@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 type DestinationPlaceholderCardProps = {
   title?: string | null;
@@ -14,6 +14,10 @@ const palettes = [
 
 const hashText = (value: string): number => Array.from(value).reduce((hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0, 7);
 
+const labelShadow = Platform.OS === 'web'
+  ? { textShadow: '0px 1px 3px rgba(0,0,0,0.3)' }
+  : { textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 };
+
 const DestinationPlaceholderCard: React.FC<DestinationPlaceholderCardProps> = ({ title, style, testID }) => {
   const label = String(title ?? '').trim() || 'Your destination';
   const [start, end] = useMemo(() => palettes[hashText(label) % palettes.length], [label]);
@@ -22,7 +26,7 @@ const DestinationPlaceholderCard: React.FC<DestinationPlaceholderCardProps> = ({
       <View style={{ position: 'absolute', left: '-15%', top: '-35%', width: '75%', height: '130%', borderRadius: 999, backgroundColor: end, opacity: 0.75, transform: [{ rotate: '-18deg' }] }} />
       <View style={{ position: 'absolute', right: '-20%', bottom: '-45%', width: '80%', height: '120%', borderRadius: 999, backgroundColor: start, opacity: 0.7, transform: [{ rotate: '22deg' }] }} />
       <View style={{ flex: 1, justifyContent: 'flex-end', padding: 18 }}>
-        <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }} numberOfLines={2}>{label}</Text>
+        <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800', ...labelShadow }} numberOfLines={2}>{label}</Text>
       </View>
     </View>
   );

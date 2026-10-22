@@ -291,7 +291,7 @@ const validActivityType = (value: unknown): ActivityType => {
 };
 const validTransferType = (value: unknown): ItineraryGeneratedTransfer['transferType'] => {
   const input = safeString(value);
-  return (['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const).includes(
+  return (['Flight', 'Public Transit', 'Private Transfer', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const).includes(
     input as ItineraryGeneratedTransfer['transferType']
   )
     ? (input as ItineraryGeneratedTransfer['transferType'])

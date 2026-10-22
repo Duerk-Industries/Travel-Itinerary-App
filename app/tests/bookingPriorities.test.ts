@@ -3,6 +3,16 @@ import { buildBookingPriorities } from '../utils/bookingPriorities';
 describe('buildBookingPriorities', () => {
   const REFERENCE = new Date('2026-08-16T12:00:00Z');
 
+  test('excludes every status other than Needs Booking across all item kinds', () => {
+    const statuses = ['Needed', 'Proposed', 'Booked', 'Completed', 'Cancelled', '', null];
+    expect(buildBookingPriorities({
+      flights: statuses.map((status, index) => ({ id: `f${index}`, status })),
+      lodgings: statuses.map((status, index) => ({ id: `l${index}`, status })),
+      activities: statuses.map((status, index) => ({ id: `a${index}`, status })),
+      carRentals: statuses.map((status, index) => ({ id: `c${index}`, status })),
+    }, REFERENCE)).toEqual([]);
+  });
+
   test('excludes items that are already Booked, Completed, or Cancelled', () => {
     const result = buildBookingPriorities(
       {
@@ -17,11 +27,11 @@ describe('buildBookingPriorities', () => {
     expect(result).toEqual([]);
   });
 
-  test('includes Needed and Proposed items, computing days-until from the reference date', () => {
+  test('includes Needs Booking items, computing days-until from the reference date', () => {
     const result = buildBookingPriorities(
       {
-        flights: [{ id: 'f1', status: 'Needed', departureDate: '2026-08-26', departureLocation: 'BOS', arrivalLocation: 'NRT' }],
-        lodgings: [{ id: 'l1', status: 'Proposed', check_in_date: '2026-08-30', name: 'Hotel Gion' }],
+        flights: [{ id: 'f1', status: 'Needs Booking', departureDate: '2026-08-26', departureLocation: 'BOS', arrivalLocation: 'NRT' }],
+        lodgings: [{ id: 'l1', status: 'Needs Booking', check_in_date: '2026-08-30', name: 'Hotel Gion' }],
       },
       REFERENCE
     );
@@ -34,7 +44,7 @@ describe('buildBookingPriorities', () => {
 
   test('flags a past-dated unbooked item as overdue', () => {
     const result = buildBookingPriorities(
-      { activities: [{ id: 'a1', status: 'Needed', date: '2026-08-10', name: 'Cooking class' }] },
+      { activities: [{ id: 'a1', status: 'Needs Booking', date: '2026-08-10', name: 'Cooking class' }] },
       REFERENCE
     );
     expect(result[0]).toMatchObject({ urgency: 'overdue', daysUntil: -6 });
@@ -43,8 +53,8 @@ describe('buildBookingPriorities', () => {
   test('treats a missing/unparsable date as unscheduled and sorts it last', () => {
     const result = buildBookingPriorities(
       {
-        carRentals: [{ id: 'c1', status: 'Needed', pickupDate: null, vendor: 'Toyota Rent a Car' }],
-        activities: [{ id: 'a1', status: 'Needed', date: '2026-08-20', name: 'Fushimi Inari hike' }],
+        carRentals: [{ id: 'c1', status: 'Needs Booking', pickupDate: null, vendor: 'Toyota Rent a Car' }],
+        activities: [{ id: 'a1', status: 'Needs Booking', date: '2026-08-20', name: 'Fushimi Inari hike' }],
       },
       REFERENCE
     );
@@ -55,11 +65,11 @@ describe('buildBookingPriorities', () => {
   test('sorts overdue before soon before upcoming, ascending by days within each bucket', () => {
     const result = buildBookingPriorities(
       {
-        flights: [{ id: 'far', status: 'Needed', departureDate: '2026-09-30' }],
-        lodgings: [{ id: 'overdue', status: 'Needed', check_in_date: '2026-08-01' }],
+        flights: [{ id: 'far', status: 'Needs Booking', departureDate: '2026-09-30' }],
+        lodgings: [{ id: 'overdue', status: 'Needs Booking', check_in_date: '2026-08-01' }],
         activities: [
-          { id: 'soon-later', status: 'Needed', date: '2026-08-25' },
-          { id: 'soon-sooner', status: 'Needed', date: '2026-08-18' },
+          { id: 'soon-later', status: 'Needs Booking', date: '2026-08-25' },
+          { id: 'soon-sooner', status: 'Needs Booking', date: '2026-08-18' },
         ],
       },
       REFERENCE

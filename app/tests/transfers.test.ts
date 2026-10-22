@@ -106,6 +106,7 @@ describe('Flights helpers', () => {
       paidBy: ['m1'],
       status: 'Booked' as const,
       transferType: 'Train' as const,
+      layoverDuration: '2h 30m',
     };
     const normalized = normalizeFlightFromApi(apiFlight);
     expect(normalized.passenger_ids).toEqual(['m1']);
@@ -115,8 +116,9 @@ describe('Flights helpers', () => {
     expect(normalized.booking_reference).toBe('');
     expect(normalized.paid_by).toEqual(['m1']);
     expect(normalized.status).toBe('Booked');
-    expect(normalized.transfer_type).toBe('Train');
-    expect(normalized.transferType).toBe('Train');
+    expect(normalized.transfer_type).toBe('Public Transit');
+    expect(normalized.transferType).toBe('Public Transit');
+    expect(normalized.layover_duration).toBe('2h 30m');
   });
 
   test('allows missing business fields when status is Needed', () => {

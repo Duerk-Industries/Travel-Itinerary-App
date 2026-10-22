@@ -12,7 +12,7 @@ import {
 } from '../../services/aiInvocationGuard';
 import { getActiveAiProvider } from '../../services/aiProviderConfigService';
 import { getProviderLimitKey } from '../../services/aiInvocationGuard';
-import { getApiBudgetWindowKey, settleProviderAttempt } from '../../apis/providerBudgeting';
+import { claimProviderSpend, getApiBudgetWindowKey, hasMeteredTokenUsage, quoteAiSpend, releaseUndispatchedSpend, reserveAiSpend, settleProviderAttempt } from '../../apis/providerBudgeting';
 import { recordUsage } from '../../services/entitlementService';
 import { logError } from '../../logger';
 import { withAiSpan } from '../tracing';
@@ -105,9 +105,22 @@ const recordNonOpenAiUsage = async (params: {
 const wrapWithRegistryGuards = (provider: AiChatProvider, experimentContext?: ExperimentOutcomeContext): AiChatProvider => ({
   ...provider,
   async chatCompletion(req: AiChatRequest, ctx: AiCallContext): Promise<AiChatResponse> {
+    req = {...req};
+    if (req.max_tokens == null) req.max_tokens = req.max_completion_tokens ?? 2048;
+    let reservation = ctx.spendReservation;
+    let dispatched = false;
+    let completed = false;
     let authorization: Awaited<ReturnType<typeof authorizeAiCall>> | undefined;
     try {
+      const providerKey = getProviderLimitKey(provider.id), quote = quoteAiSpend(providerKey,req);
+      if (reservation && (reservation.provider !== providerKey || quote === null || reservation.amountMicros < quote)) {
+        await releaseUndispatchedSpend(reservation); reservation = undefined; ctx = {...ctx,spendReservation:undefined};
+      }
       authorization = await authorizeAiCall(ctx);
+      reservation = reservation ?? await reserveAiSpend(getProviderLimitKey(provider.id),req);
+      ctx = {...ctx,spendReservation:reservation};
+      if (provider.id !== 'openai') await claimProviderSpend(reservation);
+      dispatched = true;
       const response = await withAiSpan('ai.provider.chatCompletion', {
         correlationId: ctx.correlationId,
         jobId: ctx.jobId,
@@ -129,6 +142,8 @@ const wrapWithRegistryGuards = (provider: AiChatProvider, experimentContext?: Ex
           const settlement = await settleProviderAttempt({
             provider: getProviderLimitKey(provider.id),
             attemptId: response.id ?? null,
+            reservation,
+            usageKnown: hasMeteredTokenUsage(response.usage),
             unitType: 'tokens',
             model: req.model,
             promptTokens: response.usage?.prompt_tokens ?? 0,
@@ -155,6 +170,7 @@ const wrapWithRegistryGuards = (provider: AiChatProvider, experimentContext?: Ex
           logError(`[aiProviderRegistry] failed to record usage for provider=${provider.id}`, err);
         }
       }
+      completed = true;
       await finalizeAiCallAuthorization(ctx, authorization, {
         provider: provider.id,
         model: req.model,
@@ -167,17 +183,20 @@ const wrapWithRegistryGuards = (provider: AiChatProvider, experimentContext?: Ex
       // A failed call that got past authorization was attempted against the
       // provider; settle it as a non-billable attempt for coverage. OpenAI
       // failures are settled inside postOpenAiChatCompletion.
-      if (authorization && provider.id !== 'openai') {
+      if (authorization && dispatched && !completed && provider.id !== 'openai') {
         await settleProviderAttempt({
           provider: getProviderLimitKey(provider.id),
           unitType: 'tokens',
           model: req.model,
           outcome: 'failed',
+          reservation,
+          usageKnown: false,
           caller: ctx.callerId,
           featureKey: ctx.featureKey,
           userId: ctx.userId,
         }).catch(() => undefined);
       }
+      if (!dispatched) await releaseUndispatchedSpend(reservation);
       await failAiCallAuthorization(ctx, authorization, err);
       if (experimentContext) await recordTrafficSplitOutcome(experimentContext, false);
       throw err;

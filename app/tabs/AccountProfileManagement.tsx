@@ -6,6 +6,7 @@ import DropdownOptionButton from '../components/DropdownOptionButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import DraftTextInput from '../components/DraftTextInput';
+import OfflineDownloadSettings from '../components/OfflineDownloadSettings';
 import PlaidLinkButton from '../components/PlaidLinkButton';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
@@ -615,6 +616,7 @@ const AccountProfileManagement = ({
       <Text style={styles.helperText}>
         Selected: {temperatureUnitOptions.find((opt) => opt.key === normalizeTemperatureUnit(accountProfile.temperatureUnit))?.label ?? 'Fahrenheit'}
       </Text>
+      <OfflineDownloadSettings styles={styles} />
       <BlogPublicDefaultToggle backendUrl={backendUrl} headers={headers} styles={styles} theme={theme} />
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate}>
         <Text style={styles.buttonText}>Save Profile</Text>

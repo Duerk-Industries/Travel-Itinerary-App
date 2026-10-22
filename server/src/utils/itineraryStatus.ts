@@ -4,7 +4,7 @@
 // (or vice versa) — a contract test in server/__tests__/domainSync.test.ts
 // catches drift between the two.
 
-export const ITINERARY_STATUSES = ['Needed', 'Proposed', 'Booked', 'Cancelled', 'Completed'] as const;
+export const ITINERARY_STATUSES = ['Needed', 'Proposed', 'Needs Booking', 'Booked', 'Cancelled', 'Completed'] as const;
 
 export type ItineraryStatus = (typeof ITINERARY_STATUSES)[number];
 

@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { addTripMember, canonicalAlias, epochState, storedBlog } from './providerRows';
 import { confirmWebUser, loginWebUser, cleanupTestUsersByEmail, futureDateString } from './helpers';
 
 const TRIP_DAY = futureDateString();
@@ -37,11 +37,7 @@ describe('trip blog publication consent', () => {
       .send({ name: ownerName, startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] })
       .expect(201);
     const tripId = trip.body.trip?.id ?? trip.body.id;
-    const group = await queryBlog<{ group_id: string }>('SELECT group_id FROM trips WHERE id = $1', [tripId]);
-    const groupId = group.rows[0].group_id;
-    for (const userId of otherUserIds) {
-      await queryBlog('INSERT INTO group_members (id, group_id, user_id, added_by) VALUES ($1, $2, $3, $3)', [randomUUID(), groupId, userId]);
-    }
+    for (const userId of otherUserIds) await addTripMember(tripId, userId);
     return tripId;
   };
 
@@ -68,8 +64,8 @@ describe('trip blog publication consent', () => {
     expect(res.body.state).toBe('public');
     expect(res.body.pendingCount).toBe(0);
 
-    const blogRow = await queryBlog<{ visibility_state: string }>('SELECT visibility_state FROM trip_blogs WHERE trip_id = $1', [tripId]);
-    expect(blogRow.rows[0].visibility_state).toBe('public');
+    const blogRow = (await storedBlog(tripId))!;
+    expect(blogRow.visibilityState).toBe('public');
   });
 
   it('requires unanimous consent from every other account-holding traveler, and syncs private->public->private through decline/revoke', async () => {
@@ -95,8 +91,8 @@ describe('trip blog publication consent', () => {
     expect(requestRes.body.state).toBe('pending_consent');
     expect(requestRes.body.pendingCount).toBe(1);
 
-    let blogRow = await queryBlog<{ visibility_state: string }>('SELECT visibility_state FROM trip_blogs WHERE trip_id = $1', [tripId]);
-    expect(blogRow.rows[0].visibility_state).toBe('pending_consent');
+    let blogRow = (await storedBlog(tripId))!;
+    expect(blogRow.visibilityState).toBe('pending_consent');
 
     const epoch = requestRes.body.epoch;
 
@@ -107,10 +103,9 @@ describe('trip blog publication consent', () => {
       .send({ decision: 'declined' })
       .expect(204);
 
-    blogRow = await queryBlog<{ visibility_state: string }>('SELECT visibility_state FROM trip_blogs WHERE trip_id = $1', [tripId]);
-    expect(blogRow.rows[0].visibility_state).toBe('private');
-    const epochRow = await queryBlog<{ state: string }>('SELECT state FROM blog_publication_epochs WHERE trip_id = $1 AND epoch = $2', [tripId, epoch]);
-    expect(epochRow.rows[0].state).toBe('expired');
+    blogRow = (await storedBlog(tripId))!;
+    expect(blogRow.visibilityState).toBe('private');
+    expect(await epochState(tripId, epoch)).toBe('expired');
 
     // Re-request and this time approve unanimously.
     const secondRequest = await request(app)
@@ -126,13 +121,13 @@ describe('trip blog publication consent', () => {
       .send({ decision: 'approved' })
       .expect(204);
 
-    blogRow = await queryBlog<{ visibility_state: string; visibility_epoch: string }>('SELECT visibility_state, visibility_epoch FROM trip_blogs WHERE trip_id = $1', [tripId]);
-    expect(blogRow.rows[0].visibility_state).toBe('public');
-    expect(Number(blogRow.rows[0].visibility_epoch)).toBe(secondEpoch);
+    blogRow = (await storedBlog(tripId))!;
+    expect(blogRow.visibilityState).toBe('public');
+    expect(blogRow.visibilityEpoch).toBe(secondEpoch);
 
     // The public route must now serve this trip.
-    const identity = await queryBlog<{ username_slug: string; trip_slug: string }>('SELECT username_slug, trip_slug FROM blog_public_aliases WHERE trip_id = $1 AND canonical = TRUE', [tripId]);
-    await request(app).get(`/public/blog/${identity.rows[0].username_slug}/${identity.rows[0].trip_slug}`).expect(200);
+    const identity = (await canonicalAlias(tripId))!;
+    await request(app).get(`/public/blog/${identity.usernameSlug}/${identity.tripSlug}`).expect(200);
 
     // Revoke — any single consent-eligible traveler can pull it back to private unilaterally.
     await request(app)
@@ -140,9 +135,9 @@ describe('trip blog publication consent', () => {
       .set('Authorization', `Bearer ${token2}`)
       .expect(204);
 
-    blogRow = await queryBlog<{ visibility_state: string }>('SELECT visibility_state FROM trip_blogs WHERE trip_id = $1', [tripId]);
-    expect(blogRow.rows[0].visibility_state).toBe('private');
-    await request(app).get(`/public/blog/${identity.rows[0].username_slug}/${identity.rows[0].trip_slug}`).expect(404);
+    blogRow = (await storedBlog(tripId))!;
+    expect(blogRow.visibilityState).toBe('private');
+    await request(app).get(`/public/blog/${identity.usernameSlug}/${identity.tripSlug}`).expect(404);
   });
 
   it('blocks a publication request until every account traveler has completed their date-of-birth profile', async () => {

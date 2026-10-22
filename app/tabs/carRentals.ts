@@ -1,3 +1,4 @@
+import type { PlanningCoordinates } from '../../server/src/types';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -6,7 +7,8 @@ import {
   shouldRelaxRequiredFields,
 } from '../utils/itineraryStatus';
 
-export type CarRental = {
+export type CarRental = PlanningCoordinates & {
+  dropoffLat?: number | null; dropoffLng?: number | null;
   id: string;
   tripId?: string;
   status: ItineraryStatus;
@@ -93,6 +95,8 @@ export const buildCarRentalFromDraft = (
 
 export const normalizeCarRentalFromApi = (r: any): CarRental => ({
   id: String(r.id ?? ''),
+  dropoffLat: r.dropoffLat ?? r.dropoff_lat, dropoffLng: r.dropoffLng ?? r.dropoff_lng,
+  lat: r.lat, lng: r.lng, geoCity: r.geoCity ?? r.geo_city, coordinateSource: r.coordinateSource ?? r.coordinate_source,
   tripId: r.tripId ?? r.trip_id ?? undefined,
   status: normalizeItineraryStatus(r.status, DEFAULT_NEW_ITINERARY_STATUS),
   netVotes: Number(r.netVotes ?? 0) || 0,
@@ -123,7 +127,8 @@ export const fetchCarRentalsForTrip = async (params: {
   const res = await fetch(`${backendUrl}/api/car-rentals?tripId=${activeTripId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error('Unable to load trip details');
   const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('Invalid trip details response');
   return Array.isArray(data) ? data.map((item) => normalizeCarRentalFromApi(item)) : [];
 };

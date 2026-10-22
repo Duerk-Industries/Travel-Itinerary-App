@@ -6,6 +6,10 @@ import { registerRootComponent } from 'expo';
 import { Platform, StyleSheet, Text, StatusBar, View } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { wrapApp } from './utils/sentry';
+import { installWebAlert } from './utils/crossPlatformAlert';
+
+// react-native-web's Alert.alert does nothing; give every call site a working browser dialog.
+installWebAlert();
 
 let startupError = null;
 const startupErrorListeners = new Set();
@@ -175,3 +179,10 @@ const styles = StyleSheet.create({
 // wrapApp returns Root unchanged when Sentry isn't initialized, so this is
 // safe even on a fresh checkout with no DSN configured.
 registerRootComponent(wrapApp(Root));
+
+// Web only: let the app shell open without a connection. A failure here must never affect startup.
+if (Platform.OS === 'web') {
+  import('./utils/registerServiceWorker')
+    .then(({ registerOfflineShell }) => registerOfflineShell())
+    .catch(() => undefined);
+}

@@ -2,17 +2,22 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { counterRows, isFirebase, sql } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 import { reactToTarget } from '../src/services/blogEngagementService';
 import { reconcileBlogCounters } from '../src/services/blogCounterReconciliationService';
 import { claimJobLease } from '../src/services/scheduledJobLease';
 
 // Phase 2 — counter reconciliation and the DB-backed lease primitive it's built on.
+// Reconciliation exists to repair Postgres' read-merge-write JSONB counters, so it runs there only.
+// Firestore increments counters atomically, so the job is a no-op and the same guarantee is asserted
+// directly instead (see the Firestore tests below).
+const postgresOnly = isFirebase() ? it.skip : it;
+const firestoreOnly = isFirebase() ? it : it.skip;
 const TRIP_DAY = futureDateString();
 
 describe('blog counter reconciliation', () => {
-  const traveler = { firstName: 'Recon', lastName: 'Traveler', email: 'blog-recon-traveler@example.com', password: 'Password123!' };
+  const traveler = { firstName: 'Recon', lastName: 'Traveler', email: `blog-recon-traveler-${randomUUID().slice(0, 8)}@example.com`, password: 'Password123!' };
   let travelerToken = '';
   let travelerId = '';
   let tripId = '';
@@ -54,24 +59,24 @@ describe('blog counter reconciliation', () => {
     expect(second).toBe(false);
   });
 
-  it('recomputes a drifted counter row back to the true count from source tables', async () => {
+  postgresOnly('recomputes a drifted counter row back to the true count from source tables', async () => {
     await reactToTarget(tripId, travelerId, 'item', itemId, 'heart');
 
     // Simulate drift: corrupt the counter row directly, bypassing the normal write path — this is
     // exactly the kind of divergence the JSONB read-merge-write in postgresEngagementRepository.ts
     // is documented to risk under concurrent writes.
-    await queryBlog(
+    await sql(
       `UPDATE blog_engagement_counters SET reaction_counts = '{"heart": 99}'::jsonb, reaction_total = 99 WHERE target_kind = 'item' AND target_id = $1 AND audience = 'public'`,
       [itemId]
     );
-    const drifted = await queryBlog<{ reaction_total: number }>('SELECT reaction_total FROM blog_engagement_counters WHERE target_kind = $1 AND target_id = $2 AND audience = $3', ['item', itemId, 'public']);
+    const drifted = await sql<{ reaction_total: number }>('SELECT reaction_total FROM blog_engagement_counters WHERE target_kind = $1 AND target_id = $2 AND audience = $3', ['item', itemId, 'public']);
     expect(Number(drifted.rows[0].reaction_total)).toBe(99);
 
     const result = await reconcileBlogCounters(`test-owner-${randomUUID()}`);
     expect(result.ran).toBe(true);
     expect(result.targetsReconciled).toBeGreaterThan(0);
 
-    const corrected = await queryBlog<{ reaction_total: number; reaction_counts: Record<string, number> }>(
+    const corrected = await sql<{ reaction_total: number; reaction_counts: Record<string, number> }>(
       'SELECT reaction_total, reaction_counts FROM blog_engagement_counters WHERE target_kind = $1 AND target_id = $2 AND audience = $3',
       ['item', itemId, 'public']
     );
@@ -79,12 +84,20 @@ describe('blog counter reconciliation', () => {
     expect(corrected.rows[0].reaction_counts).toEqual({ heart: 1 });
   });
 
-  it('any further call within the same hour window is a no-op — the previous test already claimed and completed it', async () => {
+  postgresOnly('any further call within the same hour window is a no-op — the previous test already claimed and completed it', async () => {
     // The previous test's reconcileBlogCounters call already claimed and completed the current
     // hour's lease; this asserts that stays true regardless of how many more times it's called,
     // which is exactly the property that makes N instances calling this on the same schedule safe.
     const again = await reconcileBlogCounters(`owner-${randomUUID()}`);
     expect(again.ran).toBe(false);
     expect(again.targetsReconciled).toBe(0);
+  });
+
+  firestoreOnly('keeps counters exact through atomic increments, so reconciliation has nothing to do', async () => {
+    await reactToTarget(tripId, travelerId, 'item', itemId, 'heart');
+    const counters = (await counterRows([itemId])).filter((row) => row.audience === 'public');
+    expect(counters).toHaveLength(1);
+    expect(counters[0].reactionTotal).toBe(1);
+    expect(await reconcileBlogCounters(`owner-${randomUUID()}`)).toEqual({ ran: false, targetsReconciled: 0 });
   });
 });

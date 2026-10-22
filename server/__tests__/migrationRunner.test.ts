@@ -120,4 +120,15 @@ describe('migrations/runner', () => {
     expect(logs.some((l) => l.includes('applying 20260101_a.sql'))).toBe(true);
     expect(logs.some((l) => l.includes('applied 20260101_a.sql'))).toBe(true);
   });
+  it('skips PostgreSQL-only SQL only for the explicit memory dialect, without marking it applied', async () => {
+    const { runMigrations, listAppliedMigrations } = require('../src/migrations/runner');
+    const client = createPgMemClient();
+    const dir = createTempMigrationsDir([{ name: '20260101_postgres.sql', sql: '-- postgres-only: test adapter marker\nCREATE TABLE production_only (id INT PRIMARY KEY);' }]);
+    expect((await runMigrations({ client, dir, dialect: 'memory' })).applied).toEqual([]);
+    expect([...(await listAppliedMigrations(client))]).toEqual([]);
+    // The production default MUST apply it, despite the marker.
+    expect((await runMigrations({ client, dir })).applied).toEqual(['20260101_postgres.sql']);
+    await expect(client.query('INSERT INTO production_only(id) VALUES(1)')).resolves.toBeDefined();
+  });
+
 });

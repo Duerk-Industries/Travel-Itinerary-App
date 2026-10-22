@@ -1,9 +1,11 @@
+import { withSpendScope } from '../apis/providerBudgeting';
 import { INGESTION_JOB_TOKEN_BUDGET_USD, INGESTION_LOGIC_VERSION } from './config';
 import type { ExtractionResult, IngestionPayload, PersistedImportJob, QueuedImportProcessorConfig } from './contracts';
 import { extractCandidates } from './extraction';
 import { normalizeIngestionPayload } from './normalization';
 import { ensureFutureDatedExtraction } from './intake/gmail';
 import { persistReviewQueueItems } from './review_queue';
+import { applyAutomaticAssignments } from './assignment/autoAssign';
 import { mapErrorToFailureCode } from './shared/audit';
 import { buildImportJobIdempotencyKey } from './shared/hashing';
 import {
@@ -79,12 +81,12 @@ const ensureImportJob = async (
       });
       const retriedJob = await requeueImportJob(existingJob.id);
       logInfo(
-        `[ingestion][orchestrator] retrying failed manual upload job=${existingJob.id} previous_state=${existingJob.state} user=${payload.userId} file="${payload.originalFilename}"`
+        `[ingestion][orchestrator] retrying failed manual upload job=${existingJob.id} previous_state=${existingJob.state} user=${payload.userId}`
       );
       return { job: retriedJob ?? existingJob, created: true };
     }
     logInfo(
-      `[ingestion][orchestrator] reusing existing job=${existingJob.id} state=${existingJob.state} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}"`
+      `[ingestion][orchestrator] reusing existing job=${existingJob.id} state=${existingJob.state} source=${payload.sourceType} user=${payload.userId}`
     );
     return { job: existingJob, created: false };
   }
@@ -119,7 +121,7 @@ const ensureImportJob = async (
     processorConfig,
   });
   logInfo(
-    `[ingestion][orchestrator] created job=${job.id} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}" correlation=${payload.correlationId}`
+    `[ingestion][orchestrator] created job=${job.id} source=${payload.sourceType} user=${payload.userId} correlation=${payload.correlationId}`
   );
   return { job, created: true };
 };
@@ -144,7 +146,7 @@ const processExistingImportJob = async (
   job: PersistedImportJob,
   payloadRecord: NonNullable<Awaited<ReturnType<typeof getImportJobPayload>>>,
   overrides?: PipelineOverrides
-): Promise<PersistedImportJob> => {
+): Promise<PersistedImportJob> => withSpendScope({provider:`INGESTION_JOB_${job.id}`,limitMicros:Math.floor(INGESTION_JOB_TOKEN_BUDGET_USD*1_000_000),windowKey:new Date(job.createdAt).toISOString().slice(0,7)}, async () => {
   if (isTerminalJobState(job.state)) {
     return job;
   }
@@ -154,7 +156,7 @@ const processExistingImportJob = async (
 
   try {
     logInfo(
-      `[ingestion][orchestrator] processing job=${job.id} state=${job.state} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}"`
+      `[ingestion][orchestrator] processing job=${job.id} state=${job.state} source=${payload.sourceType} user=${payload.userId}`
     );
     await updateImportJobState({ jobId: job.id, state: 'RECEIVED' });
     await updateImportJobState({ jobId: job.id, state: 'NORMALIZING' });
@@ -236,13 +238,16 @@ const processExistingImportJob = async (
       throw new Error('Token budget exceeded for import job');
     }
 
-    await persistReviewQueueItems({
+    const persistedItems = await persistReviewQueueItems({
       userId: payload.userId,
       importJobId: job.id,
       rawDocId: rawDoc.id,
       extractionResult: finalExtraction,
       logicVersion: processorConfig.logicVersion,
     });
+    // Best effort and after the items are safely in the review queue: this can only ever move an item
+    // out of the queue into the right trip, and it never fails the import.
+    await applyAutomaticAssignments({ userId: payload.userId, items: persistedItems });
     logInfo(
       `[ingestion][orchestrator] extracted job=${job.id} items=${finalExtraction.parsedItems.length} strategy=${finalExtraction.metadata.strategyName}`
     );
@@ -264,7 +269,7 @@ const processExistingImportJob = async (
     await deleteTempBytes(payload.contentBytesRef);
     throw error;
   }
-};
+});
 
 export const processImportJob = async (jobId: string, overrides?: PipelineOverrides): Promise<PersistedImportJob> => {
   const job = await getImportJobById(jobId);
@@ -323,6 +328,20 @@ export const runIngestionPipeline = async (
   const processorConfig = buildProcessorConfig(allowLargeLlm, allowSmallLlm, overrides);
   const { job } = await ensureImportJob(payload, processorConfig);
   return processImportJob(job.id, overrides);
+};
+
+/** Manual-text preview uses the same normalization, schemas, cache and budget
+ * policy as imports. It creates no trip item or review-queue duplicate. */
+export const previewIngestionPayload = async (payload: IngestionPayload, allowLargeLlm: boolean, allowSmallLlm: boolean): Promise<ExtractionResult> => {
+  const config = buildProcessorConfig(allowLargeLlm, allowSmallLlm);
+  const { job } = await ensureImportJob(payload, config);
+  try {
+    const doc = await normalizeIngestionPayload(job.id, payload);
+    const result = await extractCandidates(doc, { userId: payload.userId, importJobId: job.id, contentHash: payload.contentHash,
+      correlationId: payload.correlationId, logicVersion: config.logicVersion, allowLargeLlm, allowSmallLlm });
+    await updateImportJobState({ jobId: job.id, state: 'COMPLETED' });
+    return result;
+  } finally { await deleteTempBytes(payload.contentBytesRef); }
 };
 
 export const requeueDeadLetterImportJob = async (jobId: string): Promise<PersistedImportJob> => {

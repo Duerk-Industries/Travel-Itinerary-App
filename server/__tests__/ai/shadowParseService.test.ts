@@ -36,6 +36,7 @@ jest.mock('../../src/apis/providerBudgeting', () => ({
     budgetUsagePercent: 0,
     isOverBudget: false,
   })),
+  withSpendScope: jest.fn(async (_scope,work) => work()),
   recordApiCost: jest.fn(async () => 0),
   getApiBudgetWindowKey: jest.fn(() => '2026-07'),
 }));
@@ -151,15 +152,11 @@ describe('shadowParseService', () => {
     }));
   });
 
-  it('records shadow-call cost under the SHADOW_PARSE budget bucket, not OPENAI', async () => {
+  it('enforces the shadow ceiling around the extractor without double-recording cost', async () => {
     await maybeRunShadowParse({ intakeId: 'intake-1', doc, productionResult, randomValue: 0 });
 
-    // The extractor's mocked usageMetrics.estimatedCostUsd is 0.01 (see mock above).
-    expect(providerBudgeting.recordApiCost).toHaveBeenCalledWith({
-      provider: 'SHADOW_PARSE',
-      windowKey: '2026-07',
-      amountMicros: 10_000,
-    });
+    expect(providerBudgeting.withSpendScope).toHaveBeenCalledWith({provider:'SHADOW_PARSE',limitMicros:20_000_000},expect.any(Function));
+    expect(providerBudgeting.recordApiCost).not.toHaveBeenCalled();
   });
 
   it('does not record cost when the extractor reports zero spend', async () => {

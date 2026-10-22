@@ -74,3 +74,16 @@ describe('helpers', () => {
     expect(formatKeepsakeRange(['2026-12-30', '2027-01-02'])).toBe('Dec 30, 2026 – Jan 2, 2027');
   });
 });
+
+
+it('prints bounded consented maps with attribution and a labeled fallback; rejects remote/unsafe images', () => {
+  const maps = { '2026-10-30': { image: 'data:image/png;base64,YWJj', approximate: true, labels: ['Approximate area 1'] } };
+  const html = buildKeepsakeHtml(blog, 'classic', maps);
+  expect(html).toContain('data:image/png;base64,YWJj');
+  expect(html).toContain('OpenStreetMap contributors');
+  expect(html).toContain('Approximate area 1');
+  const fallback = buildKeepsakeHtml(blog, 'classic', { '2026-10-30': { ...maps['2026-10-30'], image: 'https://private.example.test/exact-map' } });
+  expect(fallback).toContain('Map image unavailable');
+  expect(fallback).not.toContain('private.example.test');
+  expect(buildKeepsakeHtml(blog, 'classic', { '2026-10-30': { approximate: true, labels: ['<script>secret</script>'] } })).not.toContain('<script>secret');
+});

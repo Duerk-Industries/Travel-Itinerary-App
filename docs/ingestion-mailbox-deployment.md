@@ -88,3 +88,15 @@ Google Workspace can work as a dedicated mailbox or catch-all receiver, and Goog
 - Mailgun pricing: https://www.mailgun.com/pricing/
 - SendGrid inbound parse: https://www.twilio.com/docs/sendgrid/for-developers/parsing-email/inbound-email
 - SendGrid pricing: https://www.twilio.com/en-us/products/email-api/pricing
+
+## Startup behavior when the mailbox is enabled but not configured
+
+If `feature_ingest_forwarded_mailbox` is on but the scheduler flag, encryption secret or authenticated
+`clamav_http` scanner is missing, the API **still starts**. It logs one error at startup listing every missing
+setting (`[startup] Forwarded mailbox is enabled but not ready ...`), so the admin panel stays available to fix or
+turn off the flag.
+
+Mail stays safe: the Mailgun webhook answers `503` (Mailgun retries for hours, so nothing is lost) and the receipt
+scheduler refuses to process, so nothing is admitted or parsed without a scanner. Setting the missing values and
+restarting is enough; no flag change is needed. Check `mailAdmissionProblems()` in
+`server/src/ingestion/worker/mailReceiptWorker.ts` for the exact list.

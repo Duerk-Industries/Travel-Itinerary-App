@@ -59,9 +59,11 @@ export const runMigrations = async ({
   client,
   dir,
   log,
+  dialect = 'postgres',
 }: {
   client: MigrationClient;
   dir: string;
+  dialect?: 'postgres' | 'memory';
   log?: (message: string) => void;
 }): Promise<RunMigrationsResult> => {
   const emit = log ?? (() => {});
@@ -72,6 +74,7 @@ export const runMigrations = async ({
   const skipped: string[] = [];
 
   for (const file of files) {
+    if (dialect === 'memory' && file.sql.includes('-- postgres-only:')) { emit(`[migrations] memory adapter skips ${file.name}`); continue; }
     if (applied.has(file.name)) {
       skipped.push(file.name);
       continue;

@@ -3,7 +3,7 @@ import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 import { blogMediaRepository } from '../src/blog/repository';
-import { queryBlog } from '../src/db.postgres';
+import { mediaAssetRow, reactionRows, counterRows } from './providerRows';
 
 const TRIP_DAY = futureDateString();
 
@@ -143,11 +143,8 @@ describe('trip blog media quota lifecycle', () => {
 
     const mediaList = await request(app).get(`/api/trips/${tripId}/blog/media`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(mediaList.body.media.some((item: any) => item.id === assetId)).toBe(false);
-    const asset = await queryBlog<{ tags: string[]; state: string }>('SELECT tags, state FROM blog_media_assets WHERE id = $1', [assetId]);
-    expect(asset.rows[0]).toMatchObject({ tags: [], state: 'deleted' });
-    const reactions = await queryBlog('SELECT id FROM blog_reactions WHERE blog_item_id = $1 OR asset_id = $2', [mediaItem.id, assetId]);
-    expect(reactions.rows).toHaveLength(0);
-    const counters = await queryBlog('SELECT target_kind FROM blog_engagement_counters WHERE target_id = $1 OR target_id = $2', [mediaItem.id, assetId]);
-    expect(counters.rows).toHaveLength(0);
+    expect(await mediaAssetRow(assetId)).toMatchObject({ tags: [], state: 'deleted' });
+    expect(await reactionRows([mediaItem.id, assetId])).toHaveLength(0);
+    expect(await counterRows([mediaItem.id, assetId])).toHaveLength(0);
   });
 });

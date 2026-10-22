@@ -4,9 +4,8 @@
  * token, and POSTing it to /api/notifications/devices.
  *
  * Native only (iOS/Android). Web has no Expo push token to register — per the product decision
- * for real push delivery, web/no-device users are reached by email instead (see
- * notifications_email in server/config/feature-flags.yaml), so this is a deliberate no-op on web
- * rather than a gap to fill in later.
+ * for real push delivery, web users use the inbox. Email requires its own
+ * explicit preference; turning push off never enables another channel.
  */
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
@@ -15,8 +14,8 @@ import { resolveBackendUrl } from './backendUrl';
 // Best-effort throughout: a permission denial, a missing EAS project id, or a network hiccup here
 // must never block login or crash the app — push registration is a nice-to-have layered on top of
 // a session that already works without it.
-export const registerForPushNotificationsAsync = async (authToken: string | null): Promise<void> => {
-  if (Platform.OS === 'web' || !authToken) return;
+export const registerForPushNotificationsAsync = async (authToken: string | null): Promise<boolean> => {
+  if (Platform.OS === 'web' || !authToken) return false;
 
   try {
     const Notifications = await import('expo-notifications');
@@ -34,14 +33,14 @@ export const registerForPushNotificationsAsync = async (authToken: string | null
       const requested = await Notifications.requestPermissionsAsync();
       status = requested.status;
     }
-    if (status !== 'granted') return;
+    if (status !== 'granted') return false;
 
     const projectId = (Constants.expoConfig?.extra as any)?.eas?.projectId;
-    if (!projectId) return;
+    if (!projectId) return false;
 
     const tokenResponse = await Notifications.getExpoPushTokenAsync({ projectId });
     const pushToken = tokenResponse.data;
-    if (!pushToken) return;
+    if (!pushToken) return false;
 
     const backendUrl = resolveBackendUrl({
       appConfigured: (Constants.expoConfig?.extra as any)?.backendUrl,
@@ -58,7 +57,7 @@ export const registerForPushNotificationsAsync = async (authToken: string | null
       platformOs: Platform.OS,
     });
 
-    await fetch(`${backendUrl}/api/notifications/devices`, {
+    const response = await fetch(`${backendUrl}/api/notifications/devices`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -70,9 +69,11 @@ export const registerForPushNotificationsAsync = async (authToken: string | null
         deviceLabel: `${Platform.OS} ${Platform.Version ?? ''}`.trim(),
       }),
     });
+    return response.ok;
   } catch {
     // Swallowed deliberately — see the best-effort note above. Nothing here is worth surfacing to
     // the user; a failed registration just means this device falls back to no real-time delivery
-    // until the next successful login retries it.
+    // until the user chooses to enable alerts again.
+    return false;
   }
 };

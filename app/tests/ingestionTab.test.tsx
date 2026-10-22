@@ -8,6 +8,10 @@ import React from 'react';
 import { act, render, waitFor } from '@testing-library/react-native';
 import IngestionTab from '../tabs/ingestion';
 
+// Settings/history have their own request and conflict tests. Keep this suite's
+// ordered HTTP fixture focused on upload polling and assignment refresh.
+jest.mock('../components/AutomaticImportSettings', () => () => null);
+
 jest.mock('react-native', () => {
   return {
     Platform: { OS: 'ios' },
@@ -246,10 +250,10 @@ describe('IngestionTab', () => {
       pressTextButton(getAllByText('Japan Trip')[0]);
     });
 
-    expect(getByDisplayValue('trip-1')).toBeTruthy();
+    expect(getAllByText('Japan Trip').length).toBeGreaterThan(0);
 
     await act(async () => {
-      pressTextButton(getAllByText('Assign')[0]);
+      pressTextButton(getAllByText('Add to Japan Trip')[0]);
     });
 
     await waitFor(() => {
@@ -330,7 +334,30 @@ describe('IngestionTab role-based view', () => {
 
     expect(await findByPlaceholderText('Search provider or confirmation')).toBeTruthy();
     expect(await findByPlaceholderText('Status or ALL')).toBeTruthy();
-    expect(await findByText('Forwarding')).toBeTruthy();
+    expect(await findByText('Copy my forwarding address')).toBeTruthy();
     expect(await findByText('Gmail import is currently disabled.')).toBeTruthy();
   });
+  it('returns from trip creation to explicit booking confirmation with server-proven trust', async () => {
+    const booking = {id:'import-1', itemType:'hotel', sourceType:'FORWARDED_MAILBOX', providerVendor:'Hotel', confidenceScore:0.95, status:'READY_FOR_REVIEW', travelerNames:[], extractedFields:{name:'Tokyo stay'}};
+    const draft = {name:'Trip to Tokyo',destinationQuery:'Tokyo',startDate:'2027-05-10',endDate:'2027-05-11'};
+    (fetch as jest.Mock).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if(url.endsWith('/config')) return createJsonResponse({...baseConfig, features:{manualUpload:true,forwardedMailbox:false,gmailImport:false}});
+      if(url.endsWith('/review-items')) return createJsonResponse({items:[booking]});
+      if(url.endsWith('/jobs')) return createJsonResponse({jobs:[]});
+      if(url.endsWith('/assignment/trips')) return createJsonResponse({trips:[{id:'new-trip',name:'New Tokyo trip'}]});
+      if(url.endsWith('/review-items/import-1')) return createJsonResponse({item:booking,suggestions:[],tripDraft:draft,forwarderTrust:'verified'});
+      throw new Error(`Unexpected fetch ${url}`);
+    });
+    const onCreate = jest.fn(), onHandled = jest.fn(), onAssignment = jest.fn();
+    const ui = render(<IngestionTab backendUrl={backendUrl} headers={headers} styles={styles} onNavigate={jest.fn()} onAssignmentApplied={onAssignment}
+      onCreateTripFromImport={onCreate} initialReview={{itemId:'import-1',tripId:'new-trip'}} onInitialReviewHandled={onHandled}/>);
+    expect(await ui.findByText('Add to New Tokyo trip')).toBeTruthy();
+    expect(ui.getByText('Forwarding address verified. Check the booking details before adding.')).toBeTruthy();
+    expect(onHandled).toHaveBeenCalledTimes(1); expect(onAssignment).not.toHaveBeenCalled();
+    await act(async () => {pressTextButton(ui.getByText('Create a trip from this booking'));});
+    expect(onCreate).toHaveBeenCalledWith('import-1',draft);
+    expect((fetch as jest.Mock).mock.calls.some((call: unknown[]) => String(call[0]).endsWith('/assign'))).toBe(false);
+  });
+
 });

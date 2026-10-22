@@ -7,6 +7,7 @@ import { recordProviderRequestCost } from '../src/apis/providerBudgeting';
 
 jest.mock('../src/db', () => ({
   getFeatureFlag: jest.fn(),
+  listAttractionCatalogEntries: jest.fn(),
 }));
 
 jest.mock('../src/apis/usageLimiter', () => ({
@@ -30,84 +31,28 @@ describe('merchant category lookup mapping', () => {
   });
 });
 
-describe('merchant category lookup service', () => {
-  let originalFetch: typeof global.fetch;
+jest.mock('../src/services/geocodingService', () => ({ resolveCatalogCoordinates: jest.fn() }));
+import { resolveCatalogCoordinates } from '../src/services/geocodingService';
+import { listAttractionCatalogEntries } from '../src/db';
 
-  beforeEach(() => {
-    clearMerchantCategoryCacheForTests();
-    originalFetch = global.fetch;
-    (getFeatureFlag as jest.Mock).mockResolvedValue({ enabled: true });
-    process.env.MERCHANT_CATEGORY_LOOKUP_TIMEOUT_MS = '1500';
-    process.env.MERCHANT_CATEGORY_LOOKUP_QUEUE_MAX = '20';
+describe('merchant category lookup public input policy', () => {
+  beforeEach(() => { jest.clearAllMocks(); (getFeatureFlag as jest.Mock).mockResolvedValue({ enabled: true }); });
+  it('does not submit arbitrary merchant names or private destinations', async () => {
+    (listAttractionCatalogEntries as jest.Mock).mockResolvedValue([]);
+    expect(await lookupMerchantCategory({ vendor: 'Home address' })).toBeNull();
+    expect(await lookupMerchantCategory({ vendor: 'Private host', destination: 'Paris' })).toBeNull();
+    expect(resolveCatalogCoordinates).not.toHaveBeenCalled();
   });
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-    delete process.env.MERCHANT_CATEGORY_LOOKUP_TIMEOUT_MS;
-    delete process.env.MERCHANT_CATEGORY_LOOKUP_QUEUE_MAX;
+  it('uses only the exact catalog record and the shared durable provider cache', async () => {
+    const entry = { id: 'public-cafe', name: 'Museum Cafe' };
+    (listAttractionCatalogEntries as jest.Mock).mockResolvedValue([entry]);
+    (resolveCatalogCoordinates as jest.Mock).mockResolvedValue({ providerCategory: 'amenity', providerType: 'cafe' });
+    expect((await lookupMerchantCategory({ vendor: 'Museum Cafe', destination: 'Paris' }))?.category).toBe('Breakfast');
+    expect(resolveCatalogCoordinates).toHaveBeenCalledWith(entry);
   });
-
-  it('returns null when provider is disabled', async () => {
+  it('keeps lookup optional when the flag or provider is unavailable', async () => {
     (getFeatureFlag as jest.Mock).mockResolvedValue({ enabled: false });
-    const fetchMock = jest.fn();
-    global.fetch = fetchMock;
-
-    const result = await lookupMerchantCategory({ vendor: 'Starbucks' });
-    expect(result).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('rate limiter prevents more than one provider call per second', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [{ category: 'amenity', type: 'cafe' }]
-    });
-    global.fetch = fetchMock;
-
-    const start = Date.now();
-    
-    const [res1, res2] = await Promise.all([
-      lookupMerchantCategory({ vendor: 'Starbucks1' }),
-      lookupMerchantCategory({ vendor: 'Starbucks2' })
-    ]);
-    
-    const duration = Date.now() - start;
-    
-    expect(res1?.category).toBe('Breakfast');
-    expect(res2?.category).toBe('Breakfast');
-    
-    // The second call should wait roughly 1000ms
-    expect(duration).toBeGreaterThanOrEqual(950);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(reserveApiUsageOrThrow).toHaveBeenCalledTimes(2);
-    expect(reserveApiUsageOrThrow).toHaveBeenCalledWith({ provider: 'NOMINATIM', caller: 'MERCHANT_CATEGORY_LOOKUP' });
-    expect(recordProviderRequestCost).toHaveBeenCalledTimes(2);
-  });
-
-  it('timeout returns null', async () => {
-    process.env.MERCHANT_CATEGORY_LOOKUP_TIMEOUT_MS = '50';
-    const fetchMock = jest.fn().mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
-    global.fetch = fetchMock;
-
-    const result = await lookupMerchantCategory({ vendor: 'Slow Coffee' });
-    
-    expect(result).toBeNull();
-  });
-
-  it('429 returns null and writes short error cache', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 429
-    });
-    global.fetch = fetchMock;
-
-    const result1 = await lookupMerchantCategory({ vendor: 'Too Many Requests' });
-    expect(result1).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-
-    // Should hit the short cache
-    const result2 = await lookupMerchantCategory({ vendor: 'Too Many Requests' });
-    expect(result2).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await lookupMerchantCategory({ vendor: 'Museum Cafe', destination: 'Paris' })).toBeNull();
+    expect(resolveCatalogCoordinates).not.toHaveBeenCalled();
   });
 });

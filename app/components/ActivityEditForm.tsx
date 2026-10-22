@@ -5,7 +5,8 @@ import { toWebStyle } from '../utils/webStyle';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
-import { ACTIVITY_TYPES, type ActivityType, type TourDraft } from '../tabs/activities';
+import { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
+import type { TourDraft } from '../tabs/activities';
 import DateField from './DateField';
 
 // Single source of truth for the "add/edit activity" form so the Activities tab and the

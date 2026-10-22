@@ -1,3 +1,4 @@
+import { shadowStyle } from '../utils/shadowStyle';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { AppTheme } from '../theme/theme';
@@ -277,10 +278,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     zIndex: 30,
     elevation: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
+    ...shadowStyle('#000', 0.18, 0, 4, 10),
   },
   dropdownOption: {
     paddingHorizontal: 12,

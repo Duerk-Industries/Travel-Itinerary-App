@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppTheme } from '../theme/theme';
 
 export type AddItemKind = 'activity' | 'place' | 'note' | 'checklist';
@@ -89,11 +89,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 12,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 12px rgba(0,0,0,0.25)' }
+      : {
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOpacity: 0.25,
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 12,
+      }),
   },
   title: {
     fontSize: 14,

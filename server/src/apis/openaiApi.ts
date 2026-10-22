@@ -1,7 +1,8 @@
+import { findApiRequestPricingUsd } from '../config/apiLimits';
 import axios from 'axios';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 import { recordUsage } from '../services/entitlementService';
-import { getApiBudgetWindowKey, settleProviderAttempt, type ProviderAttemptAttribution } from './providerBudgeting';
+import { AdvanceSpendError, claimProviderSpend, getApiBudgetWindowKey, hasMeteredTokenUsage, quoteAiSpend, reserveAiSpend, reserveProviderSpendBatch, settleProviderAttempt, type ProviderAttemptAttribution } from './providerBudgeting';
 
 type OpenAiMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -81,6 +82,9 @@ export const postOpenAiAudioTranscription = async (params: {
   model?: string;
 }): Promise<{ text: string }> => {
   await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
+  const price = findApiRequestPricingUsd('OPENAI_AUDIO_MAX');
+  const [reservation] = await reserveProviderSpendBatch([{provider:'OPENAI',amountMicros:price == null ? null : Math.ceil(price*1_000_000)}]);
+  await claimProviderSpend(reservation);
   const form = new FormData();
   form.append('file', new Blob([new Uint8Array(params.audio)], { type: params.mimeType }), params.filename);
   form.append('model', params.model ?? 'whisper-1');
@@ -92,8 +96,10 @@ export const postOpenAiAudioTranscription = async (params: {
       { headers: { Authorization: `Bearer ${params.apiKey}` } }
     );
   } catch (error) {
+    await settleProviderAttempt({provider:'OPENAI',reservation,caller:params.caller,unitType:'request',outcome:'failed',usageKnown:false}).catch(() => undefined);
     throw normalizeAxiosError(error);
   }
+  await settleProviderAttempt({provider:'OPENAI',reservation,caller:params.caller,unitType:'request',costPerRequestUsd:price});
   return response.data;
 };
 
@@ -105,9 +111,10 @@ export const postOpenAiChatCompletion = async (params: {
   skipApiUsageReservation?: boolean;
   /** Cost-ledger attribution; always passed by the provider registry, even when usage accounting is off. */
   attribution?: ProviderAttemptAttribution;
+  spendReservation?: import('../types').ApiSpendReservation | null;
 }): Promise<OpenAiChatCompletionResponse> => {
   if (!params.skipApiUsageReservation) {
-    await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
+    await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller, spendAlreadyReserved: Boolean(params.spendReservation) });
   }
   const metadata = params.usageContext?.metadata ?? {};
   const attribution: ProviderAttemptAttribution = {
@@ -116,11 +123,19 @@ export const postOpenAiChatCompletion = async (params: {
     featureKey: params.attribution?.featureKey ?? (typeof metadata.featureKey === 'string' ? metadata.featureKey : null),
     tripId: params.attribution?.tripId ?? (typeof metadata.tripId === 'string' ? metadata.tripId : null),
   };
+  const payload = {...params.payload};
+  if (payload.max_tokens == null && payload.max_completion_tokens == null) {
+    if (/^gpt-5(?:\.|$|-)|^o\d/i.test(payload.model)) payload.max_completion_tokens = 2048; else payload.max_tokens = 2048;
+  }
+  const reservation = params.spendReservation ?? await reserveAiSpend('OPENAI',payload);
+  const quote = quoteAiSpend('OPENAI',payload);
+  if (reservation && (reservation.provider !== 'OPENAI' || quote === null || reservation.amountMicros < quote)) throw new AdvanceSpendError('The spend reservation does not cover this request.');
+  await claimProviderSpend(reservation);
   let response;
   try {
     response = await axios.post<OpenAiChatCompletionResponse>(
       'https://api.openai.com/v1/chat/completions',
-      params.payload,
+      payload,
       {
         headers: {
           Authorization: `Bearer ${params.apiKey}`,
@@ -135,6 +150,8 @@ export const postOpenAiChatCompletion = async (params: {
       unitType: 'tokens',
       model: params.payload.model,
       outcome: 'failed',
+      reservation,
+      usageKnown: false,
     }).catch(() => undefined);
     throw normalizeAxiosError(error);
   }
@@ -144,6 +161,8 @@ export const postOpenAiChatCompletion = async (params: {
     ...attribution,
     provider: 'OPENAI',
     attemptId: response.data?.id,
+    reservation,
+    usageKnown: hasMeteredTokenUsage(usage),
     unitType: 'tokens',
     model: params.payload.model,
     promptTokens: usage?.prompt_tokens ?? 0,

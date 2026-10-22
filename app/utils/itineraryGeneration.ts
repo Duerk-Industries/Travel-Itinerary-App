@@ -1,6 +1,6 @@
 import { parsePlanToDetails, type ParsedItineraryDetail } from './itineraryParser';
 
-type TransferMode = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+type TransferMode = 'Flight' | 'Public Transit' | 'Private Transfer' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
 type ActivityType =
   | 'Class'
   | 'Concert/Show'
@@ -105,7 +105,7 @@ const safeString = (value: unknown): string => String(value ?? '').trim();
 
 const validTransferType = (value: unknown): TransferMode => {
   const input = safeString(value);
-  return (['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const).includes(input as TransferMode)
+  return (['Flight', 'Public Transit', 'Private Transfer', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const).includes(input as TransferMode)
     ? (input as TransferMode)
     : 'Flight';
 };

@@ -3,15 +3,9 @@ import { getDb } from '../db.firebase';
 import { getCurrentDbProvider } from '../db';
 import { notify } from './notificationService';
 import { logError, logInfo } from '../logger';
-import { randomUUID, createHash } from 'crypto';
-import axios from 'axios';
-import { getStorage } from 'firebase-admin/storage';
-import { resolveLocationBucketName } from '../utils/gcsBucket';
-import { getEnvValue } from '../env';
+import { randomUUID } from 'crypto';
 import { isFeatureEnabled } from './entitlementService';
-import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../apis/usageLimiter';
-import { recordProviderRequestCost } from '../apis/providerBudgeting';
-import { getBlogDayByDate, getVisibleMediaForDay, getDayMapArtifact, upsertDayMapArtifact, getGroupMemberUserIdsForTrip } from '../blog/firebaseBlogDayData';
+import { getBlogDayByDate, getVisibleMediaForDay, getGroupMemberUserIdsForTrip } from '../blog/firebaseBlogDayData';
 
 const LEASE_SECONDS = 300;
 const WORKER_ID = `blog-worker-${randomUUID()}`;
@@ -20,13 +14,11 @@ export const runBlogBackgroundJobs = async () => {
   if (getCurrentDbProvider() === 'firebase') {
     await runMemoryLaneJobFirebase();
     await runGroupPromptsJobFirebase();
-    await runDayMapRenderJobFirebase();
     await runDayPhotoReminderJobFirebase();
     return;
   }
   await runMemoryLaneJob();
   await runGroupPromptsJob();
-  await runDayMapRenderJob();
   await runDayPhotoReminderJob();
 };
 
@@ -299,100 +291,6 @@ const runDayPhotoReminderJob = async () => {
   }
 };
 
-const runDayMapRenderJob = async () => {
-  // architecture §14.1/§9.1: trip_blog_day_map_render is fail-closed for exactly this reason —
-  // this job is the *only* path in the whole feature set allowed to call Google Static Maps at
-  // all, and it must not spend anything while the flag is off, regardless of what's backlogged.
-  if (!(await isFeatureEnabled('trip_blog_day_map_render'))) return;
-
-  const jobKey = 'blog:day_map_render';
-  if (!await claimLease(jobKey)) return;
-
-  let success = false;
-  try {
-    // Find (trip, day) pairs that have geotagged media but no current artifact.
-    const daysWithMedia = await queryBlog<{ trip_id: string; local_date: string; blog_day_id: string }>(
-      `SELECT DISTINCT i.trip_id, d.local_date, i.blog_day_id
-       FROM blog_items i
-       JOIN blog_days d ON d.id = i.blog_day_id
-       JOIN blog_item_assets ia ON ia.item_id = i.id
-       JOIN blog_media_assets a ON a.id = ia.asset_id
-       WHERE a.captured_lat IS NOT NULL AND a.captured_lng IS NOT NULL
-         AND i.deleted_at IS NULL AND a.state = 'ready'
-       LIMIT 10`
-    );
-
-    for (const day of daysWithMedia.rows) {
-      const points = await queryBlog<{ lat: number; lng: number }>(
-        `SELECT DISTINCT a.captured_lat as lat, a.captured_lng as lng
-         FROM blog_media_assets a
-         JOIN blog_item_assets ia ON ia.asset_id = a.id
-         JOIN blog_items i ON i.id = ia.item_id
-         WHERE i.blog_day_id = $1 AND a.captured_lat IS NOT NULL AND a.state = 'ready'`,
-        [day.blog_day_id]
-      );
-
-      if (points.rows.length === 0) continue;
-
-      const pointsData = points.rows.map(p => `${p.lat},${p.lng}`).sort().join('|');
-      const pointsHash = createHash('md5').update(pointsData).digest('hex');
-
-      const existing = await queryBlog(
-        `SELECT 1 FROM blog_day_map_artifacts WHERE trip_id = $1 AND day_date = $2 AND points_hash = $3`,
-        [day.trip_id, day.local_date, pointsHash]
-      );
-      if (existing.rowCount > 0) continue;
-
-      const apiKey = getEnvValue('GOOGLE_STATIC_MAPS_API_KEY') || getEnvValue('GOOGLE_MAPS_API_KEY');
-      if (!apiKey) {
-        logError('[blog-worker] Missing Google Maps API key, skipping day map render');
-        break;
-      }
-
-      const markers = points.rows.map(p => `markers=color:red|${p.lat},${p.lng}`).join('&');
-      const url = `https://maps.googleapis.com/maps/api/staticmap?size=600x300&scale=2&${markers}&key=${apiKey}`;
-
-      // architecture §14.1: "No request path may reach Google Static Maps" without going through
-      // the same admission/budget system every other provider call does — BLOG_DAY_MAP_RENDER's
-      // 200/day cap (api-limits.yaml) exists specifically to bound this job, not as a decorative
-      // config entry. A caught ApiLimitExceededError stops *this tick's* remaining renders rather
-      // than crashing the whole job — the backlog just picks up again next hour, degrading
-      // gracefully rather than erroring (Phase 5's own requirement for this exact case).
-      try {
-        await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller: 'BLOG_DAY_MAP_RENDER', requireConfiguredLimit: true });
-      } catch (limitErr) {
-        if (limitErr instanceof ApiLimitExceededError) {
-          logInfo('[blog-worker] Day Map Render job hit its budget cap for this window, stopping early');
-          break;
-        }
-        throw limitErr;
-      }
-      const response = await axios.get(url, { responseType: 'arraybuffer' });
-      await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
-      const bucketName = resolveLocationBucketName();
-      if (!bucketName) throw new Error('No GCS bucket configured');
-
-      const gcsPath = `blog-maps/${day.trip_id}/${day.local_date}/${pointsHash}.png`;
-      const file = getStorage().bucket(bucketName).file(gcsPath);
-      await file.save(Buffer.from(response.data), { contentType: 'image/png' });
-
-      await queryBlog(
-        `INSERT INTO blog_day_map_artifacts (trip_id, day_date, points_hash, gcs_path)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (trip_id, day_date, points_hash) DO UPDATE SET gcs_path = EXCLUDED.gcs_path`,
-        [day.trip_id, day.local_date, pointsHash, gcsPath]
-      );
-
-      logInfo(`[blog-worker] Rendered day map for trip ${day.trip_id} day ${day.local_date}`);
-    }
-
-    success = true;
-  } catch (err) {
-    logError(`[blog-worker] Day Map Render job failed`, err);
-  } finally {
-    await releaseLease(jobKey, success);
-  }
-};
 
 // --- Firebase job implementations -------------------------------------------------------------
 // These are genuine business jobs (notifications, a rendered artifact), not disposable derived
@@ -571,89 +469,3 @@ const runDayPhotoReminderJobFirebase = async () => {
   }
 };
 
-const runDayMapRenderJobFirebase = async () => {
-  // Same fail-closed gate as the Postgres job — see architecture §14.1/§9.1's note on runDayMapRenderJob.
-  if (!(await isFeatureEnabled('trip_blog_day_map_render'))) return;
-
-  const jobKey = 'blog:day_map_render';
-  if (!await claimLeaseFirebase(jobKey)) return;
-
-  let success = false;
-  try {
-    const db = getDb();
-    // Find candidate (trip, day) pairs with geotagged, ready media. blog_media_assets docs carry
-    // tripId/dayDate directly (see firebaseMediaRepository.ts), so a bounded scan over recent
-    // ready assets, filtered in-memory for a geotag, stands in for the Postgres query's
-    // `blog_items JOIN blog_item_assets JOIN blog_media_assets ... LIMIT 10` distinct-pairs scan.
-    const assetSnap = await db.collection('blog_media_assets')
-      .where('state', '==', 'ready')
-      .orderBy('createdAt', 'desc')
-      .limit(500)
-      .get();
-    const pairs = new Map<string, { tripId: string; dayDate: string }>();
-    for (const doc of assetSnap.docs) {
-      const data = doc.data() as any;
-      if (data.capturedLat == null || data.capturedLng == null) continue;
-      const key = `${data.tripId}:${data.dayDate}`;
-      if (!pairs.has(key)) pairs.set(key, { tripId: String(data.tripId), dayDate: String(data.dayDate) });
-      if (pairs.size >= 10) break;
-    }
-
-    let processed = 0;
-    for (const { tripId, dayDate } of pairs.values()) {
-      const day = await getBlogDayByDate(tripId, dayDate);
-      if (!day) continue;
-
-      const media = await getVisibleMediaForDay(dayDate, ['travelers', 'followers', 'public']);
-      const points = media
-        .filter((m) => m.captured_lat != null && m.captured_lng != null)
-        .map((m) => ({ lat: m.captured_lat as number, lng: m.captured_lng as number }));
-      if (points.length === 0) continue;
-      const uniquePoints = [...new Map(points.map((p) => [`${p.lat},${p.lng}`, p])).values()];
-
-      const pointsData = uniquePoints.map((p) => `${p.lat},${p.lng}`).sort().join('|');
-      const pointsHash = createHash('md5').update(pointsData).digest('hex');
-
-      const existing = await getDayMapArtifact(tripId, dayDate, pointsHash);
-      if (existing) continue;
-
-      const apiKey = getEnvValue('GOOGLE_STATIC_MAPS_API_KEY') || getEnvValue('GOOGLE_MAPS_API_KEY');
-      if (!apiKey) {
-        logError('[blog-worker] Missing Google Maps API key, skipping day map render');
-        break;
-      }
-
-      const markers = uniquePoints.map((p) => `markers=color:red|${p.lat},${p.lng}`).join('&');
-      const url = `https://maps.googleapis.com/maps/api/staticmap?size=600x300&scale=2&${markers}&key=${apiKey}`;
-
-      try {
-        await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller: 'BLOG_DAY_MAP_RENDER', requireConfiguredLimit: true });
-      } catch (limitErr) {
-        if (limitErr instanceof ApiLimitExceededError) {
-          logInfo('[blog-worker] Day Map Render job hit its budget cap for this window, stopping early');
-          break;
-        }
-        throw limitErr;
-      }
-      const response = await axios.get(url, { responseType: 'arraybuffer' });
-      await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
-      const bucketName = resolveLocationBucketName();
-      if (!bucketName) throw new Error('No GCS bucket configured');
-
-      const gcsPath = `blog-maps/${tripId}/${dayDate}/${pointsHash}.png`;
-      const file = getStorage().bucket(bucketName).file(gcsPath);
-      await file.save(Buffer.from(response.data), { contentType: 'image/png' });
-
-      await upsertDayMapArtifact(tripId, dayDate, pointsHash, gcsPath);
-
-      logInfo(`[blog-worker] Rendered day map for trip ${tripId} day ${dayDate} (firebase)`);
-      processed += 1;
-    }
-
-    success = true;
-  } catch (err) {
-    logError(`[blog-worker] Day Map Render job failed (firebase)`, err);
-  } finally {
-    await releaseLeaseFirebase(jobKey, success);
-  }
-};

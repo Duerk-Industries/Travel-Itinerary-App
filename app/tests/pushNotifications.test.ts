@@ -81,7 +81,7 @@ describe('registerForPushNotificationsAsync', () => {
 
   test('never throws when the Expo API call fails', async () => {
     mockGetToken.mockRejectedValue(new Error('network down'));
-    await expect(registerForPushNotificationsAsync('token-abc')).resolves.toBeUndefined();
+    await expect(registerForPushNotificationsAsync('token-abc')).resolves.toBe(false);
   });
 
   test('skips registration when no EAS project id is configured', async () => {

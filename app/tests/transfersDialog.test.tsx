@@ -97,6 +97,12 @@ describe('Flights dialog', () => {
       testRenderer = renderer.create(<Harness onSave={onSave} />);
     });
     const root = testRenderer!.root;
+    const labels = root.findAll((node: any) => node.type === 'Text').map((node: any) => node.props.children);
+    expect(labels).toContain('Airline');
+    expect(labels).toContain('Flight Number');
+    expect(labels).not.toContain('Type');
+    expect(root.findAllByProps({ testID: 'transfer-directions' })).toHaveLength(0);
+
 
     act(() => {
       root.findByProps({ testID: 'flight-modal-departure-location' }).props.onChangeText('JFK');

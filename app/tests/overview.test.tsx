@@ -19,6 +19,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Image } from 'react-native';
 import { OverviewTab, buildDayWeatherLocation, makeWeatherLocationGeofriendly } from '../tabs/overview';
 import React from 'react';
+import NearbyPlacesPanel from '../components/NearbyPlacesPanel';
 
 describe('Overview helpers', () => {
   test('chooses the first lodging location for day weather', () => {
@@ -335,6 +336,46 @@ describe('Overview UI (nested itinerary)', () => {
     }
   });
 
+  test('hides What to book now when there are no Needs Booking entries', async () => {
+    const { queryByTestId, queryByText } = await renderOverview(<OverviewTab {...baseProps} tours={[
+      { id: 'needed', name: 'Needed activity', status: 'Needed', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
+      { id: 'proposed', name: 'Proposed activity', status: 'Proposed', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
+    ] as any} />);
+    expect(queryByTestId('overview-booking-priorities-card')).toBeNull();
+    expect(queryByText('What to book now')).toBeNull();
+  });
+
+  test('shows only Needs Booking entries and hides the section after they are booked', async () => {
+    const tours = [
+      { id: 'ready', name: 'Ready activity', status: 'Needs Booking', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
+      { id: 'proposed', name: 'Proposed activity', status: 'Proposed', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
+    ];
+    const { getByTestId, queryByTestId, rerender } = await renderOverview(<OverviewTab {...baseProps} tours={tours as any} />);
+    expect(getByTestId('overview-booking-priorities-card')).toBeTruthy();
+    expect(getByTestId('overview-booking-priority-activity-ready')).toBeTruthy();
+    expect(queryByTestId('overview-booking-priority-activity-proposed')).toBeNull();
+    rerender(<OverviewTab {...baseProps} tours={tours.map(tour => ({ ...tour, status: 'Booked' })) as any} />);
+    expect(queryByTestId('overview-booking-priorities-card')).toBeNull();
+  });
+
+  test('shows Nearby only while the day map is shown and omits the duplicate transfer narrative', async () => {
+    const flight = { id: 'route', trip_id: 'trip1', departure_date: '2026-01-29', arrival_date: '2026-01-29',
+      departure_location: 'BOS', arrival_location: 'NRT', departure_time: '09:00', arrival_time: '18:00',
+      carrier: 'Airline', flight_number: '1', cost: 0, booking_reference: '' };
+    const view = await renderOverview(<OverviewTab {...baseProps} flights={[flight] as any} />);
+    fireEvent.press(await view.findByTestId('overview-day-card-1'));
+    const map = view.UNSAFE_root.findAll((node: { props: { testID?: string; onOpenChange?: unknown } }) => node.props.testID === 'day-detail-map' && Boolean(node.props.onOpenChange))[0];
+    expect(map).toBeTruthy();
+    fireEvent(map, 'openChange', false);
+    expect(view.UNSAFE_root.findAllByType(NearbyPlacesPanel)).toHaveLength(0);
+    fireEvent(map, 'openChange', true);
+    expect(view.UNSAFE_root.findAllByType(NearbyPlacesPanel)).toHaveLength(1);
+    fireEvent(map, 'openChange', false);
+    expect(view.UNSAFE_root.findAllByType(NearbyPlacesPanel)).toHaveLength(0);
+    expect(view.queryByText('Transfer from BOS to NRT.')).toBeNull();
+    expect(view.getByText('Your transfer')).toBeTruthy();
+  });
+
   test('renders day pills with overview and month-inclusive dates', async () => {
     const { findByTestId, findByText } = await renderOverview(<OverviewTab {...baseProps} />);
     expect(await findByTestId('overview-day-pill-overview')).toBeTruthy();
@@ -523,6 +564,11 @@ describe('Overview UI (nested itinerary)', () => {
   });
 
   test('opens flight details modal from day details', async () => {
+    fetchMock.mockImplementation(async (input: unknown) => ({
+      ok: true,
+      json: async () => String(input).includes('/locations?q=BOS') ? ['Boston (BOS)']
+        : String(input).includes('/locations?q=CAI') ? ['Cairo (CAI)'] : [],
+    }));
     const flight = {
       id: 'flight-1',
       passenger_name: 'Traveler',
@@ -548,8 +594,34 @@ describe('Overview UI (nested itinerary)', () => {
       <OverviewTab {...baseProps} attendees={attendees} flights={[flight] as any} />
     );
     fireEvent.press(await findByTestId('overview-day-card-1'));
-    fireEvent.press(await findByTestId('day-details-flight-details'));
-    expect(await findByText('Transfer Details')).toBeTruthy();
+    fireEvent.press(await findByTestId(`day-details-transfer-${flight.id}`));
+    expect(await findByTestId('flight-overview-details')).toBeTruthy();
+    expect(await findByTestId('flight-details-edit')).toBeTruthy();
+    expect(await findByText('Boston (BOS) → Cairo (CAI)')).toBeTruthy();
+    expect(await findByText('Boston (BOS)')).toBeTruthy();
+    expect(await findByText('Cairo (CAI)')).toBeTruthy();
+  });
+
+  test('opens only the selected ground transfer with directions without the dialog flag', async () => {
+    const flights = [
+      { id: 'air', trip_id: 'trip1', transfer_type: 'Flight', departure_date: '2026-01-29', departure_location: 'BOS', arrival_location: 'NRT', booking_reference: 'AIR123' },
+      { id: 'ground', trip_id: 'trip1', transfer_type: 'Public Transit', departure_date: '2026-01-29', departure_location: 'Tokyo Station', arrival_location: 'Hotel address', booking_reference: 'GROUND456' },
+    ];
+    const { findByTestId, findByText, queryByText, queryByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} flights={flights as any} />
+    );
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-transfer-ground'));
+    expect(await findByTestId('flight-overview-details')).toBeTruthy();
+    expect(await findByText('GROUND456')).toBeTruthy();
+    expect(queryByText('AIR123')).toBeNull();
+    expect(await findByTestId('flight-details-edit')).toBeTruthy();
+    expect(await findByTestId('transfer-directions')).toBeTruthy();
+    expect(await findByText('Public transport · Apple Maps')).toBeTruthy();
+    fireEvent.press(await findByText('Close'));
+    fireEvent.press(await findByTestId('day-details-transfer-air'));
+    expect(await findByText('AIR123')).toBeTruthy();
+    expect(queryByTestId('transfer-directions')).toBeNull();
   });
 
   test('shows next day button in day details', async () => {

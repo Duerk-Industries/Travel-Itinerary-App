@@ -24,6 +24,7 @@ type LocationSelectorProps = {
   title?: string;
   locationSearchKind?: 'country_state' | 'country_destination' | 'destination';
   showCitySearch?: boolean;
+  initialQuery?: string;
 };
 
 const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
@@ -38,8 +39,9 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
   title = "Search countries or states",
   locationSearchKind = 'country_state',
   showCitySearch = true,
+  initialQuery = '',
 }) => {
-  const [countryStateQuery, setCountryStateQuery] = useState('');
+  const [countryStateQuery, setCountryStateQuery] = useState(initialQuery);
   const [countryStateSuggestions, setCountryStateSuggestions] = useState<LocationOption[]>([]);
   const [countryStateLoading, setCountryStateLoading] = useState(false);
   const [cityQuery, setCityQuery] = useState('');

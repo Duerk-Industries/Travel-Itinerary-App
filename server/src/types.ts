@@ -1,4 +1,4 @@
-export type ItineraryStatus = 'Needed' | 'Proposed' | 'Booked' | 'Cancelled' | 'Completed';
+export type ItineraryStatus = 'Needed' | 'Proposed' | 'Needs Booking' | 'Booked' | 'Cancelled' | 'Completed';
 export type ActivityType =
   | 'Class'
   | 'Concert/Show'
@@ -237,6 +237,8 @@ export interface GenerationIdempotencyRecord {
 }
 
 export type AuditAction =
+  | 'LEGACY_MAP_RETIREMENT_REQUESTED'
+  | 'LEGACY_MAP_ARTIFACT_RETIRED'
   | 'ADMIN_BOOTSTRAP_GRANTED'
   | 'USER_ROLE_GRANTED'
   | 'USER_ROLE_REVOKED'
@@ -244,6 +246,7 @@ export type AuditAction =
   | 'TIER_LIMIT_UPDATED'
   | 'TIER_ENTITLEMENT_UPDATED'
   | 'FEATURE_FLAG_UPDATED'
+  | 'FEATURE_COHORT_UPDATED'
   | 'AI_PROVIDER_CONFIG_UPDATED'
   | 'AI_PROVIDER_CERTIFIED'
   | 'AI_PROVIDER_CERTIFICATION_REVOKED'
@@ -307,10 +310,14 @@ export interface WebUser {
 }
 
 export interface Flight {
+  departureLat?: number | null;
+  departureLng?: number | null;
+  arrivalLat?: number | null;
+  arrivalLng?: number | null;
   id: string;
   userId: string;
   status: ItineraryStatus;
-  transferType?: 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+  transferType?: 'Flight' | 'Public Transit' | 'Private Transfer' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
   netVotes?: number;
   userVote?: -1 | 1 | null;
   netRating?: number;
@@ -588,7 +595,41 @@ export interface Trait {
   createdAt: string;
 }
 
-export interface Lodging {
+export type CoordinateSource = 'catalog' | 'airport' | 'manual' | 'geocoder';
+export interface PlanningCoordinates {
+  lat?: number | null;
+  lng?: number | null;
+  geoCity?: string | null;
+  coordinateSource?: CoordinateSource | null;
+}
+export type PlanningMapPoint = PlanningCoordinates & {
+  id: string; kind: 'flight' | 'lodging' | 'activity' | 'car_rental';
+  title: string; address?: string; label?: string; coordinateAttribution?: string; coordinateProvider?: string;
+  /** Links the coordinate provider's terms require near its results, such as "Powered by ...". */
+  coordinateCreditLinks?: Array<{ label: string; url: string }>;
+};
+export type NearbyPlace = {
+  catalogId: string; name: string; lat: number; lng: number; distanceMeters: number;
+  activityType: ActivityType; description: string; durationMinutes: number;
+  sourceUrl: string | null; sourceLabel: string | null;
+};
+export type CatalogActivityCreate = { tripId: string; date: string; catalogId: string; operationKey: string };
+export type CatalogActivityResult = { activity: Activity; replayed: boolean };
+
+export type TripBookingEvidence = {
+  provider: string; reference: string; itemType: import('./ingestion/contracts').ParsedItemType;
+  startDate: string | null; endDate: string | null;
+};
+export type ImportTripDraft = { name: string; destinationQuery: string; startDate: string; endDate: string };
+export type ImportForwarderTrust = 'verified' | 'uncertain' | 'not_forwarded';
+export type ImportReviewSuggestion = {
+  itemId: string; itemType: import('./ingestion/contracts').ParsedItemType; label: string;
+  tripId: string; tripName: string; reasons: string[]; reviewVersion: string;
+  forwarderTrust: ImportForwarderTrust;
+  startDate: string | null; endDate: string | null; amount: number | null; currency: string | null;
+};
+
+export interface Lodging extends PlanningCoordinates {
   id: string;
   user_id: string;
   trip_id: string;
@@ -614,7 +655,10 @@ export interface Lodging {
   placeId?: string;
 }
 
-export interface Activity {
+export interface Activity extends PlanningCoordinates {
+  catalogId?: string | null;
+  dayPosition?: number | null;
+  dayOrderPinned?: boolean;
   id: string;
   userId: string;
   tripId: string;
@@ -639,10 +683,24 @@ export interface Activity {
   createdAt: string;
 }
 
+/** Public inspiration contains only explicitly shared activity templates, never booking data. */
+export type SharedActivityTemplate = Pick<Activity, 'id' | 'name' | 'activityType' | 'duration'> & {
+  lat?: number; lng?: number; catalogId: string; sourceUrl?: string;
+};
+export type PublicTripInspiration = {
+  username: string; tripSlug: string; title: string; sourcePath: string; activities: SharedActivityTemplate[];
+};
+export type PublicActivityCopy = {
+  tripId: string; date: string; operationKey: string;
+  publicSource: { username: string; tripSlug: string; activityId: string };
+};
+
 // Temporary compatibility alias while call sites transition to Activity naming.
 export type Tour = Activity;
 
-export interface CarRental {
+export interface CarRental extends PlanningCoordinates {
+  dropoffLat?: number | null;
+  dropoffLng?: number | null;
   id: string;
   userId: string;
   tripId: string;
@@ -726,7 +784,7 @@ export type ItineraryPromptComfort = 'Budget' | 'Midrange' | 'Luxury';
 export type ItineraryPromptMobility = 'Low' | 'Medium' | 'High';
 export type ItineraryPromptCarPreference = 'PublicTransitOnly' | 'DayTripsOnly' | 'FullTripRental';
 export type ItineraryPromptInteractionStyle = 'Self-Guided' | 'Mixed' | 'Guided';
-export type TransferMode = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+export type TransferMode = 'Flight' | 'Public Transit' | 'Private Transfer' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
 
 export interface ItineraryPromptProfile {
   pace: ItineraryPromptPace;
@@ -1331,3 +1389,93 @@ export interface AnalyticsEventRecord {
   receivedAt: string;
   expiresAt: string;
 }
+
+export type NotificationCategory = 'blog_mention' | 'blog_comment_reply' | 'blog_nudge' | 'blog_reaction_digest' | 'blog_memory_lane' | 'blog_milestone' | 'blog_day_photo_reminder' | 'activity_recap' | 'import_result' | 'cancellation_deadline' | 'ai_finished' | 'trip_digest';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  category: NotificationCategory;
+  tripId?: string | null;
+  actorUserId?: string | null;
+  title: string;
+  body: string;
+  deepLink?: string | null;
+  payload: Record<string, any>;
+  readAt?: string | null;
+  seenAt?: string | null;
+  createdAt: string;
+  dedupeKey?: string | null;
+}
+
+export interface NotificationDevice {
+  id: string;
+  userId: string;
+  platform: 'ios' | 'android' | 'web';
+  pushTokenCiphertext: string;
+  pushTokenHash: string;
+  deviceLabel?: string | null;
+  permissionState: 'granted' | 'denied' | 'undetermined' | 'revoked';
+  lastSeenAt: string;
+  failureCount: number;
+  disabledAt?: string | null;
+  createdAt: string;
+}
+
+export interface NotificationPreferences {
+  digestTiming?: { timezone: string; time: string } | null;
+  quietTiming?: { timezone: string; quietStart: string; quietEnd: string } | null;
+  userId: string;
+  category: NotificationCategory;
+  inApp: boolean;
+  push: boolean;
+  email: boolean;
+}
+
+export interface NotificationOutboxEntry {
+  id: string;
+  notificationId: string;
+  channel: 'push' | 'email';
+  state: 'pending' | 'leased' | 'sent' | 'dead';
+  attemptCount: number;
+  nextAttemptAt: string;
+  leaseOwner?: string | null;
+  leaseExpiresAt?: string | null;
+  lastErrorCode?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Private member projection. Never used for public/followed trip pages. */
+export interface PlanningBundle {
+  schemaVersion: 1;
+  tripId: string;
+  representation: { costTracking: boolean };
+  trip: Trip;
+  groupMembers: unknown[];
+  flights: Flight[];
+  lodgings: Lodging[];
+  tours: Activity[];
+  carRentals: CarRental[];
+  expenses: unknown[];
+  payments: unknown[];
+  coveredBy: Record<string, string>;
+  itinerary: { id: string; planMarkdown: string | null; details: ItineraryDetail[] } | null;
+}
+
+// Only reviewed public catalog POIs enter this shared queue; never item addresses.
+export type GeocodeQuery = { name: string; locality: string; country: string; language: string; providerVersion: string };
+export type GeocodeResult = { lat: number; lng: number; geoCity: string | null; quality: 'approximate'; providerCategory?: string; providerType?: string; attribution: string; provider: string };
+export type GeocodeJob = { key: string; query: GeocodeQuery; state: 'pending' | 'done' | 'dead'; attempts: number; dueAt: number; lastErrorCode?: 'disabled' | 'lease-lost' | 'budget' | 'rate-limit' | 'timeout' | 'provider' | 'invalid-response'; leaseToken?: string; leaseUntil?: number; result?: GeocodeResult | null; expiresAt?: number };
+export type GeocodingState = { jobs: GeocodeJob[]; nextAllowedAt: number; providerLeaseToken?: string; providerLeaseUntil?: number };
+
+export type GmailForwardingConfirmation = { provider: 'gmail'; code: string; requestedBy: string; expiresAt: number };
+
+
+/** Internal, durable admission for one provider attempt; contains no prompt or account data. */
+export type ApiSpendReservation = {
+  id: string; provider: string; windowKey: string; amountMicros: number; limitMicros: number | null;
+  related?: ApiSpendReservation[];
+};
+
+export type LegacyBlogMapArtifact = {tripId:string;dayDate:string;pointsHash:string;path:string};

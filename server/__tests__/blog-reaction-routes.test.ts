@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { followTripAs, reactionRows, counterRows, blogItemTags } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 
@@ -51,7 +51,7 @@ describe('blog reaction routes (PUT/DELETE/GET .../reactions)', () => {
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
-    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3)', [randomUUID(), tripId, followerId]);
+    await followTripAs(tripId, followerId);
 
     const item = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
@@ -138,17 +138,11 @@ describe('blog reaction routes (PUT/DELETE/GET .../reactions)', () => {
     await request(app).delete(`/api/trips/${tripId}/blog/items/${created.body.id}`)
       .set('Authorization', `Bearer ${travelerToken}`).send({ version: created.body.version }).expect(204);
 
-    const deleted = await queryBlog<{ tags: string[] }>('SELECT tags FROM blog_items WHERE id = $1', [created.body.id]);
-    const reactions = await queryBlog<{ target_kind: string }>(
-      'SELECT target_kind FROM blog_reactions WHERE blog_item_id = $1 OR blog_day_id = $2', [created.body.id, day.id]
-    );
-    const counters = await queryBlog<{ target_kind: string }>(
-      "SELECT target_kind FROM blog_engagement_counters WHERE (target_kind = 'item' AND target_id = $1) OR (target_kind = 'day' AND target_id = $2)",
-      [created.body.id, day.id]
-    );
-    expect(deleted.rows[0].tags).toEqual([]);
-    expect(reactions.rows.map((row) => row.target_kind)).toEqual(['day']);
-    expect(counters.rows.map((row) => row.target_kind)).toEqual(['day']);
+    const reactions = await reactionRows([created.body.id, day.id]);
+    const counters = await counterRows([created.body.id, day.id]);
+    expect(await blogItemTags(created.body.id)).toEqual([]);
+    expect(reactions.map((row) => row.targetKind)).toEqual(['day']);
+    expect(counters.map((row) => row.targetKind)).toEqual(['day']);
   });
 
   it('404s when the flag is off', async () => {

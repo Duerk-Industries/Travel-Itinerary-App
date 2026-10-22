@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { haversineKm, type LatLon } from '../utils/geo';
-import { isFeatureEnabled } from './entitlementService';
+import { isFeatureEnabled, assertCanUseFeature } from './entitlementService';
 import { getEnvValue } from '../env';
 import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../apis/usageLimiter';
 import { recordProviderRequestCost } from '../apis/providerBudgeting';
@@ -188,7 +188,11 @@ export class DirectionsApiTransferEstimator implements TransferEstimator {
   }
 }
 
-export const getTransferEstimator = async (): Promise<TransferEstimator> => {
+export const getTransferEstimator = async (userId?: string): Promise<TransferEstimator> => {
   const useDirectionsApi = await isFeatureEnabled('attractions_transfer_directions_api');
-  return useDirectionsApi ? new DirectionsApiTransferEstimator() : new HeuristicTransferEstimator();
+  let entitled = false;
+  if (useDirectionsApi && userId) {
+    try { await assertCanUseFeature(userId, 'attractions_transfer_directions_api', 'user'); entitled = true; } catch { /* heuristic fallback */ }
+  }
+  return entitled ? new DirectionsApiTransferEstimator() : new HeuristicTransferEstimator();
 };

@@ -2,7 +2,7 @@ import type { ExtractionResult, NormalizedDocument } from '../../ingestion/contr
 import { INGESTION_LOGIC_VERSION } from '../../ingestion/config';
 import { LlmExtractor } from '../../ingestion/extraction/llmExtractor';
 import { getAdminSetting } from '../../db';
-import { getApiBudgetWindowKey, getCurrentApiBudgetStatus, recordApiCost } from '../../apis/providerBudgeting';
+import { getCurrentApiBudgetStatus, withSpendScope } from '../../apis/providerBudgeting';
 import { logError, logInfo } from '../../logger';
 import { captureAiInteraction } from '../capture/captureService';
 import { compareExtractionResults } from '../evaluation/comparisonEngine';
@@ -78,7 +78,7 @@ export const maybeRunShadowParse = async (params: {
     let llmResult: ExtractionResult;
     const startedAt = Date.now();
     try {
-      llmResult = await extractor.extract(params.doc, buildShadowConfig(params.doc));
+      llmResult = await withSpendScope({provider:'SHADOW_PARSE',limitMicros:Math.floor(budgetLimitUsd*1_000_000)}, () => extractor.extract(params.doc, buildShadowConfig(params.doc)));
       if (experimentContext) {
         await recordExperimentVariantOutcome({ ...experimentContext, success: true });
       }
@@ -89,23 +89,7 @@ export const maybeRunShadowParse = async (params: {
       throw err;
     }
 
-    // The underlying LLM call itself is recorded under the real provider's cost
-    // bucket (e.g. OPENAI) by postOpenAiChatCompletion — that's correct for the
-    // provider's own monthly budget. But the shadow-mode $/month cap checked
-    // above via getCurrentApiBudgetStatus('SHADOW_PARSE') needs its OWN spend
-    // recorded under that synthetic key, or it never accrues and the cap is a
-    // no-op. Record it here, right after the call, using the cost the
-    // extractor already computed. Counter-only on purpose: the attempt is
-    // already settled in provider_cost_ledger under the real provider, so a
-    // ledger row here would double count spend.
     const shadowCostUsd = llmResult.usageMetrics.estimatedCostUsd ?? 0;
-    if (shadowCostUsd > 0) {
-      await recordApiCost({
-        provider: 'SHADOW_PARSE',
-        windowKey: getApiBudgetWindowKey(),
-        amountMicros: Math.round(shadowCostUsd * 1_000_000),
-      });
-    }
 
     const comparison = compareExtractionResults(params.productionResult, llmResult);
     captureAiInteraction({

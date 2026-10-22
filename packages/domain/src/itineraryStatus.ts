@@ -1,4 +1,4 @@
-export const ITINERARY_STATUSES = ['Needed', 'Proposed', 'Booked', 'Cancelled', 'Completed'] as const;
+export const ITINERARY_STATUSES = ['Needed', 'Proposed', 'Needs Booking', 'Booked', 'Cancelled', 'Completed'] as const;
 
 export type ItineraryStatus = (typeof ITINERARY_STATUSES)[number];
 

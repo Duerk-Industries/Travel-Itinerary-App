@@ -1,3 +1,4 @@
+import type { KeepsakeMapCapture } from './keepsakeMapCapture';
 // Printable trip keepsake: one themed HTML document used both for the browser print view (web)
 // and for the PDF the phone app creates with expo-print. Pure functions, so they're testable.
 
@@ -87,21 +88,25 @@ const notesForDay = (day: any): string[] =>
   (day?.items || []).filter((item: any) => item.kindKey === 'core.text').flatMap((item: any) => paragraphsFromRichText(item.body));
 
 /** The themed keepsake document. Days with nothing on them are left out. */
-export const buildKeepsakeHtml = (blog: any, themeKey?: string | null): string => {
+export const buildKeepsakeHtml = (blog: any, themeKey?: string | null, maps: Record<string, KeepsakeMapCapture> = {}): string => {
   const theme = getKeepsakeTheme(themeKey);
   const title = String(blog?.title || 'Trip keepsake');
   const days: any[] = Array.isArray(blog?.days) ? blog.days : [];
-  const contentDays = days.filter((day) => day.headline || day.summary || notesForDay(day).length || photosForDay(day).length);
+  const contentDays = days.filter((day) => maps[day.localDate] || day.headline || day.summary || notesForDay(day).length || photosForDay(day).length);
   const range = formatKeepsakeRange(days.map((day) => day.localDate));
 
   const sections = contentDays.map((day) => {
     const photos = photosForDay(day);
     const figures = photos.map((photo) => `<figure><img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt)}">${photo.caption ? `<figcaption>${escapeHtml(photo.caption)}</figcaption>` : ''}</figure>`).join('');
+    const map = maps[day.localDate]?.approximate ? maps[day.localDate] : undefined;
+    const safeImage = map?.image && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(map.image) && map.image.length <= 1_000_000 ? map.image : null;
+    const mapHtml = map ? `<figure class="day-map">${safeImage ? `<img src="${safeImage}" alt="Approximate areas visited">` : '<p>Map image unavailable — areas are listed below.</p>'}<figcaption>Approximate areas; lodging locations omitted. © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors</figcaption><ol>${map.labels.slice(0, 12).map(label => `<li>${escapeHtml(label)}</li>`).join('')}</ol></figure>` : '';
     return `<section class="day">
   <p class="day-date">${escapeHtml(formatKeepsakeDay(day.localDate))}</p>
   ${day.headline ? `<h2>${escapeHtml(day.headline)}</h2>` : ''}
   ${day.summary ? `<p class="summary">${escapeHtml(day.summary)}</p>` : ''}
   ${notesForDay(day).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}
+  ${mapHtml}
   ${figures ? `<div class="photos${photos.length === 1 ? ' single' : ''}">${figures}</div>` : ''}
 </section>`;
   }).join('\n');

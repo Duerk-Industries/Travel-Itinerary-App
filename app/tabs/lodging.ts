@@ -1,3 +1,4 @@
+import type { PlanningCoordinates } from '../../server/src/types';
 import { formatDateLong } from '../utils/formatDateLong';
 import { startItemSaveTask } from '../utils/analytics/track';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -9,7 +10,7 @@ import {
   shouldRelaxRequiredFields,
 } from '../utils/itineraryStatus';
 
-export type Lodging = {
+export type Lodging = PlanningCoordinates & {
   id: string;
   userId: string;
   tripId: string;
@@ -90,6 +91,7 @@ export const calculateNights = (checkIn: string, checkOut: string): number => {
 // only, so accept both or lodging costs/dates silently read as empty.
 export const normalizeLodgingFromApi = (l: any): Lodging => ({
   id: l.id,
+  lat: l.lat, lng: l.lng, geoCity: l.geoCity ?? l.geo_city, coordinateSource: l.coordinateSource ?? l.coordinate_source,
   userId: l.user_id ?? l.userId,
   tripId: l.trip_id ?? l.tripId,
   status: normalizeItineraryStatus(l.status, LEGACY_ITINERARY_STATUS),
@@ -196,8 +198,9 @@ export const fetchLodgingsApi = async (backendUrl: string, activeTripId: string,
   const res = await fetch(`${backendUrl}/api/lodgings?tripId=${activeTripId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error('Unable to load trip details');
   const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('Invalid trip details response');
   return (data as any[]).map(normalizeLodgingFromApi);
 };
 

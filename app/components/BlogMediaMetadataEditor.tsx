@@ -91,7 +91,12 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         if (!uri) throw new Error('No recording was captured');
         const result = await onTranscribe({ uri, mimeType: 'audio/m4a', name: 'caption-recording.m4a' });
         if (result.caption) setCaption(result.caption);
-        setNotice('Transcribed — review it before saving.');
+        // Save stays disabled until alt text is set (or the photo is marked decorative) — the
+        // dictation only ever fills the caption, so say so here rather than leaving the Save
+        // button silently inert with no explanation (that's exactly what prompted this note).
+        setNotice(isDecorative || altText.trim()
+          ? 'Transcribed — review it before saving.'
+          : 'Transcribed — add alt text (or mark decorative) below, then save.');
       } catch (error: any) {
         setNotice(error?.message || 'Unable to transcribe the recording');
       } finally {
@@ -151,7 +156,7 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         <Text style={{ color: mutedColor }}>Decorative image (no alt text needed)</Text>
       </TouchableOpacity>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-        <TouchableOpacity testID="blog-media-save-metadata" disabled={busy || (!isDecorative && !altText.trim())} onPress={save} style={styles?.button}>
+        <TouchableOpacity testID="blog-media-save-metadata" disabled={busy || (!isDecorative && !altText.trim())} onPress={save} style={[styles?.button, !isDecorative && !altText.trim() ? { opacity: 0.5 } : null]}>
           <Text style={styles?.buttonText}>{busy ? 'Saving…' : 'Save details'}</Text>
         </TouchableOpacity>
         {canSuggest ? (
@@ -172,7 +177,13 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
           </TouchableOpacity>
         ) : null}
       </View>
-      {notice ? <Text accessibilityLiveRegion="polite" style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>{notice}</Text> : null}
+      {notice ? (
+        <Text accessibilityLiveRegion="polite" style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>{notice}</Text>
+      ) : !busy && !isDecorative && !altText.trim() ? (
+        <Text accessibilityLiveRegion="polite" style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>
+          Add alt text (or mark this photo decorative) to save — it's required so screen readers can describe it.
+        </Text>
+      ) : null}
     </View>
   );
 };

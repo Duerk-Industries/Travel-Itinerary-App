@@ -1,3 +1,4 @@
+import { recordApiCost } from '../src/apis/providerBudgeting';
 /// <reference types="jest" />
 /// <reference types="node" />
 import fs from 'fs';
@@ -37,7 +38,7 @@ describe('OpenAI provider budgeting', () => {
         '      ITINERARY_PLAN_P0_NORM: 1000',
         'budgeting:',
         '  OPENAI:',
-        '    monthlyBudgetUsd: 0.00002',
+        '    monthlyBudgetUsd: 0.005',
         '    alertThresholdPercent: 80',
         '    models:',
         '      GPT_4O_MINI:',
@@ -108,6 +109,7 @@ describe('OpenAI provider budgeting', () => {
       },
     });
 
+    await recordApiCost({provider:'OPENAI',amountMicros:4980});
     await expect(
       postOpenAiChatCompletion({
         caller: 'ITINERARY_PLAN_P0_NORM',

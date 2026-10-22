@@ -21,7 +21,7 @@ describe('packages/domain contract', () => {
     });
 
     const normalizeCases: unknown[] = [
-      'Needed', 'Proposed', 'Booked', 'Cancelled', 'Completed',
+      'Needed', 'Proposed', 'Needs Booking', 'Booked', 'Cancelled', 'Completed',
       'needed', 'booked', null, undefined, '', 0, {}, [],
     ];
     it.each(normalizeCases.map((v) => [String(v)]))(

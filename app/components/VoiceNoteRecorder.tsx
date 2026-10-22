@@ -9,7 +9,8 @@
  * existing item's caption field.
  */
 import React, { useState } from 'react';
-import { Text, TouchableOpacity } from 'react-native';
+import { TouchableOpacity } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
 import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 
 export type RecordedVoiceNote = { uri: string; mimeType: string; name: string };

@@ -93,3 +93,14 @@ export const sendExpoPushNotifications = async (params: {
   const alignedTickets = messages.map((_, i) => (validFlags[i] ? tickets[ticketIndex++] ?? null : null));
   return { tickets: alignedTickets };
 };
+
+export const getExpoPushReceipts = async (ids: string[]): Promise<Record<string, { status: 'ok' | 'error'; details?: { error?: string } }>> => {
+  if (!ids.length || ids.length > 100) throw new Error('Invalid receipt batch');
+  await reserveApiUsageOrThrow({ provider: 'EXPO_PUSH', caller: 'NOTIFICATION_RECEIPT' });
+  await recordProviderRequestCost({ provider: 'EXPO_PUSH' });
+  const accessToken = getEnvValue('EXPO_ACCESS_TOKEN');
+  const response = await axios.post('https://exp.host/--/api/v2/push/getReceipts', { ids }, {
+    headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, timeout: 10000, maxContentLength: 256 * 1024,
+  });
+  return response.data?.data ?? {};
+};

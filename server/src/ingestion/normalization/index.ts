@@ -172,7 +172,7 @@ const normalizeFromBytes = async (
 }> => {
   const bytes = await readTempBytes(payload.contentBytesRef);
   const decoded = decodeText(bytes);
-  if (payload.mimeType === 'text/plain') {
+  if (payload.mimeType === 'text/plain' || payload.mimeType === 'text/calendar') {
     return { normalizedText: decoded, normalizedHtml: null, extractedTextSource: 'text', normalizationQuality: 'FULL_TEXT' };
   }
   if (payload.mimeType === 'text/html') {
@@ -284,13 +284,14 @@ export const normalizeIngestionPayload = async (importJobId: string, payload: In
   }
 
   const signalSummary = classifyDocumentContent(normalizedText);
-  if (getEnvFlag('INGESTION_DEBUG_LLM')) {
+  if (getEnvFlag('INGESTION_DEBUG_LLM') && payload.sourceType !== 'FORWARDED_MAILBOX') {
     logInfo(
       `[ingestion][debug][normalize] job=${importJobId} file="${payload.originalFilename}" mime=${payload.mimeType} source=${normalized.extractedTextSource} quality=${normalized.normalizationQuality} preview=${JSON.stringify(
         debugPreview(normalizedText)
       )}`
     );
   }
+  const { structuredHtml: _html, ...safeMetadata } = payload.metadata;
   return {
     importJobId,
     userId: payload.userId,
@@ -306,12 +307,12 @@ export const normalizeIngestionPayload = async (importJobId: string, payload: In
       originalFilename: payload.originalFilename,
     }),
     normalizedText,
-    normalizedHtml: normalized.normalizedHtml ?? null,
+    normalizedHtml: typeof payload.metadata.structuredHtml === 'string' ? payload.metadata.structuredHtml : normalized.normalizedHtml ?? null,
     extractedTextSource: normalized.extractedTextSource,
     normalizationQuality: normalized.normalizationQuality,
     rawSourceReference: `${payload.sourceType}:${payload.externalMessageId}`,
     metadata: {
-      ...payload.metadata,
+      ...safeMetadata,
       signalSummary,
       extractedTextSource: normalized.extractedTextSource,
       normalizationQuality: normalized.normalizationQuality,

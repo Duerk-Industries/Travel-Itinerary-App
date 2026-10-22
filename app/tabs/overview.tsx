@@ -1,4 +1,7 @@
 // @ts-nocheck
+import { normalizeTransferType } from '../utils/transferTypes';
+import { FlightDetailsDialog, GroundTransferDetailsDialog } from '../components/TransferDetailsDialog';
+import { isFlightTransfer } from '../utils/transferCategory';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking,
   Platform,
@@ -69,8 +72,13 @@ import {
   rentalMatchesDay,
   tourMatchesDay,
 } from '../utils/overviewDayEvents';
-import { FlightEditingForm } from '../components/TransferEditingForm';
+import { FlightEditingForm, GroundTransferEditingForm } from '../components/TransferEditingForm';
 import DateField from '../components/DateField';
+import NearbyPlacesPanel from '../components/NearbyPlacesPanel';
+import TripsLikeThis from '../components/TripsLikeThis';
+import DayActivitiesOrdering from '../components/DayActivitiesOrdering';
+import { orderDayActivities } from '../../packages/domain/src/dayOrder';
+import { selectPlanningDayPoints } from '../../packages/domain/src/planningMapPoints';
 import TripDayMap from '../components/TripDayMap';
 import { type TripMapPoint } from '../utils/googleMaps';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -524,6 +532,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     durationDays: '',
   });
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [detailModal, setDetailModal] = useState<DetailModalState | null>(null);
@@ -598,6 +607,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const editLayoverLocationRef = useRef<any>(null);
   const scrollRef = useRef<any>(null);
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
+  const [visibleMapDate, setVisibleMapDate] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
   const [blogDayImages, setBlogDayImages] = useState<Record<string, string>>({});
@@ -1693,6 +1703,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const base = createInitialFlightState();
     const draft: FlightEditDraft = {
       ...base,
+      transferType: normalizeTransferType(flight.transfer_type || flight.transferType),
       passengerName: (flight as any).passenger_name || (flight as any).passengerName || base.passengerName,
       passengerIds: Array.isArray((flight as any).passenger_ids) ? (flight as any).passenger_ids : [],
       departureDate: normalizeDateString(flight.departure_date),
@@ -2193,26 +2204,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const renderSelectedItemDialogs = () => (
     <>
-      {selectedFlight ? (
-        <TripItemDetailsDialog
-          visible
-          kind="flight"
-          title={`${selectedFlight.departure_airport_code || 'Departure'} → ${selectedFlight.arrival_airport_code || 'Arrival'}`}
-          status={String((selectedFlight as any).status || '') || undefined}
-          rows={formatFlightDetails(selectedFlight).map((item) => ({
-            label: item.label,
-            value: item.value,
-            onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
-          }))}
-          styles={styles}
-          theme={theme}
-          readOnly={readOnly}
-          onClose={() => setSelectedFlight(null)}
-          onEdit={() => editFlightFromDetails(selectedFlight)}
-          onDelete={() => setItemToDelete({ kind: 'flight', id: selectedFlight.id, name: selectedFlight.booking_reference || 'this transfer' })}
-          testID="flight-overview-details"
-        />
-      ) : null}
+      {selectedFlight ? React.createElement(isFlightTransfer(selectedFlight) ? FlightDetailsDialog : GroundTransferDetailsDialog, {
+        flight: selectedFlight, backendUrl, headers, styles, theme, readOnly, mapApp,
+        onClose: () => setSelectedFlight(null),
+        onEdit: () => editFlightFromDetails(selectedFlight),
+        onDelete: () => setItemToDelete({ kind: 'flight', id: selectedFlight.id, name: selectedFlight.booking_reference || 'this transfer' }),
+        testID: 'flight-overview-details',
+      }) : null}
       {selectedLodging ? (
         <TripItemDetailsDialog
           visible
@@ -2353,6 +2351,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
   };
 
+  // Full street addresses (e.g. "6-chome-10-7 Ueno, Taito City, Tokyo 110-0005, Japan",
+  // as saved from a Google Places lookup) are too long for the day card header — keep
+  // just the city segment. Addresses without a comma (an airport code, a bare city name)
+  // are returned unchanged.
+  const shortenLocationToCity = (location: string): string => {
+    const trimmed = (location || '').trim();
+    if (!trimmed) return trimmed;
+    const parts = trimmed.split(',').map((part) => part.trim()).filter(Boolean);
+    return parts.length > 1 ? parts[1] : trimmed;
+  };
+
   // Priority mirrors the day title rule: activities beat the transfer, which
   // beats lodging, so a lodging stay no longer masks a day that has activities
   // (or at least a transfer) happening on it. Empty when nothing is known, so
@@ -2360,13 +2369,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const buildDayStartLocation = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[] }) => {
     if (!info) return tripLocationLabel || '';
     const tour = info.tours[0];
-    if (tour) return tour.startLocation || tour.name || tripLocationLabel || '';
+    if (tour) return (tour.startLocation ? shortenLocationToCity(tour.startLocation) : '') || tour.name || tripLocationLabel || '';
     const flight = info.flights[0];
-    if (flight) return flight.departure_location || flight.departure_airport_code || tripLocationLabel || '';
+    if (flight) return (flight.departure_location ? shortenLocationToCity(flight.departure_location) : '') || flight.departure_airport_code || tripLocationLabel || '';
     const lodging = info.lodgings[0];
     if (lodging) return lodging.name || tripLocationLabel || '';
     const rental = info.rentals[0];
-    if (rental) return rental.pickupLocation || rental.vendor || tripLocationLabel || '';
+    if (rental) return (rental.pickupLocation ? shortenLocationToCity(rental.pickupLocation) : '') || rental.vendor || tripLocationLabel || '';
     return tripLocationLabel || '';
   };
 
@@ -2402,13 +2411,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (activityDetails.length) {
       return activityDetails.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
     }
-    if (info.flights.length) {
-      return info.flights.map((f) => {
-        const dep = f.departure_location || f.departure_airport_code || 'Departure';
-        const arr = f.arrival_location || f.arrival_airport_code || 'Arrival';
-        return `Transfer from ${dep} to ${arr}.`;
-      });
-    }
     if (info.lodgings.length) {
       const day = normalizeDateString(date ?? '');
       return info.lodgings
@@ -2418,12 +2420,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (info.rentals.length) {
       return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
     }
-    if (info.tours.length) return [];
+    if (info.tours.length || info.flights.length) return [];
     return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
 
+  const OverviewTransferEditor = editingFlightDraft && !isFlightTransfer(editingFlightDraft) ? GroundTransferEditingForm : FlightEditingForm;
   const renderOverviewFlightEditor = () => (
-    <FlightEditingForm
+    <OverviewTransferEditor
+      backendUrl={backendUrl}
+      headers={headers}
+      mapApp={mapApp}
+      lodgings={lodgings}
       visible={!readOnly && Boolean(editingFlightDraft && editingFlightId)}
       flightId={editingFlightId}
       flight={editingFlightDraft}
@@ -2733,42 +2740,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const heroTitle = buildHeroTitle(startLocation, summary);
         const narrativeLines = buildDayNarrative(activeDayInfo, activeDayCard.date);
         const flightsForDay = activeDayInfo.flights;
-        const activityTimeKey = (tour: Tour) => {
-          const value = String(tour.startTime ?? '').trim();
-          return /^\d{1,2}:\d{2}$/.test(value) ? value.padStart(5, '0') : '99:99';
-        };
-        const toursForDay = [...activeDayInfo.tours].sort((a, b) => {
-          const byTime = activityTimeKey(a).localeCompare(activityTimeKey(b));
-          if (byTime !== 0) return byTime;
-          return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
-        });
+        // Same order the day map letters its pins in: an explicit saved position first, then start time.
+        const toursForDay = orderDayActivities(activeDayInfo.tours);
         const lodgingsForDay = activeDayInfo.lodgings;
         const rentalsForDay = activeDayInfo.rentals;
 
-        // Trip-day map points (see TripDayMap / GET /api/maps/trip-day). Plain
-        // free-text addresses, not resolved coordinates — Google's Static Maps
-        // API geocodes marker locations internally, so this deliberately
-        // avoids adding a separate geocoding call. Order determines the A/B/C…
-        // pin labels; the server independently caps + re-validates this list,
-        // so an unusually packed day degrades (drops the tail) rather than
-        // breaking the map entirely.
-        const dayMapPoints: TripMapPoint[] = [];
-        flightsForDay.forEach((f) => {
-          if (f.departure_location) dayMapPoints.push({ kind: 'flight', address: f.departure_location });
-          if (f.arrival_location) dayMapPoints.push({ kind: 'flight', address: f.arrival_location });
+        const dayMapPoints = selectPlanningDayPoints({
+          date: activeDayCard.date,
+          flights: flightsForDay.map(f => ({ ...f, departureDate: f.departure_date, arrivalDate: f.arrival_date, departureLocation: f.departure_location, arrivalLocation: f.arrival_location, departureAirportCode: f.departure_airport_code, arrivalAirportCode: f.arrival_airport_code })),
+          lodgings: lodgingsForDay.map(l => ({ ...l, check_in_date: l.checkInDate, check_out_date: l.checkOutDate })),
+          activities: toursForDay.map(t => ({ ...t, cost: Number(t.cost) || 0 })), carRentals: rentalsForDay,
         });
-        lodgingsForDay.forEach((l) => {
-          if (l.address) dayMapPoints.push({ kind: 'lodging', address: l.address });
-        });
-        toursForDay.forEach((t) => {
-          if (t.startLocation) dayMapPoints.push({ kind: 'activity', address: t.startLocation });
-        });
-        rentalsForDay.forEach((r) => {
-          if (r.pickupLocation) dayMapPoints.push({ kind: 'car_rental', address: r.pickupLocation });
-          if (r.dropoffLocation && r.dropoffLocation !== r.pickupLocation) {
-            dayMapPoints.push({ kind: 'car_rental', address: r.dropoffLocation });
-          }
-        });
+        const dayLodgingAnchor = (() => {
+          const lodging = dayMapPoints.find(p => p.kind === 'lodging' && typeof p.lat === 'number' && typeof p.lng === 'number');
+          return lodging ? { lat: lodging.lat as number, lng: lodging.lng as number } : null;
+        })();
+        const nearbyAnchor = dayMapPoints.find(p => p.kind === 'lodging' && typeof p.lat === 'number' && typeof p.lng === 'number')
+          ?? dayMapPoints.find(p => typeof p.lat === 'number' && typeof p.lng === 'number');
 
         const flightParticipantKeys = flightsForDay.map((f) => {
           const ids = Array.isArray(f.passenger_ids) && f.passenger_ids.length ? f.passenger_ids : [];
@@ -2813,8 +2801,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
               {dayMapPoints.length ? (
-                <TripDayMap points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
+                <TripDayMap key={activeDayCard.date} onOpenChange={open => setVisibleMapDate(open ? activeDayCard.date : null)} tripId={trip.id} dayDate={activeDayCard.date} points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
               ) : null}
+              {!readOnly && visibleMapDate === activeDayCard.date && dayMapPoints.length > 0 && <NearbyPlacesPanel tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} destination={trip.destination}
+                center={nearbyAnchor ? { lat: nearbyAnchor.lat!, lng: nearbyAnchor.lng! } : undefined} onAdded={onTourDataChanged} />}
+              {!readOnly && <TripsLikeThis tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} onAdded={onTourDataChanged} />}
               {narrativeLines.length ? (
                 <View style={styles.dayNarrativeBox}>
                   {narrativeLines.map((line, idx) => (
@@ -2837,7 +2828,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
                     return (
                       <View key={flight.id} style={styles.dayInfoRow}>
-                        <Text style={styles.dayInfoRoute}>{`${dep} → ${arr}`}</Text>
+                        <TouchableOpacity
+                          testID={`day-details-transfer-${flight.id}`}
+                          accessibilityRole="link"
+                          onPress={() => setSelectedFlight(flight)}
+                        >
+                          <Text style={[styles.dayInfoRoute, styles.linkText, { textDecorationLine: 'underline' }]}>{`${dep} → ${arr}`}</Text>
+                        </TouchableOpacity>
                         <Text style={styles.helperText}>{`${flight.departure_time || '--:--'} / ${
                           flight.arrival_time || '--:--'
                         }`}</Text>
@@ -2845,32 +2842,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </View>
                     );
                   })}
-                  <TouchableOpacity
-                    testID="day-details-flight-details"
-                    style={styles.dayInfoButton}
-                    onPress={() => {
-                      const sections: DetailSection[] = flightsForDay.map((flight, idx) => {
-                        const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
-                        const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
-                        const passengers =
-                          Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
-                            ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
-                            : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
-                        return {
-                          title: flightsForDay.length > 1 ? `Transfer ${idx + 1} · ${dep} → ${arr}` : undefined,
-                          subtitle: showFlightNames && passengers ? `Travelers: ${passengers}` : undefined,
-                          items: formatFlightDetails(flight),
-                        };
-                      });
-                      if (featureStandardizedItemDialogs && flightsForDay.length === 1) {
-                        setDetailModal({ title: 'Transfer Details', sections, kind: 'flight', item: flightsForDay[0] });
-                      } else {
-                        setDetailModal({ title: 'Transfer Details', sections });
-                      }
-                    }}
-                  >
-                    <Text style={styles.dayInfoButtonText}>See transfer details →</Text>
-                  </TouchableOpacity>
                   <TouchableOpacity
                     testID="day-details-add-transfer-button"
                     accessibilityRole="button"
@@ -2924,7 +2895,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {toursForDay.length ? (
                 <View style={styles.dayInfoCard}>
                   <Text style={styles.sectionTitle}>Activities</Text>
-                  {toursForDay.map((tour) => {
+                  <DayActivitiesOrdering
+                    tripId={trip.id}
+                    date={activeDayCard.date}
+                    backendUrl={backendUrl}
+                    headers={headers}
+                    activities={toursForDay}
+                    lodgingAnchor={dayLodgingAnchor}
+                    readOnly={readOnly}
+                    onChanged={onTourDataChanged ?? (() => undefined)}
+                    styles={styles}
+                    renderRow={(tour, controls) => {
                     const participants =
                       Array.isArray(tour.paidBy) && tour.paidBy.length
                         ? formatTravelerNames(tour.paidBy)
@@ -2976,9 +2957,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             testID={`day-details-getyourguide-${tour.id}`}
                           />
                         </View>
+                        {controls}
                       </View>
                     );
-                  })}
+                    }}
+                  />
                   <TouchableOpacity
                     testID="day-details-add-activity-button"
                     accessibilityRole="button"
@@ -3935,7 +3918,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           theme={theme}
         />
       ) : null}
-      {featureStandardizedItemDialogs ? renderSelectedItemDialogs() : null}
+      {featureStandardizedItemDialogs || selectedFlight ? renderSelectedItemDialogs() : null}
     </View>
   );
 };

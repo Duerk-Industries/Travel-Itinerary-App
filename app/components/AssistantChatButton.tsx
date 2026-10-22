@@ -1,3 +1,4 @@
+import { shadowStyle } from '../utils/shadowStyle';
 /**
  * AssistantChatButton — floating action button (lower-left) that opens the
  * on-device AI guide assistant. Deliberately imports nothing from
@@ -40,10 +41,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    ...shadowStyle('#000', 0.2, 0, 3, 6),
     zIndex: 1000,
   },
   icon: {

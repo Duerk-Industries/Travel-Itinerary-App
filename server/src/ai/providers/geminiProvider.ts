@@ -65,11 +65,11 @@ export const geminiProvider: AiChatProvider = {
           message: { role: 'assistant', content: candidateText(candidate) },
           finish_reason: candidate.finishReason ?? null,
         }],
-        usage: {
-          prompt_tokens: data.usageMetadata?.promptTokenCount ?? 0,
-          completion_tokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+        usage: data.usageMetadata ? {
+          prompt_tokens: data.usageMetadata?.promptTokenCount,
+          completion_tokens: typeof data.usageMetadata?.candidatesTokenCount === 'number' ? data.usageMetadata.candidatesTokenCount + (data.usageMetadata.thoughtsTokenCount ?? 0) : undefined,
           total_tokens: data.usageMetadata?.totalTokenCount ?? 0,
-        },
+        } : undefined,
       };
     } catch (err) {
       throw normalizeProviderError('gemini', err);

@@ -2,6 +2,9 @@ import { Router, type Response } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
+  createCatalogActivity,
+  copyPublicActivity,
+  undoCatalogActivity,
   castItemVote,
   deleteExpenseForSource,
   deleteActivity,
@@ -11,6 +14,7 @@ import {
   insertActivity,
   listGroupMembers,
   listActivities,
+  reorderActivitiesForDay,
   updateActivity,
   upsertExpenseForSource,
 } from '../db';
@@ -21,7 +25,10 @@ import { readDto } from '../utils/dtoParse';
 import { createActivityDto, updateActivityDto, voteOrRatingDto, bulkActivitiesDto } from './activityDtos';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
-import { HttpRateLimitExceededError, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
+import { HttpRateLimitExceededError, reserveHttpRateLimitOrThrow, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
+import { z } from 'zod';
+import { PlanningError } from '../services/planningOperations';
+import { findNearbyPlaces } from '../services/nearbyPlacesService';
 import { notify } from '../services/notificationService';
 
 const ACTIVITY_TYPES: ActivityType[] = [
@@ -86,6 +93,18 @@ const notifyActivityCompleted = async (previous: any, updated: any, membership: 
   });
 };
 
+router.get('/nearby', async (req, res) => {
+  const query = z.object({ tripId: z.string().uuid(), lat: z.coerce.number().finite().min(-90).max(90).optional(), lng: z.coerce.number().finite().min(-180).max(180).optional(), area: z.string().trim().max(120).optional(), offset: z.coerce.number().int().min(0).max(100).default(0) }).safeParse(req.query);
+  if (!query.success) { res.status(400).json({ error: 'Choose a trip and valid map area.' }); return; }
+  try {
+    if (!(await isFeatureEnabled('planning_nearby', (req as any).user.userId))) { res.status(404).json({ error: 'Nearby is currently unavailable.' }); return; }
+    const userId = (req as any).user.userId as string;
+    if (!(await ensureUserInTrip(query.data.tripId, userId))) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
+    await reserveHttpRateLimitOrThrow({ name: 'nearby_browse', identity: userId, limit: 60, windowMs: 60_000 });
+    res.json(await findNearbyPlaces(userId, query.data.tripId, query.data, query.data.offset));
+  } catch (error) { res.status(error instanceof HttpRateLimitExceededError ? 429 : 503).json({ error: 'Nearby could not load. Please try again.' }); }
+});
+
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const tripId = req.query.tripId as string | undefined;
@@ -118,6 +137,39 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
+  if (req.body?.publicSource !== undefined) {
+    const data = z.object({ tripId: z.string().uuid(), date: z.iso.date(),
+      publicSource: z.object({ username: z.string().regex(/^[a-z0-9-]{1,80}$/), tripSlug: z.string().regex(/^[a-z0-9-]{1,80}$/), activityId: z.string().uuid() }).strict() }).strict().safeParse(req.body);
+    const key = req.get('Idempotency-Key');
+    if (!data.success || !key || !/^[a-zA-Z0-9_-]{16,128}$/.test(key)) { res.status(400).json({ error: 'Choose a shared activity and a valid trip day.' }); return; }
+    const userId = (req as any).user.userId as string;
+    try {
+      if (!(await isFeatureEnabled('planning_trip_inspiration', userId))) { res.status(404).json({ error: 'Trips like this is unavailable.' }); return; }
+      await reserveHttpRateLimitOrThrow({ name: 'public_activity_copy', identity: userId, limit: 30, windowMs: 60_000 });
+      const result = await copyPublicActivity(userId, { ...data.data, operationKey: key });
+      if (result.replayed) res.setHeader('Idempotent-Replayed', 'true');
+      res.status(201).json(result.activity);
+    } catch (error) {
+      res.status(error instanceof PlanningError ? error.status : error instanceof HttpRateLimitExceededError ? 429 : 503)
+        .json({ error: error instanceof PlanningError ? error.message : 'Could not copy this activity. Please retry.', code: error instanceof PlanningError ? error.code : 'TEMPORARY_FAILURE' });
+    }
+    return;
+  }
+  if (req.body?.catalogId !== undefined) {
+    const data = z.object({ tripId: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), catalogId: z.string().min(1).max(200) }).safeParse(req.body);
+    const key = req.get('Idempotency-Key');
+    if (!data.success || !key || !/^[a-zA-Z0-9_-]{16,128}$/.test(key)) { res.status(400).json({ error: 'Choose a place, trip and day.' }); return; }
+    try {
+      if (!(await isFeatureEnabled('planning_nearby', (req as any).user.userId))) { res.status(404).json({ error: 'Nearby is currently unavailable.' }); return; }
+      const result = await createCatalogActivity((req as any).user.userId, { ...data.data, operationKey: key });
+      if (result.replayed) res.setHeader('Idempotent-Replayed', 'true');
+      res.status(201).json(result.activity);
+    } catch (error) {
+      res.status(error instanceof PlanningError ? error.status : 503).json({ error: error instanceof PlanningError ? error.message : 'Could not add this place. Please retry.', code: error instanceof PlanningError ? error.code : 'TEMPORARY_FAILURE' });
+    }
+    return;
+  }
+
   if (!(await reserveActivityUsage('ACTIVITIES_ACTIVITY_ROW_WRITE', res))) return;
   const userId = (req as any).user.userId as string;
   const dto = readDto(createActivityDto, req.body, res);
@@ -285,6 +337,42 @@ router.patch('/bulk', async (req, res) => {
   res.json({ updates, deletes });
 });
 
+const dayOrderDto = z.object({
+  tripId: z.string().uuid(),
+  date: z.iso.date(),
+  // The order the client was looking at. A mismatch means someone else changed the day first.
+  expectedIds: z.array(z.string().min(1).max(64)).max(100),
+  orderedIds: z.array(z.string().min(1).max(64)).max(100),
+  pinnedIds: z.array(z.string().min(1).max(64)).max(100).optional(),
+  expectedPinnedIds: z.array(z.string().min(1).max(64)).max(100).optional(),
+}).refine(value => (value.pinnedIds === undefined) === (value.expectedPinnedIds === undefined));
+
+// Registered before '/:id' so "day-order" is never read as an activity id.
+router.put('/day-order', async (req, res) => {
+  const dto = dayOrderDto.safeParse(req.body ?? {});
+  if (!dto.success) { res.status(400).json({ error: 'Choose a trip, a day and the new order.', code: 'INVALID_DAY_ORDER' }); return; }
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('planning_day_order', userId))) { res.status(404).json({ error: 'Reordering is currently unavailable.', code: 'FEATURE_DISABLED' }); return; }
+    await reserveHttpRateLimitOrThrow({ name: 'activity_day_order', identity: userId, limit: 60, windowMs: 60_000 });
+    const { tripId, date, orderedIds, expectedIds, pinnedIds, expectedPinnedIds } = dto.data;
+    const outcome = await reorderActivitiesForDay(userId, tripId, date, orderedIds, expectedIds,
+      pinnedIds ? { pinnedIds, expectedPinnedIds: expectedPinnedIds! } : undefined);
+    if (outcome.ok) { res.json({ order: outcome.order }); return; }
+    if (outcome.reason === 'forbidden') { res.status(403).json({ error: 'You must be in the group for this trip.' }); return; }
+    res.status(409).json({
+      error: outcome.reason === 'stale'
+        ? 'This day was changed by someone else. Review the new order and try again.'
+        : 'The new order does not match this day\'s activities.',
+      code: outcome.reason === 'stale' ? 'DAY_ORDER_STALE' : 'DAY_ORDER_MISMATCH',
+      currentOrder: outcome.currentOrder,
+    });
+  } catch (error) {
+    if (error instanceof HttpRateLimitExceededError) { res.setHeader('Retry-After', String(error.retryAfterSeconds)); res.status(429).json({ error: error.message }); return; }
+    res.status(503).json({ error: 'The order could not be saved. Please try again.' });
+  }
+});
+
 router.put('/:id', async (req, res) => {
   if (!(await reserveActivityUsage('ACTIVITIES_ACTIVITY_ROW_WRITE', res))) return;
   const userId = (req as any).user.userId as string;
@@ -421,6 +509,13 @@ router.patch('/:id', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
+  const operationKey = req.get('Idempotency-Key');
+  if (operationKey) {
+    try { await undoCatalogActivity((req as any).user.userId, String(req.params.id), operationKey); res.status(204).end(); }
+    catch (error) { res.status(error instanceof PlanningError ? error.status : 503).json({ error: error instanceof PlanningError ? error.message : 'Could not undo this addition.' }); }
+    return;
+  }
+
   if (!(await reserveActivityUsage('ACTIVITIES_ACTIVITY_ROW_DELETE', res))) return;
   const userId = (req as any).user.userId as string;
   const deleted = await deleteActivity(req.params.id, userId);

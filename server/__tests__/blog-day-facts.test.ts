@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { firestore, isFirebase, sql } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import { clearDayFactsCacheForTests } from '../src/services/blogDayFactsService';
@@ -10,9 +10,17 @@ import { clearDayFactsCacheForTests } from '../src/services/blogDayFactsService'
 // Phase 5 of docs/trip-blog-social-implementation-plan.md — "what actually happened" (C1, C2, C3,
 // C5). Facts omit undeliverable rows entirely rather than emitting zeros, and are filtered before
 // derivation so a follower never receives an itinerary-derived fact.
+const followTrip = async (tripId: string, followerId: string) => {
+  if (isFirebase()) {
+    await firestore().collection('trip_followers').doc(`${tripId}_${followerId}`).set({ tripId, followerUserId: followerId });
+  } else {
+    await sql('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [randomUUID(), tripId, followerId]);
+  }
+};
+
 describe('GET /:tripId/blog/days/:dayDate/facts', () => {
-  const traveler = { firstName: 'Facts', lastName: 'Traveler', email: 'blog-day-facts-traveler@example.com', password: 'Password123!' };
-  const follower = { firstName: 'Facts', lastName: 'Follower', email: 'blog-day-facts-follower@example.com', password: 'Password123!' };
+  const traveler = { firstName: 'Facts', lastName: 'Traveler', email: `blog-day-facts-traveler-${randomUUID().slice(0, 8)}@example.com`, password: 'Password123!' };
+  const follower = { firstName: 'Facts', lastName: 'Follower', email: `blog-day-facts-follower-${randomUUID().slice(0, 8)}@example.com`, password: 'Password123!' };
 
   let travelerToken = '';
   let travelerId = '';
@@ -46,7 +54,7 @@ describe('GET /:tripId/blog/days/:dayDate/facts', () => {
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
-    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3)', [randomUUID(), tripId, followerId]);
+    await followTrip(tripId, followerId);
 
     await request(app)
       .post('/api/activities')
@@ -73,7 +81,7 @@ describe('GET /:tripId/blog/days/:dayDate/facts', () => {
   });
 
   it('a stranger with no relationship to the trip gets 403', async () => {
-    const stranger = { firstName: 'Facts', lastName: 'Stranger', email: 'blog-day-facts-stranger@example.com', password: 'Password123!' };
+    const stranger = { firstName: 'Facts', lastName: 'Stranger', email: `blog-day-facts-stranger-${randomUUID().slice(0, 8)}@example.com`, password: 'Password123!' };
     await registerWebUser(stranger);
     await confirmWebUser(stranger.email);
     const strangerToken = (await loginWebUser(stranger)).body.token;
@@ -177,7 +185,7 @@ describe('GET /:tripId/blog/days/:dayDate/facts', () => {
     const flightDate = '2027-03-06';
     expect(flightTripId).toBeTruthy();
     const followerId = (await loginWebUser(follower)).body.user.id;
-    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [randomUUID(), flightTripId, followerId]);
+    await followTrip(flightTripId, followerId);
 
     const res = await request(app).get(`/api/trips/${flightTripId}/blog/days/${flightDate}/facts`).set('Authorization', `Bearer ${followerToken}`).expect(200);
     expect(res.body.facts.find((f: any) => f.key === 'distance')).toBeUndefined();

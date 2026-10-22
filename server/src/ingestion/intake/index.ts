@@ -8,6 +8,7 @@ import { isSupportedMimeType, normalizeMimeType } from '../shared/parserSelectio
 import { writeTempBytes } from '../shared/tempStorage';
 import { IngestionError } from '../shared/userFailures';
 import { recordVirusScanResult, scanDocumentOrStub } from '../shared/virusScan';
+import { getEnvValue } from '../../env';
 import { getVirusScanner } from '../virusScanProviders';
 
 const memoryStorage = multer.memoryStorage();
@@ -102,6 +103,9 @@ export const buildWebhookPayload = async (params: {
   metadata?: Record<string, unknown>;
   dryRun?: boolean;
 }): Promise<IngestionPayload> => {
+  if (params.sourceType === 'FORWARDED_MAILBOX' && getEnvValue('NODE_ENV') !== 'test' && getVirusScanner().name !== 'clamav_http') {
+    throw new IngestionError('virus_scan_failed', 503);
+  }
   const batchScan = await scanDocumentOrStub();
   if (batchScan.status === 'FAILED') {
     throw new IngestionError('virus_scan_failed', 400);

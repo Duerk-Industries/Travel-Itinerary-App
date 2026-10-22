@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag, deleteWebUserAndCleanup } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { addTripMember, commentRow, counterRows, reactionRows } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
 
 // Phase 4 of docs/trip-blog-social-implementation-plan.md — "confirm/verify account-deletion
@@ -46,8 +46,7 @@ describe('account deletion scrubs blog engagement data', () => {
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${ownerToken}`).expect(200);
-    const group = await queryBlog<{ group_id: string }>('SELECT group_id FROM trips WHERE id = $1', [tripId]);
-    await queryBlog('INSERT INTO group_members (id, group_id, user_id, added_by) VALUES ($1, $2, $3, $3)', [randomUUID(), group.rows[0].group_id, departingId]);
+    await addTripMember(tripId, departingId);
 
     const item = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
@@ -92,35 +91,23 @@ describe('account deletion scrubs blog engagement data', () => {
   });
 
   it('the reaction is deleted, not merely orphaned, and the counter no longer includes it', async () => {
-    const reactions = await queryBlog('SELECT * FROM blog_reactions WHERE blog_item_id = $1', [itemId]);
-    expect(reactions.rows).toHaveLength(0);
-    const counter = await queryBlog<{ reaction_total: number }>(
-      `SELECT reaction_total FROM blog_engagement_counters WHERE target_kind = 'item' AND target_id = $1 AND audience = 'public'`,
-      [itemId]
-    );
-    expect(Number(counter.rows[0]?.reaction_total ?? 0)).toBe(0);
+    expect(await reactionRows([itemId])).toHaveLength(0);
+    const counter = (await counterRows([itemId])).find((row) => row.targetKind === 'item' && row.audience === 'public');
+    expect(counter?.reactionTotal ?? 0).toBe(0);
   });
 
   it('the comment becomes an anonymous tombstone — body scrubbed, author cleared, row preserved for the reply', async () => {
-    const rows = await queryBlog<{ body: string | null; author_user_id: string | null; deleted_at: Date | null }>(
-      'SELECT body, author_user_id, deleted_at FROM blog_comments WHERE id = $1',
-      [commentId]
-    );
-    expect(rows.rows).toHaveLength(1);
-    expect(rows.rows[0].body).toBeNull();
-    expect(rows.rows[0].author_user_id).toBeNull();
-    expect(rows.rows[0].deleted_at).toBeTruthy();
-
-    const replyRows = await queryBlog('SELECT id FROM blog_comments WHERE id = $1', [replyId]);
-    expect(replyRows.rows).toHaveLength(1);
+    const row = await commentRow(commentId);
+    expect(row).toBeDefined();
+    expect(row!.body).toBeNull();
+    expect(row!.authorUserId).toBeNull();
+    expect(row!.deletedAt).toBeTruthy();
+    expect(await commentRow(replyId)).toBeDefined();
   });
 
   it('the tombstoned comment no longer counts toward the visible comment count', async () => {
-    const counter = await queryBlog<{ comment_count: number }>(
-      `SELECT comment_count FROM blog_engagement_counters WHERE target_kind = 'item' AND target_id = $1 AND audience = 'public'`,
-      [itemId]
-    );
+    const counter = (await counterRows([itemId])).find((row) => row.targetKind === 'item' && row.audience === 'public');
     // The reply (still authored by the owner, never deleted) is the only comment still counted.
-    expect(Number(counter.rows[0]?.comment_count ?? 0)).toBe(1);
+    expect(counter?.commentCount ?? 0).toBe(1);
   });
 });

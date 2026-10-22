@@ -1,3 +1,5 @@
+import { runPlanningNotifications } from '../services/planningNotificationScheduler';
+import { drainNotificationOutbox } from '../services/notificationOutboxWorker';
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { getEnvValue } from '../env';
@@ -5,6 +7,7 @@ import { processImportJob } from '../ingestion/orchestrator';
 import { getRetryPolicyConfig, listDeadLetterImportJobs, listFailedJobsReadyForRetry, requeueImportJob } from '../ingestion/shared/repository';
 import { requeueDeadLetterImportJob } from '../ingestion/orchestrator';
 import { getJobQueue } from '../ingestion/worker/jobQueue';
+import { drainMailReceipts } from '../ingestion/worker/mailReceiptWorker';
 import { logError, logInfo } from '../logger';
 
 const router = Router();
@@ -31,6 +34,19 @@ const calculateRetryDelayMs = (retryCount: number, baseDelaySeconds: number, max
   const jitter = Math.floor(exponential * 0.2);
   return (exponential + jitter) * 1000;
 };
+
+router.post('/notifications/run', authenticateWorker, async (_req, res) => {
+  try {
+    const result = await runPlanningNotifications();
+    await drainNotificationOutbox();
+    res.status(result.failed ? 503 : 200).json(result);
+  } catch { res.status(503).json({ error: 'Notification processing unavailable' }); }
+});
+
+router.post('/mail-receipts/drain', authenticateWorker, async (_req, res) => {
+  try { res.json(await drainMailReceipts()); }
+  catch { res.status(503).json({ error: 'Mail receipt processing is temporarily unavailable.' }); }
+});
 
 router.post('/jobs/:jobId/run', authenticateWorker, (req, res) => {
   const jobId = String(req.params.jobId);

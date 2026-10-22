@@ -67,12 +67,11 @@ export const upsertReaction = async (
     const isNew = !existing.exists;
     transaction.set(reactionRef, { tripId, targetKind, targetId, userId, emoji, audience, createdAt: existing.exists ? (existing.data() as any).createdAt : now, updatedAt: now }, { merge: true });
 
-    const update: any = {
-      targetKind, targetId, tripId, audience,
-      updatedAt: now,
-      [`reactionCounts.${emoji}`]: FieldValue.increment(1)
-    };
-    if (existingEmoji) update[`reactionCounts.${existingEmoji}`] = FieldValue.increment(-1);
+    // A nested object, not dotted keys: with set({ merge: true }) a dotted key is a literal field name
+    // (only update() treats dots as paths), which left the real reactionCounts map empty.
+    const reactionCounts: Record<string, unknown> = { [emoji]: FieldValue.increment(1) };
+    if (existingEmoji) reactionCounts[existingEmoji] = FieldValue.increment(-1);
+    const update: any = { targetKind, targetId, tripId, audience, updatedAt: now, reactionCounts };
     if (isNew) update.reactionTotal = FieldValue.increment(1);
 
     transaction.set(counterRef, update, { merge: true });
@@ -119,6 +118,8 @@ export const getEngagementSummaries = async (
     const data = snap.data() as any;
     const summary = summaries[key(target)];
     for (const [emoji, count] of Object.entries(data.reactionCounts ?? {})) {
+      // A reaction that was removed leaves a 0 behind; the summary only lists emoji someone used.
+      if (Number(count) <= 0) continue;
       summary.reactionCounts[emoji as BlogReactionEmoji] = (summary.reactionCounts[emoji as BlogReactionEmoji] ?? 0) + Number(count);
     }
     summary.reactionTotal += Number(data.reactionTotal ?? 0);
@@ -150,7 +151,7 @@ export const listReactors = async (
   const db = getDb();
   const snap = await db.collection('blog_reactions')
     .where('targetKind', '==', targetKind)
-    .where(targetField(targetKind), '==', targetId)
+    .where('targetId', '==', targetId)
     .get();
   const rows = snap.docs
     .map((doc: any) => doc.data() as any)
@@ -370,12 +371,27 @@ export const listTopLevelCommentsForDay = async (
 ): Promise<BlogComment[]> => {
   const limit = Math.min(50, Math.max(1, options.limit ?? 20));
   const db = getDb();
-  let query = db.collection('blog_comments')
+  // A day's discussion is every top-level comment on the day itself, on any of its entries, or on any
+  // of its photos (as on Postgres), not only comments placed directly on the day.
+  const dayDoc = await db.collection('blog_days').doc(dayId).get();
+  const localDate = dayDoc.exists ? String((dayDoc.data() as any).localDate) : null;
+  const [itemSnap, assetSnap] = localDate
+    ? await Promise.all([
+        db.collection('blog_items').where('tripId', '==', tripId).where('localDate', '==', localDate).get(),
+        db.collection('blog_media_assets').where('tripId', '==', tripId).where('dayDate', '==', localDate).get(),
+      ])
+    : [null, null];
+  const itemIds = new Set(itemSnap?.docs.map((doc: any) => doc.id) ?? []);
+  const assetIds = new Set(assetSnap?.docs.map((doc: any) => doc.id) ?? []);
+  const snap = await db.collection('blog_comments')
     .where('tripId', '==', tripId)
-    .where('blogDayId', '==', dayId)
-    .where('parentCommentId', '==', null);
-  const snap = await query.get();
+    .where('parentCommentId', '==', null)
+    .get();
   const rows = snap.docs
+    .filter((doc: any) => {
+      const data = doc.data() as any;
+      return data.blogDayId === dayId || itemIds.has(data.blogItemId) || assetIds.has(data.assetId);
+    })
     .map((doc: any) => mapComment(doc.id, doc.data()))
     .filter((c: BlogComment) => !c.deletedAt && !c.hiddenAt && visibleAudiences.includes(c.audience))
     .filter((c: BlogComment) => !options.cursor || c.createdAt < options.cursor)

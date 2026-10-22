@@ -71,6 +71,20 @@ describe('HomeTab', () => {
     (global.fetch as jest.Mock).mockRestore();
   });
 
+  test('places Ground Transfers immediately below Lodging and navigates to it', () => {
+    const onNavigate = jest.fn();
+    const { getAllByTestId, getByTestId, getByText } = render(
+      <HomeTab backendUrl="http://localhost" headers={{}} activeTripId="t2" trips={trips}
+        followedTrips={followedTrips} styles={styles} onSelectTrip={jest.fn()} onSelectFollowedTrip={jest.fn()}
+        onNavigate={onNavigate} onFollowTrip={async () => null} />
+    );
+    const order = getAllByTestId(/^home-nav-/).map(node => node.props.testID);
+    expect(order[order.indexOf('home-nav-lodging') + 1]).toBe('home-nav-ground-transfers');
+    expect(getByText('Flights')).toBeTruthy();
+    fireEvent.press(getByTestId('home-nav-ground-transfers'));
+    expect(onNavigate).toHaveBeenCalledWith('ground-transfers');
+  });
+
   test('renders hero and opens trip picker modal', async () => {
     const { findByText, getByTestId, queryByTestId } = render(
       <HomeTab

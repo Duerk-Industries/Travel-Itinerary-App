@@ -64,6 +64,37 @@ describe('ConfirmDialog accessibility', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
+  it('disables both actions and ignores Escape while busy, so a request in flight cannot be double-fired or abandoned', () => {
+    const onConfirm = jest.fn();
+    const onCancel = jest.fn();
+    const { getByLabelText, getByText } = render(
+      <ConfirmDialog visible busy title="Delete?" onConfirm={onConfirm} onCancel={onCancel} styles={styles} />
+    );
+    expect(getByText('Working…')).toBeTruthy();
+    fireEvent.press(getByLabelText('Delete'));
+    fireEvent.press(getByLabelText('Cancel'));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('shows a failure message inside the dialog and keeps it retryable', () => {
+    const onConfirm = jest.fn();
+    const { getByText, getByLabelText } = render(
+      <ConfirmDialog
+        visible
+        title="Delete?"
+        errorMessage="Not authorized to delete this trip"
+        onConfirm={onConfirm}
+        onCancel={() => {}}
+        styles={styles}
+      />
+    );
+    expect(getByText('Not authorized to delete this trip')).toBeTruthy();
+    fireEvent.press(getByLabelText('Delete'));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
   it('renders nothing when not visible', () => {
     const { queryByTestId } = render(
       <ConfirmDialog
