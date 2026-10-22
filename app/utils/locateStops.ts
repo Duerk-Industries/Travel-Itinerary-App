@@ -1,4 +1,4 @@
-import type { PlanningMapPoint } from '../../server/src/types';
+import type { CoordinateSource, PlanningMapPoint } from '../../server/src/types';
 import { isLocatedMapPoint } from './planningMapGeometry';
 
 export type LocateTarget = { kind: 'lodging' | 'activity' | 'car_rental'; itemId: string; which?: 'pickup' | 'dropoff'; title: string };
@@ -20,6 +20,7 @@ export const locateTargets = (points: PlanningMapPoint[]): LocateTarget[] =>
 export const locateStops = async (params: {
   backendUrl: string; tripId: string; headers: Record<string, string>; targets: LocateTarget[];
   fetchImpl?: typeof fetch;
+  onLocated?: (target: LocateTarget, point: { lat: number; lng: number; coordinateSource?: CoordinateSource; attribution?: string; creditLinks?: Array<{ label: string; url: string }> }) => void;
 }): Promise<LocateSummary> => {
   const send = params.fetchImpl ?? fetch;
   const summary: LocateSummary = { located: 0, notFound: 0, failed: 0, stoppedForLimit: false, attempted: 0 };
@@ -32,9 +33,14 @@ export const locateStops = async (params: {
         body: JSON.stringify({ kind: target.kind, itemId: target.itemId, ...(target.which ? { which: target.which } : {}) }),
       });
       if (response.status === 429) { summary.stoppedForLimit = true; break; }
-      const data = await response.json().catch(() => ({})) as { status?: string };
+      const data = await response.json().catch(() => ({})) as { status?: string; lat?: number; lng?: number; coordinateSource?: CoordinateSource; attribution?: string; creditLinks?: Array<{ label: string; url: string }> };
       if (!response.ok) { summary.failed += 1; continue; }
-      if (data.status === 'located' || data.status === 'already_located') summary.located += 1;
+      if (data.status === 'located' || data.status === 'already_located') {
+        summary.located += 1;
+        if (typeof data.lat === 'number' && typeof data.lng === 'number' && Number.isFinite(data.lat) && Number.isFinite(data.lng)) {
+          params.onLocated?.(target, { lat: data.lat, lng: data.lng, coordinateSource: data.coordinateSource, attribution: data.attribution, creditLinks: data.creditLinks });
+        }
+      }
       else if (data.status === 'quota') { summary.stoppedForLimit = true; break; }
       else if (data.status === 'not_found' || data.status === 'no_address') summary.notFound += 1;
       else summary.failed += 1;

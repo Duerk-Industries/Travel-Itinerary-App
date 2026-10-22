@@ -72,6 +72,19 @@ describe('day map when its pins change while it is open', () => {
     expect(host.textContent).not.toContain('Interactive map unavailable');
   });
 
+  it('notifies its owner when Show map is pressed without offering a coordinate-fetch button', async () => {
+    const onOpenChange = jest.fn();
+    await act(async () => { root.render(<TripMap points={[point('a', 35.7, 139.8)]} onOpenChange={onOpenChange} />); });
+    expect(onOpenChange).not.toHaveBeenCalled();
+    await press(host, 'Show map');
+    await settle();
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+    expect(host.textContent).not.toContain('Find locations for');
+    expect(host.querySelector('[data-testid="find-locations"]')).toBeNull();
+    await press(host, 'Hide map');
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
   it('uses the basic map when WebGL2 cannot initialize and updates its pin on selection', async () => {
     mockControl.failGpu = true;
     await render([point('a', 35.7, 139.8), point('b', 35.71, 139.79)]);

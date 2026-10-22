@@ -2,12 +2,13 @@ import { getTripById, listActivities, listCarRentals, listLodgings, setItemCoord
 import { GeocoderError, geocodeAddress, getGeocoder, storedCoordinateCredit } from './geocoder';
 import { logError } from '../logger';
 import { countryCodeFromPlace } from '../utils/countryFromPlace';
+import type { CoordinateSource } from '../types';
 
 export type LocateKind = 'lodging' | 'activity' | 'car_rental';
 
 export type LocateResult =
-  | { status: 'located'; lat: number; lng: number; geoCity: string | null; provider: string; attribution: string }
-  | { status: 'already_located' }
+  | { status: 'located'; lat: number; lng: number; geoCity: string | null; provider: string; attribution: string; creditLinks: Array<{ label: string; url: string }> }
+  | { status: 'already_located'; lat: number; lng: number; coordinateSource: CoordinateSource; attribution: string; creditLinks: Array<{ label: string; url: string }> }
   | { status: 'no_address' }
   | { status: 'not_found' }
   | { status: 'item_missing' }
@@ -70,6 +71,7 @@ export const locateTripItem = async (params: {
   let name = '';
   let byNameToo = false;
   let already = false;
+  let existing: { lat?: number | null; lng?: number | null; coordinateSource?: CoordinateSource | null } = {};
   let rental: { lat?: number | null; lng?: number | null; dropoffLat?: number | null; dropoffLng?: number | null } | null = null;
   const dropoff = params.which === 'dropoff';
 
@@ -80,6 +82,7 @@ export const locateTripItem = async (params: {
     name = item.name || '';
     byNameToo = true;
     already = hasPoint(item.lat, item.lng);
+    existing = item;
   } else if (kind === 'activity') {
     const item = (await listActivities(userId, tripId)).find((entry) => entry.id === itemId);
     if (!item) return { status: 'item_missing' };
@@ -87,14 +90,19 @@ export const locateTripItem = async (params: {
     name = item.name || '';
     byNameToo = true;
     already = hasPoint(item.lat, item.lng);
+    existing = item;
   } else {
     const item = (await listCarRentals(userId, tripId)).find((entry) => entry.id === itemId);
     if (!item) return { status: 'item_missing' };
     rental = item;
     text = ((dropoff ? item.dropoffLocation : item.pickupLocation) || '').trim();
     already = dropoff ? hasPoint(item.dropoffLat, item.dropoffLng) : hasPoint(item.lat, item.lng);
+    existing = { lat: dropoff ? item.dropoffLat : item.lat, lng: dropoff ? item.dropoffLng : item.lng, coordinateSource: item.coordinateSource };
   }
-  if (already) return { status: 'already_located' };
+  if (already) {
+    const credit = existing.coordinateSource === 'geocoder' ? storedCoordinateCredit() : null;
+    return { status: 'already_located', lat: existing.lat!, lng: existing.lng!, coordinateSource: existing.coordinateSource ?? 'manual', attribution: credit?.text ?? '', creditLinks: credit?.links ?? [] };
+  }
   if (!text) return { status: 'no_address' };
 
   const addressCountry = countryCodeFromPlace(text);
@@ -123,5 +131,5 @@ export const locateTripItem = async (params: {
   } : { lat: found.lat, lng: found.lng, coordinateSource: 'geocoder' });
 
   const credit = storedCoordinateCredit();
-  return { status: 'located', lat: found.lat, lng: found.lng, geoCity: found.geoCity, provider: getGeocoder()?.id ?? 'geocoder', attribution: credit?.text ?? '' };
+  return { status: 'located', lat: found.lat, lng: found.lng, geoCity: found.geoCity, provider: getGeocoder()?.id ?? 'geocoder', attribution: credit?.text ?? '', creditLinks: credit?.links ?? [] };
 };

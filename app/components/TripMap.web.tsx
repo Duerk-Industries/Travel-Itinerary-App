@@ -19,7 +19,7 @@ const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neu
 // Every transfer (flight, train, bus, ferry) is drawn as one kind, so name it for what it is.
 const KIND_LABEL: Record<string, string> = { flight: 'transfer', lodging: 'lodging', activity: 'activity', car_rental: 'car rental' };
 
-export default function TripMap({ points, selectedId, onSelect, testID, onFindLocations, findLocationsCount = 0, findLocationsProvider }: TripMapProps) {
+export default function TripMap({ points, selectedId, onSelect, testID, onOpenChange, locating = false, locationNotice }: TripMapProps) {
   const theme = useAppTheme();
   const { colors } = theme;
   const host = useRef<HTMLDivElement | null>(null);
@@ -30,13 +30,6 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [selection, setSelection] = useState<string | null>(null);
-  const [finding, setFinding] = useState(false);
-  const [findNotice, setFindNotice] = useState<string | null>(null);
-  const findLocations = async () => {
-    if (!onFindLocations || finding) return;
-    setFinding(true); setFindNotice(null);
-    try { setFindNotice(await onFindLocations()); } catch { setFindNotice("Couldn't look up locations right now. Try again later."); } finally { setFinding(false); }
-  };
   const selected = selectedId ?? selection;
   const { width } = useWindowDimensions();
   const resolved = useMemo(() => points.filter(located).slice(0, 100), [points]);
@@ -112,20 +105,15 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
     if (point && map.current) map.current.easeTo({ center: [point.lng!, point.lat!], zoom: Math.max(map.current.getZoom(), 13), duration: typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250 });
   }, [selected, key]);
   return <View testID={testID} style={{ gap: 8 }}>
-    <TouchableOpacity accessibilityRole="button" onPress={() => setOpen(value => !value)} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
+    <TouchableOpacity accessibilityRole="button" onPress={() => { setOpen(!open); onOpenChange?.(!open); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
     {open && <>
       {failed && <>
         <Text accessibilityRole="alert">Interactive map unavailable — showing a basic map instead.</Text>
         <TouchableOpacity accessibilityRole="button" onPress={() => setRetryKey(value => value + 1)} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">Retry map</Text></TouchableOpacity>
       </>}
       {!resolved.length && <Text>No coordinates yet. Your stops are listed below.</Text>}
-      {onFindLocations && findLocationsCount > 0 && <View style={{ gap: 4 }}>
-        <TouchableOpacity testID="find-locations" accessibilityRole="button" disabled={finding} accessibilityState={{ disabled: finding, busy: finding }} onPress={() => void findLocations()} style={{ minHeight: 44, justifyContent: 'center', opacity: finding ? 0.6 : 1 }}>
-          <Text tone="link">{finding ? 'Finding locations…' : `Find locations for ${findLocationsCount} stop${findLocationsCount === 1 ? '' : 's'}`}</Text>
-        </TouchableOpacity>
-        <Text tone="muted">{`This sends each stop's saved address to ${findLocationsProvider || 'our location provider'} to place it on the map.`}</Text>
-      </View>}
-      {findNotice && <Text accessibilityRole="alert" accessibilityLiveRegion="polite">{findNotice}</Text>}
+      {locating && <Text accessibilityLiveRegion="polite">Finding locations…</Text>}
+      {locationNotice && <Text accessibilityLiveRegion="polite">{locationNotice}</Text>}
       <div ref={viewport} style={{ display: 'flex', flexDirection: width >= 1024 ? 'row' : 'column-reverse', gap: 16 }}>
         <ol aria-label="Day stops" style={{ flex: 1, margin: 0, padding: '0 0 0 24px', color: colors.text, fontFamily: FONT_STACK, fontSize: 14, lineHeight: 1.4, maxHeight: width >= 1024 ? 400 : undefined, overflowY: 'auto' }}>
           {points.map((point, index) => <li key={point.id}><button ref={node => { rowRefs.current[point.id] = node; }} type="button" aria-pressed={selected === point.id}

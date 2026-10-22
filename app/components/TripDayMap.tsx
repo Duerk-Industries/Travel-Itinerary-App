@@ -1,4 +1,4 @@
-import { usePlanningMapPoints } from '../hooks/usePlanningMapPoints';
+import { useAutomaticMapLocations } from '../hooks/useAutomaticMapLocations';
 import TripMap from './TripMap';
 import React, { memo, useEffect, useMemo, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
@@ -52,6 +52,8 @@ const LegendPin: React.FC<{ color: string }> = ({ color }) => (
  */
 const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, requestHeaders, testID, tripId, dayDate }) => {
   const [nativeEnabled, setNativeEnabled] = useState(false);
+  const [canLocate, setCanLocate] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [failed, setFailed] = useState(false);
   const [webObjectUrl, setWebObjectUrl] = useState<string | null>(null);
 
@@ -97,10 +99,10 @@ const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, re
   }, [mapUrl, headersKey]);
 
   useEffect(() => {
-    let cancelled = false; setNativeEnabled(false);
+    let cancelled = false; setNativeEnabled(false); setCanLocate(false); setMapOpen(false);
     if (Platform.OS !== 'web' && tripId && backendUrl) void (async () => {
       const response = await fetch(`${backendUrl}/api/trips/${encodeURIComponent(tripId)}/planning-capabilities`, { headers: requestHeaders });
-      if (response?.ok) { const data = await response.json(); if (!cancelled) setNativeEnabled(data.nativeMap === true); }
+      if (response?.ok) { const data = await response.json(); if (!cancelled) { setNativeEnabled(data.nativeMap === true); setCanLocate(data.locate === true); } }
     })().catch(() => undefined);
     return () => { cancelled = true; };
   }, [tripId, backendUrl, headersKey]);
@@ -116,8 +118,8 @@ const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, re
     return LEGEND_ORDER.filter((kind) => seen.has(kind));
   }, [points]);
 
-  const serverPoints = usePlanningMapPoints({ backendUrl, tripId, dayDate, requestHeaders, enabled: nativeEnabled });
-  if (nativeEnabled) return <TripMap testID={testID} nativeEnabled points={serverPoints ?? points.map((point, index) => ({ ...point, id: point.id || `${point.kind}-${index}`, title: point.title || point.address || point.kind }))} />;
+  const locations = useAutomaticMapLocations({ points, backendUrl, tripId, dayDate, requestHeaders, enabled: nativeEnabled, canLocate, open: mapOpen });
+  if (nativeEnabled) return <TripMap key={JSON.stringify([tripId, dayDate])} testID={testID} nativeEnabled points={locations.points} onOpenChange={setMapOpen} locating={locations.locating} locationNotice={locations.notice} />;
   if (!mapUrl || !imageSource || failed) return null;
 
   return (

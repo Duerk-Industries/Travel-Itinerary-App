@@ -8,7 +8,7 @@ const compatibleBuild = (): boolean => {
   try { return require('expo-constants').default.expoConfig?.extra?.nativeMapRenderer === true; } catch { return false; }
 };
 // Never load a native module in an old binary or while the independent rollout flag is off.
-export default function TripMap({ points, selectedId, onSelect, testID, nativeEnabled = false }: TripMapProps) {
+export default function TripMap({ points, selectedId, onSelect, testID, nativeEnabled = false, onOpenChange, locating = false, locationNotice }: TripMapProps) {
   const [lib, setLib] = useState<typeof NativeMap | null>(null);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(AppState.currentState === 'active');
@@ -34,8 +34,10 @@ export default function TripMap({ points, selectedId, onSelect, testID, nativeEn
   const bounds = resolved.length ? mapBounds(resolved) : undefined;
   const shape: GeoJSON.FeatureCollection<GeoJSON.Point> = { type: 'FeatureCollection', features: resolved.map((p, n) => ({ type: 'Feature', properties: { id: p.id, label: p.label || String(n + 1) }, geometry: { type: 'Point', coordinates: [p.lng!, p.lat!] } })) };
   return <View testID={testID} style={{ gap: 8 }}>
-    <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen(value => !value)} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
+    <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => { setOpen(!open); onOpenChange?.(!open); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
     {open && <>
+      {locating && <Text accessibilityLiveRegion="polite">Finding locations…</Text>}
+      {locationNotice && <Text accessibilityLiveRegion="polite">{locationNotice}</Text>}
       {lib && active && !failed && resolved.length > 0 && <lib.MapView testID="native-trip-map" style={{ height: 360 }} mapStyle="https://tiles.openfreemap.org/styles/liberty" attributionEnabled logoEnabled={false} onDidFinishLoadingMap={() => setLoaded(true)} onDidFailLoadingMap={() => setFailed(true)}>
         <lib.Camera animationDuration={0} {...(selected ? { centerCoordinate: [selected.lng!, selected.lat!], zoomLevel: 13 } : resolved.length > 1 ? { bounds: { ...bounds!, paddingTop: 45, paddingBottom: 45, paddingLeft: 45, paddingRight: 45 } } : { centerCoordinate: [resolved[0].lng!, resolved[0].lat!], zoomLevel: 12 })} />
         <lib.ShapeSource id="stops" shape={shape} onPress={event => { const id = event.features[0]?.properties?.id; if (typeof id === 'string') choose(id); }}>

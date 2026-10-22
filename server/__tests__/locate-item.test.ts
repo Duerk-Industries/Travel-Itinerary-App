@@ -106,6 +106,7 @@ describe('POST /api/trips/:id/locate-item ("Find locations")', () => {
     mockedGeocode.mockClear();
     const again = await locate({ kind: 'lodging', itemId: lodgingId }).expect(200);
     expect(again.body.status).toBe('already_located');
+    expect(again.body).toMatchObject({ lat: 35.7148, lng: 139.7966, coordinateSource: 'geocoder' });
     expect(mockedGeocode).not.toHaveBeenCalled();
   });
 
