@@ -77,16 +77,24 @@ describe('day map when its pins change while it is open', () => {
     await render([point('a', 35.7, 139.8), point('b', 35.71, 139.79)]);
     await press(host, 'Show map');
     await settle();
-    let frame = host.querySelector('iframe')!;
-    expect(new URL(frame.src).searchParams.get('marker')).toBe('35.7,139.8');
+    // The fallback is plain images and buttons: no iframe (the OpenStreetMap embed needs WebGL too) and no canvas.
+    const basic = () => host.querySelector('[aria-label="Basic map of day stops"]') as HTMLElement;
+    expect(host.querySelector('iframe')).toBeNull();
+    expect(basic().querySelectorAll('img[src^="https://tile.openstreetmap.org/"]').length).toBeGreaterThan(0);
+    const pins = () => [...basic().querySelectorAll('button')] as HTMLButtonElement[];
+    expect(pins()).toHaveLength(2);
+    expect(pins().map((pin) => pin.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
     const stop = [...host.querySelectorAll('ol button')][1] as HTMLButtonElement;
     await act(async () => { stop.click(); });
-    frame = host.querySelector('iframe')!;
-    expect(new URL(frame.src).searchParams.get('marker')).toBe('35.71,139.79');
+    expect(pins().map((pin) => pin.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    // Selecting a pin on the basic map selects the stop in the list too.
+    await act(async () => { pins()[0].click(); });
+    expect(pins().map((pin) => pin.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+    expect([...host.querySelectorAll('ol button')].map((button) => button.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
     mockControl.failGpu = false;
     await press(host, 'Retry map');
     await settle();
-    expect(host.querySelector('iframe')).toBeNull();
+    expect(basic()).toBeNull();
     expect(host.textContent).not.toContain('Interactive map unavailable');
   });
 
@@ -150,7 +158,8 @@ describe('day map when its pins change while it is open', () => {
     await act(async () => { map.canvas.dispatchEvent(new Event('webglcontextlost')); });
     expect(host.textContent).toContain('Interactive map unavailable');
     expect((host.querySelector('[aria-label="Interactive map of day stops"]') as HTMLElement).style.display).toBe('block');
-    expect(host.querySelector('iframe')?.src).toContain('www.openstreetmap.org/export/embed.html');
+    expect(host.querySelector('iframe')).toBeNull();
+    expect(host.querySelector('[aria-label="Basic map of day stops"] img')).not.toBeNull();
     await act(async () => { map.canvas.dispatchEvent(new Event('webglcontextrestored')); map.emit('load'); });
     expect(host.textContent).not.toContain('Interactive map unavailable');
   });

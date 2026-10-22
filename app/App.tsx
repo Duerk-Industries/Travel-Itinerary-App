@@ -1,7 +1,8 @@
+import { shadowStyle } from './utils/shadowStyle';
 import { ThemeProvider } from './theme/ThemeContext';
 import type { ImportTripDraft } from '../server/src/types';
 import PendingExpenseRecovery from './components/PendingExpenseRecovery';
-import SaveTripOffline from './components/SaveTripOffline';
+import { OfflineSaveButton, OfflineSavePanel, useSaveTripOffline } from './components/SaveTripOffline';
 import PendingExpenseLogoutDialog from './components/PendingExpenseLogoutDialog';
 /**
  * Main client app for Shared Trip Planner.
@@ -1000,6 +1001,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // updateMapPreference + updateAppearancePreference are now provided by useAccountProfile.
 
   const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
+  const offlineSave = useSaveTripOffline({ trip: isFollowingMode ? null : activeTrip, trips, groups, owner: offlineOwner, token: userToken, costTrackingAllowed, disabled: offlineReadOnly });
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
   const activeGroup = useMemo(
     () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
@@ -3380,6 +3382,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         {userToken ? (
           <View style={[styles.topRightWrapper, isNarrowLayout && styles.topRightWrapperNarrow]}>
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
+              <OfflineSaveButton controller={offlineSave} theme={theme} />
               {!offlineReadOnly && <NotificationInbox backendUrl={backendUrl} token={userToken} openNotificationId={pendingNotificationId} onOpenHandled={() => setPendingNotificationId(null)} onOpen={target => {
                 if (target.tripId) setActiveTripId(target.tripId);
                 requestPageChange(target.page);
@@ -3435,8 +3438,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         ) : null}
       </View>
-      {userToken && offlineOwner && activeTrip && !isFollowingMode && <SaveTripOffline trip={activeTrip} trips={trips} groups={groups}
-        owner={offlineOwner} token={userToken} costTrackingAllowed={costTrackingAllowed} disabled={offlineReadOnly} theme={theme} />}
       {userId && <PendingExpenseRecovery error={pendingExpenses.storageError} getRecoveryData={pendingExpenses.getRecoveryData} repairQueue={pendingExpenses.repairQueue} ownerId={userId} environment={backendUrl} />}
       <OfflineBanner
         status={connection.status}
@@ -4442,6 +4443,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           dispatchContext={{ backendUrl, jsonHeaders, activeTripId, defaultPayerId }}
         />
       ) : null}
+      <OfflineSavePanel controller={offlineSave} theme={theme} />
     </SafeAreaView>
       </ChatProvider>
     </PresenceProvider>
@@ -5762,10 +5764,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     overflow: 'hidden',
     maxHeight: 280,
     ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    ...shadowStyle('#000000', 0.18, 0, 8, 18),
   },
   dropdownOption: {
     paddingHorizontal: 12,
@@ -5862,10 +5861,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     zIndex: 13000,
     elevation: 32,
     ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    ...shadowStyle('#000000', 0.18, 0, 8, 18),
     overflow: 'hidden',
   },
   modalCard: {
@@ -5986,10 +5982,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     elevation: 40, // keep above other inputs on native
     overflow: 'hidden',
     ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    ...shadowStyle('#000000', 0.18, 0, 8, 18),
   },
   locationField: {
     position: 'relative',
@@ -6054,10 +6047,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     zIndex: 41000,
     ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     elevation: 60,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    ...shadowStyle('#000000', 0.18, 0, 8, 18),
   },
   dropdownScroll: {
     maxHeight: 300,

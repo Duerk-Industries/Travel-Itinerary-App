@@ -1,60 +1,65 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Platform, TouchableOpacity, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import type { Trip } from '../../server/src/types';
 import type { AppTheme } from '../theme/theme';
-import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import { downloadOfflineTripSnapshot } from '../utils/downloadOfflineTripSnapshot';
-import { estimateBytes, getConnectionCost, readWifiOnlyPreference, shouldWarnBeforeDownload, writeWifiOnlyPreference } from '../utils/offlineDownloadPolicy';
+import { estimateBytes, getConnectionCost, readWifiOnlyPreference, shouldWarnBeforeDownload } from '../utils/offlineDownloadPolicy';
 import { loadOfflineTripCache, saveOfflineTripSnapshot, startOfflineAccessPeriod, type OfflineCacheOwner } from '../utils/offlineTripCache';
+import { ThemedText as Text } from './ThemedText';
 
-export default function SaveTripOffline({ trip, trips, groups, owner, token, costTrackingAllowed, disabled, theme }: {
-  trip: Pick<Trip, 'id' | 'groupId'>; trips: unknown[]; groups: unknown[];
-  owner: OfflineCacheOwner; token: string; costTrackingAllowed: boolean; disabled?: boolean; theme?: AppTheme;
-}) {
-  const { isPhoneLayout } = useLayoutBreakpoints();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const colors = theme?.colors;
-  // Same look as the page's primary and secondary buttons; plain defaults when no theme is passed.
-  const primary = { backgroundColor: colors?.cta ?? '#F59E0B', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 };
-  const secondary = { backgroundColor: colors?.surfaceMuted ?? '#F1F5F9', borderWidth: 1, borderColor: colors?.border ?? '#CBD5E1', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 };
-  const primaryText = { color: '#0B1726', fontWeight: '700' as const };
-  const secondaryText = { color: colors?.text ?? '#0F172A', fontWeight: '700' as const };
-  const textColor = { color: colors?.text ?? '#0F172A' };
-  const [confirm, setConfirm] = useState(false), [busy, setBusy] = useState(false);
+/**
+ * Saving a trip for offline use is one flow with two places on screen: a download icon in the top bar starts it, and a
+ * panel at the bottom of the page shows its progress, result and any question (shared-device and mobile-data prompts).
+ * The "Wi-Fi only" choice for automatic refreshes lives in Account settings; this reads it fresh on every save.
+ */
+export type SaveTripOfflineController = {
+  /** A trip is open and the person is signed in, so saving makes sense. */
+  available: boolean;
+  busy: boolean;
+  disabled: boolean;
+  notice: string | null;
+  /** Web only: the shared-device warning that must be accepted before anything is stored. */
+  confirmDevice: boolean;
+  /** Set when saving would use mobile data and the person should choose first. */
+  mobileWarning: string | null;
+  start: () => Promise<void>;
+  save: () => Promise<void>;
+  acceptMobileData: () => void;
+  waitForWifi: () => void;
+  cancelDeviceConfirm: () => void;
+  dismissNotice: () => void;
+};
+
+type Params = {
+  trip: Pick<Trip, 'id' | 'groupId'> | null | undefined;
+  trips: unknown[];
+  groups: unknown[];
+  owner: OfflineCacheOwner | null | undefined;
+  token: string | null | undefined;
+  costTrackingAllowed: boolean;
+  disabled?: boolean;
+};
+
+export function useSaveTripOffline({ trip, trips, groups, owner, token, costTrackingAllowed, disabled = false }: Params): SaveTripOfflineController {
+  const [confirmDevice, setConfirmDevice] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [mobileWarning, setMobileWarning] = useState<string | null>(null);
-  const [wifiOnly, setWifiOnly] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const epoch = useRef(0), inFlight = useRef(false);
+  const epoch = useRef(0);
+  const inFlight = useRef(false);
+  const available = Boolean(trip && owner && token);
+
+  // A different trip, account or sign-in fences off anything still running and clears what was on screen.
   useEffect(() => {
-    epoch.current += 1; setNotice(null); setConfirm(false); setMobileWarning(null); setBusy(false); inFlight.current = false;
+    epoch.current += 1; setNotice(null); setConfirmDevice(false); setMobileWarning(null); setBusy(false); inFlight.current = false;
     return () => { epoch.current += 1; };
-  }, [owner.userId, owner.environment, trip.id, token]);
-  useEffect(() => {
-    let cancelled = false;
-    void readWifiOnlyPreference().then(value => { if (!cancelled) setWifiOnly(value); });
-    return () => { cancelled = true; };
-  }, []);
-  const toggleWifiOnly = () => {
-    const next = !wifiOnly;
-    setWifiOnly(next);
-    void writeWifiOnlyPreference(next);
-  };
-  // Saving is always allowed on mobile data; we only ask first when the user chose
-  // Wi-Fi only or the last saved copy of this trip was large.
-  const start = async () => {
-    if (inFlight.current || disabled) return;
-    const previous = await loadOfflineTripCache(owner).catch(() => null);
-    const bytes = estimateBytes(previous?.snapshots[trip.id]);
-    if (shouldWarnBeforeDownload(wifiOnly, await getConnectionCost(), bytes)) {
-      setMobileWarning(`You're on mobile data.${bytes ? ` This trip was about ${Math.ceil(bytes / 1024 / 1024 * 10) / 10} MB last time.` : ''} Save it now, or wait for Wi-Fi?`);
-      return;
-    }
-    if (Platform.OS === 'web') setConfirm(true); else void save();
-  };
-  const save = async () => {
+  }, [owner?.userId, owner?.environment, trip?.id, token]);
+
+  const save = useCallback(async () => {
     setMobileWarning(null);
-    if (inFlight.current || disabled) return;
-    inFlight.current = true; setBusy(true); setConfirm(false); setNotice('Downloading trip details…');
+    if (!trip || !owner || !token || inFlight.current || disabled) return;
+    inFlight.current = true; setBusy(true); setConfirmDevice(false); setNotice('Downloading trip details…');
     const current = epoch.current;
     try {
       const previous = await loadOfflineTripCache(owner);
@@ -73,34 +78,86 @@ export default function SaveTripOffline({ trip, trips, groups, owner, token, cos
     } catch {
       if (current === epoch.current) setNotice('Could not save this trip. Your previous saved copy is still available. Check your connection and device storage, then try again.');
     } finally { if (current === epoch.current) { inFlight.current = false; setBusy(false); } }
+  }, [trip, owner, token, costTrackingAllowed, disabled, trips, groups]);
+
+  // Saving is always allowed on mobile data; the person is only asked first when they chose Wi-Fi only in Account
+  // settings, or when the last saved copy of this trip was large.
+  const start = useCallback(async () => {
+    if (!trip || !owner || inFlight.current || disabled) return;
+    const previous = await loadOfflineTripCache(owner).catch(() => null);
+    const bytes = estimateBytes(previous?.snapshots[trip.id]);
+    const wifiOnly = await readWifiOnlyPreference();
+    if (shouldWarnBeforeDownload(wifiOnly, await getConnectionCost(), bytes)) {
+      setMobileWarning(`You're on mobile data.${bytes ? ` This trip was about ${Math.ceil(bytes / 1024 / 1024 * 10) / 10} MB last time.` : ''} Save it now, or wait for Wi-Fi?`);
+      return;
+    }
+    if (Platform.OS === 'web') setConfirmDevice(true); else void save();
+  }, [trip, owner, disabled, save]);
+
+  return {
+    available, busy, disabled, notice, confirmDevice, mobileWarning, start, save,
+    acceptMobileData: () => { setMobileWarning(null); if (Platform.OS === 'web') setConfirmDevice(true); else void save(); },
+    waitForWifi: () => setMobileWarning(null),
+    cancelDeviceConfirm: () => setConfirmDevice(false),
+    dismissNotice: () => setNotice(null),
   };
-  const saveButton = <TouchableOpacity accessibilityRole="button" disabled={busy || disabled} accessibilityState={{ disabled: busy || disabled, busy }}
-    style={[primary, (busy || disabled) && { opacity: 0.6 }]} onPress={() => { setMenuOpen(false); void start(); }}>
-    <Text style={primaryText}>{busy ? 'Saving offline copy…' : 'Save this trip offline'}</Text>
+}
+
+const DownloadIcon: React.FC<{ color: string; size?: number }> = ({ color, size = 22 }) => (
+  // Material "file download" glyph: an arrow into a tray.
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path fill={color} d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
+  </Svg>
+);
+
+/** The top-bar button: a download icon with the same footprint as the notification bell beside it. */
+export function OfflineSaveButton({ controller, theme }: { controller: SaveTripOfflineController; theme?: AppTheme }) {
+  if (!controller.available) return null;
+  const off = controller.busy || controller.disabled;
+  const color = theme?.colors.text ?? '#0F172A';
+  return <TouchableOpacity testID="offline-save-button" accessibilityRole="button" accessibilityLabel="Save this trip offline"
+    accessibilityHint="Downloads this trip to this device so you can read it without a connection"
+    accessibilityState={{ disabled: off, busy: controller.busy }} disabled={off}
+    {...(Platform.OS === 'web' ? ({ title: 'Save this trip offline' } as object) : {})}
+    onPress={() => void controller.start()} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8, opacity: controller.disabled ? 0.5 : 1 }}>
+    {controller.busy ? <ActivityIndicator size="small" color={color} /> : <DownloadIcon color={color} />}
   </TouchableOpacity>;
-  const wifiButton = <TouchableOpacity accessibilityRole="switch" accessibilityState={{ checked: wifiOnly }}
-    accessibilityLabel="Download over Wi-Fi only" style={secondary} onPress={toggleWifiOnly}>
-    <Text style={secondaryText}>{wifiOnly ? '☑' : '☐'} Update saved trips over Wi-Fi only</Text>
-  </TouchableOpacity>;
-  return <View style={{ padding: 8, gap: 8, alignItems: 'center' }}>
-    {isPhoneLayout ? <View style={{ alignSelf: 'stretch', gap: 8 }}>
-      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Offline options" accessibilityState={{ expanded: menuOpen }}
-        style={[secondary, { flexDirection: 'row', justifyContent: 'space-between' }]} onPress={() => setMenuOpen(open => !open)}>
-        <Text style={secondaryText}>Offline options</Text><Text style={secondaryText}>{menuOpen ? '▴' : '▾'}</Text>
-      </TouchableOpacity>
-      {menuOpen && <View style={{ gap: 8 }}>{saveButton}{wifiButton}</View>}
-    </View> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>{saveButton}{wifiButton}</View>}
-    {mobileWarning && <View style={{ gap: 8 }}>
-      <Text accessibilityLiveRegion="polite" style={textColor}>{mobileWarning}</Text>
-      <TouchableOpacity accessibilityRole="button" style={primary}
-        onPress={() => { setMobileWarning(null); if (Platform.OS === 'web') setConfirm(true); else void save(); }}><Text style={primaryText}>Save on mobile data</Text></TouchableOpacity>
-      <TouchableOpacity accessibilityRole="button" style={secondary} onPress={() => setMobileWarning(null)}><Text style={secondaryText}>Wait for Wi-Fi</Text></TouchableOpacity>
-    </View>}
-    {confirm && <View style={{ gap: 8 }}>
-      <Text style={textColor}>This browser will keep private trip details on this device. Avoid saving on shared devices. Browser storage is not encrypted by WanderBunnies. Signing out removes saved trip copies.</Text>
-      <TouchableOpacity accessibilityRole="button" style={primary} onPress={() => void save()}><Text style={primaryText}>Save on this device</Text></TouchableOpacity>
-      <TouchableOpacity accessibilityRole="button" style={secondary} onPress={() => setConfirm(false)}><Text style={secondaryText}>Cancel offline save</Text></TouchableOpacity>
-    </View>}
-    {notice && <Text accessibilityLiveRegion="polite" style={textColor}>{notice}</Text>}
+}
+
+/**
+ * Status and questions for the save, anchored to the bottom of the screen so they are seen without scrolling. Renders
+ * nothing when there is nothing to say.
+ */
+export function OfflineSavePanel({ controller, theme }: { controller: SaveTripOfflineController; theme?: AppTheme }) {
+  const { notice, confirmDevice, mobileWarning, busy } = controller;
+  if (!controller.available || (!notice && !confirmDevice && !mobileWarning)) return null;
+  const colors = theme?.colors;
+  const primary = { backgroundColor: colors?.cta ?? '#F59E0B', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 };
+  const secondary = { backgroundColor: colors?.surfaceMuted ?? '#F1F5F9', borderWidth: 1, borderColor: colors?.border ?? '#CBD5E1', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 };
+  const primaryText = { color: '#0B1726', fontWeight: '700' as const };
+  const secondaryText = { color: colors?.text ?? '#0F172A', fontWeight: '700' as const };
+  // Fixed on the web so it stays at the bottom of the window however far the page is scrolled.
+  const placement = (Platform.OS === 'web' ? { position: 'fixed' } : { position: 'absolute' }) as object;
+  return <View pointerEvents="box-none" style={[{ left: 0, right: 0, bottom: 0, zIndex: 60, paddingHorizontal: 12, paddingBottom: 12, alignItems: 'center' }, placement]}>
+    <View testID="offline-save-panel" style={{ width: '100%', maxWidth: 720, gap: 10, padding: 14, borderRadius: 12, borderWidth: 1, backgroundColor: colors?.surface ?? '#FFFFFF', borderColor: colors?.border ?? '#CBD5E1', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 }}>
+      {mobileWarning && <View style={{ gap: 8 }}>
+        <Text accessibilityLiveRegion="polite">{mobileWarning}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <TouchableOpacity accessibilityRole="button" style={primary} onPress={controller.acceptMobileData}><Text style={primaryText}>Save on mobile data</Text></TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" style={secondary} onPress={controller.waitForWifi}><Text style={secondaryText}>Wait for Wi-Fi</Text></TouchableOpacity>
+        </View>
+      </View>}
+      {confirmDevice && <View style={{ gap: 8 }}>
+        <Text>This browser will keep private trip details on this device. Avoid saving on shared devices. Browser storage is not encrypted by WanderBunnies. Signing out removes saved trip copies.</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <TouchableOpacity accessibilityRole="button" style={primary} onPress={() => void controller.save()}><Text style={primaryText}>Save on this device</Text></TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" style={secondary} onPress={controller.cancelDeviceConfirm}><Text style={secondaryText}>Cancel offline save</Text></TouchableOpacity>
+        </View>
+      </View>}
+      {notice && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Text accessibilityLiveRegion="polite" style={{ flex: 1 }}>{notice}</Text>
+        {!busy && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dismiss message" style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }} onPress={controller.dismissNotice}><Text tone="link">Dismiss</Text></TouchableOpacity>}
+      </View>}
+    </View>
   </View>;
 }

@@ -1,3 +1,4 @@
+import { shadowStyle } from '../utils/shadowStyle';
 /**
  * ChatButton — floating action button (lower-right) that opens the ChatPanel.
  * Shows an unread badge when there are unread messages.
@@ -45,10 +46,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    ...shadowStyle('#000', 0.2, 0, 3, 6),
     zIndex: 1000,
   },
   icon: {

@@ -134,7 +134,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
             {located(point) && index > 0 && located(points[index - 1]) && <span style={{ display: 'block', color: colors.textMuted }}>{travelEstimate(points[index - 1], point)}</span>}
           </button></li>)}
         </ol>
-        {failed && <BasicTripMap points={resolved} selectedId={selected} />}
+        {failed && <BasicTripMap points={resolved} selectedId={selected} onSelect={id => chooseRef.current(id)} />}
         <div ref={host} aria-label="Interactive map of day stops" style={{ flex: failed ? 0 : 2, minHeight: failed ? 0 : 360, height: failed ? 0 : 400, display: !resolved.length ? 'none' : 'block', borderRadius: 12, overflow: 'hidden' }} />
       </div>
       {[...new Set(points.map(point => point.coordinateAttribution).filter((value): value is string => Boolean(value)))].map(value => <Text key={value}>{value}</Text>)}

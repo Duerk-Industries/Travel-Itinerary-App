@@ -1,3 +1,4 @@
+import { shadowStyle } from '../utils/shadowStyle';
 /**
  * ChatPanel — the sliding chat overlay for a trip.
  *
@@ -407,10 +408,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    ...shadowStyle('#000', 0.15, 0, 4, 12),
   },
   panelDesktop: {
     position: 'absolute' as any,

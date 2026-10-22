@@ -88,7 +88,7 @@ const DayMediaGallery = ({
     const showMetadata = (canEditMetadata || canRecordCaption) && !isAudioItem(item) && onSaveMetadata;
     if (!showCoverControl && !canRemove && !showMetadata) return null;
     return (
-      <View style={{ position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4 }} pointerEvents="box-none">
+      <View style={{ position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4, pointerEvents: 'box-none' }}>
         {showCoverControl ? (
           // Every eligible tile always carries a cover control -- either the filled badge marking
           // the current cover, or an outlined button offering to make this the cover -- rather than

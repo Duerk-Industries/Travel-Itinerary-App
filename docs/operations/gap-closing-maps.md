@@ -111,6 +111,28 @@ country**; Kawaguchiko Lakeside Hotel and Koyasan Shukubo Yochiin were left unpi
 Lower-confidence pins (0.5 to 0.7, for example Royal Park Hotel Kurashiki) are usually the right town but can be a
 street or two off; there is not yet a way to mark a pin "approximate".
 
+### When the interactive map cannot start (2026-10-22)
+
+The day map draws with WebGL. Some browsers have it switched off or blocked (a locked-down browser, a remote
+desktop, no GPU), and MapLibre then fails with `WebGL2 is required to display this map`. The component shows
+"Interactive map unavailable", a **Retry map** link, and a **basic map**.
+
+- **Not the OpenStreetMap embed.** An earlier fallback embedded `openstreetmap.org/export/embed.html`, assuming a
+  raster page. It now draws with WebGL too and showed the same "browser does not support WebGL" message, so it
+  failed in exactly the browsers it was meant for.
+- **Now:** `BasicTripMap.web.tsx` lays ordinary OpenStreetMap tile images out in HTML (geometry in
+  `app/utils/tileMap.ts`) and places the day's lettered, clickable pins on top. No WebGL, canvas or new dependency.
+  Selecting a pin or a list row highlights the other. It carries the OpenStreetMap credit and an "Open in
+  OpenStreetMap" link for the selected stop.
+- **Tile policy.** The tiles come from OpenStreetMap's public tile server (`tile.openstreetmap.org`), which is for
+  light use. The fallback loads a few tiles per day view, only when the interactive map failed, and never in the
+  background. If it ever carries real traffic, move it to a contracted raster provider.
+- **Verified** in a Chromium started with WebGL disabled: the interactive map failed as above, every tile returned
+  200, and the pins rendered.
+- **A separate bug, also fixed:** rebuilding the map when "Find locations" added pins used to mark the new map
+  unavailable, because the old map's `webglcontextlost` event reached a listener that was never detached. That
+  listener is now guarded and removed, and a single failed tile no longer hides the map.
+
 ### Provider adapter
 
 The provider sits behind `GeocoderAdapter` (`server/src/services/geocoder/types.ts`). Nothing outside

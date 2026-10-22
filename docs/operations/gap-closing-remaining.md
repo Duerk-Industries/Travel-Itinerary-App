@@ -62,7 +62,9 @@ Implemented in the continuation after P2.5:
 - Browser snapshot copies use `offlineSnapshotStorage.web.ts`, an IndexedDB
   transaction adapter. Saves wait for transaction completion, not request success.
   Native storage remains the previous adapter pending the encrypted-store spike.
-  The explicit Save this trip offline control warns about shared devices, reports
+  The explicit Save this trip offline control (a download icon in the top bar beside
+  the notification bell; progress, prompts and results appear in a panel at the bottom
+  of the screen) warns about shared devices, reports
   progress/size/date, preserves prior copies on failure and fences account changes.
   Access is extended only after the server authorizes a complete download. Native
   automatic download behavior is unchanged; browser saves are deliberate.
@@ -314,8 +316,8 @@ reused rather than suffixed.
 opened first (`lastAccessedAt`, falling back to `savedAt` for older copies). Saving or
 opening a trip records access, writes are throttled to one per hour, and a touch never
 extends the 30-day offline access window or creates a snapshot. The queue is a separate
-store and is never evicted. A device-level "Update saved trips over Wi-Fi only" switch
-(`utils/offlineDownloadPolicy.ts`) pauses automatic refreshes unless the link is
+store and is never evicted. A device-level "Update saved trips: Wi-Fi only" setting in
+Account settings (`components/OfflineDownloadSettings.tsx`, `utils/offlineDownloadPolicy.ts`) pauses automatic refreshes unless the link is
 confirmed Wi-Fi/Ethernet; unknown counts as not confirmed. A deliberate save always works
 on mobile data, but asks first when Wi-Fi only is on or the last copy was 5 MB or more.
 Browsers rarely report the connection type, so on web this warning rarely appears.
