@@ -52,7 +52,7 @@ export const geoapifyAdapter: GeocoderAdapter = {
     let parsed: { results?: unknown };
     try { parsed = JSON.parse(body); } catch { throw new GeocoderError('invalid-response'); }
     if (!parsed || !Array.isArray(parsed.results)) throw new GeocoderError('invalid-response');
-    const first = parsed.results[0] as { lat?: unknown; lon?: unknown; city?: unknown; town?: unknown; village?: unknown; country_code?: unknown; rank?: { confidence?: unknown } } | undefined;
+    const first = parsed.results[0] as { lat?: unknown; lon?: unknown; city?: unknown; town?: unknown; village?: unknown; country_code?: unknown; result_type?: unknown; rank?: { confidence?: unknown; match_type?: unknown } } | undefined;
     if (!first) return null;
     const lat = asCoordinate(first.lat, 90);
     const lng = asCoordinate(first.lon, 180);
@@ -60,6 +60,9 @@ export const geoapifyAdapter: GeocoderAdapter = {
     const confidence = typeof first.rank?.confidence === 'number' && Number.isFinite(first.rank.confidence) ? first.rank.confidence : null;
     const place = first.city ?? first.town ?? first.village;
     const country = typeof first.country_code === 'string' && /^[a-z]{2}$/i.test(first.country_code) ? first.country_code.toLowerCase() : null;
-    return { lat, lng, geoCity: typeof place === 'string' && place.trim() ? place.trim().slice(0, 160) : null, confidence, countryCode: country };
+    return { lat, lng, geoCity: typeof place === 'string' && place.trim() ? place.trim().slice(0, 160) : null, confidence, countryCode: country,
+      ...(typeof first.result_type === 'string' ? { resultType: first.result_type.toLowerCase() } : {}),
+      ...(typeof first.rank?.match_type === 'string' ? { matchType: first.rank.match_type.toLowerCase() } : {}),
+    };
   },
 };

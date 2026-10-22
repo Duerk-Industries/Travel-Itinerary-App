@@ -99,7 +99,7 @@ describe('POST /api/trips/:id/locate-item ("Find locations")', () => {
     const res = await locate({ kind: 'lodging', itemId: lodgingId }).expect(200);
     expect(res.body).toEqual(expect.objectContaining({ status: 'located', lat: 35.7148, lng: 139.7966, provider: 'geoapify' }));
     expect(res.body.attribution).toMatch(/Geoapify/);
-    expect(mockedGeocode).toHaveBeenCalledWith('Asakusa 2-6-7, Taito, Tokyo, Japan', { countryCode: 'jp' });
+    expect(mockedGeocode).toHaveBeenCalledWith('Asakusa 2-6-7, Taito, Tokyo, Japan', { countryCode: 'jp', requirePreciseMatch: true, strictCountry: true });
     const saved = (await listLodgings(userId, tripId)).find((item) => item.id === lodgingId)!;
     expect(saved).toEqual(expect.objectContaining({ lat: 35.7148, lng: 139.7966, coordinateSource: 'geocoder' }));
 
@@ -107,6 +107,14 @@ describe('POST /api/trips/:id/locate-item ("Find locations")', () => {
     const again = await locate({ kind: 'lodging', itemId: lodgingId }).expect(200);
     expect(again.body.status).toBe('already_located');
     expect(mockedGeocode).not.toHaveBeenCalled();
+  });
+
+  it('uses the hotel address country instead of the overall trip country', async () => {
+    const hotel = await insertLodging({ userId, tripId, status: 'Booked', name: 'London Hotel', checkInDate: '2027-03-02', checkOutDate: '2027-03-03', rooms: 1, totalCost: 10, costPerNight: 10, address: '10 Example Street, London, UK', paid_by: [], traveler_ids: [] });
+    mockedGeocode.mockResolvedValue({ lat: 51.5, lng: -0.1, geoCity: 'London', confidence: 0.95, countryCode: 'gb' });
+    expect((await locate({ kind: 'lodging', itemId: hotel.id }).expect(200)).body.status).toBe('located');
+    expect(mockedGeocode).toHaveBeenCalledWith('10 Example Street, London, UK', { countryCode: 'gb', strictCountry: true, requirePreciseMatch: true });
+    expect(mockedGeocode).toHaveBeenCalledTimes(1);
   });
 
   it('adds the trip destination to a bare place name but not to a full address', async () => {
@@ -124,8 +132,8 @@ describe('POST /api/trips/:id/locate-item ("Find locations")', () => {
     mockedGeocode.mockResolvedValueOnce(null).mockResolvedValueOnce({ lat: 35.714, lng: 139.794, geoCity: 'Taito', confidence: 0.76, countryCode: 'jp' });
     const res = await locate({ kind: 'lodging', itemId: fallbackLodgingId }).expect(200);
     expect(res.body.status).toBe('located');
-    expect(mockedGeocode).toHaveBeenNthCalledWith(1, 'Tokyo-to, Tokyo, Taito-ku Asakusa 2-6-7, Japan', { countryCode: 'jp' });
-    expect(mockedGeocode).toHaveBeenNthCalledWith(2, 'Richmond Hotel Asakusa, Tokyo-to, Tokyo, Japan', { countryCode: 'jp' });
+    expect(mockedGeocode).toHaveBeenNthCalledWith(1, 'Tokyo-to, Tokyo, Taito-ku Asakusa 2-6-7, Japan', { countryCode: 'jp', requirePreciseMatch: true, strictCountry: true });
+    expect(mockedGeocode).toHaveBeenNthCalledWith(2, 'Richmond Hotel Asakusa, Tokyo-to, Tokyo, Taito-ku Asakusa 2-6-7, Japan', { countryCode: 'jp', requirePreciseMatch: true, strictCountry: true });
     const saved = (await listLodgings(userId, tripId)).find((item) => item.id === fallbackLodgingId)!;
     expect(saved).toEqual(expect.objectContaining({ lat: 35.714, lng: 139.794, coordinateSource: 'geocoder' }));
   });

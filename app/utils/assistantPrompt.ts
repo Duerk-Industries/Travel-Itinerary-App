@@ -15,8 +15,8 @@ const SYSTEM_PROMPT_HEADER =
   "sounds more familiar or typical for a travel app, even if it seems more natural. When " +
   "explaining how to do something, always say which tab it's in first, even if your answer is " +
   "otherwise short -- don't jump straight to a button or action without naming where to find it. " +
-  "For example, if the reference material says a feature lives in the Transfers tab and is " +
-  "reached via a \"+\" button, answer \"From the Transfers tab, tap the '+' button...\" -- NOT " +
+  "For example, if the reference material says a feature lives in the Ground Transfers tab and is " +
+  "reached via a \"+\" button, answer \"From the Ground Transfers tab, tap the '+' button...\" -- NOT " +
   "just \"Tap the '+' button...\" by itself. The button part alone isn't wrong, it's incomplete " +
   "-- the user still needs to know where to find it. If the reference material doesn't cover " +
   "the question, say so plainly rather than guessing. Keep answers short and conversational -- " +

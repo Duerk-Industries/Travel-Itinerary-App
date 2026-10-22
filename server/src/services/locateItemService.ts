@@ -19,7 +19,7 @@ const hasPoint = (lat: unknown, lng: unknown): boolean => typeof lat === 'number
 /** A bare name ("Senso-ji") is ambiguous worldwide; the trip's destination narrows it. A full address already is not. */
 const withDestination = (text: string, destination: string | null | undefined): string => {
   const place = (destination ?? '').trim();
-  return place && !text.includes(',') ? `${text}, ${place}` : text;
+  return place && !countryCodeFromPlace(text) && !text.toLowerCase().includes(place.toLowerCase()) ? `${text}, ${place}` : text;
 };
 
 /**
@@ -45,10 +45,11 @@ const placeContext = (destination: string | null | undefined, address: string): 
  * map data to the building (Japanese block numbers, for example) while the place's name is. So a lodging or activity
  * whose address finds no confident match is searched again by name.
  */
-export const searchesFor = (address: string, name: string, destination: string | null | undefined, byNameToo: boolean): string[] => {
+export const searchesFor = (address: string, name: string, destination: string | null | undefined, byNameToo: boolean, preferAddress = false): string[] => {
   const searches = [withDestination(address, destination)];
   const named = name.trim();
   if (byNameToo && named && named.toLowerCase() !== address.trim().toLowerCase()) {
+    if (preferAddress) searches.push(withDestination(`${named}, ${address}`, destination));
     const context = placeContext(destination, address);
     searches.push(context && !named.includes(',') ? `${named}, ${context}` : named);
   }
@@ -96,11 +97,12 @@ export const locateTripItem = async (params: {
   if (already) return { status: 'already_located' };
   if (!text) return { status: 'no_address' };
 
-  const countryCode = countryCodeFromPlace(trip?.destination);
+  const addressCountry = countryCodeFromPlace(text);
+  const countryCode = addressCountry ?? countryCodeFromPlace(trip?.destination);
   let found;
   try {
-    for (const search of searchesFor(text, name, trip?.destination, byNameToo)) {
-      found = await geocodeAddress(search, { countryCode });
+    for (const search of searchesFor(text, name, trip?.destination, byNameToo, kind === 'lodging')) {
+      found = await geocodeAddress(search, { countryCode, ...(kind === 'lodging' ? { requirePreciseMatch: true, strictCountry: Boolean(countryCode) } : {}) });
       if (found) break;
     }
   } catch (error) {

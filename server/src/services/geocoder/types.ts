@@ -24,6 +24,10 @@ export type GeocoderResult = {
   confidence: number | null;
   /** Lowercase ISO 3166-1 alpha-2 country of the match, or null when the provider does not say. */
   countryCode: string | null;
+  /** Spatial level of the result (building, amenity, street, city, etc.), when reported. */
+  resultType?: string;
+  /** Provider match level; a high confidence city match still isn't a hotel location. */
+  matchType?: string;
 };
 
 /** What a provider requires to be shown wherever its results appear. */

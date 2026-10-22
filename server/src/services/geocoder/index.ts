@@ -90,7 +90,7 @@ const confident = (found: GeocoderResult): boolean => found.confidence === null 
  * result in another country is kept only when the provider is strongly sure, otherwise the lookup is repeated
  * restricted to the trip's country and that answer must itself be confident.
  */
-export const geocodeAddress = async (text: string, options: { language?: string; countryCode?: string } = {}): Promise<GeocoderResult | null> => {
+export const geocodeAddress = async (text: string, options: { language?: string; countryCode?: string; requirePreciseMatch?: boolean; strictCountry?: boolean } = {}): Promise<GeocoderResult | null> => {
   const adapter = getGeocoder();
   if (!adapter || !adapter.isConfigured()) throw new GeocoderError('not-configured');
   const query = text.normalize('NFKC').replace(/\s+/g, ' ').trim();
@@ -98,11 +98,16 @@ export const geocodeAddress = async (text: string, options: { language?: string;
   const language = (options.language || 'en').slice(0, 8);
   const tripCountry = validCountry(options.countryCode);
 
-  const first = await callProvider(adapter, query, language);
-  if (!first || !confident(first)) return null;
+  const acceptable = (found: GeocoderResult): boolean => confident(found) && (!options.requirePreciseMatch || (
+    (!found.resultType || ['building', 'amenity'].includes(found.resultType))
+    && !['match_by_street', 'match_by_postcode', 'match_by_city_or_disrict', 'match_by_city_or_district', 'match_by_country_or_state'].includes(found.matchType ?? '')
+  ));
+  const first = await callProvider(adapter, query, language, options.strictCountry ? tripCountry : undefined);
+  if (!first || !acceptable(first)) return null;
   const elsewhere = Boolean(tripCountry && first.countryCode && first.countryCode !== tripCountry);
+  if (options.strictCountry) return elsewhere ? null : first;
   if (!elsewhere || (first.confidence !== null && first.confidence >= STRONG_CONFIDENCE)) return first;
 
   const inCountry = await callProvider(adapter, query, language, tripCountry);
-  return inCountry && confident(inCountry) ? inCountry : null;
+  return inCountry && acceptable(inCountry) ? inCountry : null;
 };

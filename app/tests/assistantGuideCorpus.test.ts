@@ -46,10 +46,11 @@ describe('assistantGuideCorpus', () => {
   // the model answered "click the Flights tab" -- a plausible-sounding name
   // for a travel app, but not this app's actual tab name. The corpus entry
   // now explicitly rules that guess out by name; keep it that way.
-  it('explicitly names the Transfers tab and rules out "Flights tab" as a wrong guess', () => {
+  it('documents the separate Flights and Ground Transfers screens', () => {
     const transfers = GUIDE_CORPUS.find((entry) => entry.id === 'transfers');
     expect(transfers?.content).toContain('Transfers');
-    expect(transfers?.content.toLowerCase()).toContain('no separate "flights" tab');
+    expect(transfers?.content).toContain('Use Flights for air travel');
+    expect(transfers?.content).toContain('Use Ground Transfers for trains');
   });
 
   // Regression guard for a second real hallucination observed in manual

@@ -1,6 +1,18 @@
 import { searchesFor } from '../src/services/locateItemService';
 
 describe('searchesFor', () => {
+  it('keeps the full hotel address ahead of name-only fallbacks', () => {
+    expect(searchesFor('2-6-7 Asakusa, Tokyo, Japan', 'Richmond Hotel', 'Japan', true, true)).toEqual([
+      '2-6-7 Asakusa, Tokyo, Japan',
+      'Richmond Hotel, 2-6-7 Asakusa, Tokyo, Japan',
+      'Richmond Hotel, Tokyo, Japan',
+    ]);
+  });
+
+  it('adds destination context to an incomplete comma-separated address', () => {
+    expect(searchesFor('123 Main Street, Springfield', 'Hotel', 'USA', true)[0]).toBe('123 Main Street, Springfield, USA');
+    expect(searchesFor('123 Main Street, London, UK', 'Hotel', 'Japan', true)[0]).toBe('123 Main Street, London, UK');
+  });
   it('tries the address first, then the name with the address\'s place names but not its street or block numbers', () => {
     expect(searchesFor('Tokyo-to, Tokyo, Taito-ku Asakusa 2-6-7, Japan', 'Richmond Hotel Premier Asakusa International', 'Japan', true)).toEqual([
       'Tokyo-to, Tokyo, Taito-ku Asakusa 2-6-7, Japan',

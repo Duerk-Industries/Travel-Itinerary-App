@@ -106,6 +106,32 @@ describe('FlightsTab read-only mode', () => {
     jest.restoreAllMocks();
   });
 
+  test.each(['flights', 'ground'] as const)('%s screen filters rows and totals, and offers the right transfer types', (transferScope) => {
+    const ground: Flight = { ...flight, id: 'train-1', transfer_type: 'Train', transferType: 'Train', cost: 37 };
+    const air: Flight = { ...flight, cost: 250 };
+    const { getByTestId, queryByTestId, getByText, queryByText } = render(
+      <FlightsTab
+        transferScope={transferScope}
+        backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+        flights={[air, ground]} setFlights={jest.fn() as any} groupMembers={[member]} defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`} payerName={() => 'Bryan Traveler'}
+        headers={{}} jsonHeaders={{}} findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={async () => {}} styles={styles} airportOptions={[]} onSearchAirports={() => {}}
+      />
+    );
+    expect(getByTestId(`transfer-row-${transferScope === 'flights' ? 'flight-1' : 'train-1'}`)).toBeTruthy();
+    expect(queryByTestId(`transfer-row-${transferScope === 'flights' ? 'train-1' : 'flight-1'}`)).toBeNull();
+    expect(getByText(transferScope === 'flights' ? 'Total flight cost: $250.00' : 'Total ground transfer cost: $37.00')).toBeTruthy();
+    fireEvent.press(getByTestId('transfer-add'));
+    expect(getByTestId('flight-modal-save')).toBeTruthy();
+    if (transferScope === 'ground') {
+      expect(getByText('Other')).toBeTruthy();
+      expect(queryByText('Flight')).toBeNull();
+    } else {
+      expect(queryByText('Other')).toBeNull();
+    }
+  });
+
   test('opens the edit form when a row is tapped in editable mode', () => {
     const { getByTestId } = render(
       <FlightsTab

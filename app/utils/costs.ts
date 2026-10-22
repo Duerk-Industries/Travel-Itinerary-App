@@ -1,4 +1,6 @@
 import { rollUpTotals } from './coveredBy';
+import { transferExpenseCategory } from './transferCategory';
+
 import { carRentalExpenseDescription, flightExpenseDescription } from './expenseDescription';
 
 const splitAmountIntoCents = (amount: number, parts: number): number[] => {
@@ -90,7 +92,7 @@ export const buildAllExpenses = (
     allExpenses.push({
       id: `flight-${f.id}`,
       date: f.departureDate ?? f.departure_date,
-      category: 'Flights',
+      category: transferExpenseCategory(f),
       description: flightExpenseDescription(f),
       amount: Number(f.cost) || 0,
       currency: tripCurrency,

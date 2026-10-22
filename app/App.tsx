@@ -1,3 +1,4 @@
+import { isFlightTransfer } from './utils/transferCategory';
 import { shadowStyle } from './utils/shadowStyle';
 import { ThemeProvider } from './theme/ThemeContext';
 import type { ImportTripDraft } from '../server/src/types';
@@ -223,6 +224,7 @@ type Page =
   | 'overview'
   | 'blog'
   | 'flights'
+  | 'ground-transfers'
   | 'lodging'
   | 'packing'
   | 'car'
@@ -1241,14 +1243,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [mapApp, analyticsView.feature, analyticsView.tripId]);
 
   const openFlightInFlightsTab = useCallback((flightId: string) => {
+    const transfer = flights.find(item => item.id === flightId);
+    setActivePage(transfer && !isFlightTransfer(transfer) ? 'ground-transfers' : 'flights');
     setExternalFlightEditId(flightId);
-  }, []);
+  }, [flights]);
 
   const openItineraryExpenseEditor = useCallback((sourceType: string, sourceId: string) => {
     if (isFollowingMode || offlineReadOnly) return;
     switch (sourceType) {
       case 'flight':
-        setExternalFlightEditId(sourceId);
+        openFlightInFlightsTab(sourceId);
         break;
       case 'activity':
         setExternalActivityEditId(sourceId);
@@ -1262,7 +1266,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       default:
         break;
     }
-  }, [isFollowingMode, offlineReadOnly]);
+  }, [isFollowingMode, offlineReadOnly, openFlightInFlightsTab]);
 
   const saveCarRentalDraft = useCallback(async (rentalId?: string | null, draftOverride?: CarRentalDraft) => {
     if (isFollowingMode) return false;
@@ -2372,6 +2376,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           ]);
           break;
         case 'flights':
+        case 'ground-transfers':
           await Promise.all([fetchFlights(authToken), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
           break;
         case 'lodging':
@@ -2742,6 +2747,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'home' ||
           sessionPage === 'overview' ||
           sessionPage === 'flights' ||
+          sessionPage === 'ground-transfers' ||
           sessionPage === 'lodging' ||
           sessionPage === 'packing' ||
           sessionPage === 'trips' ||
@@ -3216,6 +3222,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       'overview',
       'blog',
       'flights',
+      'ground-transfers',
       'lodging',
       'packing',
       'car',
@@ -3868,9 +3875,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         />
       ) : null}
 
-      {activePage === 'flights'
+      {(activePage === 'flights' || activePage === 'ground-transfers')
         ? renderSharedPageScroll(
             <FlightsTab
+              key={activePage}
+              transferScope={activePage === 'ground-transfers' ? 'ground' : 'flights'}
               backendUrl={backendUrl}
               userToken={userToken}
               activeTripId={activeTripId}
@@ -3899,7 +3908,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             />
           )
         : null}
-      {activePage !== 'flights' && externalFlightEditId ? (
+      {activePage !== 'flights' && activePage !== 'ground-transfers' && externalFlightEditId ? (
         <FlightsTab
           backendUrl={backendUrl}
           userToken={userToken}

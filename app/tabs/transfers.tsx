@@ -1,3 +1,4 @@
+import { isFlightTransfer } from '../utils/transferCategory';
 import { airportDisplayForCode } from '../utils/airportDisplay';
 import type { PlanningCoordinates } from '../../server/src/types';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -479,6 +480,7 @@ export const fetchFlightsForTrip = async ({
 };
 
 type FlightsTabProps = {
+  transferScope?: 'all' | 'flights' | 'ground';
   backendUrl: string;
   userToken: string | null;
   activeTripId: string | null;
@@ -561,10 +563,11 @@ const COMPACT_ICON_BUTTON: ViewStyle = { minWidth: 0, paddingHorizontal: 6, padd
 
 
 export const FlightsTab: React.FC<FlightsTabProps> = ({
+  transferScope = 'all',
   backendUrl,
   userToken,
   activeTripId,
-  flights,
+  flights: allFlights,
   setFlights,
   groupMembers,
   defaultPayerId,
@@ -588,6 +591,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   theme,
   featureTapToEditTables = true,
 }) => {
+  const flights = useMemo(() => allFlights.filter(item => transferScope === 'all' || (transferScope === 'flights' ? isFlightTransfer(item) : !isFlightTransfer(item))), [allFlights, transferScope]);
+  const allowedTransferTypes = useMemo(() => TRANSFER_TYPES.filter(type => transferScope === 'all' || (transferScope === 'flights' ? type === 'Flight' : type !== 'Flight')), [transferScope]);
+  const initialDraft = (): FlightDraft => ({ ...createInitialFlightState(), transferType: transferScope === 'ground' ? 'Train' : 'Flight' });
+  const sectionTitle = transferScope === 'ground' ? 'Ground Transfers' : transferScope === 'flights' ? 'Flights' : 'Transfers';
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
   const memberNames = useMemo(() => {
@@ -638,7 +645,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     return names.join(', ');
   };
 
-  const [newFlight, setNewFlight] = useState<FlightDraft>(createInitialFlightState());
+  const [newFlight, setNewFlight] = useState<FlightDraft>(initialDraft);
   const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
   const [passengerAnchor, setPassengerAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
@@ -736,7 +743,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const gridColumns = useMemo<GridColumn<Flight>[]>(() => [
     { key: 'passenger_name', label: 'Passenger', width: 170, editor: 'text', sticky: 'left', getValue: (row) => row.passenger_name || '' },
     { key: 'status', label: 'Status', width: 135, editor: 'select', options: Object.values({ Needed: 'Needed', Proposed: 'Proposed', Booked: 'Booked', Completed: 'Completed', Cancelled: 'Cancelled' }), getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
-    { key: 'transfer_type', label: 'Type', width: 120, editor: 'select', options: TRANSFER_TYPES, getValue: (row) => String(row.transfer_type || row.transferType || 'Flight') },
+    { key: 'transfer_type', label: 'Type', width: 120, editor: 'select', options: allowedTransferTypes, getValue: (row) => String(row.transfer_type || row.transferType || 'Flight') },
     { key: 'departure_date', label: 'Departure Date', width: 145, editor: 'date', getValue: (row) => row.departure_date || '' },
     { key: 'departure_location', label: 'Departure Location', width: 190, editor: 'text', getValue: (row) => row.departure_location || row.departure_airport_code || '' },
     { key: 'departure_time', label: 'Departure Time', width: 125, editor: 'time', getValue: (row) => row.departure_time || '' },
@@ -751,7 +758,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
-  ], []);
+  ], [allowedTransferTypes]);
   const beginGridEdit = () => { if (readOnly) return; const snapshot = flights.map((row) => ({ ...row, passenger_ids: [...(row.passenger_ids ?? [])], paidBy: [...(row.paidBy ?? row.paid_by ?? [])] })); setGridRows(snapshot); setGridOriginalRows(snapshot); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); setTableEditing(true); };
   const cancelGridEdit = () => { setTableEditing(false); setGridRows([]); setGridOriginalRows([]); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); };
   const recordGridChange = (rows: Flight[], deleteIds: Set<string>) => { setGridHistory((items) => [...items.slice(-99), { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]); setGridRedo([]); setGridRows(rows); setGridDeleteIds(deleteIds); };
@@ -1336,7 +1343,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return false;
     }
 
-    setNewFlight(createInitialFlightState());
+    setNewFlight(initialDraft());
     await fetchFlights();
     return true;
   };
@@ -1435,7 +1442,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
       // Convert parsed data into our flight draft
       const primary = data.primary || {};
+      if (TRANSFER_TYPES.includes(primary.transferType) && !allowedTransferTypes.includes(primary.transferType)) {
+        throw new Error(`This is ${primary.transferType === 'Flight' ? 'a flight. Add it from Flights' : 'a ground transfer. Add it from Ground Transfers'}.`);
+      }
       const init = createFlightDraftForTrip(findActiveTrip(), defaultPayerId);
+      init.transferType = allowedTransferTypes.includes(primary.transferType) ? primary.transferType : transferScope === 'ground' ? 'Other' : 'Flight';
       
       init.carrier = primary.carrier || '';
       init.flightNumber = primary.flightNumber || '';
@@ -1493,6 +1504,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     }
     setEditingFlightId('new');
     const init = createFlightDraftForTrip(findActiveTrip(), defaultPayerId);
+    init.transferType = transferScope === 'ground' ? 'Train' : 'Flight';
     if (groupMembers.length) {
       const allIds = groupMembers.map((m) => m.id);
       init.passengerIds = allIds;
@@ -1564,7 +1576,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       {showList ? (
         <>
       <View style={styles.row}>
-        <Text style={styles.sectionTitle}>Transfers</Text>
+        <Text style={styles.sectionTitle}>{sectionTitle}</Text>
         {!readOnly ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {!tableEditing ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="transfer-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
@@ -1892,7 +1904,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                           onChange={(e) => setters.transfer_type(e.target.value)}
                           style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                         >
-                          {TRANSFER_TYPES.map((opt) => (
+                          {allowedTransferTypes.map((opt) => (
                             <option key={opt} value={opt}>
                               {opt}
                             </option>
@@ -1980,7 +1992,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       </HorizontalTableScroll>
       </> : null}
       <View style={styles.totalRow}>
-        <Text style={styles.flightTitle}>Total flight cost: ${flightsTotal.toFixed(2)}</Text>
+        <Text style={styles.flightTitle}>Total {transferScope === 'ground' ? 'ground transfer' : transferScope === 'all' ? 'transfer' : 'flight'} cost: ${flightsTotal.toFixed(2)}</Text>
       </View>
         </>
       ) : null}
@@ -2133,6 +2145,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         </Modal>
       ) : null}
       <FlightEditingForm
+        transferTypes={allowedTransferTypes}
         visible={!readOnly && Boolean(editingFlight && editingFlightId)}
         flightId={editingFlightId}
         flight={editingFlight}

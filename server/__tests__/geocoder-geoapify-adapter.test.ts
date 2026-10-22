@@ -62,6 +62,11 @@ describe('Geoapify adapter', () => {
     expect(new URL(String(fetchMock.mock.calls[1][0])).searchParams.has('filter')).toBe(false);
   });
 
+  it('preserves result and match levels so hotel lookups can reject coarse matches', async () => {
+    fetchMock.mockResolvedValue(reply({ results: [{ lon: 139.79, lat: 35.71, result_type: 'street', rank: { confidence: 1, match_type: 'match_by_street' } }] }));
+    expect(await geoapifyAdapter.geocode('Hotel address', options())).toMatchObject({ resultType: 'street', matchType: 'match_by_street' });
+  });
+
   it('returns null when there is no result', async () => {
     fetchMock.mockResolvedValue(reply({ results: [] }));
     expect(await geoapifyAdapter.geocode('nowhere', options())).toBeNull();

@@ -74,6 +74,25 @@ describe('geocoder layer (provider-neutral)', () => {
     let fake: ReturnType<typeof makeAdapter>;
     beforeEach(() => { fake = makeAdapter(); registerGeocoder(fake); process.env.GEOCODER_PROVIDER = 'fakemaps'; });
 
+    it('rejects confident coarse hotel matches but accepts building and amenity matches', async () => {
+      for (const resultType of ['city', 'street', 'postcode', 'country']) {
+        fake.geocode.mockResolvedValueOnce({ lat: 10, lng: 20, geoCity: 'City', confidence: 1, countryCode: 'jp', resultType });
+        expect(await geocodeAddress('Hotel address', { requirePreciseMatch: true })).toBeNull();
+      }
+      for (const resultType of ['building', 'amenity']) {
+        fake.geocode.mockResolvedValueOnce({ lat: 10, lng: 20, geoCity: 'City', confidence: 0.95, countryCode: 'jp', resultType });
+        expect(await geocodeAddress('Hotel address', { requirePreciseMatch: true })).toMatchObject({ resultType });
+      }
+      fake.geocode.mockResolvedValueOnce({ lat: 10, lng: 20, geoCity: 'City', confidence: 1, countryCode: 'jp', resultType: 'building', matchType: 'match_by_city_or_disrict' });
+      expect(await geocodeAddress('Hotel address', { requirePreciseMatch: true })).toBeNull();
+    });
+
+    it('strict hotel country filtering rejects a high-confidence wrong-country result', async () => {
+      expect(await geocodeAddress('Hotel address', { countryCode: 'jp', strictCountry: true })).toBeNull();
+      expect(fake.geocode).toHaveBeenCalledWith('Hotel address', expect.objectContaining({ countryCode: 'jp' }));
+      expect(fake.geocode).toHaveBeenCalledTimes(1);
+    });
+
     it('normalizes and bounds the query before any provider call', async () => {
       await geocodeAddress('  1   Fake Street  ');
       expect(fake.geocode.mock.calls[0][0]).toBe('1 Fake Street');

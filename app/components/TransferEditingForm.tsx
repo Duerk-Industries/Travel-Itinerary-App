@@ -12,6 +12,7 @@ type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover'
 const TRANSFER_TYPES: TransferType[] = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'];
 
 export type FlightEditingFormProps = {
+  transferTypes?: TransferType[];
   visible: boolean;
   flightId: string | null;
   flight: FlightEditDraft | null;
@@ -47,6 +48,7 @@ export type FlightEditingFormProps = {
 };
 
 export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
+  transferTypes = TRANSFER_TYPES,
   visible,
   flightId,
   flight,
@@ -195,7 +197,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               }
               style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
             >
-              {TRANSFER_TYPES.map((opt) => (
+              {transferTypes.map((opt) => (
                 <option key={`transfer-type-${opt}`} value={opt}>
                   {opt}
                 </option>
@@ -203,7 +205,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             </select>
           ) : (
             <View style={styles.payerChips}>
-              {TRANSFER_TYPES.map((opt) => {
+              {transferTypes.map((opt) => {
                 const selected = (flight as any).transferType === opt;
                 return (
                   <TouchableOpacity
