@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
 import TripMap from './TripMap';
 import type { BlogDayMapPoints } from '../../server/src/services/blogMapProjection';
 export default function BlogMap({ map, testID, nativeEnabled }: { map: BlogDayMapPoints; testID?: string; nativeEnabled?: boolean }) {

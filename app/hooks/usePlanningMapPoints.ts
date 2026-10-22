@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { PlanningMapPoint } from '../../server/src/types';
-export function usePlanningMapPoints({ backendUrl, tripId, dayDate, requestHeaders, enabled }: { backendUrl: string; tripId?: string; dayDate?: string; requestHeaders: Record<string, string>; enabled: boolean }) {
+export function usePlanningMapPoints({ backendUrl, tripId, dayDate, requestHeaders, enabled, refreshKey = 0 }: { backendUrl: string; tripId?: string; dayDate?: string; requestHeaders: Record<string, string>; refreshKey?: number; enabled: boolean }) {
   const [result, setResult] = useState<{ scope: string; points: PlanningMapPoint[] } | null>(null);
   const scope = JSON.stringify([backendUrl, tripId, dayDate, requestHeaders]);
   useEffect(() => {
@@ -11,6 +11,6 @@ export function usePlanningMapPoints({ backendUrl, tripId, dayDate, requestHeade
       if (response.ok) { const data = await response.json(); if (!cancelled && Array.isArray(data.points)) setResult({ scope, points: data.points }); }
     }).catch(() => undefined).finally(() => clearTimeout(timer));
     return () => { cancelled = true; controller.abort(); clearTimeout(timer); };
-  }, [scope, enabled]);
+  }, [scope, enabled, refreshKey]);
   return enabled && result?.scope === scope ? result.points : null;
 }

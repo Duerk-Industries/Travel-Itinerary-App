@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { AppState, Text, TouchableOpacity, View } from 'react-native';
+import { AppState, TouchableOpacity, View } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
 import { copyToClipboard } from '../utils/clipboard';
 import type { GmailForwardingConfirmation as ConfirmationData } from '../../server/src/types';
 type Confirmation = ConfirmationData & { id: string };

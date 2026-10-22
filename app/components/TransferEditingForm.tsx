@@ -483,6 +483,8 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                 key={`${airport.iata_code ?? 'na'}-${airport.name}`}
                 style={styles.dropdownOption}
                 onPressIn={onAirportOptionPressIn}
+                // See DropdownOptionButton: without this the press-in arrives 50 ms after the input's blur.
+                delayPressIn={0}
                 onPress={() => {
                   if (onSelectAirport) onSelectAirport(activeAirportTarget, airport);
                 }}

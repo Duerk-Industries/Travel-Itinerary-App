@@ -132,6 +132,12 @@ const darkTheme: AppTheme = {
   spacing: lightTheme.spacing,
 };
 
+/**
+ * Color for text that acts as a link or button label. The teal `link` color reads well on dark surfaces but is only
+ * about 2.4:1 on white, so light mode uses the navy `primary`, as the rest of the app does.
+ */
+export const linkTextColor = (theme: AppTheme): string => (theme.mode === 'dark' ? theme.colors.link : theme.colors.primary);
+
 export const getAppTheme = (
   appearancePreference: AppearancePreference,
   systemScheme: 'light' | 'dark' | null | undefined

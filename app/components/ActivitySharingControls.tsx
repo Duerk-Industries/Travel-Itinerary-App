@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
 import type { SharedActivityTemplate } from '../../server/src/types';
 
 /** Sharing is an independent opt-in, with the exact allowlist preview before enabling. */

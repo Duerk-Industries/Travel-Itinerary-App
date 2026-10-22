@@ -2,7 +2,10 @@ import { configureMapLibre } from '../utils/maplibreConfig.web';
 import { isLocatedMapPoint } from '../utils/planningMapGeometry';
 import { travelEstimate } from '../../packages/domain/src/planningTravelEstimates';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
+import { useAppTheme } from '../theme/ThemeContext';
+import { linkTextColor } from '../theme/theme';
 import type { Map as LibreMap } from 'maplibre-gl';
 import type { TripMapProps } from './TripMap.types';
 import type { PlanningMapPoint } from '../../server/src/types';
@@ -10,14 +13,27 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 const COLORS = { flight: '#4285F4', lodging: '#FB8C00', activity: '#34A853', car_rental: '#9C27B0' };
 const located = isLocatedMapPoint;
+// The stop list is plain HTML, so it has to ask for the app's font; the browser default is a serif.
+const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+// Every transfer (flight, train, bus, ferry) is drawn as one kind, so name it for what it is.
+const KIND_LABEL: Record<string, string> = { flight: 'transfer', lodging: 'lodging', activity: 'activity', car_rental: 'car rental' };
 
-export default function TripMap({ points, selectedId, onSelect, testID }: TripMapProps) {
+export default function TripMap({ points, selectedId, onSelect, testID, onFindLocations, findLocationsCount = 0, findLocationsProvider }: TripMapProps) {
+  const theme = useAppTheme();
+  const { colors } = theme;
   const host = useRef<HTMLDivElement | null>(null);
   const map = useRef<LibreMap | null>(null);
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(true);
   const [failed, setFailed] = useState(false);
   const [selection, setSelection] = useState<string | null>(null);
+  const [finding, setFinding] = useState(false);
+  const [findNotice, setFindNotice] = useState<string | null>(null);
+  const findLocations = async () => {
+    if (!onFindLocations || finding) return;
+    setFinding(true); setFindNotice(null);
+    try { setFindNotice(await onFindLocations()); } catch { setFindNotice("Couldn't look up locations right now. Try again later."); } finally { setFinding(false); }
+  };
   const selected = selectedId ?? selection;
   const { width } = useWindowDimensions();
   const resolved = useMemo(() => points.filter(located).slice(0, 100), [points]);
@@ -46,7 +62,14 @@ export default function TripMap({ points, selectedId, onSelect, testID }: TripMa
       map.current = instance;
       const markers: import('maplibre-gl').Marker[] = [];
       let resize: ResizeObserver | undefined;
-      dispose = () => { resize?.disconnect(); markers.forEach(marker => marker.remove()); instance.remove(); if (map.current === instance) map.current = null; };
+      // Removing a map makes the browser fire "webglcontextlost" on its canvas a moment later. That must never mark the
+      // map that replaced it (or a map that is going away) as broken, so the listener is guarded and detached on dispose.
+      const lost = () => { if (!cancelled) setFailed(true); };
+      const canvas = instance.getCanvas();
+      dispose = () => {
+        canvas.removeEventListener('webglcontextlost', lost);
+        resize?.disconnect(); markers.forEach(marker => marker.remove()); instance.remove(); if (map.current === instance) map.current = null;
+      };
       instance.addControl(new lib.NavigationControl(), 'top-right');
       resolved.forEach((point, index) => {
         const button = document.createElement('button');
@@ -57,16 +80,22 @@ export default function TripMap({ points, selectedId, onSelect, testID }: TripMa
         markers.push(new lib.Marker({ element: button }).setLngLat([point.lng!, point.lat!]).addTo(instance));
       });
       if (resolved.length > 1) instance.fitBounds(resolved.reduce((bounds, point) => bounds.extend([point.lng!, point.lat!]), new lib.LngLatBounds()), { padding: 60, maxZoom: 15, duration: 0 });
+      let loaded = false;
       instance.on('load', () => {
+        loaded = true;
         if (cancelled || resolved.length < 2) return;
         instance.addSource('visit-order', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: resolved.map(point => [point.lng!, point.lat!]) } } });
         instance.addLayer({ id: 'visit-order', type: 'line', source: 'visit-order', paint: { 'line-color': '#475569', 'line-width': 3, 'line-dasharray': [2, 2] } });
       });
-      instance.on('error', () => { if (!cancelled) setFailed(true); });
-      const lost = () => setFailed(true);
-      instance.getCanvas().addEventListener('webglcontextlost', lost);
+      instance.on('error', (event) => {
+        const detail = event as { error?: { message?: string }; sourceId?: string; tile?: unknown };
+        console.warn('[map] error', detail?.error?.message ?? event);
+        // A single failed tile, glyph or sprite request is routine; only a map that could not load its style is unusable.
+        if (!cancelled && !loaded && !detail?.sourceId && !detail?.tile) setFailed(true);
+      });
+      canvas.addEventListener('webglcontextlost', lost);
       if (typeof ResizeObserver !== 'undefined') { resize = new ResizeObserver(() => instance.resize()); resize.observe(host.current); }
-    }).catch(() => { dispose?.(); dispose = undefined; if (!cancelled) setFailed(true); });
+    }).catch((error) => { console.warn('[map] could not start', error); dispose?.(); dispose = undefined; if (!cancelled) setFailed(true); });
     return () => { cancelled = true; dispose?.(); };
   }, [open, visible, key]);
   useEffect(() => {
@@ -74,23 +103,32 @@ export default function TripMap({ points, selectedId, onSelect, testID }: TripMa
     if (point && map.current) map.current.easeTo({ center: [point.lng!, point.lat!], zoom: Math.max(map.current.getZoom(), 13), duration: typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250 });
   }, [selected, key]);
   return <View testID={testID} style={{ gap: 8 }}>
-    <TouchableOpacity accessibilityRole="button" onPress={() => setOpen(value => !value)} style={{ minHeight: 44, justifyContent: 'center' }}><Text>{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
+    <TouchableOpacity accessibilityRole="button" onPress={() => setOpen(value => !value)} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
     {open && <>
       {failed && <Text accessibilityRole="alert">Map unavailable — your itinerary is still below.</Text>}
       {!resolved.length && <Text>No coordinates yet. Your stops are listed below.</Text>}
+      {onFindLocations && findLocationsCount > 0 && <View style={{ gap: 4 }}>
+        <TouchableOpacity testID="find-locations" accessibilityRole="button" disabled={finding} accessibilityState={{ disabled: finding, busy: finding }} onPress={() => void findLocations()} style={{ minHeight: 44, justifyContent: 'center', opacity: finding ? 0.6 : 1 }}>
+          <Text tone="link">{finding ? 'Finding locations…' : `Find locations for ${findLocationsCount} stop${findLocationsCount === 1 ? '' : 's'}`}</Text>
+        </TouchableOpacity>
+        <Text tone="muted">{`This sends each stop's saved address to ${findLocationsProvider || 'our location provider'} to place it on the map.`}</Text>
+      </View>}
+      {findNotice && <Text accessibilityRole="alert" accessibilityLiveRegion="polite">{findNotice}</Text>}
       <div style={{ display: 'flex', flexDirection: width >= 1024 ? 'row' : 'column-reverse', gap: 16 }}>
-        <ol aria-label="Day stops" style={{ flex: 1, margin: 0, padding: '0 0 0 24px', maxHeight: width >= 1024 ? 400 : undefined, overflowY: 'auto' }}>
+        <ol aria-label="Day stops" style={{ flex: 1, margin: 0, padding: '0 0 0 24px', color: colors.text, fontFamily: FONT_STACK, fontSize: 14, lineHeight: 1.4, maxHeight: width >= 1024 ? 400 : undefined, overflowY: 'auto' }}>
           {points.map((point, index) => <li key={point.id}><button ref={node => { rowRefs.current[point.id] = node; }} type="button" aria-pressed={selected === point.id}
-            onClick={() => chooseRef.current(point.id)} style={{ minHeight: 44, width: '100%', textAlign: 'left', background: selected === point.id ? '#e0f2fe' : 'transparent', border: 'none', cursor: 'pointer', padding: 8 }}>
-            {point.label || String(index + 1)} · {point.title} · {point.kind.replace('_', ' ')}{!located(point) ? ' · Not on the map yet' : ''}
-            {located(point) && index > 0 && located(points[index - 1]) && <span style={{ display: 'block' }}>{travelEstimate(points[index - 1], point)}</span>}
+            onClick={() => chooseRef.current(point.id)} style={{ minHeight: 44, width: '100%', textAlign: 'left', color: colors.text, font: 'inherit', background: selected === point.id ? colors.surfaceMuted : 'transparent', border: selected === point.id ? `1px solid ${colors.border}` : '1px solid transparent', borderRadius: 6, cursor: 'pointer', padding: 8 }}>
+            {point.label || String(index + 1)} · {point.title} · {KIND_LABEL[point.kind] ?? point.kind.replace('_', ' ')}{!located(point) ? ' · Not on the map yet' : ''}
+            {located(point) && index > 0 && located(points[index - 1]) && <span style={{ display: 'block', color: colors.textMuted }}>{travelEstimate(points[index - 1], point)}</span>}
           </button></li>)}
         </ol>
         <div ref={host} aria-label="Interactive map of day stops" style={{ flex: 2, minHeight: 360, height: 400, display: failed || !resolved.length ? 'none' : 'block', borderRadius: 12, overflow: 'hidden' }} />
       </div>
       {[...new Set(points.map(point => point.coordinateAttribution).filter((value): value is string => Boolean(value)))].map(value => <Text key={value}>{value}</Text>)}
-      <Text>Straight-line estimates, not directions. Roads, barriers, traffic and accessibility can change travel time. Letters show visit order. Blue: flight · Orange: lodging · Green: activity · Purple: car rental.</Text>
-      <Text>© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors</Text>
+      <Text>Straight-line estimates, not directions. Roads, barriers, traffic and accessibility can change travel time. Letters show visit order. Blue: transfer · Orange: lodging · Green: activity · Purple: car rental.</Text>
+      {[...new Map(points.flatMap(point => point.coordinateCreditLinks ?? []).map(link => [link.url, link])).values()].map(link =>
+        <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" style={{ minHeight: 24, color: linkTextColor(theme) }}>{link.label}</a>)}
+      <Text tone="muted">© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors</Text>
     </>}
   </View>;
 }

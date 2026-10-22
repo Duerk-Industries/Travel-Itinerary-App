@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Linking, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, TextInput, TouchableOpacity, View } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
+import { useAppTheme } from '../theme/ThemeContext';
 import { randomUUID } from 'expo-crypto';
 import type { NearbyPlace, Activity } from '../../server/src/types';
 import { GetYourGuideCta } from './GetYourGuideCta';
@@ -8,6 +10,7 @@ export default function NearbyPlacesPanel({ tripId, date, center, backendUrl, he
   tripId: string; date: string; center?: { lat: number; lng: number }; backendUrl: string;
   headers: Record<string, string>; onAdded?: () => void; destination?: string | null;
 }) {
+  const { colors } = useAppTheme();
   const [enabled, setEnabled] = useState(false);
   const [partner, setPartner] = useState(false);
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
@@ -73,20 +76,21 @@ export default function NearbyPlacesPanel({ tripId, date, center, backendUrl, he
   if (!enabled) return null;
   return <View style={{ padding: 12, gap: 10 }} accessibilityLabel="Nearby activities">
     <Text style={{ fontSize: 18, fontWeight: '700' }}>Nearby · {date}</Text>
-    <Text>Places within 2 km. Durations and travel times are estimates.</Text>
-    <TextInput accessibilityLabel="Search another area" placeholder="Search another area by landmark" value={area} onChangeText={setArea} />
-    <TouchableOpacity accessibilityRole="button" onPress={() => setQuery(area.trim())} style={{ minHeight: 44 }}><Text>Search another area</Text></TouchableOpacity>
+    <Text tone="muted">Places within 2 km. Durations and travel times are estimates.</Text>
+    <TextInput accessibilityLabel="Search another area" placeholder="Search another area by landmark" placeholderTextColor={colors.textMuted} value={area} onChangeText={setArea}
+      style={{ color: colors.text, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 10, minHeight: 44 }} />
+    <TouchableOpacity accessibilityRole="button" onPress={() => setQuery(area.trim())} style={{ minHeight: 44 }}><Text tone="link">Search another area</Text></TouchableOpacity>
     {error && <Text accessibilityRole="alert">{error}</Text>}
     {loading && <Text>Finding nearby places…</Text>}
     {!loading && !places.length && <Text>No nearby places in this catalog. Try another landmark or add an activity manually.</Text>}
-    {places.map(place => <View key={place.catalogId} style={{ gap: 6, borderBottomWidth: 1, borderBottomColor: '#cbd5e1', paddingVertical: 12 }}>
-      <Text style={{ fontWeight: '700' }}>{place.name}</Text><Text>{place.distanceMeters} m away · about {place.durationMinutes} min · {place.activityType}</Text>
+    {places.map(place => <View key={place.catalogId} style={{ gap: 6, borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 12 }}>
+      <Text style={{ fontWeight: '700' }}>{place.name}</Text><Text tone="muted">{place.distanceMeters} m away · about {place.durationMinutes} min · {place.activityType}</Text>
       <Text>{place.description}</Text>
-      {place.sourceUrl && <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(place.sourceUrl!)}><Text>{place.sourceLabel || 'Source'}</Text></TouchableOpacity>}
-      {added[place.catalogId] ? <TouchableOpacity accessibilityRole="button" onPress={() => void undo(place.catalogId)} style={{ minHeight: 44 }}><Text>Added to {date} · Undo</Text></TouchableOpacity>
-        : <TouchableOpacity accessibilityRole="button" disabled={pending[place.catalogId]} onPress={() => void add(place)} style={{ minHeight: 44 }}><Text>{pending[place.catalogId] ? 'Adding…' : `Add to ${date}`}</Text></TouchableOpacity>}
+      {place.sourceUrl && <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(place.sourceUrl!)}><Text tone="link">{place.sourceLabel || 'Source'}</Text></TouchableOpacity>}
+      {added[place.catalogId] ? <TouchableOpacity accessibilityRole="button" onPress={() => void undo(place.catalogId)} style={{ minHeight: 44 }}><Text tone="link">Added to {date} · Undo</Text></TouchableOpacity>
+        : <TouchableOpacity accessibilityRole="button" disabled={pending[place.catalogId]} onPress={() => void add(place)} style={{ minHeight: 44 }}><Text tone="link">{pending[place.catalogId] ? 'Adding…' : `Add to ${date}`}</Text></TouchableOpacity>}
       {partner && <><Text>Partner</Text><GetYourGuideCta backendUrl={backendUrl} headers={headers} activity={{ id: place.catalogId, name: place.name, activityType: place.activityType }} destination={destination} featureEnabled /></>}
     </View>)}
-    {nextOffset !== null && <TouchableOpacity accessibilityRole="button" disabled={loading} onPress={() => void load(nextOffset)} style={{ minHeight: 44 }}><Text>More places</Text></TouchableOpacity>}
+    {nextOffset !== null && <TouchableOpacity accessibilityRole="button" disabled={loading} onPress={() => void load(nextOffset)} style={{ minHeight: 44 }}><Text tone="link">More places</Text></TouchableOpacity>}
   </View>;
 }

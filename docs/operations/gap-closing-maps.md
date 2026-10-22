@@ -61,6 +61,80 @@ Then enable `planning_geocoding` in the DB. Every external lookup checks this fl
 
 Provider selection via Stripe Directory query `geocoding API` was unavailable because the local CLI authentication expired; no provider account was selected or purchased. The configurable interface allows a separately reviewed deployment decision.
 
+## Find locations (Geoapify), 2026-10-21
+
+Lodging, car rentals and most typed-in activities have no coordinates, because the public-POI worker above only
+handles reviewed catalog places. "Find locations" fills that gap on request, with Geoapify.
+
+- **Who and when:** a trip member presses **Find locations for N stops** under the day map (or the item has no
+  pin yet). Nothing runs in the background and nothing is backfilled.
+- **What leaves the server:** one address per stop, read from the item's own saved address (`POST
+  /api/trips/:id/locate-item` takes `kind`, `itemId` and for rentals `which`, never free text). A bare place
+  name gets the trip's destination appended. No traveler names or other fields are sent.
+- **Result:** stored with `coordinateSource = 'geocoder'` through `setItemCoordinates`. An item that already has
+  coordinates is never replaced, so a hand-set or catalog location wins. A match below 0.5 confidence is treated
+  as not found, since a wrong pin is worse than none.
+- **Credit:** Geoapify allows storing results if the data-source attribution travels with them, and its free plan
+  needs a visible follow-link. The day-map response adds `coordinateAttribution`
+  ("Locations by Geoapify · © OpenStreetMap contributors"), `coordinateProvider` and `coordinateCreditLinks` to every
+  stored geocoder point, and the map renders those links ("Powered by Geoapify" for this provider).
+- **Setup:** set `GEOAPIFY_API_KEY` (a `_FILE` secret also works) in `server/.env` and restart. Without a key the
+  route answers 503 `NOT_CONFIGURED` and the button is hidden. `GEOCODER_MAX_DAILY_REQUESTS` (default 500;
+  `GEOAPIFY_MAX_DAILY_REQUESTS` is still read if it is unset) is a hard cap shared by all users, and
+  `ITEM_LOCATE_RATE_LIMIT_MAX` / `_WINDOW_MS` limit each person (default 40 per 10 minutes).
+- **Switches:** the `planning_locate_items` flag (seeded on, fail-closed, toggle in Admin) turns it off instantly.
+  The map itself still needs `planning_web_map`.
+- **Key safety:** the key goes in a query parameter because that is how Geoapify authenticates, so the request
+  URL is never logged. The adapter reduces provider errors to a short code, and the shared layer does it again for
+  any error an adapter lets through, so a URL or key cannot leave the geocoding layer.
+
+### Accuracy rules and what real addresses did (2026-10-21)
+
+A confidence score is not enough on its own, so the shared layer and the lookup service add these rules. They were
+chosen after live lookups with a real key against the Japan trip's own addresses.
+
+- **Minimum confidence 0.5.** A weak match becomes "not found", never a pin. Without it, a nonsense query returned
+  invented coordinates (confidence 0) and a rough Asakusa address landed in Fuchu (0.29).
+- **Stay in the trip's country.** The country comes from the trip destination (`countryFromPlace`; "Georgia" is
+  ambiguous and gives no restriction). A match in another country is kept only at 0.8 or higher; otherwise the lookup
+  repeats restricted to the trip's country and that answer must itself be confident. This fixed a hotel name that
+  resolved to **Copenhagen at 0.62**; restricted to Japan it resolved to Asakusa at 0.76. Each provider request counts
+  against the daily cap.
+- **Address, then name.** Japanese block-number addresses (`Asakusa 2-6-7`) are mostly absent from open map data to the
+  building, while the place's name is found. So a lodging or activity whose address has no confident match is searched
+  again as `name, place names from its address` (street and block numbers dropped, because adding a partial address
+  found a same-named hotel in Yokohama). Car rentals use the address only.
+- **No proximity bias.** Biasing toward a point pulled Kanazawa results toward Tokyo, so only the country filter is used.
+
+Result with the 13 hotels and activities of the Japan trip: **11 located, all in the right place, none in the wrong
+country**; Kawaguchiko Lakeside Hotel and Koyasan Shukubo Yochiin were left unpinned (matches were only city-level).
+Lower-confidence pins (0.5 to 0.7, for example Royal Park Hotel Kurashiki) are usually the right town but can be a
+street or two off; there is not yet a way to mark a pin "approximate".
+
+### Provider adapter
+
+The provider sits behind `GeocoderAdapter` (`server/src/services/geocoder/types.ts`). Nothing outside
+`server/src/services/geocoder/` names a provider: the route, `locateItemService`, the day-map credit and the app all
+read the active adapter.
+
+| Piece | Where | Responsibility |
+|---|---|---|
+| `GeocoderAdapter` | `types.ts` | `id`, `displayName`, `credit` (text and required links), `isConfigured()`, `geocode(query, { language, signal })` |
+| `geoapifyAdapter` | `geoapifyAdapter.ts` | The only provider-specific code: its URL, credential, response shape and failure mapping |
+| `geocodeAddress()` | `index.ts` | Rules every provider gets: query bounds, per-provider daily cap, 8 s timeout, 0.5 minimum confidence, coordinate range check, and reducing any error to a `GeocoderError` code |
+| `getGeocoder()`, `storedCoordinateCredit()` | `index.ts` | Select the provider (`GEOCODER_PROVIDER`, default `geoapify`; an unknown id means "not configured", never a silent fallback) and supply the credit shown on stored coordinates |
+
+To add a provider: implement the interface in a new file, call `registerGeocoder(adapter)` where the registry is built,
+set `GEOCODER_PROVIDER` to its id, and review its terms for storage, display and attribution. Add it to
+`GEOCODER_PREVIOUS_PROVIDERS` when you switch away from one whose results are still stored, because coordinates do not
+record which provider found them and its credit has to keep showing.
+
+- **Not covered:** flights (placed by airport code), trains and stations, and the existing catalog worker, which is
+  unchanged. Tested with a mocked provider only: no live call was made, so check one real address after adding the key.
+
+Review before wide use: Geoapify's full terms (including the free plan's "limited commercial use"), your privacy
+policy wording for sending a stop's address to a geocoder, and a sample of real addresses for accuracy.
+
 ## Verification
 
 - Focused frontend tests cover keepsake safety/fallback, native flag/load failure/background lifecycle, public reader, recap, trip-day map and blog controls.

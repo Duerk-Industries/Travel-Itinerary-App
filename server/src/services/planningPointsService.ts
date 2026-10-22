@@ -5,6 +5,15 @@ import { listFlights, listLodgings, listActivities, listCarRentals, getTripById,
 import type { Flight } from '../types';
 import { findBundledAirport } from './airportCatalog';
 import { selectPlanningDayPoints } from '../utils/planningMapPoints';
+import { storedCoordinateCredit } from './geocoder';
+// Coordinates stored from a "Find locations" lookup keep their provider's required credit wherever they are shown.
+const withStoredAttribution = <T extends { coordinateSource?: string | null; coordinateAttribution?: string; coordinateProvider?: string; coordinateCreditLinks?: Array<{ label: string; url: string }> }>(points: T[]): T[] => {
+  if (!points.some(point => point.coordinateSource === 'geocoder' && !point.coordinateAttribution)) return points;
+  const credit = storedCoordinateCredit();
+  if (!credit) return points;
+  return points.map(point => point.coordinateSource === 'geocoder' && !point.coordinateAttribution
+    ? { ...point, coordinateAttribution: credit.text, coordinateProvider: credit.provider, coordinateCreditLinks: credit.links } : point);
+};
 export const withAirportCoordinates = (flight: Flight): Flight => {
   const departure = findBundledAirport(flight.departureAirportCode);
   const arrival = findBundledAirport(flight.arrivalAirportCode);
@@ -17,10 +26,10 @@ export const getPlanningDayPoints = async (userId: string, tripId: string, date:
   const points = selectPlanningDayPoints({ date, flights: flights.map(withAirportCoordinates), lodgings: lodgings.map(item => ({ ...item, check_in_date: item.check_in_date ?? (item as any).checkInDate, check_out_date: item.check_out_date ?? (item as any).checkOutDate })), activities, carRentals });
   // Resolve the current item's catalog identity on every read. No background write
   // can overwrite an edited address, manual coordinate, or a deleted trip item.
-  if (!points.some(p => p.kind === 'activity' && (p.lat == null || p.lng == null))) return points;
+  if (!points.some(p => p.kind === 'activity' && (p.lat == null || p.lng == null))) return withStoredAttribution(points);
   try {
     const trip = await getTripById(tripId);
-    if (!trip?.destination) return points;
+    if (!trip?.destination) return withStoredAttribution(points);
     const catalog = await listAttractionCatalogEntries(userId, normalizeDestinationKey(trip.destination), 2000);
     for (const point of points.filter(p => p.kind === 'activity' && (p.lat == null || p.lng == null)).slice(0, 10)) {
       const activity = activities.find(a => a.id === point.id);
@@ -34,5 +43,5 @@ export const getPlanningDayPoints = async (userId: string, tripId: string, date:
       }
     }
   } catch { /* Optional lookup never blocks the itinerary or item save. */ }
-  return points;
+  return withStoredAttribution(points);
 };

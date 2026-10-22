@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
 import type { RecentAutoAssignment } from '../../server/src/ingestion/shared/repository';
 
 export default function AutomaticImportSettings({ backendUrl, headers, onChanged }: {

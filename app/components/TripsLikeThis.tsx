@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Text, TouchableOpacity, View } from 'react-native';
+import { AppState, Linking, TouchableOpacity, View } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
 import { randomUUID } from 'expo-crypto';
 import type { PublicTripInspiration, SharedActivityTemplate } from '../../server/src/types';
 
@@ -82,20 +83,20 @@ export default function TripsLikeThis({ tripId, date, backendUrl, headers, onAdd
   if (enabledScope !== scope) return null;
   return <View accessibilityLabel="Trips like this" style={{ padding: 12, gap: 10 }}>
     <Text style={{ fontSize: 18, fontWeight: '700' }}>Trips like this</Text>
-    <Text>Ideas shared by public blogs visiting the same destination. Copies are proposed activities; check current opening hours and availability.</Text>
+    <Text tone="muted">Ideas shared by public blogs visiting the same destination. Copies are proposed activities; check current opening hours and availability.</Text>
     {notice?.scope === scope && <Text accessibilityRole="alert" accessibilityLiveRegion="polite">{notice.text}</Text>}
     {result?.scope !== scope ? <Text>Finding shared trips…</Text> : !result.trips.length ? <Text>No shared activities for this destination yet. Nearby and manual entry are still available.</Text> : result.trips.map(source => <View key={`${source.username}/${source.tripSlug}`} style={{ gap: 8 }}>
-      <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(`${backendUrl}${source.sourcePath}`)} style={{ minHeight: 44 }}><Text style={{ fontWeight: '700' }}>{source.title} · Source blog</Text></TouchableOpacity>
+      <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(`${backendUrl}${source.sourcePath}`)} style={{ minHeight: 44 }}><Text tone="link" style={{ fontWeight: '700' }}>{source.title} · Source blog</Text></TouchableOpacity>
       {source.activities.map(activity => {
         const identity = `${scope}:${source.username}/${source.tripSlug}/${activity.id}`;
         return <View key={activity.id} style={{ gap: 4 }}><Text>{activity.name} · {activity.activityType} · about {activity.duration}</Text>
-          {activity.sourceUrl && <TouchableOpacity accessibilityRole="link" style={{ minHeight: 44 }} onPress={() => void Linking.openURL(activity.sourceUrl!)}><Text>Catalog source</Text></TouchableOpacity>}
+          {activity.sourceUrl && <TouchableOpacity accessibilityRole="link" style={{ minHeight: 44 }} onPress={() => void Linking.openURL(activity.sourceUrl!)}><Text tone="link">Catalog source</Text></TouchableOpacity>}
           <TouchableOpacity accessibilityRole="button" disabled={pending === identity} style={{ minHeight: 44 }}
             onPress={() => void (added[identity] ? undo(identity) : copy(source, activity))}>
-            <Text>{pending === identity ? 'Saving…' : added[identity] ? 'Added · Undo' : `Copy to ${date}`}</Text>
+            <Text tone="link">{pending === identity ? 'Saving…' : added[identity] ? 'Added · Undo' : `Copy to ${date}`}</Text>
           </TouchableOpacity></View>;
       })}
     </View>)}
-    <TouchableOpacity accessibilityRole="button" onPress={() => void load(scope)} style={{ minHeight: 44 }}><Text>Refresh shared trips</Text></TouchableOpacity>
+    <TouchableOpacity accessibilityRole="button" onPress={() => void load(scope)} style={{ minHeight: 44 }}><Text tone="link">Refresh shared trips</Text></TouchableOpacity>
   </View>;
 }

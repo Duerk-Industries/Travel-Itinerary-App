@@ -605,6 +605,8 @@ export interface PlanningCoordinates {
 export type PlanningMapPoint = PlanningCoordinates & {
   id: string; kind: 'flight' | 'lodging' | 'activity' | 'car_rental';
   title: string; address?: string; label?: string; coordinateAttribution?: string; coordinateProvider?: string;
+  /** Links the coordinate provider's terms require near its results, such as "Powered by ...". */
+  coordinateCreditLinks?: Array<{ label: string; url: string }>;
 };
 export type NearbyPlace = {
   catalogId: string; name: string; lat: number; lng: number; distanceMeters: number;

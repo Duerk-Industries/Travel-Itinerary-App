@@ -1,6 +1,7 @@
 import GmailForwardingConfirmation from './GmailForwardingConfirmation';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Platform, Share, TouchableOpacity, View } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
 import { copyToClipboard } from '../utils/clipboard';
 import ImportSenderAddresses from './ImportSenderAddresses';
 

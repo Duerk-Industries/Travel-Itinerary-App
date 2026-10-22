@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, TextInput, TouchableOpacity, View } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
+import { useAppTheme } from '../theme/ThemeContext';
 import { exportCsv } from '../utils/csvExport';
 import { readRecoveryFile } from '../utils/pendingQueueRepair';
 import type { RepairOutcome } from '../hooks/usePendingWrites';
@@ -33,6 +35,7 @@ const FILE_PROBLEMS = {
 } as const;
 
 export default function PendingExpenseRecovery({ error, getRecoveryData, ownerId, environment, repairQueue }: Props) {
+  const { colors } = useAppTheme();
   const [notice, setNotice] = useState<string | null>(null);
   const [exported, setExported] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -93,8 +96,8 @@ export default function PendingExpenseRecovery({ error, getRecoveryData, ownerId
         {button('Repair saved expenses', () => { if (exported) void runRepair([]); }, 'expense-recovery-repair', !exported)}
         <Text style={{ marginTop: 8 }}>Or restore from a recovery file you exported earlier. It must be from this account.</Text>
         {Platform.OS === 'web' ? button('Choose a recovery file', chooseFile, 'expense-recovery-choose-file') : null}
-        <TextInput testID="expense-recovery-paste" multiline value={pasted} onChangeText={setPasted} placeholder="Or paste the file contents here"
-          accessibilityLabel="Recovery file contents" autoCapitalize="none" autoCorrect={false} style={{ minHeight: 64, borderWidth: 1, borderColor: '#94a3b8', borderRadius: 8, padding: 8 }} />
+        <TextInput testID="expense-recovery-paste" multiline value={pasted} onChangeText={setPasted} placeholder="Or paste the file contents here" placeholderTextColor={colors.textMuted}
+          accessibilityLabel="Recovery file contents" autoCapitalize="none" autoCorrect={false} style={{ minHeight: 64, color: colors.text, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 8 }} />
         {button('Restore from pasted contents', () => void restoreFrom(pasted), 'expense-recovery-restore', !pasted.trim())}
       </> : null}
     </> : null}

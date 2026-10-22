@@ -1,3 +1,4 @@
+import { airportDisplayForCode } from '../utils/airportDisplay';
 import type { PlanningCoordinates } from '../../server/src/types';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, type ViewStyle } from 'react-native';
@@ -644,6 +645,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [editingFlight, setEditingFlight] = useState<FlightEditDraft | null>(null);
   const [airports, setAirports] = useState<Airport[]>([]);
   const [airportSuggestions, setAirportSuggestions] = useState<Airport[]>([]);
+  // Full "City (CODE)" labels for every airport suggested or chosen so far. The code in a field is looked
+  // up here first, so an airport that came from a server search (and is not in `airports`) still shows its name.
+  const [airportLabelByCode, setAirportLabelByCode] = useState<Record<string, string>>({});
   const [airportAnchor, setAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [airportAnchorInWindow, setAirportAnchorInWindow] = useState(false);
   const [airportTarget, setAirportTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
@@ -868,15 +872,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     return { hours, minutes };
   };
 
-  const formatLocationDisplay = (code?: string | null, label?: string | null): string => {
-    if (label && label.trim().length) return label;
-    const normalized = code ? code.toUpperCase() : '';
-    if (!normalized) return '-';
-    if (!/^[A-Z0-9]{3,4}$/.test(normalized)) return code ?? normalized;
-    const match = airports.find((a) => (a.iata_code ?? '').toUpperCase() === normalized);
-    if (match) return formatAirportLabel(match);
-    return normalized;
-  };
+  const formatLocationDisplay = (code?: string | null, label?: string | null): string =>
+    airportDisplayForCode(code, label, airportLabelByCode, airports);
 
   const getColumnDisplayValue = (item: Flight, key: typeof columns[number]['key']): string => {
     const value = item[key as keyof Flight];
@@ -1148,6 +1145,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const selectAirport = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover', airport: Airport) => {
     const code = airport.iata_code ?? '';
+    if (code && (airport.city || airport.name)) {
+      const label = formatAirportLabel(airport);
+      setAirportLabelByCode((prev) => (prev[code.toUpperCase()] === label ? prev : { ...prev, [code.toUpperCase()]: label }));
+    }
     if ((target === 'dep' || target === 'modal-dep') && editingFlight) {
       setEditingFlight((prev) => (prev ? { ...prev, departureLocation: code, departureAirportCode: code } : prev));
     } else if ((target === 'arr' || target === 'modal-arr') && editingFlight) {

@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { PanResponder, Text, View } from 'react-native';
+import { PanResponder, View } from 'react-native';
+import { ThemedText as Text } from './ThemedText';
 import type { DayOrderRowProps } from './dayOrderDrag';
 
 /** Native dragging uses RN's responder API; the handle keeps row links and controls usable. */

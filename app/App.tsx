@@ -1,3 +1,4 @@
+import { ThemeProvider } from './theme/ThemeContext';
 import type { ImportTripDraft } from '../server/src/types';
 import PendingExpenseRecovery from './components/PendingExpenseRecovery';
 import SaveTripOffline from './components/SaveTripOffline';
@@ -4482,6 +4483,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   return (
+    <ThemeProvider theme={theme}>
     <NavigationContainer
       ref={navigationRef}
       linking={linking}
@@ -4578,6 +4580,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         </RootStack.Group>
       </RootStack.Navigator>
     </NavigationContainer>
+    </ThemeProvider>
   );
 };
 
