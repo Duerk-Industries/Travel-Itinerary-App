@@ -2778,8 +2778,8 @@ export const listTripBookingReferences = async (tripIds: string[]): Promise<Map<
         db.collection('parsed_items').where('assignedTripId', '==', tripId).get(),
       ]);
       for (const doc of flights.docs) {
-        const d = doc.data(); if (d.status === 'Cancelled' || !['Flight','Train','Ferry','Bus'].includes(d.transferType ?? 'Flight')) continue;
-        evidence.push({ provider: String(d.carrier ?? ''), reference: String(d.bookingReference ?? ''), itemType: d.transferType === 'Train' ? 'rail' : ['Ferry','Bus'].includes(d.transferType) ? 'ferry_bus_transfer' : 'flight', startDate: dateOnly(d.departureDate), endDate: dateOnly(d.arrivalDate) });
+        const d = doc.data(); if (d.status === 'Cancelled' || !['Flight','Train','Ferry','Bus','Public Transit'].includes(d.transferType ?? 'Flight')) continue;
+        evidence.push({ provider: String(d.carrier ?? ''), reference: String(d.bookingReference ?? ''), itemType: d.transferType === 'Train' ? 'rail' : ['Ferry','Bus','Public Transit'].includes(d.transferType) ? 'ferry_bus_transfer' : 'flight', startDate: dateOnly(d.departureDate), endDate: dateOnly(d.arrivalDate) });
       }
       for (const doc of rentals.docs) {
         const d = doc.data(); if (d.status === 'Cancelled') continue;
@@ -2789,7 +2789,7 @@ export const listTripBookingReferences = async (tripIds: string[]): Promise<Map<
     } else {
       const p = getPg();
       const [flights, rentals, parsed] = await Promise.all([
-        p.query<import('../../types').TripBookingEvidence>(`SELECT carrier AS provider, booking_reference AS reference, CASE WHEN transfer_type='Train' THEN 'rail' WHEN transfer_type IN ('Ferry','Bus') THEN 'ferry_bus_transfer' ELSE 'flight' END AS "itemType", departure_date AS "startDate", arrival_date AS "endDate" FROM flights WHERE trip_id=$1 AND status <> 'Cancelled' AND (transfer_type IN ('Flight','Train','Ferry','Bus') OR transfer_type IS NULL)`, [tripId]),
+        p.query<import('../../types').TripBookingEvidence>(`SELECT carrier AS provider, booking_reference AS reference, CASE WHEN transfer_type='Train' THEN 'rail' WHEN transfer_type IN ('Ferry','Bus','Public Transit') THEN 'ferry_bus_transfer' ELSE 'flight' END AS "itemType", departure_date AS "startDate", arrival_date AS "endDate" FROM flights WHERE trip_id=$1 AND status <> 'Cancelled' AND (transfer_type IN ('Flight','Train','Ferry','Bus','Public Transit') OR transfer_type IS NULL)`, [tripId]),
         p.query<import('../../types').TripBookingEvidence>(`SELECT vendor AS provider, reference, 'car_rental' AS "itemType", pickup_date AS "startDate", dropoff_date AS "endDate" FROM car_rentals WHERE trip_id=$1 AND status <> 'Cancelled'`, [tripId]),
         p.query<ParsedItemRow>(`SELECT * FROM parsed_items WHERE assigned_trip_id=$1 AND review_status='ASSIGNED'`, [tripId]),
       ]);

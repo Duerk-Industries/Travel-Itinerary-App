@@ -1,3 +1,4 @@
+import { normalizeTransferType } from './transferTypes';
 import { type CarRental, type CarRentalDraft } from '../tabs/carRentals';
 import { type Flight, type FlightCreateDraft } from '../tabs/transfers';
 import { type Tour, type TourDraft } from '../tabs/activities';
@@ -51,10 +52,7 @@ export const getOverviewSaveFlags = (
 
 export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft & { passengerIds: string[]; paidBy?: string[] } => ({
   status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
-  transferType:
-    (flight as any).transferType ??
-    (flight as any).transfer_type ??
-    'Flight',
+  transferType: normalizeTransferType(flight.transferType || flight.transfer_type),
   passengerName: flight.passenger_name,
   arrivalDate: (flight as any).arrival_date || (flight as any).arrivalDate || flight.departure_date,
   passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : Array.isArray((flight as any).passengerIds) ? (flight as any).passengerIds : [],

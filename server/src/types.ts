@@ -317,7 +317,7 @@ export interface Flight {
   id: string;
   userId: string;
   status: ItineraryStatus;
-  transferType?: 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+  transferType?: 'Flight' | 'Public Transit' | 'Private Transfer' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
   netVotes?: number;
   userVote?: -1 | 1 | null;
   netRating?: number;
@@ -784,7 +784,7 @@ export type ItineraryPromptComfort = 'Budget' | 'Midrange' | 'Luxury';
 export type ItineraryPromptMobility = 'Low' | 'Medium' | 'High';
 export type ItineraryPromptCarPreference = 'PublicTransitOnly' | 'DayTripsOnly' | 'FullTripRental';
 export type ItineraryPromptInteractionStyle = 'Self-Guided' | 'Mixed' | 'Guided';
-export type TransferMode = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+export type TransferMode = 'Flight' | 'Public Transit' | 'Private Transfer' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
 
 export interface ItineraryPromptProfile {
   pace: ItineraryPromptPace;

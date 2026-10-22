@@ -22,7 +22,7 @@ export function buildTransferDirections(origin: string, destination: string, tra
   const start = origin.trim();
   const end = destination.trim();
   if (!start || !end) return null;
-  const transit = ['bus', 'train'].includes(transferType.trim().toLowerCase());
+  const transit = ['bus', 'train', 'ferry', 'public transit'].includes(transferType.trim().toLowerCase());
   // Waze has no transit mode or custom-origin parameter in its documented deep links.
   const app = preference === 'waze' && transit ? 'google' : preference;
   const mode = transit ? 'transit' : 'driving';

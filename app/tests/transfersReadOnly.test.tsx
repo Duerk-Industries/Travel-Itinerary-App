@@ -8,6 +8,8 @@ import { describe, expect, test, jest } from '@jest/globals';
 import { fireEvent, render } from '@testing-library/react-native';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from '../tabs/transfers';
 import { getAppTheme } from '../theme/theme';
+import DateField from '../components/DateField';
+import { Platform } from 'react-native';
 
 const styles = {
   card: {},
@@ -139,12 +141,13 @@ describe('FlightsTab read-only mode', () => {
 
   test('ground transfers fill plain-text locations from eligible hotel addresses without airport autocomplete', () => {
     const onSearchAirports = jest.fn(() => {});
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId, UNSAFE_getAllByType } = render(
       <FlightsTab transferScope="ground" backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
         flights={[{ ...flight, transferType: 'Train', transfer_type: 'Train' }]} setFlights={jest.fn() as any}
         lodgings={[
           { id: 'hotel', name: 'Hotel Today', address: '12 Main Street', checkInDate: '2026-09-01', checkOutDate: '2026-09-02', status: 'Booked' },
           { id: 'blank', name: 'No Address', address: '', checkInDate: '2026-09-01', checkOutDate: '2026-09-02', status: 'Booked' },
+          { id: 'later', name: 'Later Hotel', address: '99 Later Road', checkInDate: '2026-09-10', checkOutDate: '2026-09-12', status: 'Booked' },
         ]}
         groupMembers={[member]} defaultPayerId="member-1" formatMemberName={m => m.firstName || m.id} payerName={() => 'Member'}
         headers={{}} jsonHeaders={{}} findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}}
@@ -163,6 +166,57 @@ describe('FlightsTab read-only mode', () => {
     fireEvent.press(getByTestId('ground-arrival-hotel-hotel'));
     expect(getByTestId('flight-modal-arrival-location').props.value).toBe('12 Main Street');
     expect(onSearchAirports).not.toHaveBeenCalled();
+    const dateField = (testID: string) => UNSAFE_getAllByType(DateField).find(field => field.props.testID === testID)!;
+    // An independently chosen arrival day must be reset by a later departure-date edit.
+    fireEvent(dateField('transfer-arrival-date'), 'change', '2026-09-05');
+    expect(getByTestId('ground-arrival-hotel').props.accessibilityState.disabled).toBe(true);
+    fireEvent(dateField('transfer-departure-date'), 'change', '2026-09-10');
+    expect(dateField('transfer-arrival-date').props.value).toBe('2026-09-10');
+    fireEvent.press(getByTestId('ground-departure-hotel'));
+    expect(queryByTestId('ground-departure-hotel-hotel')).toBeNull();
+    fireEvent.press(getByTestId('ground-departure-hotel-later'));
+    expect(getByTestId('flight-modal-departure-location').props.value).toBe('99 Later Road');
+    fireEvent.press(getByTestId('ground-arrival-hotel'));
+    expect(queryByTestId('ground-arrival-hotel-hotel')).toBeNull();
+    fireEvent.press(getByTestId('ground-arrival-hotel-later'));
+    expect(getByTestId('flight-modal-arrival-location').props.value).toBe('99 Later Road');
+    fireEvent(dateField('transfer-arrival-date'), 'change', '2026-09-20');
+    expect(getByTestId('ground-arrival-hotel').props.accessibilityState.disabled).toBe(true);
+    expect(getByTestId('ground-departure-hotel').props.accessibilityState.disabled).toBe(false);
+  });
+
+  test('web modal date inputs refresh both hotel lists and survive an external-data refresh', () => {
+    const originalOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+    try {
+      const transfer: Flight = { ...flight, transferType: 'Public Transit', transfer_type: 'Public Transit' };
+      const props = {
+        transferScope: 'ground' as const, backendUrl: 'http://localhost', userToken: 'token', activeTripId: 'trip-1',
+        flights: [transfer], externalEditFlightId: transfer.id, setFlights: jest.fn() as any,
+        lodgings: [
+          { id: 'old', name: 'Old Hotel', address: 'Old address', checkInDate: '2026-09-01', checkOutDate: '2026-09-02', status: 'Booked' as const },
+          { id: 'new', name: 'New Hotel', address: 'New address', checkInDate: '2026-09-10', checkOutDate: '2026-09-11', status: 'Booked' as const },
+        ],
+        groupMembers: [member], defaultPayerId: 'member-1', formatMemberName: (m: GroupMemberOption) => m.id,
+        payerName: () => 'Member', headers: {}, jsonHeaders: {}, findActiveTrip: () => trip,
+        fetchGroupMembersForActiveTrip: async () => {}, styles, airportOptions: [], onSearchAirports: () => {},
+      };
+      const { getByTestId, UNSAFE_root, rerender } = render(<FlightsTab {...props} />);
+      const hotelSelect = (leg: string) => UNSAFE_root.findByProps({ 'data-testid': `ground-${leg}-hotel` });
+      const options = (leg: string) => hotelSelect(leg).findAllByType('option').map((option: { props: { value: string } }) => option.props.value);
+      expect(options('departure')).toContain('old');
+      fireEvent(getByTestId('transfer-arrival-date'), 'change', { target: { value: '2026-09-05' } });
+      fireEvent(getByTestId('transfer-departure-date'), 'change', { target: { value: '2026-09-10' } });
+      expect(getByTestId('transfer-arrival-date').props.value).toBe('2026-09-10');
+      expect(options('departure')).toEqual(['', 'new']);
+      expect(options('arrival')).toEqual(['', 'new']);
+      rerender(<FlightsTab {...props} flights={[{ ...transfer }]} />);
+      expect(getByTestId('transfer-departure-date').props.value).toBe('2026-09-10');
+      expect(getByTestId('transfer-arrival-date').props.value).toBe('2026-09-10');
+      expect(options('arrival')).toEqual(['', 'new']);
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS });
+    }
   });
 
   test('opens the edit form when a row is tapped in editable mode', () => {

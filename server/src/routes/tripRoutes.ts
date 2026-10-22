@@ -680,9 +680,9 @@ router.get('/:id/planning-capabilities', async (req, res) => {
   try {
     const access = await ensureUserCanReadTrip(String(req.params.id), userId);
     if (!access) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
-    const [map, nearby, partner, dayOrder, nativeMap, inspiration] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order', 'planning_native_map', 'planning_trip_inspiration'].map(key => isFeatureEnabled(key, userId)));
+    const [map, nearby, partner, dayOrder, nativeMap, inspiration, optimizeOrder] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order', 'planning_native_map', 'planning_trip_inspiration', 'planning_optimize_order'].map(key => isFeatureEnabled(key, userId)));
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json({ map, nativeMap: nativeMap && (await getFeatureFlag('planning_native_map'))?.enabled === true, nearby: nearby && access.access === 'member', partner, dayOrder: dayOrder && access.access === 'member', inspiration: inspiration && access.access === 'member', locate: access.access === 'member' && geocoderConfigured() && await isFeatureEnabled('planning_locate_items', userId), locateProvider: getGeocoder()?.displayName ?? null });
+    res.json({ map, optimizeOrder: optimizeOrder && dayOrder && access.access === 'member', nativeMap: nativeMap && (await getFeatureFlag('planning_native_map'))?.enabled === true, nearby: nearby && access.access === 'member', partner, dayOrder: dayOrder && access.access === 'member', inspiration: inspiration && access.access === 'member', locate: access.access === 'member' && geocoderConfigured() && await isFeatureEnabled('planning_locate_items', userId), locateProvider: getGeocoder()?.displayName ?? null });
   } catch { res.status(503).json({ error: 'Planning options are temporarily unavailable.' }); }
 });
 

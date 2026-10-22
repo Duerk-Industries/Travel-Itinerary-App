@@ -135,6 +135,20 @@ describe('PUT /api/activities/day-order', () => {
     await reorder({ tripId, date: DAY }).expect(400);
   });
 
+  it('gates optimization independently from manual reordering', async () => {
+    await db.setFeatureFlag('planning_optimize_order', false, null);
+    clearFeatureFlagCacheForTesting();
+    let caps = await request(app).get(`/api/trips/${tripId}/planning-capabilities`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(caps.body.dayOrder).toBe(true);
+    expect(caps.body.optimizeOrder).toBe(false);
+    await db.setFeatureFlag('planning_optimize_order', true, null);
+    clearFeatureFlagCacheForTesting();
+    caps = await request(app).get(`/api/trips/${tripId}/planning-capabilities`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(caps.body.optimizeOrder).toBe(true);
+    await db.setFeatureFlag('planning_optimize_order', false, null);
+    clearFeatureFlagCacheForTesting();
+  });
+
   it('is unavailable while the rollout flag is off, and is reported by planning-capabilities', async () => {
     let caps = await request(app).get(`/api/trips/${tripId}/planning-capabilities`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(caps.body.dayOrder).toBe(true);

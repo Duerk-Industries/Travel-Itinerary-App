@@ -50,7 +50,7 @@ describe('assistantGuideCorpus', () => {
     const transfers = GUIDE_CORPUS.find((entry) => entry.id === 'transfers');
     expect(transfers?.content).toContain('Transfers');
     expect(transfers?.content).toContain('Use Flights for air travel');
-    expect(transfers?.content).toContain('Use Ground Transfers for trains');
+    expect(transfers?.content).toContain('Use Ground Transfers for Public Transit');
   });
 
   // Regression guard for a second real hallucination observed in manual

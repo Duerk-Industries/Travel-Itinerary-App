@@ -31,7 +31,7 @@ import { previewIngestionPayload } from '../ingestion/orchestrator';
 import { getTierIngestionRules } from '../ingestion/shared/quota';
 import type { Request } from 'express';
 
-const TRANSFER_TYPES = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
+const TRANSFER_TYPES = ['Flight', 'Public Transit', 'Private Transfer', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
 type TransferType = (typeof TRANSFER_TYPES)[number];
 
 const normalizeMemberScopedIds = (ids: string[] | undefined, members: any[]): string[] | undefined => {

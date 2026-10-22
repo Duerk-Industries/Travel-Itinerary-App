@@ -1,3 +1,5 @@
+import { TRANSFER_TYPES as CANONICAL_TRANSFER_TYPES, normalizeTransferType } from '../utils/transferTypes';
+import type { TransferMode } from '../../server/src/types';
 import TransferDirections from '../components/TransferDirections';
 import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from '../components/HotelAddressPicker';
@@ -70,8 +72,8 @@ export interface Flight {
   layoverAirportLabel?: string;
 }
 
-export type TransferType = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
-export const TRANSFER_TYPES: TransferType[] = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'];
+export type TransferType = TransferMode;
+export const TRANSFER_TYPES: TransferType[] = [...CANONICAL_TRANSFER_TYPES];
 
 export type FlightDraft = {
   status: ItineraryStatus;
@@ -324,7 +326,7 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
   const passengerIds = Array.isArray(flight.passengerIds) ? flight.passengerIds.filter(Boolean) : [];
   return {
     status: normalizeItineraryStatus(flight.status, DEFAULT_NEW_ITINERARY_STATUS),
-    transferType: TRANSFER_TYPES.includes(flight.transferType) ? flight.transferType : 'Flight',
+    transferType: normalizeTransferType(flight.transferType),
     passengerName: trim(flight.passengerName) || 'Traveler',
     passengerIds,
     departureDate,
@@ -412,16 +414,8 @@ export const normalizeFlightFromApi = (f: any): Flight => ({
   departureLat: f.departureLat, departureLng: f.departureLng, arrivalLat: f.arrivalLat, arrivalLng: f.arrivalLng,
   ...f,
   status: normalizeItineraryStatus(f.status, LEGACY_ITINERARY_STATUS),
-  transfer_type: TRANSFER_TYPES.includes(f.transfer_type)
-    ? f.transfer_type
-    : TRANSFER_TYPES.includes(f.transferType)
-      ? f.transferType
-      : 'Flight',
-  transferType: TRANSFER_TYPES.includes(f.transferType)
-    ? f.transferType
-    : TRANSFER_TYPES.includes(f.transfer_type)
-      ? f.transfer_type
-      : 'Flight',
+  transfer_type: normalizeTransferType(f.transfer_type || f.transferType),
+  transferType: normalizeTransferType(f.transferType || f.transfer_type),
   netVotes: Number(f.netVotes ?? 0) || 0,
   userVote: f.userVote === 1 || f.userVote === -1 ? f.userVote : null,
   netRating: Number(f.netRating ?? 0) || 0,
@@ -602,7 +596,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 }) => {
   const flights = useMemo(() => allFlights.filter(item => transferScope === 'all' || (transferScope === 'flights' ? isFlightTransfer(item) : !isFlightTransfer(item))), [allFlights, transferScope]);
   const allowedTransferTypes = useMemo(() => TRANSFER_TYPES.filter(type => transferScope === 'all' || (transferScope === 'flights' ? type === 'Flight' : type !== 'Flight')), [transferScope]);
-  const initialDraft = (): FlightDraft => ({ ...createInitialFlightState(), transferType: transferScope === 'ground' ? 'Train' : 'Flight' });
+  const initialDraft = (): FlightDraft => ({ ...createInitialFlightState(), transferType: transferScope === 'ground' ? 'Public Transit' : 'Flight' });
   const sectionTitle = transferScope === 'ground' ? 'Ground Transfers' : transferScope === 'flights' ? 'Flights' : 'Transfers';
   const ground = transferScope === 'ground';
   const tableColumns = useMemo(() => columns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
@@ -707,8 +701,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     return {
       id: localId,
       status: normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS),
-      transfer_type: TRANSFER_TYPES.includes(draft.transferType) ? draft.transferType : 'Flight',
-      transferType: TRANSFER_TYPES.includes(draft.transferType) ? draft.transferType : 'Flight',
+      transfer_type: normalizeTransferType(draft.transferType),
+      transferType: normalizeTransferType(draft.transferType),
       passenger_name: draft.passengerName || 'Traveler',
       passenger_ids: draft.passengerIds ?? [],
       trip_id: activeTripId ?? 'wizard',
@@ -755,7 +749,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const allGridColumns = useMemo<GridColumn<Flight>[]>(() => [
     { key: 'passenger_name', label: 'Passenger', width: 170, editor: 'text', sticky: 'left', getValue: (row) => row.passenger_name || '' },
     { key: 'status', label: 'Status', width: 135, editor: 'select', options: ITINERARY_STATUSES, getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
-    { key: 'transfer_type', label: 'Type', width: 120, editor: 'select', options: allowedTransferTypes, getValue: (row) => String(row.transfer_type || row.transferType || 'Flight') },
+    { key: 'transfer_type', label: 'Type', width: 120, editor: 'select', options: allowedTransferTypes, getValue: (row) => normalizeTransferType(row.transfer_type || row.transferType) },
     { key: 'departure_date', label: 'Departure Date', width: 145, editor: 'date', getValue: (row) => row.departure_date || '' },
     { key: 'departure_location', label: 'Departure Location', width: 190, editor: 'text', getValue: (row) => row.departure_location || row.departure_airport_code || '' },
     { key: 'departure_time', label: 'Departure Time', width: 125, editor: 'time', getValue: (row) => row.departure_time || '' },
@@ -784,7 +778,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (column.editor === 'decimal' && rawValue && !/^\d*(\.\d*)?$/.test(rawValue)) { setGridErrors([{ rowId, columnKey, message: 'Enter a non-negative decimal.' }]); return; }
     setGridErrors((errors) => errors.filter((error) => !(error.rowId === rowId && error.columnKey === columnKey)));
     const value: any = columnKey === 'cost' ? Number(rawValue || 0) : rawValue;
-    recordGridChange(gridRows.map((item) => item.id === rowId ? { ...item, [columnKey]: value } : item), new Set(gridDeleteIds));
+    recordGridChange(gridRows.map((item) => item.id === rowId ? {
+      ...item, [columnKey]: value,
+      ...(columnKey === 'departure_date' && !isFlightTransfer(item) ? { arrival_date: rawValue } : {}),
+    } : item), new Set(gridDeleteIds));
   };
   const undoGridChange = () => { const previous = gridHistory[gridHistory.length - 1]; if (!previous) return; setGridHistory((items) => items.slice(0, -1)); setGridRedo((items) => [...items, { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]); setGridRows(previous.rows); setGridDeleteIds(new Set(previous.deleteIds)); };
   const redoGridChange = () => { const next = gridRedo[gridRedo.length - 1]; if (!next) return; setGridRedo((items) => items.slice(0, -1)); setGridHistory((items) => [...items, { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]); setGridRows(next.rows); setGridDeleteIds(new Set(next.deleteIds)); };
@@ -799,7 +796,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         const original = originalById.get(row.id);
         if (!original || JSON.stringify(original) === JSON.stringify(row)) continue;
         const draft: FlightEditDraft = {
-          status: normalizeItineraryStatus(row.status, DEFAULT_NEW_ITINERARY_STATUS), transferType: (row.transfer_type || row.transferType || 'Flight') as TransferType,
+          status: normalizeItineraryStatus(row.status, DEFAULT_NEW_ITINERARY_STATUS), transferType: normalizeTransferType(row.transfer_type || row.transferType),
           passengerName: row.passenger_name || 'Traveler', passengerIds: row.passenger_ids ?? [], departureDate: row.departure_date || '', arrivalDate: row.arrival_date || row.departure_date || '',
           departureLocation: row.departure_location || row.departure_airport_code || '', departureAirportCode: row.departure_airport_code || row.departure_location || '', departureTime: row.departure_time || '',
           arrivalLocation: row.arrival_location || row.arrival_airport_code || '', arrivalAirportCode: row.arrival_airport_code || row.arrival_location || '', layoverLocation: row.layover_location || '', layoverLocationCode: row.layover_location_code || '', layoverDuration: row.layover_duration || '', arrivalTime: row.arrival_time || '', cost: String(row.cost ?? ''), carrier: row.carrier || '', flightNumber: row.flight_number || '', bookingReference: row.booking_reference || '', paidBy: row.paidBy ?? row.paid_by ?? [],
@@ -900,6 +897,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     const value = item[key as keyof Flight];
     const baseDisplay = value != null ? String(value) : '-';
     switch (key) {
+      case 'transfer_type':
+        return normalizeTransferType(item.transfer_type || item.transferType);
       case 'passenger_name': {
         const ids = Array.isArray(item.passenger_ids) ? item.passenger_ids : [];
         return formatTravelerListDisplay(ids, baseDisplay, groupMembers) || baseDisplay;
@@ -1193,11 +1192,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     setEditingFlightId(flight.id);
     const base: FlightEditDraft = {
       status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
-      transferType: TRANSFER_TYPES.includes((flight as any).transferType)
-        ? (flight as any).transferType
-        : TRANSFER_TYPES.includes((flight as any).transfer_type)
-          ? (flight as any).transfer_type
-          : 'Flight',
+      transferType: normalizeTransferType(flight.transferType || flight.transfer_type),
       passengerName: flight.passenger_name,
       passengerIds: normalizedPassengerIds,
       departureDate: normalizeDateString(flight.departure_date),
@@ -1245,12 +1240,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   useEffect(() => {
-    if (!externalEditFlightId) return;
+    if (!externalEditFlightId || editingFlightId === externalEditFlightId) return;
     const target = flights.find((f) => f.id === externalEditFlightId);
     if (target) {
       openFlightDetails(target);
     }
-  }, [externalEditFlightId, flights]);
+  }, [externalEditFlightId, flights, editingFlightId]);
 
   const saveFlightDetails = async () => {
     if (readOnly) return;
@@ -1455,7 +1450,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       }
 
       // Convert parsed data into our flight draft
-      const primary = data.primary || {};
+      const primary = { ...(data.primary || {}), transferType: normalizeTransferType(data.primary?.transferType) };
       if (TRANSFER_TYPES.includes(primary.transferType) && !allowedTransferTypes.includes(primary.transferType)) {
         throw new Error(`This is ${primary.transferType === 'Flight' ? 'a flight. Add it from Flights' : 'a ground transfer. Add it from Ground Transfers'}.`);
       }
@@ -1518,7 +1513,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     }
     setEditingFlightId('new');
     const init = createFlightDraftForTrip(findActiveTrip(), defaultPayerId);
-    init.transferType = transferScope === 'ground' ? 'Train' : 'Flight';
+    init.transferType = transferScope === 'ground' ? 'Public Transit' : 'Flight';
     if (groupMembers.length) {
       const allIds = groupMembers.map((m) => m.id);
       init.passengerIds = allIds;
@@ -1817,7 +1812,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 const valueMap: Record<string, string> = {
                   passenger_name: buildPassengerName(newFlight.passengerIds) || 'Select passengers',
                   status: normalizeItineraryStatus(newFlight.status, DEFAULT_NEW_ITINERARY_STATUS),
-                  transfer_type: TRANSFER_TYPES.includes(newFlight.transferType) ? newFlight.transferType : 'Flight',
+                  transfer_type: normalizeTransferType(newFlight.transferType),
                   departure_date: newFlight.departureDate,
                   departure_location: newFlight.departureLocation,
                   departure_time: newFlight.departureTime,
@@ -1840,7 +1835,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     })),
                   departure_date: (text) =>
                     setNewFlight((prev) => {
-                      const nextArrival = !prev.arrivalDate || prev.arrivalDate === prev.departureDate ? text : prev.arrivalDate;
+                      const nextArrival = ground || !prev.arrivalDate || prev.arrivalDate === prev.departureDate ? text : prev.arrivalDate;
                       return { ...prev, departureDate: text, arrivalDate: nextArrival };
                     }),
                   departure_location: (text) => setNewFlight((prev) => ({ ...prev, departureLocation: text })),

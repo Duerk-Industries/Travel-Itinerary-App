@@ -100,7 +100,7 @@ type PromptCarCode = 'P' | 'D' | 'R';
 type PromptInteractionStyleCode = 'self_guided' | 'mixed' | 'guided';
 type PromptDayTimeCode = 'M' | 'D' | 'E';
 type PromptActivityCode = 'A' | 'R' | 'T' | 'O' | 'E';
-type PromptTransferMode = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+type PromptTransferMode = 'Flight' | 'Public Transit' | 'Private Transfer' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
 
 type LegacyPromptWeights = { o: number; c: number; f: number; n: number; r: number };
 type PromptWeights = InterestWeights;
@@ -1110,7 +1110,7 @@ const sanitizeRoute = (raw: unknown, norm: PromptNorm, req: PromptReq): PromptRo
     .map((transfer: any) => {
       const mode = String(transfer?.m ?? '').trim() as PromptTransferMode;
       const validMode: PromptTransferMode = (
-        ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const
+        ['Flight', 'Public Transit', 'Private Transfer', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const
       ).includes(mode)
         ? mode
         : 'Flight';

@@ -51,6 +51,16 @@ describe('Flights API passenger validation', () => {
     await closePool();
   });
 
+  it.each(['Public Transit', 'Private Transfer'])('stores and returns %s without falling back to Flight', async transferType => {
+    const created = await request(app).post('/api/transfers').set('Authorization', `Bearer ${token}`)
+      .send({ tripId, transferType, passengerIds: [memberId], departureDate: '2027-03-02', arrivalDate: '2027-03-02',
+        departureLocation: 'Hotel', arrivalLocation: 'Station', departureTime: '10:00', arrivalTime: '11:00', cost: 10, carrier: 'Provider' }).expect(201);
+    expect(created.body.transferType || created.body.transfer_type).toBe(transferType);
+    const updated = await request(app).patch(`/api/transfers/${created.body.id}`).set('Authorization', `Bearer ${token}`)
+      .send({ transferType, carrier: 'Updated Provider' }).expect(200);
+    expect(updated.body.transferType || updated.body.transfer_type).toBe(transferType);
+  });
+
   it('rejects creating a flight without passengers', async () => {
     await request(app)
       .post('/api/transfers')

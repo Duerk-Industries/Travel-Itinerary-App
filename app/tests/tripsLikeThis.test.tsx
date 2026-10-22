@@ -41,9 +41,16 @@ describe('Trips like this and sharing controls', () => {
     const view = render(<TripsLikeThis {...props} />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
     view.rerender(<TripsLikeThis {...props} tripId="other-trip" headers={{ Authorization: 'Bearer two' }} />);
-    await waitFor(() => expect(view.getByText(/No shared activities/)).toBeTruthy());
+    await waitFor(() => expect(view.queryByText('Trips like this')).toBeNull());
     await act(async () => { release(json({ trips: [source] })); });
     expect(view.queryByText('Paris ideas · Source blog')).toBeNull();
+  });
+  it.each([{ trips: [] }, { trips: [{ ...source, activities: [] }] }])('hides the entire section without shared activities', async ({ trips }) => {
+    global.fetch = jest.fn(async (url: string) => url.endsWith('planning-capabilities') ? json({ inspiration: true }) : json({ trips })) as unknown as typeof fetch;
+    const view = render(<TripsLikeThis {...props} />);
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
+    expect(view.queryByText('Trips like this')).toBeNull();
+    expect(view.queryByText('Refresh shared trips')).toBeNull();
   });
   it('shows no surface or browse call when the capability is disabled', async () => {
     global.fetch = jest.fn(async () => json({ inspiration: false }));

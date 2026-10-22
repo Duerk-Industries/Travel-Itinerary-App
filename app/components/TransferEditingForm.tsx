@@ -1,3 +1,4 @@
+import { TRANSFER_TYPES as CANONICAL_TRANSFER_TYPES, normalizeTransferType } from '../utils/transferTypes';
 import TransferDirections from './TransferDirections';
 import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from './HotelAddressPicker';
@@ -13,7 +14,7 @@ import type { AppTheme } from '../theme/theme';
 import DateField from './DateField';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
-const TRANSFER_TYPES: TransferType[] = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'];
+const TRANSFER_TYPES: TransferType[] = [...CANONICAL_TRANSFER_TYPES];
 
 export type FlightEditingFormProps = {
   mapApp?: MapApp;
@@ -192,7 +193,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           <Text style={[styles.modalLabel, { marginTop: 16 }]}>Type</Text>
           {Platform.OS === 'web' ? (
             <select
-              value={TRANSFER_TYPES.includes((flight as any).transferType as TransferType) ? (flight as any).transferType : 'Flight'}
+              value={normalizeTransferType(flight.transferType)}
               onChange={(e) =>
                 setFlight((prev) =>
                   prev
@@ -216,7 +217,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           ) : (
             <View style={styles.payerChips}>
               {transferTypes.map((opt) => {
-                const selected = (flight as any).transferType === opt;
+                const selected = normalizeTransferType(flight.transferType) === opt;
                 return (
                   <TouchableOpacity
                     key={`transfer-type-${opt}`}
@@ -238,7 +239,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                 onChange={(dep) =>
                   setFlight((prev) => {
                     if (!prev) return prev;
-                    const nextArrival = !prev.arrivalDate || prev.arrivalDate === prev.departureDate
+                    const nextArrival = ground || !prev.arrivalDate || prev.arrivalDate === prev.departureDate
                       ? dep
                       : prev.arrivalDate;
                     return { ...prev, departureDate: dep, arrivalDate: nextArrival };
@@ -267,7 +268,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
               {ground ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
-                <HotelAddressPicker hotels={lodgings} date={flight.departureDate || flight.departureDate} styles={styles} testID="ground-departure-hotel"
+                <HotelAddressPicker hotels={lodgings} date={flight.departureDate} styles={styles} testID="ground-departure-hotel"
                   onSelect={address => setFlight(prev => prev ? { ...prev, departureLocation: address } : prev)} />
                 <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} testID="flight-modal-departure-location"
                   value={flight.departureLocation} placeholder="Location" autoComplete="off"

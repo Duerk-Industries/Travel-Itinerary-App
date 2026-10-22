@@ -23,11 +23,11 @@ const D: OrderableActivity = { id: 'd', name: 'Mid Temple', lat: 35.68, lng: 139
 
 type FetchHandler = (url: string, init?: RequestInit) => Reply | Promise<Reply> | never;
 
-const setup = (opts: { activities?: OrderableActivity[]; capability?: boolean; onPut?: FetchHandler; readOnly?: boolean; lodging?: { lat: number; lng: number } | null } = {}) => {
+const setup = (opts: { activities?: OrderableActivity[]; capability?: boolean; optimization?: boolean | null; onPut?: FetchHandler; readOnly?: boolean; lodging?: { lat: number; lng: number } | null } = {}) => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const fetchMock = jest.fn(async (url: string, init?: RequestInit) => {
     calls.push({ url, init });
-    if (url.includes('/planning-capabilities')) return json({ body: { dayOrder: opts.capability ?? true } });
+    if (url.includes('/planning-capabilities')) return json({ body: { dayOrder: opts.capability ?? true, ...(opts.optimization === null ? {} : { optimizeOrder: opts.optimization ?? true }) } });
     if (url.endsWith('/api/activities/day-order')) {
       if (!opts.onPut) return json({ body: { order: [] } });
       return json(await opts.onPut(url, init));
@@ -65,6 +65,15 @@ describe('DayActivitiesOrdering', () => {
   const originalFetch = global.fetch;
   afterEach(() => {
     global.fetch = originalFetch;
+  });
+
+  it.each([false, null])('keeps manual reordering but hides optimization when its separate flag is %s', async optimization => {
+    const view = setup({ optimization, lodging: { lat: 35.7, lng: 139.7 } });
+    await waitFor(() => expect(view.getByTestId('day-order-down-a')).toBeTruthy());
+    expect(view.queryByTestId('day-order-optimize')).toBeNull();
+    expect(view.queryByTestId('day-order-lodging-toggle')).toBeNull();
+    expect(view.queryByText('⠿ Drag to reorder')).toBeNull();
+    expect(view.getByTestId('day-order-drag-a')).toBeTruthy();
   });
 
   it('lists activities in saved-position order and shows no controls until the rollout flag is on', async () => {

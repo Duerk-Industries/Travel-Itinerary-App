@@ -35,6 +35,8 @@ const MONTHS: Record<string, string> = {
 const LONG_DATE = /([A-Z][a-z]+)\s+(\d{1,2}),\s+(\d{4})/;
 const DAY_HEADING = /^DAY\s+(\d{1,3})\s*(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day,\s*([A-Z][a-z]+\s+\d{1,2},\s+\d{4})\s*$/;
 const TRANSFER_KINDS: Record<string, { type: ItineraryDocumentCandidate['type']; transferType: string }> = {
+  'PUBLIC TRANSIT': { type: 'ferry_bus_transfer', transferType: 'Public Transit' },
+  'PRIVATE TRANSFER': { type: 'ferry_bus_transfer', transferType: 'Private Transfer' },
   FLIGHT: { type: 'flight', transferType: 'Flight' },
   TRAIN: { type: 'rail', transferType: 'Train' },
   BUS: { type: 'ferry_bus_transfer', transferType: 'Bus' },

@@ -52,6 +52,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
   tripId, date, backendUrl, headers, activities, lodgingAnchor, readOnly, onChanged, styles, renderRow,
 }: Props<T>) {
   const [enabled, setEnabled] = useState(false);
+  const [optimizationEnabled, setOptimizationEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [preview, setPreview] = useState<OptimizeResult | null>(null);
@@ -74,12 +75,13 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
   useEffect(() => {
     let cancelled = false;
     setEnabled(false);
+    setOptimizationEnabled(false);
     if (readOnly || typeof fetch !== 'function') return undefined;
     void Promise.resolve(fetch(`${backendUrl}/api/trips/${encodeURIComponent(tripId)}/planning-capabilities`, { headers }))
       .then(async (response) => {
         if (!response?.ok) return;
         const data = await response.json();
-        if (!cancelled) setEnabled(data?.dayOrder === true);
+        if (!cancelled) { setEnabled(data?.dayOrder === true); setOptimizationEnabled(data?.optimizeOrder === true); }
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
@@ -174,6 +176,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
   };
 
   const showPreview = () => {
+    if (!optimizationEnabled || !enabled || readOnly) return;
     previewBase.current = { ids: orderedIds, pins: pinnedIds };
     setNotice(null);
     const anchor = useLodging && lodgingAnchor ? lodgingAnchor : null;
@@ -220,7 +223,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
 
   return (
     <View>
-      {canReorder ? (
+      {canReorder && optimizationEnabled ? (
         <View testID="day-order-tools" style={{ gap: 8, marginBottom: 8 }}>
           <TouchableOpacity
             testID="day-order-optimize"
@@ -252,7 +255,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
         </View>
       ) : null}
 
-      {preview ? (
+      {preview && optimizationEnabled ? (
         <View testID="day-order-preview" style={{ gap: 6, marginBottom: 10 }} accessibilityLabel="Suggested order">
           <Text style={styles.flightTitle}>Suggested order</Text>
           <Text style={styles.helperText}>

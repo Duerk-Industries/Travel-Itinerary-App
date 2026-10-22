@@ -7,7 +7,7 @@ import TransferDirections from '../components/TransferDirections';
 describe('transfer route links', () => {
   const origin = 'Hotel A & Spa, Tokyo';
   const destination = 'Tokyo Station, 東京';
-  it.each(['Bus', 'Train'])('uses transit for %s with both endpoints in Google Maps', type => {
+  it.each(['Bus', 'Train', 'Ferry', 'Public Transit'])('uses transit for %s with both endpoints in Google Maps', type => {
     const route = buildTransferDirections(origin, destination, type, 'google')!;
     const url = new URL(route.url);
     expect(url.searchParams.get('origin')).toBe(origin);
@@ -15,7 +15,7 @@ describe('transfer route links', () => {
     expect(url.searchParams.get('travelmode')).toBe('transit');
     expect(url.searchParams.get('api')).toBe('1');
   });
-  it.each(['Other', 'Private', 'Ferry', 'Flight'])('defaults to driving for %s', type => {
+  it.each(['Other', 'Private', 'Private Transfer', 'Flight'])('defaults to driving for %s', type => {
     expect(new URL(buildTransferDirections(origin, destination, type)!.url).searchParams.get('travelmode')).toBe('driving');
   });
   it.each(['Bus', 'Train', 'Private'])('uses Apple Maps endpoints and the correct mode for %s', type => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import { hotelsForTransferDate, type TransferHotel } from '../utils/transferHotels';
 import { toWebStyle } from '../utils/webStyle';
@@ -7,7 +7,9 @@ export default function HotelAddressPicker({ hotels, date, onSelect, styles, tes
   hotels: TransferHotel[]; date: string; onSelect: (address: string) => void; styles: Record<string, any>; testID: string;
 }) {
   const [open, setOpen] = useState(false);
-  const options = hotelsForTransferDate(hotels, date);
+  // The owner supplies the trip's cached hotel list; typing in the form or opening
+  // this dropdown should neither refetch hotels nor repeat the date filtering.
+  const options = useMemo(() => hotelsForTransferDate(hotels, date), [hotels, date]);
   const disabled = options.length === 0;
   const label = disabled ? 'No hotels available' : 'Use hotel address';
   if (Platform.OS === 'web') return <select data-testid={testID} aria-label="Use hotel address" disabled={disabled} value=""

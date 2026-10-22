@@ -1,6 +1,6 @@
 import { useAutomaticMapLocations } from '../hooks/useAutomaticMapLocations';
 import TripMap from './TripMap';
-import React, { memo, useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { buildTripDayMapUrl, type TripMapPoint, type TripMapPointKind } from '../utils/googleMaps';
@@ -12,6 +12,7 @@ type TripDayMapProps = {
   backendUrl: string;
   requestHeaders: Record<string, string>;
   testID?: string;
+  onOpenChange?: (open: boolean) => void;
 };
 
 // Mirrors MARKER_COLOR_BY_KIND in server/src/routes/staticMapRoutes.ts (Google
@@ -50,7 +51,7 @@ const LegendPin: React.FC<{ color: string }> = ({ color }) => (
  * how the day hero image elsewhere in Overview already falls back to a
  * plain color box instead of surfacing a fetch failure to the user.
  */
-const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, requestHeaders, testID, tripId, dayDate }) => {
+const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, requestHeaders, testID, tripId, dayDate, onOpenChange }) => {
   const [nativeEnabled, setNativeEnabled] = useState(false);
   const [canLocate, setCanLocate] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
@@ -119,6 +120,11 @@ const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, re
   }, [points]);
 
   const locations = useAutomaticMapLocations({ points, backendUrl, tripId, dayDate, requestHeaders, enabled: nativeEnabled, canLocate, open: mapOpen });
+  const visibilityCallback = useRef(onOpenChange);
+  visibilityCallback.current = onOpenChange;
+  const mapShown = nativeEnabled ? mapOpen : Boolean(mapUrl && imageSource && !failed);
+  useEffect(() => { visibilityCallback.current?.(mapShown); }, [mapShown, tripId, dayDate]);
+  useEffect(() => () => { visibilityCallback.current?.(false); }, []);
   if (nativeEnabled) return <TripMap key={JSON.stringify([tripId, dayDate])} testID={testID} nativeEnabled points={locations.points} onOpenChange={setMapOpen} locating={locations.locating} locationNotice={locations.notice} />;
   if (!mapUrl || !imageSource || failed) return null;
 

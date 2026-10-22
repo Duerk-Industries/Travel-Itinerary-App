@@ -21,7 +21,7 @@ export default function DayOrderRow(props: DayOrderRowProps) {
     {!props.disabled && <View {...responder.panHandlers} testID={`day-order-drag-${props.id}`}
       accessible accessibilityLabel={`Drag ${props.name} to reorder. Move up and down buttons are also available.`}
       style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 }}>
-      <Text>⠿ Drag to reorder</Text>
+      <Text>⠿</Text>
     </View>}
     {props.children}
   </View>;

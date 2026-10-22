@@ -164,6 +164,7 @@ export const applyStartupFeatureFlagOverrides = async (): Promise<void> => {
 const flagCache = new Map<string, { enabled: boolean; expiresAt: number }>();
 const FLAG_CACHE_TTL_MS = 60_000;
 const FAIL_CLOSED_FLAGS = new Set([
+  'planning_optimize_order',
   'planning_web_map', 'planning_day_order', 'planning_auto_assign', 'planning_nearby', 'planning_locate_items', 'planning_trip_inspiration', 'planning_notifications', 'planning_structured_import', 'trip_bundle',
   'feature_ingest_forwarded_mailbox',
   'packing_lists_v2',

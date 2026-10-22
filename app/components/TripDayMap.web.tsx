@@ -1,11 +1,15 @@
 import { useAutomaticMapLocations } from '../hooks/useAutomaticMapLocations';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import TripMap from './TripMap';
 import type { TripMapPoint } from '../utils/googleMaps';
-export default function TripDayMap({ points, testID, tripId, backendUrl, requestHeaders, dayDate }: { points: TripMapPoint[]; backendUrl: string; requestHeaders: Record<string, string>; testID?: string; tripId?: string; dayDate?: string }) {
+export default function TripDayMap({ points, testID, tripId, backendUrl, requestHeaders, dayDate, onOpenChange }: { points: TripMapPoint[]; backendUrl: string; requestHeaders: Record<string, string>; testID?: string; tripId?: string; dayDate?: string; onOpenChange?: (open: boolean) => void }) {
   const [enabled, setEnabled] = useState(false);
   const [canLocate, setCanLocate] = useState(false);
   const [open, setOpen] = useState(false);
+  const visibilityCallback = useRef(onOpenChange);
+  visibilityCallback.current = onOpenChange;
+  useEffect(() => { visibilityCallback.current?.(enabled && open); }, [enabled, open, tripId, dayDate]);
+  useEffect(() => () => { visibilityCallback.current?.(false); }, []);
   const auth = JSON.stringify(requestHeaders);
   useEffect(() => {
     let cancelled = false; setEnabled(false); setCanLocate(false); setOpen(false);

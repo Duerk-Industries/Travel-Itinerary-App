@@ -603,6 +603,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const editLayoverLocationRef = useRef<any>(null);
   const scrollRef = useRef<any>(null);
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
+  const [visibleMapDate, setVisibleMapDate] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
   const [blogDayImages, setBlogDayImages] = useState<Record<string, string>>({});
@@ -2418,13 +2419,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (activityDetails.length) {
       return activityDetails.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
     }
-    if (info.flights.length) {
-      return info.flights.map((f) => {
-        const dep = f.departure_location || f.departure_airport_code || 'Departure';
-        const arr = f.arrival_location || f.arrival_airport_code || 'Arrival';
-        return `Transfer from ${dep} to ${arr}.`;
-      });
-    }
     if (info.lodgings.length) {
       const day = normalizeDateString(date ?? '');
       return info.lodgings
@@ -2434,7 +2428,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (info.rentals.length) {
       return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
     }
-    if (info.tours.length) return [];
+    if (info.tours.length || info.flights.length) return [];
     return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
 
@@ -2812,9 +2806,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
               {dayMapPoints.length ? (
-                <TripDayMap tripId={trip.id} dayDate={activeDayCard.date} points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
+                <TripDayMap key={activeDayCard.date} onOpenChange={open => setVisibleMapDate(open ? activeDayCard.date : null)} tripId={trip.id} dayDate={activeDayCard.date} points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
               ) : null}
-              {!readOnly && <NearbyPlacesPanel tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} destination={trip.destination}
+              {!readOnly && visibleMapDate === activeDayCard.date && dayMapPoints.length > 0 && <NearbyPlacesPanel tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} destination={trip.destination}
                 center={nearbyAnchor ? { lat: nearbyAnchor.lat!, lng: nearbyAnchor.lng! } : undefined} onAdded={onTourDataChanged} />}
               {!readOnly && <TripsLikeThis tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} onAdded={onTourDataChanged} />}
               {narrativeLines.length ? (

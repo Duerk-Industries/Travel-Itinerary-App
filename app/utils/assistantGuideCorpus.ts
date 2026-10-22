@@ -34,7 +34,7 @@ export const GUIDE_CORPUS: GuideCorpusEntry[] = [
     title: 'Flights and Ground Transfers screens',
     keywords: ['flight', 'flights', 'train', 'transfer', 'transfers', 'airport', 'departure', 'arrival', 'layover'],
     content:
-      'Use Flights for air travel. Use Ground Transfers for trains, buses, ferries, private transfers, ' +
+      'Use Flights for air travel. Use Ground Transfers for Public Transit (trains, buses, ferries), Private Transfer, ' +
       'and Other. Ground Transfers appears directly below Lodging on Home. Their expense totals are separate. Each entry has a status (Needed, Proposed, Needs Booking, ' +
       'Booked, Completed, or Cancelled). Add one manually by tapping the round "+" button -- it has no ' +
       'text label; there is no "Add Flight" button. To add one automatically instead, tap the separate ' +

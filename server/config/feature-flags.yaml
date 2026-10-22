@@ -21,7 +21,10 @@ flags:
     description: "P2 add confident, matching bookings from the person's own uploads to the right trip automatically, with Undo for 7 days. Default for everyone once on; each person can turn it off. Forwarded email never qualifies."
   planning_day_order:
     enabled: false
-    description: "P2 move-up/down reorder and Optimize day for a day's activities; stored per-day order, no external routing provider"
+    description: "P2 manual drag and move-up/down reordering for a day's activities; optimization additionally requires planning_optimize_order"
+  planning_optimize_order:
+    enabled: false
+    description: "Show route optimization suggestions and the lodging start/end option; manual reordering remains independently controlled by planning_day_order"
   planning_nearby:
     enabled: false
     description: "P1 catalog Nearby and atomic Add to day; no external geocoder"

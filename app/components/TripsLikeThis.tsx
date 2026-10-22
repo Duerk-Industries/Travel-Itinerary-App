@@ -24,7 +24,7 @@ export default function TripsLikeThis({ tripId, date, backendUrl, headers, onAdd
       const response = await fetch(`${backendUrl}/api/trips/${encodeURIComponent(tripId)}/similar-trips`, { headers });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Trips like this could not load.');
-      if (current.current === requestScope && request === sequence.current) setResult({ scope: requestScope, trips: body.trips });
+      if (current.current === requestScope && request === sequence.current) setResult({ scope: requestScope, trips: Array.isArray(body.trips) ? body.trips : [] });
     } catch (error) {
       if (current.current === requestScope && request === sequence.current) {
         setResult(null); setNotice({ scope: requestScope, text: (error as Error).message });
@@ -80,12 +80,13 @@ export default function TripsLikeThis({ tripId, date, backendUrl, headers, onAdd
     } catch (error) { if (current.current === scope) setNotice({ scope, text: (error as Error).message }); }
     finally { busy.current.delete(identity); if (current.current === scope) setPending(''); }
   };
-  if (enabledScope !== scope) return null;
+  const sharedTrips = result?.scope === scope ? result.trips.filter(source => source.activities?.length > 0) : [];
+  if (enabledScope !== scope || !sharedTrips.length) return null;
   return <View accessibilityLabel="Trips like this" style={{ padding: 12, gap: 10 }}>
     <Text style={{ fontSize: 18, fontWeight: '700' }}>Trips like this</Text>
     <Text tone="muted">Ideas shared by public blogs visiting the same destination. Copies are proposed activities; check current opening hours and availability.</Text>
     {notice?.scope === scope && <Text accessibilityRole="alert" accessibilityLiveRegion="polite">{notice.text}</Text>}
-    {result?.scope !== scope ? <Text>Finding shared trips…</Text> : !result.trips.length ? <Text>No shared activities for this destination yet. Nearby and manual entry are still available.</Text> : result.trips.map(source => <View key={`${source.username}/${source.tripSlug}`} style={{ gap: 8 }}>
+    {sharedTrips.map(source => <View key={`${source.username}/${source.tripSlug}`} style={{ gap: 8 }}>
       <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(`${backendUrl}${source.sourcePath}`)} style={{ minHeight: 44 }}><Text tone="link" style={{ fontWeight: '700' }}>{source.title} · Source blog</Text></TouchableOpacity>
       {source.activities.map(activity => {
         const identity = `${scope}:${source.username}/${source.tripSlug}/${activity.id}`;
