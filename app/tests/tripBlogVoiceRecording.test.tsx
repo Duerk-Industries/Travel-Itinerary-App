@@ -119,15 +119,11 @@ describe('TripBlogTab in-app voice note recording', () => {
     expect(transcribeCalls).toHaveLength(0);
   });
 
-  // Regression test: manual testing on web (localhost:8081) surfaced "Saved, but couldn't
-  // transcribe it: An audio recording is required" -- transcribeMediaCaption (tripBlog.tsx) was
-  // reusing React Native's { uri, name, type } FormData file convention on every platform, but a
-  // browser's FormData.append just stringifies that plain object instead of attaching real bytes,
-  // so the server's multer middleware never received a file. Fixed by fetching the blob: URI into
-  // a real Blob and appending that instead, only on web. This asserts the fix's actual mechanism:
-  // on web, recording.uri gets fetched a SECOND time (once for the upload, once more here) to
-  // build a real Blob for the transcribe request.
-  it('fetches the recording a second time to build a real Blob for the transcribe request on web', async () => {
+  // Regression test: on web the transcribe request must attach real audio bytes (a browser's
+  // FormData stringifies RN's { uri, name, type } object, so the server saw no file). The recording
+  // is now read once (utils/localBlob.ts) and that same Blob is reused for transcription, because
+  // re-reading the blob: address was a second chance for iPhone Safari's "Load failed".
+  it('reads the recording once on web and sends that Blob to transcription', async () => {
     Platform.OS = 'web';
     const { findByText, getByTestId, getByLabelText } = renderTab();
     fireEvent.press(await findByText('Edit blog'));
@@ -142,7 +138,10 @@ describe('TripBlogTab in-app voice note recording', () => {
       expect.objectContaining({ method: 'POST' }),
     ));
     const recordingUriFetches = fetchMock.mock.calls.filter(([reqUrl]: [string]) => String(reqUrl) === 'file:///recorded-voice-note.m4a');
-    expect(recordingUriFetches).toHaveLength(2);
+    expect(recordingUriFetches.length).toBeLessThanOrEqual(1);
+    const transcribeCall = fetchMock.mock.calls.find(([reqUrl]: [string]) => String(reqUrl).includes('transcribe-caption'));
+    const audio = (transcribeCall[1].body as FormData).get('audio');
+    expect(audio).toBeInstanceOf(Blob);
   });
 
   it('does not re-fetch the recording on native -- the { uri, name, type } FormData convention is used as before', async () => {

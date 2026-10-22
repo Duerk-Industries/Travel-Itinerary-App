@@ -12,10 +12,13 @@ describe('Itinerary overview weather route', () => {
   let token = '';
   let userId = '';
   const originalFetch = global.fetch;
+  const originalWeatherDisabled = process.env.OPEN_METEO_DISABLED;
   let fetchMock: jest.SpyInstance;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
+    // jest-setup turns real weather lookups off; this suite mocks fetch, so turn them back on.
+    delete process.env.OPEN_METEO_DISABLED;
     await initDb();
     await seedTiersForTest();
     const user = await registerAndLoginWebUser({
@@ -74,6 +77,7 @@ describe('Itinerary overview weather route', () => {
   });
 
   afterAll(async () => {
+    if (originalWeatherDisabled !== undefined) process.env.OPEN_METEO_DISABLED = originalWeatherDisabled;
     await cleanupTestUsersByEmail([USER_EMAIL]);
     await closePool();
   });
