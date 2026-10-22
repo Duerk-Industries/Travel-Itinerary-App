@@ -23,6 +23,7 @@ import type { AppTheme } from '../theme/theme';
 import { fixedTableColumn } from '../utils/tableColumns';
 import { startItemSaveTask } from '../utils/analytics/track';
 import {
+  ITINERARY_STATUSES,
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
   type ItineraryStatus,
@@ -753,7 +754,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     : { key, direction: 'asc' });
   const allGridColumns = useMemo<GridColumn<Flight>[]>(() => [
     { key: 'passenger_name', label: 'Passenger', width: 170, editor: 'text', sticky: 'left', getValue: (row) => row.passenger_name || '' },
-    { key: 'status', label: 'Status', width: 135, editor: 'select', options: Object.values({ Needed: 'Needed', Proposed: 'Proposed', Booked: 'Booked', Completed: 'Completed', Cancelled: 'Cancelled' }), getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
+    { key: 'status', label: 'Status', width: 135, editor: 'select', options: ITINERARY_STATUSES, getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
     { key: 'transfer_type', label: 'Type', width: 120, editor: 'select', options: allowedTransferTypes, getValue: (row) => String(row.transfer_type || row.transferType || 'Flight') },
     { key: 'departure_date', label: 'Departure Date', width: 145, editor: 'date', getValue: (row) => row.departure_date || '' },
     { key: 'departure_location', label: 'Departure Location', width: 190, editor: 'text', getValue: (row) => row.departure_location || row.departure_airport_code || '' },
@@ -1892,7 +1893,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                           onChange={(e) => setters.status(e.target.value)}
                           style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                         >
-                          {['Needed', 'Proposed', 'Booked', 'Cancelled', 'Completed'].map((opt) => (
+                          {ITINERARY_STATUSES.map((opt) => (
                             <option key={opt} value={opt}>
                               {opt}
                             </option>

@@ -335,6 +335,28 @@ describe('Overview UI (nested itinerary)', () => {
     }
   });
 
+  test('hides What to book now when there are no Needs Booking entries', async () => {
+    const { queryByTestId, queryByText } = await renderOverview(<OverviewTab {...baseProps} tours={[
+      { id: 'needed', name: 'Needed activity', status: 'Needed', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
+      { id: 'proposed', name: 'Proposed activity', status: 'Proposed', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
+    ] as any} />);
+    expect(queryByTestId('overview-booking-priorities-card')).toBeNull();
+    expect(queryByText('What to book now')).toBeNull();
+  });
+
+  test('shows only Needs Booking entries and hides the section after they are booked', async () => {
+    const tours = [
+      { id: 'ready', name: 'Ready activity', status: 'Needs Booking', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
+      { id: 'proposed', name: 'Proposed activity', status: 'Proposed', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
+    ];
+    const { getByTestId, queryByTestId, rerender } = await renderOverview(<OverviewTab {...baseProps} tours={tours as any} />);
+    expect(getByTestId('overview-booking-priorities-card')).toBeTruthy();
+    expect(getByTestId('overview-booking-priority-activity-ready')).toBeTruthy();
+    expect(queryByTestId('overview-booking-priority-activity-proposed')).toBeNull();
+    rerender(<OverviewTab {...baseProps} tours={tours.map(tour => ({ ...tour, status: 'Booked' })) as any} />);
+    expect(queryByTestId('overview-booking-priorities-card')).toBeNull();
+  });
+
   test('renders day pills with overview and month-inclusive dates', async () => {
     const { findByTestId, findByText } = await renderOverview(<OverviewTab {...baseProps} />);
     expect(await findByTestId('overview-day-pill-overview')).toBeTruthy();

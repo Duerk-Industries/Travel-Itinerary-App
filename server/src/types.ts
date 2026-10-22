@@ -1,4 +1,4 @@
-export type ItineraryStatus = 'Needed' | 'Proposed' | 'Booked' | 'Cancelled' | 'Completed';
+export type ItineraryStatus = 'Needed' | 'Proposed' | 'Needs Booking' | 'Booked' | 'Cancelled' | 'Completed';
 export type ActivityType =
   | 'Class'
   | 'Concert/Show'

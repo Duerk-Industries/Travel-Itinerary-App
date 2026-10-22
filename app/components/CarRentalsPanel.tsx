@@ -4,6 +4,7 @@ import HorizontalTableScroll from './HorizontalTableScroll';
 import { buildCarRentalFromDraft, createInitialCarRentalDraft, type CarRental, type CarRentalDraft } from '../tabs/carRentals';
 import type { GroupMemberOption } from '../tabs/transfers';
 import {
+  ITINERARY_STATUSES,
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
   normalizeItineraryStatus,
@@ -158,7 +159,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
     { key: 'pickupDate', label: 'Pick-up', width: 135, editor: 'date', getValue: (row) => row.pickupDate || '' },
     { key: 'dropoffLocation', label: 'Drop-off Location', width: 190, editor: 'text', getValue: (row) => row.dropoffLocation || '' },
     { key: 'dropoffDate', label: 'Drop-off', width: 135, editor: 'date', getValue: (row) => row.dropoffDate || '' },
-    { key: 'status', label: 'Status', width: 135, editor: 'select', options: [DEFAULT_NEW_ITINERARY_STATUS, 'Needed', 'Proposed', 'Booked', 'Completed', 'Cancelled'], getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
+    { key: 'status', label: 'Status', width: 135, editor: 'select', options: ITINERARY_STATUSES, getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
     { key: 'vendor', label: 'Vendor', width: 150, editor: 'text', getValue: (row) => row.vendor || '' },
     { key: 'reference', label: 'Reference', width: 150, editor: 'text', getValue: (row) => row.reference || '' },
     { key: 'prepaid', label: 'Prepaid', width: 100, editor: 'select', options: ['Yes', 'No'], getValue: (row) => row.prepaid || '' },

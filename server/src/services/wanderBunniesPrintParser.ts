@@ -1,3 +1,4 @@
+import { ITINERARY_STATUSES } from '../utils/itineraryStatus';
 import type { ItineraryDocumentCandidate } from './itineraryDocumentImportService';
 
 /**
@@ -50,7 +51,7 @@ const TRANSFER_LABELS = ['Carrier', 'Number', 'Departure', 'Arrival', 'Travelers
 const LODGING_LABELS = ['Check-in', 'Check-out', 'Address', 'Rooms', 'Status', 'Refund by', 'Total', 'Per night', 'Coordinates', 'Coordinate source'];
 const TOUR_LABELS = ['Time', 'Location', 'Duration', 'Status', 'Category', 'Booking reference', 'Cost', 'Free cancellation by', 'Coordinates', 'Coordinate source'];
 const RENTAL_LABELS = ['Vehicle', 'Pick up', 'Drop off', 'Reference', 'Prepaid', 'Cost', 'Pick-up coordinates', 'Drop-off coordinates', 'Coordinate source', 'Notes'];
-const STATUSES = ['Needed', 'Proposed', 'Booked', 'Cancelled', 'Completed'];
+const STATUSES: readonly string[] = ITINERARY_STATUSES;
 const ACTIVITY_TYPES = [
   'Class', 'Concert/Show', 'Day Trip', 'Event', 'Food & Drink', 'Fun & Games', 'Hike', 'Nightlife', 'Other',
   'Open Access', 'Outdoor Activity', 'Reservation', 'Shopping', 'Sights & Landmarks', 'Spa/Wellness',
@@ -123,7 +124,7 @@ const labelsFor = (kind: string, lines: string[]): string[] | null => {
   if (kind === 'CAR RENTAL') return RENTAL_LABELS;
   // A tour activity prints Time/Location/Duration/Status; a day-plan item does not.
   // Any field may be empty (an activity with no start time begins at "Location"), but Status is always printed.
-  return kind === 'ACTIVITY' && /Status\s*(?:Needed|Proposed|Booked|Cancelled|Completed)/.test(lines.join(' ')) && lines.some((line) => startsWithLabel(line, TOUR_LABELS)) ? TOUR_LABELS : null;
+  return kind === 'ACTIVITY' && /Status\s*(?:Needed|Proposed|Needs Booking|Booked|Cancelled|Completed)/.test(lines.join(' ')) && lines.some((line) => startsWithLabel(line, TOUR_LABELS)) ? TOUR_LABELS : null;
 };
 
 const toItems = (dayLines: Array<{ day: number; date: string; lines: string[] }>): RawItem[] => {

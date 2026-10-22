@@ -10,6 +10,12 @@ jest.mock('../src/ai/registry/aiProviderRegistry');
 
 const mockedDb = db as jest.Mocked<typeof db>;
 
+test('preserves Needs Booking on printed hotels and activities', () => {
+  const { candidates } = parseWanderBunniesPrint(PRINTED.replaceAll('StatusBooked', 'StatusNeeds Booking'));
+  expect(candidates.find(candidate => candidate.type === 'hotel')?.status).toBe('Needs Booking');
+  expect(candidates.find(candidate => candidate.name === 'Sagrada Familia')?.status).toBe('Needs Booking');
+});
+
 // Text as pdf-parse returns it for an itinerary printed by WanderBunnies: each label is glued to its
 // value, headings are uppercase kinds, and a booking repeats on every day it appears.
 const PRINTED = `

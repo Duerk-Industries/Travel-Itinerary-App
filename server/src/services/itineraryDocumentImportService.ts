@@ -1,3 +1,4 @@
+import { normalizeItineraryStatus } from '../utils/itineraryStatus';
 import {
   addItineraryDetail,
   createItineraryRecord,
@@ -622,8 +623,7 @@ export const findExistingTripItemMatches = (
   return match ? [{ candidateIndex, existingId: String(match.id ?? ''), existingType: candidate.type, reason: 'Matches an existing trip item by date and normalized identifying fields' }] : [];
 });
 
-const itineraryStatus = (value: string | null | undefined): 'Needed' | 'Proposed' | 'Booked' | 'Cancelled' | 'Completed' =>
-  value === 'Needed' || value === 'Booked' || value === 'Cancelled' || value === 'Completed' ? value : 'Proposed';
+const itineraryStatus = (value: string | null | undefined) => normalizeItineraryStatus(value, 'Proposed');
 
 const summarize = (candidate: ItineraryDocumentCandidate): string =>
   candidate.name || candidate.flightNumber || candidate.providerVendor || candidate.departureLocation || candidate.pickupLocation || candidate.type.replace(/_/g, ' ');
