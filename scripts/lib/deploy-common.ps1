@@ -179,7 +179,7 @@ function New-HostingConfig([string]$OutputFile, [string]$Site, [string]$PublicDi
     "media-src 'self' https://$host_ https://storage.googleapis.com blob:"
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
     "font-src 'self' https://fonts.gstatic.com"
-    "frame-src 'self' https://www.google.com https://recaptcha.google.com"
+    "frame-src 'self' https://www.google.com https://recaptcha.google.com https://www.openstreetmap.org"
     "worker-src 'self' blob:"
     "base-uri 'self'"
     "form-action 'self'"

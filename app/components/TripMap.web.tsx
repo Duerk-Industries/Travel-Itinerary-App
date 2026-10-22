@@ -10,6 +10,7 @@ import type { Map as LibreMap } from 'maplibre-gl';
 import type { TripMapProps } from './TripMap.types';
 import type { PlanningMapPoint } from '../../server/src/types';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import BasicTripMap from './BasicTripMap.web';
 
 const COLORS = { flight: '#4285F4', lodging: '#FB8C00', activity: '#34A853', car_rental: '#9C27B0' };
 const located = isLocatedMapPoint;
@@ -22,6 +23,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
   const theme = useAppTheme();
   const { colors } = theme;
   const host = useRef<HTMLDivElement | null>(null);
+  const viewport = useRef<HTMLDivElement | null>(null);
   const map = useRef<LibreMap | null>(null);
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(true);
@@ -43,9 +45,9 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
   chooseRef.current = (id: string) => { setSelection(id); onSelect?.(id); };
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   useEffect(() => {
-    if (!host.current || typeof IntersectionObserver === 'undefined') return;
+    if (!viewport.current || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(entries => setVisible(entries[0]?.isIntersecting ?? false), { rootMargin: '200px' });
-    observer.observe(host.current); return () => observer.disconnect();
+    observer.observe(viewport.current); return () => observer.disconnect();
   }, [open]);
   useEffect(() => {
     if (!open || !visible || !host.current || !resolved.length) return;
@@ -113,7 +115,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
     <TouchableOpacity accessibilityRole="button" onPress={() => setOpen(value => !value)} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
     {open && <>
       {failed && <>
-        <Text accessibilityRole="alert">Map unavailable — your itinerary is still below.</Text>
+        <Text accessibilityRole="alert">Interactive map unavailable — showing a basic map instead.</Text>
         <TouchableOpacity accessibilityRole="button" onPress={() => setRetryKey(value => value + 1)} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">Retry map</Text></TouchableOpacity>
       </>}
       {!resolved.length && <Text>No coordinates yet. Your stops are listed below.</Text>}
@@ -124,7 +126,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
         <Text tone="muted">{`This sends each stop's saved address to ${findLocationsProvider || 'our location provider'} to place it on the map.`}</Text>
       </View>}
       {findNotice && <Text accessibilityRole="alert" accessibilityLiveRegion="polite">{findNotice}</Text>}
-      <div style={{ display: 'flex', flexDirection: width >= 1024 ? 'row' : 'column-reverse', gap: 16 }}>
+      <div ref={viewport} style={{ display: 'flex', flexDirection: width >= 1024 ? 'row' : 'column-reverse', gap: 16 }}>
         <ol aria-label="Day stops" style={{ flex: 1, margin: 0, padding: '0 0 0 24px', color: colors.text, fontFamily: FONT_STACK, fontSize: 14, lineHeight: 1.4, maxHeight: width >= 1024 ? 400 : undefined, overflowY: 'auto' }}>
           {points.map((point, index) => <li key={point.id}><button ref={node => { rowRefs.current[point.id] = node; }} type="button" aria-pressed={selected === point.id}
             onClick={() => chooseRef.current(point.id)} style={{ minHeight: 44, width: '100%', textAlign: 'left', color: colors.text, font: 'inherit', background: selected === point.id ? colors.surfaceMuted : 'transparent', border: selected === point.id ? `1px solid ${colors.border}` : '1px solid transparent', borderRadius: 6, cursor: 'pointer', padding: 8 }}>
@@ -132,7 +134,8 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
             {located(point) && index > 0 && located(points[index - 1]) && <span style={{ display: 'block', color: colors.textMuted }}>{travelEstimate(points[index - 1], point)}</span>}
           </button></li>)}
         </ol>
-        <div ref={host} aria-label="Interactive map of day stops" style={{ flex: 2, minHeight: 360, height: 400, display: !resolved.length ? 'none' : 'block', borderRadius: 12, overflow: 'hidden' }} />
+        {failed && <BasicTripMap points={resolved} selectedId={selected} />}
+        <div ref={host} aria-label="Interactive map of day stops" style={{ flex: failed ? 0 : 2, minHeight: failed ? 0 : 360, height: failed ? 0 : 400, display: !resolved.length ? 'none' : 'block', borderRadius: 12, overflow: 'hidden' }} />
       </div>
       {[...new Set(points.map(point => point.coordinateAttribution).filter((value): value is string => Boolean(value)))].map(value => <Text key={value}>{value}</Text>)}
       <Text>Straight-line estimates, not directions. Roads, barriers, traffic and accessibility can change travel time. Letters show visit order. Blue: transfer · Orange: lodging · Green: activity · Purple: car rental.</Text>

@@ -37,43 +37,8 @@ import {
 // of what's inside any one cell.
 const fixedColumnStyle = fixedTableColumn;
 
-export type ActivityType =
-  | 'Class'
-  | 'Concert/Show'
-  | 'Day Trip'
-  | 'Event'
-  | 'Food & Drink'
-  | 'Fun & Games'
-  | 'Hike'
-  | 'Nightlife'
-  | 'Other'
-  | 'Open Access'
-  | 'Outdoor Activity'
-  | 'Reservation'
-  | 'Shopping'
-  | 'Sights & Landmarks'
-  | 'Spa/Wellness'
-  | 'Ticketed Attraction'
-  | 'Tour';
-export const ACTIVITY_TYPES: ActivityType[] = [
-  'Class',
-  'Concert/Show',
-  'Day Trip',
-  'Event',
-  'Food & Drink',
-  'Fun & Games',
-  'Hike',
-  'Nightlife',
-  'Other',
-  'Open Access',
-  'Outdoor Activity',
-  'Reservation',
-  'Shopping',
-  'Sights & Landmarks',
-  'Spa/Wellness',
-  'Ticketed Attraction',
-  'Tour',
-];
+import { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
+export { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
 
 export type Tour = PlanningCoordinates & {
   dayPosition?: number | null;
