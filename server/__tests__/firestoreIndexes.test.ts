@@ -14,8 +14,8 @@ const REQUIRED: Array<{ collection: string; fields: string[]; query: string }> =
   { collection: 'notifications', fields: ['userId', 'inApp', 'readAt', 'createdAt', '__name__'], query: 'unread inbox page' },
   { collection: 'notification_outbox', fields: ['state', 'nextAttemptAt'], query: 'outbox claim: state in [...], nextAttemptAt <= now' },
   { collection: 'itineraries', fields: ['tripId', 'createdAt', '__name__'], query: 'planning bundle: latest itinerary for a trip' },
-  { collection: 'import_jobs', fields: ['state', '__name__'], query: 'planning scan: completed imports paged by id' },
-  { collection: 'generation_idempotency', fields: ['status', '__name__'], query: 'planning scan: completed generations paged by id' },
+  // The planning scans (state/status == x ordered by __name__) are served by Firestore's automatic single-field
+  // indexes; Firestore rejects a composite for them (HTTP 400 "this index is not necessary"), so none is declared.
   { collection: 'blog_media_assets', fields: ['state', 'createdAt'], query: 'day photo job: state == ready, orderBy createdAt desc' },
   { collection: 'blog_items', fields: ['tripId', 'createdAt'], query: 'day photo reminder: tripId == x, createdAt > cutoff' },
 ];

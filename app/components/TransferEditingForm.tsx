@@ -122,11 +122,12 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
 
   const baseOverlayStyle = {
     backgroundColor: 'rgba(15,23,42,0.35)',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     padding: 16,
+    paddingTop: 24,
   };
-  const baseCardStyle = { marginTop: 0 };
+  const baseCardStyle = { marginTop: 0, maxHeight: '100%' as const };
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>

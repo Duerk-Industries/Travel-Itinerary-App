@@ -27,7 +27,7 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
   onClose,
   testID,
   message,
-  useNativeModal = false,
+  useNativeModal = true,
   overlayStyle,
   cardStyle,
   accessibilityRole = 'none',
@@ -39,7 +39,7 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
 
   const content = (
     <View
-      style={[styles.modalOverlay, overlayStyle]}
+      style={[styles.modalOverlay, { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-start', alignItems: 'center', padding: 16, paddingTop: 24 }, overlayStyle]}
       testID={testID}
       accessible
       accessibilityRole={accessibilityRole}
@@ -47,7 +47,7 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
       accessibilityLabel={title}
       accessibilityHint={message}
     >
-      <View style={scrollable ? [styles.confirmModal, { maxHeight: '100%' }, cardStyle] : [styles.confirmModal, cardStyle]}>
+      <View style={[styles.confirmModal, cardStyle, { marginTop: 0, maxHeight: '100%' }]}>
         {showTitle ? (
           <Text style={styles.sectionTitle} accessibilityRole="header">
             {title}

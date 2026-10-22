@@ -65,4 +65,3 @@ tmp
 server/public
 # Generated from the pinned MapLibre dependency by the web scripts.
 app/public/map-assets/
-app/public/map-assets/maplibre-6.15.0-worker.mjs

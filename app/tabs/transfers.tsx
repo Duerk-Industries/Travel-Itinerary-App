@@ -1656,7 +1656,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       <View style={styles.actionCell}>
                         <TouchableOpacity style={[styles.tableActionButton, COMPACT_ACTION_BUTTON]}
                           onPress={() => setSelectedTransfer(item)} testID={`transfer-details-${item.id}`}>
-                          <Text style={styles.buttonText}>Details</Text>
+                          <Text style={[styles.buttonText, { color: theme?.colors.text }]}>Details</Text>
                         </TouchableOpacity>
                         {!readOnly ? (
                           <>

@@ -108,6 +108,18 @@ describe('FlightsTab read-only mode', () => {
     jest.restoreAllMocks();
   });
 
+  test.each(['light', 'dark'] as const)('Details text follows the %s theme', mode => {
+    const theme = getAppTheme(mode, 'light');
+    const { getByTestId } = render(<FlightsTab transferScope="flights" backendUrl="http://localhost"
+      userToken="token" activeTripId="trip-1" flights={[flight]} setFlights={jest.fn() as any}
+      groupMembers={[member]} defaultPayerId="member-1" formatMemberName={m => m.firstName || m.id}
+      payerName={() => 'Member'} headers={{}} jsonHeaders={{}} findActiveTrip={() => trip}
+      fetchGroupMembersForActiveTrip={async () => {}} styles={styles} theme={theme}
+      airportOptions={[]} onSearchAirports={() => {}} />);
+    const button = getByTestId('transfer-details-flight-1');
+    expect(button.findByType('Text').props.style).toEqual(expect.arrayContaining([{ color: theme.colors.text }]));
+  });
+
   test.each(['flights', 'ground'] as const)('%s screen filters rows and totals, and offers the right transfer types', (transferScope) => {
     const ground: Flight = { ...flight, id: 'train-1', transfer_type: 'Train', transferType: 'Train', cost: 37 };
     const air: Flight = { ...flight, cost: 250 };
