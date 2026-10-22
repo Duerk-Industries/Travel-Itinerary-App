@@ -1,5 +1,6 @@
 import { planningFirestore } from '../../services/planningFirestore';
 import { reviewItemVersion } from '../assignment/reviewVersion';
+import { dateOnly, bookingDates } from '../assignment/tripMatcher';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
@@ -2766,7 +2767,6 @@ export const setAutoAssignPreference = async (userId: string, value: boolean | n
 export const listTripBookingReferences = async (tripIds: string[]): Promise<Map<string, import('../../types').TripBookingEvidence[]>> => {
   await ensureIngestionRepositoryReady();
   const out = new Map<string, import('../../types').TripBookingEvidence[]>();
-  const { dateOnly, bookingDates } = await import('../assignment/tripMatcher');
   for (const tripId of Array.from(new Set(tripIds))) {
     const evidence: import('../../types').TripBookingEvidence[] = [];
     let items: PersistedParsedItem[] = [];

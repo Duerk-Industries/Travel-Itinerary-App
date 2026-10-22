@@ -92,11 +92,11 @@ describe('Public Blog API', () => {
     expect(maps.body.days).toEqual([]);
     await setStoredVisibility(publishedTripId, 'private');
     if (getCurrentDbProvider() === 'firebase') {
-      const { getDb } = await import('../src/db.firebase');
+      const { getDb } = require('../src/db.firebase') as typeof import('../src/db.firebase');
       const epochs = await getDb().collection('blog_publication_epochs').where('tripId', '==', publishedTripId).get();
       for (const doc of epochs.docs) await doc.ref.update({ state: 'revoked' });
     } else {
-      const { queryBlog } = await import('../src/db.postgres');
+      const { queryBlog } = require('../src/db.postgres') as typeof import('../src/db.postgres');
       await queryBlog("UPDATE blog_publication_epochs SET state='revoked' WHERE trip_id=$1", [publishedTripId]);
     }
     await request(app).get('/public/blog/testuser/paris-2026/maps').expect(404);

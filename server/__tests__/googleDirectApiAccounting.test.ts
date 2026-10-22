@@ -6,6 +6,9 @@ jest.mock('../src/apis/usageLimiter', () => ({
 }));
 
 jest.mock('../src/apis/providerBudgeting', () => ({
+  ...jest.requireActual('../src/apis/providerBudgeting'),
+  reserveAiSpend: jest.fn(async () => ({ id: 'reservation-1' })),
+  claimProviderSpend: jest.fn(async () => undefined),
   recordProviderRequestCost: jest.fn(async () => undefined),
   settleProviderAttempt: jest.fn(async () => ({ attemptId: 'x', duplicate: false, costStatus: 'estimated', estimatedCostMicros: 12_345 })),
 }));
@@ -71,6 +74,8 @@ describe('direct Google API accounting', () => {
     expect(mockedReserve).toHaveBeenCalledWith({ provider: 'GEMINI', caller: 'PARSE_FLIGHT_TEXT' });
     expect(mockedSettle).toHaveBeenCalledWith({
       provider: 'GEMINI',
+      reservation: { id: 'reservation-1' },
+      usageKnown: true,
       attemptId: null,
       unitType: 'tokens',
       model: 'gemini-2.5-flash',

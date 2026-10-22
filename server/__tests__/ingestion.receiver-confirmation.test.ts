@@ -83,9 +83,9 @@ describe('receiver authenticated Gmail forwarding confirmation', () => {
     mail.authentication.forwarder = { email, domain: 'example.com', method: 'authenticated-submission' }; mail.authentication.contentHash = receiverContentHash(mail.raw);
     await request(app).post('/api/ingestion/webhooks/mailgun').set('X-WanderBunnies-Receiver-Authentication', signReceiverAuthentication(mail.authentication, receiverKey)).type('form').send(mail.body).expect(200);
     const receipt = (await listMailReceipts(userId)).find(r => r.state === 'PENDING')!;
-    const { readRawMail, updateMailReceipt } = await import('../src/ingestion/shared/mailAdmission');
-    const { buildMailgunWebhookPayloads } = await import('../src/ingestion/intake/mailgun');
-    const { deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
+    const { readRawMail, updateMailReceipt } = require('../src/ingestion/shared/mailAdmission') as typeof import('../src/ingestion/shared/mailAdmission');
+    const { buildMailgunWebhookPayloads } = require('../src/ingestion/intake/mailgun') as typeof import('../src/ingestion/intake/mailgun');
+    const { deleteTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
     const raw = readRawMail(receipt);
     const payloads = await buildMailgunWebhookPayloads({ body: raw.body, files: [] } as unknown as import('express').Request, userId, '', receipt.authentication);
     expect(payloads[0].metadata.senderTrust).toBe('VERIFIED_FORWARDER'); expect(payloads[0].metadata.automaticAssignmentAllowed).toBe(true);

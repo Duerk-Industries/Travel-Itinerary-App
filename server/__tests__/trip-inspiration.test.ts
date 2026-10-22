@@ -16,8 +16,8 @@ describe('Trips like this and credited activity copies', () => {
   const sharing = (enabled: boolean, token = owner) => request(app).put(`/api/trips/${sourceTrip}/activity-sharing`).set(auth(token)).send({ enabled });
   const copy = (key = randomUUID(), overrides: Record<string, unknown> = {}, token = visitor) => request(app).post('/api/activities').set(auth(token)).set('Idempotency-Key', key)
     .send({ tripId: targetTrip, date: day, publicSource: { username, tripSlug: slug, activityId }, ...overrides });
-  const sql = async (text: string, params: unknown[]) => (await import('../src/db.postgres')).queryBlog(text, params);
-  const firestore = async () => (await import('../src/db.firebase')).getDb();
+  const sql = async (text: string, params: unknown[]) => (require('../src/db.postgres') as typeof import('../src/db.postgres')).queryBlog(text, params);
+  const firestore = async () => (require('../src/db.firebase') as typeof import('../src/db.firebase')).getDb();
   const trip = async (token: string, destination: string) => {
     const group = await request(app).post('/api/groups').set(auth(token)).send({ name: `Group ${randomUUID()}` }).expect(201);
     return (await request(app).post('/api/trips').set(auth(token)).send({ groupId: group.body.id, name: `${destination} trip`, locationIds: [destination.trim().toLowerCase()], startDate: '2027-05-01', endDate: '2027-05-05' }).expect(201)).body.id as string;
