@@ -1,4 +1,5 @@
 import { getApiCacheSetting } from '../config/apiLimits';
+import { getEnvFlag, getEnvValue } from '../env';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 import { recordProviderRequestCost } from './providerBudgeting';
 
@@ -129,6 +130,23 @@ const toWeatherPresentation = (weatherCode: number | null | undefined): { icon: 
   }
 };
 
+// Weather is a nice-to-have badge, but trip blog and overview loads wait on it. Without a
+// timeout a slow Open-Meteo response stalled those pages (and timed out server tests on CI).
+const DEFAULT_OPEN_METEO_TIMEOUT_MS = 4_000;
+const getOpenMeteoTimeoutMs = (): number => {
+  const parsed = Number(getEnvValue('OPEN_METEO_TIMEOUT_MS'));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_OPEN_METEO_TIMEOUT_MS;
+};
+
+/** GET with a timeout; null on timeout or network error, so callers show no weather. */
+const fetchOpenMeteo = async (url: string): Promise<Response | null> => {
+  try {
+    return await fetch(url, { method: 'GET', headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(getOpenMeteoTimeoutMs()) });
+  } catch {
+    return null;
+  }
+};
+
 const getCachedValue = <T>(cache: Map<string, CachedValue<T>>, key: string): { hit: boolean; value: T | null } => {
   const cached = cache.get(key);
   if (!cached) return { hit: false, value: null };
@@ -160,7 +178,9 @@ const geocodeLocation = async (
   await reserveApiUsageOrThrow({ provider: 'OPEN_METEO', caller: 'OVERVIEW_DAY_WEATHER_GEOCODE' });
   await recordProviderRequestCost({ provider: 'OPEN_METEO' });
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`;
-  const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
+  const res = await fetchOpenMeteo(url);
+  // Timeout/network error: transient, so don't cache the miss; the next load retries.
+  if (!res) return { location: null, apiCalls: 1 };
   if (!res.ok) {
     setCachedValue(geocodeCache, normalized, null, getGeocodeCacheTtlMs());
     return { location: null, apiCalls: 1 };
@@ -205,8 +225,8 @@ const fetchForecastRange = async (params: {
     `&longitude=${encodeURIComponent(String(params.longitude))}` +
     '&daily=weather_code,temperature_2m_max' +
     `&timezone=UTC&start_date=${encodeURIComponent(params.startDate)}&end_date=${encodeURIComponent(params.endDate)}`;
-  const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
-  if (!res.ok) {
+  const res = await fetchOpenMeteo(url);
+  if (!res || !res.ok) {
     return { days: new Map<string, WeatherDay>(), apiCalls: 1 };
   }
 
@@ -235,6 +255,8 @@ const fetchForecastRange = async (params: {
 export const fetchOverviewWeather = async (
   requests: WeatherRequest[]
 ): Promise<{ weather: OverviewWeatherResult[]; apiCalls: number }> => {
+  // Off switch for environments that must not call the internet (server tests set it).
+  if (getEnvFlag('OPEN_METEO_DISABLED')) return { weather: [], apiCalls: 0 };
   const normalizedRequests = requests
     .map((request) => ({
       date: String(request?.date ?? '').trim(),

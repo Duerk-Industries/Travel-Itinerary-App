@@ -177,6 +177,9 @@ describe('non-token API request-cost wiring (Phase 1 audit)', () => {
   });
 
   it('Open-Meteo geocode + forecast (openMeteoWeatherApi.ts, 2 sites)', async () => {
+    // jest-setup turns real weather lookups off; this test mocks fetch, so turn them back on.
+    const previousDisabled = process.env.OPEN_METEO_DISABLED;
+    delete process.env.OPEN_METEO_DISABLED;
     (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
       if (String(url).includes('geocoding-api')) {
         return jsonResponse({ results: [{ latitude: 40.7, longitude: -74.0, name: 'Testville' }] });
@@ -184,7 +187,11 @@ describe('non-token API request-cost wiring (Phase 1 audit)', () => {
       return jsonResponse({ daily: { time: ['2026-01-01'], weather_code: [1], temperature_2m_max: [20] } });
     });
 
-    await fetchOverviewWeather([{ date: '2026-01-01', location: 'Testville' }]);
+    try {
+      await fetchOverviewWeather([{ date: '2026-01-01', location: 'Testville' }]);
+    } finally {
+      if (previousDisabled !== undefined) process.env.OPEN_METEO_DISABLED = previousDisabled;
+    }
 
     expect(mockedRecordCost.mock.calls.filter(([arg]) => arg.provider === 'OPEN_METEO').length).toBe(2);
   });

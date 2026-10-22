@@ -77,6 +77,9 @@ if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.trim() === 'development-
 process.env.DB_PROVIDER = process.env.JEST_DB_PROVIDER ?? 'memory';
 process.env.GCLOUD_PROJECT_ID = process.env.GCLOUD_PROJECT_ID ?? 'jest-firebase-test-project';
 process.env.INGESTION_JOB_QUEUE_MODE = 'in_process';
+// Tests must not call the real Open-Meteo API: a slow response made blog tests time out on CI.
+// Tests that exercise the weather code mock fetch and switch this back off themselves.
+process.env.OPEN_METEO_DISABLED = '1';
 
 if (process.env.DB_PROVIDER === 'memory') {
   // pg-mem: mock the pg module with an in-memory implementation
