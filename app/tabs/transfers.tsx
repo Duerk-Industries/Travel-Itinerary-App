@@ -1,3 +1,5 @@
+import TransferDirections from '../components/TransferDirections';
+import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from '../components/HotelAddressPicker';
 import type { TransferHotel } from '../utils/transferHotels';
 import { isFlightTransfer } from '../utils/transferCategory';
@@ -482,6 +484,7 @@ export const fetchFlightsForTrip = async ({
 };
 
 type FlightsTabProps = {
+  mapApp?: MapApp;
   transferScope?: 'all' | 'flights' | 'ground';
   lodgings?: TransferHotel[];
   backendUrl: string;
@@ -567,6 +570,7 @@ const COMPACT_ICON_BUTTON: ViewStyle = { minWidth: 0, paddingHorizontal: 6, padd
 
 export const FlightsTab: React.FC<FlightsTabProps> = ({
   transferScope = 'all',
+  mapApp,
   lodgings = [],
   backendUrl,
   userToken,
@@ -1662,6 +1666,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                           <Text style={styles.cellText}>View only</Text>
                         )}
                       </View>
+                      <TransferDirections compact origin={item.departure_location || item.departure_airport_label || item.departure_airport_code || ''}
+                        destination={item.arrival_location || item.arrival_airport_label || item.arrival_airport_code || ''}
+                        transferType={item.transfer_type || item.transferType || 'Flight'} mapApp={mapApp} styles={styles} />
                     </View>
                   );
                 }
@@ -2161,6 +2168,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       ) : null}
       <FlightEditingForm
         transferTypes={allowedTransferTypes}
+        mapApp={mapApp}
         lodgings={lodgings}
         visible={!readOnly && Boolean(editingFlight && editingFlightId)}
         flightId={editingFlightId}

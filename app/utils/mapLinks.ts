@@ -18,6 +18,25 @@ export const buildMapUrl = (address: string, app: MapApp = 'google'): string | n
   }
 };
 
+export function buildTransferDirections(origin: string, destination: string, transferType: string, preference: MapApp = 'google') {
+  const start = origin.trim();
+  const end = destination.trim();
+  if (!start || !end) return null;
+  const transit = ['bus', 'train'].includes(transferType.trim().toLowerCase());
+  // Waze has no transit mode or custom-origin parameter in its documented deep links.
+  const app = preference === 'waze' && transit ? 'google' : preference;
+  const mode = transit ? 'transit' : 'driving';
+  if (app === 'waze') return { url: buildMapUrl(end, 'waze')!, app, mode, usesCurrentLocation: true };
+  if (app === 'apple') return {
+    url: `https://maps.apple.com/directions?source=${encodeURIComponent(start)}&destination=${encodeURIComponent(end)}&mode=${mode}`,
+    app, mode, usesCurrentLocation: false,
+  };
+  return {
+    url: `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(start)}&destination=${encodeURIComponent(end)}&travelmode=${mode}`,
+    app, mode, usesCurrentLocation: false,
+  };
+}
+
 const storageKey = 'stp.mapPreference';
 
 type LocalStorageLike = { getItem: (key: string) => string | null; setItem: (key: string, value: string) => void };

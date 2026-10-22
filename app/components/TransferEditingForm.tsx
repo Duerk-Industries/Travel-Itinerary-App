@@ -1,3 +1,5 @@
+import TransferDirections from './TransferDirections';
+import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from './HotelAddressPicker';
 import type { TransferHotel } from '../utils/transferHotels';
 import React from 'react';
@@ -14,6 +16,7 @@ type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover'
 const TRANSFER_TYPES: TransferType[] = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'];
 
 export type FlightEditingFormProps = {
+  mapApp?: MapApp;
   lodgings?: TransferHotel[];
   transferTypes?: TransferType[];
   visible: boolean;
@@ -53,6 +56,7 @@ export type FlightEditingFormProps = {
 export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
   transferTypes = TRANSFER_TYPES,
   lodgings = [],
+  mapApp,
   visible,
   flightId,
   flight,
@@ -352,6 +356,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             </View>
           </View>
 
+          <TransferDirections origin={flight.departureLocation} destination={flight.arrivalLocation} transferType={flight.transferType} mapApp={mapApp} styles={styles} />
           {!ground && <>
           <Text style={[styles.modalLabel, { marginTop: 16 }]}>Layover</Text>
           <View style={rowStyle}>

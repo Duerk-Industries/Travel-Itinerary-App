@@ -3880,6 +3880,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             <FlightsTab
               key={activePage}
               lodgings={lodgings}
+              mapApp={mapApp}
               transferScope={activePage === 'ground-transfers' ? 'ground' : 'flights'}
               backendUrl={backendUrl}
               userToken={userToken}
@@ -3911,6 +3912,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         : null}
       {activePage !== 'flights' && activePage !== 'ground-transfers' && externalFlightEditId ? (
         <FlightsTab
+          mapApp={mapApp}
           lodgings={lodgings}
           backendUrl={backendUrl}
           userToken={userToken}
