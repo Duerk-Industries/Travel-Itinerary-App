@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { FlightDetailsDialog, GroundTransferDetailsDialog } from '../components/TransferDetailsDialog';
+import { isFlightTransfer } from '../utils/transferCategory';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking,
   Platform,
@@ -69,7 +71,7 @@ import {
   rentalMatchesDay,
   tourMatchesDay,
 } from '../utils/overviewDayEvents';
-import { FlightEditingForm } from '../components/TransferEditingForm';
+import { FlightEditingForm, GroundTransferEditingForm } from '../components/TransferEditingForm';
 import DateField from '../components/DateField';
 import NearbyPlacesPanel from '../components/NearbyPlacesPanel';
 import TripsLikeThis from '../components/TripsLikeThis';
@@ -529,6 +531,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     durationDays: '',
   });
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [detailModal, setDetailModal] = useState<DetailModalState | null>(null);
@@ -2199,26 +2202,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const renderSelectedItemDialogs = () => (
     <>
-      {selectedFlight ? (
-        <TripItemDetailsDialog
-          visible
-          kind="flight"
-          title={`${selectedFlight.departure_airport_code || 'Departure'} → ${selectedFlight.arrival_airport_code || 'Arrival'}`}
-          status={String((selectedFlight as any).status || '') || undefined}
-          rows={formatFlightDetails(selectedFlight).map((item) => ({
-            label: item.label,
-            value: item.value,
-            onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
-          }))}
-          styles={styles}
-          theme={theme}
-          readOnly={readOnly}
-          onClose={() => setSelectedFlight(null)}
-          onEdit={() => editFlightFromDetails(selectedFlight)}
-          onDelete={() => setItemToDelete({ kind: 'flight', id: selectedFlight.id, name: selectedFlight.booking_reference || 'this transfer' })}
-          testID="flight-overview-details"
-        />
-      ) : null}
+      {selectedFlight ? React.createElement(isFlightTransfer(selectedFlight) ? FlightDetailsDialog : GroundTransferDetailsDialog, {
+        flight: selectedFlight, backendUrl, headers, styles, theme, readOnly, mapApp,
+        onClose: () => setSelectedFlight(null),
+        onEdit: () => editFlightFromDetails(selectedFlight),
+        onDelete: () => setItemToDelete({ kind: 'flight', id: selectedFlight.id, name: selectedFlight.booking_reference || 'this transfer' }),
+        testID: 'flight-overview-details',
+      }) : null}
       {selectedLodging ? (
         <TripItemDetailsDialog
           visible
@@ -2432,8 +2422,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
 
+  const OverviewTransferEditor = editingFlightDraft && !isFlightTransfer(editingFlightDraft) ? GroundTransferEditingForm : FlightEditingForm;
   const renderOverviewFlightEditor = () => (
-    <FlightEditingForm
+    <OverviewTransferEditor
+      backendUrl={backendUrl}
+      headers={headers}
       mapApp={mapApp}
       lodgings={lodgings}
       visible={!readOnly && Boolean(editingFlightDraft && editingFlightId)}
@@ -2833,7 +2826,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
                     return (
                       <View key={flight.id} style={styles.dayInfoRow}>
-                        <Text style={styles.dayInfoRoute}>{`${dep} → ${arr}`}</Text>
+                        <TouchableOpacity
+                          testID={`day-details-transfer-${flight.id}`}
+                          accessibilityRole="link"
+                          onPress={() => setSelectedFlight(flight)}
+                        >
+                          <Text style={[styles.dayInfoRoute, styles.linkText, { textDecorationLine: 'underline' }]}>{`${dep} → ${arr}`}</Text>
+                        </TouchableOpacity>
                         <Text style={styles.helperText}>{`${flight.departure_time || '--:--'} / ${
                           flight.arrival_time || '--:--'
                         }`}</Text>
@@ -2841,32 +2840,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </View>
                     );
                   })}
-                  <TouchableOpacity
-                    testID="day-details-flight-details"
-                    style={styles.dayInfoButton}
-                    onPress={() => {
-                      const sections: DetailSection[] = flightsForDay.map((flight, idx) => {
-                        const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
-                        const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
-                        const passengers =
-                          Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
-                            ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
-                            : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
-                        return {
-                          title: flightsForDay.length > 1 ? `Transfer ${idx + 1} · ${dep} → ${arr}` : undefined,
-                          subtitle: showFlightNames && passengers ? `Travelers: ${passengers}` : undefined,
-                          items: formatFlightDetails(flight),
-                        };
-                      });
-                      if (featureStandardizedItemDialogs && flightsForDay.length === 1) {
-                        setDetailModal({ title: 'Transfer Details', sections, kind: 'flight', item: flightsForDay[0] });
-                      } else {
-                        setDetailModal({ title: 'Transfer Details', sections });
-                      }
-                    }}
-                  >
-                    <Text style={styles.dayInfoButtonText}>See transfer details →</Text>
-                  </TouchableOpacity>
                   <TouchableOpacity
                     testID="day-details-add-transfer-button"
                     accessibilityRole="button"
@@ -3943,7 +3916,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           theme={theme}
         />
       ) : null}
-      {featureStandardizedItemDialogs ? renderSelectedItemDialogs() : null}
+      {featureStandardizedItemDialogs || selectedFlight ? renderSelectedItemDialogs() : null}
     </View>
   );
 };

@@ -536,7 +536,7 @@ describe('Overview edit controls', () => {
       root.findByProps({ testID: 'overview-day-card-1' }).props.onPress();
     });
     act(() => {
-      root.findByProps({ testID: 'day-details-flight-details' }).props.onPress();
+      root.findByProps({ testID: `day-details-transfer-${flight.id}` }).props.onPress();
     });
     act(() => {
       pressByText(root, 'Edit');

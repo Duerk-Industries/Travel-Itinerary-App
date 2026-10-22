@@ -154,6 +154,8 @@ describe('FlightsTab read-only mode', () => {
         styles={styles} airportOptions={['London (LHR)']} onSearchAirports={onSearchAirports} />
     );
     fireEvent.press(getByTestId('transfer-row-flight-1'));
+    expect(getByTestId('ground-transfer-screen-details')).toBeTruthy();
+    fireEvent.press(getByTestId('flight-details-edit'));
     fireEvent.press(getByTestId('ground-departure-hotel'));
     expect(queryByTestId('ground-departure-hotel-blank')).toBeNull();
     fireEvent.press(getByTestId('ground-departure-hotel-hotel'));
@@ -242,6 +244,8 @@ describe('FlightsTab read-only mode', () => {
     );
 
     fireEvent.press(getByTestId('transfer-row-flight-1'));
+    expect(getByTestId('flight-screen-details')).toBeTruthy();
+    fireEvent.press(getByTestId('flight-details-edit'));
     expect(getByTestId('flight-modal-save')).toBeTruthy();
   });
 
@@ -285,7 +289,7 @@ describe('FlightsTab read-only mode', () => {
   test('does not open the edit form on row tap when featureTapToEditTables is disabled', () => {
     // Kill-switch coverage for implementation-plan-ux-remediation.md Initiative A:
     // with the flag off, only the explicit Edit button (not the row itself) opens the modal.
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId, getByLabelText } = render(
       <FlightsTab
         backendUrl="http://localhost"
         userToken="token"
@@ -310,6 +314,7 @@ describe('FlightsTab read-only mode', () => {
     fireEvent.press(getByTestId('transfer-row-flight-1'));
     expect(queryByTestId('flight-modal-save')).toBeNull();
 
+    fireEvent.press(getByLabelText('Close'));
     fireEvent.press(getByTestId('transfer-edit-flight-1'));
     expect(getByTestId('flight-modal-save')).toBeTruthy();
   });

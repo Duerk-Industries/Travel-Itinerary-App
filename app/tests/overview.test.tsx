@@ -564,6 +564,11 @@ describe('Overview UI (nested itinerary)', () => {
   });
 
   test('opens flight details modal from day details', async () => {
+    fetchMock.mockImplementation(async (input: unknown) => ({
+      ok: true,
+      json: async () => String(input).includes('/locations?q=BOS') ? ['Boston (BOS)']
+        : String(input).includes('/locations?q=CAI') ? ['Cairo (CAI)'] : [],
+    }));
     const flight = {
       id: 'flight-1',
       passenger_name: 'Traveler',
@@ -589,8 +594,34 @@ describe('Overview UI (nested itinerary)', () => {
       <OverviewTab {...baseProps} attendees={attendees} flights={[flight] as any} />
     );
     fireEvent.press(await findByTestId('overview-day-card-1'));
-    fireEvent.press(await findByTestId('day-details-flight-details'));
-    expect(await findByText('Transfer Details')).toBeTruthy();
+    fireEvent.press(await findByTestId(`day-details-transfer-${flight.id}`));
+    expect(await findByTestId('flight-overview-details')).toBeTruthy();
+    expect(await findByTestId('flight-details-edit')).toBeTruthy();
+    expect(await findByText('Boston (BOS) → Cairo (CAI)')).toBeTruthy();
+    expect(await findByText('Boston (BOS)')).toBeTruthy();
+    expect(await findByText('Cairo (CAI)')).toBeTruthy();
+  });
+
+  test('opens only the selected ground transfer with directions without the dialog flag', async () => {
+    const flights = [
+      { id: 'air', trip_id: 'trip1', transfer_type: 'Flight', departure_date: '2026-01-29', departure_location: 'BOS', arrival_location: 'NRT', booking_reference: 'AIR123' },
+      { id: 'ground', trip_id: 'trip1', transfer_type: 'Public Transit', departure_date: '2026-01-29', departure_location: 'Tokyo Station', arrival_location: 'Hotel address', booking_reference: 'GROUND456' },
+    ];
+    const { findByTestId, findByText, queryByText, queryByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} flights={flights as any} />
+    );
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-transfer-ground'));
+    expect(await findByTestId('flight-overview-details')).toBeTruthy();
+    expect(await findByText('GROUND456')).toBeTruthy();
+    expect(queryByText('AIR123')).toBeNull();
+    expect(await findByTestId('flight-details-edit')).toBeTruthy();
+    expect(await findByTestId('transfer-directions')).toBeTruthy();
+    expect(await findByText('Public transport · Apple Maps')).toBeTruthy();
+    fireEvent.press(await findByText('Close'));
+    fireEvent.press(await findByTestId('day-details-transfer-air'));
+    expect(await findByText('AIR123')).toBeTruthy();
+    expect(queryByTestId('transfer-directions')).toBeNull();
   });
 
   test('shows next day button in day details', async () => {

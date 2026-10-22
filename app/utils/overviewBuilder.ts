@@ -1,6 +1,9 @@
+import { isFlightTransfer } from './transferCategory';
 import { MapApp, buildMapUrl } from './mapLinks';
 
 type FlightLike = {
+  transfer_type?: string;
+  transferType?: string;
   id: string;
   departure_date?: string;
   departureDate?: string;
@@ -144,9 +147,10 @@ export const formatFlightSummary = (flight: FlightLike): string => {
 
 export const formatFlightDetails = (flight: FlightLike): DetailItem[] => {
   const details: DetailItem[] = [];
-  details.push({ label: 'Type', value: (flight as any).transfer_type || (flight as any).transferType || 'Flight' });
-  details.push({ label: 'Carrier', value: flight.carrier || 'N/A' });
-  details.push({ label: 'Transfer Number', value: flight.flight_number || flight.flightNumber || 'N/A' });
+  const ground = !isFlightTransfer(flight);
+  if (ground) details.push({ label: 'Type', value: (flight as any).transfer_type || (flight as any).transferType });
+  details.push({ label: ground ? 'Provider' : 'Flight', value: ground ? flight.carrier || 'N/A'
+    : [flight.carrier, flight.flight_number || flight.flightNumber].filter(Boolean).join(' ') || 'N/A' });
   details.push({ label: 'Departure', value: flight.departure_airport_code || flight.departureAirportCode || 'N/A' });
   details.push({ label: 'Arrival', value: flight.arrival_airport_code || flight.arrivalAirportCode || 'N/A' });
   const depDate = flight.departure_date || flight.departureDate || '';
@@ -156,11 +160,8 @@ export const formatFlightDetails = (flight: FlightLike): DetailItem[] => {
     value: formatFriendlyDate(depDate, flight.departure_time || flight.departureTime || '') || 'N/A',
   });
   const arrivalDateUsed = arrDate || depDate;
-  if (arrDate && arrDate !== depDate) {
-    details.push({ label: 'Arrival Date', value: formatFriendlyDate(arrDate) || arrDate || 'N/A' });
-  }
   details.push({
-    label: 'Arrival Time',
+    label: 'Arrival Date',
     value:
       formatFriendlyDate(arrivalDateUsed, flight.arrival_time || flight.arrivalTime || '') ||
       flight.arrival_time ||
