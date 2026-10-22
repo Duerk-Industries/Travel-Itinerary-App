@@ -19,6 +19,8 @@ jest.mock('maplibre-gl', () => {
     on(name: string, handler: (event?: unknown) => void) { (this.handlers[name] ||= []).push(handler); }
     emit(name: string, event?: unknown) { (this.handlers[name] || []).forEach((handler) => handler(event)); }
     getCanvas() { return this.canvas; }
+    style: object | undefined;
+    getStyle() { return this.style; }
     addControl() {} addSource() {} addLayer() {} fitBounds() {} easeTo() {} resize() {}
     getZoom() { return 13; }
     remove() { this.removed = true; setTimeout(() => this.canvas.dispatchEvent(new Event('webglcontextlost')), 0); }
@@ -115,5 +117,35 @@ describe('day map when its pins change while it is open', () => {
     expect(host.textContent).not.toContain('Map unavailable');
     await act(async () => { mockInstances[0].canvas.dispatchEvent(new Event('webglcontextlost')); });
     expect(host.textContent).toContain('Map unavailable');
+  });
+
+  it('keeps the map visible for a font error before the first render and recovers on load', async () => {
+    mockControl.autoLoad = false;
+    await render([point('a', 35.7, 139.8)]);
+    await press(host, 'Show map');
+    await settle();
+    const map = mockInstances[0];
+    map.style = { version: 8 };
+    await act(async () => { map.emit('error', { error: { message: 'glyph range 404' } }); });
+    expect(host.textContent).not.toContain('Map unavailable');
+    await act(async () => { map.canvas.dispatchEvent(new Event('webglcontextlost')); });
+    expect(host.textContent).toContain('Map unavailable');
+    expect((host.querySelector('[aria-label="Interactive map of day stops"]') as HTMLElement).style.display).toBe('block');
+    await act(async () => { map.canvas.dispatchEvent(new Event('webglcontextrestored')); map.emit('load'); });
+    expect(host.textContent).not.toContain('Map unavailable');
+  });
+
+  it('retries a map that could not load its style', async () => {
+    mockControl.autoLoad = false;
+    await render([point('a', 35.7, 139.8)]);
+    await press(host, 'Show map');
+    await settle();
+    await act(async () => { mockInstances[0].emit('error', { error: { message: 'Failed to fetch style' } }); });
+    mockControl.autoLoad = true;
+    await press(host, 'Retry map');
+    await settle();
+    expect(mockInstances).toHaveLength(2);
+    expect(mockInstances[0].removed).toBe(true);
+    expect(host.textContent).not.toContain('Map unavailable');
   });
 });

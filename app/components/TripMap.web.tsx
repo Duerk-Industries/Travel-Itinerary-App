@@ -26,6 +26,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [selection, setSelection] = useState<string | null>(null);
   const [finding, setFinding] = useState(false);
   const [findNotice, setFindNotice] = useState<string | null>(null);
@@ -64,10 +65,12 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
       let resize: ResizeObserver | undefined;
       // Removing a map makes the browser fire "webglcontextlost" on its canvas a moment later. That must never mark the
       // map that replaced it (or a map that is going away) as broken, so the listener is guarded and detached on dispose.
-      const lost = () => { if (!cancelled) setFailed(true); };
+      const lost = (event: Event) => { event.preventDefault(); if (!cancelled) setFailed(true); };
+      const restored = () => { if (!cancelled) setFailed(false); };
       const canvas = instance.getCanvas();
       dispose = () => {
         canvas.removeEventListener('webglcontextlost', lost);
+        canvas.removeEventListener('webglcontextrestored', restored);
         resize?.disconnect(); markers.forEach(marker => marker.remove()); instance.remove(); if (map.current === instance) map.current = null;
       };
       instance.addControl(new lib.NavigationControl(), 'top-right');
@@ -83,6 +86,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
       let loaded = false;
       instance.on('load', () => {
         loaded = true;
+        if (!cancelled) setFailed(false);
         if (cancelled || resolved.length < 2) return;
         instance.addSource('visit-order', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: resolved.map(point => [point.lng!, point.lat!]) } } });
         instance.addLayer({ id: 'visit-order', type: 'line', source: 'visit-order', paint: { 'line-color': '#475569', 'line-width': 3, 'line-dasharray': [2, 2] } });
@@ -91,13 +95,16 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
         const detail = event as { error?: { message?: string }; sourceId?: string; tile?: unknown };
         console.warn('[map] error', detail?.error?.message ?? event);
         // A single failed tile, glyph or sprite request is routine; only a map that could not load its style is unusable.
-        if (!cancelled && !loaded && !detail?.sourceId && !detail?.tile) setFailed(true);
+        // Fonts and sprites can fail before the first complete render too. Once the style
+        // JSON exists, those errors must not hide an otherwise usable map.
+        if (!cancelled && !loaded && !instance.getStyle() && !detail?.sourceId && !detail?.tile) setFailed(true);
       });
       canvas.addEventListener('webglcontextlost', lost);
+      canvas.addEventListener('webglcontextrestored', restored);
       if (typeof ResizeObserver !== 'undefined') { resize = new ResizeObserver(() => instance.resize()); resize.observe(host.current); }
     }).catch((error) => { console.warn('[map] could not start', error); dispose?.(); dispose = undefined; if (!cancelled) setFailed(true); });
     return () => { cancelled = true; dispose?.(); };
-  }, [open, visible, key]);
+  }, [open, visible, key, retryKey]);
   useEffect(() => {
     const point = resolved.find(candidate => candidate.id === selected);
     if (point && map.current) map.current.easeTo({ center: [point.lng!, point.lat!], zoom: Math.max(map.current.getZoom(), 13), duration: typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250 });
@@ -105,7 +112,10 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
   return <View testID={testID} style={{ gap: 8 }}>
     <TouchableOpacity accessibilityRole="button" onPress={() => setOpen(value => !value)} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
     {open && <>
-      {failed && <Text accessibilityRole="alert">Map unavailable — your itinerary is still below.</Text>}
+      {failed && <>
+        <Text accessibilityRole="alert">Map unavailable — your itinerary is still below.</Text>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setRetryKey(value => value + 1)} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">Retry map</Text></TouchableOpacity>
+      </>}
       {!resolved.length && <Text>No coordinates yet. Your stops are listed below.</Text>}
       {onFindLocations && findLocationsCount > 0 && <View style={{ gap: 4 }}>
         <TouchableOpacity testID="find-locations" accessibilityRole="button" disabled={finding} accessibilityState={{ disabled: finding, busy: finding }} onPress={() => void findLocations()} style={{ minHeight: 44, justifyContent: 'center', opacity: finding ? 0.6 : 1 }}>
@@ -122,7 +132,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, onFindLo
             {located(point) && index > 0 && located(points[index - 1]) && <span style={{ display: 'block', color: colors.textMuted }}>{travelEstimate(points[index - 1], point)}</span>}
           </button></li>)}
         </ol>
-        <div ref={host} aria-label="Interactive map of day stops" style={{ flex: 2, minHeight: 360, height: 400, display: failed || !resolved.length ? 'none' : 'block', borderRadius: 12, overflow: 'hidden' }} />
+        <div ref={host} aria-label="Interactive map of day stops" style={{ flex: 2, minHeight: 360, height: 400, display: !resolved.length ? 'none' : 'block', borderRadius: 12, overflow: 'hidden' }} />
       </div>
       {[...new Set(points.map(point => point.coordinateAttribution).filter((value): value is string => Boolean(value)))].map(value => <Text key={value}>{value}</Text>)}
       <Text>Straight-line estimates, not directions. Roads, barriers, traffic and accessibility can change travel time. Letters show visit order. Blue: transfer · Orange: lodging · Green: activity · Purple: car rental.</Text>
