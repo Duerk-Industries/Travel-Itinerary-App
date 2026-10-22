@@ -109,7 +109,7 @@ describe('FlightsTab read-only mode', () => {
   test.each(['flights', 'ground'] as const)('%s screen filters rows and totals, and offers the right transfer types', (transferScope) => {
     const ground: Flight = { ...flight, id: 'train-1', transfer_type: 'Train', transferType: 'Train', cost: 37 };
     const air: Flight = { ...flight, cost: 250 };
-    const { getByTestId, queryByTestId, getByText, queryByText } = render(
+    const { getByTestId, queryByTestId, getByText, getAllByText, queryByText } = render(
       <FlightsTab
         transferScope={transferScope}
         backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
@@ -127,9 +127,42 @@ describe('FlightsTab read-only mode', () => {
     if (transferScope === 'ground') {
       expect(getByText('Other')).toBeTruthy();
       expect(queryByText('Flight')).toBeNull();
+      expect(getAllByText('Provider')).toHaveLength(2);
+      expect(queryByText('Carrier')).toBeNull();
+      expect(queryByText('Layover')).toBeNull();
+      expect(queryByTestId('flight-modal-flight-number')).toBeNull();
+      expect(getByTestId('ground-departure-hotel').props.accessibilityState.disabled).toBe(true);
     } else {
       expect(queryByText('Other')).toBeNull();
     }
+  });
+
+  test('ground transfers fill plain-text locations from eligible hotel addresses without airport autocomplete', () => {
+    const onSearchAirports = jest.fn(() => {});
+    const { getByTestId, queryByTestId } = render(
+      <FlightsTab transferScope="ground" backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+        flights={[{ ...flight, transferType: 'Train', transfer_type: 'Train' }]} setFlights={jest.fn() as any}
+        lodgings={[
+          { id: 'hotel', name: 'Hotel Today', address: '12 Main Street', checkInDate: '2026-09-01', checkOutDate: '2026-09-02', status: 'Booked' },
+          { id: 'blank', name: 'No Address', address: '', checkInDate: '2026-09-01', checkOutDate: '2026-09-02', status: 'Booked' },
+        ]}
+        groupMembers={[member]} defaultPayerId="member-1" formatMemberName={m => m.firstName || m.id} payerName={() => 'Member'}
+        headers={{}} jsonHeaders={{}} findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}}
+        styles={styles} airportOptions={['London (LHR)']} onSearchAirports={onSearchAirports} />
+    );
+    fireEvent.press(getByTestId('transfer-row-flight-1'));
+    fireEvent.press(getByTestId('ground-departure-hotel'));
+    expect(queryByTestId('ground-departure-hotel-blank')).toBeNull();
+    fireEvent.press(getByTestId('ground-departure-hotel-hotel'));
+    expect(getByTestId('flight-modal-departure-location').props.value).toBe('12 Main Street');
+    fireEvent.changeText(getByTestId('flight-modal-departure-location'), 'A custom street address');
+    expect(getByTestId('flight-modal-departure-location').props.value).toBe('A custom street address');
+    expect(getByTestId('flight-modal-departure-location').props.onFocus).toBeUndefined();
+    expect(getByTestId('flight-modal-departure-location').props.onBlur).toBeUndefined();
+    fireEvent.press(getByTestId('ground-arrival-hotel'));
+    fireEvent.press(getByTestId('ground-arrival-hotel-hotel'));
+    expect(getByTestId('flight-modal-arrival-location').props.value).toBe('12 Main Street');
+    expect(onSearchAirports).not.toHaveBeenCalled();
   });
 
   test('opens the edit form when a row is tapped in editable mode', () => {

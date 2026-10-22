@@ -2440,6 +2440,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const renderOverviewFlightEditor = () => (
     <FlightEditingForm
+      lodgings={lodgings}
       visible={!readOnly && Boolean(editingFlightDraft && editingFlightId)}
       flightId={editingFlightId}
       flight={editingFlightDraft}

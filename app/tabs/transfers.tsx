@@ -1,3 +1,5 @@
+import HotelAddressPicker from '../components/HotelAddressPicker';
+import type { TransferHotel } from '../utils/transferHotels';
 import { isFlightTransfer } from '../utils/transferCategory';
 import { airportDisplayForCode } from '../utils/airportDisplay';
 import type { PlanningCoordinates } from '../../server/src/types';
@@ -481,6 +483,7 @@ export const fetchFlightsForTrip = async ({
 
 type FlightsTabProps = {
   transferScope?: 'all' | 'flights' | 'ground';
+  lodgings?: TransferHotel[];
   backendUrl: string;
   userToken: string | null;
   activeTripId: string | null;
@@ -564,6 +567,7 @@ const COMPACT_ICON_BUTTON: ViewStyle = { minWidth: 0, paddingHorizontal: 6, padd
 
 export const FlightsTab: React.FC<FlightsTabProps> = ({
   transferScope = 'all',
+  lodgings = [],
   backendUrl,
   userToken,
   activeTripId,
@@ -595,6 +599,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const allowedTransferTypes = useMemo(() => TRANSFER_TYPES.filter(type => transferScope === 'all' || (transferScope === 'flights' ? type === 'Flight' : type !== 'Flight')), [transferScope]);
   const initialDraft = (): FlightDraft => ({ ...createInitialFlightState(), transferType: transferScope === 'ground' ? 'Train' : 'Flight' });
   const sectionTitle = transferScope === 'ground' ? 'Ground Transfers' : transferScope === 'flights' ? 'Flights' : 'Transfers';
+  const ground = transferScope === 'ground';
+  const tableColumns = useMemo(() => columns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
+    .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column), [ground]);
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
   const memberNames = useMemo(() => {
@@ -740,7 +747,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const sortFlightTable = (key: string) => setFlightSort((current) => current.key === key
     ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
     : { key, direction: 'asc' });
-  const gridColumns = useMemo<GridColumn<Flight>[]>(() => [
+  const allGridColumns = useMemo<GridColumn<Flight>[]>(() => [
     { key: 'passenger_name', label: 'Passenger', width: 170, editor: 'text', sticky: 'left', getValue: (row) => row.passenger_name || '' },
     { key: 'status', label: 'Status', width: 135, editor: 'select', options: Object.values({ Needed: 'Needed', Proposed: 'Proposed', Booked: 'Booked', Completed: 'Completed', Cancelled: 'Cancelled' }), getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
     { key: 'transfer_type', label: 'Type', width: 120, editor: 'select', options: allowedTransferTypes, getValue: (row) => String(row.transfer_type || row.transferType || 'Flight') },
@@ -759,6 +766,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], [allowedTransferTypes]);
+  const gridColumns = useMemo(() => allGridColumns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
+    .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column), [allGridColumns, ground]);
   const beginGridEdit = () => { if (readOnly) return; const snapshot = flights.map((row) => ({ ...row, passenger_ids: [...(row.passenger_ids ?? [])], paidBy: [...(row.paidBy ?? row.paid_by ?? [])] })); setGridRows(snapshot); setGridOriginalRows(snapshot); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); setTableEditing(true); };
   const cancelGridEdit = () => { setTableEditing(false); setGridRows([]); setGridOriginalRows([]); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); };
   const recordGridChange = (rows: Flight[], deleteIds: Set<string>) => { setGridHistory((items) => [...items.slice(-99), { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]); setGridRedo([]); setGridRows(rows); setGridDeleteIds(deleteIds); };
@@ -905,9 +914,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       case 'arrival_date':
         return formatDateLong(baseDisplay);
       case 'departure_location':
-        return formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel);
+        return ground ? item.departure_location || '-' : formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel);
       case 'arrival_location':
-        return formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel);
+        return ground ? item.arrival_location || '-' : formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel);
       default:
         return baseDisplay;
     }
@@ -922,7 +931,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     const CELL_PADDING_PX = 32;
     const MAX_COLUMN_WIDTH_PX = 420;
     const widths: Record<string, number> = {};
-    for (const col of columns) {
+    for (const col of tableColumns) {
       if (col.key === 'actions' || col.key === 'votes' || col.key === 'rating') continue;
       let longest = col.label.length;
       for (const item of sortedFlights) {
@@ -934,7 +943,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       widths[col.key as string] = Math.max(minW, Math.min(estimated, MAX_COLUMN_WIDTH_PX));
     }
     return widths;
-  }, [sortedFlights, groupMembers, airports]);
+  }, [sortedFlights, groupMembers, airports, tableColumns]);
   const colWidth = (col: { key: typeof columns[number]['key']; minWidth?: number }) =>
     dynamicColumnWidths[col.key as string] ?? (col.minWidth ?? 120);
 
@@ -1188,14 +1197,14 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       passengerIds: normalizedPassengerIds,
       departureDate: normalizeDateString(flight.departure_date),
       arrivalDate: normalizeDateString(flight.arrival_date || (flight as any).arrivalDate || flight.departure_date),
-      departureLocation: getFlightLocationForEdit(
+      departureLocation: !isFlightTransfer(flight) ? flight.departure_location || '' : getFlightLocationForEdit(
         flight.departure_location,
         flight.departure_airport_label || flight.departureAirportLabel,
         flight.departure_airport_code
       ),
       departureAirportCode: flight.departure_airport_code ?? '',
       departureTime: normalizeTimeInput(flight.departure_time, flight.departure_time),
-      arrivalLocation: getFlightLocationForEdit(
+      arrivalLocation: !isFlightTransfer(flight) ? flight.arrival_location || '' : getFlightLocationForEdit(
         flight.arrival_location,
         flight.arrival_airport_label || flight.arrivalAirportLabel,
         flight.arrival_airport_code
@@ -1606,7 +1615,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       >
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]}>
-            {columns.map((col, idx) => (
+            {tableColumns.map((col, idx) => (
               <TouchableOpacity
                 key={col.key}
                 style={[
@@ -1614,7 +1623,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   fixedTableColumn(colWidth(col)),
                   col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
                   col.key === 'actions' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
-                  idx === columns.length - 1 && styles.lastCell,
+                  idx === tableColumns.length - 1 && styles.lastCell,
                 ]}
                 onPress={() => col.key !== 'actions' && sortFlightTable(String(col.key))}
               >
@@ -1624,8 +1633,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           </View>
           {sortedFlights.map((item) => (
             <TouchableOpacity key={item.id} style={styles.tableRow} testID={`transfer-row-${item.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openFlightDetails(item); }} activeOpacity={0.8}>
-              {columns.map((col, idx) => {
-                const isLast = idx === columns.length - 1;
+              {tableColumns.map((col, idx) => {
+                const isLast = idx === tableColumns.length - 1;
                 if (col.key === 'actions') {
                   return (
                     <View
@@ -1750,8 +1759,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           ))}
           {isAddingRow ? (
             <View style={[styles.tableRow, styles.inputRow]}>
-              {columns.map((col, idx) => {
-                const isLast = idx === columns.length - 1;
+              {tableColumns.map((col, idx) => {
+                const isLast = idx === tableColumns.length - 1;
                 if (col.key === 'actions') {
                   return (
                     <View
@@ -1932,6 +1941,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
+                      {ground ? <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <HotelAddressPicker hotels={lodgings} date={isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate}
+                          styles={styles} testID={`ground-inline-${isDeparture ? 'departure' : 'arrival'}-hotel`} onSelect={setters[col.key]} />
+                        <TextInput style={[styles.input, { flex: 1 }]} value={rawValue} onChangeText={setters[col.key]} autoComplete="off" />
+                      </View> : (
                       <TouchableOpacity
                         style={[styles.input, { justifyContent: 'center' }]}
                         onPress={() => openLocationOverlay(isDeparture ? 'dep' : 'arr', rawValue)}
@@ -1940,6 +1954,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                           {displayValue || (isDeparture ? 'Select departure airport' : 'Select arrival airport')}
                         </Text>
                       </TouchableOpacity>
+                      )}
                     </View>
                   );
                 }
@@ -2146,6 +2161,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       ) : null}
       <FlightEditingForm
         transferTypes={allowedTransferTypes}
+        lodgings={lodgings}
         visible={!readOnly && Boolean(editingFlight && editingFlightId)}
         flightId={editingFlightId}
         flight={editingFlight}
