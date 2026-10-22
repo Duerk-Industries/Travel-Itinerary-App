@@ -8,7 +8,8 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { OverviewTab, dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
 import LodgingDialog from '../components/LodgingDialog';
-import { FlightEditingForm } from '../components/TransferEditingForm';
+import { FlightDetailsDialog, GroundTransferDetailsDialog } from '../components/TransferDetailsDialog';
+import { FlightEditingForm, GroundTransferEditingForm } from '../components/TransferEditingForm';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -496,9 +497,18 @@ describe('Overview edit controls', () => {
     expect(baseProps.onLodgingDataChanged).toHaveBeenCalled();
   });
 
-  test('opens flight editing over the overview view without switching the background to edit mode', async () => {
+  test.each([
+    [undefined, undefined, 'Flight'],
+    ['Flight', undefined, 'Flight'],
+    ['Public Transit', undefined, 'Public Transit'],
+    [undefined, 'Private Transfer', 'Private Transfer'],
+    ['Train', undefined, 'Public Transit'],
+    ['Other', undefined, 'Other'],
+  ])('keeps %s / %s transfer details and editing in the correct modals', async (transfer_type, transferType, expectedType) => {
     const flight = {
       id: 'flight-1',
+      transfer_type,
+      transferType,
       trip_id: baseTrip.id,
       passenger_name: 'Traveler',
       passenger_ids: [],
@@ -538,11 +548,19 @@ describe('Overview edit controls', () => {
     act(() => {
       root.findByProps({ testID: `day-details-transfer-${flight.id}` }).props.onPress();
     });
+    const ground = expectedType !== 'Flight';
+    expect(root.findAllByType(ground ? GroundTransferDetailsDialog : FlightDetailsDialog)).toHaveLength(1);
+    expect(root.findAllByType(ground ? FlightDetailsDialog : GroundTransferDetailsDialog)).toHaveLength(0);
     act(() => {
       pressByText(root, 'Edit');
     });
 
-    expect(root.findAllByType(FlightEditingForm)).toHaveLength(1);
+    const editor = ground ? GroundTransferEditingForm : FlightEditingForm;
+    expect(root.findAllByType(editor)).toHaveLength(1);
+    expect(root.findAllByType(ground ? FlightEditingForm : GroundTransferEditingForm)).toHaveLength(0);
+    expect(root.findByType(editor).props.flight.transferType).toBe(expectedType);
+    expect(root.findAllByProps({ testID: 'ground-departure-hotel' }).length > 0).toBe(ground);
+    expect(root.findAllByProps({ testID: 'flight-modal-flight-number' }).length > 0).toBe(!ground);
     expect(root.findByProps({ testID: 'day-details-back' })).toBeTruthy();
   });
 });

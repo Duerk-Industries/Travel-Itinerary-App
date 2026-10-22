@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { normalizeTransferType } from '../utils/transferTypes';
 import { FlightDetailsDialog, GroundTransferDetailsDialog } from '../components/TransferDetailsDialog';
 import { isFlightTransfer } from '../utils/transferCategory';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -1702,6 +1703,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const base = createInitialFlightState();
     const draft: FlightEditDraft = {
       ...base,
+      transferType: normalizeTransferType(flight.transfer_type || flight.transferType),
       passengerName: (flight as any).passenger_name || (flight as any).passengerName || base.passengerName,
       passengerIds: Array.isArray((flight as any).passenger_ids) ? (flight as any).passenger_ids : [],
       departureDate: normalizeDateString(flight.departure_date),
