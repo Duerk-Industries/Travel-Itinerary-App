@@ -73,3 +73,17 @@ export const removeAsync = async (key: string): Promise<void> => {
     // ignore
   }
 };
+
+/** Durability-sensitive callers must observe storage failures. */
+export const readAsyncOrThrow = async (key: string): Promise<string | null> => {
+  if (canAccessWebStorage()) return window.localStorage.getItem(key);
+  return AsyncStorage.getItem(key);
+};
+export const writeAsyncOrThrow = async (key: string, value: string): Promise<void> => {
+  if (canAccessWebStorage()) window.localStorage.setItem(key, value);
+  else await AsyncStorage.setItem(key, value);
+};
+export const removeAsyncOrThrow = async (key: string): Promise<void> => {
+  if (canAccessWebStorage()) window.localStorage.removeItem(key);
+  else await AsyncStorage.removeItem(key);
+};

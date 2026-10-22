@@ -1,11 +1,12 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, ScrollView, Text, View, TouchableOpacity, useWindowDimensions, Image } from 'react-native';
+import { StyleSheet, ScrollView, Text, View, TouchableOpacity, useWindowDimensions, Image, Platform } from 'react-native';
 import { type Lodging, fetchPlaceDetailsApi, type PlaceDetailsPayload } from '../tabs/lodging';
 import { formatDateLong } from '../utils/formatDateLong';
 import { buildStaticMapUrl } from '../utils/googleMaps';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useImageSource } from '../utils/imageSource';
 import type { AppTheme } from '../theme/theme';
+import TripDayMap from './TripDayMap';
 import DialogShell from './DialogShell';
 
 type DetailRow = {
@@ -92,7 +93,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
 
   const photoUrl = placeDetails?.details?.photos?.[0]?.photoUri;
   const imageUrl = lodging?.imageUrl || photoUrl;
-  const mapImageUrl = lodging?.address ? buildStaticMapUrl(lodging.address, backendUrl) : '';
+  const mapImageUrl = lodging?.address ? `${backendUrl}/api/maps/static?lodgingId=${encodeURIComponent(lodging.id)}` : '';
   const imageSource = useImageSource(imageUrl);
   // React Native's Image supports request headers, allowing the authenticated
   // server proxy to protect the Google Maps key while still rendering bytes
@@ -241,7 +242,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
               </View>
             ))}
           </View>
-          {mapImageUrl ? (
+          {Platform.OS === 'web' && lodging ? <TripDayMap tripId={lodging.tripId} points={[{ ...lodging, kind: 'lodging', title: lodging.name, address: lodging.address }]} backendUrl={backendUrl} requestHeaders={requestHeaders} /> : mapImageUrl ? (
             <View style={detailStyles.mapCard}>
               <Image style={[detailStyles.mapImage, { height: mapHeight }]} source={mapImageSource} resizeMode="cover" />
               <View style={detailStyles.mapMeta}>

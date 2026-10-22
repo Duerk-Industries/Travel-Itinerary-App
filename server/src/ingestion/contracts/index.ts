@@ -171,6 +171,7 @@ export interface ExtractionResult {
 }
 
 export interface ExtractionConfig {
+  spendReservation?: import('../../types').ApiSpendReservation | null;
   logicVersion: string;
   allowSmallLlm: boolean;
   allowLargeLlm: boolean;

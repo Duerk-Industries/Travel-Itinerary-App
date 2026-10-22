@@ -9,6 +9,7 @@ jest.mock('../src/apis/providerBudgeting', () => ({
   recordProviderRequestCost: jest.fn(async () => undefined),
 }));
 
+import { createHash } from 'crypto';
 import { clamavHttpAdapter, stubAdapter, getVirusScanner } from '../src/ingestion/virusScanProviders';
 import { reserveApiUsageOrThrow } from '../src/apis/usageLimiter';
 import { recordProviderRequestCost } from '../src/apis/providerBudgeting';
@@ -32,9 +33,9 @@ describe('getVirusScanner (provider selection)', () => {
     expect(getVirusScanner().name).toBe('clamav_http');
   });
 
-  it('falls back to the stub on an unknown provider value (no silent scan disable)', () => {
+  it('rejects an unknown provider rather than disabling scans', () => {
     process.env.INGESTION_VIRUS_SCAN_PROVIDER = 'not-a-real-provider';
-    expect(getVirusScanner().name).toBe('stub');
+    expect(() => getVirusScanner()).toThrow('Unknown');
   });
 });
 
@@ -52,6 +53,16 @@ describe('stubAdapter.scanBatch', () => {
 describe('clamavHttpAdapter.scanBuffer', () => {
   const buf = Buffer.from('file-bytes');
 
+  it.each([
+    { status: 'clean', sha256: 'wrong-digest', signatureUpdatedAt: new Date().toISOString() },
+    { status: 'clean', sha256: createHash('sha256').update(buf).digest('hex'), signatureUpdatedAt: '2020-01-01T00:00:00Z' },
+    {},
+  ])('fails closed for an invalid or stale scanner attestation', async (result) => {
+    process.env.INGESTION_VIRUS_SCAN_URL = 'http://clamav.test/scan';
+    (global as any).fetch = jest.fn(async () => ({ status: 200, json: async () => result }));
+    expect((await clamavHttpAdapter.scanBuffer!(buf, 'private-booking.pdf')).status).toBe('FAILED');
+  });
+
   it('fails closed when INGESTION_VIRUS_SCAN_URL is not configured', async () => {
     delete process.env.INGESTION_VIRUS_SCAN_URL;
     const result = await clamavHttpAdapter.scanBuffer!(buf, 'boarding.pdf');
@@ -59,9 +70,9 @@ describe('clamavHttpAdapter.scanBuffer', () => {
     expect(result.provider).toBe('clamav_http_unconfigured');
   });
 
-  it('maps HTTP 200 to PASSED', async () => {
+  it('accepts a clean attestation for the actual bytes with fresh signatures', async () => {
     process.env.INGESTION_VIRUS_SCAN_URL = 'http://clamav.test/scan';
-    (global as any).fetch = jest.fn(async () => ({ status: 200, text: async () => 'CLEAN' } as any));
+    (global as any).fetch = jest.fn(async () => ({ status: 200, json: async () => ({ status: 'clean', sha256: createHash('sha256').update(buf).digest('hex'), signatureUpdatedAt: new Date().toISOString() }) } as any));
     const result = await clamavHttpAdapter.scanBuffer!(buf, 'clean.pdf');
     expect(result.status).toBe('PASSED');
     expect(result.provider).toBe('clamav_http');

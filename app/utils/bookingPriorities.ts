@@ -49,7 +49,7 @@ type MinimalCarRental = {
   model?: string | null;
 };
 
-const NEEDS_BOOKING_STATUSES = new Set(['Needed', 'Proposed']);
+const NEEDS_BOOKING_STATUSES = new Set(['Needs Booking']);
 const SOON_THRESHOLD_DAYS = 14;
 
 const parseDateOnly = (value: unknown): Date | null => {

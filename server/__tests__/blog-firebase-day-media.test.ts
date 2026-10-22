@@ -48,7 +48,7 @@ describe('getVisibleMediaForDay (Firebase) — keyed on localDate, not the blog_
   });
 
   it('finds the day\'s ready media even though the item\'s blogDayId is a date string', async () => {
-    const rows = await getVisibleMediaForDay('2026-08-28', ['public']);
+    const rows = await getVisibleMediaForDay('t1', '2026-08-28', ['public']);
     expect(rows).toHaveLength(1); // only the ready one
     expect(rows[0].media_kind_key).toBe('photo');
     expect(rows[0].captured_lat).toBe(46.5);
@@ -56,12 +56,12 @@ describe('getVisibleMediaForDay (Firebase) — keyed on localDate, not the blog_
 
   it('respects the audience filter', async () => {
     fakeDb.collection('blog_items')._seed('item-media', { tripId: 't1', blogDayId: '2026-08-28', localDate: '2026-08-28', kindKey: 'media.photo', audience: 'travelers', deletedAt: null });
-    expect(await getVisibleMediaForDay('2026-08-28', ['public'])).toHaveLength(0);
-    expect(await getVisibleMediaForDay('2026-08-28', ['travelers', 'public'])).toHaveLength(1);
+    expect(await getVisibleMediaForDay('t1', '2026-08-28', ['public'])).toHaveLength(0);
+    expect(await getVisibleMediaForDay('t1', '2026-08-28', ['travelers', 'public'])).toHaveLength(1);
   });
 
   it('hasTextItemForDay also keys on localDate', async () => {
-    expect(await hasTextItemForDay('2026-08-28')).toBe(true);
-    expect(await hasTextItemForDay('2026-08-29')).toBe(false);
+    expect(await hasTextItemForDay('t1', '2026-08-28')).toBe(true);
+    expect(await hasTextItemForDay('t1', '2026-08-29')).toBe(false);
   });
 });

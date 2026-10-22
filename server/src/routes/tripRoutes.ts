@@ -1,8 +1,18 @@
+import { ensureUserInTrip, getFeatureFlag } from '../db';
+import { getPlanningDayPoints } from '../services/planningPointsService';
+import { locateTripItem } from '../services/locateItemService';
+import { geocoderConfigured, getGeocoder } from '../services/geocoder';
+import { z } from 'zod';
+import { getEnvFlag } from '../env';
+import { readPlanningBundle } from '../services/planningBundleService';
+import { PlanningError } from '../services/planningOperations';
+import { HttpRateLimitExceededError, reserveHttpRateLimitOrThrow, reserveItemLocateRateLimit } from '../services/httpRateLimitService';
 import { Router } from 'express';
 import { recordServerEvent } from '../analytics/ingestService';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
+  getActivitySharing, setActivitySharing, listSimilarTrips,
   acceptTripShareInvite,
   addTripComment,
   createTripShareInvite,
@@ -100,6 +110,23 @@ const isPastUtcDate = (value?: string | null): boolean => Boolean(value && value
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
+
+router.get('/:id/bundle', async (req, res) => {
+  res.set({ 'Cache-Control': 'private, no-cache', Vary: 'Authorization' });
+  if (!z.string().uuid().safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid trip' }); return; }
+  try {
+    if (!getEnvFlag('TRIP_BUNDLE_VERSIONING') || !(await isFeatureEnabled('trip_bundle', (req as any).user.userId))) { res.status(404).json({ error: 'Bundle unavailable' }); return; }
+    const user = (req as any).user as TokenPayload;
+    const result = await readPlanningBundle(user.userId, req.params.id, user.role, req.get('If-None-Match'));
+    res.set('ETag', result.etag);
+    if (!result.bundle) { res.status(304).end(); return; }
+    res.json(result.bundle);
+  } catch (error) {
+    if (error instanceof PlanningError) { res.status(error.status).json({ error: error.message, code: error.code }); return; }
+    res.status(503).json({ error: 'Saved trip download is temporarily unavailable' });
+  }
+});
+
 
 // Following is not yet implemented server-side; return empty data instead of 404s for client calls.
 router.get('/followed', async (req, res) => {
@@ -603,6 +630,90 @@ router.get('/:id/messages', async (req, res) => {
   const limit = Math.min(Number(req.query.limit ?? 200), 500);
   const messages = await listTripMessages(req.params.id, limit);
   res.json({ tripId: req.params.id, messages });
+});
+
+router.get('/:id/planning-map-points', async (req, res) => {
+  const userId = (req as unknown as { user: { userId: string } }).user.userId;
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    if (!await ensureUserInTrip(req.params.id, userId)) return res.status(403).json({ error: 'Trip access required' });
+    const date = String(req.query.dayDate || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date))) return res.status(400).json({ error: 'Choose a valid day' });
+    const enabled = await Promise.all(['planning_web_map', 'planning_native_map'].map(key => isFeatureEnabled(key, userId)));
+    if (!enabled.some(Boolean)) return res.status(404).json({ error: 'Maps are not enabled' });
+    const points = await getPlanningDayPoints(userId, req.params.id, date);
+    if (!await ensureUserInTrip(req.params.id, userId)) return res.status(403).json({ error: 'Trip access required' });
+    return res.json({ points });
+  } catch { return res.status(503).json({ error: 'Map points unavailable' }); }
+});
+
+const locateItemBody = z.object({
+  kind: z.enum(['lodging', 'activity', 'car_rental']),
+  itemId: z.string().trim().min(1).max(64),
+  which: z.enum(['pickup', 'dropoff']).optional(),
+}).strict();
+
+/** Geocodes one item's own saved address on request. The client never supplies the text to look up. */
+router.post('/:id/locate-item', async (req, res) => {
+  const userId = (req as unknown as { user: { userId: string } }).user.userId;
+  res.setHeader('Cache-Control', 'private, no-store');
+  const parsed = locateItemBody.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Choose a lodging, activity or car rental to locate.' });
+  try {
+    if (!await ensureUserInTrip(req.params.id, userId)) return res.status(403).json({ error: 'Trip access required' });
+    if (!await isFeatureEnabled('planning_locate_items', userId)) return res.status(404).json({ error: 'Finding locations is not enabled.' });
+    if (!geocoderConfigured()) return res.status(503).json({ error: 'Finding locations is not set up yet.', code: 'NOT_CONFIGURED' });
+    await reserveItemLocateRateLimit(userId, req.ip);
+    const result = await locateTripItem({ userId, tripId: req.params.id, ...parsed.data });
+    return res.status(result.status === 'item_missing' ? 404 : 200).json(result);
+  } catch (error) {
+    if (error instanceof HttpRateLimitExceededError) {
+      res.setHeader('Retry-After', String(error.retryAfterSeconds));
+      return res.status(429).json({ error: 'Too many location lookups. Try again in a few minutes.' });
+    }
+    return res.status(503).json({ error: 'Finding locations is temporarily unavailable.' });
+  }
+});
+
+router.get('/:id/planning-capabilities', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const access = await ensureUserCanReadTrip(String(req.params.id), userId);
+    if (!access) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
+    const [map, nearby, partner, dayOrder, nativeMap, inspiration, optimizeOrder] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order', 'planning_native_map', 'planning_trip_inspiration', 'planning_optimize_order'].map(key => isFeatureEnabled(key, userId)));
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ map, optimizeOrder: optimizeOrder && dayOrder && access.access === 'member', nativeMap: nativeMap && (await getFeatureFlag('planning_native_map'))?.enabled === true, nearby: nearby && access.access === 'member', partner, dayOrder: dayOrder && access.access === 'member', inspiration: inspiration && access.access === 'member', locate: access.access === 'member' && geocoderConfigured() && await isFeatureEnabled('planning_locate_items', userId), locateProvider: getGeocoder()?.displayName ?? null });
+  } catch { res.status(503).json({ error: 'Planning options are temporarily unavailable.' }); }
+});
+
+for (const action of ['similar-trips', 'activity-sharing'] as const) {
+  router.get(`/:id/${action}`, async (req, res) => {
+    const userId = (req as any).user.userId as string;
+    res.setHeader('Cache-Control', 'private, no-store');
+    try {
+      if (!z.string().uuid().safeParse(req.params.id).success) { res.status(400).json({ error: 'Choose a valid trip.' }); return; }
+      if (!(await isFeatureEnabled('planning_trip_inspiration', userId))) { res.status(404).json({ error: 'Trips like this is unavailable.' }); return; }
+      await reserveHttpRateLimitOrThrow({ name: 'trip_inspiration_read', identity: userId, limit: 60, windowMs: 60_000 });
+      res.json(action === 'similar-trips' ? { trips: await listSimilarTrips(userId, req.params.id) } : await getActivitySharing(userId, req.params.id));
+    } catch (error) {
+      res.status(error instanceof PlanningError ? error.status : error instanceof HttpRateLimitExceededError ? 429 : 503)
+        .json({ error: error instanceof PlanningError ? error.message : 'Shared activities could not load.' });
+    }
+  });
+}
+router.put('/:id/activity-sharing', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const body = z.object({ enabled: z.boolean() }).strict().safeParse(req.body);
+  if (!body.success || !z.string().uuid().safeParse(req.params.id).success) { res.status(400).json({ error: 'Choose whether to share activities.' }); return; }
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    if (!(await isFeatureEnabled('planning_trip_inspiration', userId))) { res.status(404).json({ error: 'Activity sharing is unavailable.' }); return; }
+    await reserveHttpRateLimitOrThrow({ name: 'trip_inspiration_share', identity: userId, limit: 20, windowMs: 60_000 });
+    res.json(await setActivitySharing(userId, req.params.id, body.data.enabled));
+  } catch (error) {
+    res.status(error instanceof PlanningError ? error.status : error instanceof HttpRateLimitExceededError ? 429 : 503)
+      .json({ error: error instanceof PlanningError ? error.message : 'Sharing could not be updated.' });
+  }
 });
 
 router.get('/:id/covered-by', async (req, res) => {

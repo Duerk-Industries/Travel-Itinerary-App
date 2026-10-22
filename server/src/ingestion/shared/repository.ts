@@ -1,10 +1,14 @@
+import { planningFirestore } from '../../services/planningFirestore';
+import { reviewItemVersion } from '../assignment/reviewVersion';
+import { dateOnly, bookingDates } from '../assignment/tripMatcher';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import type { Pool } from 'pg';
-import { getCurrentDbProvider, poolClient, getTripById, upsertExpenseForSource } from '../../db';
+import { getCurrentDbProvider, poolClient, getTripById, upsertExpenseForSource, ensureUserInTrip } from '../../db';
+import { withPlanningTransaction } from '../../db.postgres';
 import { getEnvValue } from '../../env';
 import { fetchFrankfurterExchangeRate } from '../../apis/frankfurterApi';
 import {
@@ -366,7 +370,7 @@ const mapRetryPolicyRow = (row: RetryPolicyRow): RetryPolicyConfigRecord => ({
   updatedAt: row.updated_at,
 });
 
-const getFirebaseDb = (): Firestore => {
+export const getFirebaseDb = (): Firestore => {
   if (!firebaseApp) {
     if (getApps().length > 0) {
       firebaseApp = getApps()[0]!;
@@ -392,10 +396,10 @@ const getFirebaseDb = (): Firestore => {
     }
   }
   const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
-  return databaseId ? getFirestore(firebaseApp!, databaseId) : getFirestore(firebaseApp!);
+  return planningFirestore(databaseId ? getFirestore(firebaseApp!, databaseId) : getFirestore(firebaseApp!));
 };
 
-const getPg = (): Pool => poolClient();
+export const getPg = (): Pool => poolClient();
 
 const ensurePgSchema = async (): Promise<void> => {
   if (schemaReady.has('postgres')) return;
@@ -569,6 +573,21 @@ const ensurePgSchema = async (): Promise<void> => {
       assignment_transaction_id UUID NOT NULL UNIQUE
     );
   `);
+  // Automatic adding needs enough to take an assignment back later: which row it created, a fingerprint of
+  // that row (and its expense) to detect later edits, and when the undo window closes.
+  for (const column of [
+    "mode TEXT NOT NULL DEFAULT 'MANUAL'",
+    'trip_record_kind TEXT',
+    'trip_record_id TEXT',
+    'trip_message_id TEXT',
+    'record_fingerprint TEXT',
+    'expense_fingerprint TEXT',
+    'reasons JSONB',
+    'undo_expires_at TIMESTAMP',
+    'undone_at TIMESTAMP',
+  ]) {
+    await p.query(`ALTER TABLE parsed_item_assignments ADD COLUMN IF NOT EXISTS ${column};`);
+  }
   await p.query(`
     CREATE TABLE IF NOT EXISTS provider_connections (
       id UUID PRIMARY KEY,
@@ -778,21 +797,33 @@ const normalizeCurrencyCode = (value: unknown): string | null => {
   return /^[A-Z]{3}$/.test(text) ? text : null;
 };
 
-const syncAssignedFlightExpense = async (params: {
-  item: PersistedParsedItem;
+type PreparedAssignedExpense = {
+  userId: string;
   tripId: string;
-  tripRecordId: string;
-  matchedMemberIds: string[];
-}): Promise<void> => {
-  if (params.item.itemType !== 'flight' && params.item.itemType !== 'rail' && params.item.itemType !== 'ferry_bus_transfer') {
-    return;
-  }
-  const trip = await getTripById(params.tripId);
-  if (!trip?.groupId) return;
-  const fields = mergeFields(params.item);
+  groupId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency: string | null | undefined;
+  amountInTripCurrency: number | null | undefined;
+  exchangeRateToTripCurrency: number | null | undefined;
+  exchangeRateDate: string | null | undefined;
+  tripCurrency: string;
+};
+
+/**
+ * Works out the expense a transport booking creates (including the exchange-rate lookup, which is a
+ * network call). Done BEFORE any database transaction opens so a slow rate provider can never hold a
+ * transaction open. Returns null for item types that create no expense.
+ */
+const prepareAssignedExpense = async (item: PersistedParsedItem, tripId: string): Promise<PreparedAssignedExpense | null> => {
+  if (item.itemType !== 'flight' && item.itemType !== 'rail' && item.itemType !== 'ferry_bus_transfer') return null;
+  const trip = await getTripById(tripId);
+  if (!trip?.groupId) return null;
+  const fields = mergeFields(item);
   const amount = resolveAssignedFlightCost(fields);
   const currency = normalizeCurrencyCode(fields.currency);
-  const expenseDate = toDateOnly(fields.startDateTimeUtc ?? params.item.startDateTimeUtc);
+  const expenseDate = toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc);
   const tripCurrency = normalizeCurrencyCode(trip.currency) ?? 'USD';
 
   let amountInTripCurrency: number | null | undefined = undefined;
@@ -815,22 +846,17 @@ const syncAssignedFlightExpense = async (params: {
       exchangeRateDate = rate.date;
     }
   }
+  return { userId: item.userId, tripId, groupId: trip.groupId, expenseDate, category: 'Flights', amount, currency, amountInTripCurrency, exchangeRateToTripCurrency, exchangeRateDate, tripCurrency };
+};
 
+const writeAssignedExpense = async (prepared: PreparedAssignedExpense | null, tripRecordId: string, matchedMemberIds: string[]): Promise<void> => {
+  if (!prepared) return;
   await upsertExpenseForSource({
-    userId: params.item.userId,
-    tripId: params.tripId,
-    groupId: trip.groupId,
-    expenseDate,
-    category: 'Flights',
-    amount,
-    currency,
-    amountInTripCurrency,
-    exchangeRateToTripCurrency,
-    exchangeRateDate,
-    payerIds: params.matchedMemberIds,
-    forIds: params.matchedMemberIds,
+    ...prepared,
+    payerIds: matchedMemberIds,
+    forIds: matchedMemberIds,
     sourceType: 'flight',
-    sourceId: params.tripRecordId,
+    sourceId: tripRecordId,
   });
 };
 
@@ -981,7 +1007,67 @@ const matchTravelerNamesToGroupMemberIds = async (
   }
 };
 
-const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedParsedItem, tripId: string, assignedByUserId: string) => {
+export type AssignmentMode = 'MANUAL' | 'AUTO';
+export type AssignmentOptions = {
+  mode?: AssignmentMode;
+  /** How long an automatic assignment can be taken back. */
+  undoWindowMs?: number;
+  /** Plain-language reasons the trip was chosen, kept so the person can see why. */
+  reasons?: string[];
+  expectedItemVersion?: string;
+};
+export type TripRecordKind = 'flights' | 'lodgings' | 'car_rentals' | 'tours';
+export const AUTO_UNDO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+const tripRecordKindFor = (itemType: PersistedParsedItem['itemType']): TripRecordKind | null => {
+  if (itemType === 'flight' || itemType === 'rail' || itemType === 'ferry_bus_transfer') return 'flights';
+  if (itemType === 'hotel') return 'lodgings';
+  if (itemType === 'car_rental') return 'car_rentals';
+  if (itemType === 'tour_activity' || itemType === 'restaurant_reservation' || itemType === 'event_ticket') return 'tours';
+  return null;
+};
+
+// Fields that change for reasons other than a person editing the booking (background enrichment, reordering).
+const VOLATILE_RECORD_KEYS = new Set([
+  'created_at', 'createdAt', 'updated_at', 'updatedAt', 'day_position', 'dayPosition',
+  'lat', 'lng', 'geo_city', 'geoCity', 'coordinate_source', 'coordinateSource', 'catalog_id', 'catalogId',
+  'dropoff_lat', 'dropoff_lng',
+]);
+
+const canonicalJson = (value: unknown): string => {
+  if (value instanceof Date) return JSON.stringify(value.toISOString());
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([key, v]) => !VOLATILE_RECORD_KEYS.has(key) && v !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b));
+    return `{${entries.map(([key, v]) => `${JSON.stringify(key)}:${canonicalJson(v)}`).join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
+};
+
+/** Stable hash of a stored row, ignoring fields that change without anyone editing the booking. */
+export const fingerprintRecord = (row: Record<string, unknown> | null | undefined): string | null =>
+  row ? createHash('sha256').update(canonicalJson(row)).digest('hex') : null;
+
+const readRecordRowPostgres = async (client: Pool, table: TripRecordKind, id: string): Promise<Record<string, unknown> | null> => {
+  // `table` comes from a closed list above, never from request data.
+  const { rows } = await client.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+  return (rows[0] as Record<string, unknown> | undefined) ?? null;
+};
+
+const readExpenseBySourcePostgres = async (client: Pool, sourceId: string): Promise<Record<string, unknown> | null> => {
+  const { rows } = await client.query(`SELECT * FROM expenses WHERE source_type = 'flight' AND source_id = $1`, [sourceId]);
+  return (rows[0] as Record<string, unknown> | undefined) ?? null;
+};
+
+const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedParsedItem, tripId: string, assignedByUserId: string, options: AssignmentOptions = {}) => {
+  await client.query('SELECT id FROM trips WHERE id=$1 FOR SHARE', [tripId]);
+  await client.query('SELECT gm.id FROM group_members gm JOIN trips t ON t.group_id=gm.group_id WHERE t.id=$1 AND gm.user_id=$2 AND gm.removed_at IS NULL FOR SHARE', [tripId, item.userId]);
+  if (!await ensureUserInTrip(tripId, item.userId)) throw new Error('You are no longer part of this trip.');
+  const locked = await client.query<ParsedItemRow>('SELECT * FROM parsed_items WHERE id=$1 AND user_id=$2 FOR UPDATE', [item.id, item.userId]);
+  const current = locked.rows[0] && mapParsedItemRow(locked.rows[0]);
+  if (!current || current.status === 'ASSIGNED' || current.status === 'DELETED' || reviewItemVersion(current) !== (options.expectedItemVersion ?? reviewItemVersion(item))) throw new Error('This booking changed. Refresh it before adding.');
   const id = randomUUID();
   const messageId = randomUUID();
   const assignmentTransactionId = randomUUID();
@@ -1106,10 +1192,21 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
      VALUES ($1,$2,$3,$4,$5,$6,$7)`,
     [messageId, SYSTEM_APP_ID, tripId, assignedByUserId, SYSTEM_SENDER_NAME, SYSTEM_SENDER_INITIALS, getSystemMessageBody(item, tripName)]
   );
+  const recordKind = tripRecordKindFor(item.itemType);
+  const mode: AssignmentMode = options.mode ?? 'MANUAL';
+  const undoExpiresAt = mode === 'AUTO' ? new Date(Date.now() + (options.undoWindowMs ?? AUTO_UNDO_WINDOW_MS)).toISOString() : null;
   await client.query(
-    `INSERT INTO parsed_item_assignments (id, parsed_item_id, trip_id, assigned_by_user_id, assigned_at, assignment_transaction_id)
-     VALUES ($1,$2,$3,$4,NOW(),$5)`,
-    [randomUUID(), item.id, tripId, assignedByUserId, assignmentTransactionId]
+    `INSERT INTO parsed_item_assignments (
+       id, parsed_item_id, trip_id, assigned_by_user_id, assigned_at, assignment_transaction_id,
+       mode, trip_record_kind, trip_record_id, trip_message_id, record_fingerprint, reasons, undo_expires_at
+     ) VALUES ($1,$2,$3,$4,NOW(),$5,$6,$7,$8,$9,$10,$11::jsonb,$12)`,
+    [
+      randomUUID(), item.id, tripId, assignedByUserId, assignmentTransactionId,
+      mode, recordKind, id, messageId,
+      recordKind ? fingerprintRecord(await readRecordRowPostgres(client, recordKind, id)) : null,
+      JSON.stringify(options.reasons ?? []),
+      undoExpiresAt,
+    ]
   );
   await client.query(
     `UPDATE parsed_items
@@ -1120,10 +1217,10 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
      WHERE id = $1`,
     [item.id, tripId, assignmentTransactionId]
   );
-  return { tripRecordId: id, assignmentTransactionId, matchedMemberIds };
+  return { tripRecordId: id, assignmentTransactionId, matchedMemberIds, tripRecordKind: recordKind, assignmentMode: mode, undoExpiresAt, messageId };
 };
 
-const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tripId: string, assignedByUserId: string) => {
+const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tripId: string, assignedByUserId: string, options: AssignmentOptions = {}, prepared: PreparedAssignedExpense | null = null) => {
   const db = getFirebaseDb();
   const assignmentTransactionId = randomUUID();
   const tripRecordId = randomUUID();
@@ -1137,10 +1234,26 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
   const arrivalDate = resolveAssignedDateOnly(fields.arrivalDate, fields.endDateTimeUtc ?? item.endDateTimeUtc, departureDate);
   const arrivalTime = resolveAssignedTimeOnly(fields.arrivalTime, fields.endDateTimeUtc ?? item.endDateTimeUtc);
   const flightCost = resolveAssignedFlightCost(fields);
+  const recordKind = tripRecordKindFor(item.itemType);
+  const mode: AssignmentMode = options.mode ?? 'MANUAL';
+  const undoExpiresAt = mode === 'AUTO' ? new Date(Date.now() + (options.undoWindowMs ?? AUTO_UNDO_WINDOW_MS)).toISOString() : null;
+  // The expense lives in the same transaction as the booking, so a failure can never leave a booking
+  // without its cost (or a cost without its booking). Its id is derived from the booking so a retry is idempotent.
+  const expenseId = `src_${createHash('sha256').update(`flight:${tripRecordId}`).digest('hex').slice(0, 40)}`;
+  let expenseFingerprint: string | null = null;
   await db.runTransaction(async (tx) => {
+    let recordPayload: Record<string, unknown> | null = null;
+    const setRecord = (collection: string, data: Record<string, unknown>) => {
+      recordPayload = data;
+      tx.set(db.collection(collection).doc(tripRecordId), data);
+    };
     const parsedItemRef = db.collection('parsed_items').doc(item.id);
     const parsedItemDoc = await tx.get(parsedItemRef);
     if (!parsedItemDoc.exists) throw new Error('Parsed item not found');
+    const [access, currentTrip] = await Promise.all([tx.get(db.collection('trip_access').doc(`${tripId}_${item.userId}`)), tx.get(db.collection('trips').doc(tripId))]);
+    if (!currentTrip.exists || access.data()?.status !== 'active' || access.data()?.canWrite !== true) throw new Error('You are no longer part of this trip.');
+    const currentItem = { ...parsedItemDoc.data(), id: parsedItemDoc.id } as PersistedParsedItem;
+    if (currentItem.userId !== item.userId || ['ASSIGNED','DELETED'].includes(currentItem.reviewStatus) || reviewItemVersion(currentItem) !== (options.expectedItemVersion ?? reviewItemVersion(item))) throw new Error('This booking changed. Refresh it before adding.');
     const payload: Record<string, unknown> = {
       id: tripRecordId,
       userId: item.userId,
@@ -1149,7 +1262,7 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
       createdAt: nowIso(),
     };
     if (item.itemType === 'flight' || item.itemType === 'rail' || item.itemType === 'ferry_bus_transfer') {
-      tx.set(db.collection('flights').doc(tripRecordId), {
+      setRecord('flights', {
         ...payload,
         transferType: item.itemType === 'flight' ? 'Flight' : item.itemType === 'rail' ? 'Train' : 'Ferry',
         passengerName: (item.travelerNames ?? []).join(', ') || 'Traveler',
@@ -1172,7 +1285,7 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
       const checkInDate = toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc);
       const checkOutDate = toDateOnly(fields.endDateTimeUtc ?? item.endDateTimeUtc, checkInDate);
       const totalCost = Number(fields.totalCost ?? fields.cost ?? 0);
-      tx.set(db.collection('lodgings').doc(tripRecordId), {
+      setRecord('lodgings', {
         ...payload,
         trip_id: tripId,
         name: String(fields.name ?? fields.hotelName ?? item.providerVendor ?? 'Imported lodging'),
@@ -1187,7 +1300,7 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
         traveler_ids: [],
       });
     } else if (item.itemType === 'car_rental') {
-      tx.set(db.collection('car_rentals').doc(tripRecordId), {
+      setRecord('car_rentals', {
         ...payload,
         pickupLocation: String(fields.pickupLocation ?? ''),
         pickupDate: toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc),
@@ -1203,7 +1316,7 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
         travelerIds: matchedMemberIds,
       });
     } else if (item.itemType === 'tour_activity' || item.itemType === 'restaurant_reservation' || item.itemType === 'event_ticket') {
-      tx.set(db.collection('tours').doc(tripRecordId), {
+      setRecord('tours', {
         ...payload,
         activityType: mapActivityType(item.itemType),
         date: toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc),
@@ -1218,6 +1331,31 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
         paidBy: matchedMemberIds,
         travelerIds: matchedMemberIds,
       });
+    }
+    if (prepared) {
+      const currency = prepared.currency ?? prepared.tripCurrency;
+      const expensePayload = {
+        id: expenseId,
+        tripId: prepared.tripId,
+        groupId: prepared.groupId,
+        userId: prepared.userId,
+        expenseDate: prepared.expenseDate,
+        category: prepared.category,
+        amount: prepared.amount ?? 0,
+        currency,
+        amountInTripCurrency: prepared.amountInTripCurrency ?? (currency === prepared.tripCurrency ? prepared.amount ?? 0 : null),
+        exchangeRateToTripCurrency: prepared.exchangeRateToTripCurrency ?? (currency === prepared.tripCurrency ? 1 : null),
+        exchangeRateDate: prepared.exchangeRateDate ?? null,
+        payerIds: matchedMemberIds,
+        forIds: matchedMemberIds,
+        sourceType: 'flight',
+        sourceId: tripRecordId,
+        vendor: null,
+        notes: null,
+        createdAt: nowIso(),
+      };
+      expenseFingerprint = fingerprintRecord(expensePayload);
+      tx.set(db.collection('expenses').doc(expenseId), expensePayload);
     }
     tx.set(db.collection('trip_messages').doc(messageId), {
       id: messageId,
@@ -1235,6 +1373,15 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
       assignedByUserId,
       assignedAt: nowIso(),
       assignmentTransactionId,
+      mode,
+      tripRecordKind: recordKind,
+      tripRecordId,
+      tripMessageId: messageId,
+      recordFingerprint: fingerprintRecord(recordPayload),
+      expenseFingerprint,
+      reasons: options.reasons ?? [],
+      undoExpiresAt,
+      undoneAt: null,
     });
     tx.update(parsedItemRef, {
       reviewStatus: 'ASSIGNED',
@@ -1244,7 +1391,7 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
       updatedAt: nowIso(),
     });
   });
-  return { tripRecordId, assignmentTransactionId, matchedMemberIds };
+  return { tripRecordId, assignmentTransactionId, matchedMemberIds, tripRecordKind: recordKind, assignmentMode: mode, undoExpiresAt, messageId };
 };
 
 export const getOrCreateIngestionSource = async (userId: string, sourceType: IngestionSourceType): Promise<string> => {
@@ -2290,30 +2437,372 @@ export const softDeleteParsedItem = async (userId: string, itemId: string): Prom
   return mapParsedItemRow(rows[0]);
 };
 
-export const assignParsedItemToTrip = async (userId: string, itemId: string, tripId: string, assignedByUserId: string) => {
+export const assignParsedItemToTrip = async (
+  userId: string,
+  itemId: string,
+  tripId: string,
+  assignedByUserId: string,
+  options: AssignmentOptions = {}
+) => {
   await ensureTripExists(tripId);
+  if (!await ensureUserInTrip(tripId, userId)) throw new Error('You are no longer part of this trip.');
   const item = await getParsedItemById(userId, itemId);
   if (!item) throw new Error('Parsed item not found');
   if (item.status === 'ASSIGNED') throw new Error('Parsed item already assigned');
   if (item.status === 'DELETED') throw new Error('Deleted items cannot be assigned');
 
+  // The exchange-rate lookup is a network call: finish it before any transaction opens.
+  const prepared = await prepareAssignedExpense(item, tripId);
+
   if (getCurrentDbProvider() === 'firebase') {
-    const result = await insertAssignmentArtifactsFirestore(item, tripId, assignedByUserId);
-    await syncAssignedFlightExpense({ item, tripId, tripRecordId: result.tripRecordId, matchedMemberIds: result.matchedMemberIds });
-    return result;
+    return insertAssignmentArtifactsFirestore(item, tripId, assignedByUserId, options, prepared);
   }
 
-  const client = getPg();
-  await client.query('BEGIN');
-  try {
-    const result = await insertAssignmentArtifactsPostgres(client, item, tripId, assignedByUserId);
-    await client.query('COMMIT');
-    await syncAssignedFlightExpense({ item, tripId, tripRecordId: result.tripRecordId, matchedMemberIds: result.matchedMemberIds });
+  // The booking, its system message, the assignment record AND its expense commit together or not at all.
+  // (A bare BEGIN/COMMIT on a connection pool does not do that: statements may run on different connections.)
+  return withPlanningTransaction(async () => {
+    const client = getPg();
+    const result = await insertAssignmentArtifactsPostgres(client, item, tripId, assignedByUserId, options);
+    await writeAssignedExpense(prepared, result.tripRecordId, result.matchedMemberIds);
+    const recordKind = result.tripRecordKind;
+    if (recordKind && prepared) {
+      const expenseRow = await readExpenseBySourcePostgres(client, result.tripRecordId);
+      await client.query(`UPDATE parsed_item_assignments SET expense_fingerprint = $2 WHERE assignment_transaction_id = $1`, [
+        result.assignmentTransactionId,
+        fingerprintRecord(expenseRow),
+      ]);
+    }
     return result;
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw error;
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Taking an automatic assignment back
+// ---------------------------------------------------------------------------
+
+export type UndoFailure =
+  | 'not_found'
+  | 'not_assigned'
+  | 'not_automatic'
+  | 'already_undone'
+  | 'expired'
+  | 'forbidden'
+  | 'booking_edited'
+  | 'expense_edited'
+  | 'payments_recorded';
+
+export type UndoOutcome =
+  | { ok: true; parsedItemId: string; tripId: string }
+  | { ok: false; reason: UndoFailure; message: string };
+
+const UNDO_MESSAGES: Record<UndoFailure, string> = {
+  not_found: 'This import could not be found.',
+  not_assigned: 'This booking is not in a trip.',
+  not_automatic: 'Only bookings that were added automatically can be taken back here. Remove it from the trip instead.',
+  already_undone: 'This booking was already taken back.',
+  expired: 'The time to take this back has passed. Remove it from the trip instead.',
+  forbidden: 'You are no longer part of this trip.',
+  booking_edited: 'Someone changed this booking after it was added, so it was left in the trip. Remove it from the trip if you still want it gone.',
+  expense_edited: 'The cost of this booking was changed after it was added, so it was left in the trip.',
+  payments_recorded: 'Payments between travelers were recorded after this was added, so it was left in the trip to keep the balances correct.',
+};
+const undoFailure = (reason: UndoFailure): UndoOutcome => ({ ok: false, reason, message: UNDO_MESSAGES[reason] });
+
+type AssignmentRecord = {
+  tripId: string;
+  mode: string;
+  tripRecordKind: TripRecordKind | null;
+  tripRecordId: string | null;
+  tripMessageId: string | null;
+  recordFingerprint: string | null;
+  expenseFingerprint: string | null;
+  undoExpiresAt: Date | null;
+  assignedAt: Date;
+  undoneAt: Date | null;
+  transactionId: string;
+};
+
+/**
+ * Removes exactly what one automatic assignment created, and returns the booking to the review queue.
+ * It refuses, with a plain reason, whenever removing it could throw away someone else's work: the booking or
+ * its cost was edited, payments between travelers were recorded since, the window has closed, or the
+ * person is no longer in the trip. Safe to call again: a second call after success reports `already_undone`.
+ */
+export const undoParsedItemAssignment = async (userId: string, itemId: string, now: Date = new Date()): Promise<UndoOutcome> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') return undoAssignmentFirestore(userId, itemId, now);
+  return withPlanningTransaction(async (): Promise<UndoOutcome> => {
+    const client = getPg();
+    const itemRows = await client.query(`SELECT review_status, assigned_trip_id FROM parsed_items WHERE id = $1 AND user_id = $2`, [itemId, userId]);
+    const itemRow = itemRows.rows[0] as { review_status: string; assigned_trip_id: string | null } | undefined;
+    if (!itemRow) return undoFailure('not_found');
+    const assignmentRows = await client.query(
+      `SELECT assignment_transaction_id, trip_id, mode, trip_record_kind, trip_record_id, trip_message_id,
+              record_fingerprint, expense_fingerprint, undo_expires_at, assigned_at, undone_at
+       FROM parsed_item_assignments WHERE parsed_item_id = $1 ORDER BY assigned_at DESC LIMIT 1`,
+      [itemId]
+    );
+    const row = assignmentRows.rows[0] as any;
+    if (!row) return undoFailure('not_assigned');
+    const record: AssignmentRecord = {
+      tripId: String(row.trip_id),
+      mode: String(row.mode ?? 'MANUAL'),
+      tripRecordKind: row.trip_record_kind ?? null,
+      tripRecordId: row.trip_record_id ?? null,
+      tripMessageId: row.trip_message_id ?? null,
+      recordFingerprint: row.record_fingerprint ?? null,
+      expenseFingerprint: row.expense_fingerprint ?? null,
+      undoExpiresAt: row.undo_expires_at ? new Date(row.undo_expires_at) : null,
+      assignedAt: new Date(row.assigned_at),
+      undoneAt: row.undone_at ? new Date(row.undone_at) : null,
+      transactionId: String(row.assignment_transaction_id),
+    };
+    if (record.undoneAt) return undoFailure('already_undone');
+    if (itemRow.review_status !== 'ASSIGNED') return undoFailure('not_assigned');
+    if (record.mode !== 'AUTO' || !record.tripRecordKind || !record.tripRecordId) return undoFailure('not_automatic');
+    if (!record.undoExpiresAt || record.undoExpiresAt.getTime() < now.getTime()) return undoFailure('expired');
+    if (!(await ensureUserInTrip(record.tripId, userId))) return undoFailure('forbidden');
+
+    const current = await readRecordRowPostgres(client, record.tripRecordKind, record.tripRecordId);
+    if (current && fingerprintRecord(current) !== record.recordFingerprint) return undoFailure('booking_edited');
+    const expense = await readExpenseBySourcePostgres(client, record.tripRecordId);
+    if (expense && record.expenseFingerprint && fingerprintRecord(expense) !== record.expenseFingerprint) return undoFailure('expense_edited');
+    const payments = await client.query(`SELECT 1 FROM trip_payments WHERE trip_id = $1 AND created_at > $2 LIMIT 1`, [record.tripId, record.assignedAt.toISOString()]);
+    if (payments.rows.length) return undoFailure('payments_recorded');
+
+    if (expense) await client.query(`DELETE FROM expenses WHERE source_type = 'flight' AND source_id = $1`, [record.tripRecordId]);
+    if (current) await client.query(`DELETE FROM ${record.tripRecordKind} WHERE id = $1 AND trip_id = $2`, [record.tripRecordId, record.tripId]);
+    if (record.tripMessageId) await client.query(`DELETE FROM trip_messages WHERE id = $1 AND trip_id = $2`, [record.tripMessageId, record.tripId]);
+    await client.query(
+      `UPDATE parsed_items SET review_status = 'READY_FOR_REVIEW', assigned_trip_id = NULL, assignment_transaction_id = NULL, updated_at = NOW() WHERE id = $1`,
+      [itemId]
+    );
+    await client.query(`UPDATE parsed_item_assignments SET undone_at = NOW() WHERE assignment_transaction_id = $1`, [record.transactionId]);
+    return { ok: true, parsedItemId: itemId, tripId: record.tripId };
+  });
+};
+
+const toDate = (value: unknown): Date | null => {
+  if (!value) return null;
+  const date = typeof (value as { toDate?: unknown }).toDate === 'function' ? (value as { toDate: () => Date }).toDate() : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const undoAssignmentFirestore = async (userId: string, itemId: string, now: Date): Promise<UndoOutcome> => {
+  const db = getFirebaseDb();
+  return db.runTransaction(async (tx): Promise<UndoOutcome> => {
+    const itemRef = db.collection('parsed_items').doc(itemId);
+    const itemDoc = await tx.get(itemRef);
+    if (!itemDoc.exists || (itemDoc.data() as any).userId !== userId) return undoFailure('not_found');
+    const assignments = await tx.get(db.collection('parsed_item_assignments').where('parsedItemId', '==', itemId));
+    const latest = assignments.docs
+      .map((doc) => ({ ref: doc.ref, data: doc.data() as any }))
+      .sort((a, b) => String(b.data.assignedAt ?? '').localeCompare(String(a.data.assignedAt ?? '')))[0];
+    if (!latest) return undoFailure('not_assigned');
+    const a = latest.data;
+    if (a.undoneAt) return undoFailure('already_undone');
+    const itemData = itemDoc.data() as any;
+    if (String(itemData.status ?? itemData.reviewStatus) !== 'ASSIGNED') return undoFailure('not_assigned');
+    const kind = a.tripRecordKind as TripRecordKind | null;
+    if (a.mode !== 'AUTO' || !kind || !a.tripRecordId) return undoFailure('not_automatic');
+    const expires = toDate(a.undoExpiresAt);
+    if (!expires || expires.getTime() < now.getTime()) return undoFailure('expired');
+    if (!(await ensureUserInTrip(String(a.tripId), userId))) return undoFailure('forbidden');
+
+    const recordRef = db.collection(kind).doc(String(a.tripRecordId));
+    const recordDoc = await tx.get(recordRef);
+    if (recordDoc.exists && fingerprintRecord(recordDoc.data() as Record<string, unknown>) !== a.recordFingerprint) return undoFailure('booking_edited');
+    const expenseSnap = await tx.get(db.collection('expenses').where('sourceType', '==', 'flight').where('sourceId', '==', String(a.tripRecordId)));
+    const expenseDoc = expenseSnap.docs[0];
+    if (expenseDoc && a.expenseFingerprint && fingerprintRecord(expenseDoc.data() as Record<string, unknown>) !== a.expenseFingerprint) return undoFailure('expense_edited');
+    const assignedAt = toDate(a.assignedAt) ?? new Date(0);
+    const payments = await tx.get(db.collection('trip_payments').where('tripId', '==', String(a.tripId)));
+    if (payments.docs.some((doc) => (toDate((doc.data() as any).createdAt)?.getTime() ?? 0) > assignedAt.getTime())) return undoFailure('payments_recorded');
+
+    if (expenseDoc) tx.delete(expenseDoc.ref);
+    if (recordDoc.exists) tx.delete(recordRef);
+    if (a.tripMessageId) tx.delete(db.collection('trip_messages').doc(String(a.tripMessageId)));
+    tx.update(itemRef, { reviewStatus: 'READY_FOR_REVIEW', status: 'READY_FOR_REVIEW', assignedTripId: null, assignmentTransactionId: null, updatedAt: nowIso() });
+    tx.update(latest.ref, { undoneAt: nowIso() });
+    return { ok: true, parsedItemId: itemId, tripId: String(a.tripId) };
+  });
+};
+
+export type RecentAutoAssignment = {
+  item: PersistedParsedItem;
+  tripId: string;
+  tripName: string | null;
+  reasons: string[];
+  assignedAt: string;
+  undoExpiresAt: string;
+};
+
+/** Bookings that were added automatically and can still be taken back, newest first. */
+export const listRecentAutoAssignments = async (userId: string, now: Date = new Date(), limit = 20): Promise<RecentAutoAssignment[]> => {
+  await ensureIngestionRepositoryReady();
+  const rows: Array<{ itemId: string; tripId: string; reasons: string[]; assignedAt: string; undoExpiresAt: string }> = [];
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('parsed_item_assignments')
+      .where('assignedByUserId', '==', userId)
+      .where('mode', '==', 'AUTO')
+      .get();
+    for (const doc of snap.docs) {
+      const data = doc.data() as any;
+      const expires = toDate(data.undoExpiresAt);
+      if (data.undoneAt || !expires || expires.getTime() <= now.getTime()) continue;
+      rows.push({
+        itemId: String(data.parsedItemId),
+        tripId: String(data.tripId),
+        reasons: Array.isArray(data.reasons) ? data.reasons : [],
+        assignedAt: toDate(data.assignedAt)?.toISOString() ?? '',
+        undoExpiresAt: expires.toISOString(),
+      });
+    }
+  } else {
+    const { rows: found } = await getPg().query(
+      `SELECT parsed_item_id, trip_id, reasons, assigned_at, undo_expires_at
+       FROM parsed_item_assignments
+       WHERE assigned_by_user_id = $1 AND mode = 'AUTO' AND undone_at IS NULL AND undo_expires_at > $2
+       ORDER BY assigned_at DESC LIMIT $3`,
+      [userId, now.toISOString(), limit]
+    );
+    for (const row of found as any[]) {
+      rows.push({
+        itemId: String(row.parsed_item_id),
+        tripId: String(row.trip_id),
+        reasons: Array.isArray(row.reasons) ? row.reasons : [],
+        assignedAt: new Date(row.assigned_at).toISOString(),
+        undoExpiresAt: new Date(row.undo_expires_at).toISOString(),
+      });
+    }
   }
+  rows.sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
+  const out: RecentAutoAssignment[] = [];
+  for (const row of rows.slice(0, limit)) {
+    const item = await getParsedItemById(userId, row.itemId);
+    if (!item || item.status !== 'ASSIGNED') continue;
+    const trip = await getTripById(row.tripId);
+    out.push({ item, tripId: row.tripId, tripName: trip?.name ?? null, reasons: row.reasons, assignedAt: row.assignedAt, undoExpiresAt: row.undoExpiresAt });
+  }
+  return out;
+};
+
+/** What a review item shows about how it was assigned: how, why, and whether it can still be taken back. */
+export type AssignmentSummary = { mode: AssignmentMode; tripId: string; reasons: string[]; undoExpiresAt: string | null; undone: boolean };
+
+export const getAssignmentSummaries = async (userId: string, itemIds: string[]): Promise<Map<string, AssignmentSummary>> => {
+  await ensureIngestionRepositoryReady();
+  const out = new Map<string, AssignmentSummary>();
+  if (!itemIds.length) return out;
+  if (getCurrentDbProvider() === 'firebase') {
+    const db = getFirebaseDb();
+    for (const id of itemIds) {
+      const snap = await db.collection('parsed_item_assignments').where('parsedItemId', '==', id).get();
+      const latest = snap.docs.map((d) => d.data() as any).sort((x, y) => String(y.assignedAt ?? '').localeCompare(String(x.assignedAt ?? '')))[0];
+      if (latest && latest.assignedByUserId === userId) {
+        out.set(id, {
+          mode: latest.mode === 'AUTO' ? 'AUTO' : 'MANUAL',
+          tripId: String(latest.tripId),
+          reasons: latest.reasons ?? [],
+          undoExpiresAt: toDate(latest.undoExpiresAt)?.toISOString() ?? null,
+          undone: Boolean(latest.undoneAt),
+        });
+      }
+    }
+    return out;
+  }
+  const p = getPg();
+  for (const id of itemIds) {
+    const { rows } = await p.query(
+      `SELECT trip_id, mode, reasons, undo_expires_at, undone_at FROM parsed_item_assignments
+       WHERE parsed_item_id = $1 AND assigned_by_user_id = $2 ORDER BY assigned_at DESC LIMIT 1`,
+      [id, userId]
+    );
+    const row = rows[0] as any;
+    if (row) {
+      out.set(id, {
+        mode: row.mode === 'AUTO' ? 'AUTO' : 'MANUAL',
+        tripId: String(row.trip_id),
+        reasons: Array.isArray(row.reasons) ? row.reasons : [],
+        undoExpiresAt: row.undo_expires_at ? new Date(row.undo_expires_at).toISOString() : null,
+        undone: Boolean(row.undone_at),
+      });
+    }
+  }
+  return out;
+};
+
+// ---------------------------------------------------------------------------
+// The person's choice about automatic adding, and booking numbers already in a trip
+// ---------------------------------------------------------------------------
+
+/** `null` means the person never chose, so the release default applies. */
+export const getAutoAssignPreference = async (userId: string): Promise<boolean | null> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const doc = await getFirebaseDb().collection('ingestion_user_settings').doc(userId).get();
+    const value = (doc.data() as any)?.autoAssign;
+    return typeof value === 'boolean' ? value : null;
+  }
+  const { rows } = await getPg().query(`SELECT auto_assign FROM ingestion_user_settings WHERE user_id = $1`, [userId]);
+  const value = (rows[0] as { auto_assign: boolean | null } | undefined)?.auto_assign;
+  return typeof value === 'boolean' ? value : null;
+};
+
+export const setAutoAssignPreference = async (userId: string, value: boolean | null): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    await getFirebaseDb().collection('ingestion_user_settings').doc(userId).set({ autoAssign: value, updatedAt: nowIso() }, { merge: true });
+    return;
+  }
+  await getPg().query(
+    `INSERT INTO ingestion_user_settings (user_id, auto_assign, updated_at) VALUES ($1, $2, NOW())
+     ON CONFLICT (user_id) DO UPDATE SET auto_assign = EXCLUDED.auto_assign, updated_at = NOW()`,
+    [userId, value]
+  );
+};
+
+/** Provider/type/date-scoped continuity. Bare reference strings never grant a match. */
+export const listTripBookingReferences = async (tripIds: string[]): Promise<Map<string, import('../../types').TripBookingEvidence[]>> => {
+  await ensureIngestionRepositoryReady();
+  const out = new Map<string, import('../../types').TripBookingEvidence[]>();
+  for (const tripId of Array.from(new Set(tripIds))) {
+    const evidence: import('../../types').TripBookingEvidence[] = [];
+    let items: PersistedParsedItem[] = [];
+    if (getCurrentDbProvider() === 'firebase') {
+      const db = getFirebaseDb();
+      const [flights, rentals, parsed] = await Promise.all([
+        db.collection('flights').where('tripId', '==', tripId).get(),
+        db.collection('car_rentals').where('tripId', '==', tripId).get(),
+        db.collection('parsed_items').where('assignedTripId', '==', tripId).get(),
+      ]);
+      for (const doc of flights.docs) {
+        const d = doc.data(); if (d.status === 'Cancelled' || !['Flight','Train','Ferry','Bus','Public Transit'].includes(d.transferType ?? 'Flight')) continue;
+        evidence.push({ provider: String(d.carrier ?? ''), reference: String(d.bookingReference ?? ''), itemType: d.transferType === 'Train' ? 'rail' : ['Ferry','Bus','Public Transit'].includes(d.transferType) ? 'ferry_bus_transfer' : 'flight', startDate: dateOnly(d.departureDate), endDate: dateOnly(d.arrivalDate) });
+      }
+      for (const doc of rentals.docs) {
+        const d = doc.data(); if (d.status === 'Cancelled') continue;
+        evidence.push({ provider: String(d.vendor ?? ''), reference: String(d.reference ?? ''), itemType: 'car_rental', startDate: dateOnly(d.pickupDate), endDate: dateOnly(d.dropoffDate) });
+      }
+      items = parsed.docs.filter(doc => doc.data().reviewStatus === 'ASSIGNED').map(doc => ({ ...doc.data(), id: doc.id } as PersistedParsedItem));
+    } else {
+      const p = getPg();
+      const [flights, rentals, parsed] = await Promise.all([
+        p.query<import('../../types').TripBookingEvidence>(`SELECT carrier AS provider, booking_reference AS reference, CASE WHEN transfer_type='Train' THEN 'rail' WHEN transfer_type IN ('Ferry','Bus','Public Transit') THEN 'ferry_bus_transfer' ELSE 'flight' END AS "itemType", departure_date AS "startDate", arrival_date AS "endDate" FROM flights WHERE trip_id=$1 AND status <> 'Cancelled' AND (transfer_type IN ('Flight','Train','Ferry','Bus','Public Transit') OR transfer_type IS NULL)`, [tripId]),
+        p.query<import('../../types').TripBookingEvidence>(`SELECT vendor AS provider, reference, 'car_rental' AS "itemType", pickup_date AS "startDate", dropoff_date AS "endDate" FROM car_rentals WHERE trip_id=$1 AND status <> 'Cancelled'`, [tripId]),
+        p.query<ParsedItemRow>(`SELECT * FROM parsed_items WHERE assigned_trip_id=$1 AND review_status='ASSIGNED'`, [tripId]),
+      ]);
+      evidence.push(...flights.rows, ...rentals.rows); items = parsed.rows.map(mapParsedItemRow);
+    }
+    for (const item of items) {
+      const fields = { ...item.extractedFields, ...item.editedFields };
+      evidence.push({ provider: String(fields.providerVendor ?? item.providerVendor ?? ''), reference: String(fields.confirmationNumber ?? item.confirmationNumber ?? ''), itemType: item.itemType,
+        startDate: bookingDates(item).start, endDate: bookingDates(item).end });
+    }
+    out.set(tripId, evidence.filter(row => row.provider && row.reference).map(row => ({ ...row, startDate: dateOnly(row.startDate), endDate: dateOnly(row.endDate) })));
+  }
+  return out;
 };
 
 export const recordUsageMetering = async (params: {
@@ -2749,6 +3238,7 @@ export const getReviewQueueSignedUrl = async (_documentId: string): Promise<{ ur
 
 export const deleteUserIngestionData = async (userId: string): Promise<void> => {
   await ensureIngestionRepositoryReady();
+  await (await import('./mailAdmission')).deleteUserMailAdmissionData(userId);
   if (getCurrentDbProvider() === 'firebase') {
     const db = getFirebaseDb();
     const collections = [

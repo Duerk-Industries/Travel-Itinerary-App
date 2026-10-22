@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+# Report failures without printing commands that may contain secret values.
+# EXIT also catches explicit exits and unset-variable errors missed by ERR.
+deploy_stage="initializing"
+trap 'failure_line=$LINENO' ERR
+trap 'status=$?; if ((status != 0)); then printf "ERROR: %s failed during %s near line %s (exit %s).\n" "${BASH_SOURCE[0]}" "$deploy_stage" "${failure_line:-$LINENO}" "$status" >&2; fi' EXIT
 
 SERVICE_NAME="${SERVICE_NAME:-travel-itinerary-app}"
 REGION="${REGION:-us-east5}"
@@ -11,6 +16,7 @@ IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_NUMBER,D
 IGNORE_SECRET_KEYS="${IGNORE_SECRET_KEYS:-GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS}"
 SKIP_FIRESTORE_INDEXES="${SKIP_FIRESTORE_INDEXES:-0}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # This script deploys API code, applies env vars from .env directly,
 # and applies optional secret mappings from .secrets or SECRETS via --set-secrets.
@@ -28,6 +34,8 @@ if [[ -z "$SECRETS_FILE" && -f "server/.secrets" ]]; then
 fi
 
 if [[ "$SKIP_FIRESTORE_INDEXES" != "1" ]]; then
+  deploy_stage="Firestore index deployment"
+  echo "Starting Firestore index deployment..."
   "$SCRIPT_DIR/deploy-firestore-indexes.sh"
 else
   echo "Skipping Firestore index deployment because SKIP_FIRESTORE_INDEXES=1."
@@ -66,12 +74,12 @@ strip_inline_comment() {
       continue
     fi
     if [[ "$ch" == "'" && $in_double -eq 0 ]]; then
-      ((in_single = 1 - in_single))
+      in_single=$((1 - in_single))
       out+="$ch"
       continue
     fi
     if [[ "$ch" == '"' && $in_single -eq 0 ]]; then
-      ((in_double = 1 - in_double))
+      in_double=$((1 - in_double))
       out+="$ch"
       continue
     fi
@@ -155,6 +163,8 @@ cleanup_legacy_secrets() {
     --clear-secrets
 }
 
+deploy_stage="reading deployment configuration"
+echo "Reading deployment configuration (values redacted)..."
 env_pairs=()
 declare -A secret_map=()
 saw_google_application_credentials=0
@@ -259,7 +269,8 @@ if [[ "${#secret_map[@]}" -gt 0 ]]; then
   done
   env_pairs=("${filtered_env_pairs[@]}")
 fi
-env_pairs+=("NODE_OPTIONS=--max-old-space-size=1536" "GIT_SHA=$(git -C "$REPO_ROOT" rev-parse HEAD)")
+git_sha="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+env_pairs+=("NODE_OPTIONS=--max-old-space-size=1536" "GIT_SHA=$git_sha")
 env_keys=()
 for pair in "${env_pairs[@]}"; do
   env_keys+=("${pair%%=*}")
@@ -306,6 +317,7 @@ if [[ "${#env_keys[@]}" -gt 0 ]]; then
 fi
 
 if [[ -n "$remove_secrets_arg" ]]; then
+  deploy_stage="checking existing Cloud Run service"
   if gcloud run services describe "$SERVICE_NAME" --region "$REGION" >/dev/null 2>&1; then
     allow_clear_fallback=0
     if [[ "${#secret_map[@]}" -eq 0 ]]; then
@@ -315,6 +327,8 @@ if [[ -n "$remove_secrets_arg" ]]; then
   fi
 fi
 
+deploy_stage="Cloud Run source deployment"
+echo "Starting Cloud Run source deployment..."
 gcloud run deploy "$SERVICE_NAME" \
   --source "$SOURCE_DIR" \
   --region "$REGION" \
@@ -329,11 +343,14 @@ gcloud run deploy "$SERVICE_NAME" \
 
 # A prior canary deploy with --no-traffic pins the service away from LATEST
 # until this is explicitly restored; gcloud run deploy alone does not undo it.
+deploy_stage="routing traffic to the latest revision"
+echo "Routing traffic to the latest revision..."
 gcloud run services update-traffic "$SERVICE_NAME" \
   --region "$REGION" \
   --to-latest
 
 if [[ -n "$remove_secrets_arg" ]]; then
+  deploy_stage="post-deploy secret cleanup"
   allow_clear_fallback=0
   if [[ "${#secret_map[@]}" -eq 0 ]]; then
     allow_clear_fallback=1

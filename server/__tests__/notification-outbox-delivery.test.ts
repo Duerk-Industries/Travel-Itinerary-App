@@ -1,3 +1,5 @@
+import * as notificationService from '../src/services/notificationService';
+jest.mock('../src/services/notificationWorkRepository', () => ({ putNotificationWork: jest.fn(async () => undefined) }));
 import { describe, expect, test, jest, beforeEach } from '@jest/globals';
 
 // Unit tests for the real push/email delivery logic in notificationOutboxWorker.ts — everything
@@ -10,6 +12,7 @@ jest.mock('../src/services/entitlementService', () => ({
   isFeatureEnabled: (key: string) => mockIsFeatureEnabled(key),
 }));
 
+const mockGetPreferences = jest.fn(async () => [{ category: 'blog_mention', in_app: true, push: true, email: true }]);
 const mockGetNotificationById = jest.fn();
 const mockListActivePushDevicesForUser = jest.fn();
 const mockDeleteDevice = jest.fn();
@@ -17,6 +20,7 @@ const mockIncrementDeviceFailure = jest.fn();
 jest.mock('../src/services/notificationRepository', () => ({
   notificationRepository: () => ({
     getNotificationById: mockGetNotificationById,
+    getPreferences: mockGetPreferences,
     listActivePushDevicesForUser: mockListActivePushDevicesForUser,
     deleteDevice: mockDeleteDevice,
     incrementDeviceFailure: mockIncrementDeviceFailure,
@@ -51,12 +55,27 @@ describe('notification outbox real delivery', () => {
   });
 
   const notification = {
-    id: 'notif-1',
+    id: 'notif-1', category: 'blog_mention',
     user_id: 'user-1',
     title: 'Add a photo from today?',
     body: 'The day is almost over.',
     deep_link: '/trips/trip-1/blog',
   };
+
+  test('quiet hours defer both external channels without calling providers', async () => {
+    mockGetNotificationById.mockResolvedValue(notification);
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-19T03:00:00Z'));
+    const preference = jest.spyOn(notificationService, 'getNotificationPreference').mockResolvedValue({
+      inApp: true, push: true, email: true,
+      quietTiming: { timezone: 'America/New_York', quietStart: '22:00', quietEnd: '08:00' },
+    });
+    try {
+      await expect(deliverPush({ notification_id: 'notif-1' })).rejects.toMatchObject({ until: Date.parse('2026-10-19T12:00:00Z') });
+      await expect(deliverEmail({ notification_id: 'notif-1' })).rejects.toMatchObject({ until: Date.parse('2026-10-19T12:00:00Z') });
+      expect(mockSendExpoPushNotifications).not.toHaveBeenCalled();
+      expect(mockSendNotificationEmail).not.toHaveBeenCalled();
+    } finally { preference.mockRestore(); jest.useRealTimers(); }
+  });
 
   test('sends a real push to every registered device', async () => {
     mockGetNotificationById.mockResolvedValue(notification);
@@ -69,26 +88,18 @@ describe('notification outbox real delivery', () => {
 
     expect(mockSendExpoPushNotifications).toHaveBeenCalledWith({
       caller: 'NOTIFICATION_PUSH',
-      messages: [expect.objectContaining({ to: 'decrypted:cipher-1', title: notification.title, body: notification.body })],
+      messages: [expect.objectContaining({ to: 'decrypted:cipher-1', title: 'Travel update', body: 'Open WanderBunnies to view this update.', data: { notificationId: 'notif-1' } })],
     });
     expect(mockSendNotificationEmail).not.toHaveBeenCalled();
     expect(mockDeleteDevice).not.toHaveBeenCalled();
   });
 
-  test('falls back to email when the user has no registered push device', async () => {
+  test('keeps no-device push work paused while the independent email outbox owns email', async () => {
     mockGetNotificationById.mockResolvedValue(notification);
     mockListActivePushDevicesForUser.mockResolvedValue([]);
-    mockGetUserById.mockResolvedValue({ id: 'user-1', email: 'web-user@example.com' });
-
-    await deliverPush({ notification_id: 'notif-1' });
-
+    await expect(deliverPush({ notification_id: 'notif-1' })).rejects.toThrow('No consenting mobile device');
     expect(mockSendExpoPushNotifications).not.toHaveBeenCalled();
-    expect(mockSendNotificationEmail).toHaveBeenCalledWith(
-      'web-user@example.com',
-      notification.title,
-      notification.body,
-      notification.deep_link
-    );
+    expect(mockSendNotificationEmail).not.toHaveBeenCalled();
   });
 
   test('disables a device on DeviceNotRegistered but only counts a failure otherwise', async () => {
@@ -104,32 +115,26 @@ describe('notification outbox real delivery', () => {
       ],
     });
 
-    await deliverPush({ notification_id: 'notif-1' });
+    await expect(deliverPush({ notification_id: 'notif-1' })).rejects.toThrow('PUSH_RETRY_REQUIRED');
 
     expect(mockDeleteDevice).toHaveBeenCalledWith('user-1', 'device-dead');
     expect(mockIncrementDeviceFailure).toHaveBeenCalledWith('device-flaky');
     expect(mockIncrementDeviceFailure).not.toHaveBeenCalledWith('device-dead');
   });
 
-  test('falls back to email (not a no-op) when the notifications_push flag is off', async () => {
-    // A disabled notifications_push flag must be treated the same as "no device registered" —
-    // it's still a reason to try email, not a reason to skip the user entirely. See the bug this
-    // guards against: notificationOutboxWorker.ts originally returned before ever reaching the
-    // device check when this flag was off (its default state), silently dropping every reminder.
+  test('pauses delivery when push is killed without sending email', async () => {
     mockIsFeatureEnabled.mockImplementation(async (key: string) => key !== 'notifications_push');
     mockGetNotificationById.mockResolvedValue(notification);
-    mockGetUserById.mockResolvedValue({ id: 'user-1', email: 'flagoff@example.com' });
-
-    await deliverPush({ notification_id: 'notif-1' });
-
-    expect(mockListActivePushDevicesForUser).not.toHaveBeenCalled();
+    await expect(deliverPush({ notification_id: 'notif-1' })).rejects.toThrow('paused');
+    expect(mockSendNotificationEmail).not.toHaveBeenCalled();
     expect(mockSendExpoPushNotifications).not.toHaveBeenCalled();
-    expect(mockSendNotificationEmail).toHaveBeenCalledWith(
-      'flagoff@example.com',
-      notification.title,
-      notification.body,
-      notification.deep_link
-    );
+  });
+  test('does not fall back to email without independent email consent', async () => {
+    mockGetPreferences.mockResolvedValueOnce([{ category: 'blog_mention', in_app: true, push: true, email: false }]);
+    mockGetNotificationById.mockResolvedValue(notification);
+    mockListActivePushDevicesForUser.mockResolvedValue([]);
+    await expect(deliverPush({ notification_id: 'notif-1' })).rejects.toThrow('No consenting mobile device');
+    expect(mockSendNotificationEmail).not.toHaveBeenCalled();
   });
 
   test('deliverEmail is a no-op when the user has no email on file', async () => {

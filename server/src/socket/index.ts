@@ -40,6 +40,7 @@ export const createSocketServer = (httpServer: HttpServer): Server => {
 
   io.on('connection', (socket) => {
     logInfo(`[socket] connected: ${socket.id} user=${socket.data.user?.id}`);
+    if (socket.data.user?.id) void socket.join(`user:${socket.data.user.id}`);
     registerChatHandlers(io!, socket);
     registerBlogHandlers(io!, socket);
   });

@@ -100,7 +100,7 @@ describe('db lifecycle', () => {
         CLOUD_RUN_JOB: undefined,
         GOOGLE_CLOUD_PROJECT: undefined,
         FIRESTORE_EMULATOR_HOST: undefined,
-        DATABASE_URL: process.env.DATABASE_URL ?? 'pg-mem://localhost/test',
+        DATABASE_URL: 'pg-mem://localhost/provider-lifecycle-test',
       },
       async () => {
         const db = await loadDb();

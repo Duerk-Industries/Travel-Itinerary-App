@@ -302,6 +302,113 @@ describe('DailyExpensesTab', () => {
     }
   });
 
+  describe('offline add', () => {
+    const queueExpense = jest.fn();
+    const renderOffline = (overrides: Record<string, unknown> = {}) =>
+      render(
+        <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+          groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles}
+          costTrackingAllowed readOnly allowOfflineAdd
+          pendingExpenses={{ entries: [], syncedNotice: null, queueExpense, retryEntry: jest.fn(), discardEntry: jest.fn() }}
+          {...overrides} />
+      );
+
+    beforeEach(() => {
+      queueExpense.mockReset();
+    });
+
+    it('lets a new expense be saved on this device without any network request, and closes the form', async () => {
+      queueExpense.mockResolvedValue('entry-1');
+      const fetchMock = jest.fn();
+      const originalFetch = global.fetch;
+      global.fetch = fetchMock as any;
+      try {
+        const screen = renderOffline();
+        expect(screen.getByTestId('expense-add-button').props.disabled).toBe(false);
+        // Editing, scanning and importing stay unavailable offline.
+        expect(screen.getByTestId('expense-import-button').props.disabled).toBe(true);
+
+        fireEvent.press(screen.getByTestId('expense-add-button'));
+        fireEvent.changeText(screen.getByPlaceholderText('Amount'), '18.75');
+        fireEvent.changeText(screen.getByPlaceholderText('Description'), 'Flour Bakery');
+        fireEvent.press(screen.getByText('Save Expense'));
+
+        await waitFor(() => expect(queueExpense).toHaveBeenCalledTimes(1));
+        const args = queueExpense.mock.calls[0][0];
+        expect(args.operationKey).toMatch(/^exp_/);
+        expect(args.payload).toEqual(expect.objectContaining({ tripId: 't1', amount: 18.75, vendor: 'Flour Bakery', payerIds: ['m1'] }));
+        await waitFor(() => expect(screen.queryByTestId('expense-add-modal')).toBeNull());
+        expect(fetchMock).not.toHaveBeenCalled();
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('keeps the form open and says nothing was saved when the device storage refuses the write', async () => {
+      queueExpense.mockResolvedValue(null);
+      const screen = renderOffline();
+      fireEvent.press(screen.getByTestId('expense-add-button'));
+      fireEvent.changeText(screen.getByPlaceholderText('Amount'), '5');
+      fireEvent.press(screen.getByText('Save Expense'));
+      await waitFor(() => expect(queueExpense).toHaveBeenCalledTimes(1));
+      expect(screen.getByTestId('expense-add-modal')).toBeTruthy();
+    });
+
+    it('queues instead of failing when the connection drops while saving online', async () => {
+      queueExpense.mockResolvedValue('entry-2');
+      const fetchMock = jest.fn().mockRejectedValue(new TypeError('Network request failed'));
+      const originalFetch = global.fetch;
+      global.fetch = fetchMock as any;
+      try {
+        const screen = renderOffline({ readOnly: false });
+        fireEvent.press(screen.getByTestId('expense-add-button'));
+        fireEvent.changeText(screen.getByPlaceholderText('Amount'), '9.5');
+        fireEvent.press(screen.getByText('Save Expense'));
+        await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(queueExpense).toHaveBeenCalledTimes(1));
+        // Same operation key on the attempt and the queued retry, so the server can dedupe.
+        const sentKey = fetchMock.mock.calls[0][1].headers['Idempotency-Key'];
+        expect(queueExpense.mock.calls[0][0].operationKey).toBe(sentKey);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('lists waiting expenses with a plain status and offers Try again only for ones that failed', () => {
+      const retryEntry = jest.fn();
+      const discardEntry = jest.fn();
+      const base = { enqueuedAtMs: 1, attempts: 0, kind: 'createExpense' };
+      const payload = { tripId: 't1', expenseDate: '2025-02-01', category: 'Dinner', amount: 30, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'] };
+      const screen = renderOffline({
+        pendingExpenses: {
+          entries: [
+            { ...base, id: 'w1', status: 'pending', args: { operationKey: 'exp_aaaaaaaa', payload } },
+            { ...base, id: 'f1', status: 'failed', lastError: 'You no longer have access to this trip.', args: { operationKey: 'exp_bbbbbbbb', payload: { ...payload, amount: 12 } } },
+            { ...base, id: 'o1', status: 'pending', args: { operationKey: 'exp_cccccccc', payload: { ...payload, tripId: 'other-trip' } } },
+          ],
+          syncedNotice: '2 offline expenses synced',
+          queueExpense,
+          retryEntry,
+          discardEntry,
+        },
+      });
+      expect(screen.getByText('Saved on this device · waiting to sync')).toBeTruthy();
+      expect(screen.getByText('2 offline expenses synced')).toBeTruthy();
+      expect(screen.getByText('Waiting to sync')).toBeTruthy();
+      expect(screen.getByText("Couldn't sync: You no longer have access to this trip.")).toBeTruthy();
+      expect(screen.queryByTestId('expense-pending-o1')).toBeNull();
+      expect(screen.getAllByLabelText('Try syncing this expense again')).toHaveLength(1);
+
+      fireEvent.press(screen.getByLabelText('Try syncing this expense again'));
+      expect(retryEntry).toHaveBeenCalledWith('f1');
+
+      fireEvent.press(within(screen.getByTestId('expense-pending-f1')).getByLabelText('Discard this expense'));
+      expect(discardEntry).not.toHaveBeenCalled();
+      fireEvent.press(screen.getByLabelText('Discard', { exact: true }));
+      expect(discardEntry).toHaveBeenCalledWith('f1');
+    });
+  });
+
   it('surfaces unreachable expenses and opens linked itinerary items from their description', () => {
     const setExpenses = jest.fn();
     const onEditItineraryItem = jest.fn();
@@ -382,7 +489,12 @@ describe('DailyExpensesTab', () => {
         'http://example.test/api/expenses',
         expect.objectContaining({
           method: 'POST',
-          headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' },
+          // New expenses carry a stable Idempotency-Key so a retry (or offline replay) can't duplicate them.
+          headers: {
+            Authorization: 'Bearer token',
+            'Content-Type': 'application/json',
+            'Idempotency-Key': expect.stringMatching(/^exp_[A-Za-z0-9_-]{8,}$/),
+          },
           body: expect.any(String),
         })
       );

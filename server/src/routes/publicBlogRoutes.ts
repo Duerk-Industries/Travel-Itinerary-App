@@ -1,3 +1,4 @@
+import { readBlogMaps } from '../services/blogMapService';
 import { Router } from 'express';
 import { queryBlog } from '../db.postgres';
 import { getCurrentDbProvider } from '../db';
@@ -259,6 +260,27 @@ const resolvePublicTripIdPostgres = async (
   );
   return { tripId, days: days.rows.map((d) => ({ id: String(d.id), localDate: new Date(d.local_date).toISOString().slice(0, 10) })) };
 };
+
+// Locations have a separate uncached response so withdrawing consent never leaves
+// coordinates in the public document cache. Resolve publication again after reads.
+router.get('/:username/:tripSlug/maps', async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'blog_public_maps', identity: `ip:${clientIp(req)}`, limit: 15, windowMs: 60_000 });
+    const resolve = () => getCurrentDbProvider() === 'firebase'
+      ? resolvePublicTripIdFirebase(String(req.params.username), String(req.params.tripSlug))
+      : resolvePublicTripIdPostgres(String(req.params.username), String(req.params.tripSlug));
+    const blog = await resolve();
+    if (!blog) return res.status(404).json({ error: 'Public blog not found' });
+    const days = await readBlogMaps(blog.tripId, blog.days.map(d => d.localDate));
+    const current = await resolve();
+    if (!current || current.tripId !== blog.tripId) return res.status(404).json({ error: 'Public blog not found' });
+    return res.json({ days });
+  } catch (error) {
+    if (error instanceof HttpRateLimitExceededError) return res.status(429).json({ error: 'Please try again shortly' });
+    return res.status(503).json({ error: 'Maps are unavailable' });
+  }
+});
 
 router.get('/:username/:tripSlug', async (req, res) => {
   // The public-reader page (unlike everything else in this router) is a full document fetch, not

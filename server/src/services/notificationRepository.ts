@@ -4,6 +4,7 @@ import * as firebase from './notificationRepository.firebase';
 
 export interface NotificationRepository {
   createNotification(notification: any): Promise<string>;
+  createNotificationWithOutbox(notification: any, channels: Array<'push' | 'email'>): Promise<string>;
   enqueueOutbox(entries: any[]): Promise<void>;
   getPreferences(userIds: string[]): Promise<any[]>;
   isThreadMuted(userId: string, threadKey: string): Promise<boolean>;
@@ -22,7 +23,7 @@ export interface NotificationRepository {
   incrementDeviceFailure(deviceId: string): Promise<void>;
   updatePreferences(userId: string, preferences: any[]): Promise<void>;
   claimOutboxBatch(leaseOwner: string, batchSize: number, leaseSeconds: number): Promise<any[]>;
-  updateOutboxState(id: string, state: string, options?: { attemptCount?: number; nextAttemptAt?: Date; lastErrorCode?: string | null }): Promise<void>;
+  updateOutboxState(id: string, state: string, options?: { leaseOwner?: string; attemptCount?: number; nextAttemptAt?: Date; lastErrorCode?: string | null }): Promise<void>;
   pruneNotifications(retentionDays: number, maxPerRow: number): Promise<void>;
   /** Erasure: hard-deletes every device row (including the encrypted push token) for the user. */
   purgeDevicesForUser(userId: string): Promise<number>;

@@ -1,0 +1,1081 @@
+{
+  "generatedAt": "2026-10-19T14:50:41.563Z",
+  "mode": "source-only",
+  "flags": [
+    {
+      "key": "ai_itinerary_generation",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/routes/accountRoutes.ts",
+        "server/src/routes/itineraryRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/createTripWizard.tsx",
+        "app/tabs/overview.tsx"
+      ]
+    },
+    {
+      "key": "ai_assistant_guide",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/accountRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "ai_assistant_actions",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/accountRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/components/AssistantChatPanel.tsx",
+        "app/hooks/useAssistantChat.ts"
+      ]
+    },
+    {
+      "key": "csv_export",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/routes/webAuthRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "activity_lodging_csv_import",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/dataTransferRoutes.ts",
+        "server/src/routes/webAuthRoutes.ts",
+        "server/src/services/httpRateLimitService.ts"
+      ]
+    },
+    {
+      "key": "activity_lodging_csv_export",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/webAuthRoutes.ts"
+      ]
+    },
+    {
+      "key": "car_rentals",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/analytics/metrics/index.ts",
+        "server/src/analytics/registry.ts",
+        "server/src/blog/firebaseRecapRepository.ts",
+        "server/src/blog/postgresRecapRepository.ts",
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/ingestion/shared/repository.ts",
+        "server/src/routes/blogInsightRoutes.ts",
+        "server/src/routes/carRentalRoutes.ts",
+        "server/src/services/blogDayFactsService.ts",
+        "server/src/services/blogDayStarterService.ts",
+        "server/src/services/blogPlacesService.ts",
+        "server/src/services/entitlementService.ts",
+        "app/App.tsx",
+        "app/utils/analytics/features.ts"
+      ]
+    },
+    {
+      "key": "trip_sharing",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/analytics/metrics/index.ts",
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/routes/tripRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "trip_following",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/analytics/metrics/index.ts",
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/routes/tripRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "cost_tracking",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/analytics/metrics/index.ts",
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/routes/accountRoutes.ts",
+        "server/src/routes/expenseRoutes.ts",
+        "server/src/routes/ledgerPaymentRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "receipt_scanning",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/routes/accountRoutes.ts",
+        "server/src/routes/expenseRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "multiple_groups",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "trip_creation",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/analytics/metrics/index.ts",
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/routes/tripRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "feature_ingest_manual_upload",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/analytics/metrics/index.ts",
+        "server/src/ingestion/config.ts"
+      ]
+    },
+    {
+      "key": "feature_ingest_forwarded_mailbox",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/index.ts",
+        "server/src/ingestion/config.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "feature_ingest_gmail_import",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/ingestion/config.ts",
+        "app/tabs/HomeTab.tsx"
+      ]
+    },
+    {
+      "key": "feature_ingest_admin_observability",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/ingestion/config.ts",
+        "app/tabs/AdminTab.tsx"
+      ]
+    },
+    {
+      "key": "feature_ingest_local_virus_scan_stub",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/ingestion/config.ts"
+      ]
+    },
+    {
+      "key": "ingestion_dual_llm_consensus",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/ingestion/config.ts",
+        "server/src/routes/adminRoutes.ts"
+      ]
+    },
+    {
+      "key": "overview_weather",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/itineraryRoutes.ts"
+      ]
+    },
+    {
+      "key": "flight_parser",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/transferRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_document_import",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/db.firebase.ts",
+        "server/src/db.postgres.ts",
+        "server/src/routes/webAuthRoutes.ts",
+        "server/src/services/aiProviderConfigService.ts",
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryDocumentImportService.ts",
+        "app/components/ItineraryDocumentImport.tsx"
+      ]
+    },
+    {
+      "key": "itinerary_reactions",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/webAuthRoutes.ts",
+        "server/src/services/itineraryReactionService.ts"
+      ]
+    },
+    {
+      "key": "merchant_category_lookup",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/merchantCategoryLookupService.ts"
+      ]
+    },
+    {
+      "key": "stripe_billing",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": []
+    },
+    {
+      "key": "stripe_checkout",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/db.postgres.ts"
+      ]
+    },
+    {
+      "key": "stripe_customer_portal",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": []
+    },
+    {
+      "key": "premium_trials",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/config/premiumTrials.ts"
+      ]
+    },
+    {
+      "key": "attractions_transfer_directions_api",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/transferEstimationService.ts"
+      ]
+    },
+    {
+      "key": "getyourguide_activity_suggestions",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/config/getYourGuide.ts"
+      ]
+    },
+    {
+      "key": "feature_grid_editing",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/activityRoutes.ts",
+        "server/src/routes/webAuthRoutes.ts"
+      ]
+    },
+    {
+      "key": "feature_grid_editing_clipboard",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/webAuthRoutes.ts"
+      ]
+    },
+    {
+      "key": "feature_standardized_item_dialogs",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/webAuthRoutes.ts"
+      ]
+    },
+    {
+      "key": "feature_tap_to_edit_tables",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/webAuthRoutes.ts",
+        "app/tabs/transfers.tsx"
+      ]
+    },
+    {
+      "key": "feature_cover_photo_fallback_v2",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/webAuthRoutes.ts"
+      ]
+    },
+    {
+      "key": "feature_quick_start_trip_wizard",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/webAuthRoutes.ts"
+      ]
+    },
+    {
+      "key": "packing_lists_v2",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/db.firebase.ts",
+        "server/src/routes/accountRoutes.ts",
+        "server/src/routes/tripRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/components/PackingPresetSelector.tsx"
+      ]
+    },
+    {
+      "key": "trip_day_map",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/staticMapRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/components/TripDayMap.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/analytics/metrics/index.ts",
+        "server/src/blog/firebaseBlogDayData.ts",
+        "server/src/blog/firebaseMediaRepository.ts",
+        "server/src/blog/firebasePublicationRepository.ts",
+        "server/src/blog/firebaseRecapRepository.ts",
+        "server/src/blog/firebaseRepository.ts",
+        "server/src/blog/postgresMediaRepository.ts",
+        "server/src/blog/postgresRecapRepository.ts",
+        "server/src/blog/postgresRepository.ts",
+        "server/src/blog/registry.ts",
+        "server/src/blog/types.ts",
+        "server/src/routes/blogAuthoringRoutes.ts",
+        "server/src/routes/blogEngagementRoutes.ts",
+        "server/src/routes/blogImportRoutes.ts",
+        "server/src/routes/blogIndexingRoutes.ts",
+        "server/src/routes/blogInsightRoutes.ts",
+        "server/src/routes/blogModalityRoutes.ts",
+        "server/src/routes/blogPublicationRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/routes/blogSitemapRoutes.ts",
+        "server/src/routes/blogSocialRoutes.ts",
+        "server/src/routes/publicBlogRoutes.ts",
+        "server/src/services/blogBackgroundWorker.ts",
+        "server/src/services/blogCaptionSuggestionService.ts",
+        "server/src/services/blogDayStarterService.ts",
+        "server/src/services/blogEngagementService.ts",
+        "server/src/services/blogVoiceCaptionService.ts",
+        "server/src/services/entitlementService.ts",
+        "server/src/services/notificationService.ts",
+        "app/components/BlogDayStarterCard.tsx",
+        "app/components/PublicTripBlogPage.tsx",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_video_uploads",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/blog/registry.ts",
+        "server/src/routes/blogRoutes.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_google_photos_import",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogImportRoutes.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_apple_photos_import",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogImportRoutes.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_mobile_share_ios",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogImportRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_mobile_share_android",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogImportRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_public_sharing",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogPublicationRoutes.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_social_posting",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogSocialRoutes.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_photo_uploads",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/blog/registry.ts",
+        "server/src/routes/blogRoutes.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_audio",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/blog/registry.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/blogVoiceCaptionService.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_audio_transcription",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/blogVoiceCaptionService.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_translation",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/blog/registry.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_exports",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/blog/registry.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_item_audiences",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": []
+    },
+    {
+      "key": "trip_blog_structured_cards",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/blog/registry.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_galleries",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/blog/registry.ts",
+        "server/src/routes/blogRoutes.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_panorama_media",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/blog/registry.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_ai_highlights",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/blog/registry.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/blogDayStarterService.ts",
+        "app/components/BlogDayStarterCard.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_public_indexing",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogIndexingRoutes.ts",
+        "server/src/routes/blogSitemapRoutes.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_search",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogModalityRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_places",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogInsightRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_offline_queue",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_trip_awards",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_keepsake_export",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_structured_data",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": []
+    },
+    {
+      "key": "trip_blog_social_layer",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogEngagementRoutes.ts",
+        "server/src/routes/blogInsightRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/routes/publicBlogRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_reactions",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogEngagementRoutes.ts",
+        "server/src/routes/blogInsightRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/routes/publicBlogRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_comments",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogEngagementRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_mentions",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_public_engagement",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/publicBlogRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "app/components/PublicTripBlogPage.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_authoring_assist",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogAuthoringRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_day_starter",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogAuthoringRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_photo_composer",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogAuthoringRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_day_facts",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogInsightRoutes.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_day_map_render",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/blogBackgroundWorker.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "trip_blog_spend_summary",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogRoutes.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_recap",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogInsightRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_alt_text",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogPublicationRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_caption_ai",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/blogRoutes.ts",
+        "server/src/services/blogCaptionSuggestionService.ts",
+        "server/src/services/entitlementService.ts",
+        "app/tabs/tripBlog.tsx"
+      ]
+    },
+    {
+      "key": "trip_blog_nudges",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/blogBackgroundWorker.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "activity_recap",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/activityRoutes.ts",
+        "server/src/routes/blogRoutes.ts",
+        "server/src/routes/webAuthRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "server/src/services/notificationService.ts",
+        "server/src/services/notificationTypes.ts"
+      ]
+    },
+    {
+      "key": "notifications_in_app",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/notificationRoutes.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "notifications_outbox_enabled",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/notificationOutboxWorker.ts"
+      ]
+    },
+    {
+      "key": "notifications_push",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/notificationOutboxWorker.ts"
+      ]
+    },
+    {
+      "key": "age_gate_enforcement",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/ageVerificationService.ts",
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "analytics_collection_enabled",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/analytics/rolloutService.ts",
+        "server/src/routes/adminRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "server/src/services/privacyConsentService.ts",
+        "app/components/admin/AnalyticsSection.tsx"
+      ]
+    },
+    {
+      "key": "diagnostics_user_linked_enabled",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/analytics/rolloutService.ts",
+        "server/src/routes/adminRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "server/src/services/privacyConsentService.ts",
+        "app/components/admin/AnalyticsSection.tsx"
+      ]
+    },
+    {
+      "key": "notifications_web_push",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "notifications_email",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/notificationOutboxWorker.ts",
+        "app/utils/pushNotifications.ts"
+      ]
+    },
+    {
+      "key": "expense_import_plaid",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/plaidIntegrationRoutes.ts",
+        "server/src/routes/webAuthRoutes.ts"
+      ]
+    },
+    {
+      "key": "expense_import_plaid_link",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/plaidIntegrationRoutes.ts",
+        "server/src/routes/webAuthRoutes.ts"
+      ]
+    },
+    {
+      "key": "expense_import_plaid_sync",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": []
+    },
+    {
+      "key": "expense_import_plaid_review_queue",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": []
+    },
+    {
+      "key": "expense_import_plaid_assignment",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": []
+    },
+    {
+      "key": "expense_import_plaid_webhooks",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": []
+    },
+    {
+      "key": "expense_import_plaid_auto_category",
+      "seedEnabled": false,
+      "deployedEnabled": null,
+      "references": []
+    },
+    {
+      "key": "itinerary_block_cache",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryPlanCacheService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_block_cache_reads",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryPlanCacheService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_block_cache_writes",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryPlanCacheService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_block_cache_llm_binding",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryPlanCacheService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_block_cache_stale_revalidate",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryPlanCacheService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_corpus_authoring",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_corpus_promotion",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_cache_prepopulation",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/routes/adminRoutes.ts",
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryCachePrepopulateService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_practical_notes",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_road_trip_lite",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryPromptPlanService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_day_variants",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryPromptPlanService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_timed_route_days",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryPromptPlanService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_live_route_conditions",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryRoadTripService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_live_weather_variants",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts",
+        "server/src/services/itineraryRoadTripService.ts"
+      ]
+    },
+    {
+      "key": "itinerary_anchor_schedule_verification",
+      "seedEnabled": true,
+      "deployedEnabled": null,
+      "references": [
+        "server/src/services/entitlementService.ts"
+      ]
+    }
+  ],
+  "mapArtifacts": {
+    "status": "Deployment and bucket not inspected.",
+    "rows": null,
+    "confirmedPathPattern": "blog-maps/<trip>/<YYYY-MM-DD>/<32-hex-hash>.png",
+    "dryRunOnly": true,
+    "candidateObjectPaths": null,
+    "unrecognizedPaths": null,
+    "readers": [
+      "server/src/blog/firebaseBlogDayData.ts",
+      "server/src/services/blogBackgroundWorker.ts",
+      "server/src/services/blogDayFactsService.ts"
+    ]
+  },
+  "consensus": {
+    "status": "Not measured; review existing admin comparison data before changing the sample rate."
+  },
+  "scannerConfiguration": {
+    "INGESTION_ENCRYPTION_SECRET": false,
+    "INGESTION_VIRUS_SCAN_URL": false,
+    "INGESTION_VIRUS_SCAN_AUTH_TOKEN": false,
+    "INGESTION_MAIL_RECEIPT_SCHEDULER_READY": false
+  }
+}

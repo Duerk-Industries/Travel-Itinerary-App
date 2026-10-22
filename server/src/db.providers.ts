@@ -8,7 +8,7 @@ export type DbProvider = 'postgres' | 'memory' | 'dynamodb' | 'firebase';
 // they're excluded here. Every other member must line up exactly across adapters;
 // keeping this a real structural type (rather than `as unknown as`) means a
 // mismatched or missing export in db.firebase.ts fails `tsc`, not just at runtime.
-export type DatabaseAdapter = Omit<typeof postgresAdapter, 'queryBlog' | 'withBlogTransaction' | 'setPoolFactory'>;
+export type DatabaseAdapter = Omit<typeof postgresAdapter, 'queryBlog' | 'withBlogTransaction' | 'setPoolFactory' | 'withPlanningTransaction'>;
 
 let cachedAdapter: DatabaseAdapter | null = null;
 let cachedProvider: DbProvider | null = null;

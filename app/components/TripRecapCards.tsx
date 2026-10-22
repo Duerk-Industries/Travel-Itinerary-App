@@ -1,3 +1,5 @@
+import BlogMap from './BlogMap';
+import type { BlogMapDay } from '../../server/src/services/blogMapService';
 import React, { useState } from 'react';
 import { ImageBackground, Linking, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,6 +8,8 @@ import { formatDateLong } from '../utils/formatDateLong';
 
 type Props = {
   recap: any;
+  mapDays?: BlogMapDay[];
+  nativeEnabled?: boolean;
   topPhotoUrl?: string | null;
   // Used for the hero image when no photo has reactions yet — the recap should still show a photo.
   fallbackPhotoUrl?: string | null;
@@ -34,7 +38,7 @@ const dateRange = (start?: string | null, end?: string | null): string | null =>
 // hero-photo + Fraunces language as the day cards from Phase 1, so the recap and the daily story
 // read as one product instead of the recap looking like a settings summary bolted onto the end.
 const TripRecapCards: React.FC<Props> = ({
-  recap, topPhotoUrl, fallbackPhotoUrl = null, shareUrl = null, spendTotal = null, currency = 'USD',
+  recap, mapDays = [], nativeEnabled, topPhotoUrl, fallbackPhotoUrl = null, shareUrl = null, spendTotal = null, currency = 'USD',
   textColor = '#111827', mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff',
   showAwards = false, theme, displayFont, displayFontItalic,
 }) => {
@@ -119,6 +123,7 @@ const TripRecapCards: React.FC<Props> = ({
         </View>
       )}
       <View style={{ padding: 16, paddingTop: heroUrl ? 14 : 4 }}>
+        {mapDays.length > 0 && <BlogMap nativeEnabled={nativeEnabled} testID="trip-recap-map" map={{ precision: mapDays.some(d => d.mapPoints.precision === 'approximate') ? 'approximate' : 'exact', points: mapDays.flatMap(d => d.mapPoints.points).slice(0, 100) }} />}
         {(recap?.topContributors || []).length ? (
           <Text style={{ color: textColor, marginTop: 4 }}>Traveler spotlight: {(recap.topContributors || []).map((c: any) => c.displayName).join(', ')}</Text>
         ) : null}

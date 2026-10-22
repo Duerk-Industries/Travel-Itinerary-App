@@ -1,3 +1,5 @@
+import { EntitlementError } from '../errors';
+import { withAirportCoordinates } from '../services/planningPointsService';
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
@@ -24,9 +26,12 @@ import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/it
 import { applyVoteSummary } from '../services/itemVoteService';
 import { assertCanUseFeature, getUserRoleForToken } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
-import { FlightParserConfigurator } from '../services/flightParserLLM';
+import { buildManualUploadPayloads } from '../ingestion/intake';
+import { previewIngestionPayload } from '../ingestion/orchestrator';
+import { getTierIngestionRules } from '../ingestion/shared/quota';
+import type { Request } from 'express';
 
-const TRANSFER_TYPES = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
+const TRANSFER_TYPES = ['Flight', 'Public Transit', 'Private Transfer', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
 type TransferType = (typeof TRANSFER_TYPES)[number];
 
 const normalizeMemberScopedIds = (ids: string[] | undefined, members: any[]): string[] | undefined => {
@@ -55,7 +60,7 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const tripId = req.query.tripId as string | undefined;
-  const flights = await listFlights(userId, tripId);
+  const flights = (await listFlights(userId, tripId)).map(withAirportCoordinates);
   if (tripId) {
     const withVotes = await applyVoteSummary(userId, tripId, 'flight', flights as any[]);
     res.json(withVotes);
@@ -89,35 +94,25 @@ router.get('/locations', async (req, res) => {
 });
 
 router.post('/parse', async (req, res) => {
+  const text = req.body?.text;
+  if (typeof text !== 'string' || !text.trim() || Buffer.byteLength(text) > 64 * 1024) { res.status(400).json({ error: 'Paste confirmation text up to 64 KB.' }); return; }
   const userId = (req as any).user.userId as string;
-  const role = await getUserRoleForToken(userId);
-  
   try {
-    await assertCanUseFeature(userId, 'flight_parser', role);
-  } catch (err) {
-    res.status(403).json({ error: (err as Error).message });
-    return;
-  }
-
-  try {
+    await assertCanUseFeature(userId, 'flight_parser', await getUserRoleForToken(userId));
     await reserveApiUsageOrThrow({ provider: 'LLM_PARSER', caller: 'PARSE_FLIGHT_TEXT' });
-  } catch (err) {
-    res.status(429).json({ error: (err as Error).message });
-    return;
-  }
-
-  const { text } = req.body;
-  if (!text || typeof text !== 'string') {
-    res.status(400).json({ error: 'Text to parse is required' });
-    return;
-  }
-
-  try {
-    const parser = FlightParserConfigurator.getParser();
-    const result = await parser.parse(text);
-    res.json(result);
-  } catch (err) {
-    res.status(err instanceof ApiLimitExceededError ? 429 : 500).json({ error: (err as Error).message });
+    const { rules } = await getTierIngestionRules(userId);
+    const [payload] = await buildManualUploadPayloads({ files: [{ originalname: 'pasted-confirmation.txt', mimetype: 'text/plain', buffer: Buffer.from(text), size: Buffer.byteLength(text), fieldname: 'files' }] } as unknown as Request, userId);
+    payload.dryRun = true;
+    const result = await previewIngestionPayload(payload, rules.llmEscalations === 'LARGE_ALLOWED', rules.llmEscalations !== 'NONE');
+    const first = result.parsedItems.find(item => ['flight', 'rail', 'ferry_bus_transfer'].includes(item.itemType));
+    if (!first) { res.status(422).json({ error: 'No transfer details found. Try a full confirmation or use Imports.' }); return; }
+    res.json({ primary: { ...first.extractedFields, passengerName: first.travelerNames.join(', '), bookingReference: first.confirmationNumber || first.extractedFields.bookingReference || '' } });
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      res.status(402).json({ error: error.message, code: error.code });
+      return;
+    }
+    res.status(error instanceof ApiLimitExceededError ? 429 : 503).json({ error: 'This confirmation could not be read. Please try again or enter its details.' });
   }
 });
 

@@ -1,0 +1,82 @@
+- generic [ref=f7e8]:
+  - generic [ref=f7e10]:
+    - generic "WanderBunnies logo" [ref=f7e11]:
+      - img "WanderBunnies logo" [ref=f7e13]
+    - generic [ref=f7e14]: WanderBunnies
+  - generic [ref=f7e16]:
+    - generic [ref=f7e17]:
+      - generic "WanderBunnies Logo" [ref=f7e18]:
+        - img "WanderBunnies Logo" [ref=f7e20]
+      - heading "WanderBunnies" [level=1] [ref=f7e21]
+      - generic [ref=f7e22]: Collaborative Itinerary & Expense Management
+      - generic [ref=f7e23]: WanderBunnies is a collaborative trip-planning app that helps friends, families and travel groups create shared itineraries, organize flights and lodging, track expenses, and maintain packing lists. The application integrates with Google APIs to provide secure authentication.
+      - generic [ref=f7e25]:
+        - button "Sign in with Google" [ref=f7e26] [cursor=pointer]
+        - generic [ref=f7e34]:
+          - button "Create Account" [ref=f7e35] [cursor=pointer]
+          - button "Log In" [ref=f7e37] [cursor=pointer]
+      - generic [ref=f7e39]:
+        - heading "Core Application Features" [level=2] [ref=f7e40]
+        - generic [ref=f7e41]:
+          - generic [ref=f7e42]: ✓
+          - generic [ref=f7e43]: "Collaborative Planning: Build a shared day-by-day itinerary with flights, lodging, activities, and car rentals that everyone in your group can see and edit."
+        - generic [ref=f7e44]:
+          - generic [ref=f7e45]: ✓
+          - generic [ref=f7e46]: "Shared Expenses: Split and track shared costs with automatic balances for each traveler, so everyone can settle up."
+        - generic [ref=f7e47]:
+          - generic [ref=f7e48]: ✓
+          - generic [ref=f7e49]: "AI Itinerary Generation: Generate intelligent itinerary suggestions based on your destinations and dates using state-of-the-art AI models."
+        - generic [ref=f7e50]:
+          - generic [ref=f7e51]: ✓
+          - generic [ref=f7e52]: "Real-time Collaboration: Chat with your group and see presence indicators to know who is online and planning with you."
+        - generic [ref=f7e53]:
+          - generic [ref=f7e54]: ✓
+          - generic [ref=f7e55]: "Packing & Notes: Manage shared packing lists and trip-wide notes to keep all your travel details in one central location."
+    - generic [ref=f7e56]:
+      - heading "Google User Data Disclosure" [level=2] [ref=f7e57]
+      - generic [ref=f7e58]:
+        - text: WanderBunnies requests specific permissions from your Google Account to provide its core functionality. We adhere to the
+        - link "Google API Services User Data Policy" [ref=f7e59] [cursor=pointer]:
+          - /url: https://developers.google.com/terms/api-services-user-data-policy
+        - text: ", including Limited Use requirements."
+      - generic [ref=f7e60]:
+        - generic [ref=f7e61]: "Google Identity: We use your Google profile (name and email) to uniquely identify you within your travel groups and to provide a secure, password-less sign-in experience."
+        - generic [ref=f7e63]: "Data Privacy: Your Google data is used exclusively for the features you authorize. We do not sell your data, use it for advertising, or allow any third-party access except as required to provide the service."
+      - generic [ref=f7e66]:
+        - text: Full details are available in our
+        - link "Privacy Policy" [ref=f7e67] [cursor=pointer]:
+          - /url: https://wander-bunnies.com/privacy.html
+        - text: .
+    - generic [ref=f7e68]:
+      - heading "Visual Itinerary Preview" [level=2] [ref=f7e69]
+      - generic [ref=f7e70]:
+        - generic [ref=f7e71]:
+          - generic [ref=f7e72]: DAY 1
+          - generic [ref=f7e74]:
+            - generic [ref=f7e75]: Arrive in Seattle
+            - generic [ref=f7e76]: Pike Place Market · check in to hotel
+        - generic [ref=f7e77]:
+          - generic [ref=f7e78]: DAY 2
+          - generic [ref=f7e80]:
+            - generic [ref=f7e81]: Olympic National Park
+            - generic [ref=f7e82]: Hurricane Ridge · Sol Duc Falls Trail
+        - generic [ref=f7e83]:
+          - generic [ref=f7e84]: DAY 3
+          - generic [ref=f7e86]:
+            - generic [ref=f7e87]: Hoh Rainforest
+            - generic [ref=f7e88]: Ruby Beach · sunset drive back
+      - generic [ref=f7e89]: This is a sample itinerary preview. Log in to create your own custom trip plan.
+    - generic [ref=f7e90]:
+      - generic [ref=f7e91]:
+        - link "Privacy Policy" [ref=f7e92] [cursor=pointer]:
+          - /url: https://wander-bunnies.com/privacy.html
+        - generic [ref=f7e93]: ·
+        - link "Terms of Service" [ref=f7e94] [cursor=pointer]:
+          - /url: https://wander-bunnies.com/terms.html
+        - generic [ref=f7e95]: ·
+        - link "Cookie Policy" [ref=f7e96] [cursor=pointer]:
+          - /url: https://wander-bunnies.com/cookies.html
+        - generic [ref=f7e97]: ·
+        - link "Your Privacy Choices" [ref=f7e98] [cursor=pointer]:
+          - /url: https://wander-bunnies.com/privacy-choices.html
+      - generic [ref=f7e99]: © 2026 WanderBunnies · Owned and operated by Tristan Duerk, all rights reserved

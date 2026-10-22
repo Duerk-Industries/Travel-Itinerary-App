@@ -260,7 +260,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     };
   }).sort((a, b) => a.localDate.localeCompare(b.localDate));
 
-  return { id: blog.id, tripId, title: blog.title ?? '', subtitle: blog.subtitle ?? null, introduction: blog.introduction ?? null, contentRevision: Number(blog.contentRevision ?? 0), visibilityState: blog.visibilityState ?? 'private', visibilityEpoch: Number(blog.visibilityEpoch ?? 0), photoLocationEnabled: Boolean(blog.photoLocationEnabled), dayPhotoRemindersEnabled: Boolean(blog.dayPhotoRemindersEnabled), publicOptOut: Boolean(blog.publicOptOut), days };
+  return { id: blog.id, tripId, title: blog.title ?? '', subtitle: blog.subtitle ?? null, introduction: blog.introduction ?? null, contentRevision: Number(blog.contentRevision ?? 0), visibilityState: blog.visibilityState ?? 'private', visibilityEpoch: Number(blog.visibilityEpoch ?? 0), photoLocationEnabled: Boolean(blog.photoLocationEnabled), dayPhotoRemindersEnabled: Boolean(blog.dayPhotoRemindersEnabled), sharedMapEnabled: Boolean(blog.sharedMapEnabled), publicOptOut: Boolean(blog.publicOptOut), days };
 };
 
 export const getBlogCapabilities = async (userId: string, tripId: string, capabilities: BlogCapabilities): Promise<BlogCapabilities> => {
@@ -333,7 +333,9 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
     // authorized state on a conflict, not a bare rejection.
     return { conflict: true, latest: mapItem({ id: itemId, data: () => row }) };
   }
-  const update = { body: patch.body === undefined ? row.body : String(patch.body), tags: patch.tags === undefined ? normalizeBlogTags(row.tags ?? []) : normalizeBlogTags(patch.tags), languageTag: patch.languageTag === undefined ? row.languageTag ?? null : patch.languageTag, audience: patch.audience ?? row.audience ?? 'public', version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() };
+  // Editing detaches an item from its itinerary source (the link, and the item field the API reads).
+  const detach = row.sourceId ? { sourceDetached: true } : {};
+  const update = { body: patch.body === undefined ? row.body : String(patch.body), tags: patch.tags === undefined ? normalizeBlogTags(row.tags ?? []) : normalizeBlogTags(patch.tags), languageTag: patch.languageTag === undefined ? row.languageTag ?? null : patch.languageTag, audience: patch.audience ?? row.audience ?? 'public', version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso(), ...detach };
   await ref.set(update, { merge: true });
   await getDb().collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
   await getDb().collection('trip_blogs').doc(String(row.tripId)).set({ contentRevision: (await ensureBlog(String(row.tripId))).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
@@ -490,7 +492,7 @@ const MAX_BLOG_INTRODUCTION_LENGTH = 5000;
 export const updateBlogMeta = async (
   userId: string,
   tripId: string,
-  patch: { title?: string; subtitle?: string | null; introduction?: string | null; photoLocationEnabled?: boolean; dayPhotoRemindersEnabled?: boolean; publicOptOut?: boolean }
+  patch: { title?: string; subtitle?: string | null; introduction?: string | null; photoLocationEnabled?: boolean; dayPhotoRemindersEnabled?: boolean; sharedMapEnabled?: boolean; publicOptOut?: boolean }
 ): Promise<BlogDocument> => {
   const access = await ensureUserInTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to edit this trip');
@@ -510,6 +512,7 @@ export const updateBlogMeta = async (
   if (patch.introduction !== undefined) update.introduction = patch.introduction ?? null;
   if (patch.photoLocationEnabled !== undefined) update.photoLocationEnabled = Boolean(patch.photoLocationEnabled);
   if (patch.dayPhotoRemindersEnabled !== undefined) update.dayPhotoRemindersEnabled = Boolean(patch.dayPhotoRemindersEnabled);
+  if (patch.sharedMapEnabled !== undefined) update.sharedMapEnabled = Boolean(patch.sharedMapEnabled);
   if (patch.publicOptOut !== undefined) update.publicOptOut = Boolean(patch.publicOptOut);
   await getDb().collection('trip_blogs').doc(tripId).set(update, { merge: true });
   return {
@@ -523,6 +526,7 @@ export const updateBlogMeta = async (
     visibilityEpoch: Number(blog.visibilityEpoch ?? 0),
     photoLocationEnabled: Boolean(update.photoLocationEnabled !== undefined ? update.photoLocationEnabled : (blog as any).photoLocationEnabled),
     dayPhotoRemindersEnabled: Boolean(update.dayPhotoRemindersEnabled !== undefined ? update.dayPhotoRemindersEnabled : (blog as any).dayPhotoRemindersEnabled),
+    sharedMapEnabled: Boolean(update.sharedMapEnabled !== undefined ? update.sharedMapEnabled : (blog as any).sharedMapEnabled),
     publicOptOut: Boolean(update.publicOptOut !== undefined ? update.publicOptOut : (blog as any).publicOptOut),
     days: [],
   };
@@ -553,14 +557,21 @@ export const getContributorsForDays = async (dayIds: string[]): Promise<Record<s
   const db = getDb();
   const dayDocs = await Promise.all(dayIds.map((id) => db.collection('blog_days').doc(id).get()));
   const dateToDayId = new Map<string, string>();
+  const tripIds = new Set<string>();
   dayIds.forEach((id, i) => {
     result[id] = {};
     const data = dayDocs[i].data() as any;
-    if (data?.localDate) dateToDayId.set(String(data.localDate), id);
+    if (data?.localDate) dateToDayId.set(`${data.tripId}:${data.localDate}`, id);
+    if (data?.tripId) tripIds.add(String(data.tripId));
   });
 
-  const itemSnap = await db.collection('blog_items').where('kindKey', '==', 'core.text').get();
-  for (const doc of itemSnap.docs) {
+  // Only the requested days' own trips: scanning every trip's items and photos would both leak other
+  // trips' contributors (matched by calendar date alone) and read the whole collection.
+  const tripChunks: string[][] = [];
+  const tripList = [...tripIds];
+  for (let i = 0; i < tripList.length; i += 10) tripChunks.push(tripList.slice(i, i + 10));
+  const itemDocs = (await Promise.all(tripChunks.map((chunk) => db.collection('blog_items').where('tripId', 'in', chunk).where('kindKey', '==', 'core.text').get()))).flatMap((snap) => snap.docs);
+  for (const doc of itemDocs) {
     const data = doc.data() as any;
     if (data.deletedAt || !dayIds.includes(data.blogDayId)) continue;
     const bucket = result[data.blogDayId];
@@ -569,10 +580,10 @@ export const getContributorsForDays = async (dayIds: string[]): Promise<Record<s
     bucket[data.authorUserId] = entry;
   }
 
-  const assetSnap = await db.collection('blog_media_assets').where('state', '==', 'ready').get();
-  for (const doc of assetSnap.docs) {
+  const assetDocs = (await Promise.all(tripChunks.map((chunk) => db.collection('blog_media_assets').where('tripId', 'in', chunk).where('state', '==', 'ready').get()))).flatMap((snap) => snap.docs);
+  for (const doc of assetDocs) {
     const data = doc.data() as any;
-    const dayId = dateToDayId.get(String(data.dayDate));
+    const dayId = dateToDayId.get(`${data.tripId}:${data.dayDate}`);
     if (!dayId) continue;
     const bucket = result[dayId];
     const entry = bucket[data.uploaderUserId] ?? { itemCount: 0, assetCount: 0 };

@@ -30,7 +30,8 @@ app/android/app/.cxx
 app/node_modules
 app/logs
 logs
-patches
+patches/*
+!patches/react-native-web+0.21.2.patch
 build
 coverage
 *.log*
@@ -62,3 +63,5 @@ app/-DryRun/frontend/
 .artifacts
 tmp
 server/public
+# Generated from the pinned MapLibre dependency by the web scripts.
+app/public/map-assets/

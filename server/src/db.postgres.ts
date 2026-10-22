@@ -1,3 +1,6 @@
+import { validateSpendBatch, validateActualSpend } from './utils/apiSpendValidation';
+import { memoryPlanningRevision, trackMemoryPlanningWrites } from './services/planningMemoryRevision';
+import { AsyncLocalStorage } from 'async_hooks';
 // server/src/db.ts
 import type {
   AnalyticsEventRecord,
@@ -95,6 +98,7 @@ import { getReservedUsernames } from './config/authFlags';
 import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
 import { normalizePackingLabel } from './utils/packingListNormalize';
+import { orderDayActivities } from './utils/dayOrder';
 import { ActivityBlockSchema, LocationProfileSchema, type ActivityBlock, type LocationProfile } from './schemas/itineraryCacheSchemas';
 
 
@@ -250,7 +254,23 @@ export const setPoolFactory = (factory: PoolCtor): void => {
 };
 
 
+const planningTransaction = new AsyncLocalStorage<PoolClient>();
+/** Adapter-owned transaction context: nested domain helpers use the same client. */
+export const withPlanningTransaction = async <T>(work: (client: PoolClient) => Promise<T>): Promise<T> => {
+  const active = planningTransaction.getStore();
+  if (active) return work(active);
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await planningTransaction.run(client, () => work(client));
+    await client.query('COMMIT'); return result;
+  } catch (error) { await client.query('ROLLBACK'); throw error; }
+  finally { client.release(); }
+};
+
 function getPool(): Pool {
+  const active = planningTransaction.getStore();
+  if (active) return active as unknown as Pool;
   if (!pool) {
     const cs = getEnvValue('DATABASE_URL');
 
@@ -303,6 +323,7 @@ function getPool(): Pool {
     }
 
     pool = new PoolFactory({ connectionString: cs });
+    if (getEnvFlag('USE_IN_MEMORY_DB') || cs.startsWith('pg-mem://')) pool = trackMemoryPlanningWrites(pool);
   }
   return pool;
 }
@@ -1169,6 +1190,9 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_date DATE;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vendor TEXT;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS notes TEXT;`);
+  // Client-supplied operation key (owner + random id) so a retried offline create returns the original expense instead of a duplicate.
+  await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS client_operation_id TEXT;`);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_client_operation ON expenses(client_operation_id);`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_payments (
@@ -1493,7 +1517,7 @@ export const initDb = async (): Promise<void> => {
       const pathMod = require('node:path') as typeof import('node:path');
       const migrationsDir = pathMod.join(__dirname, '..', 'migrations');
       const client = { query: (sql: string, params?: unknown[]) => p.query(sql, params as any) };
-      await runMigrations({ client, dir: migrationsDir });
+      await runMigrations({ client, dir: migrationsDir, dialect: getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' || getEnvValue('DATABASE_URL')?.startsWith('pg-mem://') ? 'memory' : 'postgres' });
     } catch (err) {
       const { logError } = require('./logger') as typeof import('./logger');
       logError('[migrations] auto-apply on initDb failed', err);
@@ -1516,6 +1540,7 @@ export const initDb = async (): Promise<void> => {
     await del('ai_experiment_assignments');
     await del('ai_experiments');
     await del('generation_idempotency');
+    await del('api_spend_reservations');
     await del('api_cost_counters');
     await del('api_usage_counters');
     await del('admin_settings');
@@ -4304,8 +4329,15 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
              COALESCE(passenger_ids, '[]'::jsonb) as passenger_ids,
              departure_date as "departureDate",
              arrival_date as "arrivalDate",
+             departure_location,
+             departure_airport_code,
              departure_time as "departureTime",
+             arrival_location,
+             arrival_airport_code,
              arrival_time as "arrivalTime",
+             layover_location,
+             layover_location_code,
+             layover_duration,
              carrier,
              flight_number as "flightNumber",
              booking_reference as "bookingReference",
@@ -4417,7 +4449,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              l.refund_by as "refundBy",
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
-             l.address,
+             l.address, l.lat, l.lng, l.geo_city as "geoCity", l.coordinate_source as "coordinateSource",
              l.notes,
              COALESCE(l.features, '[]'::jsonb) as features,
              l.place_id as "placeId",
@@ -4468,7 +4500,7 @@ export const getLodgingById = async (lodgingId: string): Promise<(Lodging & { tr
              l.refund_by as "refundBy",
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
-             l.address,
+             l.address, l.lat, l.lng, l.geo_city as "geoCity", l.coordinate_source as "coordinateSource",
              l.notes,
              COALESCE(l.features, '[]'::jsonb) as features,
              l.place_id as "placeId",
@@ -4664,6 +4696,9 @@ export const updateLodging = async (
           refund_by = COALESCE($8, refund_by),
           total_cost = COALESCE($9, total_cost),
           cost_per_night = COALESCE($10, cost_per_night),
+          lat = CASE WHEN $11 IS NOT NULL AND ($11 <> address OR address IS NULL) THEN NULL ELSE lat END,
+          lng = CASE WHEN $11 IS NOT NULL AND ($11 <> address OR address IS NULL) THEN NULL ELSE lng END,
+          coordinate_source = CASE WHEN $11 IS NOT NULL AND ($11 <> address OR address IS NULL) THEN NULL ELSE coordinate_source END,
           address = COALESCE($11, address),
           notes = COALESCE($12, notes),
           features = COALESCE($13::jsonb, features),
@@ -4705,6 +4740,9 @@ export const updateLodging = async (
           refund_by = COALESCE($8, l.refund_by),
           total_cost = COALESCE($9, l.total_cost),
           cost_per_night = COALESCE($10, l.cost_per_night),
+          lat = CASE WHEN $11 IS NOT NULL AND ($11 <> l.address OR l.address IS NULL) THEN NULL ELSE l.lat END,
+          lng = CASE WHEN $11 IS NOT NULL AND ($11 <> l.address OR l.address IS NULL) THEN NULL ELSE l.lng END,
+          coordinate_source = CASE WHEN $11 IS NOT NULL AND ($11 <> l.address OR l.address IS NULL) THEN NULL ELSE l.coordinate_source END,
           address = COALESCE($11, l.address),
           notes = COALESCE($12, l.notes),
           features = COALESCE($13::jsonb, l.features),
@@ -4767,6 +4805,7 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
+      tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition", tu.day_order_pinned as "dayOrderPinned",
       tu.start_time as "startTime",
       tu.duration,
       tu.cost::numeric as cost,
@@ -4812,6 +4851,7 @@ export const getActivityById = async (id: string): Promise<Activity | null> => {
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
+      tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition", tu.day_order_pinned as "dayOrderPinned",
       tu.start_time as "startTime",
       tu.duration,
       tu.cost::numeric as cost,
@@ -4858,6 +4898,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
+      lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition", day_order_pinned as "dayOrderPinned",
       start_time as "startTime",
       duration,
       cost::numeric as cost,
@@ -4907,6 +4948,53 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
   return created;
 };
 
+export type DayOrderOutcome =
+  | { ok: true; order: string[] }
+  | { ok: false; reason: 'forbidden' | 'stale' | 'mismatch'; currentOrder: string[] };
+
+// Sets the visit order of ALL of one trip's activities on one date, atomically.
+// `expectedIds` is the order the caller was looking at; if the day has changed underneath them
+// (a tripmate reordered, added or removed a stop) nothing is written and the current order is returned.
+// Only this day's rows are touched, so other days keep their positions.
+export const reorderActivitiesForDay = async (
+  userId: string,
+  tripId: string,
+  date: string,
+  orderedIds: string[],
+  expectedIds: string[],
+  pins?: { pinnedIds: string[]; expectedPinnedIds: string[] }
+): Promise<DayOrderOutcome> =>
+  withPlanningTransaction(async (client) => {
+    if (!(await ensureUserInTrip(tripId, userId))) return { ok: false, reason: 'forbidden', currentOrder: [] };
+    const { rows } = await client.query<{ id: string; name: string | null; startTime: string | null; dayPosition: number | null; dayOrderPinned: boolean }>(
+      `SELECT id, name, start_time as "startTime", day_position as "dayPosition", day_order_pinned as "dayOrderPinned"
+       FROM tours
+       WHERE trip_id = $1 AND date = $2::date
+       FOR UPDATE`,
+      [tripId, date]
+    );
+    const current = orderDayActivities(rows.map((row) => ({ ...row, id: String(row.id) })));
+    const currentOrder = current.map((row) => row.id);
+    if (currentOrder.length !== expectedIds.length || currentOrder.some((id, index) => id !== expectedIds[index])) {
+      return { ok: false, reason: 'stale', currentOrder };
+    }
+    const sameSet = orderedIds.length === currentOrder.length && new Set(orderedIds).size === orderedIds.length
+      && orderedIds.every((id) => currentOrder.includes(id));
+    if (!sameSet) return { ok: false, reason: 'mismatch', currentOrder };
+    if (pins) {
+      const currentPins = current.filter(row => row.dayOrderPinned).map(row => row.id).sort();
+      if (JSON.stringify(currentPins) !== JSON.stringify([...pins.expectedPinnedIds].sort())) return { ok: false, reason: 'stale', currentOrder };
+      if (new Set(pins.pinnedIds).size !== pins.pinnedIds.length || pins.pinnedIds.some(id => !currentOrder.includes(id))) return { ok: false, reason: 'mismatch', currentOrder };
+    }
+    const positionById = new Map(current.map((row) => [row.id, row.dayPosition ?? null]));
+    for (let index = 0; index < orderedIds.length; index += 1) {
+      const id = orderedIds[index]!;
+      if (pins) await client.query('UPDATE tours SET day_position=$1,day_order_pinned=$4 WHERE id=$2 AND trip_id=$3', [index, id, tripId, pins.pinnedIds.includes(id)]);
+      else if (positionById.get(id) !== index) await client.query(`UPDATE tours SET day_position = $1 WHERE id = $2 AND trip_id = $3`, [index, id, tripId]);
+    }
+    return { ok: true, order: orderedIds };
+  });
+
 export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const p = getPool();
   const current = await getActivityById(id);
@@ -4923,8 +5011,13 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
     SET
       status = COALESCE($3, status),
       activity_type = COALESCE($4, activity_type),
+      day_position = CASE WHEN $5 IS NOT NULL AND $5::date <> date THEN NULL ELSE day_position END,
+      day_order_pinned = CASE WHEN $5 IS NOT NULL AND $5::date <> date THEN FALSE ELSE day_order_pinned END,
       date = COALESCE($5, date),
       name = COALESCE($6, name),
+      lat = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lat END,
+      lng = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lng END,
+      coordinate_source = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE coordinate_source END,
       start_location = COALESCE($7, start_location),
       start_time = COALESCE($8, start_time),
       duration = COALESCE($9, duration),
@@ -4945,6 +5038,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
+      lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition", day_order_pinned as "dayOrderPinned",
       start_time as "startTime",
       duration,
       cost::numeric as cost,
@@ -5003,6 +5097,7 @@ export const listCarRentals = async (userId: string, tripId?: string): Promise<C
              c.user_id as "userId",
              c.trip_id as "tripId",
              c.status,
+             c.lat, c.lng, c.dropoff_lat as "dropoffLat", c.dropoff_lng as "dropoffLng", c.geo_city as "geoCity", c.coordinate_source as "coordinateSource",
              c.pickup_location as "pickupLocation",
              to_char(c.pickup_date, 'YYYY-MM-DD') as "pickupDate",
              c.dropoff_location as "dropoffLocation",
@@ -5046,6 +5141,7 @@ export const getCarRentalById = async (id: string): Promise<CarRental | null> =>
              c.user_id as "userId",
              c.trip_id as "tripId",
              c.status,
+             c.lat, c.lng, c.dropoff_lat as "dropoffLat", c.dropoff_lng as "dropoffLng", c.geo_city as "geoCity", c.coordinate_source as "coordinateSource",
              c.pickup_location as "pickupLocation",
              to_char(c.pickup_date, 'YYYY-MM-DD') as "pickupDate",
              c.dropoff_location as "dropoffLocation",
@@ -5072,6 +5168,44 @@ export const getCarRentalById = async (id: string): Promise<CarRental | null> =>
     paidBy: Array.isArray(row.paidBy) ? row.paidBy : [],
     travelerIds: Array.isArray(row.travelerIds) ? row.travelerIds : [],
   };
+};
+
+export type ItemCoordinateKind = 'lodging' | 'activity' | 'car_rental';
+export type ItemCoordinates = {
+  lat?: number | null;
+  lng?: number | null;
+  coordinateSource: 'catalog' | 'airport' | 'manual' | 'geocoder';
+  /** Car rentals only: the drop-off point. */
+  dropoffLat?: number | null;
+  dropoffLng?: number | null;
+};
+
+/** Stores coordinates (and where they came from) on a lodging, activity or car rental the caller can edit. */
+export const setItemCoordinates = async (
+  userId: string,
+  kind: ItemCoordinateKind,
+  itemId: string,
+  coordinates: ItemCoordinates
+): Promise<boolean> => {
+  const p = getPool();
+  const table = kind === 'lodging' ? 'lodgings' : kind === 'activity' ? 'tours' : 'car_rentals';
+  // Item ids are UUIDs; anything else cannot exist (and would make Postgres reject the query).
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId)) return false;
+  const { rows } = await p.query<{ trip_id: string }>(`SELECT trip_id FROM ${table} WHERE id = $1`, [itemId]);
+  if (!rows.length) return false;
+  if (!(await ensureUserInTrip(rows[0].trip_id, userId))) throw new Error('Not authorized to update this trip');
+  if (kind === 'car_rental') {
+    await p.query(
+      `UPDATE car_rentals SET lat = $2, lng = $3, dropoff_lat = $4, dropoff_lng = $5, coordinate_source = $6 WHERE id = $1`,
+      [itemId, coordinates.lat ?? null, coordinates.lng ?? null, coordinates.dropoffLat ?? null, coordinates.dropoffLng ?? null, coordinates.coordinateSource]
+    );
+  } else {
+    await p.query(
+      `UPDATE ${table} SET lat = $2, lng = $3, coordinate_source = $4 WHERE id = $1`,
+      [itemId, coordinates.lat ?? null, coordinates.lng ?? null, coordinates.coordinateSource]
+    );
+  }
+  return true;
 };
 
 export const insertCarRental = async (rental: Omit<CarRental, 'id' | 'createdAt'>): Promise<CarRental> => {
@@ -5138,6 +5272,10 @@ export const updateCarRental = async (id: string, userId: string, updates: Parti
       UPDATE car_rentals c
       SET
         status = COALESCE($3, c.status),
+        lat = CASE WHEN $4 IS NOT NULL AND ($4 <> c.pickup_location OR c.pickup_location IS NULL) THEN NULL ELSE c.lat END,
+        lng = CASE WHEN $4 IS NOT NULL AND ($4 <> c.pickup_location OR c.pickup_location IS NULL) THEN NULL ELSE c.lng END,
+        dropoff_lat = CASE WHEN $6 IS NOT NULL AND ($6 <> c.dropoff_location OR c.dropoff_location IS NULL) THEN NULL ELSE c.dropoff_lat END,
+        dropoff_lng = CASE WHEN $6 IS NOT NULL AND ($6 <> c.dropoff_location OR c.dropoff_location IS NULL) THEN NULL ELSE c.dropoff_lng END,
         pickup_location = COALESCE($4, c.pickup_location),
         pickup_date = COALESCE(NULLIF($5, '')::date, c.pickup_date),
         dropoff_location = COALESCE($6, c.dropoff_location),
@@ -5163,7 +5301,8 @@ export const updateCarRental = async (id: string, userId: string, updates: Parti
                 c.user_id as "userId",
                 c.trip_id as "tripId",
                 c.status,
-                c.pickup_location as "pickupLocation",
+                c.lat, c.lng, c.dropoff_lat as "dropoffLat", c.dropoff_lng as "dropoffLng", c.geo_city as "geoCity", c.coordinate_source as "coordinateSource",
+             c.pickup_location as "pickupLocation",
                 to_char(c.pickup_date, 'YYYY-MM-DD') as "pickupDate",
                 c.dropoff_location as "dropoffLocation",
                 to_char(c.dropoff_date, 'YYYY-MM-DD') as "dropoffDate",
@@ -5470,6 +5609,7 @@ export const insertExpense = async (expense: {
   sourceId?: string | null;
   vendor?: string | null;
   notes?: string | null;
+  clientOperationId?: string | null;
 }): Promise<any> => {
   const p = getPool();
   const id = randomUUID();
@@ -5485,9 +5625,9 @@ export const insertExpense = async (expense: {
     `
       INSERT INTO expenses (
         id, trip_id, group_id, user_id, expense_date, category, amount, currency, amount_in_trip_currency, exchange_rate_to_trip_currency, exchange_rate_date,
-        payer_ids, for_ids, source_type, source_id, vendor, notes
+        payer_ids, for_ids, source_type, source_id, vendor, notes, client_operation_id
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18
       )
       RETURNING
         id,
@@ -5527,6 +5667,7 @@ export const insertExpense = async (expense: {
       expense.sourceId ?? null,
       expense.vendor ?? null,
       expense.notes ?? null,
+      expense.clientOperationId ?? null,
     ]
   );
   const row = rows[0] as any;
@@ -5535,6 +5676,61 @@ export const insertExpense = async (expense: {
     payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
     forIds: Array.isArray(row.forIds) ? row.forIds : [],
   };
+};
+
+const getExpenseByClientOperation = async (clientOperationId: string): Promise<any | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT id,
+             trip_id as "tripId",
+             group_id as "groupId",
+             user_id as "userId",
+             to_char(expense_date, 'YYYY-MM-DD') as "expenseDate",
+             category,
+             amount::numeric as amount,
+             currency,
+             amount_in_trip_currency::numeric as "amountInTripCurrency",
+             exchange_rate_to_trip_currency::numeric as "exchangeRateToTripCurrency",
+             to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
+             COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
+             COALESCE(for_ids, '[]'::jsonb) as "forIds",
+             source_type as "sourceType",
+             source_id as "sourceId",
+             vendor,
+             notes,
+             created_at as "createdAt"
+      FROM expenses
+      WHERE client_operation_id = $1
+      LIMIT 1
+    `,
+    [clientOperationId]
+  );
+  const row = rows[0] as any;
+  if (!row) return null;
+  return {
+    ...row,
+    payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
+    forIds: Array.isArray(row.forIds) ? row.forIds : [],
+  };
+};
+
+// Create-once by (owner, operation id). The unique index makes concurrent retries race safely: the
+// loser re-reads and returns the winner's row as a replay instead of failing or duplicating.
+export const insertExpenseIdempotent = async (
+  expense: Parameters<typeof insertExpense>[0],
+  clientOperationId: string
+): Promise<{ expense: any; replayed: boolean }> => {
+  const existing = await getExpenseByClientOperation(clientOperationId);
+  if (existing) return { expense: existing, replayed: true };
+  try {
+    const created = await insertExpense({ ...expense, clientOperationId });
+    return { expense: created, replayed: false };
+  } catch (err) {
+    const raced = await getExpenseByClientOperation(clientOperationId);
+    if (raced) return { expense: raced, replayed: true };
+    throw err;
+  }
 };
 
 export const updateExpense = async (
@@ -7628,7 +7824,7 @@ export const listAttractionCatalogEntries = async (
   const key = String(destinationKey ?? '').trim().toLowerCase();
   if (!key) return [];
   const p = getPool();
-  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 2000);
   const { rows } = await p.query(
     `SELECT id, name, payload, updated_at as "updatedAt"
        FROM locations
@@ -11372,10 +11568,16 @@ export const listApiCostCounters = async (): Promise<
   }));
 };
 
-export const resetApiCostCounters = async (): Promise<void> => {
-  const p = getPool();
-  await p.query(`DELETE FROM api_cost_counters`);
-};
+export const resetApiCostCounters = async (): Promise<void> => serializeMemorySpend(async () => {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    if (!isMemorySpend()) await client.query('LOCK TABLE api_spend_reservations IN SHARE ROW EXCLUSIVE MODE');
+    const pending = await client.query('SELECT id FROM api_spend_reservations WHERE settled_micros IS NULL LIMIT 1');
+    if (pending.rows.length) throw new Error('Cannot reset budgets with unsettled provider work');
+    await client.query('DELETE FROM api_cost_counters'); await client.query('COMMIT');
+  } catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
+});
 
 export const recordItineraryGenerationMetrics = async (metrics: ItineraryGenerationMetrics): Promise<void> => {
   const p = getPool();
@@ -13674,4 +13876,110 @@ export const getTripTimezone = async (tripId: string): Promise<string | null> =>
 
 export const setTripTimezone = async (tripId: string, timezone: string): Promise<void> => {
   await getPool().query(`UPDATE trips SET timezone = $2 WHERE id = $1`, [tripId, timezone]);
+};
+
+export { createCatalogActivityPostgres as createCatalogActivity, undoCatalogActivityPostgres as undoCatalogActivity } from './services/planningOperations';
+export { getActivitySharingPostgres as getActivitySharing, setActivitySharingPostgres as setActivitySharing,
+  listSimilarTripsPostgres as listSimilarTrips, copyPublicActivityPostgres as copyPublicActivity } from './services/tripInspiration';
+
+/** Revision scopes are updated by DB triggers, including non-facade writers. */
+export const getPlanningRevision = async (tripId: string, groupId: string): Promise<string> => {
+  if (getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' || getEnvValue('DATABASE_URL')?.startsWith('pg-mem://')) return memoryPlanningRevision();
+  const result = await getPool().query('SELECT scope,revision FROM planning_revisions WHERE scope = ANY($1::text[]) ORDER BY scope', [[`trip:${tripId}`, `group:${groupId}`, 'global:profiles']]);
+  return JSON.stringify(result.rows);
+};
+
+export { mutateGeocodingPostgres as mutateGeocodingState } from './services/geocodingRepository';
+
+
+/** Lock budget rows in a consistent order; admission and holds commit together across instances. */
+const reserveApiSpendBatchStored = async (requests: import('./types').ApiSpendReservation[]): Promise<boolean> => {
+  validateSpendBatch(requests);
+  const client = await getPool().connect();
+  const pending: typeof requests = [];
+  try {
+    await client.query('BEGIN');
+    for (const request of [...requests].sort((a,b) => a.id.localeCompare(b.id))) {
+      const existing = await client.query('SELECT * FROM api_spend_reservations WHERE id=$1 FOR UPDATE',[request.id]);
+      if (existing.rows.length) {
+        const row = existing.rows[0];
+        if (row.provider !== request.provider || row.window_key !== request.windowKey || Number(row.amount_micros) !== request.amountMicros || (row.settled_micros !== null || row.dispatched_at !== null)) throw new Error('Spend reservation cannot be reused for another attempt');
+        continue;
+      }
+      const inserted = await client.query(`INSERT INTO api_spend_reservations (id,provider,window_key,amount_micros) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO NOTHING RETURNING id`, [request.id,request.provider,request.windowKey,request.amountMicros]);
+      if (inserted.rows.length) pending.push(request);
+      else {
+        const {rows} = await client.query('SELECT * FROM api_spend_reservations WHERE id=$1 FOR UPDATE', [request.id]);
+        const row = rows[0];
+        if (!row || row.provider !== request.provider || row.window_key !== request.windowKey || Number(row.amount_micros) !== request.amountMicros || (row.settled_micros !== null || row.dispatched_at !== null)) throw new Error('Spend reservation cannot be reused for another attempt');
+      }
+    }
+    const buckets = new Map<string, {provider:string; windowKey:string; amount:number; limit:number|null}>();
+    for (const request of pending) {
+      const key = `${request.provider}:${request.windowKey}`, bucket = buckets.get(key) ?? {provider:request.provider,windowKey:request.windowKey,amount:0,limit:null};
+      bucket.amount += request.amountMicros;
+      if (!Number.isSafeInteger(bucket.amount)) throw new Error('Spend amount exceeds integer precision');
+      if (request.limitMicros !== null) bucket.limit = bucket.limit === null ? request.limitMicros : Math.min(bucket.limit, request.limitMicros);
+      buckets.set(key,bucket);
+    }
+    for (const bucket of [...buckets.values()].sort((a,b) => `${a.provider}:${a.windowKey}`.localeCompare(`${b.provider}:${b.windowKey}`))) {
+      await client.query(`INSERT INTO api_cost_counters (provider,window_key,amount_micros) VALUES ($1,$2,0) ON CONFLICT (provider,window_key) DO NOTHING`, [bucket.provider,bucket.windowKey]);
+      const {rows} = await client.query('SELECT amount_micros FROM api_cost_counters WHERE provider=$1 AND window_key=$2 FOR UPDATE', [bucket.provider,bucket.windowKey]);
+      if (!Number.isSafeInteger(Number(rows[0].amount_micros)+bucket.amount)) throw new Error('Spend amount exceeds integer precision');
+      if (bucket.limit !== null && Number(rows[0].amount_micros) + bucket.amount > bucket.limit) {
+        if (isMemorySpend()) for (const request of pending) await client.query('DELETE FROM api_spend_reservations WHERE id=$1', [request.id]);
+        await client.query('ROLLBACK'); return false;
+      }
+    }
+    for (const bucket of buckets.values()) await client.query('UPDATE api_cost_counters SET amount_micros=amount_micros+$3,updated_at=NOW() WHERE provider=$1 AND window_key=$2', [bucket.provider,bucket.windowKey,bucket.amount]);
+    await client.query('COMMIT'); return true;
+  } catch (error) {
+    if (isMemorySpend()) for (const request of pending) await client.query('DELETE FROM api_spend_reservations WHERE id=$1',[request.id]);
+    await client.query('ROLLBACK'); throw error;
+  } finally { client.release(); }
+};
+
+/** Null means dispatch/usage is uncertain: retain the whole hold, including after a crash. */
+const settleApiSpendReservationStored = async (id: string, actualMicros: number | null, undispatchedOnly = false): Promise<number> => {
+  validateActualSpend(actualMicros);
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const {rows} = await client.query('SELECT * FROM api_spend_reservations WHERE id=$1 FOR UPDATE', [id]);
+    const row = rows[0]; if (!row) throw new Error('Spend reservation not found');
+    if (row.settled_micros === null && (!undispatchedOnly || row.dispatched_at === null)) {
+      const amount = actualMicros ?? Number(row.amount_micros);
+      const current = await client.query('SELECT amount_micros FROM api_cost_counters WHERE provider=$1 AND window_key=$2 FOR UPDATE',[row.provider,row.window_key]);
+      const nextAmount = Number(current.rows[0]?.amount_micros ?? 0) + amount - Number(row.amount_micros);
+      if (!Number.isSafeInteger(nextAmount) || nextAmount < 0) throw new Error('Invalid budget reconciliation');
+      await client.query('UPDATE api_cost_counters SET amount_micros=amount_micros+$3,updated_at=NOW() WHERE provider=$1 AND window_key=$2', [row.provider,row.window_key,amount-Number(row.amount_micros)]);
+      await client.query('UPDATE api_spend_reservations SET settled_micros=$2,settled_at=NOW() WHERE id=$1', [id,amount]);
+    }
+    const total = await client.query('SELECT amount_micros FROM api_cost_counters WHERE provider=$1 AND window_key=$2', [row.provider,row.window_key]);
+    await client.query('COMMIT'); return Number(total.rows[0]?.amount_micros ?? 0);
+  } catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
+};
+
+// pg-mem has no row locks; serialize its transactions to preserve admission semantics in tests.
+const isMemorySpend = () => getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' || Boolean(getEnvValue('DATABASE_URL')?.startsWith('pg-mem://'));
+let memorySpendTail: Promise<unknown> = Promise.resolve();
+const serializeMemorySpend = <T>(work: () => Promise<T>): Promise<T> => {
+  if (!isMemorySpend()) return work();
+  const next = memorySpendTail.then(work,work); memorySpendTail = next.catch(() => undefined); return next;
+};
+export const reserveApiSpendBatch = (requests: import('./types').ApiSpendReservation[]) => serializeMemorySpend(() => reserveApiSpendBatchStored(requests));
+export const settleApiSpendReservation = (id:string,actualMicros:number|null,undispatchedOnly = false) => serializeMemorySpend(() => settleApiSpendReservationStored(id,actualMicros,undispatchedOnly));
+
+export const claimApiSpendReservation = (id:string): Promise<boolean> => serializeMemorySpend(async () => {
+  const result = await getPool().query('UPDATE api_spend_reservations SET dispatched_at=NOW() WHERE id=$1 AND dispatched_at IS NULL AND settled_micros IS NULL RETURNING id',[id]);
+  return result.rows.length === 1;
+});
+
+export const listLegacyBlogMapArtifacts = async (afterPath='',limit=100): Promise<import('./types').LegacyBlogMapArtifact[]> => {
+  const result = await getPool().query('SELECT trip_id,day_date,points_hash,gcs_path FROM blog_day_map_artifacts WHERE gcs_path > $1 ORDER BY gcs_path LIMIT $2',[afterPath,Math.min(100,Math.max(1,limit))]);
+  return result.rows.map(row => ({tripId:row.trip_id,dayDate:row.day_date instanceof Date ? row.day_date.toISOString().slice(0,10) : String(row.day_date).slice(0,10),pointsHash:row.points_hash,path:row.gcs_path}));
+};
+export const deleteLegacyBlogMapArtifact = async (row:import('./types').LegacyBlogMapArtifact): Promise<boolean> => {
+  const result = await getPool().query('DELETE FROM blog_day_map_artifacts WHERE trip_id=$1 AND day_date=$2 AND points_hash=$3 AND gcs_path=$4 RETURNING trip_id',[row.tripId,row.dayDate,row.pointsHash,row.path]);
+  return result.rows.length === 1;
 };

@@ -59,9 +59,13 @@ const chunk = <T>(items: T[], size = 10): T[][] => {
 // Keyed on `localDate`, not the blog_days doc id: firebaseMediaRepository.initUpload writes media
 // blog_items with `blogDayId = <date string>` while text items use `blogDayId = <doc id>` — the
 // one field every blog_items doc sets consistently is `localDate`.
-export const getVisibleMediaForDay = async (dayDate: string, visibleAudiences: BlogAudience[]): Promise<FirebaseMediaRow[]> => {
+//
+// Scoped to the trip: another trip's photos on the same calendar date are never this trip's day (the
+// Postgres query joins through the trip's own blog_days). Without this a day's facts, and the map
+// points derived from them, could include another trip's photo locations.
+export const getVisibleMediaForDay = async (tripId: string, dayDate: string, visibleAudiences: BlogAudience[]): Promise<FirebaseMediaRow[]> => {
   const db = getDb();
-  const itemSnap = await db.collection('blog_items').where('localDate', '==', dayDate).get();
+  const itemSnap = await db.collection('blog_items').where('tripId', '==', tripId).where('localDate', '==', dayDate).get();
   const itemIds = itemSnap.docs
     .filter((doc) => {
       const data = doc.data() as any;
@@ -76,7 +80,7 @@ export const getVisibleMediaForDay = async (dayDate: string, visibleAudiences: B
     const assetSnap = await db.collection('blog_media_assets').where('blogItemId', 'in', ids).get();
     assetSnap.docs.forEach((doc) => {
       const data = doc.data() as any;
-      if (String(data.state) !== 'ready') return;
+      if (String(data.state) !== 'ready' || data.moderationState === 'blocked') return;
       rows.push({
         id: doc.id,
         captured_at: data.capturedAt ? new Date(data.capturedAt) : null,
@@ -93,10 +97,10 @@ const ALL_AUDIENCES: BlogAudience[] = ['travelers', 'followers', 'public'];
 
 // Postgres's day-starter media count has no audience filter (`blogDayStarterService.ts`'s
 // mediaCount query) — passing every audience reproduces that.
-export const countAllReadyMediaForDay = async (dayDate: string): Promise<number> => (await getVisibleMediaForDay(dayDate, ALL_AUDIENCES)).length;
+export const countAllReadyMediaForDay = async (tripId: string, dayDate: string): Promise<number> => (await getVisibleMediaForDay(tripId, dayDate, ALL_AUDIENCES)).length;
 
-export const hasTextItemForDay = async (dayDate: string): Promise<boolean> => {
-  const snap = await getDb().collection('blog_items').where('localDate', '==', dayDate).where('kindKey', '==', 'core.text').get();
+export const hasTextItemForDay = async (tripId: string, dayDate: string): Promise<boolean> => {
+  const snap = await getDb().collection('blog_items').where('tripId', '==', tripId).where('localDate', '==', dayDate).where('kindKey', '==', 'core.text').get();
   return snap.docs.some((doc) => (doc.data() as any).deletedAt == null);
 };
 
@@ -112,20 +116,6 @@ export const insertDayStarterDismissal = async (tripId: string, dayDate: string,
   );
 };
 
-export const getDayMapArtifact = async (tripId: string, dayDate: string, pointsHash: string): Promise<{ gcs_path: string } | null> => {
-  const doc = await getDb().collection('blog_day_map_artifacts').doc(`${tripId}:${dayDate}:${pointsHash}`).get();
-  if (!doc.exists) return null;
-  const data = doc.data() as any;
-  return { gcs_path: String(data.gcsPath ?? '') };
-};
-
-export const upsertDayMapArtifact = async (tripId: string, dayDate: string, pointsHash: string, gcsPath: string): Promise<void> => {
-  await getDb().collection('blog_day_map_artifacts').doc(`${tripId}:${dayDate}:${pointsHash}`).set(
-    { tripId, dayDate, pointsHash, gcsPath, updatedAt: nowIso() },
-    { merge: true }
-  );
-};
-
 export const getFollowerCommentsEnabled = async (tripId: string): Promise<boolean> => {
   const doc = await getDb().collection('trip_blogs').doc(tripId).get();
   if (!doc.exists) return true;
@@ -133,6 +123,22 @@ export const getFollowerCommentsEnabled = async (tripId: string): Promise<boolea
   // Fail-open, mirroring the Postgres `!== false` check in blogEngagementService.ts: a missing
   // field means "not yet configured," not "disabled."
   return data.followerCommentsEnabled !== false;
+};
+
+// Fail-closed (unlike followerCommentsEnabled): no document, or anything but `true`, is off.
+export const getSharedMapEnabled = async (tripId: string): Promise<boolean> => {
+  const doc = await getDb().collection('trip_blogs').doc(tripId).get();
+  return doc.exists && (doc.data() as any)?.sharedMapEnabled === true;
+};
+
+// Lodging coordinates are used server-side only, to keep followers' approximate maps away from
+// where the travelers sleep; they are never returned to the caller.
+export const getTripLodgingAnchors = async (tripId: string): Promise<Array<{ lat: number; lng: number }>> => {
+  const snap = await getDb().collection('lodgings').where('trip_id', '==', tripId).get();
+  return snap.docs
+    .map((doc) => doc.data() as any)
+    .filter((data) => data.lat != null && data.lng != null && Number.isFinite(Number(data.lat)) && Number.isFinite(Number(data.lng)))
+    .map((data) => ({ lat: Number(data.lat), lng: Number(data.lng) }));
 };
 
 export const getGroupMemberUserIdsForTrip = async (tripId: string): Promise<string[]> => {

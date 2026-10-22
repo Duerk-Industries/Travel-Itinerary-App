@@ -218,6 +218,8 @@ export const insertActivity = async (...args: Parameters<ReturnType<typeof adapt
   adapter().insertActivity(...args);
 export const insertCarRental = async (...args: Parameters<ReturnType<typeof adapter>['insertCarRental']>) =>
   adapter().insertCarRental(...args);
+export const setItemCoordinates = async (...args: Parameters<ReturnType<typeof adapter>['setItemCoordinates']>) =>
+  adapter().setItemCoordinates(...args);
 export const updateActivity = async (...args: Parameters<ReturnType<typeof adapter>['updateActivity']>) =>
   adapter().updateActivity(...args);
 export const updateCarRental = async (...args: Parameters<ReturnType<typeof adapter>['updateCarRental']>) =>
@@ -397,6 +399,10 @@ export const listExpenses = async (...args: Parameters<ReturnType<typeof adapter
   adapter().listExpenses(...args);
 export const insertExpense = async (...args: Parameters<ReturnType<typeof adapter>['insertExpense']>) =>
   adapter().insertExpense(...args);
+export const reorderActivitiesForDay = async (...args: Parameters<ReturnType<typeof adapter>['reorderActivitiesForDay']>) =>
+  adapter().reorderActivitiesForDay(...args);
+export const insertExpenseIdempotent = async (...args: Parameters<ReturnType<typeof adapter>['insertExpenseIdempotent']>) =>
+  adapter().insertExpenseIdempotent(...args);
 export const updateExpense = async (...args: Parameters<ReturnType<typeof adapter>['updateExpense']>) =>
   adapter().updateExpense(...args);
 export const upsertExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['upsertExpenseForSource']>) =>
@@ -819,3 +825,22 @@ export const getTripTimezone = async (...args: Parameters<ReturnType<typeof adap
   adapter().getTripTimezone(...args);
 export const setTripTimezone = async (...args: Parameters<ReturnType<typeof adapter>['setTripTimezone']>) =>
   adapter().setTripTimezone(...args);
+
+export const createCatalogActivity = async (...args: Parameters<ReturnType<typeof adapter>['createCatalogActivity']>) => adapter().createCatalogActivity(...args);
+export const getActivitySharing = async (...args: Parameters<ReturnType<typeof adapter>['getActivitySharing']>) => adapter().getActivitySharing(...args);
+export const setActivitySharing = async (...args: Parameters<ReturnType<typeof adapter>['setActivitySharing']>) => adapter().setActivitySharing(...args);
+export const listSimilarTrips = async (...args: Parameters<ReturnType<typeof adapter>['listSimilarTrips']>) => adapter().listSimilarTrips(...args);
+export const copyPublicActivity = async (...args: Parameters<ReturnType<typeof adapter>['copyPublicActivity']>) => adapter().copyPublicActivity(...args);
+export const undoCatalogActivity = async (...args: Parameters<ReturnType<typeof adapter>['undoCatalogActivity']>) => adapter().undoCatalogActivity(...args);
+
+export const getPlanningRevision = async (...args: Parameters<ReturnType<typeof adapter>['getPlanningRevision']>) => adapter().getPlanningRevision(...args);
+
+export const mutateGeocodingState = (...args: Parameters<ReturnType<typeof adapter>['mutateGeocodingState']>) => adapter().mutateGeocodingState(...args);
+
+export const reserveApiSpendBatch = async (...args: Parameters<ReturnType<typeof adapter>['reserveApiSpendBatch']>) => adapter().reserveApiSpendBatch(...args);
+export const settleApiSpendReservation = async (...args: Parameters<ReturnType<typeof adapter>['settleApiSpendReservation']>) => adapter().settleApiSpendReservation(...args);
+
+export const claimApiSpendReservation = async (...args: Parameters<ReturnType<typeof adapter>['claimApiSpendReservation']>) => adapter().claimApiSpendReservation(...args);
+
+export const listLegacyBlogMapArtifacts = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyBlogMapArtifacts']>) => adapter().listLegacyBlogMapArtifacts(...args);
+export const deleteLegacyBlogMapArtifact = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyBlogMapArtifact']>) => adapter().deleteLegacyBlogMapArtifact(...args);

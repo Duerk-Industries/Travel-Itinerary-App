@@ -316,6 +316,7 @@ export const reserveApiUsageOrThrow = async (params: {
   caller: string;
   units?: number;
   requireConfiguredLimit?: boolean;
+  spendAlreadyReserved?: boolean;
 }): Promise<void> => {
   const provider = normalizeKeyPart(params.provider);
   const caller = normalizeKeyPart(params.caller);
@@ -325,7 +326,7 @@ export const reserveApiUsageOrThrow = async (params: {
   }
 
   const budgetStatus = await getCurrentApiBudgetStatus(provider);
-  if (budgetStatus.monthlyBudgetUsd != null && budgetStatus.isOverBudget) {
+  if (!params.spendAlreadyReserved && budgetStatus.monthlyBudgetUsd != null && budgetStatus.isOverBudget) {
     throw new ApiBudgetExceededError({
       provider,
       monthlyBudgetUsd: budgetStatus.monthlyBudgetUsd,

@@ -10,6 +10,7 @@ const PAGE_FEATURES: Record<string, { feature: AnalyticsFeature; tripScoped: boo
   'create-trip': { feature: 'create_trip', tripScoped: false },
   overview: { feature: 'overview', tripScoped: true },
   flights: { feature: 'transfers', tripScoped: true },
+  'ground-transfers': { feature: 'transfers', tripScoped: true },
   lodging: { feature: 'lodging', tripScoped: true },
   car: { feature: 'car_rentals', tripScoped: true },
   tours: { feature: 'activities', tripScoped: true },

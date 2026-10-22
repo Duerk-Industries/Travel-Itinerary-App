@@ -5,7 +5,7 @@ import request from 'supertest';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
-import { queryBlog } from '../src/db.postgres';
+import { reactionRows } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 
 describe('trip blog photo galleries', () => {
@@ -135,17 +135,15 @@ describe('trip blog photo galleries', () => {
     dayResult = await getDay();
     galleryItem = dayResult.items.find((item: any) => item.id === galleryId);
     expect(galleryItem.assets).toHaveLength(1);
-    const afterFirst = await queryBlog<{ asset_id: string }>('SELECT asset_id FROM blog_reactions WHERE asset_id = $1 OR asset_id = $2', [firstAssetId, secondAssetId]);
-    expect(afterFirst.rows.map((row) => row.asset_id)).toEqual([secondAssetId]);
-    const galleryReaction = await queryBlog('SELECT id FROM blog_reactions WHERE blog_item_id = $1', [galleryId]);
-    expect(galleryReaction.rows).toHaveLength(1);
+    const afterFirst = (await reactionRows([firstAssetId, secondAssetId])).filter((row) => row.targetKind === 'asset');
+    expect(afterFirst.map((row) => row.targetId)).toEqual([secondAssetId]);
+    expect((await reactionRows([galleryId])).filter((row) => row.targetKind === 'item')).toHaveLength(1);
 
     const remainingAssetId = galleryItem.assets[0].assetId;
     await request(app).delete(`/api/trips/${tripId}/blog/media/${remainingAssetId}`).set('Authorization', `Bearer ${token}`).expect(204);
     dayResult = await getDay();
     expect(dayResult.items.find((item: any) => item.id === galleryId)).toBeUndefined();
-    const afterLast = await queryBlog('SELECT id FROM blog_reactions WHERE blog_item_id = $1 OR asset_id = $2', [galleryId, secondAssetId]);
-    expect(afterLast.rows).toHaveLength(0);
+    expect(await reactionRows([galleryId, secondAssetId])).toHaveLength(0);
   });
 
   it('rejects removing a single asset from a standalone (non-gallery) item', async () => {

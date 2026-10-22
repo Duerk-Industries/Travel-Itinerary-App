@@ -1,3 +1,5 @@
+import { shadowStyle } from '../utils/shadowStyle';
+import FeatureCohortEditor from '../components/FeatureCohortEditor';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
@@ -32,7 +34,7 @@ type QueueDepthSnapshot = {
   snapshotAtIso: string;
 };
 
-type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
+type FeatureFlag = { key: string; enabled: boolean; description?: string | null; supportsCohort?: boolean };
 
 type AiProviderOption = { id: string; configured: boolean; registered: boolean; certified?: boolean; supportedModels: string[] };
 type AiProviderFeatureConfig = {
@@ -239,10 +241,10 @@ const apiFetch = async (backendUrl: string, headers: Record<string, string>, pat
   return res.json();
 };
 
-const getCardStyle = (theme: AppTheme) => ({
+const getCardStyle = (theme: AppTheme, opacity = 0.06, y = 2, radius = 10) => ({
   backgroundColor: theme.colors.surface,
   borderColor: theme.colors.border,
-  shadowColor: theme.mode === 'dark' ? '#000000' : theme.colors.primary,
+  ...shadowStyle(theme.mode === 'dark' ? '#000000' : theme.colors.primary, opacity, 0, y, radius),
 });
 
 const getInputStyle = (theme: AppTheme) => ({
@@ -267,7 +269,7 @@ const getSecondaryPillTextStyle = (theme: AppTheme, active = false) => ({
 // --- Overview ---
 const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSectionProps> = ({ onNav, theme }) => (
   <View style={localStyles.section}>
-    <View style={[localStyles.heroCard, getCardStyle(theme), { backgroundColor: theme.colors.primary }]}>
+    <View style={[localStyles.heroCard, getCardStyle(theme, 0, 0, 0), { backgroundColor: theme.colors.primary }]}>
       <Text style={[localStyles.heroEyebrow, { color: theme.colors.link }]}>Operations</Text>
       <Text style={[localStyles.heroTitle, { color: theme.colors.onPrimary }]}>Admin Panel</Text>
       <Text style={[localStyles.heroBody, { color: theme.colors.onPrimary }]}>
@@ -292,7 +294,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Privacy Requests', section: 'privacy-requests' as AdminSection, desc: 'Rights requests with statutory due dates, and account/analytics erasure jobs' },
       ] as { label: string; section: AdminSection; desc: string }[]
     ).map((item) => (
-      <TouchableOpacity key={item.section} style={[localStyles.navCard, getCardStyle(theme)]} onPress={() => onNav(item.section)}>
+      <TouchableOpacity key={item.section} style={[localStyles.navCard, getCardStyle(theme, 0.07, 2, 6)]} onPress={() => onNav(item.section)}>
         <View style={[localStyles.navAccent, { backgroundColor: item.section === 'features' ? theme.colors.link : item.section === 'tiers' ? theme.colors.premium : theme.colors.cta }]} />
         <Text style={[localStyles.navCardTitle, { color: theme.colors.text }]}>{item.label}</Text>
         <Text style={[localStyles.navCardDesc, { color: theme.colors.textMuted }]}>{item.desc}</Text>
@@ -375,6 +377,7 @@ const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, st
               <Text style={localStyles.badgeText}>{flag.enabled ? 'ON' : 'OFF'}</Text>
             </View>
           </View>
+          {flag.supportsCohort && <FeatureCohortEditor featureKey={flag.key} backendUrl={backendUrl} headers={headers} theme={theme} />}
           {reasonVisible[flag.key] || true ? (
             <View style={localStyles.inlineForm}>
               <TextInput
@@ -877,7 +880,7 @@ const UserDetailSection: React.FC<{
           </View>
         )}
         {tierDropdownOpen && !tierLocked ? (
-          <View style={[localStyles.dropdownMenu, getCardStyle(theme)]}>
+          <View style={[localStyles.dropdownMenu, getCardStyle(theme, 0.18, 8, 18)]}>
             {sortedTiers.map((tier) => (
               <Pressable
                 key={tier.key}
@@ -1170,7 +1173,7 @@ const TiersSection: React.FC<{
             {
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.border,
-              shadowColor: theme.mode === 'dark' ? '#000000' : theme.colors.primary,
+              ...shadowStyle(theme.mode === 'dark' ? '#000000' : theme.colors.primary, 0.08, 0, 3, 8),
             },
           ]}
         >
@@ -2422,8 +2425,8 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
       setError(`Overall limit for ${provider.provider} must be blank or a positive number.`);
       return;
     }
-    if (parsedMonthlyBudgetUsd !== null && (!Number.isFinite(parsedMonthlyBudgetUsd) || parsedMonthlyBudgetUsd <= 0)) {
-      setError(`Monthly budget for ${provider.provider} must be blank or a positive number.`);
+    if (parsedMonthlyBudgetUsd !== null && (!Number.isFinite(parsedMonthlyBudgetUsd) || parsedMonthlyBudgetUsd < 0)) {
+      setError(`Monthly budget for ${provider.provider} must be blank or a non-negative number.`);
       return;
     }
     if (
@@ -3556,9 +3559,7 @@ const localStyles = StyleSheet.create({
     borderWidth: 1,
     padding: 14,
     marginBottom: 12,
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
+    ...shadowStyle('#000000', 0.06, 0, 2, 10),
     elevation: 2,
   },
   cardTitle: { fontSize: 15, fontWeight: '600', color: '#1a1a2e', marginBottom: 2 },
@@ -3585,9 +3586,7 @@ const localStyles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     marginBottom: 12,
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    ...shadowStyle('#000000', 0.07, 0, 2, 6),
     elevation: 3,
   },
   navAccent: { width: 48, height: 6, borderRadius: 999, marginBottom: 14 },
@@ -3657,10 +3656,7 @@ const localStyles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     marginBottom: 8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    ...shadowStyle('#000000', 0.18, 0, 8, 18),
     elevation: 12,
   },
   dropdownOption: {
@@ -3697,9 +3693,7 @@ const localStyles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    ...shadowStyle('#000000', 0.08, 0, 3, 8),
     elevation: 3,
   },
   tableHeaderRow: { flexDirection: 'row', minHeight: 64, borderBottomWidth: 1 },

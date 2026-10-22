@@ -1,3 +1,5 @@
+import { validateSpendBatch, validateActualSpend } from './utils/apiSpendValidation';
+import { planningFirestore } from './services/planningFirestore';
 // Firebase adapter (Firestore-backed)
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldPath, FieldValue } from 'firebase-admin/firestore';
@@ -89,6 +91,8 @@ import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
 import { normalizePackingLabel } from './utils/packingListNormalize';
+import { orderDayActivities } from './utils/dayOrder';
+import type { DayOrderOutcome } from './db.postgres';
 import { buildPackingListDisplayGroups } from './utils/packingListDisplay';
 import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
@@ -795,8 +799,16 @@ export const getDb = (): Firestore => {
   const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
   if (databaseId) {
   }
-  return databaseId ? getFirestore(app!, databaseId) : getFirestore(app!);
+  const firestore = databaseId ? getFirestore(app!, databaseId) : getFirestore(app!);
+  if (!configuredFirestores.has(firestore)) {
+    configuredFirestores.add(firestore);
+    // A missing optional value (a Google profile with no photo, an Apple sign-in with no name) is
+    // stored as absent, the way Postgres stores NULL, instead of failing the whole write.
+    try { firestore.settings({ ignoreUndefinedProperties: true }); } catch { /* already in use: keep its current settings */ }
+  }
+  return planningFirestore(firestore);
 };
+const configuredFirestores = new WeakSet<object>();
 
 export const initDb = async (): Promise<void> => {
   logInfo('Initializing DB connection...');
@@ -1982,7 +1994,8 @@ const scrubBlogEngagementForDeletedUser = async (userId: string): Promise<void> 
   for (const doc of comments.docs) {
     const data = doc.data() as any;
     const alreadyTombstoned = Boolean(data.deletedAt);
-    await doc.ref.set({ body: null, deletedAt: data.deletedAt ?? now, updatedAt: now }, { merge: true });
+    // authorUserId is cleared too: Postgres does this through the user foreign key (ON DELETE SET NULL).
+    await doc.ref.set({ body: null, authorUserId: null, deletedAt: data.deletedAt ?? now, updatedAt: now }, { merge: true });
     if (!alreadyTombstoned && !data.hiddenAt) {
       const counterRef = db.collection('blog_engagement_counters').doc(`${data.targetKind}:${data.targetId}:${data.audience}`);
       await counterRef.set({ commentCount: FieldValue.increment(-1), updatedAt: now }, { merge: true });
@@ -2013,6 +2026,13 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('billing_subscriptions').where('userId', '==', userId).get(),
     db.collection('privacy_choice_events').where('userId', '==', userId).get(),
   ]);
+  for (const [collection, field] of [['operation_receipts', 'userId'], ['notification_work', 'data.userId'], ['notification_work', 'data.ownerId']]) {
+    for (;;) {
+      const page = await db.collection(collection).where(field, '==', userId).limit(200).get();
+      if (page.empty) break;
+      await deleteDocRefsInBatches(page.docs.map(doc => doc.ref));
+    }
+  }
   await scrubBlogEngagementForDeletedUser(userId);
   const refs = [
     db.collection('users').doc(userId),
@@ -2825,18 +2845,21 @@ export const createGroupWithMembers = async (
   const invites: { id: string; email: string }[] = [];
   for (const member of members) {
     const guestName = member.guestName?.trim();
-    if (guestName) {
-      await db.collection('group_members').doc(randomUUID()).set({
-        groupId,
-        guestName,
-        addedBy: ownerId,
-        createdAt: nowIso(),
-        removedAt: null,
-      });
+    const normalized = member.email ? normalizeEmail(member.email) : '';
+    // An email always means an invite (a name alongside it is just a label, as on Postgres); only a
+    // person with no email becomes a guest on the trip.
+    if (!normalized) {
+      if (guestName) {
+        await db.collection('group_members').doc(randomUUID()).set({
+          groupId,
+          guestName,
+          addedBy: ownerId,
+          createdAt: nowIso(),
+          removedAt: null,
+        });
+      }
       continue;
     }
-    const normalized = member.email ? normalizeEmail(member.email) : '';
-    if (!normalized) continue;
     const user = await findUserByEmail(normalized);
     const inviteId = randomUUID();
     invites.push({ id: inviteId, email: normalized });
@@ -2845,6 +2868,7 @@ export const createGroupWithMembers = async (
       inviterId: ownerId,
       inviteeUserId: user?.id ?? null,
       inviteeEmail: normalized,
+      guestName: guestName || null,
       status: 'pending',
       createdAt: nowIso(),
     });
@@ -4412,14 +4436,14 @@ export const listAttractionCatalogEntries = async (
   const key = String(destinationKey ?? '').trim().toLowerCase();
   if (!key) return [];
   const db = getDb();
-  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 2000);
   // Use top-level destinationKey field for an indexed Firestore query
   // instead of loading 500 docs and filtering in-memory.
   const snapshot = await db
     .collection('locations')
     .where('sourceType', '==', 'attraction')
     .where('destinationKey', '==', key)
-    .limit(safeLimit * 2)
+    .limit(safeLimit)
     .get();
   const filtered = snapshot.docs
     .map((doc) => toAttractionCatalogEntry(doc.id, doc.data()))
@@ -4894,7 +4918,7 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
     await ensureLodgingLocation(placeId, updates.name || data.name, updates.address || data.address);
   }
 
-  const updatePayload = stripUndefined(updates);
+  const updatePayload = stripUndefined({ ...updates, ...(updates.address !== undefined && updates.address !== data.address ? { lat: null, lng: null, coordinateSource: null } : {}) });
   if (Object.keys(updatePayload).length > 0) {
     await db.collection('lodgings').doc(lodgingId).update(updatePayload);
   }
@@ -4955,6 +4979,48 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
   return payload;
 };
 
+// Same contract as the Postgres adapter: all of a day's activities are reordered in one transaction,
+// and nothing is written when the caller's `expectedIds` no longer match the stored order.
+export const reorderActivitiesForDay = async (
+  userId: string,
+  tripId: string,
+  date: string,
+  orderedIds: string[],
+  expectedIds: string[],
+  pins?: { pinnedIds: string[]; expectedPinnedIds: string[] }
+): Promise<DayOrderOutcome> => {
+  if (!(await ensureUserInTrip(tripId, userId))) return { ok: false, reason: 'forbidden', currentOrder: [] };
+  const db = getDb();
+  return db.runTransaction(async (tx) => {
+    const access = await tx.get(db.collection('trip_access').doc(`${tripId}_${userId}`));
+    if (access.data()?.status !== 'active' || access.data()?.canWrite !== true) return { ok: false, reason: 'forbidden', currentOrder: [] } as DayOrderOutcome;
+    const snapshot = await tx.get(db.collection('tours').where('tripId', '==', tripId));
+    const dayDocs = snapshot.docs
+      .map((doc) => ({ ref: doc.ref, activity: normalizeActivityRecord(doc.data()) as Activity }))
+      .filter(({ activity }) => String(activity.date ?? '').slice(0, 10) === date);
+    const current = orderDayActivities(dayDocs.map(({ activity }) => ({ ...activity, id: String(activity.id) })));
+    const currentOrder = current.map((row) => row.id);
+    if (currentOrder.length !== expectedIds.length || currentOrder.some((id, index) => id !== expectedIds[index])) {
+      return { ok: false, reason: 'stale', currentOrder } as DayOrderOutcome;
+    }
+    const sameSet = orderedIds.length === currentOrder.length && new Set(orderedIds).size === orderedIds.length
+      && orderedIds.every((id) => currentOrder.includes(id));
+    if (!sameSet) return { ok: false, reason: 'mismatch', currentOrder } as DayOrderOutcome;
+    if (pins) {
+      const currentPins = current.filter(row => row.dayOrderPinned).map(row => row.id).sort();
+      if (JSON.stringify(currentPins) !== JSON.stringify([...pins.expectedPinnedIds].sort())) return { ok: false, reason: 'stale', currentOrder } as DayOrderOutcome;
+      if (new Set(pins.pinnedIds).size !== pins.pinnedIds.length || pins.pinnedIds.some(id => !currentOrder.includes(id))) return { ok: false, reason: 'mismatch', currentOrder } as DayOrderOutcome;
+    }
+    const positionById = new Map(current.map((row) => [row.id, row.dayPosition ?? null]));
+    const refById = new Map(dayDocs.map(({ ref, activity }) => [String(activity.id), ref]));
+    orderedIds.forEach((id, index) => {
+      if (pins) tx.update(refById.get(id)!, { dayPosition: index, dayOrderPinned: pins.pinnedIds.includes(id) });
+      else if (positionById.get(id) !== index) tx.update(refById.get(id)!, { dayPosition: index });
+    });
+    return { ok: true, order: orderedIds } as DayOrderOutcome;
+  });
+};
+
 export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const db = getDb();
   const doc = await db.collection('tours').doc(id).get();
@@ -4964,6 +5030,9 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
   if (!membership) return null;
   const updatePayload = stripUndefined({
     ...activity,
+    ...(activity.startLocation !== undefined && activity.startLocation !== current.startLocation ? { lat: null, lng: null, coordinateSource: null } : {}),
+    // A stop moved to another day must not carry its old rank into that day's order.
+    ...(activity.date !== undefined && String(activity.date).slice(0, 10) !== String(current.date ?? '').slice(0, 10) ? { dayPosition: null, dayOrderPinned: false } : {}),
     activityType: typeof (activity as any).activityType === 'undefined' ? undefined : (activity as any).activityType,
   });
   if (Object.keys(updatePayload).length > 0) {
@@ -5024,6 +5093,36 @@ export const getCarRentalById = async (id: string): Promise<CarRental | null> =>
   return { ...(doc.data() as CarRental), status: normalizeItineraryStatus((doc.data() as any)?.status) };
 };
 
+/** Stores coordinates (and where they came from) on a lodging, activity or car rental the caller can edit. */
+export const setItemCoordinates = async (
+  userId: string,
+  kind: 'lodging' | 'activity' | 'car_rental',
+  itemId: string,
+  coordinates: {
+    lat?: number | null;
+    lng?: number | null;
+    coordinateSource: 'catalog' | 'airport' | 'manual' | 'geocoder';
+    dropoffLat?: number | null;
+    dropoffLng?: number | null;
+  }
+): Promise<boolean> => {
+  const db = getDb();
+  const collection = kind === 'lodging' ? 'lodgings' : kind === 'activity' ? 'tours' : 'car_rentals';
+  const ref = db.collection(collection).doc(itemId);
+  const doc = await ref.get();
+  if (!doc.exists) return false;
+  const data = doc.data() as any;
+  const tripId = data.tripId ?? data.trip_id;
+  if (!tripId || !(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to update this trip');
+  await ref.update({
+    lat: coordinates.lat ?? null,
+    lng: coordinates.lng ?? null,
+    coordinateSource: coordinates.coordinateSource,
+    ...(kind === 'car_rental' ? { dropoffLat: coordinates.dropoffLat ?? null, dropoffLng: coordinates.dropoffLng ?? null } : {}),
+  });
+  return true;
+};
+
 export const insertCarRental = async (rental: Omit<CarRental, 'id' | 'createdAt'>): Promise<CarRental> => {
   const db = getDb();
   const id = randomUUID();
@@ -5048,6 +5147,8 @@ export const updateCarRental = async (id: string, userId: string, updates: Parti
   if (!membership) return null;
   const payload = stripUndefined({
     ...updates,
+    ...(updates.pickupLocation !== undefined && updates.pickupLocation !== data.pickupLocation ? { lat: null, lng: null } : {}),
+    ...(updates.dropoffLocation !== undefined && updates.dropoffLocation !== data.dropoffLocation ? { dropoffLat: null, dropoffLng: null } : {}),
     status: typeof updates.status === 'undefined' ? undefined : normalizeItineraryStatus((updates as any).status),
     cost: typeof updates.cost === 'undefined' ? undefined : Number(updates.cost) || 0,
   });
@@ -5286,6 +5387,51 @@ export const insertExpense = async (expense: {
   };
   await db.collection('expenses').doc(id).set(payload);
   return payload;
+};
+
+// Create-once by (owner, operation id): the document id is derived from the key and written with
+// create(), which fails if the document exists, so concurrent retries cannot both succeed.
+export const insertExpenseIdempotent = async (
+  expense: Parameters<typeof insertExpense>[0],
+  clientOperationId: string
+): Promise<{ expense: any; replayed: boolean }> => {
+  const db = getDb();
+  const docId = `op_${createHash('sha256').update(clientOperationId).digest('hex').slice(0, 40)}`;
+  const ref = db.collection('expenses').doc(docId);
+  const existing = await ref.get();
+  if (existing.exists) return { expense: existing.data(), replayed: true };
+  const tripDoc = await db.collection('trips').doc(expense.tripId).get();
+  const tripCurrency = (tripDoc.data() as any)?.currency ?? 'USD';
+  const currency = expense.currency ?? tripCurrency ?? 'USD';
+  const payload = {
+    id: docId,
+    tripId: expense.tripId,
+    groupId: expense.groupId,
+    userId: expense.userId,
+    expenseDate: expense.expenseDate,
+    category: expense.category,
+    amount: expense.amount ?? 0,
+    currency,
+    amountInTripCurrency: expense.amountInTripCurrency ?? (currency === tripCurrency ? expense.amount ?? 0 : null),
+    exchangeRateToTripCurrency: expense.exchangeRateToTripCurrency ?? (currency === tripCurrency ? 1 : null),
+    exchangeRateDate: expense.exchangeRateDate ?? null,
+    payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
+    forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    sourceType: null,
+    sourceId: null,
+    vendor: expense.vendor ?? null,
+    notes: expense.notes ?? null,
+    clientOperationId,
+    createdAt: nowIso(),
+  };
+  try {
+    await ref.create(payload);
+    return { expense: payload, replayed: false };
+  } catch (err) {
+    const raced = await ref.get();
+    if (raced.exists) return { expense: raced.data(), replayed: true };
+    throw err;
+  }
 };
 
 export const updateExpense = async (
@@ -5954,9 +6100,10 @@ export const deleteItineraryDetail = async (userId: string, detailId: string): P
   }
 };
 
+// Argument order is (userId, detailId, ...) like the Postgres adapter and the shared interface.
 export const updateItineraryDetail = async (
-  detailId: string,
   userId: string,
+  detailId: string,
   updates: Partial<ItineraryDetail>
 ): Promise<ItineraryDetail> => {
   const db = getDb();
@@ -7676,11 +7823,13 @@ export const listApiCostCounters = async (): Promise<
 
 export const resetApiCostCounters = async (): Promise<void> => {
   const db = getDb();
-  const snap = await db.collection('api_cost_counters').get();
-  if (snap.empty) return;
-  const batch = db.batch();
-  snap.docs.forEach((doc) => batch.delete(doc.ref));
-  await batch.commit();
+  await db.runTransaction(async tx => {
+    const pending = await tx.get(db.collection('api_spend_reservations').where('settledMicros','==',null).limit(1));
+    if (!pending.empty) throw new Error('Cannot reset budgets with unsettled provider work');
+    const counters = await tx.get(db.collection('api_cost_counters'));
+    if (counters.size > 400) throw new Error('Too many budget counters for an atomic reset');
+    counters.docs.forEach(doc => tx.delete(doc.ref));
+  });
 };
 
 export const atomicIncrementIfUnderLimit = async (
@@ -8788,7 +8937,8 @@ export const claimStripeWebhookEvent = async (data: {
       livemode: data.livemode,
       eventCreated: data.eventCreated ?? null,
       processingStatus: 'pending',
-      attemptCount: previous?.attemptCount ?? 0,
+      // The first delivery counts as attempt 1, as on Postgres (column default), so retries read 2, 3, ...
+      attemptCount: previous?.attemptCount ?? 1,
       lastError: null,
       receivedAt: previous?.receivedAt ?? nowIso(),
       processedAt: null,
@@ -9636,4 +9786,79 @@ export const getTripTimezone = async (tripId: string): Promise<string | null> =>
 
 export const setTripTimezone = async (tripId: string, timezone: string): Promise<void> => {
   await getDb().collection('trips').doc(tripId).set({ timezone }, { merge: true });
+};
+
+export { createCatalogActivityFirebase as createCatalogActivity, undoCatalogActivityFirebase as undoCatalogActivity } from './services/planningOperations';
+export { getActivitySharingFirebase as getActivitySharing, setActivitySharingFirebase as setActivitySharing,
+  listSimilarTripsFirebase as listSimilarTrips, copyPublicActivityFirebase as copyPublicActivity } from './services/tripInspiration';
+
+export const getPlanningRevision = async (tripId: string, groupId: string): Promise<string> => {
+  const db = getDb();
+  const docs = await db.getAll(...[`trip:${tripId}`, `group:${groupId}`, 'global:profiles'].map(scope => db.collection('planning_revisions').doc(scope)));
+  return JSON.stringify(docs.map(doc => [doc.id, doc.data()?.revision ?? 0]));
+};
+
+export { mutateGeocodingFirebase as mutateGeocodingState } from './services/geocodingRepository';
+
+
+export const reserveApiSpendBatch = async (requests: import('./types').ApiSpendReservation[]): Promise<boolean> => {
+  validateSpendBatch(requests);
+  const db = getDb();
+  return db.runTransaction(async tx => {
+    const records = await Promise.all(requests.map(request => tx.get(db.collection('api_spend_reservations').doc(request.id))));
+    const pending = requests.filter((request,i) => {
+      if (!records[i].exists) return true;
+      const row = records[i].data()!;
+      if (row.provider !== request.provider || row.windowKey !== request.windowKey || row.amountMicros !== request.amountMicros || (row.settledMicros !== null || row.dispatchedAt !== null)) throw new Error('Spend reservation cannot be reused for another attempt');
+      return false;
+    });
+    const buckets = new Map<string,{provider:string;windowKey:string;amount:number;limit:number|null}>();
+    for (const request of pending) {
+      const key = `${request.provider}_${request.windowKey}`, bucket = buckets.get(key) ?? {provider:request.provider,windowKey:request.windowKey,amount:0,limit:null};
+      bucket.amount += request.amountMicros;
+      if (!Number.isSafeInteger(bucket.amount)) throw new Error('Spend amount exceeds integer precision');
+      if (request.limitMicros !== null) bucket.limit = bucket.limit === null ? request.limitMicros : Math.min(bucket.limit,request.limitMicros);
+      buckets.set(key,bucket);
+    }
+    const entries = [...buckets.entries()];
+    const counters = await Promise.all(entries.map(([key]) => tx.get(db.collection('api_cost_counters').doc(key))));
+    if (entries.some(([,bucket],i) => !Number.isSafeInteger(Number(counters[i].data()?.amountMicros ?? 0)+bucket.amount))) throw new Error('Spend amount exceeds integer precision');
+    if (entries.some(([,bucket],i) => bucket.limit !== null && Number(counters[i].data()?.amountMicros ?? 0) + bucket.amount > bucket.limit)) return false;
+    entries.forEach(([key,bucket],i) => tx.set(db.collection('api_cost_counters').doc(key), {provider:bucket.provider,windowKey:bucket.windowKey,amountMicros:Number(counters[i].data()?.amountMicros ?? 0)+bucket.amount,updatedAt:nowIso()}, {merge:true}));
+    pending.forEach(request => tx.create(db.collection('api_spend_reservations').doc(request.id), {...request,settledMicros:null,dispatchedAt:null,createdAt:nowIso()}));
+    return true;
+  });
+};
+export const settleApiSpendReservation = async (id: string, actualMicros: number | null, undispatchedOnly = false): Promise<number> => {
+  validateActualSpend(actualMicros);
+  const db = getDb(), ref = db.collection('api_spend_reservations').doc(id);
+  return db.runTransaction(async tx => {
+    const snapshot = await tx.get(ref); if (!snapshot.exists) throw new Error('Spend reservation not found');
+    const row = snapshot.data()!, counter = db.collection('api_cost_counters').doc(`${row.provider}_${row.windowKey}`);
+    const current = Number((await tx.get(counter)).data()?.amountMicros ?? 0);
+    if (row.settledMicros !== null || undispatchedOnly && row.dispatchedAt !== null) return current;
+    const amount = actualMicros ?? row.amountMicros, total = current + amount - row.amountMicros;
+    if (!Number.isSafeInteger(total) || total < 0) throw new Error('Invalid budget reconciliation');
+    tx.set(counter,{amountMicros:total,updatedAt:nowIso()},{merge:true}); tx.update(ref,{settledMicros:amount,settledAt:nowIso()});
+    return total;
+  });
+};
+
+export const claimApiSpendReservation = async (id:string): Promise<boolean> => {
+  const db = getDb(), ref = db.collection('api_spend_reservations').doc(id);
+  return db.runTransaction(async tx => {
+    const snapshot = await tx.get(ref), row = snapshot.data();
+    if (!row || row.dispatchedAt !== null || row.settledMicros !== null) return false;
+    tx.update(ref,{dispatchedAt:nowIso()}); return true;
+  });
+};
+
+export const listLegacyBlogMapArtifacts = async (afterPath='',limit=100): Promise<import('./types').LegacyBlogMapArtifact[]> => {
+  const query = getDb().collection('blog_day_map_artifacts').orderBy('gcsPath').limit(Math.min(100,Math.max(1,limit)));
+  const rows = await (afterPath ? query.startAfter(afterPath) : query).get();
+  return rows.docs.map(doc => {const row=doc.data();return {tripId:String(row.tripId),dayDate:String(row.dayDate),pointsHash:String(row.pointsHash),path:String(row.gcsPath)};});
+};
+export const deleteLegacyBlogMapArtifact = async (row:import('./types').LegacyBlogMapArtifact): Promise<boolean> => {
+  const db=getDb(), ref=db.collection('blog_day_map_artifacts').doc(`${row.tripId}:${row.dayDate}:${row.pointsHash}`);
+  return db.runTransaction(async tx => {const doc=await tx.get(ref);if(!doc.exists || doc.data()?.gcsPath !== row.path) return false;tx.delete(ref);return true;});
 };

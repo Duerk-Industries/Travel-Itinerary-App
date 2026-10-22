@@ -1428,6 +1428,7 @@ export const syncAttractionsCatalogFromCsvToDbOnStartup = async (): Promise<void
         destinationKey: normalizeDestinationKey(row.destinationKey) || row.destinationKey,
       });
     }
+    (await import('./nearbyPlacesService')).invalidateNearbyCatalog();
     logInfo(`[attractions] startup CSV import completed rows=${rows.length}`);
   } catch (err) {
     logError('[attractions] startup CSV import failed', err);
@@ -1462,6 +1463,7 @@ export const invalidateAttractionCatalogCache = async (params: {
   });
   if (count > 0) {
     await writeCatalogCsv(updated);
+    (await import('./nearbyPlacesService')).invalidateNearbyCatalog();
     logInfo(`[attractions] manual cache invalidation: flushed ${count} entries`);
   }
   return { count };

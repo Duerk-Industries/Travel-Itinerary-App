@@ -3,12 +3,12 @@ import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
-import { queryBlog } from '../src/db.postgres';
+import { abandonRecapSnapshot, bumpContentRevision, recapSnapshotStates, seedAirports, seedDayCommentCount } from './providerRows';
 import { randomUUID } from 'crypto';
 import { blogRecapRepository } from '../src/blog/recapRepository';
 
 describe('GET /:tripId/blog/recap', () => {
-  const traveler = { firstName: 'Recap', lastName: 'Traveler', email: 'blog-recap-traveler@example.com', password: 'Password123!' };
+  const traveler = { firstName: 'Recap', lastName: 'Traveler', email: `blog-recap-traveler-${randomUUID().slice(0, 8)}@example.com`, password: 'Password123!' };
   let token = '';
   let tripId = '';
   let userId = '';
@@ -27,19 +27,15 @@ describe('GET /:tripId/blog/recap', () => {
       .send({ name: 'Recap Trip', startDate: '2027-06-01', endDate: '2027-06-03', participants: [] }).expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
-    await queryBlog("INSERT INTO airports (iata_code, name, city, country, lat, lng) VALUES ('QXA', 'Recap A', 'A', 'Test', 0, 0), ('QXB', 'Recap B', 'B', 'Test', 0, 1)");
-    await queryBlog(
-      `INSERT INTO flights (id, user_id, trip_id, status, transfer_type, passenger_name, departure_date,
-        departure_airport_code, departure_time, arrival_airport_code, arrival_time, cost, carrier, flight_number, booking_reference)
-       VALUES ($1, $2, $3, 'Completed', 'Flight', 'Recap Traveler', '2027-06-01', 'QXA', '09:00', 'QXB', '10:00', 0, 'Test Air', 'TA1', 'R1')`,
-      [randomUUID(), userId, tripId]
-    );
-    const day = await queryBlog<{ id: string }>("SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = '2027-06-02'", [tripId]);
-    await queryBlog(
-      `INSERT INTO blog_engagement_counters (target_kind, target_id, trip_id, audience, reaction_counts, reaction_total, comment_count)
-       VALUES ('day', $1, $2, 'travelers', '{}'::jsonb, 0, 4)`,
-      [day.rows[0].id, tripId]
-    );
+    await seedAirports([
+      { code: 'QXA', name: 'Recap A', city: 'A', country: 'Test', lat: 0, lng: 0 },
+      { code: 'QXB', name: 'Recap B', city: 'B', country: 'Test', lat: 0, lng: 1 },
+    ]);
+    await request(app).post('/api/transfers').set('Authorization', `Bearer ${token}`).send({
+      tripId, passengerIds: [userId], passengerName: 'Recap Traveler', departureDate: '2027-06-01', departureLocation: 'QXA', departureAirportCode: 'QXA',
+      departureTime: '09:00', arrivalLocation: 'QXB', arrivalAirportCode: 'QXB', arrivalTime: '10:00', cost: 0, carrier: 'Test Air', flightNumber: 'TA1', bookingReference: 'R1', status: 'Completed',
+    }).expect(201);
+    await seedDayCommentCount(tripId, '2027-06-02', 'travelers', 4);
   });
 
   afterAll(async () => { await cleanupTestUsersByEmail([traveler.email]); });
@@ -56,8 +52,7 @@ describe('GET /:tripId/blog/recap', () => {
       if (response.status === 200) ready = response;
     }
     if (!ready) {
-      const snapshots = await queryBlog('SELECT state, failure_code FROM blog_recap_snapshots WHERE trip_id = $1', [tripId]);
-      throw new Error(`Recap did not become ready: ${JSON.stringify(snapshots.rows)}`);
+      throw new Error(`Recap did not become ready: ${JSON.stringify(await recapSnapshotStates(tripId))}`);
     }
     expect(ready.body.state).toBe('ready');
     expect(ready?.body.recap).toEqual(expect.objectContaining({ title: 'Recap Trip', dayCount: 3, startDate: '2027-06-01', endDate: '2027-06-03', distanceKm: 111, audienceClass: 'travelers', mostCommentedDay: { dayDate: '2027-06-02', commentCount: 4 } }));
@@ -76,7 +71,7 @@ describe('GET /:tripId/blog/recap', () => {
   });
 
   it('allows only one lease owner and recovers an expired claim', async () => {
-    await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1 WHERE trip_id = $1', [tripId]);
+    await bumpContentRevision(tripId);
     const revision = await blogRecapRepository().getRecapRevision(tripId);
     expect(revision).not.toBeNull();
     const firstClaims = await Promise.all([
@@ -85,10 +80,7 @@ describe('GET /:tripId/blog/recap', () => {
     ]);
     expect(firstClaims.filter(Boolean)).toHaveLength(1);
 
-    await queryBlog(
-      "UPDATE blog_recap_snapshots SET state = 'pending', lease_expires_at = '2000-01-01', lease_owner = 'dead-worker' WHERE trip_id = $1 AND content_revision = $2",
-      [tripId, revision!.contentRevision]
-    );
+    await abandonRecapSnapshot(tripId, revision!.contentRevision);
     const recoveryClaims = await Promise.all([
       blogRecapRepository().claimRecapSnapshot(revision!, 'travelers', 'worker-c', 60),
       blogRecapRepository().claimRecapSnapshot(revision!, 'travelers', 'worker-d', 60),

@@ -4,6 +4,43 @@
 # file has no effect on already-seeded flags. Use the admin API to change live values.
 
 flags:
+  feature_ingest_receiver_auth:
+    enabled: false
+    description: "Content-bound trusted receiver attestations; enable only after receiver policy/real forwarding fixture validation"
+  planning_native_map:
+    enabled: false
+    description: "Native MapLibre renderer; requires compatible EAS binary and named-device checks"
+  planning_geocoding:
+    enabled: false
+    description: "Reviewed public catalog POI lookup via a configured self-hosted/contracted endpoint; no private addresses"
+  planning_web_map:
+    enabled: false
+    description: "P1 on-device web map; enable after bundle and WebGL checks"
+  planning_auto_assign:
+    enabled: false
+    description: "P2 add confident, matching bookings from the person's own uploads to the right trip automatically, with Undo for 7 days. Default for everyone once on; each person can turn it off. Forwarded email never qualifies."
+  planning_day_order:
+    enabled: false
+    description: "P2 manual drag and move-up/down reordering for a day's activities; optimization additionally requires planning_optimize_order"
+  planning_optimize_order:
+    enabled: false
+    description: "Show route optimization suggestions and the lodging start/end option; manual reordering remains independently controlled by planning_day_order"
+  planning_nearby:
+    enabled: false
+    description: "P1 catalog Nearby and atomic Add to day; no external geocoder"
+  planning_locate_items:
+    enabled: true
+    description: "Find locations: on a member's explicit request, geocode a lodging, activity or car rental's own saved address with Geoapify (needs GEOAPIFY_API_KEY) and store the result with attribution"
+  planning_trip_inspiration:
+    enabled: false
+    description: "Destination-matched public trips with explicit catalog activity sharing and credited copies"
+  planning_structured_import:
+    enabled: false
+    description: "P1 bounded calendar and reservation extraction"
+  trip_bundle:
+    enabled: false
+    description: "P1 permission-sensitive conditional trip bundle"
+
   ai_itinerary_generation:
     enabled: true
     description: "Enable AI-powered itinerary generation via OpenAI"
@@ -47,7 +84,7 @@ flags:
     enabled: true
     description: "Phase 1 manual upload ingestion and review queue"
   feature_ingest_forwarded_mailbox:
-    enabled: true
+    enabled: false
     description: "Phase 2 forwarded mailbox ingestion"
   feature_ingest_gmail_import:
     enabled: false
@@ -231,8 +268,8 @@ flags:
   # externally-billed call in the feature set." A day map is rendered once per (trip-day,
   # points-hash) by a background job, never on a request path (architecture §14.1).
   trip_blog_day_map_render:
-    enabled: true
-    description: "Background day-map render job (§14.1) — writes a stored PNG via Google Static Maps once per (trip-day, points-hash); no request path ever calls out"
+    enabled: false
+    description: "Retired legacy blog map renderer; retained as a disabled compatibility tombstone. New readers use authorized mapPoints."
   # Phase 6 — every independently releasable surface defaults off. Caption AI and nudges are
   # fail-closed in entitlementService because they call a paid provider or contact a person.
   trip_blog_spend_summary:
@@ -278,7 +315,7 @@ flags:
     enabled: false
     description: "Optional client Sentry diagnostics; fails closed when missing"
   notifications_web_push:
-    enabled: true
+    enabled: false
     description: "Web push notification delivery"
   # Added alongside real push delivery (2026-09-14) — beyond the original four-flag table above.
   # notifications_web_push was reserved for literal browser push (service worker + VAPID), which
@@ -355,3 +392,7 @@ flags:
   itinerary_anchor_schedule_verification:
     enabled: true
     description: "Enable optional capped verification of selected time-critical anchor schedules"
+
+  planning_notifications:
+    enabled: false
+    description: "Owner: planning. Durable deadline/digest scheduler; retire after measured rollout."

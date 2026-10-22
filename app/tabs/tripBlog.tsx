@@ -10,7 +10,9 @@ import VoiceNoteRecorder from '../components/VoiceNoteRecorder';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { formatDateLong } from '../utils/formatDateLong';
 import TripDayMap from '../components/TripDayMap';
+import ActivitySharingControls from '../components/ActivitySharingControls';
 import { type TripMapPoint } from '../utils/googleMaps';
+import TripMap from '../components/TripMap';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useAutosave } from '../utils/useAutosave';
@@ -42,6 +44,7 @@ import {
   uploadBlogFiles,
 } from '../utils/blogUpload';
 import { convertImageToJpeg, isHeicMimeType, toJpegName } from '../utils/heicToJpeg';
+import { actualAudioType, readLocalBlob } from '../utils/localBlob';
 import { defaultTemperatureUnitForRegion, formatWeatherFactValue, type TemperatureUnit } from '../utils/temperatureUnit';
 import { readImageCaptureMetadata, readNativeExifCapture } from '../utils/exifCapture';
 import PhotoFirstComposer from '../components/PhotoFirstComposer';
@@ -255,21 +258,37 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   // resolve membership against there), and a failure (flag off, rate-limited, etc.) just leaves
   // that day's strip empty rather than surfacing an error — facts are enrichment, never blocking.
   const [dayFacts, setDayFacts] = useState({});
+  // Server-projected stops for the device map. Exact for travelers; coarse, opt-in and lodging-free for followers.
+  const [dayMapPoints, setDayMapPoints] = useState<Record<string, { precision: 'exact' | 'approximate'; points: Array<{ lat: number; lng: number }> }>>({});
   // The °F/°C switch only shows when there's weather to convert.
   const hasWeatherFacts = useMemo(() => Object.values(dayFacts || {}).some((facts: any) => Array.isArray(facts) && facts.some((fact) => fact.key === 'weather')), [dayFacts]);
+  const factScope = JSON.stringify([activeTripId, headers?.Authorization, readOnly]);
+  const factScopeRef = useRef(factScope); factScopeRef.current = factScope;
+  const mapScope = JSON.stringify([factScope, publicPreview]);
+  const mapScopeRef = useRef(mapScope); mapScopeRef.current = mapScope;
   const loadedFactDays = useRef(new Set());
-  useEffect(() => { loadedFactDays.current.clear(); setDayFacts({}); }, [activeTripId]);
+  useEffect(() => { loadedFactDays.current.clear(); setDayFacts({}); }, [factScope]);
+  useEffect(() => { setDayMapPoints({}); }, [mapScope]);
   useEffect(() => {
     if (publicPreview) return;
     for (const day of visibleDays) {
       if (loadedFactDays.current.has(day.localDate)) continue;
       loadedFactDays.current.add(day.localDate);
+      const requestScope = mapScope;
       fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${day.localDate}/facts`, { headers })
         .then((response) => (response.ok ? response.json() : null))
-        .then((data) => { if (data?.facts) setDayFacts((current) => ({ ...current, [day.localDate]: data.facts })); })
+        .then((data) => {
+          if (!data?.facts || factScopeRef.current !== factScope) return;
+          setDayFacts((current) => ({ ...current, [day.localDate]: data.facts }));
+          if (mapScopeRef.current !== requestScope) return;
+          setDayMapPoints((current) => {
+            const { [day.localDate]: _previous, ...rest } = current;
+            return data.mapPoints?.points?.length ? { ...rest, [day.localDate]: data.mapPoints } : rest;
+          });
+        })
         .catch(() => { loadedFactDays.current.delete(day.localDate); });
     }
-  }, [visibleDays, publicPreview, backendUrl, activeTripId, headers]);
+  }, [visibleDays, publicPreview, backendUrl, activeTripId, headers, mapScope]);
 
   // Phase 5 (A1) — Day Starter. For any day the editing traveler has left empty, ask the server
   // for its one deterministic draft suggestion. Same lazy per-day shape as the facts effect above:
@@ -446,6 +465,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       }
       if (!response.ok || !data.recap) throw new Error(data.error || 'Unable to build the trip recap');
       setRecap(data.recap);
+      try {
+        const mapsResponse = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/maps`, { headers, cache: 'no-store' });
+        if (mapsResponse.ok && mapScopeRef.current === mapScope) { const maps = await mapsResponse.json(); if (mapScopeRef.current !== mapScope) return; setDayMapPoints(Object.fromEntries((maps.days || []).map(day => [day.dayDate, day.mapPoints]))); }
+      } catch { /* The recap remains useful without a map. */ }
       setRecapNotice(null);
       // Bring the freshly-built card into view — otherwise it just appears somewhere off-screen.
       setTimeout(() => { try { scrollRef.current?.scrollTo({ y: Math.max(0, recapY.current - 24), animated: true }); } catch {} }, 120);
@@ -493,8 +516,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         // ("An audio recording is required"). Found via manual testing on web, not previously
         // exercised there. fetch() the blob: URI to get a real Blob, then append(name, blob,
         // filename) -- that's what actually attaches bytes to the multipart body in a browser.
-        const audioResponse = await fetch(recording.uri);
-        const audioBlob = await audioResponse.blob();
+        const audioBlob = recording.blob ?? await readLocalBlob(recording.uri);
         formData.append('audio', audioBlob, recording.name || 'caption-recording.m4a');
       } else {
         formData.append('audio', {
@@ -643,6 +665,74 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       setPublicationNotice(error.message || 'Unable to update public viewing');
     } finally {
       setPublicationBusy(false);
+    }
+  };
+
+  // Followers' approximate maps: off until a traveler has seen exactly what would be shown.
+  const [mapPreview, setMapPreview] = useState<Array<{ dayDate: string; points: Array<{ lat: number; lng: number }> }> | null>(null);
+  const [mapShareBusy, setMapShareBusy] = useState(false);
+  const [mapShareNotice, setMapShareNotice] = useState('');
+  useEffect(() => { setMapPreview(null); setMapShareNotice(''); }, [activeTripId]);
+  const loadMapPreview = async () => {
+    if (!activeTripId || mapShareBusy) return;
+    setMapShareBusy(true);
+    setMapShareNotice('');
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/map-sharing-preview`, { headers });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to build the preview');
+      setMapPreview(Array.isArray(data.days) ? data.days : []);
+    } catch (error) {
+      setMapShareNotice(error.message || 'Unable to build the preview');
+    } finally {
+      setMapShareBusy(false);
+    }
+  };
+  const setSharedMap = async (enabled) => {
+    if (!activeTripId || !canEdit || mapShareBusy) return;
+    // Consent is informed: turning sharing on requires a preview that actually shows something.
+    if (enabled && !mapPreview?.length) return;
+    setMapShareBusy(true);
+    setMapShareNotice('');
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sharedMapEnabled: enabled }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to update map sharing');
+      setMapShareNotice(enabled ? 'Followers can now see approximate day maps.' : 'Followers no longer see day maps.');
+      if (!enabled) setMapPreview(null);
+      await refreshBlogAndPublication();
+    } catch (error) {
+      setMapShareNotice(error.message || 'Unable to update map sharing');
+    } finally {
+      setMapShareBusy(false);
+    }
+  };
+
+  // Whether newly uploaded photos keep where they were taken. Not retroactive (server enforces at upload time).
+  const [photoLocationBusy, setPhotoLocationBusy] = useState(false);
+  const [photoLocationNotice, setPhotoLocationNotice] = useState('');
+  const setPhotoLocation = async (enabled) => {
+    if (!activeTripId || !canEdit || photoLocationBusy) return;
+    setPhotoLocationBusy(true);
+    setPhotoLocationNotice('');
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoLocationEnabled: enabled }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to update photo locations');
+      setPhotoLocationNotice(enabled ? 'Photos you add from now on will keep where they were taken.' : 'Photos you add from now on will not keep their location.');
+      await refreshBlogAndPublication();
+    } catch (error) {
+      setPhotoLocationNotice(error.message || 'Unable to update photo locations');
+    } finally {
+      setPhotoLocationBusy(false);
     }
   };
 
@@ -908,8 +998,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       const result = await DocumentPicker.getDocumentAsync({ type: SUPPORTED_AUDIO_MIME_TYPES, multiple: false, copyToCacheDirectory: true });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      let blob;
+      try {
+        blob = await readLocalBlob(asset.uri);
+      } catch (error) {
+        throw new Error(`Couldn't read that audio file on this device (${error.message || 'unknown error'}). Please try again.`);
+      }
       const mimeType = asset.mimeType || guessMimeTypeFromName(asset.name);
       if (!mimeType || !SUPPORTED_AUDIO_MIME_TYPES.includes(mimeType)) throw new Error('Choose an MP3, M4A, WAV, or WebM audio file.');
       const uploaded = await uploadBlogFiles(
@@ -940,12 +1034,20 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     setUploading(true);
     setVoiceUploadFailures((current) => ({ ...current, [dayDate]: null }));
     try {
-      const response = await fetch(recording.uri);
-      const blob = await response.blob();
+      let blob;
+      try {
+        blob = await readLocalBlob(recording.uri);
+      } catch (error) {
+        throw new Error(`Couldn't read the recording on this device (${error.message || 'unknown error'}). Please try again.`);
+      }
+      // Label the audio with the format the browser really recorded (iPhone Safari: audio/mp4,
+      // Chrome: audio/webm), not the "audio/m4a" the recorder assumes, so it plays back elsewhere.
+      const { mimeType, extension } = actualAudioType(blob.type, recording.mimeType);
+      recording = { ...recording, mimeType, name: `voice-note.${extension}`, blob };
       const uploaded = await uploadBlogFiles(
         { backendUrl, headers, tripId: activeTripId },
         dayDate,
-        [{ blob, mimeType: recording.mimeType, size: blob.size, name: recording.name }]
+        [{ blob, mimeType, size: blob.size, name: recording.name }]
       );
       if (!uploaded.succeeded || !uploaded.assets[0]) {
         throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : uploaded.errors?.[0] || 'Unable to add the voice note.');
@@ -1378,7 +1480,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>Quick capture</Text>
               </TouchableOpacity>
             ) : null}
-            {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
+            {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton nativeEnabled={capabilities.planning_native_map === true} backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
           </View>
         </View>
         {/* Phase 1 masthead stat row (redesign proposal §1) — the "trip at a glance" strip. */}
@@ -1685,6 +1787,22 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     />
                   );
                 })()}
+              </View>
+            ) : null}
+            {!publicPreview && dayMapPoints[day.localDate] ? (
+              <View style={{ marginTop: 4, marginBottom: 4 }}>
+                <TripMap
+                  nativeEnabled={capabilities.planning_native_map === true}
+                  testID={`blog-day-map-${day.localDate}`}
+                  points={dayMapPoints[day.localDate].points.map((point, index) => ({
+                    id: `blog-map-${day.localDate}-${index}`, kind: 'activity' as const, lat: point.lat, lng: point.lng,
+                    coordinateSource: 'manual' as const,
+                    title: dayMapPoints[day.localDate].precision === 'approximate' ? `Approximate area ${index + 1}` : `Photo location ${index + 1}`,
+                  }))}
+                />
+                {dayMapPoints[day.localDate].precision === 'approximate' ? (
+                  <Text style={{ fontSize: 12, color: theme?.colors?.textMuted ?? '#64748b' }}>Locations are approximate (about 1 km) and omit where the travelers stayed.</Text>
+                ) : null}
               </View>
             ) : null}
             {(day.items || []).filter((item) => item.kindKey !== 'core.gallery' && !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (
@@ -2044,6 +2162,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
           <View style={{ marginTop: 8 }} onLayout={(e) => { recapY.current = e.nativeEvent.layout.y; }}>
             {recap ? (
               <TripRecapCards
+                nativeEnabled={capabilities.planning_native_map === true}
+                mapDays={Object.entries(publicPreview ? {} : dayMapPoints).map(([dayDate, mapPoints]) => ({ dayDate, mapPoints }))}
                 recap={recap}
                 topPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.assetId === recap?.topPhoto?.assetId)?.primaryUrl}
                 fallbackPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.mediaKind === 'photo' && (item.primaryUrl || item.thumbnailUrl))?.primaryUrl}
@@ -2130,6 +2250,71 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                         : 'Blogs go public automatically when every traveler is 16+ with a date of birth in their profile and none has chosen private. Otherwise, public viewing needs consent from all adult account travelers.'}
                     {' '}Travelers and followers can always see this blog.
                   </Text>
+                </View>
+              ) : null}
+              {canEdit && !readOnly && <ActivitySharingControls tripId={activeTripId} backendUrl={backendUrl} headers={headers} />}
+              {canEdit && !readOnly ? (
+                <View testID="blog-photo-location-settings" style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
+                  <Text style={{ color: textColor, fontWeight: '700' }}>Keep photo locations: {blog?.photoLocationEnabled ? 'On' : 'Off'}</Text>
+                  <Text style={{ color: mutedColor, marginTop: 4, fontSize: 12 }}>
+                    Off by default. When on, photos added from now on keep where they were taken, which lets this trip draw a map of each day. Photos already added are not changed, and turning this off does not remove locations already saved. Only travelers see exact locations; followers see a map only if you also share day maps below.
+                  </Text>
+                  <TouchableOpacity
+                    testID="blog-photo-location-toggle"
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: Boolean(blog?.photoLocationEnabled), disabled: photoLocationBusy }}
+                    disabled={photoLocationBusy}
+                    onPress={() => setPhotoLocation(!blog?.photoLocationEnabled)}
+                    style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 5, paddingHorizontal: 10, minHeight: 44, justifyContent: 'center', ...(blog?.photoLocationEnabled ? { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' } : {}) }]}
+                  >
+                    <Text style={blog?.photoLocationEnabled ? { color: textColor } : styles.buttonText}>{photoLocationBusy ? 'Updating…' : blog?.photoLocationEnabled ? 'Stop keeping locations' : 'Keep photo locations'}</Text>
+                  </TouchableOpacity>
+                  {photoLocationNotice ? <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>{photoLocationNotice}</Text> : null}
+                </View>
+              ) : null}
+              {canEdit && !readOnly ? (
+                <View testID="blog-shared-map-settings" style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
+                  <Text style={{ color: textColor, fontWeight: '700' }}>Follower day maps: {blog?.sharedMapEnabled ? 'On' : 'Off'}</Text>
+                  <Text style={{ color: mutedColor, marginTop: 4, fontSize: 12 }}>
+                    Off by default. When on, followers see a map of each day built from your photo locations, rounded to about 1 km, without places near where you stayed. Any traveler can change this. Travelers always see their own exact locations.
+                  </Text>
+                  {blog?.sharedMapEnabled ? (
+                    <TouchableOpacity testID="blog-shared-map-off" accessibilityRole="button" disabled={mapShareBusy} onPress={() => setSharedMap(false)} style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]}>
+                      <Text style={{ color: textColor }}>{mapShareBusy ? 'Updating…' : 'Stop sharing maps'}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{ marginTop: 8, gap: 8 }}>
+                      <TouchableOpacity testID="blog-shared-map-preview" accessibilityRole="button" disabled={mapShareBusy} onPress={loadMapPreview} style={[styles.button, { alignSelf: 'flex-start', paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]}>
+                        <Text style={{ color: textColor }}>{mapShareBusy && !mapPreview ? 'Building preview…' : 'Preview what followers would see'}</Text>
+                      </TouchableOpacity>
+                      {mapPreview ? (
+                        <View testID="blog-shared-map-preview-result" style={{ gap: 6 }}>
+                          {mapPreview.length === 0 ? (
+                            <Text style={{ color: mutedColor, fontSize: 12 }}>No day has enough photo locations to show a map, so followers would see none.</Text>
+                          ) : (
+                            <>
+                              <Text style={{ color: textColor, fontSize: 12 }}>Followers would see a map on {mapPreview.length} {mapPreview.length === 1 ? 'day' : 'days'}:</Text>
+                              {mapPreview.map((day) => (
+                                <View key={day.dayDate} style={{ gap: 2 }}>
+                                  <Text style={{ color: mutedColor, fontSize: 12 }}>{day.dayDate} · {day.points.length} approximate areas</Text>
+                                  {Platform.OS === 'web' ? (
+                                    <TripMap
+                                      testID={`blog-shared-map-preview-${day.dayDate}`}
+                                      points={day.points.map((point, index) => ({ id: `preview-${day.dayDate}-${index}`, kind: 'activity' as const, lat: point.lat, lng: point.lng, coordinateSource: 'manual' as const, title: `Approximate area ${index + 1}` }))}
+                                    />
+                                  ) : null}
+                                </View>
+                              ))}
+                            </>
+                          )}
+                          <TouchableOpacity testID="blog-shared-map-on" accessibilityRole="button" disabled={mapShareBusy || mapPreview.length === 0} onPress={() => setSharedMap(true)} style={[styles.button, { alignSelf: 'flex-start', paddingVertical: 5, paddingHorizontal: 10, opacity: mapPreview.length === 0 ? 0.5 : 1 }]}>
+                            <Text style={styles.buttonText}>{mapShareBusy ? 'Updating…' : 'Share these maps with followers'}</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
+                  {mapShareNotice ? <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>{mapShareNotice}</Text> : null}
                 </View>
               ) : null}
               <BlogDiscoveryPanel

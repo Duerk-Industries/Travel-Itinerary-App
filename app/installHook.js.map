@@ -1,6 +1,7 @@
 {
   "version": 3,
-  "sources": [],
+  "sources": ["installHook.js"],
+  "sourcesContent": [""],
   "names": [],
   "mappings": "",
   "file": "installHook.js"

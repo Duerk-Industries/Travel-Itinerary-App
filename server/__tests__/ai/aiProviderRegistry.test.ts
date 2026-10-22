@@ -34,6 +34,11 @@ jest.mock('../../src/services/aiInvocationGuard', () => {
 });
 
 jest.mock('../../src/apis/providerBudgeting', () => ({
+  claimProviderSpend: jest.fn(async () => undefined),
+  hasMeteredTokenUsage: jest.fn(usage => Boolean(usage)),
+  quoteAiSpend: jest.fn(() => 100),
+  reserveAiSpend: jest.fn(async () => null),
+  releaseUndispatchedSpend: jest.fn(async () => undefined),
   getApiBudgetWindowKey: jest.fn(() => '2026-07'),
   settleProviderAttempt: jest.fn(),
 }));
@@ -131,7 +136,7 @@ describe('aiProviderRegistry cost recording', () => {
     const response = await provider.chatCompletion(request, context);
 
     expect(response).toBe(fakeResponse);
-    expect(mockedSettle).toHaveBeenCalledWith(expectedSettlement);
+    expect(mockedSettle).toHaveBeenCalledWith({...expectedSettlement,reservation:null,usageKnown:true});
   });
 
   it('records per-user usage for a non-openai provider when usage accounting is enabled', async () => {
@@ -206,7 +211,7 @@ describe('aiProviderRegistry cost recording', () => {
     const provider = await resolveProvider('mail_parsing', 'INGESTION_LLM_EXTRACT');
     await provider.chatCompletion(request, { ...context, usageAccountingEnabled: true } as AiCallContext & { usageAccountingEnabled: boolean });
 
-    expect(mockedSettle).toHaveBeenCalledWith(expectedSettlement);
+    expect(mockedSettle).toHaveBeenCalledWith({...expectedSettlement,reservation:null,usageKnown:true});
     expect(mockedRecordUsage).not.toHaveBeenCalledWith('user-1', 'fake_anthropic_estimated_cost_micros_usd', expect.anything(), expect.anything());
   });
 
@@ -271,7 +276,7 @@ describe('aiProviderRegistry traffic_split experiments', () => {
     expect(response).toBe(fakeResponse);
     // Same tracking every other provider call gets — a traffic_split
     // resolution must never bypass rate-limiting/cost-recording.
-    expect(mockedSettle).toHaveBeenCalledWith(expectedSettlement);
+    expect(mockedSettle).toHaveBeenCalledWith({...expectedSettlement,reservation:null,usageKnown:true});
     // And the circuit breaker actually gets fed an outcome — this is what
     // makes trip detection possible for traffic_split in the first place.
     expect(mockedRecordOutcome).toHaveBeenCalledWith({

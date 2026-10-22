@@ -32,15 +32,8 @@ export const buildStaticMapUrl = (address: string, backendUrl?: string, apiKey?:
  * future entity that stores real coordinates (e.g. flights via the airport
  * dataset) without needing another endpoint contract change.
  */
-export type TripMapPointKind = 'flight' | 'lodging' | 'activity' | 'car_rental';
-
-export type TripMapPoint = {
-  kind: TripMapPointKind;
-  label?: string;
-  address?: string;
-  lat?: number;
-  lng?: number;
-};
+export type TripMapPointKind = import('../../server/src/types').PlanningMapPoint['kind'];
+export type TripMapPoint = Omit<import('../../server/src/types').PlanningMapPoint, 'id' | 'title'> & { id?: string; title?: string };
 
 const MAX_TRIP_DAY_MAP_URL_POINTS = 12;
 

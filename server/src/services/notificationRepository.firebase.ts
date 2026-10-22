@@ -1,47 +1,36 @@
-import { randomUUID } from 'crypto';
+import { parseNotificationCursor } from './notificationCursor';
+import { createHash, randomUUID } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb } from '../db.firebase';
 
 const nowIso = () => new Date().toISOString();
 
-export const createNotification = async (n: any): Promise<string> => {
+export const createNotificationWithOutbox = async (n: any, channels: Array<'push' | 'email'>): Promise<string> => {
   const db = getDb();
-  const id = randomUUID();
-  const dedupeKey = n.dedupeKey || null;
-
-  if (dedupeKey) {
-    const docId = `${n.userId}:${dedupeKey}`;
-    const ref = db.collection('notifications').doc(docId);
-    const snap = await ref.get();
-    if (snap.exists) return snap.id;
-
-    const data = { ...n, createdAt: nowIso(), readAt: null, seenAt: null };
-    await ref.set(data);
-    return docId;
-  } else {
-    const ref = db.collection('notifications').doc(id);
-    const data = { ...n, createdAt: nowIso(), readAt: null, seenAt: null };
-    await ref.set(data);
-    return id;
-  }
+  const id = n.dedupeKey ? createHash('sha256').update(`${n.userId}:${n.dedupeKey}`).digest('hex') : randomUUID();
+  const ref = db.collection('notifications').doc(id);
+  await db.runTransaction(async tx => {
+    const previous = await tx.get(ref);
+    const outbox = await Promise.all(channels.map(async channel => {
+      const ref = db.collection('notification_outbox').doc(`${id}:${channel}`);
+      return { ref, channel, exists: (await tx.get(ref)).exists };
+    }));
+    if (!previous.exists) tx.create(ref, { ...n, inApp: n.inApp !== false, createdAt: nowIso(), readAt: null, seenAt: null });
+    for (const entry of outbox) if (!entry.exists) tx.create(entry.ref, { notificationId: id, channel: entry.channel, state: 'pending', attemptCount: 0, nextAttemptAt: nowIso(), createdAt: nowIso(), updatedAt: nowIso() });
+  });
+  return id;
 };
+export const createNotification = (n: any): Promise<string> => createNotificationWithOutbox(n, []);
 
 export const enqueueOutbox = async (entries: any[]): Promise<void> => {
   const db = getDb();
-  const batch = db.batch();
-  for (const e of entries) {
-    const id = `${e.notificationId}:${e.channel}`;
-    const ref = db.collection('notification_outbox').doc(id);
-    batch.set(ref, {
-      ...e,
-      state: 'pending',
-      attemptCount: 0,
-      nextAttemptAt: nowIso(),
-      createdAt: nowIso(),
-      updatedAt: nowIso()
-    }, { merge: true });
+  for (const entry of entries) {
+    const ref = db.collection('notification_outbox').doc(`${entry.notificationId}:${entry.channel}`);
+    await db.runTransaction(async tx => {
+      const existing = await tx.get(ref);
+      if (!existing.exists) tx.create(ref, { ...entry, state: 'pending', attemptCount: 0, nextAttemptAt: nowIso(), createdAt: nowIso(), updatedAt: nowIso() });
+    });
   }
-  await batch.commit();
 };
 
 export const getPreferences = async (userIds: string[]): Promise<any[]> => {
@@ -59,23 +48,20 @@ export const isThreadMuted = async (userId: string, threadKey: string): Promise<
 export const getUnreadCount = async (userId: string): Promise<number> => {
   const snap = await getDb().collection('notifications')
     .where('userId', '==', userId)
+    .where('inApp', '==', true)
     .where('readAt', '==', null)
     .get();
   return snap.size;
 };
 
-export const listNotifications = async (userId: string, options: any): Promise<any[]> => {
-  const limit = Math.min(100, Math.max(1, options.limit ?? 20));
-  const db = getDb();
-  let query = db.collection('notifications').where('userId', '==', userId);
+export const listNotifications = async (userId: string, options: { limit?: number; cursor?: string; unreadOnly?: boolean }): Promise<any[]> => {
+  const limit = Math.min(50, Math.max(1, options.limit ?? 20));
+  let query = getDb().collection('notifications').where('userId', '==', userId).where('inApp', '==', true);
   if (options.unreadOnly) query = query.where('readAt', '==', null);
-
-  const snap = await query.get();
-  return snap.docs
-    .map((doc): any => ({ ...(doc.data() as any), id: doc.id }))
-    .filter((n: any) => !options.cursor || n.createdAt < options.cursor)
-    .sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, limit);
+  const cursor = parseNotificationCursor(options.cursor);
+  let ordered = query.orderBy('createdAt', 'desc').orderBy('__name__', 'desc');
+  if (cursor) ordered = ordered.startAfter(cursor.t, cursor.id);
+  return (await ordered.limit(limit).get()).docs.map(doc => ({ ...doc.data(), id: doc.id }));
 };
 
 export const markAsRead = async (userId: string, ids: string[] | 'all'): Promise<void> => {
@@ -105,16 +91,29 @@ export const upsertDevice = async (userId: string, d: any): Promise<void> => {
   }, { merge: true });
 };
 
+// Same columns and snake_case names as the Postgres adapter. The encrypted token and its hash are
+// never part of this public projection (listActivePushDevicesForUser is the internal delivery read).
 export const listDevices = async (userId: string): Promise<any[]> => {
   const snap = await getDb().collection('notification_devices')
     .where('userId', '==', userId)
     .where('disabledAt', '==', null)
     .get();
-  return snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+  return snap.docs.map(doc => {
+    const d = doc.data() as any;
+    return {
+      id: doc.id, platform: d.platform, device_label: d.deviceLabel ?? null,
+      permission_state: d.permissionState ?? null, last_seen_at: d.lastSeenAt ?? null, created_at: d.createdAt ?? null,
+    };
+  });
 };
 
+// Only the owner's own device can be disabled (Postgres filters on user_id the same way).
 export const deleteDevice = async (userId: string, deviceId: string): Promise<void> => {
-  await getDb().collection('notification_devices').doc(deviceId).update({ disabledAt: nowIso() });
+  const ref = getDb().collection('notification_devices').doc(deviceId);
+  await getDb().runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (snap.exists && (snap.data() as any).userId === userId) tx.update(ref, { disabledAt: nowIso() });
+  });
 };
 
 export const getNotificationById = async (id: string): Promise<any | null> => {
@@ -190,7 +189,12 @@ export const updateOutboxState = async (id: string, state: string, options: any 
   if (options.nextAttemptAt != null) update.nextAttemptAt = options.nextAttemptAt.toISOString();
   if (options.lastErrorCode != null) update.lastErrorCode = options.lastErrorCode;
 
-  await db.collection('notification_outbox').doc(id).update(update);
+  const ref = db.collection('notification_outbox').doc(id);
+  await db.runTransaction(async tx => {
+    const doc = await tx.get(ref);
+    if (!doc.exists || (options.leaseOwner && doc.data()?.leaseOwner !== options.leaseOwner)) return;
+    tx.update(ref, update);
+  });
 };
 
 export const pruneNotifications = async (retentionDays: number, maxPerRow: number): Promise<void> => {

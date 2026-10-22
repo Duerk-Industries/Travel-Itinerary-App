@@ -1,3 +1,10 @@
+import { isFlightTransfer } from './utils/transferCategory';
+import { shadowStyle } from './utils/shadowStyle';
+import { ThemeProvider } from './theme/ThemeContext';
+import type { ImportTripDraft } from '../server/src/types';
+import PendingExpenseRecovery from './components/PendingExpenseRecovery';
+import { OfflineSaveButton, OfflineSavePanel, useSaveTripOffline } from './components/SaveTripOffline';
+import PendingExpenseLogoutDialog from './components/PendingExpenseLogoutDialog';
 /**
  * Main client app for Shared Trip Planner.
  *
@@ -17,6 +24,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { getNetworkStateAsync } from 'expo-network';
+import { allowAutomaticDownload, getConnectionCost, readWifiOnlyPreference } from './utils/offlineDownloadPolicy';
 import * as ExpoLinking from 'expo-linking';
 import {
   adminScreenBySection,
@@ -85,18 +93,23 @@ import {
   saveSessionAsync,
 } from './utils/session';
 import OfflineUnlockScreen from './components/OfflineUnlockScreen';
+import NotificationInbox from './components/NotificationInbox';
 import OfflineBanner from './components/OfflineBanner';
 import { useConnectionState } from './hooks/useConnectionState';
+import { usePendingExpenseSync } from './hooks/usePendingExpenseSync';
 import {
   clearOfflineTripCache,
   isOfflineAccessValid,
   isTripActiveToday,
   loadOfflineTripCache,
   saveOfflineTripSnapshot,
+  touchOfflineTripSnapshot,
   startOfflineAccessPeriod,
   type OfflineTripCache,
+  type OfflineTripSnapshot,
   type OfflineItinerarySnapshot,
 } from './utils/offlineTripCache';
+import { downloadOfflineTripSnapshot } from './utils/downloadOfflineTripSnapshot';
 import { requestOfflineUnlock } from './utils/offlineAccess';
 
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
@@ -211,6 +224,7 @@ type Page =
   | 'overview'
   | 'blog'
   | 'flights'
+  | 'ground-transfers'
   | 'lodging'
   | 'packing'
   | 'car'
@@ -391,7 +405,7 @@ const decodeBase64UrlUtf8 = (value: string): string | null => {
 
 const decodeTokenClaims = (
   token: string
-): { firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null => {
+): { userId?: string; firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null => {
   try {
     const payload = token.split('.')[1];
     if (!payload) return null;
@@ -563,10 +577,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     applySession,
     clearSessionState,
   } = useAuthSession();
+  const offlineOwner = useMemo(() => userId ? { userId, environment: backendUrl, legacyEmail: userEmail } : null, [userId, backendUrl, userEmail]);
+  const [offlineSaveError, setOfflineSaveError] = useState<string | null>(null);
   const privacy = usePrivacyConsent(backendUrl, userToken);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const offlineUnlockEpochRef = useRef(0);
+  const offlineDownloadsRef = useRef<Record<string, Promise<OfflineTripSnapshot>>>({});
   const offlineSnapshotPrefetchRef = useRef<Record<string, number>>({});
   const refreshInFlightRef = useRef(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -604,6 +622,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     resendConfirmationEmail: submitResendConfirmation,
   } = useAuthFlowState({ backendUrl, userToken });
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
+  const [importTripCreation, setImportTripCreation] = useState<{ auth: string; itemId: string; draft: ImportTripDraft } | null>(null);
+  const [returnImportReview, setReturnImportReview] = useState<{ auth: string; itemId: string; tripId: string } | null>(null);
+  const tripCreationAuthRef = useRef(userToken); tripCreationAuthRef.current = userToken;
+  useEffect(() => { setImportTripCreation(null); setReturnImportReview(null); }, [userToken]);
+
   // selectedFollowedTripDetails is now owned by useSelectedFollowedTripDetails (declared below once selectedFollowedTrip is derived).
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
@@ -629,6 +652,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const connection = useConnectionState();
   const offlineReadOnly = offlineMode || connection.status === 'offline';
   // userEmail / userId / userRole are owned by useAuthSession (declared above).
+  const [pendingNotificationId, setPendingNotificationId] = useState<string | null>(null);
   const [shareTripModalOpen, setShareTripModalOpen] = useState(false);
   const [overviewEditSignal, setOverviewEditSignal] = useState(0);
   const [goToDay1Signal, setGoToDay1Signal] = useState(0);
@@ -637,6 +661,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
   const [tripToDelete, setTripToDelete] = useState<{ id: string; name: string; isLastTraveler: boolean } | null>(null);
+  const [tripDeleteBusy, setTripDeleteBusy] = useState(false);
+  const [tripDeleteError, setTripDeleteError] = useState<string | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -909,6 +935,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [userToken]
   );
 
+  // Expenses added without a connection are saved on this device (account-scoped) and sent when the
+  // device is online with a valid session, even if the user has left the Expenses tab.
+  const pendingExpenses = usePendingExpenseSync({
+    userId,
+    backendUrl,
+    headers,
+    canSync: Boolean(userToken) && !offlineMode && connection.status !== 'offline',
+    onSynced: (expense, tripId) => {
+      if (tripId !== activeTripId) return;
+      setExpenses((prev) => [expense as unknown as Expense, ...prev.filter((e) => e.id !== (expense as { id?: string }).id)]);
+    },
+  });
+
   const { userMembers, memberIds, currentUserMemberId, defaultPayerId } = useTripMembers(
     groupMembers,
     userEmail,
@@ -964,6 +1003,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // updateMapPreference + updateAppearancePreference are now provided by useAccountProfile.
 
   const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
+  const offlineSave = useSaveTripOffline({ trip: isFollowingMode ? null : activeTrip, trips, groups, owner: offlineOwner, token: userToken, costTrackingAllowed, disabled: offlineReadOnly });
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
   const activeGroup = useMemo(
     () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
@@ -1015,7 +1055,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!pendingOfflineUnlock || offlineUnlocking) return;
     setOfflineUnlocking(true);
     setOfflineUnlockMessage(null);
+    const epoch = offlineUnlockEpochRef.current;
     const result = await requestOfflineUnlock();
+    if (epoch !== offlineUnlockEpochRef.current) return;
     setOfflineUnlocking(false);
     if (!result.ok) {
       setOfflineUnlockMessage(result.message);
@@ -1041,45 +1083,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [applySession, hydrateOfflineTripCache, offlineUnlocking, pendingOfflineUnlock]);
 
   useEffect(() => {
-    if (Platform.OS === 'web' || !userToken || !userEmail || offlineReadOnly || !activeTrip) return;
-    void saveOfflineTripSnapshot(
-      userEmail,
-      {
-        tripId: activeTrip.id,
-        savedAt: Date.now(),
-        trip: activeTrip,
-        groupMembers,
-        flights,
-        lodgings,
-        tours,
-        carRentals,
-        expenses,
-        payments: tripPayments,
-        coveredBy,
-        itinerary: offlineItineraries[activeTrip.id] ?? null,
-      },
-      { trips, groups },
-    );
-  }, [
-    activeTrip,
-    carRentals,
-    coveredBy,
-    expenses,
-    flights,
-    groupMembers,
-    groups,
-    lodgings,
-    offlineReadOnly,
-    offlineItineraries,
-    tours,
-    tripPayments,
-    trips,
-    userEmail,
-    userToken,
-  ]);
-
-  useEffect(() => {
-    if (Platform.OS === 'web' || !userToken || !userEmail || offlineReadOnly) return;
+    if (Platform.OS === 'web' || !userToken || !offlineOwner || offlineReadOnly || !accountProfile.entitlements) return;
     const now = Date.now();
     const currentTripIds = trips
       .filter((trip) => trip.id === activeTripId || isTripActiveToday(trip))
@@ -1087,108 +1091,72 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!currentTripIds.length) return;
     let cancelled = false;
 
-    const fetchList = async (path: string): Promise<unknown[]> => {
-      try {
-        const response = await fetch(`${backendUrl}${path}`, { headers });
-        if (!response.ok) return [];
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch {
-        return [];
-      }
-    };
-    const fetchRecord = async (path: string): Promise<Record<string, string>> => {
-      try {
-        const response = await fetch(`${backendUrl}${path}`, { headers });
-        if (!response.ok) return {};
-        const data = await response.json();
-        return data && typeof data === 'object' && !Array.isArray(data) ? data as Record<string, string> : {};
-      } catch {
-        return {};
-      }
-    };
-    const fetchItinerary = async (tripId: string): Promise<OfflineItinerarySnapshot | null> => {
-      const records = await fetchList('/api/itineraries');
-      const matching = records.filter((record: any) => record?.tripId === tripId);
-      if (!matching.length) return null;
-      const latest = [...matching].sort(
-        (a: any, b: any) => new Date(b?.updatedAt ?? b?.createdAt ?? 0).getTime() - new Date(a?.updatedAt ?? a?.createdAt ?? 0).getTime(),
-      )[0] as any;
-      const id = typeof latest?.id === 'string' ? latest.id : null;
-      if (!id) return null;
-      return {
-        id,
-        planMarkdown: typeof latest.planMarkdown === 'string' && latest.planMarkdown.trim() ? latest.planMarkdown : null,
-        details: await fetchList(`/api/itineraries/${encodeURIComponent(id)}/details`),
-      };
-    };
-
-    void Promise.all(currentTripIds.map(async (tripId) => {
+    // The Wi-Fi-only setting pauses automatic refreshes without an error; the saved copy stays as is.
+    void Promise.all([readWifiOnlyPreference(), getConnectionCost()]).then(([wifiOnly, cost]) => {
+      if (cancelled || !allowAutomaticDownload(wifiOnly, cost)) return;
+      return Promise.all(currentTripIds.map(async (tripId) => {
       // Avoid re-downloading the same current-trip snapshot more than once in
       // a five-minute refresh window when another piece of active data changes.
-      if ((offlineSnapshotPrefetchRef.current[tripId] ?? 0) > now - 5 * 60 * 1000) return;
-      offlineSnapshotPrefetchRef.current[tripId] = now;
-      const trip = trips.find((candidate) => candidate.id === tripId);
-      if (!trip) return;
-      const [members, tripFlights, tripLodgings, tripTours, tripRentals, tripExpenses, tripPayments, tripCoveredBy, tripItinerary] = await Promise.all([
-        fetchList(`/api/groups/${trip.groupId}/members`),
-        fetchFlightsForTrip({ backendUrl, activeTripId: tripId, token: userToken }).catch(() => []),
-        fetchLodgingsApi(backendUrl, tripId, userToken).catch(() => []),
-        fetchActivitiesForTrip({ backendUrl, activeTripId: tripId, token: userToken }).catch(() => []),
-        fetchCarRentalsForTrip({ backendUrl, activeTripId: tripId, token: userToken }).catch(() => []),
-        costTrackingAllowed ? fetchList(`/api/expenses?tripId=${encodeURIComponent(tripId)}`) : Promise.resolve([]),
-        costTrackingAllowed ? fetchList(`/api/payments?tripId=${encodeURIComponent(tripId)}`) : Promise.resolve([]),
-        fetchRecord(`/api/trips/${tripId}/covered-by`),
-        fetchItinerary(tripId),
-      ]);
-      if (cancelled) return;
-      await saveOfflineTripSnapshot(
-        userEmail,
-        {
-          tripId,
-          savedAt: Date.now(),
-          trip,
-          groupMembers: members,
-          flights: tripFlights,
-          lodgings: tripLodgings,
-          tours: tripTours,
-          carRentals: tripRentals,
-          expenses: tripExpenses,
-          payments: tripPayments,
-          coveredBy: tripCoveredBy,
-          itinerary: tripItinerary,
-        },
-        { trips, groups },
-      );
-    }));
+      const cacheKey = `${offlineOwner.userId}:${offlineOwner.environment}:${tripId}:${costTrackingAllowed}`;
+      if ((offlineSnapshotPrefetchRef.current[cacheKey] ?? 0) > now - 5 * 60 * 1000) return;
+      try {
+        const trip = trips.find(candidate => candidate.id === tripId);
+        if (!trip) return;
+        let download = offlineDownloadsRef.current[cacheKey];
+        if (!download) {
+          download = loadOfflineTripCache(offlineOwner).then(cache => downloadOfflineTripSnapshot({ trip, backendUrl, token: userToken, costTrackingAllowed, useBundle: true, previous: cache?.snapshots[tripId] }));
+          offlineDownloadsRef.current[cacheKey] = download;
+          void download.finally(() => {
+            if (offlineDownloadsRef.current[cacheKey] === download) delete offlineDownloadsRef.current[cacheKey];
+          }).catch(() => undefined);
+        }
+        const snapshot = await download;
+        if (cancelled) return;
+        await saveOfflineTripSnapshot(offlineOwner, snapshot, { trips, groups });
+        if (!cancelled) { offlineSnapshotPrefetchRef.current[cacheKey] = Date.now(); setOfflineSaveError(null); }
+      } catch {
+        delete offlineSnapshotPrefetchRef.current[cacheKey];
+        if (!cancelled) setOfflineSaveError("Couldn't update the saved copy. Your previous saved copy is still available. Try again when connected.");
+      }
+      }));
+    });
 
     return () => {
       cancelled = true;
     };
   }, [
     activeTripId,
+    accountProfile.entitlements,
     backendUrl,
     costTrackingAllowed,
     groups,
     headers,
     offlineReadOnly,
+    offlineOwner,
     trips,
     userEmail,
     userToken,
   ]);
 
   useEffect(() => {
+    // Opening a trip online also counts as use, so eviction keeps what is actually read.
+    if (offlineReadOnly || !offlineOwner || !activeTripId) return;
+    void touchOfflineTripSnapshot(offlineOwner, activeTripId).catch(() => undefined);
+  }, [activeTripId, offlineOwner, offlineReadOnly]);
+
+  useEffect(() => {
     if (!offlineReadOnly || !userEmail || !activeTripId) return;
     let cancelled = false;
-    void loadOfflineTripCache(userEmail).then((cache) => {
+    void loadOfflineTripCache(offlineOwner).then((cache) => {
       if (!cancelled && cache && isOfflineAccessValid(cache)) {
         hydrateOfflineTripCache(cache, activeTripId);
+        void touchOfflineTripSnapshot(offlineOwner, activeTripId).catch(() => undefined);
       }
-    });
+    }).catch(() => { if (!cancelled) setOfflineSaveError("Couldn't read the saved copy. Connect to the internet and download again."); });
     return () => {
       cancelled = true;
     };
-  }, [activeTripId, hydrateOfflineTripCache, offlineReadOnly, userEmail]);
+  }, [activeTripId, hydrateOfflineTripCache, offlineReadOnly, offlineOwner, userEmail]);
 
   useEffect(() => {
     if (offlineMode && connection.status === 'online') {
@@ -1275,14 +1243,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [mapApp, analyticsView.feature, analyticsView.tripId]);
 
   const openFlightInFlightsTab = useCallback((flightId: string) => {
+    const transfer = flights.find(item => item.id === flightId);
+    setActivePage(transfer && !isFlightTransfer(transfer) ? 'ground-transfers' : 'flights');
     setExternalFlightEditId(flightId);
-  }, []);
+  }, [flights]);
 
   const openItineraryExpenseEditor = useCallback((sourceType: string, sourceId: string) => {
     if (isFollowingMode || offlineReadOnly) return;
     switch (sourceType) {
       case 'flight':
-        setExternalFlightEditId(sourceId);
+        openFlightInFlightsTab(sourceId);
         break;
       case 'activity':
         setExternalActivityEditId(sourceId);
@@ -1296,7 +1266,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       default:
         break;
     }
-  }, [isFollowingMode, offlineReadOnly]);
+  }, [isFollowingMode, offlineReadOnly, openFlightInFlightsTab]);
 
   const saveCarRentalDraft = useCallback(async (rentalId?: string | null, draftOverride?: CarRentalDraft) => {
     if (isFollowingMode) return false;
@@ -1581,8 +1551,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const logout = useCallback(() => {
+    offlineUnlockEpochRef.current += 1;
+    setOfflineUnlocking(false);
+    setLodgings([]);
+    setCarRentals([]);
+    setGroupMembers([]);
+    setCoveredBy({});
     if (userId) void clearOfflineBlogAccount(userId);
-    void clearOfflineTripCache(userEmail);
+    void clearOfflineTripCache(offlineOwner).catch(() => setOfflineSaveError("Couldn't remove the saved copy from this device."));
+    offlineSnapshotPrefetchRef.current = {};
+    offlineDownloadsRef.current = {};
+    setOfflineItineraries({});
     setOfflineMode(false);
     setPendingOfflineUnlock(null);
     setOfflineUnlockMessage(null);
@@ -1615,7 +1594,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     // PresenceProvider and ChatProvider reset their state automatically when
     // userToken or activeTripId becomes null after clearSession().
     void clearSessionAsync();
-  }, [clearSessionState, clearTripsData, userEmail, userId]);
+  }, [clearSessionState, clearTripsData, offlineOwner, userEmail, userId]);
+  const [pendingLogoutBusy, setPendingLogoutBusy] = useState(false);
+  const [pendingLogoutError, setPendingLogoutError] = useState<string | null>(null);
+  const [pendingLogoutVisible, setPendingLogoutVisible] = useState(false);
+  const requestLogout = useCallback(() => {
+    if (pendingExpenses.entries.length || pendingExpenses.storageError) { setPendingLogoutError(pendingExpenses.storageError); setPendingLogoutVisible(true); }
+    else logout();
+  }, [pendingExpenses.entries.length, pendingExpenses.storageError, logout]);
   logoutRef.current = logout;
 
   // handleFollowTripByCode is now provided by useFollowedTrips.
@@ -1738,6 +1724,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const handleAuthSuccess = useCallback(
     (token: string, firstLoginOverride?: boolean, options?: { requirePasswordSetup?: boolean }) => {
+    offlineUnlockEpochRef.current += 1;
+    offlineSnapshotPrefetchRef.current = {};
+    offlineDownloadsRef.current = {};
+    setOfflineUnlocking(false);
     markLoginStarted();
     const decoded = decodeTokenClaims(token);
     const name =
@@ -1754,7 +1744,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setOfflineMode(false);
     setPendingOfflineUnlock(null);
     if (Platform.OS !== 'web') {
-      void startOfflineAccessPeriod(decoded?.email ?? null);
+      void startOfflineAccessPeriod(decodedUserId ? { userId: decodedUserId, environment: backendUrl } : null).catch(() => setOfflineSaveError("Couldn't save trips on this device. Free up space and try again."));
     }
     setInvitesLoaded(false);
     connectSocket(token);
@@ -2386,7 +2376,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           ]);
           break;
         case 'flights':
-          await Promise.all([fetchFlights(authToken), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
+        case 'ground-transfers':
+          await Promise.all([fetchFlights(authToken), ...(currentPage === 'ground-transfers' ? [fetchLodgings(authToken)] : []), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
           break;
         case 'lodging':
           await Promise.all([fetchLodgings(authToken), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
@@ -2565,8 +2556,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         await configureEveningTripReminderHandler();
         const Notifications = await import('expo-notifications');
         if (cancelled) return;
+        const last = await Notifications.getLastNotificationResponseAsync();
+        const lastId = last?.notification.request.content.data?.notificationId;
+        if (!cancelled && typeof lastId === 'string') { setPendingNotificationId(lastId); await Notifications.clearLastNotificationResponseAsync(); }
         subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-          const data = response.notification.request.content.data as { type?: string; tripId?: string; deepLink?: string | null } | undefined;
+          const data = response.notification.request.content.data as { type?: string; tripId?: string; deepLink?: string | null; notificationId?: string } | undefined;
+          if (data?.notificationId) { setPendingNotificationId(data.notificationId); return; }
           if (data?.type === 'evening_trip_reminder' && data.tripId) {
             setActiveTripId(data.tripId);
             setActivePage('blog');
@@ -2697,14 +2692,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [userToken, requirePasswordSetup, ageVerificationRequired, ageVerifiedReloadKey, offlineReadOnly, fetchTrips, fetchGroups, fetchInvites, fetchPendingTripShareInvites]);
 
   useEffect(() => {
-    // Best-effort, native-only (see pushNotifications.ts) — never awaited/blocking, and safe to
-    // re-run on every token change since /api/notifications/devices upserts on the token hash.
-    if (userToken && !requirePasswordSetup) {
-      void registerForPushNotificationsAsync(userToken);
-    }
-  }, [userToken, requirePasswordSetup]);
-
-  useEffect(() => {
     if (userToken) return;
     let cancelled = false;
     void loadSessionAsync().then(async (session) => {
@@ -2714,7 +2701,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           const network = await getNetworkStateAsync();
           const isOffline = network.isInternetReachable === false || network.isConnected === false;
           if (isOffline) {
-            const cache = await loadOfflineTripCache(session.email ?? null);
+            const cache = await loadOfflineTripCache(decodeTokenClaims(session.token)?.userId ? { userId: decodeTokenClaims(session.token)!.userId!, environment: backendUrl } : null);
             if (cancelled) return;
             if (isOfflineAccessValid(cache)) {
               setPendingOfflineUnlock({ cache: cache as OfflineTripCache, session });
@@ -2724,7 +2711,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             // No snapshot or a lapsed access period means an online sign-in is
             // required before cached trip information can be viewed again.
             void clearSessionAsync();
-            setAuthErrorMessage('Offline access has expired. Connect to the internet and sign in again.');
+            setAuthErrorMessage(cache ? 'Offline access has expired. Connect to the internet and sign in again.' : 'Connect to the internet and sign in to download your trips again.');
             return;
           }
         } catch {
@@ -2760,6 +2747,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'home' ||
           sessionPage === 'overview' ||
           sessionPage === 'flights' ||
+          sessionPage === 'ground-transfers' ||
           sessionPage === 'lodging' ||
           sessionPage === 'packing' ||
           sessionPage === 'trips' ||
@@ -2930,14 +2918,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const onTripCreated = useCallback((tripId: string) => {
+    if (tripCreationAuthRef.current !== userToken) return;
+    const returnToImport = importTripCreation?.auth === userToken ? importTripCreation : null;
     setActiveTripId(tripId);
     fetchTrips();
     fetchGroups();
     fetchInvites();
     setPageForwardHistory([]);
     setPageHistory((prev) => prev.slice(-25));
-    setActivePage('overview');
-  }, [fetchTrips, fetchGroups, fetchInvites]);
+    if (returnToImport) setReturnImportReview({ auth: returnToImport.auth, itemId: returnToImport.itemId, tripId });
+    setImportTripCreation(null);
+    setActivePage(returnToImport ? 'ingest' : 'overview');
+  }, [fetchTrips, fetchGroups, fetchInvites, importTripCreation, userToken]);
 
   const onAiItineraryQueued = useCallback((tripId: string, jobId: string, request?: Record<string, unknown>) => {
     setAsyncItineraryByTrip((prev) => ({
@@ -3008,16 +3000,36 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
   }, []);
 
-  const deleteTrip = async (tripId: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
-      method: 'DELETE',
-      headers,
-    });
+  // Resolves to null on success, or a user-facing message on failure. It never throws and never
+  // raises an Alert: the confirm dialog stays open (as a native Modal) until this settles and shows
+  // the message inline. Closing the Modal and then calling Alert.alert left iOS unresponsive, since
+  // an Alert can't be presented while a Modal is still dismissing.
+  const deleteTrip = async (tripId: string): Promise<string | null> => {
+    if (!userToken) return 'You are signed out. Sign in again and retry.';
+    // React Native's fetch has no default timeout, so on a weak connection the dialog would sit on
+    // "Deleting…" indefinitely. Give up after 20s; the delete may still have reached the server, so
+    // the trip list is refreshed either way.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    let res: Response;
+    try {
+      res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
+        method: 'DELETE',
+        headers,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if ((err as any)?.name === 'AbortError') {
+        fetchTrips();
+        return 'This is taking too long. The trip may or may not have been removed. Check your trip list, then try again if it is still there.';
+      }
+      return 'Could not reach the server. Check your connection and try again.';
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      Alert.alert(data.error || 'Unable to delete trip');
-      return;
+      return data?.error || 'Unable to delete trip';
     }
     // Drop any in-flight async itinerary tracker for this trip so its poller
     // doesn't keep hitting a trip the user no longer belongs to.
@@ -3037,6 +3049,31 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setActivePage('account');
     }
     fetchTrips();
+    return null;
+  };
+
+  const runTripDelete = async () => {
+    if (!tripToDelete || tripDeleteBusy) return;
+    if (connection.status === 'offline') {
+      setTripDeleteError("You're offline. Connect to the internet to delete or leave a trip, then try again.");
+      return;
+    }
+    const tripId = tripToDelete.id;
+    setTripDeleteBusy(true);
+    setTripDeleteError(null);
+    const error = await deleteTrip(tripId);
+    setTripDeleteBusy(false);
+    if (error) {
+      setTripDeleteError(error);
+      return;
+    }
+    setTripToDelete(null);
+  };
+
+  const dismissTripDelete = () => {
+    if (tripDeleteBusy) return;
+    setTripToDelete(null);
+    setTripDeleteError(null);
   };
 
   // Opens the confirmation dialog immediately (no waiting on a network round
@@ -3048,6 +3085,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // "leave trip" if other travelers are still on it.
   const confirmDeleteTrip = (trip: { id: string; name: string }) => {
     if (!userToken) return;
+    setTripDeleteError(null);
+    setTripDeleteBusy(false);
     setTripToDelete({ id: trip.id, name: trip.name, isLastTraveler: true });
     fetch(`${backendUrl}/api/account/trips/${trip.id}/members`, { headers })
       .then((res) => (res.ok ? res.json() : null))
@@ -3183,6 +3222,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       'overview',
       'blog',
       'flights',
+      'ground-transfers',
       'lodging',
       'packing',
       'car',
@@ -3292,6 +3332,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     <PresenceProvider activeTripId={activeTripId} userToken={userToken}>
       <ChatProvider activeTripId={activeTripId} userToken={userToken}>
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
+      <PendingExpenseLogoutDialog visible={pendingLogoutVisible} count={pendingExpenses.entries.length} busy={pendingLogoutBusy} error={pendingLogoutError}
+        onCancel={() => setPendingLogoutVisible(false)}
+        onSync={() => { setPendingLogoutVisible(false); pendingExpenses.syncNow(); }}
+        onKeep={() => { setPendingLogoutVisible(false); logout(); }}
+        onDiscard={async () => {
+          setPendingLogoutBusy(true);
+          const discarded = await pendingExpenses.discardAll();
+          setPendingLogoutBusy(false);
+          if (!discarded) { setPendingLogoutError("Couldn't remove the saved expenses. You're still signed in; try again or keep them on this device."); return; }
+          setPendingLogoutVisible(false); logout();
+        }} />
       <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
         <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
           {userToken && activePage !== 'home' ? (
@@ -3338,6 +3389,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         {userToken ? (
           <View style={[styles.topRightWrapper, isNarrowLayout && styles.topRightWrapperNarrow]}>
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
+              <OfflineSaveButton controller={offlineSave} theme={theme} />
+              {!offlineReadOnly && <NotificationInbox backendUrl={backendUrl} token={userToken} openNotificationId={pendingNotificationId} onOpenHandled={() => setPendingNotificationId(null)} onOpen={target => {
+                if (target.tripId) setActiveTripId(target.tripId);
+                requestPageChange(target.page);
+              }} />}
+
               {!isPhoneLayout ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {activeTripId && (
@@ -3379,7 +3436,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               ) : null}
               <TouchableOpacity
                 style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                onPress={logout}
+                onPress={requestLogout}
                 testID="topbar-logout"
               >
                 <Text style={styles.buttonText}>Logout</Text>
@@ -3388,7 +3445,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         ) : null}
       </View>
-      <OfflineBanner status={connection.status} offlineReadOnly={offlineReadOnly} />
+      {userId && <PendingExpenseRecovery error={pendingExpenses.storageError} getRecoveryData={pendingExpenses.getRecoveryData} repairQueue={pendingExpenses.repairQueue} ownerId={userId} environment={backendUrl} />}
+      <OfflineBanner
+        status={connection.status}
+        offlineReadOnly={offlineReadOnly}
+        signedIn={Boolean(userToken) || offlineMode}
+        canAddExpenses={Boolean(userId) && !offlineMode && !isFollowingMode}
+      />
+      {offlineSaveError && <Text accessibilityRole="alert">{offlineSaveError}</Text>}
       {userToken ? (
         <View style={styles.contentViewport}>
           {activePage === 'home'
@@ -3526,6 +3590,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   costTrackingAllowed={costTrackingAllowed}
                   receiptScanningAllowed={receiptScanningAllowed}
                   readOnly={isFollowingMode || offlineReadOnly}
+                  allowOfflineAdd={!isFollowingMode && Boolean(userId) && !offlineMode}
+                  pendingExpenses={{
+                    entries: pendingExpenses.entries,
+                    syncedNotice: pendingExpenses.syncedNotice,
+                    queueExpense: pendingExpenses.queueExpense,
+                    retryEntry: pendingExpenses.retryEntry,
+                    replaceEntry: pendingExpenses.replaceEntry,
+                    discardEntry: pendingExpenses.discardEntry,
+                  }}
                 />
               )
             : null}
@@ -3591,6 +3664,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     theme={theme}
                     onNavigate={handleHomeNavigate}
                     onAssignmentApplied={handleIngestionAssignmentApplied}
+                    onCreateTripFromImport={(itemId, draft) => { if (!userToken) return; setImportTripCreation({ auth: userToken, itemId, draft }); requestPageChange('create-trip'); }}
+                    initialReview={returnImportReview?.auth === userToken ? returnImportReview : null}
+                    onInitialReviewHandled={() => setReturnImportReview(null)}
                     userRole={userRole}
                   />
                 </Suspense>
@@ -3675,7 +3751,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   jsonHeaders={jsonHeaders}
                   airportOptions={flightAirportOptions}
                   onSearchAirports={fetchFlightAirports}
-                  logout={logout}
+                  logout={requestLogout}
                   styles={styles}
                   traits={traits}
                   setTraits={setTraits}
@@ -3799,9 +3875,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         />
       ) : null}
 
-      {activePage === 'flights'
+      {(activePage === 'flights' || activePage === 'ground-transfers')
         ? renderSharedPageScroll(
             <FlightsTab
+              key={activePage}
+              lodgings={lodgings}
+              mapApp={mapApp}
+              transferScope={activePage === 'ground-transfers' ? 'ground' : 'flights'}
               backendUrl={backendUrl}
               userToken={userToken}
               activeTripId={activeTripId}
@@ -3830,8 +3910,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             />
           )
         : null}
-      {activePage !== 'flights' && externalFlightEditId ? (
+      {activePage !== 'flights' && activePage !== 'ground-transfers' && externalFlightEditId ? (
         <FlightsTab
+          mapApp={mapApp}
+          lodgings={lodgings}
           backendUrl={backendUrl}
           userToken={userToken}
           activeTripId={activeTripId}
@@ -4061,7 +4143,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   followCodePayloads={followCodePayloads}
                   setFollowCodePayloads={setFollowCodePayloads}
                   styles={styles}
-                  logout={logout}
+                  logout={requestLogout}
                   onOpenFollowedTrip={(tripId) => handleSelectFollowedTrip(tripId, 'following')}
                 />
               )
@@ -4204,7 +4286,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             // The profile request was refused before the date of birth was saved; load it now.
             void loadAccountProfile();
           }}
-          onSignOut={logout}
+          onSignOut={requestLogout}
         />
       ) : null}
       {userToken && !requirePasswordSetup && ageVerificationRequired === false ? (
@@ -4253,6 +4335,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         <IncomingShareModal
           backendUrl={backendUrl}
           headers={headers}
+          onImported={() => setActivePage('ingest')}
           trips={trips}
           activeTripId={activeTripId}
           styles={styles}
@@ -4272,6 +4355,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         <View style={styles.wizardOverlay}>
           <View style={styles.wizardModal}>
             <CreateTripWizard
+              initialDraft={importTripCreation?.auth === userToken ? importTripCreation.draft : null}
               backendUrl={backendUrl}
               userToken={userToken}
               headers={headers}
@@ -4280,7 +4364,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onSearchAirports={fetchFlightAirports}
               styles={styles}
               theme={theme}
-              onCancel={closeTripWizard}
+              onCancel={() => { const backToImports = importTripCreation?.auth === userToken; setImportTripCreation(null); if (backToImports) { setPageForwardHistory([]); setActivePage('ingest'); } else closeTripWizard(); }}
               onTripCreated={onTripCreated}
               onAiItineraryQueued={onAiItineraryQueued}
               onUnauthorized={logout}
@@ -4317,12 +4401,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               : `Are you sure you want to leave "${tripToDelete.name}"? You'll be removed from this trip, but it will remain for the other travelers.`
           }
           confirmLabel={tripToDelete.isLastTraveler ? 'Delete Trip' : 'Leave Trip'}
-          onConfirm={() => {
-            const tripId = tripToDelete.id;
-            setTripToDelete(null);
-            deleteTrip(tripId);
-          }}
-          onCancel={() => setTripToDelete(null)}
+          onConfirm={runTripDelete}
+          onCancel={dismissTripDelete}
+          busy={tripDeleteBusy}
+          busyLabel={tripToDelete.isLastTraveler ? 'Deleting…' : 'Leaving…'}
+          errorMessage={tripDeleteError}
           styles={styles}
           testID="trip-delete-confirm-dialog"
           useNativeModal
@@ -4373,6 +4456,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           dispatchContext={{ backendUrl, jsonHeaders, activeTripId, defaultPayerId }}
         />
       ) : null}
+      <OfflineSavePanel controller={offlineSave} theme={theme} />
     </SafeAreaView>
       </ChatProvider>
     </PresenceProvider>
@@ -4414,6 +4498,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   return (
+    <ThemeProvider theme={theme}>
     <NavigationContainer
       ref={navigationRef}
       linking={linking}
@@ -4510,6 +4595,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         </RootStack.Group>
       </RootStack.Navigator>
     </NavigationContainer>
+    </ThemeProvider>
   );
 };
 
@@ -5691,10 +5777,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     overflow: 'hidden',
     maxHeight: 280,
     ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    ...shadowStyle('#000000', 0.18, 0, 8, 18),
   },
   dropdownOption: {
     paddingHorizontal: 12,
@@ -5791,10 +5874,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     zIndex: 13000,
     elevation: 32,
     ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    ...shadowStyle('#000000', 0.18, 0, 8, 18),
     overflow: 'hidden',
   },
   modalCard: {
@@ -5915,10 +5995,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     elevation: 40, // keep above other inputs on native
     overflow: 'hidden',
     ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    ...shadowStyle('#000000', 0.18, 0, 8, 18),
   },
   locationField: {
     position: 'relative',
@@ -5983,10 +6060,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     zIndex: 41000,
     ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     elevation: 60,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    ...shadowStyle('#000000', 0.18, 0, 8, 18),
   },
   dropdownScroll: {
     maxHeight: 300,

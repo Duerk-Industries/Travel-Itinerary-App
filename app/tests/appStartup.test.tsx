@@ -103,9 +103,9 @@ describe('App startup', () => {
     const token = makeJwt({ email: 'offline@example.com', firstName: 'Off', lastName: 'Line', role: 'user', userId: 'offline-user' });
     await AsyncStorage.clear();
     await saveSessionAsync(token, 'Off Line', 'overview', 'offline@example.com', 'offline-trip');
-    await startOfflineAccessPeriod('offline@example.com');
+    await startOfflineAccessPeriod({ userId: 'offline-user', environment: 'https://duerk.org' });
     await saveOfflineTripSnapshot(
-      'offline@example.com',
+      { userId: 'offline-user', environment: 'https://duerk.org' },
       {
         tripId: 'offline-trip',
         savedAt: Date.now(),
@@ -127,9 +127,9 @@ describe('App startup', () => {
   it('keeps cached trips locked when device authentication is cancelled', async () => {
     const token = makeJwt({ email: 'locked@example.com', firstName: 'Locked', lastName: 'Traveler', role: 'user', userId: 'locked-user' });
     await saveSessionAsync(token, 'Locked Traveler', 'overview', 'locked@example.com', 'locked-trip');
-    await startOfflineAccessPeriod('locked@example.com');
+    await startOfflineAccessPeriod({ userId: 'locked-user', environment: 'https://duerk.org' });
     await saveOfflineTripSnapshot(
-      'locked@example.com',
+      { userId: 'locked-user', environment: 'https://duerk.org' },
       {
         tripId: 'locked-trip',
         savedAt: Date.now(),

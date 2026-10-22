@@ -142,8 +142,11 @@ const corsOptions: cors.CorsOptions = {
     return callback(new Error(`The CORS policy for this site does not allow access from the specified Origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent', 'X-Public-Visitor-Id'],
-  exposedHeaders: ['X-Request-Id'],
+  // Every non-safelisted header the web app sends must be listed, or the browser blocks the request at its
+  // preflight when the app and API are on different origins (as in local development).
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent', 'X-Public-Visitor-Id', 'X-Device-Timezone', 'If-None-Match'],
+  // The trip bundle's ETag and an idempotent replay marker are read by client code.
+  exposedHeaders: ['X-Request-Id', 'ETag', 'Idempotent-Replayed'],
 };
 
 app.use((req, res, next) => {
@@ -208,11 +211,20 @@ if (!hasWebApp) {
   app.get('/', (_req, res) => res.sendFile(loginPath));
 }
 
-app.use(express.static(publicDir));
+// The offline-shell worker must always be revalidated, or a bad version could outlive its fix.
+const staticOptions: Parameters<typeof express.static>[1] = {
+  setHeaders: (res, filePath) => {
+    if (path.basename(filePath) === 'sw.js') {
+      res.setHeader('Cache-Control', 'no-cache, max-age=0');
+      res.setHeader('Service-Worker-Allowed', '/');
+    }
+  },
+};
+app.use(express.static(publicDir, staticOptions));
 // In local server-only runs the Expo export is not copied to server/public yet.
 // Keep the profile's public legal links reachable from their checked-in pages.
 const appPublicDir = path.join(__dirname, '..', '..', 'app', 'public');
-if (fs.existsSync(appPublicDir)) app.use(express.static(appPublicDir));
+if (fs.existsSync(appPublicDir)) app.use(express.static(appPublicDir, staticOptions));
 
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, createOAuthNonce, decodeOAuthState, authenticate } from './auth';

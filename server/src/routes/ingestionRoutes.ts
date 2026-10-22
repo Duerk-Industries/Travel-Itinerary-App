@@ -1,11 +1,18 @@
-import { Router } from 'express';
+import { readGmailConfirmation, resolveMailAlias } from '../ingestion/shared/mailAdmission';
+import { ownerVerifiedAddress, receiverAuthenticationEnabled, receiverPolicyCurrent } from '../ingestion/shared/receiverAuthentication';
+import { AUTO_ASSIGN_FLAG, automaticAddingEnabledFor } from '../ingestion/assignment/autoAssign';
+import { buildMatchingContext, forwardingTrust } from '../ingestion/assignment/matchingContext';
+import { listReviewSuggestions, confirmReviewSuggestions } from '../ingestion/assignment/reviewSuggestions';
+import { z } from 'zod';
+import { reserveHttpRateLimitOrThrow, HttpRateLimitExceededError } from '../services/httpRateLimitService';
+import { Router, type Request, type Response, type RequestHandler } from 'express';
 import bodyParser from 'body-parser';
 import multer from 'multer';
 import { authenticate, type TokenPayload } from '../auth';
 import { listTrips, writeAuditLog } from '../db';
 import { resolveAndValidateRedirectUri } from '../redirects';
 import { isFeatureEnabled } from '../services/entitlementService';
-import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS, getIngestionForwardingAddress } from '../ingestion/config';
+import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS } from '../ingestion/config';
 import { assignReviewItemToTrip, bulkAssignReviewItemsToTrip, bulkDeleteReviewItems, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
 import { manualUploadMiddleware, buildManualUploadPayloads, buildGmailConsentUrl, buildGmailDryRunEntries, buildGmailIngestionPayloads, fetchGmailProfile, GMAIL_READONLY_SCOPE_URL, refreshGmailAccessToken } from '../ingestion/intake';
 import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
@@ -19,6 +26,11 @@ import {
   upsertProviderConnection,
   updateProviderConnectionStatus,
   getIngestedDocumentById,
+  getAssignmentSummaries,
+  getAutoAssignPreference,
+  listRecentAutoAssignments,
+  setAutoAssignPreference,
+  undoParsedItemAssignment,
   createDataDeletionJob,
   markDataDeletionJobRunning,
   markDataDeletionJobSucceeded,
@@ -28,6 +40,9 @@ import {
 import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { getBackendUrl, getEnvValue } from '../env';
+import { getMailAlias, listMailReceipts, updateMailReceipt, releaseHeldMail } from '../ingestion/shared/mailAdmission';
+import { SenderVerificationError, listSenders, startSenderVerification, confirmSenderVerification, removeSender } from '../ingestion/shared/verifiedSenders';
+import { sendShareEmailBestEffort } from '../mailer';
 import { logError, logInfo } from '../logger';
 import { readDto } from '../utils/dtoParse';
 import {
@@ -40,6 +55,13 @@ import {
 const router = Router();
 router.use(bodyParser.json({ limit: '2mb' }));
 router.use(authenticate);
+
+const mailSettingsHandler = (handler: (req: Request, res: Response) => Promise<void>): RequestHandler => (req, res) => {
+  void handler(req, res).catch(() => {
+    logError('[ingestion][mailgun] settings unavailable');
+    if (!res.headersSent) res.status(503).json({ error: 'Import settings are temporarily unavailable. Please try again.' });
+  });
+};
 
 type TierRules = (typeof INGESTION_TIER_RULES)[keyof typeof INGESTION_TIER_RULES];
 
@@ -119,7 +141,7 @@ const getActiveGmailConnection = async (userId: string) => {
   return updated;
 };
 
-router.get('/config', async (req, res) => {
+router.get('/config', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
   const { tierKey, rules } = await getTierIngestionRules(userId);
   const gmailConnection = await getProviderConnection(userId, 'gmail');
@@ -138,9 +160,10 @@ router.get('/config', async (req, res) => {
     quotas: rules,
     forwarding: {
       provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
-      currentAddress: getIngestionForwardingAddress(),
+      currentAddress: mailboxFlag && tierKey !== 'free' ? await getMailAlias(userId) : '',
       instructions: INGESTION_FORWARDING_SETTINGS_COPY,
-      adminManagedNote: 'Changing the destination inbox may require an admin update and provider redeploy.',
+      adminManagedNote: 'Keep your address private. Creating a new address stops mail to the old one immediately.',
+      receipts: (await listMailReceipts(userId)).filter(r => r.expiresAt > Date.now() && r.state !== 'CONFIRMATION').map(r => ({ id: r.id, state: r.state, expiresAt: r.expiresAt, holdReason: r.holdReason })),
     },
     gmail: {
       scope: GMAIL_READONLY_SCOPE_URL,
@@ -163,7 +186,7 @@ router.get('/config', async (req, res) => {
           },
     },
   });
-});
+}));
 
 router.get('/review-items', async (req, res) => {
   const userId = (req as any).user.userId as string;
@@ -194,6 +217,59 @@ router.get('/review-items', async (req, res) => {
     return haystack.includes(search);
   });
   res.json({ items: filtered });
+});
+
+// What the person has chosen about automatic adding, and what is actually in effect for them.
+router.get('/settings', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  const [available, choice] = await Promise.all([isFeatureEnabled(AUTO_ASSIGN_FLAG, userId), getAutoAssignPreference(userId)]);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({ autoAssign: { available, choice, enabled: available && (choice ?? true) } });
+});
+
+router.put('/settings', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  const value = req.body?.autoAssign;
+  if (value !== true && value !== false && value !== null) {
+    res.status(400).json({ error: 'Choose on, off, or the default.', code: 'INVALID_SETTING' });
+    return;
+  }
+  await setAutoAssignPreference(userId, value);
+  res.json({ autoAssign: { available: await isFeatureEnabled(AUTO_ASSIGN_FLAG, userId), choice: value, enabled: await automaticAddingEnabledFor(userId) } });
+});
+
+// Bookings that were added to a trip automatically and can still be taken back.
+router.get('/auto-added', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  const recent = await listRecentAutoAssignments(userId);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({ items: recent });
+});
+
+router.post('/review-items/:id/undo', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'ingestion_undo', identity: userId, limit: 30, windowMs: 60_000 });
+  } catch (error) {
+    if (error instanceof HttpRateLimitExceededError) {
+      res.setHeader('Retry-After', String(error.retryAfterSeconds));
+      res.status(429).json({ error: error.message });
+      return;
+    }
+    throw error;
+  }
+  const outcome = await undoParsedItemAssignment(userId, req.params.id);
+  if (outcome.ok) {
+    res.json({ undone: true, itemId: outcome.parsedItemId, tripId: outcome.tripId });
+    return;
+  }
+  // 409 = refused to protect someone's work; 404/403 = nothing to undo or not theirs.
+  const status = outcome.reason === 'not_found' ? 404 : outcome.reason === 'forbidden' ? 403 : 409;
+  res.status(status).json({ error: outcome.message, code: `UNDO_${outcome.reason.toUpperCase()}` });
 });
 
 router.get('/jobs', async (req, res) => {
@@ -228,6 +304,27 @@ const describeUploadRequest = (req: any): Record<string, unknown> => {
   };
 };
 
+router.get('/review-suggestions', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!await requireTierAccess(userId, res)) return;
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'import_suggestion_preview', identity: userId, limit: 20, windowMs: 60_000 });
+    res.json(await listReviewSuggestions(userId, typeof req.query.after === 'string' ? req.query.after : undefined));
+  } catch (error) { res.status(error instanceof HttpRateLimitExceededError ? 429 : 503).json({ error: 'Matching bookings could not load. Try again.' }); }
+});
+router.post('/review-suggestions/confirm', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!await requireTierAccess(userId, res)) return;
+  const body = z.object({ suggestions: z.array(z.object({ itemId: z.string().uuid(), tripId: z.string().uuid(), reviewVersion: z.string().regex(/^[a-f0-9]{64}$/) }).strict()).min(1).max(20) }).strict().safeParse(req.body);
+  if (!body.success || new Set(body.data.suggestions.map(row => row.itemId)).size !== body.data.suggestions.length) { res.status(400).json({ error: 'Review up to 20 different bookings before confirming.' }); return; }
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'import_suggestion_confirm', identity: userId, limit: 10, windowMs: 60_000 });
+    const result = await confirmReviewSuggestions(userId, body.data.suggestions);
+    res.status(result.failed.length ? 207 : 200).json(result);
+  } catch (error) { res.status(error instanceof HttpRateLimitExceededError ? 429 : 503).json({ error: 'The result could not be confirmed. Refresh Imports before retrying.' }); }
+});
 router.get('/review-items/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await requireTierAccess(userId, res))) return;
@@ -238,7 +335,16 @@ router.get('/review-items/:id', async (req, res) => {
   }
   const signed = await getReviewQueueSignedUrl(item.rawDocId);
   const rawDocument = await getIngestedDocumentById(item.rawDocId);
+  const [automaticAddingOn, assignments] = await Promise.all([automaticAddingEnabledFor(userId), getAssignmentSummaries(userId, [item.id])]);
+  const context = await buildMatchingContext(userId, [item]);
+  const placement = item.status === 'ASSIGNED' ? null : await context.evaluate(item, automaticAddingOn);
   res.json({
+    // Where this booking probably belongs and why, in plain language. `heldBack` says why it was not added automatically.
+    placement: placement && { decision: placement.decision, tripId: placement.tripId, tripName: placement.tripName, reasons: placement.reasons, heldBack: placement.heldBack ?? null },
+    assignment: assignments.get(item.id) ?? null,
+    suggestions: placement?.candidates.slice(0, 5).map(candidate => ({ ...candidate, tripName: context.trips.find(trip => trip.id === candidate.tripId)?.name ?? 'Trip' })) ?? [],
+    forwarderTrust: placement?.forwarderTrust ?? await forwardingTrust(item, userId),
+    tripDraft: await context.draft(item),
     item,
     signedDocument: signed,
     documentSummary: rawDocument
@@ -373,15 +479,123 @@ router.get('/assignment/trips', async (req, res) => {
   res.json({ trips });
 });
 
-router.get('/forwarding', async (_req, res) => {
+router.get('/forwarding', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
   const enabled = await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox);
   res.status(enabled ? 200 : 403).json({
     enabled,
     provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
-    currentAddress: getIngestionForwardingAddress(),
+    currentAddress: (await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox)) ? await getMailAlias(userId) : '',
     instructions: INGESTION_FORWARDING_SETTINGS_COPY,
   });
-});
+}));
+
+router.post('/forwarding/test', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) { res.status(403).json({ error: 'Forwarding is paused' }); return; }
+  try { await reserveHttpRateLimitOrThrow({ name: 'import_setup_test', identity: userId, limit: 3, windowMs: 60_000 }); }
+  catch (error) { if (error instanceof HttpRateLimitExceededError) { res.status(429).json({ error: error.message }); return; } throw error; }
+  // This is an authenticated synthetic inbox receipt, not an email send. No
+  // parser, scanner, reply, quota reservation or booking write can occur.
+  const alias = await getMailAlias(userId);
+  const { recordSyntheticReceipt } = await import('../ingestion/shared/mailAdmission');
+  await recordSyntheticReceipt(userId, alias);
+  res.json({ received: true, synthetic: true });
+}));
+
+router.post('/forwarding/rotate', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  res.json({ currentAddress: await getMailAlias(userId, true) });
+}));
+// Additional forwarding addresses: the user proves they can read mail at the address.
+// Codes are emailed only to that address and never returned, logged or pushed.
+const senderErrorResponse = (error: unknown, res: Response): boolean => {
+  if (error instanceof SenderVerificationError) { res.status(error.httpStatus).json({ error: error.message, code: error.code }); return true; }
+  if (error instanceof HttpRateLimitExceededError) { res.status(429).json({ error: error.message }); return true; }
+  return false;
+};
+router.get('/forwarding/addresses', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  res.json({ addresses: await listSenders(userId) });
+}));
+router.post('/forwarding/addresses', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) { res.status(403).json({ error: 'Forwarding is paused' }); return; }
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'import_sender_verify_start', identity: userId, limit: 10, windowMs: 60 * 60_000 });
+    const started = await startSenderVerification(userId, req.body?.email);
+    if (started.alreadyVerified) { res.json({ status: 'VERIFIED' }); return; }
+    const { sent } = await sendShareEmailBestEffort(started.email, 'Your WanderBunnies forwarding code',
+      [`Use this code to confirm this address for forwarding bookings to WanderBunnies:`, '', started.code, '',
+        'It expires in 30 minutes. If you did not request it, ignore this email.'].join('\n'));
+    if (!sent) { res.status(503).json({ error: 'We could not send the code. Please try again later.' }); return; }
+    res.status(202).json({ status: 'PENDING' });
+  } catch (error) { if (!senderErrorResponse(error, res)) throw error; }
+}));
+router.post('/forwarding/addresses/confirm', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'import_sender_verify_confirm', identity: userId, limit: 20, windowMs: 60 * 60_000 });
+    const address = await confirmSenderVerification(userId, req.body?.email, req.body?.code);
+    res.json({ address });
+  } catch (error) { if (!senderErrorResponse(error, res)) throw error; }
+}));
+router.delete('/forwarding/addresses/:id', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const removed = await removeSender(userId, String(req.params.id));
+  res.status(removed ? 200 : 404).json({ removed });
+}));
+router.get('/forwarding/confirmations', mailSettingsHandler(async (req, res) => {
+  const userId = (req as unknown as { user: { userId: string } }).user.userId;
+  res.setHeader('Cache-Control', 'private, no-store');
+  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox)) || !await receiverAuthenticationEnabled()) { res.json({ confirmations: [] }); return; }
+  const current = await resolveMailAlias(await getMailAlias(userId));
+  const confirmations = [];
+  for (const receipt of await listMailReceipts(userId)) {
+    if (!current || receipt.aliasHash !== current.aliasHash || !receiverPolicyCurrent(receipt.authentication)) continue;
+    const confirmation = readGmailConfirmation(receipt);
+    if (confirmation && await ownerVerifiedAddress(userId, confirmation.requestedBy)) confirmations.push({ id: receipt.id, ...confirmation });
+  }
+  res.json({ confirmations: confirmations.sort((a, b) => b.expiresAt - a.expiresAt).slice(0, 5) });
+}));
+
+router.get('/forwarding/receipts', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  const receipts = await listMailReceipts(userId);
+  res.json({ receipts: receipts.filter(r => r.expiresAt > Date.now() && r.state !== 'CONFIRMATION').map(r => ({
+    id: r.id, state: r.state, expiresAt: r.expiresAt, holdReason: r.holdReason,
+  })) });
+}));
+router.post('/forwarding/receipts/:id/release', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await requireTierAccess(userId, res);
+  if (!access) return;
+  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) {
+    res.status(403).json({ error: 'Forwarded mail is currently disabled.' }); return;
+  }
+  try {
+    const released = await releaseHeldMail(String(req.params.id), userId, access.rules.monthlyUploads);
+    res.status(released ? 200 : 404).json({ released });
+  } catch (error) {
+    if (error instanceof IngestionError) { res.status(error.httpStatus).json({ error: error.message, code: error.code }); return; }
+    res.status(503).json({ error: 'Please try again later.' });
+  }
+}));
+router.delete('/forwarding/receipts/:id', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const receipt = await updateMailReceipt(String(req.params.id), current =>
+    current.userId === userId && current.leaseUntil <= Date.now()
+      ? { ...current, state: 'COMPLETE', encrypted: null } : null);
+  res.status(receipt ? 200 : 404).json({ deleted: Boolean(receipt) });
+}));
 
 router.get('/gmail/status', async (req, res) => {
   const userId = (req as any).user.userId as string;

@@ -1,98 +1,93 @@
-import { Router } from 'express';
+import { MAIL_CONTENT_FIELDS, verifyReceiverAuthentication, ownerVerifiedAddress } from '../ingestion/shared/receiverAuthentication';
+import { recognizeGmailConfirmation, isGmailConfirmationCandidate } from '../ingestion/shared/gmailConfirmation';
+import { Router, type RequestHandler, type ErrorRequestHandler } from 'express';
+import multer from 'multer';
 import bodyParser from 'body-parser';
 import { logError, logInfo } from '../logger';
 import { isFeatureEnabled } from '../services/entitlementService';
-import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_USAGE_KEYS } from '../ingestion/config';
-import { buildMailgunWebhookPayloads, mailgunWebhookMiddleware, resolveMailgunWebhookUser, validateMailgunWebhookSignature } from '../ingestion/intake/mailgun';
-import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
-import { getTierIngestionRules, assertAndConsumeMonthlyQuota } from '../ingestion/shared/quota';
+import { INGESTION_FEATURE_FLAGS } from '../ingestion/config';
+import { mailgunWebhookMiddleware, validateMailgunWebhookSignature } from '../ingestion/intake/mailgun';
+import { getTierIngestionRules } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
+import { admitMail, MAIL_MAX_BYTES, mailReceiptId, resolveMailAlias, type RawMail } from '../ingestion/shared/mailAdmission';
+import { assertMailAdmissionReady } from '../ingestion/worker/mailReceiptWorker';
+import { isSupportedMimeType, normalizeMimeType } from '../ingestion/shared/parserSelection';
 
 const router = Router();
-router.use(bodyParser.json({ limit: '5mb' }));
-router.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
+// Enforce the same aggregate limit and deadline at the ingress proxy.
+const boundTransport: RequestHandler = (req, res, next) => {
+  const limit = 512 * 1024;
+  if (Number(req.get('content-length') || 0) > limit) {
+    res.status(406).json({ error: 'Message is too large. Upload the confirmation manually.' }); return;
+  }
+  let bytes = 0;
+  const count = (chunk: Buffer) => {
+    bytes += chunk.length;
+    if (bytes > limit) { res.status(406).end(); req.destroy(); }
+  };
+  req.on('data', count);
+  const timer = setTimeout(() => { if (!res.writableEnded) { res.status(503).end(); req.destroy(); } }, 15_000);
+  res.on('close', () => { clearTimeout(timer); req.off('data', count); });
+  next();
+};
+router.use(boundTransport);
+router.use(bodyParser.json({ limit: '512kb' }));
+router.use(bodyParser.urlencoded({ extended: false, limit: '512kb', parameterLimit: 32 }));
 
 router.post('/mailgun', mailgunWebhookMiddleware, async (req, res) => {
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const files = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
-  const describeRequest = () => ({
-    provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
-    recipient: String(body.recipient ?? ''),
-    sender: String(body.sender ?? body.from ?? ''),
-    subject: String(body.subject ?? ''),
-    fileCount: files.length,
-    files: files.map((file) => ({
-      filename: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
-    })),
-    contentType: req.get('content-type') ?? '',
-    userAgent: req.get('user-agent') ?? '',
-  });
-
-  logInfo(`[ingestion][mailgun] webhook received recipient="${String(body.recipient ?? '')}" sender="${String(body.sender ?? body.from ?? '')}" files=${files.length}`);
-
-  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) {
-    logInfo('[ingestion][mailgun] webhook rejected because forwarded mailbox feature flag is disabled');
-    res.status(403).json({ error: 'Forwarded mailbox ingestion is currently disabled.' });
-    return;
-  }
-
   try {
+    if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) {
+      res.status(503).json({ error: 'Forwarded mail is temporarily unavailable. Please use manual upload.' }); return;
+    }
+    assertMailAdmissionReady();
+    const body = (req.body ?? {}) as Record<string, unknown>;
     await validateMailgunWebhookSignature(body);
-    logInfo('[ingestion][mailgun] webhook signature accepted');
-    const resolvedUser = await resolveMailgunWebhookUser(body);
-    if (!resolvedUser) {
-      logInfo('[ingestion][mailgun] webhook rejected because no matching user account was found');
-      res.status(406).json({ error: 'No eligible user account matched this forwarded message.' });
-      return;
+    const alias = await resolveMailAlias(body.recipient);
+    // Includes the legacy shared address. From cannot attribute even a hold.
+    if (!alias) { res.status(200).json({ accepted: true }); return; }
+    const { tierKey, rules } = await getTierIngestionRules(alias.userId);
+    if (tierKey === 'free') { res.status(200).json({ accepted: true }); return; }
+    const files = Array.isArray(req.files) ? req.files as Express.Multer.File[] : [];
+    const safeBody: Record<string, string> = {};
+    for (const name of MAIL_CONTENT_FIELDS) {
+      if (typeof body[name] === 'string') safeBody[name] = body[name] as string;
     }
-
-    const { tierKey, rules } = await getTierIngestionRules(resolvedUser.userId);
-    logInfo(`[ingestion][mailgun] resolved sender to user=${resolvedUser.userId} tier=${tierKey}`);
-    if (tierKey === 'free') {
-      logInfo(`[ingestion][mailgun] webhook rejected because user=${resolvedUser.userId} is on free tier`);
-      res.status(406).json({ error: 'Forwarded mailbox ingestion requires Premium or Pro.' });
-      return;
+    const totalBytes = Buffer.byteLength(JSON.stringify(safeBody)) + files.reduce((sum, file) => sum + file.buffer.length, 0);
+    if (totalBytes > MAIL_MAX_BYTES) throw new IngestionError('file_too_large', 406);
+    if (!['stripped-text', 'body-plain', 'text', 'stripped-html', 'body-html', 'html'].some(name => safeBody[name]?.trim())
+      && !files.some(file => isSupportedMimeType(normalizeMimeType(file.mimetype, file.originalname)))) {
+      throw new IngestionError('unsupported_file_type', 406);
     }
-
-    await assertAndConsumeMonthlyQuota({
-      userId: resolvedUser.userId,
-      usageKey: INGESTION_USAGE_KEYS.forwardedMailboxDeliveries,
-      limit: rules.monthlyUploads,
+    const raw: RawMail = { body: safeBody, transport: { token: String(body.token), timestamp: String(body.timestamp) }, files: files.map(file => ({ originalname: file.originalname, mimetype: file.mimetype, bytes: file.buffer.toString('base64') })) };
+    const authentication = await verifyReceiverAuthentication(req.get('X-WanderBunnies-Receiver-Authentication'), raw);
+    if (authentication) raw.authentication = authentication;
+    const confirmation = await recognizeGmailConfirmation(alias.userId, raw, authentication);
+    const unverifiedConfirmation = !confirmation && isGmailConfirmationCandidate(raw);
+    const forceHold = unverifiedConfirmation || (authentication?.author.dkim === 'fail' && await ownerVerifiedAddress(alias.userId, authentication.author.email));
+    raw.body['Message-Id'] ||= `mailgun-${mailReceiptId(alias.userId, body)}`;
+    raw.body.Date ||= new Date().toISOString();
+    const receipt = await admitMail({
+      id: mailReceiptId(alias.userId, body), userId: alias.userId, aliasHash: alias.aliasHash, raw,
+      monthlyLimit: rules.monthlyUploads, confirmation, forceHold, holdReason: unverifiedConfirmation ? 'GMAIL_CONFIRMATION_UNVERIFIED' : undefined,
+      allowLargeLlm: rules.llmEscalations === 'LARGE_ALLOWED', allowSmallLlm: rules.llmEscalations !== 'NONE',
     });
-
-    const payloads = await buildMailgunWebhookPayloads(req, resolvedUser.userId, resolvedUser.senderEmail);
-    logInfo(`[ingestion][mailgun] built payloads user=${resolvedUser.userId} payloads=${payloads.length}`);
-    const jobs = [];
-    for (const payload of payloads) {
-      jobs.push(await enqueueIngestionPipelineJob(payload, rules.llmEscalations === 'LARGE_ALLOWED', rules.llmEscalations !== 'NONE'));
-    }
-    logInfo(`[ingestion][mailgun] queued jobs user=${resolvedUser.userId} jobs=${jobs.map((job) => job.id).join(',')}`);
-
-    res.status(202).json({
-      accepted: true,
-      provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
-      payloadCount: payloads.length,
-      jobs,
-    });
+    logInfo(`[ingestion][mailgun] delivery recorded receipt=${receipt?.id ?? 'dropped'} parts=${files.length + 1}`);
+    // Durable receipt is the outbox. The authenticated scheduler processes it
+    // on any instance; no detached Cloud Run work or local temp-file handoff.
+    res.status(200).json({ accepted: true });
   } catch (error) {
     if (error instanceof IngestionError) {
-      logError(`[ingestion][mailgun] webhook rejected code=${error.code}`, describeRequest());
-      const permanent = error.httpStatus === 406 || ['quota_exceeded', 'unsupported_file_type', 'file_too_large', 'virus_scan_failed'].includes(error.code);
-      if (error.retryAfterSeconds) {
-        res.setHeader('Retry-After', String(error.retryAfterSeconds));
-      }
-      res.status(permanent ? 406 : error.httpStatus).json({ error: error.message, code: error.code });
-      return;
+      logError(`[ingestion][mailgun] admission failed code=${error.code}`);
+      res.status(error.httpStatus === 406 ? 406 : 503).json({ error: error.message, code: error.code }); return;
     }
-
-    logError('[ingestion] mailgun webhook failed', {
-      ...describeRequest(),
-      error: (error as Error)?.message ?? 'unknown',
-    });
-    res.status(500).json({ error: 'Mailbox webhook processing failed temporarily.' });
+    logError('[ingestion][mailgun] temporary admission failure');
+    res.status(503).json({ error: 'Mailbox processing failed temporarily.' });
   }
 });
-
+const handleTransportError: ErrorRequestHandler = (error: unknown, _req, res, _next) => {
+  const status = typeof error === 'object' && error ? Number((error as { status?: number }).status) : 0;
+  const invalid = error instanceof multer.MulterError || status === 400 || status === 413;
+  if (!res.headersSent) res.status(invalid ? 406 : 503).json({ error: invalid ? 'Message could not be accepted. Upload the confirmation manually.' : 'Mailbox processing failed temporarily.' });
+};
+router.use(handleTransportError);
 export default router;

@@ -169,8 +169,9 @@ const HomeTab: React.FC<HomeTabProps> = ({
   const navItems = [
     { key: 'overview', label: 'Itinerary', icon: '🧭' },
     { key: 'blog', label: 'Trip Blog', icon: '📖' },
-    { key: 'flights', label: 'Transfers', icon: '✈️' },
+    { key: 'flights', label: 'Flights', icon: '✈️' },
     { key: 'lodging', label: 'Lodging', icon: '🏨' },
+    { key: 'ground-transfers', label: 'Ground Transfers', icon: '🚌' },
     { key: 'packing', label: 'Packing', icon: '✓' },
     { key: 'tours', label: 'Activities', icon: '🎟️' },
     { key: 'expenses', label: 'Daily Expenses', icon: '🧾' },
@@ -313,8 +314,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
             </Text>
           </View>
           <View
-            style={[styles.homeHeroChangeTripBadge, isCompactLayout && { left: 14, right: 'auto', bottom: 12 }]}
-            pointerEvents="none"
+            style={[styles.homeHeroChangeTripBadge, { pointerEvents: 'none' }, isCompactLayout && { left: 14, right: 'auto', bottom: 12 }]}
           >
             <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>
           </View>

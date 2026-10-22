@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { followTripAs, setDateOfBirth, authorOfBlogItem, canonicalAlias } from './providerRows';
 import { randomUUID } from 'crypto';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, futureDateStringPlusDays, loginWebUser, registerWebUser } from './helpers';
@@ -47,10 +47,7 @@ describe('trip blog security boundaries', () => {
 
     // Add `follower` as a read-only trip follower (not a group member) — mirrors how
     // ensureUserCanReadTrip's UNION branch is populated in production.
-    await queryBlog(
-      'INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3)',
-      [randomUUID(), tripId, followerUserId]
-    );
+    await followTripAs(tripId, followerUserId);
   });
 
   afterAll(async () => {
@@ -159,7 +156,7 @@ describe('trip blog security boundaries', () => {
 
     // Owner is the trip's only account-holding member here (follower/outsider are not
     // consent-eligible), so requesting publication auto-approves through the real endpoint.
-    await queryBlog("UPDATE users SET date_of_birth = '1990-01-01' WHERE id = (SELECT author_user_id FROM blog_items WHERE id = $1)", [publicItem.body.id]);
+    await setDateOfBirth(await authorOfBlogItem(publicItem.body.id), '1990-01-01');
     await setFeatureFlag('trip_blog_public_sharing', true, null);
     clearFeatureFlagCacheForTesting();
     const publish = await request(app)
@@ -168,11 +165,8 @@ describe('trip blog security boundaries', () => {
       .expect(201);
     expect(publish.body.state).toBe('public');
 
-    const alias = await queryBlog<{ username_slug: string; trip_slug: string }>(
-      'SELECT username_slug, trip_slug FROM blog_public_aliases WHERE trip_id = $1 AND canonical = TRUE',
-      [tripId]
-    );
-    const publicView = await request(app).get(`/public/blog/${alias.rows[0].username_slug}/${alias.rows[0].trip_slug}`).expect(200);
+    const alias = (await canonicalAlias(tripId))!;
+    const publicView = await request(app).get(`/public/blog/${alias.usernameSlug}/${alias.tripSlug}`).expect(200);
     const body = JSON.stringify(publicView.body);
     expect(body).not.toContain('This must stay private to travelers only');
     expect(body).toContain('This is fine to publish');

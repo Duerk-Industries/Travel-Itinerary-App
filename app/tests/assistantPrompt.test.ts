@@ -47,7 +47,7 @@ describe('buildAssistantSystemPrompt', () => {
     // across multiple retests. A concrete worked example was needed on top
     // of it, same lesson as every other stubborn instruction-following gap
     // found this session (see assistantTools.ts's few-shot examples).
-    expect(prompt).toContain("From the Transfers tab, tap the '+' button");
+    expect(prompt).toContain("From the Ground Transfers tab, tap the '+' button");
   });
 
   it('frames retrieved content as data, not instructions (prompt-injection hygiene)', () => {

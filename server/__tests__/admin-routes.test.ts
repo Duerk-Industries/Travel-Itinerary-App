@@ -79,6 +79,21 @@ describe('Admin routes', () => {
   // GET /api/admin/users
   // ---------------------------------------------------------------------------
 
+  describe('planning rollout cohorts', () => {
+    const endpoint = '/api/admin/features/planning_nearby/cohort';
+    it('requires admin access and an owner/expiry/reason, persists and audits the rule', async () => {
+      const cohort = { userIds: [userId, userId], owner: 'Planning team', retireAfter: '2099-01-01T00:00:00.000Z' };
+      await request(app).put(endpoint).set('Authorization', `Bearer ${userToken}`).send({ cohort, reason: 'Pilot cohort' }).expect(403);
+      await request(app).put(endpoint).set('Authorization', `Bearer ${adminToken}`).send({ cohort }).expect(400);
+      const saved = await request(app).put(endpoint).set('Authorization', `Bearer ${adminToken}`).send({ cohort, reason: 'Pilot cohort' }).expect(200);
+      expect(saved.body.cohort.userIds).toEqual([userId]);
+      expect((await request(app).get(endpoint).set('Authorization', `Bearer ${adminToken}`).expect(200)).body.cohort.owner).toBe('Planning team');
+      expect((await listAuditLog({ limit: 100 })).entries.some(row => row.action === 'FEATURE_COHORT_UPDATED')).toBe(true);
+      await request(app).put(endpoint).set('Authorization', `Bearer ${adminToken}`).send({ cohort: { ...cohort, retireAfter: '2000-01-01T00:00:00Z' }, reason: 'Expired pilot' }).expect(400);
+      await request(app).put(endpoint).set('Authorization', `Bearer ${adminToken}`).send({ cohort: null, reason: 'Pilot finished' }).expect(200);
+    });
+  });
+
   describe('GET /api/admin/users', () => {
     it('returns a paginated user list', async () => {
       const res = await request(app)

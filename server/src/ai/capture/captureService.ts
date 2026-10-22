@@ -1,3 +1,5 @@
+import { reserveApiUsageOrThrow } from '../../apis/usageLimiter';
+import { recordProviderRequestCost } from '../../apis/providerBudgeting';
 import fs from 'fs/promises';
 import path from 'path';
 import zlib from 'zlib';
@@ -52,6 +54,8 @@ const persistLocalCapture = async (record: CaptureRecord): Promise<void> => {
 const persistGcsCapture = async (record: CaptureRecord): Promise<void> => {
   const target = getAiCaptureGcsTarget();
   const objectName = `${target.objectPrefix}${captureObjectPath(record)}`;
+  await reserveApiUsageOrThrow({provider:'INGESTION_STORAGE',caller:'AI_CAPTURE_WRITE'});
+  await recordProviderRequestCost({provider:'INGESTION_STORAGE',caller:'AI_CAPTURE_WRITE'});
   await getAiCaptureBucket()
     .file(objectName)
     .save(await serializeRecord(record), {
@@ -72,6 +76,8 @@ const persistLocalEvaluation = async (record: CaptureRecord, evaluation: Evaluat
 const persistGcsEvaluation = async (record: CaptureRecord, evaluation: EvaluationResult): Promise<void> => {
   const target = getAiCaptureGcsTarget();
   const objectName = `${target.objectPrefix}${evaluationObjectPath(record)}`;
+  await reserveApiUsageOrThrow({provider:'INGESTION_STORAGE',caller:'AI_CAPTURE_WRITE'});
+  await recordProviderRequestCost({provider:'INGESTION_STORAGE',caller:'AI_CAPTURE_WRITE'});
   await getAiCaptureBucket()
     .file(objectName)
     .save(await serializeJson(evaluation), {

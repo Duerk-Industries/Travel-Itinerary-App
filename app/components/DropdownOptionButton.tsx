@@ -12,6 +12,12 @@ type DropdownOptionButtonProps = {
   accessibilityLabel?: string;
 };
 
+// react-native-web waits 50 ms before reporting a press start unless told otherwise. A text input's blur
+// fires immediately on mouse-down, so a parent that uses onPressIn to say "an option is being chosen" (to
+// skip its blur auto-select) would always lose that race and pick the first option. React Native's
+// Pressable typings omit this web prop; native ignores it.
+const WEB_IMMEDIATE_PRESS_IN = { delayPressIn: 0 } as object;
+
 const DropdownOptionButtonComponent: React.FC<DropdownOptionButtonProps> = ({
   styles,
   children,
@@ -27,6 +33,7 @@ const DropdownOptionButtonComponent: React.FC<DropdownOptionButtonProps> = ({
     disabled={disabled}
     onPress={onPress}
     onPressIn={onPressIn}
+    {...WEB_IMMEDIATE_PRESS_IN}
     accessibilityRole="menuitem"
     accessibilityLabel={accessibilityLabel}
     accessibilityState={{ disabled: !!disabled }}

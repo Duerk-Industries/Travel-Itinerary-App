@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { followTripAs, setStoredVisibility, insertPublicEpoch, insertPublicAlias, revokeEpochs } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
 
 // Phase 4 of docs/trip-blog-social-implementation-plan.md — "audience inheritance: a private
@@ -53,7 +53,7 @@ describe('comment audience is frozen at creation, not re-derived from current pu
     tripId = trip.body.trip?.id ?? trip.body.id;
     const blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${ownerToken}`).expect(200);
     dayId = blog.body.days[0].id;
-    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3)', [randomUUID(), tripId, followerId]);
+    await followTripAs(tripId, followerId);
   });
 
   afterAll(async () => { await cleanupTestUsersByEmail([owner.email, follower.email]); });
@@ -77,15 +77,9 @@ describe('comment audience is frozen at creation, not re-derived from current pu
   });
 
   it('publishing the blog does not retroactively relabel those existing comments', async () => {
-    await queryBlog(`UPDATE trip_blogs SET visibility_state = 'public' WHERE trip_id = $1`, [tripId]);
-    await queryBlog(
-      `INSERT INTO blog_publication_epochs (id, trip_id, epoch, state, requested_by) VALUES ($1, $2, 1, 'public', $3)`,
-      [randomUUID(), tripId, ownerId]
-    );
-    await queryBlog(
-      `INSERT INTO blog_public_aliases (id, trip_id, user_id, username_slug, trip_slug, canonical) VALUES ($1, $2, $3, $4, $5, TRUE)`,
-      [randomUUID(), tripId, ownerId, usernameSlug, tripSlug]
-    );
+    await setStoredVisibility(tripId, 'public');
+    await insertPublicEpoch(tripId, ownerId);
+    await insertPublicAlias(tripId, ownerId, usernameSlug, tripSlug);
 
     const dayFetch = await request(app)
       .get(`/api/trips/${tripId}/blog/comments`)
@@ -116,8 +110,8 @@ describe('comment audience is frozen at creation, not re-derived from current pu
   });
 
   it('revoking publication does not relabel the public comment, but it disappears from the unauthenticated route', async () => {
-    await queryBlog(`UPDATE trip_blogs SET visibility_state = 'private' WHERE trip_id = $1`, [tripId]);
-    await queryBlog(`UPDATE blog_publication_epochs SET state = 'revoked' WHERE trip_id = $1`, [tripId]);
+    await setStoredVisibility(tripId, 'private');
+    await revokeEpochs(tripId);
 
     const dayFetch = await request(app)
       .get(`/api/trips/${tripId}/blog/comments`)

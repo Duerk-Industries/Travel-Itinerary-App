@@ -105,6 +105,19 @@ export const reserveItineraryGenerationRateLimit = async (
 // identity-scoped layer alongside the ACTIVITIES_API aggregate cap in api-limits.yaml
 // (reserveApiUsageOrThrow) — that cap protects the shared daily budget across all users,
 // this one stops a single user/IP from exhausting it or hammering the endpoint.
+/** "Find locations" sends addresses to an outside geocoder, so each person is limited even within the daily cap. */
+export const reserveItemLocateRateLimit = async (
+  userId: string,
+  ip: string | null | undefined,
+): Promise<void> => {
+  await reserveRequestRateLimits({
+    name: 'item_locate',
+    identities: [`user:${userId}`, ip ? `ip:${ip}` : null],
+    limit: parsePositiveInt(process.env.ITEM_LOCATE_RATE_LIMIT_MAX, testSafeDefault(40)),
+    windowMs: parsePositiveInt(process.env.ITEM_LOCATE_RATE_LIMIT_WINDOW_MS, 10 * 60 * 1000),
+  });
+};
+
 export const reserveActivitiesBulkSaveRateLimit = async (
   userId: string,
   ip: string | null | undefined,
@@ -208,3 +221,8 @@ export const accountPasswordRateLimit: RequestHandler = async (req: Request, res
     next(err);
   }
 };
+
+/** Only called after cheap request validation and trip authorization. */
+export const reserveMapRenderRateLimit = (userId: string, ip?: string | null): Promise<void> => reserveRequestRateLimits({
+  name: 'map_render', identities: [`user:${userId}`, ip ? `ip:${ip}` : null], limit: 30, windowMs: 5 * 60_000,
+});

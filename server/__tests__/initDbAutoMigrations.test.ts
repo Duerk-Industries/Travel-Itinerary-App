@@ -26,13 +26,14 @@ describe('initDb auto-applies migrations', () => {
     delete process.env.INGESTION_MIGRATIONS_ON_BOOT;
   });
 
-  it('creates schema_migrations and records each checked-in .sql file by default', async () => {
+  it('records every migration supported by the memory adapter without claiming PostgreSQL-only SQL ran', async () => {
     const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
 
     const pool = db.poolClient();
 
-    // Every .sql file in /server/migrations should appear in schema_migrations.
+    // Every supported .sql file should appear in schema_migrations.
+    // pg-mem cannot execute PL/pgSQL triggers; never record skipped SQL as applied.
     // Reading from the ledger itself proves the table exists (would throw if
     // the runner didn't fire).
     const fs = require('node:fs') as typeof import('node:fs');
@@ -43,6 +44,7 @@ describe('initDb auto-applies migrations', () => {
     const sqlFiles = fs
       .readdirSync(migDir)
       .filter((f) => f.endsWith('.sql') && !f.endsWith('.rollback.sql'))
+      .filter((f) => !fs.readFileSync(path.join(migDir, f), 'utf8').includes('-- postgres-only:'))
       .sort();
 
     const { rows: appliedRows } = await pool.query<{ name: string }>(
@@ -50,6 +52,7 @@ describe('initDb auto-applies migrations', () => {
     );
     const applied = appliedRows.map((r) => r.name);
     expect(applied).toEqual(sqlFiles);
+    expect(applied).not.toContain('20261022_trip_bundle_triggers.sql');
   });
 
   it('respects INGESTION_MIGRATIONS_ON_BOOT=false (skips the runner entirely)', async () => {
@@ -79,7 +82,7 @@ describe('initDb auto-applies migrations', () => {
     const path = require('node:path') as typeof import('node:path');
     const migDir = path.join(__dirname, '..', 'migrations');
     const client = { query: (sql: string, params?: unknown[]) => pool.query(sql, params as any) };
-    const second = await runMigrations({ client, dir: migDir });
+    const second = await runMigrations({ client, dir: migDir, dialect: 'memory' });
     expect(second.applied).toEqual([]);
     expect(second.alreadyApplied.length).toBe(firstRows.length);
   });

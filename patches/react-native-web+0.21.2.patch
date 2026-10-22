@@ -1,0 +1,163 @@
+diff --git a/node_modules/react-native-web/dist/exports/TouchableHighlight/index.js b/node_modules/react-native-web/dist/exports/TouchableHighlight/index.js
+--- a/node_modules/react-native-web/dist/exports/TouchableHighlight/index.js
++++ b/node_modules/react-native-web/dist/exports/TouchableHighlight/index.js
+@@ -125,9 +125,8 @@
+   return /*#__PURE__*/React.createElement(View, _extends({}, rest, pressEventHandlers, {
+     accessibilityDisabled: disabled,
+     focusable: !disabled && focusable !== false,
+-    pointerEvents: disabled ? 'box-none' : undefined,
+     ref: setRef,
+-    style: [styles.root, style, !disabled && styles.actionable, extraStyles && extraStyles.underlay]
++    style: [styles.root, style, !disabled && styles.actionable, extraStyles && extraStyles.underlay, disabled && styles.disabled]
+   }), /*#__PURE__*/React.cloneElement(child, {
+     style: [child.props.style, extraStyles && extraStyles.child]
+   }));
+@@ -135,6 +134,9 @@
+ var styles = StyleSheet.create({
+   root: {
+     userSelect: 'none'
++  },
++  disabled: {
++    pointerEvents: 'box-none'
+   },
+   actionable: {
+     cursor: 'pointer',
+diff --git a/node_modules/react-native-web/dist/exports/TouchableOpacity/index.js b/node_modules/react-native-web/dist/exports/TouchableOpacity/index.js
+--- a/node_modules/react-native-web/dist/exports/TouchableOpacity/index.js
++++ b/node_modules/react-native-web/dist/exports/TouchableOpacity/index.js
+@@ -90,13 +90,12 @@
+   return /*#__PURE__*/React.createElement(View, _extends({}, rest, pressEventHandlers, {
+     accessibilityDisabled: disabled,
+     focusable: !disabled && focusable !== false,
+-    pointerEvents: disabled ? 'box-none' : undefined,
+     ref: setRef,
+     style: [styles.root, !disabled && styles.actionable, style, opacityOverride != null && {
+       opacity: opacityOverride
+     }, {
+       transitionDuration: duration
+-    }]
++    }, disabled && styles.disabled]
+   }));
+ }
+ var styles = StyleSheet.create({
+@@ -104,6 +103,9 @@
+     transitionProperty: 'opacity',
+     transitionDuration: '0.15s',
+     userSelect: 'none'
++  },
++  disabled: {
++    pointerEvents: 'box-none'
+   },
+   actionable: {
+     cursor: 'pointer',
+diff --git a/node_modules/react-native-web/src/exports/TouchableHighlight/index.js b/node_modules/react-native-web/src/exports/TouchableHighlight/index.js
+--- a/node_modules/react-native-web/src/exports/TouchableHighlight/index.js
++++ b/node_modules/react-native-web/src/exports/TouchableHighlight/index.js
+@@ -177,13 +177,13 @@
+       {...pressEventHandlers}
+       accessibilityDisabled={disabled}
+       focusable={!disabled && focusable !== false}
+-      pointerEvents={disabled ? 'box-none' : undefined}
+       ref={setRef}
+       style={[
+         styles.root,
+         style,
+         !disabled && styles.actionable,
+-        extraStyles && extraStyles.underlay
++        extraStyles && extraStyles.underlay,
++        disabled && styles.disabled
+       ]}
+     >
+       {React.cloneElement(child, {
+@@ -197,6 +197,9 @@
+   root: {
+     userSelect: 'none'
+   },
++  disabled: {
++    pointerEvents: 'box-none'
++  },
+   actionable: {
+     cursor: 'pointer',
+     touchAction: 'manipulation'
+diff --git a/node_modules/react-native-web/src/exports/TouchableOpacity/index.js b/node_modules/react-native-web/src/exports/TouchableOpacity/index.js
+--- a/node_modules/react-native-web/src/exports/TouchableOpacity/index.js
++++ b/node_modules/react-native-web/src/exports/TouchableOpacity/index.js
+@@ -134,14 +134,14 @@
+       {...pressEventHandlers}
+       accessibilityDisabled={disabled}
+       focusable={!disabled && focusable !== false}
+-      pointerEvents={disabled ? 'box-none' : undefined}
+       ref={setRef}
+       style={[
+         styles.root,
+         !disabled && styles.actionable,
+         style,
+         opacityOverride != null && { opacity: opacityOverride },
+-        { transitionDuration: duration }
++        { transitionDuration: duration },
++        disabled && styles.disabled
+       ]}
+     />
+   );
+@@ -152,6 +152,9 @@
+     transitionProperty: 'opacity',
+     transitionDuration: '0.15s',
+     userSelect: 'none'
++  },
++  disabled: {
++    pointerEvents: 'box-none'
+   },
+   actionable: {
+     cursor: 'pointer',
+diff --git a/node_modules/react-native-web/dist/cjs/exports/TouchableOpacity/index.js b/node_modules/react-native-web/dist/cjs/exports/TouchableOpacity/index.js
+--- a/node_modules/react-native-web/dist/cjs/exports/TouchableOpacity/index.js
++++ b/node_modules/react-native-web/dist/cjs/exports/TouchableOpacity/index.js
+@@ -95,13 +95,12 @@
+   return /*#__PURE__*/React.createElement(_View.default, (0, _extends2.default)({}, rest, pressEventHandlers, {
+     accessibilityDisabled: disabled,
+     focusable: !disabled && focusable !== false,
+-    pointerEvents: disabled ? 'box-none' : undefined,
+     ref: setRef,
+     style: [styles.root, !disabled && styles.actionable, style, opacityOverride != null && {
+       opacity: opacityOverride
+     }, {
+       transitionDuration: duration
+-    }]
++    }, disabled && styles.disabled]
+   }));
+ }
+ var styles = _StyleSheet.default.create({
+@@ -109,6 +108,9 @@
+     transitionProperty: 'opacity',
+     transitionDuration: '0.15s',
+     userSelect: 'none'
++  },
++  disabled: {
++    pointerEvents: 'box-none'
+   },
+   actionable: {
+     cursor: 'pointer',
+diff --git a/node_modules/react-native-web/dist/cjs/exports/TouchableHighlight/index.js b/node_modules/react-native-web/dist/cjs/exports/TouchableHighlight/index.js
+--- a/node_modules/react-native-web/dist/cjs/exports/TouchableHighlight/index.js
++++ b/node_modules/react-native-web/dist/cjs/exports/TouchableHighlight/index.js
+@@ -130,9 +130,8 @@
+   return /*#__PURE__*/React.createElement(_View.default, (0, _extends2.default)({}, rest, pressEventHandlers, {
+     accessibilityDisabled: disabled,
+     focusable: !disabled && focusable !== false,
+-    pointerEvents: disabled ? 'box-none' : undefined,
+     ref: setRef,
+-    style: [styles.root, style, !disabled && styles.actionable, extraStyles && extraStyles.underlay]
++    style: [styles.root, style, !disabled && styles.actionable, extraStyles && extraStyles.underlay, disabled && styles.disabled]
+   }), /*#__PURE__*/React.cloneElement(child, {
+     style: [child.props.style, extraStyles && extraStyles.child]
+   }));
+@@ -140,6 +139,9 @@
+ var styles = _StyleSheet.default.create({
+   root: {
+     userSelect: 'none'
++  },
++  disabled: {
++    pointerEvents: 'box-none'
+   },
+   actionable: {
+     cursor: 'pointer',
