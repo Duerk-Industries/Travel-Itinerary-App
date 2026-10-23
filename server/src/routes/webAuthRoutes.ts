@@ -257,6 +257,7 @@ router.get('/confirm-email', async (req, res) => {
 });
 
 router.get('/features', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
   const [
     gridEditing,
     gridClipboard,
@@ -296,7 +297,7 @@ router.get('/features', async (_req, res) => {
     isFeatureEnabled('activity_lodging_csv_export'),
     isFeatureEnabled('csv_export'),
     isFeatureEnabled('activity_recap'),
-    isFeatureEnabled('ai_itinerary_generation'),
+    getFeatureFlag('ai_itinerary_generation').then((flag) => flag?.enabled ?? true),
   ]);
   res.json({
     usernameLoginEnabled: getAuthFlag('usernameLoginEnabled'),

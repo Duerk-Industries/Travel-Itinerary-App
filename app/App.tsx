@@ -746,7 +746,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureActivityRecap, setFeatureActivityRecap] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    fetch(`${backendUrl}/api/auth/features`)
+    const refreshFeatures = () => fetch(`${backendUrl}/api/auth/features`, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled && data) {
@@ -768,7 +768,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         }
       })
       .catch(() => undefined);
+    void refreshFeatures();
+    const timer = setInterval(() => { void refreshFeatures(); }, 15000);
     return () => {
+      clearInterval(timer);
       cancelled = true;
     };
   }, [backendUrl, activePage]);
