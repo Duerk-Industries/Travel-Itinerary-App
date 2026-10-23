@@ -85,6 +85,17 @@ describe('Account profile links', () => {
     expect(onNavigate).toHaveBeenNthCalledWith(3, 'account-travel-profile');
   });
 
+  test('links to Preferences and returns to Profile', () => {
+    const onNavigate = jest.fn();
+    const view = render(<AccountTab {...defaultProps} onNavigate={onNavigate} />);
+    fireEvent.press(view.getByTestId('account-link-preferences'));
+    expect(onNavigate).toHaveBeenCalledWith('account-preferences');
+    view.rerender(<AccountTab {...defaultProps} onNavigate={onNavigate} activePage="account-preferences" />);
+    expect(view.getByTestId('account-profile-management').props.activePage).toBe('account-preferences');
+    fireEvent.press(view.getByTestId('account-subpage-back'));
+    expect(onNavigate).toHaveBeenLastCalledWith('account');
+  });
+
   test('opens the public privacy and terms pages from the profile footer', () => {
     const originalOS = Platform.OS;
     Platform.OS = 'ios';

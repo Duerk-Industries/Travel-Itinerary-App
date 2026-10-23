@@ -2426,6 +2426,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'ingest':
           await Promise.all([fetchTrips(authToken), fetchGroups()]);
           break;
+        case 'account-preferences':
         case 'account-privacy':
           break;
         case 'account':
@@ -2768,6 +2769,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'account-packing-list' ||
           sessionPage === 'account-travel-profile' ||
           sessionPage === 'account-privacy' ||
+          sessionPage === 'account-preferences' ||
           sessionPage === 'follow' ||
           sessionPage === 'following'
         ) {
@@ -3729,7 +3731,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             </View>
           ) : null}
 
-          {(activePage === 'account' || activePage === 'account-fellow-travelers' || activePage === 'account-packing-list' || activePage === 'account-travel-profile' || activePage === 'account-privacy')
+          {(activePage === 'account' || activePage === 'account-fellow-travelers' || activePage === 'account-packing-list' || activePage === 'account-travel-profile' || activePage === 'account-privacy' || activePage === 'account-preferences')
             ? renderSharedPageScroll(
                 <AccountTab
                   backendUrl={backendUrl}

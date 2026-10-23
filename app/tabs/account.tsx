@@ -200,7 +200,7 @@ interface AccountTabProps {
   fetchTraitProfile: () => Promise<void>;
 }
 
-export type AccountPage = 'account' | 'account-fellow-travelers' | 'account-packing-list' | 'account-travel-profile' | 'account-privacy';
+export type AccountPage = 'account' | 'account-fellow-travelers' | 'account-packing-list' | 'account-travel-profile' | 'account-privacy' | 'account-preferences';
 
 const AccountTab: React.FC<AccountTabProps> = ({
   backendUrl,
@@ -278,7 +278,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
     ? 'Fellow Travelers'
     : page === 'account-packing-list'
       ? 'Packing List'
-      : page === 'account-privacy' ? 'Privacy' : 'Travel Profile';
+      : page === 'account-privacy' ? 'Privacy' : page === 'account-preferences' ? 'Preferences' : 'Travel Profile';
 
   const renderPageHeader = (title: string, description: string) => (
     <View style={localStyles.pageHeader}>
@@ -299,6 +299,14 @@ const AccountTab: React.FC<AccountTabProps> = ({
       <Text style={styles.sectionTitle}>Profile settings</Text>
       <Text style={styles.helperText}>Manage the details used for planning trips with your group.</Text>
       <View style={localStyles.linkGrid}>
+        <TouchableOpacity
+          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          onPress={() => onNavigate('account-preferences')}
+          testID="account-link-preferences"
+        >
+          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Preferences</Text>
+          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Choose apps, appearance, temperature units, and saved-trip updates.</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
           onPress={() => onNavigate('account-fellow-travelers')}
@@ -343,10 +351,11 @@ const AccountTab: React.FC<AccountTabProps> = ({
           ? 'Manage the people you travel with and their saved profiles.'
           : page === 'account-packing-list'
             ? 'Items saved here are included when you join a trip.'
+            : page === 'account-preferences' ? 'Choose your maps, calendar, appearance, temperature, and saved-trip update preferences.'
             : page === 'account-privacy' ? 'Manage your privacy choices and optional data collection.'
             : 'Tell us how you like to travel so itinerary suggestions fit you better.'
       ) : null}
-      {!isSubPage ? <AccountProfileManagement
+      {!isSubPage || page === 'account-preferences' ? <AccountProfileManagement
         theme={theme}
         backendUrl={backendUrl}
         userToken={userToken}

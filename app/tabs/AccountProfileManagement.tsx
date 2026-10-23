@@ -274,7 +274,12 @@ const AccountProfileManagement = ({
     const res = await fetch(`${backendUrl}/api/account/profile`, {
       method: 'PATCH',
       headers: jsonHeaders,
-      body: JSON.stringify({ ...accountProfile, mapPreference: accountProfile.mapPreference ?? mapApp }),
+      body: JSON.stringify(activePage === 'account-preferences' ? {
+        mapPreference: accountProfile.mapPreference ?? mapApp,
+        calendarPreference: accountProfile.calendarPreference ?? 'google',
+        appearancePreference: accountProfile.appearancePreference ?? appearancePreference,
+        temperatureUnit: accountProfile.temperatureUnit,
+      } : { ...accountProfile, mapPreference: accountProfile.mapPreference ?? mapApp }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -309,7 +314,7 @@ const AccountProfileManagement = ({
       appearancePreference: nextAppearancePreference,
       temperatureUnit: nextTemperatureUnit,
     });
-    setAccountMessage('Profile updated');
+    setAccountMessage(activePage === 'account-preferences' ? 'Preferences updated' : 'Profile updated');
   };
 
   const handleAddressSave = async () => {
@@ -486,6 +491,96 @@ const AccountProfileManagement = ({
     }
   };
 
+  if (activePage === 'account-preferences') return (
+    <View style={[styles.card, styles.accountSection]} testID="account-preferences-settings">
+      {accountMessage ? <Text style={styles.bodyText}>{accountMessage}</Text> : null}
+      <Text style={styles.modalLabel}>Preferred maps app</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {mapAppOptions.map((opt) => (
+          <TouchableOpacity
+            key={opt.key}
+            style={[
+              styles.mapOptionButton,
+              mapApp === opt.key && styles.mapOptionActive,
+              { marginRight: 8, marginTop: 4 },
+            ]}
+            onPress={() => {
+              onChangeMapApp(opt.key);
+              setAccountProfile((p) => ({ ...p, mapPreference: opt.key }));
+            }}
+          >
+            <Text style={[styles.mapOptionText, mapApp === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.helperText}>
+        Selected: {mapAppOptions.find((opt) => opt.key === mapApp)?.label ?? 'Google Maps'}
+      </Text>
+      <Text style={styles.modalLabel}>Preferred calendar app</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {calendarAppOptions.map((opt) => (
+          <TouchableOpacity key={opt.key} accessibilityRole="button"
+            accessibilityState={{ selected: (accountProfile.calendarPreference ?? 'google') === opt.key }}
+            style={[styles.mapOptionButton, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActive, { marginRight: 8, marginTop: 4 }]}
+            onPress={() => setAccountProfile((profile) => ({ ...profile, calendarPreference: opt.key }))}>
+            <Text style={[styles.mapOptionText, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.helperText}>Save preferences to remember this choice. Apple Calendar downloads a calendar (.ics) file on the web and opens the phone's calendar editor in the installed app. Later trip changes won't sync to saved events.</Text>
+      <Text style={styles.modalLabel}>Appearance</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {appearanceOptions.map((opt) => (
+          <TouchableOpacity
+            key={opt.key}
+            style={[
+              styles.mapOptionButton,
+              appearancePreference === opt.key && styles.mapOptionActive,
+              { marginRight: 8, marginTop: 4 },
+            ]}
+            onPress={() => {
+              onChangeAppearancePreference(opt.key);
+              setAccountProfile((p) => ({ ...p, appearancePreference: opt.key }));
+            }}
+          >
+            <Text style={[styles.mapOptionText, appearancePreference === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.helperText}>
+        Selected: {appearanceOptions.find((opt) => opt.key === appearancePreference)?.label ?? 'Auto'}
+      </Text>
+      <Text style={styles.modalLabel}>Temperature</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {temperatureUnitOptions.map((opt) => {
+          const selected = normalizeTemperatureUnit(accountProfile.temperatureUnit) === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              style={[
+                styles.mapOptionButton,
+                selected && styles.mapOptionActive,
+                { marginRight: 8, marginTop: 4 },
+              ]}
+              onPress={() => {
+                setAccountProfile((p) => ({ ...p, temperatureUnit: opt.key }));
+              }}
+            >
+              <Text style={[styles.mapOptionText, selected && styles.mapOptionActiveText]}>{opt.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={styles.helperText}>
+        Selected: {temperatureUnitOptions.find((opt) => opt.key === normalizeTemperatureUnit(accountProfile.temperatureUnit))?.label ?? 'Fahrenheit'}
+      </Text>
+      <OfflineDownloadSettings styles={styles} />
+      <TouchableOpacity style={styles.button} onPress={handleProfileUpdate} accessibilityRole="button">
+        <Text style={styles.buttonText}>Save Preferences</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={[styles.card, styles.accountSection]}>
       <Text style={styles.sectionTitle}>Account</Text>
@@ -550,87 +645,6 @@ const AccountProfileManagement = ({
           </View>
         ) : null}
       </View>
-      <Text style={styles.modalLabel}>Preferred maps app</Text>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
-        {mapAppOptions.map((opt) => (
-          <TouchableOpacity
-            key={opt.key}
-            style={[
-              styles.mapOptionButton,
-              mapApp === opt.key && styles.mapOptionActive,
-              { marginRight: 8, marginTop: 4 },
-            ]}
-            onPress={() => {
-              onChangeMapApp(opt.key);
-              setAccountProfile((p) => ({ ...p, mapPreference: opt.key }));
-            }}
-          >
-            <Text style={[styles.mapOptionText, mapApp === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <Text style={styles.helperText}>
-        Selected: {mapAppOptions.find((opt) => opt.key === mapApp)?.label ?? 'Google Maps'}
-      </Text>
-      <Text style={styles.modalLabel}>Preferred calendar app</Text>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
-        {calendarAppOptions.map((opt) => (
-          <TouchableOpacity key={opt.key} accessibilityRole="button"
-            accessibilityState={{ selected: (accountProfile.calendarPreference ?? 'google') === opt.key }}
-            style={[styles.mapOptionButton, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActive, { marginRight: 8, marginTop: 4 }]}
-            onPress={() => setAccountProfile((profile) => ({ ...profile, calendarPreference: opt.key }))}>
-            <Text style={[styles.mapOptionText, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <Text style={styles.helperText}>Save your profile to remember this choice. Apple Calendar downloads a calendar (.ics) file on the web and opens the phone's calendar editor in the installed app. Later trip changes won't sync to saved events.</Text>
-      <Text style={styles.modalLabel}>Appearance</Text>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
-        {appearanceOptions.map((opt) => (
-          <TouchableOpacity
-            key={opt.key}
-            style={[
-              styles.mapOptionButton,
-              appearancePreference === opt.key && styles.mapOptionActive,
-              { marginRight: 8, marginTop: 4 },
-            ]}
-            onPress={() => {
-              onChangeAppearancePreference(opt.key);
-              setAccountProfile((p) => ({ ...p, appearancePreference: opt.key }));
-            }}
-          >
-            <Text style={[styles.mapOptionText, appearancePreference === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <Text style={styles.helperText}>
-        Selected: {appearanceOptions.find((opt) => opt.key === appearancePreference)?.label ?? 'Auto'}
-      </Text>
-      <Text style={styles.modalLabel}>Temperature</Text>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
-        {temperatureUnitOptions.map((opt) => {
-          const selected = normalizeTemperatureUnit(accountProfile.temperatureUnit) === opt.key;
-          return (
-            <TouchableOpacity
-              key={opt.key}
-              style={[
-                styles.mapOptionButton,
-                selected && styles.mapOptionActive,
-                { marginRight: 8, marginTop: 4 },
-              ]}
-              onPress={() => {
-                setAccountProfile((p) => ({ ...p, temperatureUnit: opt.key }));
-              }}
-            >
-              <Text style={[styles.mapOptionText, selected && styles.mapOptionActiveText]}>{opt.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-      <Text style={styles.helperText}>
-        Selected: {temperatureUnitOptions.find((opt) => opt.key === normalizeTemperatureUnit(accountProfile.temperatureUnit))?.label ?? 'Fahrenheit'}
-      </Text>
-      <OfflineDownloadSettings styles={styles} />
       <BlogPublicDefaultToggle backendUrl={backendUrl} headers={headers} styles={styles} theme={theme} />
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate}>
         <Text style={styles.buttonText}>Save Profile</Text>

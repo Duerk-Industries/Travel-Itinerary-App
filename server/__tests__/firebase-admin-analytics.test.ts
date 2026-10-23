@@ -147,6 +147,8 @@ class FakeCollection {
 
   limit(count: number) { return new FakeQuery(this, [], count); }
 
+  orderBy(field: string, direction?: 'asc' | 'desc') { return new FakeQuery(this).orderBy(field, direction); }
+
   doc(id: string) {
     return new FakeDocRef(this, id);
   }
