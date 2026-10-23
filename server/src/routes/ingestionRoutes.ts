@@ -1,5 +1,6 @@
 import { readGmailConfirmation, resolveMailAlias } from '../ingestion/shared/mailAdmission';
 import { ownerVerifiedAddress, receiverAuthenticationEnabled, receiverPolicyCurrent } from '../ingestion/shared/receiverAuthentication';
+import { getFeatureFlag } from '../db';
 import { AUTO_ASSIGN_FLAG, automaticAddingEnabledFor } from '../ingestion/assignment/autoAssign';
 import { buildMatchingContext, forwardingTrust } from '../ingestion/assignment/matchingContext';
 import { listReviewSuggestions, confirmReviewSuggestions } from '../ingestion/assignment/reviewSuggestions';
@@ -142,17 +143,20 @@ const getActiveGmailConnection = async (userId: string) => {
 };
 
 router.get('/config', mailSettingsHandler(async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
   const userId = (req as any).user.userId as string;
   const { tierKey, rules } = await getTierIngestionRules(userId);
   const gmailConnection = await getProviderConnection(userId, 'gmail');
-  const [manualFlag, mailboxFlag, gmailFlag] = await Promise.all([
-    isFeatureEnabled(INGESTION_FEATURE_FLAGS.manualUpload),
-    isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox),
-    isFeatureEnabled(INGESTION_FEATURE_FLAGS.gmailImport),
+  const [manualFlag, mailboxFlag, gmailFlag, autoAssignFlag] = await Promise.all([
+    getFeatureFlag(INGESTION_FEATURE_FLAGS.manualUpload).then(flag => flag?.enabled ?? true),
+    getFeatureFlag(INGESTION_FEATURE_FLAGS.forwardedMailbox).then(flag => flag?.enabled ?? true),
+    getFeatureFlag(INGESTION_FEATURE_FLAGS.gmailImport).then(flag => flag?.enabled ?? true),
+    isFeatureEnabled(AUTO_ASSIGN_FLAG, userId),
   ]);
   res.json({
     tierKey,
     features: {
+      autoAssign: autoAssignFlag && tierKey !== 'free',
       manualUpload: manualFlag && tierKey !== 'free',
       forwardedMailbox: mailboxFlag && tierKey !== 'free',
       gmailImport: gmailFlag && tierKey !== 'free',

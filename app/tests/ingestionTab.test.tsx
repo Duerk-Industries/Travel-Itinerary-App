@@ -325,18 +325,43 @@ describe('IngestionTab role-based view', () => {
     expect(queryByText(/Inbox only/)).toBeNull();
   });
 
-  it('keeps the full admin view (filters, forwarding detail, and the Gmail-disabled message) for admins', async () => {
+  it('keeps admin filters but hides Gmail when its flag is disabled', async () => {
     mockLoad({ ...baseConfig, features: { manualUpload: true, forwardedMailbox: true, gmailImport: false } });
 
-    const { findByText, findByPlaceholderText } = render(
+    const { findByText, findByPlaceholderText, queryByText } = render(
       <IngestionTab backendUrl={backendUrl} headers={headers} styles={styles} onNavigate={jest.fn()} userRole="admin" />
     );
 
     expect(await findByPlaceholderText('Search provider or confirmation')).toBeTruthy();
     expect(await findByPlaceholderText('Status or ALL')).toBeTruthy();
     expect(await findByText('Copy my forwarding address')).toBeTruthy();
-    expect(await findByText('Gmail import is currently disabled.')).toBeTruthy();
+    expect(queryByText('Gmail Import')).toBeNull();
+    expect(queryByText('Gmail import is currently disabled.')).toBeNull();
   });
+  it.each(['user', 'admin'] as const)('reacts to intake flags enabling and disabling while open for %s', async (role) => {
+    jest.useFakeTimers();
+    const disabled = { ...baseConfig, features: { manualUpload: false, forwardedMailbox: false, gmailImport: false } };
+    mockLoad(disabled);
+    const view = render(<IngestionTab backendUrl={backendUrl} headers={headers} styles={styles} onNavigate={jest.fn()} userRole={role} />);
+    try {
+      await act(async () => { await Promise.resolve(); });
+      await waitFor(() => expect(view.getByText('Queued Items')).toBeTruthy());
+      expect(view.queryByText('Manual Upload')).toBeNull();
+      expect(view.queryByText('Gmail Import')).toBeNull();
+      expect(view.queryByText('Copy my forwarding address')).toBeNull();
+      mockLoad({ ...baseConfig, features: { manualUpload: true, forwardedMailbox: true, gmailImport: true } });
+      await act(async () => { jest.advanceTimersByTime(15000); });
+      await waitFor(() => expect(view.getByText('Manual Upload')).toBeTruthy());
+      expect(view.getByText('Gmail Import')).toBeTruthy();
+      expect(view.getByText('Copy my forwarding address')).toBeTruthy();
+      mockLoad(disabled);
+      await act(async () => { jest.advanceTimersByTime(15000); });
+      await waitFor(() => expect(view.queryByText('Manual Upload')).toBeNull());
+      expect(view.queryByText('Gmail Import')).toBeNull();
+      expect(view.queryByText('Copy my forwarding address')).toBeNull();
+    } finally { view.unmount(); jest.useRealTimers(); }
+  });
+
   it('returns from trip creation to explicit booking confirmation with server-proven trust', async () => {
     const booking = {id:'import-1', itemType:'hotel', sourceType:'FORWARDED_MAILBOX', providerVendor:'Hotel', confidenceScore:0.95, status:'READY_FOR_REVIEW', travelerNames:[], extractedFields:{name:'Tokyo stay'}};
     const draft = {name:'Trip to Tokyo',destinationQuery:'Tokyo',startDate:'2027-05-10',endDate:'2027-05-11'};

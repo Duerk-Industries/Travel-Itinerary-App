@@ -42,6 +42,7 @@ type ImportJob = {
 type ConfigResponse = {
   tierKey: string;
   features: {
+    autoAssign?: boolean;
     manualUpload: boolean;
     forwardedMailbox: boolean;
     gmailImport: boolean;
@@ -193,6 +194,14 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
     void load();
     return () => { if (scopeRef.current === scope) scopeRef.current = ''; };
   }, [scope]);
+
+  const refreshConfig = useCallback(async () => {
+    const response = await fetch(`${backendUrl}/api/ingestion/config`, { headers, cache: 'no-store' });
+    if (!response.ok) throw new Error('Import settings unavailable');
+    const settings: ConfigResponse = await response.json();
+    if (scopeRef.current === scope) setConfig(settings);
+  }, [backendUrl, headers, scope]);
+  usePolling({ enabled: loadedScope === scope, intervalMs: 15000, poll: refreshConfig, immediate: false });
 
   const jobsRef = useRef<ImportJob[]>(jobs);
   jobsRef.current = jobs;
@@ -521,7 +530,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>Ingest & Review</Text>
-      <AutomaticImportSettings backendUrl={backendUrl} headers={headers} onChanged={() => void load()} />
+      {config.features.autoAssign ? <AutomaticImportSettings backendUrl={backendUrl} headers={headers} onChanged={() => void load()} /> : null}
       <ImportSuggestionReview backendUrl={backendUrl} headers={headers} styles={styles}
         onReviewItem={id => { const item = items.find(row => row.id === id); if (item) void beginEdit(item); else setError('Refresh Imports to review this booking.'); }}
         onConfirmed={async assigned => { for (const entry of assigned) { if (scopeRef.current !== scope) return; await onAssignmentApplied?.({ itemType: entry.itemType, tripId: entry.tripId }); } if (scopeRef.current === scope) await load(); }} />
@@ -558,9 +567,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
 
       {config.features.forwardedMailbox ? <ImportForwardingSetup address={config.forwarding.currentAddress} backendUrl={backendUrl} headers={headers} styles={styles}
         onRotated={address => setConfig(current => current ? { ...current, forwarding: { ...current.forwarding, currentAddress: address } } : current)} />
-        : <Text style={styles.helperText}>Email forwarding is temporarily unavailable. You can upload a confirmation below.</Text>}
+        : null}
 
-      {(config.forwarding.receipts ?? []).filter(r => r.state !== 'COMPLETE').map(receipt => (
+      {(config.features.forwardedMailbox ? config.forwarding.receipts ?? [] : []).filter(r => r.state !== 'COMPLETE').map(receipt => (
         <View key={receipt.id} style={styles.section}>
           <Text style={styles.helperText}>{receipt.holdReason === 'GMAIL_CONFIRMATION_UNVERIFIED' ? 'This forwarding confirmation could not be verified. Delete it and request another in Gmail; it will not be imported as a booking.' : receipt.state === 'HELD' ? 'Check this message before importing. Your plan allowance still applies.' : 'Received — preparing your booking preview.'}</Text>
           {receipt.state === 'HELD' && receipt.holdReason !== 'GMAIL_CONFIRMATION_UNVERIFIED' && <TouchableOpacity style={styles.button} accessibilityRole="button" onPress={() => {
@@ -578,7 +587,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
         </View>
       ))}
 
-      {isAdmin ? (
+      {isAdmin && config.features.gmailImport ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Gmail Import</Text>
           <Text style={styles.helperText}>Scope review: {config.gmail.scope}</Text>
@@ -668,7 +677,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
         {filteredItems.length === 0 ? (
           <Text style={styles.helperText}>
             {items.length === 0
-              ? 'No items have been imported yet. Use Manual Upload or Gmail Import to get started.'
+              ? 'No items have been imported yet.'
               : 'No items match the current filters. Clear a filter to see more.'}
           </Text>
         ) : null}
