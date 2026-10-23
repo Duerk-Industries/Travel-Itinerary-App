@@ -2172,7 +2172,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         </Modal>
       ) : null}
       {selectedTransfer ? React.createElement(isFlightTransfer(selectedTransfer) ? FlightDetailsDialog : GroundTransferDetailsDialog, {
-        flight: selectedTransfer, backendUrl, headers, styles, theme, readOnly, mapApp,
+        flight: selectedTransfer, backendUrl, headers, styles, theme, readOnly, mapApp, lodgings,
         testID: isFlightTransfer(selectedTransfer) ? 'flight-screen-details' : 'ground-transfer-screen-details',
         onClose: () => setSelectedTransfer(null),
         onEdit: () => { const item = selectedTransfer; setSelectedTransfer(null); openFlightDetails(item); },

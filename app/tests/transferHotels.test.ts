@@ -1,8 +1,20 @@
-import { hotelsForTransferDate, type TransferHotel } from '../utils/transferHotels';
+import { hotelsForTransferDate, transferLocationLabel, type TransferHotel } from '../utils/transferHotels';
 
 const hotel = (id: string, checkInDate: string, checkOutDate: string, address = '123 Hotel Road'): TransferHotel => ({ id, name: id, checkInDate, checkOutDate, address, status: 'Booked' });
 
 describe('transfer hotel address choices', () => {
+  it('resolves hotel names from stored addresses while leaving other locations unchanged', () => {
+    const hotels = [hotel('Hotel A', '2027-03-01', '2027-03-04')];
+    expect(transferLocationLabel(' 123 HOTEL  Road ', hotels, '2027-03-02')).toBe('Hotel A');
+    expect(transferLocationLabel('Station', hotels, '2027-03-02')).toBe('Station');
+    expect(transferLocationLabel('', hotels, '2027-03-02')).toBe('');
+  });
+
+  it('uses the stay dates to distinguish shared addresses, keeping ambiguous locations as addresses', () => {
+    const hotels = [hotel('Hotel A', '2027-03-01', '2027-03-04'), hotel('Hotel B', '2027-04-01', '2027-04-04')];
+    expect(transferLocationLabel('123 Hotel Road', hotels, '2027-04-02')).toBe('Hotel B');
+    expect(transferLocationLabel('123 Hotel Road', hotels, '')).toBe('123 Hotel Road');
+  });
   it('offers current stays, checkout-day stays, and next-day check-ins only when they have addresses', () => {
     const hotels = [hotel('current', '2027-03-01', '2027-03-04'), hotel('checkout', '2027-03-01', '2027-03-02'),
       hotel('tomorrow', '2027-03-03', '2027-03-04'), hotel('old', '2027-02-25', '2027-03-01'), hotel('future', '2027-03-04', '2027-03-06'),
