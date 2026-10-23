@@ -148,9 +148,9 @@ export const AccountPrivacySettings = ({ privacy, backendUrl, token, theme }: {
     <Text style={[styles.text, palette.text]}>Necessary account, security, quota and billing records support the service. Optional choices do not affect trip features or price.</Text>
     {privacy.loading && !status ? <Text style={[styles.text, palette.text]}>Loading privacy settings…</Text> : null}
     {privacy.error ? <Text style={palette.error}>{privacy.error}</Text> : null}
-    <ChoiceSwitch label="Product analytics" detail={status?.privacySignalActive ? 'Blocked on this browser by your privacy signal.' : status?.productCollectionEnabled ? 'Feature and trip-use measurement.' : 'Collection is currently disabled.'}
+    <ChoiceSwitch label="Product analytics" detail={status?.privacySignalActive ? 'Blocked on this browser by your privacy signal.' : status?.productCollectionEnabled ? 'Feature and trip-use measurement.' : 'Collection is currently disabled. Your preference will apply when collection is available.'}
       value={status?.productAnalytics === true}
-      disabled={!status || privacy.saving || ((!status.productCollectionEnabled || status.privacySignalActive) && status.productAnalytics !== true)}
+      disabled={!status || privacy.saving || (status.privacySignalActive && status.productAnalytics !== true)}
       onChange={(value) => { void saveSafely(privacy, { productAnalytics: value }); }} theme={theme} />
     <ChoiceSwitch label="Detailed diagnostics" detail={status?.diagnosticsCollectionEnabled ? 'App crash and performance details.' : 'Collection is currently disabled.'}
       value={status?.optionalDiagnostics === true}

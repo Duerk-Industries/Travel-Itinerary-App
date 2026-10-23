@@ -8,6 +8,7 @@ import DialogShell from '../components/DialogShell';
 import DraftTextInput from '../components/DraftTextInput';
 import OfflineDownloadSettings from '../components/OfflineDownloadSettings';
 import PlaidLinkButton from '../components/PlaidLinkButton';
+import { calendarAppOptions, isCalendarApp } from '../utils/calendarEvents';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
 import { normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
@@ -304,6 +305,7 @@ const AccountProfileManagement = ({
       homeAddress: updatedUser.homeAddress ?? '',
       preferredAirport: updatedUser.preferredAirport ?? '',
       mapPreference: nextMapPreference,
+      calendarPreference: isCalendarApp(updatedUser.calendarPreference) ? updatedUser.calendarPreference : accountProfile.calendarPreference ?? 'google',
       appearancePreference: nextAppearancePreference,
       temperatureUnit: nextTemperatureUnit,
     });
@@ -570,6 +572,18 @@ const AccountProfileManagement = ({
       <Text style={styles.helperText}>
         Selected: {mapAppOptions.find((opt) => opt.key === mapApp)?.label ?? 'Google Maps'}
       </Text>
+      <Text style={styles.modalLabel}>Preferred calendar app</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {calendarAppOptions.map((opt) => (
+          <TouchableOpacity key={opt.key} accessibilityRole="button"
+            accessibilityState={{ selected: (accountProfile.calendarPreference ?? 'google') === opt.key }}
+            style={[styles.mapOptionButton, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActive, { marginRight: 8, marginTop: 4 }]}
+            onPress={() => setAccountProfile((profile) => ({ ...profile, calendarPreference: opt.key }))}>
+            <Text style={[styles.mapOptionText, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.helperText}>Save your profile to remember this choice. Apple Calendar downloads a calendar (.ics) file on the web and opens the phone's calendar editor in the installed app. Later trip changes won't sync to saved events.</Text>
       <Text style={styles.modalLabel}>Appearance</Text>
       <View style={[styles.row, { flexWrap: 'wrap' }]}>
         {appearanceOptions.map((opt) => (

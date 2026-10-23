@@ -1,3 +1,4 @@
+import { uiTransferCalendarEvent } from '../utils/calendarEvents';
 import React, { useEffect, useState } from 'react';
 import type { Flight } from '../tabs/transfers';
 import type { AppTheme } from '../theme/theme';
@@ -46,7 +47,7 @@ function TransferDetails({ flight, backendUrl, headers, styles, theme, readOnly,
   };
 
   const ground = !isFlightTransfer(flight);
-  return <TripItemDetailsDialog visible kind="flight"
+  return <TripItemDetailsDialog visible kind="flight" calendarEvent={uiTransferCalendarEvent(flight)}
     title={`${detailAirportLocation(flight, 'departure')} → ${detailAirportLocation(flight, 'arrival')}`}
     status={flight.status || undefined}
     rows={formatFlightDetails(flight).map(item => ({ label: item.label,

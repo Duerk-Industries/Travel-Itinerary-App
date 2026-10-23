@@ -14,6 +14,17 @@ describe('GET /api/auth/features', () => {
     await initDb();
   });
 
+  it('exposes the AI itinerary generation flag independently of account tier', async () => {
+    await setFeatureFlag('ai_itinerary_generation', false, null);
+    clearFeatureFlagCacheForTesting();
+    const disabled = await request(app).get('/api/auth/features').expect(200);
+    expect(disabled.body.featureAiItineraryGeneration).toBe(false);
+    await setFeatureFlag('ai_itinerary_generation', true, null);
+    clearFeatureFlagCacheForTesting();
+    const enabled = await request(app).get('/api/auth/features').expect(200);
+    expect(enabled.body.featureAiItineraryGeneration).toBe(true);
+  });
+
   it('reports the UX-remediation kill switches alongside the existing grid-editing flags', async () => {
     await setFeatureFlag('feature_tap_to_edit_tables', true, null);
     await setFeatureFlag('feature_cover_photo_fallback_v2', true, null);

@@ -1,4 +1,6 @@
 // @ts-nocheck
+import AddToCalendarButton from '../components/AddToCalendarButton';
+import { activityCalendarEvent, uiTransferCalendarEvent, lodgingCalendarEvent, rentalCalendarEvent, makeCalendarEvent, type CalendarEvent } from '../utils/calendarEvents';
 import { normalizeTransferType } from '../utils/transferTypes';
 import { FlightDetailsDialog, GroundTransferDetailsDialog } from '../components/TransferDetailsDialog';
 import { isFlightTransfer } from '../utils/transferCategory';
@@ -287,6 +289,7 @@ type DayCard = {
 };
 
 type DetailSection = {
+  calendarEvent?: CalendarEvent | null;
   title?: string;
   subtitle?: string;
   items: DetailItem[];
@@ -2142,6 +2145,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <TripItemDetailsDialog
           visible
           kind={modal.kind}
+          calendarEvent={modal.kind === 'flight' ? uiTransferCalendarEvent(modal.item as Flight)
+            : modal.kind === 'activity' ? activityCalendarEvent(modal.item as Tour)
+            : lodgingCalendarEvent({ ...(modal.item as Lodging), check_in_date: (modal.item as Lodging).checkInDate, check_out_date: (modal.item as Lodging).checkOutDate })}
           title={itemName}
           subtitle={modal.sections.find((section) => section.subtitle)?.subtitle}
           status={status}
@@ -2173,6 +2179,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <Text style={styles.sectionTitle}>{modal.title}</Text>
             {modal.sections.map((section, idx) => (
               <View key={`${section.title ?? 'section'}-${idx}`} style={styles.detailSection}>
+                <AddToCalendarButton event={section.calendarEvent ?? null} styles={styles} />
                 {section.title ? <Text style={styles.headerText}>{section.title}</Text> : null}
                 {section.subtitle ? <Text style={styles.helperText}>{section.subtitle}</Text> : null}
                 {section.items.map((item) => {
@@ -2215,6 +2222,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <TripItemDetailsDialog
           visible
           kind="lodging"
+          calendarEvent={lodgingCalendarEvent({ ...selectedLodging, check_in_date: selectedLodging.checkInDate, check_out_date: selectedLodging.checkOutDate })}
           title={selectedLodging.name}
           status={String(selectedLodging.status || '') || undefined}
           rows={[
@@ -2238,6 +2246,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <TripItemDetailsDialog
           visible
           kind="activity"
+          calendarEvent={activityCalendarEvent(selectedTour)}
           title={selectedTour.name}
           status={String(selectedTour.status || '') || undefined}
           rows={formatTourDetails(selectedTour).map((item) => ({
@@ -2874,6 +2883,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       const sections: DetailSection[] = rentalsForDay.map((rental, idx) => ({
                         title: rentalsForDay.length > 1 ? `Rental ${idx + 1}` : undefined,
                         items: formatRentalDetails(rental),
+                        calendarEvent: rentalCalendarEvent(rental),
                       }));
                       setDetailModal({ title: 'Rental Car Details', sections });
                     }}
@@ -2925,6 +2935,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     {
                                       subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
                                       items: formatTourDetails(tour),
+                                      calendarEvent: activityCalendarEvent(tour),
                                     },
                                   ],
                                 });
@@ -2935,6 +2946,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     {
                                       subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
                                       items: formatTourDetails(tour),
+                                      calendarEvent: activityCalendarEvent(tour),
                                     },
                                   ],
                                 });
@@ -3105,6 +3117,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             <Text style={styles.dayInfoRoute}>{d.activity}</Text>
                           )}
                         </View>
+                        {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
                         {isActivity ? (
                           <View style={{ flexShrink: 0 }}>
                             <ReactionBar

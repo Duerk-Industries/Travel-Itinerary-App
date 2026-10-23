@@ -60,6 +60,11 @@ Examples: free text in an event, collection without consent, the wrong populatio
 
 ### A consent change isn't respected
 
+Profile → Privacy stores the Product analytics preference independently of current
+collection availability. Users can turn it off and back on while collection is
+disabled. `productAnalyticsAllowed` remains false until the collection flag,
+rollout, region, current notice, and browser privacy signal checks all permit it.
+
 1. Kill switch off.
 2. Check `GET /api/account/privacy-preferences` for the account, and compare the client's `productAnalyticsAllowed` with the server's.
 3. The server is authoritative, so ingest refuses anything the server hasn't consented to. If events were stored without consent, delete them, then follow the breach assessment above.

@@ -78,6 +78,14 @@ describe('AccountProfileManagement', () => {
     expect(getByText('Save Profile')).toBeTruthy();
   });
 
+  it('sets the calendar preference beside maps in the profile', () => {
+    const setAccountProfile = jest.fn();
+    const { getByText } = render(<AccountProfileManagement {...defaultProps} setAccountProfile={setAccountProfile} />);
+    expect(getByText('Preferred calendar app')).toBeTruthy();
+    fireEvent.press(getByText('Apple Calendar'));
+    expect(setAccountProfile.mock.calls[0][0](defaultProps.accountProfile).calendarPreference).toBe('apple');
+  });
+
   it('updates the selected temperature preference', () => {
     const setAccountProfile = jest.fn();
     const { getByText } = render(

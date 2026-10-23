@@ -279,6 +279,7 @@ router.get('/features', async (_req, res) => {
     activityLodgingExport,
     csvExport,
     activityRecap,
+    aiItineraryGeneration,
   ] = await Promise.all([
     getFeatureFlag('feature_grid_editing'),
     getFeatureFlag('feature_grid_editing_clipboard'),
@@ -295,6 +296,7 @@ router.get('/features', async (_req, res) => {
     isFeatureEnabled('activity_lodging_csv_export'),
     isFeatureEnabled('csv_export'),
     isFeatureEnabled('activity_recap'),
+    isFeatureEnabled('ai_itinerary_generation'),
   ]);
   res.json({
     usernameLoginEnabled: getAuthFlag('usernameLoginEnabled'),
@@ -314,6 +316,7 @@ router.get('/features', async (_req, res) => {
     featureActivityLodgingCsvImport: activityLodgingImport === true,
     featureActivityLodgingCsvExport: activityLodgingExport === true && csvExport === true,
     featureActivityRecap: activityRecap === true,
+    featureAiItineraryGeneration: aiItineraryGeneration === true,
   });
 });
 

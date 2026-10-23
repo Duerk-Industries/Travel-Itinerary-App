@@ -18,6 +18,7 @@ export type PageKey =
   | 'account-fellow-travelers'
   | 'account-packing-list'
   | 'account-travel-profile'
+  | 'account-privacy'
   | 'follow'
   | 'following'
   | 'admin';

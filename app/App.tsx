@@ -1,5 +1,6 @@
 import { isFlightTransfer } from './utils/transferCategory';
 import { shadowStyle } from './utils/shadowStyle';
+import { CalendarPreferenceContext } from './contexts/CalendarPreferenceContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import type { ImportTripDraft } from '../server/src/types';
 import PendingExpenseRecovery from './components/PendingExpenseRecovery';
@@ -741,6 +742,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureExpenseImportPlaid, setFeatureExpenseImportPlaid] = useState(false);
   const [featureActivityLodgingCsvImport, setFeatureActivityLodgingCsvImport] = useState(false);
   const [featureActivityLodgingCsvExport, setFeatureActivityLodgingCsvExport] = useState(false);
+  const [featureAiItineraryGeneration, setFeatureAiItineraryGeneration] = useState(false);
   const [featureActivityRecap, setFeatureActivityRecap] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -762,13 +764,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureActivityLodgingCsvImport(Boolean(data.featureActivityLodgingCsvImport));
           setFeatureActivityLodgingCsvExport(Boolean(data.featureActivityLodgingCsvExport));
           setFeatureActivityRecap(Boolean(data.featureActivityRecap));
+          setFeatureAiItineraryGeneration(Boolean(data.featureAiItineraryGeneration));
         }
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [backendUrl]);
+  }, [backendUrl, activePage]);
   const {
     accountProfile,
     mapApp,
@@ -2423,11 +2426,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'ingest':
           await Promise.all([fetchTrips(authToken), fetchGroups()]);
           break;
+        case 'account-privacy':
+          break;
         case 'account':
         case 'account-fellow-travelers':
         case 'account-packing-list':
         case 'account-travel-profile':
-          await Promise.all([fetchTraits(), fetchTraitProfile(), loadFamilyRelationships(authToken), loadFellowTravelers(authToken)]);
+          await Promise.all([...(featureAiItineraryGeneration ? [fetchTraits(), fetchTraitProfile()] : []), loadFamilyRelationships(authToken), loadFellowTravelers(authToken)]);
           break;
         case 'follow':
           await Promise.all([fetchTrips(authToken), fetchFollowedTrips(authToken)]);
@@ -2475,6 +2480,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchTraitProfile,
     loadFamilyRelationships,
     loadFellowTravelers,
+    featureAiItineraryGeneration,
     requirePasswordSetup
   ]);
 
@@ -2761,6 +2767,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'account-fellow-travelers' ||
           sessionPage === 'account-packing-list' ||
           sessionPage === 'account-travel-profile' ||
+          sessionPage === 'account-privacy' ||
           sessionPage === 'follow' ||
           sessionPage === 'following'
         ) {
@@ -3722,7 +3729,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             </View>
           ) : null}
 
-          {(activePage === 'account' || activePage === 'account-fellow-travelers' || activePage === 'account-packing-list' || activePage === 'account-travel-profile')
+          {(activePage === 'account' || activePage === 'account-fellow-travelers' || activePage === 'account-packing-list' || activePage === 'account-travel-profile' || activePage === 'account-privacy')
             ? renderSharedPageScroll(
                 <AccountTab
                   backendUrl={backendUrl}
@@ -3732,6 +3739,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onNavigate={(page) => requestPageChange(page)}
                   accountProfile={accountProfile}
                   plaidEnabled={featureExpenseImportPlaid}
+                  aiItineraryGenerationEnabled={featureAiItineraryGeneration}
                   setAccountProfile={setAccountProfile}
                   familyRelationships={familyRelationships}
                   setFamilyRelationships={setFamilyRelationships}
@@ -4498,6 +4506,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   return (
+    <CalendarPreferenceContext.Provider value={accountProfile.calendarPreference ?? 'google'}>
     <ThemeProvider theme={theme}>
     <NavigationContainer
       ref={navigationRef}
@@ -4596,6 +4605,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       </RootStack.Navigator>
     </NavigationContainer>
     </ThemeProvider>
+    </CalendarPreferenceContext.Provider>
   );
 };
 

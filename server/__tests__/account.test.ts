@@ -189,6 +189,7 @@ describe('Password validation', () => {
         homeAddress: '123 Main St, Austin, TX',
         preferredAirport: 'AUS',
         mapPreference: 'apple',
+        calendarPreference: 'apple',
         appearancePreference: 'dark',
         temperatureUnit: 'celsius',
       })
@@ -208,6 +209,7 @@ describe('Password validation', () => {
     expect(profileRes.body.homeAddress).toBe('123 Main St, Austin, TX');
     expect(profileRes.body.preferredAirport).toBe('AUS');
     expect(profileRes.body.mapPreference).toBe('apple');
+    expect(profileRes.body.calendarPreference).toBe('apple');
     expect(profileRes.body.appearancePreference).toBe('dark');
     expect(profileRes.body.temperatureUnit).toBe('celsius');
 
@@ -220,6 +222,10 @@ describe('Password validation', () => {
       })
       .expect(200);
 
+    expect(clearRes.body.user.calendarPreference).toBe('apple');
+    await request(app).patch('/api/account/profile').set('Authorization', `Bearer ${token}`).send({ calendarPreference: 'unknown' }).expect(400);
+    const calendarOnly = await request(app).patch('/api/account/profile').set('Authorization', `Bearer ${token}`).send({ calendarPreference: 'google' }).expect(200);
+    expect(calendarOnly.body.user.calendarPreference).toBe('google');
     expect(clearRes.body.user.homeAddress).toBeNull();
     expect(clearRes.body.user.preferredAirport).toBeNull();
   });

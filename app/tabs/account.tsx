@@ -1,3 +1,4 @@
+import { isCalendarApp } from '../utils/calendarEvents';
 import React, { useEffect, useState } from 'react';
 import { AccountPrivacySettings } from '../components/PrivacySettings';
 import type { PrivacyController } from '../hooks/usePrivacyConsent';
@@ -25,6 +26,7 @@ export interface AccountProfile {
   homeAddress: string;
   preferredAirport: string;
   mapPreference?: MapApp;
+  calendarPreference?: 'google' | 'apple';
   appearancePreference: AppearancePreference;
   temperatureUnit: TemperatureUnit;
   entitlements?: {
@@ -104,6 +106,7 @@ export const fetchAccountProfile = async ({
       homeAddress: data.homeAddress ?? '',
       preferredAirport: data.preferredAirport ?? '',
       mapPreference: mapPreference ?? prev.mapPreference ?? 'google',
+      calendarPreference: isCalendarApp(data.calendarPreference) ? data.calendarPreference : 'google',
       appearancePreference: appearancePreference ?? prev.appearancePreference ?? 'auto',
       temperatureUnit,
       entitlements: data.entitlements ?? prev.entitlements,
@@ -161,6 +164,7 @@ interface AccountTabProps {
   onNavigate?: (page: AccountPage) => void;
   accountProfile: AccountProfile;
   plaidEnabled?: boolean;
+  aiItineraryGenerationEnabled?: boolean;
   setAccountProfile: Setter<AccountProfile>;
   familyRelationships: any[];
   setFamilyRelationships: Setter<any[]>;
@@ -196,7 +200,7 @@ interface AccountTabProps {
   fetchTraitProfile: () => Promise<void>;
 }
 
-export type AccountPage = 'account' | 'account-fellow-travelers' | 'account-packing-list' | 'account-travel-profile';
+export type AccountPage = 'account' | 'account-fellow-travelers' | 'account-packing-list' | 'account-travel-profile' | 'account-privacy';
 
 const AccountTab: React.FC<AccountTabProps> = ({
   backendUrl,
@@ -206,6 +210,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   onNavigate = () => undefined,
   accountProfile,
   plaidEnabled = false,
+  aiItineraryGenerationEnabled = true,
   setAccountProfile,
   familyRelationships,
   setFamilyRelationships,
@@ -266,12 +271,14 @@ const AccountTab: React.FC<AccountTabProps> = ({
     };
   }, [backendUrl, userToken]);
 
-  const isSubPage = activePage !== 'account';
-  const subPageTitle = activePage === 'account-fellow-travelers'
+  // A restored session can still point at a page whose feature has been disabled.
+  const page = activePage === 'account-travel-profile' && !aiItineraryGenerationEnabled ? 'account' : activePage;
+  const isSubPage = page !== 'account';
+  const subPageTitle = page === 'account-fellow-travelers'
     ? 'Fellow Travelers'
-    : activePage === 'account-packing-list'
+    : page === 'account-packing-list'
       ? 'Packing List'
-      : 'Travel Profile';
+      : page === 'account-privacy' ? 'Privacy' : 'Travel Profile';
 
   const renderPageHeader = (title: string, description: string) => (
     <View style={localStyles.pageHeader}>
@@ -308,13 +315,21 @@ const AccountTab: React.FC<AccountTabProps> = ({
           <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Packing List</Text>
           <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Edit the personal items added to your trips.</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        {aiItineraryGenerationEnabled ? <TouchableOpacity
           style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
           onPress={() => onNavigate('account-travel-profile')}
           testID="account-link-travel-profile"
         >
           <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Travel Profile</Text>
           <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Save your travel style and itinerary preferences.</Text>
+        </TouchableOpacity> : null}
+        <TouchableOpacity
+          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          onPress={() => onNavigate('account-privacy')}
+          testID="account-link-privacy"
+        >
+          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Privacy</Text>
+          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Manage analytics, diagnostics, and your privacy choices.</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -324,10 +339,11 @@ const AccountTab: React.FC<AccountTabProps> = ({
     <View>
       {isSubPage ? renderPageHeader(
         subPageTitle,
-        activePage === 'account-fellow-travelers'
+        page === 'account-fellow-travelers'
           ? 'Manage the people you travel with and their saved profiles.'
-          : activePage === 'account-packing-list'
+          : page === 'account-packing-list'
             ? 'Items saved here are included when you join a trip.'
+            : page === 'account-privacy' ? 'Manage your privacy choices and optional data collection.'
             : 'Tell us how you like to travel so itinerary suggestions fit you better.'
       ) : null}
       {!isSubPage ? <AccountProfileManagement
@@ -353,7 +369,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         logout={logout}
         styles={styles}
       /> : null}
-      {!isSubPage && privacy ? <AccountPrivacySettings privacy={privacy} backendUrl={backendUrl} token={userToken} theme={theme} /> : null}
+      {page === 'account-privacy' && privacy ? <AccountPrivacySettings privacy={privacy} backendUrl={backendUrl} token={userToken} theme={theme} /> : null}
       {!isSubPage ? <PremiumSubscriptionPanel
         backendUrl={backendUrl}
         token={userToken}
@@ -366,7 +382,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         systemColorScheme={colorScheme}
       /> : null}
       {!isSubPage ? renderProfileLinks() : null}
-      {activePage === 'account-fellow-travelers' ? <FamilyRelationships
+      {page === 'account-fellow-travelers' ? <FamilyRelationships
         backendUrl={backendUrl}
         userToken={userToken}
         headers={headers}
@@ -379,14 +395,14 @@ const AccountTab: React.FC<AccountTabProps> = ({
         setShowRelationshipDropdown={setShowRelationshipDropdown}
         styles={styles}
       /> : null}
-      {activePage === 'account-packing-list' ? <PackingListTable
+      {page === 'account-packing-list' ? <PackingListTable
         backendUrl={backendUrl}
         headers={headers}
         theme={theme}
         variant="user"
         title="Personal packing list"
       /> : null}
-      {activePage === 'account-travel-profile' ? <AccountTraits
+      {page === 'account-travel-profile' ? <AccountTraits
         backendUrl={backendUrl}
         userToken={userToken}
         headers={headers}
