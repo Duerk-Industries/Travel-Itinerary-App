@@ -167,6 +167,23 @@ describe('AccountProfileManagement', () => {
     expect(getByText('Connect Bank Account')).toBeTruthy();
   });
 
+  it('shows a city and uppercase code for a saved lowercase preferred airport', () => {
+    const view = render(<AccountProfileManagement {...defaultProps} accountProfile={{ ...defaultProps.accountProfile, preferredAirport: 'bos' }} />);
+    expect(view.getByPlaceholderText('Preferred airport (optional)').props.value).toBe('Boston (BOS)');
+    expect(view.queryByTestId('blog-public-default-setting')).toBeNull();
+  });
+
+  it('resolves an airport outside the fallback list and remembers its city label', async () => {
+    const onSearchAirports = jest.fn();
+    const profile = { ...defaultProps.accountProfile, preferredAirport: 'hnd' };
+    const view = render(<AccountProfileManagement {...defaultProps} accountProfile={profile} onSearchAirports={onSearchAirports} />);
+    await waitFor(() => expect(onSearchAirports).toHaveBeenCalledWith('HND'));
+    view.rerender(<AccountProfileManagement {...defaultProps} accountProfile={profile} onSearchAirports={onSearchAirports} airportOptions={['Tokyo (hnd)']} />);
+    expect(view.getByPlaceholderText('Preferred airport (optional)').props.value).toBe('Tokyo (HND)');
+    view.rerender(<AccountProfileManagement {...defaultProps} accountProfile={profile} onSearchAirports={onSearchAirports} airportOptions={[]} />);
+    expect(view.getByPlaceholderText('Preferred airport (optional)').props.value).toBe('Tokyo (HND)');
+  });
+
   it('uses airport autocomplete suggestions for preferred airport', async () => {
     const onSearchAirports = jest.fn();
     const setAccountProfile = jest.fn();

@@ -10,6 +10,7 @@ import { isAgeVerificationRequiredBody } from '../utils/ageVerificationRequired'
 import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
+import BlogPublicDefaultToggle from '../components/BlogPublicDefaultToggle';
 import PackingListTable from '../components/PackingListTable';
 import PremiumSubscriptionPanel from '../components/PremiumSubscriptionPanel';
 import { useBillingStatus } from '../hooks/useBillingStatus';
@@ -378,6 +379,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         logout={logout}
         styles={styles}
       /> : null}
+      {page === 'account-privacy' ? <View style={styles.card}><BlogPublicDefaultToggle backendUrl={backendUrl} headers={headers} styles={styles} theme={theme} /></View> : null}
       {page === 'account-privacy' && privacy ? <AccountPrivacySettings privacy={privacy} backendUrl={backendUrl} token={userToken} theme={theme} /> : null}
       {!isSubPage ? <PremiumSubscriptionPanel
         backendUrl={backendUrl}

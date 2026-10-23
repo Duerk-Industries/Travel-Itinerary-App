@@ -116,10 +116,12 @@ describe('Account profile links', () => {
     const props = { ...defaultProps, privacy: {} as any, onNavigate };
     const view = render(<AccountTab {...props} />);
     expect(view.queryByTestId('privacy-settings')).toBeNull();
+    expect(view.queryByTestId('blog-public-default-setting')).toBeNull();
     fireEvent.press(view.getByTestId('account-link-privacy'));
     expect(onNavigate).toHaveBeenCalledWith('account-privacy');
     view.rerender(<AccountTab {...props} activePage="account-privacy" />);
     expect(view.getByTestId('privacy-settings')).toBeTruthy();
+    expect(view.getByTestId('blog-public-default-setting')).toBeTruthy();
     expect(view.queryByTestId('account-profile-management')).toBeNull();
     fireEvent.press(view.getByTestId('account-subpage-back'));
     expect(onNavigate).toHaveBeenLastCalledWith('account');

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { AppTheme } from '../theme/theme';
-import BlogPublicDefaultToggle from '../components/BlogPublicDefaultToggle';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
@@ -162,6 +161,7 @@ const AccountProfileManagement = ({
   const [addressForm, setAddressForm] = useState<AddressForm>(() => parseHomeAddress(accountProfile.homeAddress));
   const [preferredAirportSuggestions, setPreferredAirportSuggestions] = useState<string[]>([]);
   const [showPreferredAirportSuggestions, setShowPreferredAirportSuggestions] = useState(false);
+  const [airportLabels, setAirportLabels] = useState<Record<string, string>>({});
   const [multiEmailEnabled, setMultiEmailEnabled] = useState(false);
   const [emailManagerLoaded, setEmailManagerLoaded] = useState(false);
   const [accountEmails, setAccountEmails] = useState<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>>([]);
@@ -174,9 +174,28 @@ const AccountProfileManagement = ({
     const codeMatch = input.match(/\(([A-Za-z0-9]{3,4})\)/);
     if (codeMatch?.[1]) return codeMatch[1].toUpperCase();
     if (/^[A-Za-z0-9]{3,4}$/.test(input)) return input.toUpperCase();
-    const token = input.match(/\b([A-Za-z0-9]{3,4})\b/);
-    return token?.[1]?.toUpperCase() ?? input;
+    return input;
   };
+
+  const preferredAirportCode = parsePreferredAirportCode(accountProfile.preferredAirport ?? '');
+  const airportLabelOptions = [...airportOptions, ...fallbackAirportOptions];
+  const preferredAirportLabel = (airportLabelOptions.find((option) => parsePreferredAirportCode(option) === preferredAirportCode)
+    ?? airportLabels[preferredAirportCode] ?? preferredAirportCode).replace(/\(([A-Za-z0-9]{3,4})\)/, (_match, code: string) => `(${code.toUpperCase()})`);
+
+  useEffect(() => {
+    setAirportLabels((previous) => {
+      const next = { ...previous };
+      for (const option of airportOptions) {
+        const code = parsePreferredAirportCode(option);
+        if (option !== code) next[code] = option.replace(/\(([A-Za-z0-9]{3,4})\)/, `(${code})`);
+      }
+      return next;
+    });
+  }, [airportOptions]);
+
+  useEffect(() => {
+    if (/^[A-Z0-9]{3,4}$/.test(preferredAirportCode)) void onSearchAirports(preferredAirportCode);
+  }, [preferredAirportCode, onSearchAirports]);
 
   const buildAirportSuggestions = (query: string): string[] => {
     const trimmed = query.trim();
@@ -279,7 +298,7 @@ const AccountProfileManagement = ({
         calendarPreference: accountProfile.calendarPreference ?? 'google',
         appearancePreference: accountProfile.appearancePreference ?? appearancePreference,
         temperatureUnit: accountProfile.temperatureUnit,
-      } : { ...accountProfile, mapPreference: accountProfile.mapPreference ?? mapApp }),
+      } : { ...accountProfile, preferredAirport: parsePreferredAirportCode(accountProfile.preferredAirport), mapPreference: accountProfile.mapPreference ?? mapApp }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -308,7 +327,7 @@ const AccountProfileManagement = ({
       lastName: updatedUser.lastName ?? '',
       email: updatedUser.email ?? '',
       homeAddress: updatedUser.homeAddress ?? '',
-      preferredAirport: updatedUser.preferredAirport ?? '',
+      preferredAirport: parsePreferredAirportCode(updatedUser.preferredAirport ?? ''),
       mapPreference: nextMapPreference,
       calendarPreference: isCalendarApp(updatedUser.calendarPreference) ? updatedUser.calendarPreference : accountProfile.calendarPreference ?? 'google',
       appearancePreference: nextAppearancePreference,
@@ -607,7 +626,7 @@ const AccountProfileManagement = ({
         <TextInput
           style={styles.input}
           placeholder="Preferred airport (optional)"
-          value={accountProfile.preferredAirport ?? ''}
+          value={showPreferredAirportSuggestions ? accountProfile.preferredAirport ?? '' : preferredAirportLabel}
           onFocus={() => {
             setPreferredAirportSuggestions(buildAirportSuggestions(accountProfile.preferredAirport ?? ''));
             setShowPreferredAirportSuggestions(true);
@@ -645,7 +664,6 @@ const AccountProfileManagement = ({
           </View>
         ) : null}
       </View>
-      <BlogPublicDefaultToggle backendUrl={backendUrl} headers={headers} styles={styles} theme={theme} />
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate}>
         <Text style={styles.buttonText}>Save Profile</Text>
       </TouchableOpacity>
