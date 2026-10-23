@@ -5,6 +5,7 @@ import { withStorageLease } from '../utils/replayLock';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { mergeSalvage, salvageRecoveryData } from '../utils/pendingQueueRepair';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, Platform } from 'react-native';
 import { canAccessWebStorage, readAsync, readAsyncOrThrow, readSync, writeAsync, writeSync } from '../utils/persistentStorage';
 
 /**
@@ -206,9 +207,22 @@ export function usePendingWrites(
     };
     refresh();
     const unsubscribe = store?.subscribe(key, refresh);
-    const focus = () => refresh();
-    if (store && typeof window !== 'undefined') window.addEventListener('focus', focus);
-    return () => { cancelled = true; unsubscribe?.(); if (store && typeof window !== 'undefined') window.removeEventListener('focus', focus); };
+    let unsubscribeForeground: (() => void) | undefined;
+    if (store) {
+      // Hermes exposes window === globalThis, but has no DOM event API.
+      // This hook mounts before login, so testing only for window crashes iOS startup.
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        const focus = () => refresh();
+        window.addEventListener('focus', focus);
+        unsubscribeForeground = () => window.removeEventListener('focus', focus);
+      } else if (Platform.OS !== 'web') {
+        const subscription = AppState.addEventListener('change', state => {
+          if (state === 'active') refresh();
+        });
+        unsubscribeForeground = () => subscription.remove();
+      }
+    }
+    return () => { cancelled = true; unsubscribe?.(); unsubscribeForeground?.(); };
   }, [storageKey, store, accept, storeFailure]);
   const getRecoveryData = useCallback(async (): Promise<string | null> => {
     const key = keyRef.current, generation = generationRef.current;

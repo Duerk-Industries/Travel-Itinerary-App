@@ -99,6 +99,27 @@ describe('App startup', () => {
     expect(getAllByText('WanderBunnies').length).toBeGreaterThan(0);
   });
 
+  it('starts before login with the native expense store and a Hermes-shaped window', async () => {
+    const storeModule = require('../utils/pendingWriteStore');
+    const read = jest.fn(async () => []);
+    const replacement = jest.replaceProperty(storeModule, 'transactionalPendingWriteStore', {
+      read,
+      subscribe: () => () => {},
+    });
+    const previousWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: globalThis });
+    try {
+      const view = render(<App />);
+      await waitFor(() => expect(read).toHaveBeenCalled());
+      expect(view.getAllByText('WanderBunnies').length).toBeGreaterThan(0);
+      view.unmount();
+    } finally {
+      replacement.restore();
+      if (previousWindow) Object.defineProperty(globalThis, 'window', previousWindow);
+      else Reflect.deleteProperty(globalThis, 'window');
+    }
+  });
+
   it('requires device authentication before restoring cached trips offline', async () => {
     const token = makeJwt({ email: 'offline@example.com', firstName: 'Off', lastName: 'Line', role: 'user', userId: 'offline-user' });
     await AsyncStorage.clear();

@@ -36,11 +36,34 @@ describe('root Expo/EAS config parity', () => {
     expect(rootConfig.owner).toBe(appConfig.owner);
     expect(rootConfig.extra?.eas?.projectId).toBe(appConfig.extra?.eas?.projectId);
     expect(rootConfig.ios?.bundleIdentifier).toBe(appConfig.ios?.bundleIdentifier);
+    expect(rootConfig.ios?.infoPlist?.NSLocationWhenInUseUsageDescription).toEqual(
+      appConfig.ios?.infoPlist?.NSLocationWhenInUseUsageDescription,
+    );
     expect(rootConfig.android?.package).toBe(appConfig.android?.package);
     expect(rootConfig.icon).toBe('./app/assets/wanderbunnies-app-icon.png');
     expect(rootConfig.splash?.image).toBe('./app/assets/wanderbunnies-splash-screen.png');
     expect(rootConfig.android?.adaptiveIcon?.foregroundImage).toBe('./app/assets/wanderbunnies-android-foreground.png');
     expect(rootConfig.android?.adaptiveIcon?.monochromeImage).toBe('./app/assets/wanderbunnies-android-monochrome.png');
+  });
+
+  it.each(['development', 'preview', 'production'])('includes the location purpose string for the %s iOS build', (profile) => {
+    const originalBuild = process.env.EAS_BUILD;
+    const originalProfile = process.env.EAS_BUILD_PROFILE;
+    try {
+      process.env.EAS_BUILD = 'true';
+      process.env.EAS_BUILD_PROFILE = profile;
+      const { createExpoConfig } = require('../../expo.config.shared.cjs');
+      const config = createExpoConfig({ appDir: appRoot });
+      const purpose = config.ios?.infoPlist?.NSLocationWhenInUseUsageDescription;
+      expect(typeof purpose).toBe('string');
+      expect(purpose.trim().length).toBeGreaterThan(20);
+      expect(purpose).toMatch(/trip maps/i);
+    } finally {
+      if (originalBuild === undefined) delete process.env.EAS_BUILD;
+      else process.env.EAS_BUILD = originalBuild;
+      if (originalProfile === undefined) delete process.env.EAS_BUILD_PROFILE;
+      else process.env.EAS_BUILD_PROFILE = originalProfile;
+    }
   });
 
   it('resolves the root Sentry Expo plugin through the app workspace', () => {

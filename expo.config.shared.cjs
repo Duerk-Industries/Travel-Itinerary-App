@@ -164,6 +164,9 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
           : {}),
         infoPlist: {
           ITSAppUsesNonExemptEncryption: false,
+          // Required because the native map library links location APIs. The app does not request or store the
+          // person's location unless a map feature asks for it.
+          NSLocationWhenInUseUsageDescription: 'WanderBunnies can show where you are on trip maps. Your location is not stored or shared.',
           NSAppTransportSecurity: {
             ...(isProduction ? {} : { NSAllowsArbitraryLoads: true }),
             NSExceptionDomains: {

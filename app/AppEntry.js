@@ -3,10 +3,11 @@
 import '@expo/metro-runtime';
 import React, { useEffect, useState } from 'react';
 import { registerRootComponent } from 'expo';
-import { Platform, StyleSheet, Text, StatusBar, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, StatusBar, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { wrapApp } from './utils/sentry';
 import { installWebAlert } from './utils/crossPlatformAlert';
+import { formatStartupDiagnostic, startupErrorMessage as getErrorMessage } from './utils/startupDiagnostics';
 
 // react-native-web's Alert.alert does nothing; give every call site a working browser dialog.
 installWebAlert();
@@ -25,17 +26,6 @@ const publishStartupError = (error) => {
   });
 };
 
-const getErrorMessage = (error) => {
-  if (!error) return 'Unknown startup error';
-  if (typeof error === 'string') return error;
-  if (error.message) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-};
-
 const globalErrorUtils = globalThis.ErrorUtils;
 
 if (globalErrorUtils && typeof globalErrorUtils.setGlobalHandler === 'function') {
@@ -47,27 +37,37 @@ if (globalErrorUtils && typeof globalErrorUtils.setGlobalHandler === 'function')
     globalErrorUtils.setGlobalHandler((error, isFatal) => {
       if (!globalThis.__wanderBunniesAppMounted) {
         publishStartupError(error);
-        console.log('Captured JS startup error', getErrorMessage(error), isFatal ? '(fatal)' : '');
+        console.error('Captured JS startup error', formatStartupDiagnostic(error), isFatal ? '(fatal)' : '');
       } else if (originalGlobalHandler) {
         originalGlobalHandler(error, isFatal);
       } else {
-        console.error('Unhandled JS error:', getErrorMessage(error));
+        console.error('Unhandled JS error:', formatStartupDiagnostic(error));
       }
     });
     globalErrorUtils.__hasWanderBunniesHandler = true;
   }
 }
 
-const StartupFailure = ({ error }) => (
+const StartupFailure = ({ error, componentStack }) => {
+  const [showDetails, setShowDetails] = useState(false);
+  return (
   <SafeAreaProvider>
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.title}>WanderBunnies could not start</Text>
         <Text style={styles.message}>{getErrorMessage(error)}</Text>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setShowDetails(value => !value)} style={styles.detailsButton}>
+          <Text style={styles.message}>{showDetails ? 'Hide technical details' : 'Show technical details'}</Text>
+        </TouchableOpacity>
+        {showDetails ? <ScrollView style={styles.details}>
+          <Text selectable testID="startup-error-details" style={styles.diagnostic}>{formatStartupDiagnostic(error, componentStack)}</Text>
+        </ScrollView> : null}
+        {error && typeof error.stack === 'string' ? <Text selectable style={styles.stack}>{error.stack.slice(0, 1500)}</Text> : null}
       </View>
     </SafeAreaView>
   </SafeAreaProvider>
-);
+  );
+};
 
 const describeModuleShape = (moduleValue) => {
   const t = typeof moduleValue;
@@ -103,18 +103,19 @@ const resolveComponentExport = (moduleValue) => {
 };
 
 class EntryErrorBoundary extends React.Component {
-  state = { error: null };
+  state = { error: null, componentStack: '' };
 
   static getDerivedStateFromError(error) {
     return { error };
   }
 
   componentDidCatch(error, info) {
-    console.error('App entry failed', error, info?.componentStack);
+    console.error('App entry failed', formatStartupDiagnostic(error, info?.componentStack));
+    this.setState({ componentStack: info?.componentStack || '' });
   }
 
   render() {
-    if (this.state.error) return <StartupFailure error={this.state.error} />;
+    if (this.state.error) return <StartupFailure error={this.state.error} componentStack={this.state.componentStack} />;
     return this.props.children;
   }
 }
@@ -141,7 +142,7 @@ const Root = () => {
     }
   } catch (loadError) {
     publishStartupError(loadError);
-    console.log('App root failed to load', getErrorMessage(loadError));
+    console.error('App root failed to load', formatStartupDiagnostic(loadError));
     return <StartupFailure error={loadError} />;
   }
 
@@ -173,6 +174,15 @@ const styles = StyleSheet.create({
     color: '#dce8f2',
     fontSize: 15,
     lineHeight: 22,
+  },
+  detailsButton: { marginTop: 20, paddingVertical: 12 },
+  details: { flexGrow: 0, maxHeight: '60%', marginTop: 8 },
+  diagnostic: { color: '#dce8f2', fontSize: 12, lineHeight: 18, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  stack: {
+    color: '#9fb3c8',
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 12,
   },
 });
 

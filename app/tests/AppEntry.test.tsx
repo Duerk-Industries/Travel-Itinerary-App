@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 /// <reference types="node" />
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 // Mock expo BEFORE the suite-wide ErrorUtils is touched. react-native and
 // react-native-safe-area-context come from the suite-wide mocks under
@@ -82,5 +82,22 @@ describe('AppEntry', () => {
     // call even if the module were forcibly reloaded.
     require('../AppEntry');
     expect(setGlobalHandlerMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the original startup stack in local logs and selectable technical details', () => {
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const error = new TypeError('undefined is not a function');
+      error.stack = 'TypeError: undefined is not a function\n    at usePendingWrites (app/hooks/usePendingWrites.ts:210)';
+      capturedHandler(error, true);
+      const view = render(<Root />);
+      expect(view.queryByTestId('startup-error-details')).toBeNull();
+      fireEvent.press(view.getByText('Show technical details'));
+      expect(view.getByTestId('startup-error-details').props.children).toBe(error.stack);
+      expect(view.getByTestId('startup-error-details').props.selectable).toBe(true);
+      expect(log).toHaveBeenCalledWith('Captured JS startup error', error.stack, '(fatal)');
+      fireEvent.press(view.getByText('Hide technical details'));
+      expect(view.queryByTestId('startup-error-details')).toBeNull();
+    } finally { log.mockRestore(); }
   });
 });
