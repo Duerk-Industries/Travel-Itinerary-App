@@ -171,14 +171,14 @@ describe('FlightsTab read-only mode', () => {
     fireEvent.press(getByTestId('ground-departure-hotel'));
     expect(queryByTestId('ground-departure-hotel-blank')).toBeNull();
     fireEvent.press(getByTestId('ground-departure-hotel-hotel'));
-    expect(getByTestId('flight-modal-departure-location').props.value).toBe('12 Main Street');
+    expect(getByTestId('flight-modal-departure-location').props.value).toBe('Hotel Today, 12 Main Street');
     fireEvent.changeText(getByTestId('flight-modal-departure-location'), 'A custom street address');
     expect(getByTestId('flight-modal-departure-location').props.value).toBe('A custom street address');
     expect(getByTestId('flight-modal-departure-location').props.onFocus).toBeUndefined();
     expect(getByTestId('flight-modal-departure-location').props.onBlur).toBeUndefined();
     fireEvent.press(getByTestId('ground-arrival-hotel'));
     fireEvent.press(getByTestId('ground-arrival-hotel-hotel'));
-    expect(getByTestId('flight-modal-arrival-location').props.value).toBe('12 Main Street');
+    expect(getByTestId('flight-modal-arrival-location').props.value).toBe('Hotel Today, 12 Main Street');
     expect(onSearchAirports).not.toHaveBeenCalled();
     const dateField = (testID: string) => UNSAFE_getAllByType(DateField).find(field => field.props.testID === testID)!;
     // An independently chosen arrival day must be reset by a later departure-date edit.
@@ -189,11 +189,11 @@ describe('FlightsTab read-only mode', () => {
     fireEvent.press(getByTestId('ground-departure-hotel'));
     expect(queryByTestId('ground-departure-hotel-hotel')).toBeNull();
     fireEvent.press(getByTestId('ground-departure-hotel-later'));
-    expect(getByTestId('flight-modal-departure-location').props.value).toBe('99 Later Road');
+    expect(getByTestId('flight-modal-departure-location').props.value).toBe('Later Hotel, 99 Later Road');
     fireEvent.press(getByTestId('ground-arrival-hotel'));
     expect(queryByTestId('ground-arrival-hotel-hotel')).toBeNull();
     fireEvent.press(getByTestId('ground-arrival-hotel-later'));
-    expect(getByTestId('flight-modal-arrival-location').props.value).toBe('99 Later Road');
+    expect(getByTestId('flight-modal-arrival-location').props.value).toBe('Later Hotel, 99 Later Road');
     fireEvent(dateField('transfer-arrival-date'), 'change', '2026-09-20');
     expect(getByTestId('ground-arrival-hotel').props.accessibilityState.disabled).toBe(true);
     expect(getByTestId('ground-departure-hotel').props.accessibilityState.disabled).toBe(false);

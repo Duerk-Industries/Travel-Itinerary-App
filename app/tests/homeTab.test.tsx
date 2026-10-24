@@ -71,15 +71,19 @@ describe('HomeTab', () => {
     (global.fetch as jest.Mock).mockRestore();
   });
 
-  test('places Ground Transfers immediately below Lodging and navigates to it', () => {
+  test('uses the requested Home link order and navigates to Ground Transfers', () => {
     const onNavigate = jest.fn();
     const { getAllByTestId, getByTestId, getByText } = render(
       <HomeTab backendUrl="http://localhost" headers={{}} activeTripId="t2" trips={trips}
-        followedTrips={followedTrips} styles={styles} onSelectTrip={jest.fn()} onSelectFollowedTrip={jest.fn()}
+        followedTrips={followedTrips} styles={styles} userTier="pro" onSelectTrip={jest.fn()} onSelectFollowedTrip={jest.fn()}
         onNavigate={onNavigate} onFollowTrip={async () => null} />
     );
     const order = getAllByTestId(/^home-nav-/).map(node => node.props.testID);
-    expect(order[order.indexOf('home-nav-lodging') + 1]).toBe('home-nav-ground-transfers');
+    expect(order).toEqual([
+      'home-nav-overview', 'home-nav-blog', 'home-nav-flights', 'home-nav-lodging',
+      'home-nav-tours', 'home-nav-ground-transfers', 'home-nav-car', 'home-nav-expenses',
+      'home-nav-cost', 'home-nav-packing', 'home-nav-ingest',
+    ]);
     expect(getByText('Flights')).toBeTruthy();
     fireEvent.press(getByTestId('home-nav-ground-transfers'));
     expect(onNavigate).toHaveBeenCalledWith('ground-transfers');

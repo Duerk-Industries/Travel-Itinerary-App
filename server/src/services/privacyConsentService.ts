@@ -83,7 +83,9 @@ export const savePrivacyChoice = async (
   context?: CollectionContext,
 ): Promise<PrivacyStatus> => {
   const flags = await collectionFlags(userId, context);
-  if ((update.productAnalytics === true && (!flags.product || privacySignalActive)) ||
+  // A saved product preference is independent of collection availability. Collection
+  // still requires flags, rollout membership, region, and current consent in toStatus.
+  if ((update.productAnalytics === true && privacySignalActive) ||
       (update.optionalDiagnostics === true && !flags.diagnostics)) {
     const error = new Error('This optional purpose is unavailable');
     (error as Error & { code?: string }).code = 'PRIVACY_PURPOSE_UNAVAILABLE';

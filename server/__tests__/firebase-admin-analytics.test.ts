@@ -71,6 +71,7 @@ class FakeDocSnapshot {
 
 class FakeQuerySnapshot {
   constructor(public docs: FakeDocSnapshot[]) {}
+  get size() { return this.docs.length; }
   get empty() {
     return this.docs.length === 0;
   }
@@ -80,42 +81,45 @@ class FakeQuerySnapshot {
 }
 
 class FakeDocRef {
-  constructor(private collection: FakeCollection, public id: string) {}
+  constructor(private backingCollection: FakeCollection, public id: string) {}
+  collection(name: string) { return this.backingCollection.subcollection(this.id, name); }
+  get parent() { return this.backingCollection; }
+  get path() { return `${this.parent.path}/${this.id}`; }
   async get() {
-    return new FakeDocSnapshot(this.id, this.collection.getById(this.id), this);
+    return new FakeDocSnapshot(this.id, this.backingCollection.getById(this.id), this);
   }
   async set(value: any, options?: { merge?: boolean }) {
-    this.collection.set(this.id, value, options);
+    this.backingCollection.set(this.id, value, options);
   }
   async update(value: any) {
-    this.collection.update(this.id, value);
+    this.backingCollection.update(this.id, value);
   }
   async delete() {
-    this.collection.delete(this.id);
+    this.backingCollection.delete(this.id);
   }
 }
 
 class FakeQuery {
   constructor(
-    private collection: FakeCollection,
+    private backingCollection: FakeCollection,
     private filters: Filter[] = [],
     private limitCount?: number,
   ) {}
 
   where(field: string, op: string, value: any) {
-    return new FakeQuery(this.collection, [...this.filters, { field, op, value }], this.limitCount);
+    return new FakeQuery(this.backingCollection, [...this.filters, { field, op, value }], this.limitCount);
   }
 
   limit(count: number) {
-    return new FakeQuery(this.collection, this.filters, count);
+    return new FakeQuery(this.backingCollection, this.filters, count);
   }
 
   orderBy(_field: string, _direction?: 'asc' | 'desc') {
-    return new FakeQuery(this.collection, this.filters, this.limitCount);
+    return new FakeQuery(this.backingCollection, this.filters, this.limitCount);
   }
 
   async get() {
-    const docs = this.collection
+    const docs = this.backingCollection
       .all()
       .filter(({ data }) =>
         this.filters.every((filter) => {
@@ -126,13 +130,24 @@ class FakeQuery {
         })
       )
       .slice(0, this.limitCount ?? undefined)
-      .map(({ id, data }) => new FakeDocSnapshot(id, data, this.collection.doc(id)));
+      .map(({ id, data }) => new FakeDocSnapshot(id, data, this.backingCollection.doc(id)));
     return new FakeQuerySnapshot(docs);
   }
 }
 
 class FakeCollection {
-  constructor(private store: Map<string, any>) {}
+  private nested = new Map<string, FakeCollection>();
+  get path(): string { return this.collectionPath ?? this.id; }
+  subcollection(docId: string, name: string): FakeCollection {
+    const path = `${this.path}/${docId}/${name}`;
+    if (!this.nested.has(path)) this.nested.set(path, new FakeCollection(new Map(), name, path));
+    return this.nested.get(path)!;
+  }
+  constructor(private store: Map<string, any>, public id: string, private collectionPath?: string) {}
+
+  limit(count: number) { return new FakeQuery(this, [], count); }
+
+  orderBy(field: string, direction?: 'asc' | 'desc') { return new FakeQuery(this).orderBy(field, direction); }
 
   doc(id: string) {
     return new FakeDocRef(this, id);
@@ -202,7 +217,17 @@ class FakeFirestore {
     if (!this.collections.has(name)) {
       this.collections.set(name, new Map());
     }
-    return new FakeCollection(this.collections.get(name)!);
+    return new FakeCollection(this.collections.get(name)!, name);
+  }
+
+  async runTransaction<T>(work: (transaction: FakeBatch & { get: (ref: FakeDocRef | FakeQuery) => ReturnType<FakeDocRef['get']> | ReturnType<FakeQuery['get']>; getAll: (...refs: FakeDocRef[]) => Promise<FakeDocSnapshot[]> }) => Promise<T>) {
+    const transaction = Object.assign(new FakeBatch(), {
+      get: (ref: FakeDocRef | FakeQuery) => ref.get(),
+      getAll: (...refs: FakeDocRef[]) => this.getAll(...refs),
+    });
+    const result = await work(transaction);
+    await transaction.commit();
+    return result;
   }
 
   batch() {

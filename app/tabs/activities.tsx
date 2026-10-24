@@ -1,3 +1,5 @@
+import AddToCalendarButton from '../components/AddToCalendarButton';
+import { activityCalendarEvent } from '../utils/calendarEvents';
 import type { PlanningCoordinates } from '../../server/src/types';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -1046,6 +1048,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.sectionTitle}>Activity Details</Text>
               </View>
               <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+                <AddToCalendarButton event={activityCalendarEvent(selectedTour)} styles={styles} />
                 {renderDetailRow('Date', formatDateLong(selectedTour.date))}
                 {renderDetailRow('Type', selectedTour.activityType || 'Tour')}
                 {renderDetailRow('Activity', selectedTour.name || '-')}
@@ -1137,6 +1140,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         <TripItemDetailsDialog
           visible={Boolean(selectedTour)}
           kind="activity"
+          calendarEvent={activityCalendarEvent(selectedTour)}
           title={selectedTour.name || 'Activity'}
           subtitle={formatPeopleList(selectedTour.travelerIds)}
           status={normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS)}

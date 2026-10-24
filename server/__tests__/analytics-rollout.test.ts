@@ -122,10 +122,11 @@ describe('rollout enforcement (Phase 6)', () => {
     const user = await newUser();
     const status = await request(app).get('/api/account/privacy-preferences').set('Authorization', `Bearer ${user.token}`).expect(200);
     expect(status.body.productCollectionEnabled).toBe(false);
-    expect((await optIn(user.token).expect(403)).body.code).toBe('PRIVACY_PURPOSE_UNAVAILABLE');
+    const preference = await optIn(user.token).expect(200);
+    expect(preference.body).toMatchObject({ productAnalytics: true, productAnalyticsAllowed: false });
+    await request(app).post('/api/analytics/events').set('Authorization', `Bearer ${user.token}`).send({ events: [event()] }).expect(403);
 
     jest.spyOn(db, 'isInternalCanaryAccount').mockResolvedValue(true);
-    await optIn(user.token).expect(200);
     await request(app).post('/api/analytics/events').set('Authorization', `Bearer ${user.token}`).send({ events: [event()] }).expect(200);
     expect(await stored(user.userId)).toHaveLength(1);
   });
@@ -156,9 +157,8 @@ describe('rollout enforcement (Phase 6)', () => {
     const user = await newUser();
     const european = await request(app).get('/api/account/privacy-preferences').set({ Authorization: `Bearer ${user.token}`, 'X-Device-Timezone': 'Europe/Paris' }).expect(200);
     expect(european.body.productCollectionEnabled).toBe(false);
-    expect((await optIn(user.token, 'Europe/Paris').expect(403)).body.code).toBe('PRIVACY_PURPOSE_UNAVAILABLE');
-
-    await optIn(user.token, 'America/Denver').expect(200);
+    const preference = await optIn(user.token, 'Europe/Paris').expect(200);
+    expect(preference.body).toMatchObject({ productAnalytics: true, productAnalyticsAllowed: false });
     // Server events before any client event: zone unknown → dropped.
     const groupId = (await listGroupsForUser(user.userId))[0].id as string;
     await request(app).post('/api/trips').set('Authorization', `Bearer ${user.token}`)

@@ -45,15 +45,19 @@ describe('privacy preferences', () => {
     expect(response.body).not.toHaveProperty('userId');
   });
 
-  it('records a refusal while collection is disabled and rejects grants', async () => {
+  it('allows product preferences to be turned off and back on while collection stays disabled', async () => {
     const denied = await request(app).patch(endpoint).set(auth())
       .send({ revision: 0, platform: 'web', productAnalytics: false, optionalDiagnostics: false }).expect(200);
     expect(denied.body).toMatchObject({ revision: 1, productAnalytics: false, optionalDiagnostics: false });
     expect(denied.body.productEpoch).toBe(1);
     expect(denied.body.diagnosticsEpoch).toBe(1);
+    const reenabled = await request(app).patch(endpoint).set(auth())
+      .send({ revision: 1, platform: 'web', productAnalytics: true }).expect(200);
+    expect(reenabled.body).toMatchObject({ productAnalytics: true, productAnalyticsAllowed: false, productCollectionEnabled: false, revision: 2 });
+    expect((await getPrivacyPreferences(userId)).revision).toBe(2);
+    // Detailed diagnostics still cannot be enabled while that purpose is unavailable.
     await request(app).patch(endpoint).set(auth())
-      .send({ revision: 1, platform: 'web', productAnalytics: true }).expect(403);
-    expect((await getPrivacyPreferences(userId)).revision).toBe(1);
+      .send({ revision: 2, platform: 'web', optionalDiagnostics: true }).expect(403);
   });
 
   it('keeps purposes separate, uses fresh flags, rotates the diagnostic pseudonym, and rejects stale writes', async () => {

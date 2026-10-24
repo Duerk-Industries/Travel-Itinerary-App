@@ -1,3 +1,5 @@
+import AddToCalendarButton from './AddToCalendarButton';
+import { rentalCalendarEvent } from '../utils/calendarEvents';
 import React from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
@@ -291,6 +293,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
             </View>
             <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
               <View style={styles.actionCell}>
+                <AddToCalendarButton event={rentalCalendarEvent(car)} styles={styles} />
                 {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
                   <>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => onVoteCarRental(car.id, 1)}>

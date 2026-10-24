@@ -12,6 +12,7 @@ import AccountTab from '../tabs/account';
 jest.mock('../tabs/AccountProfileManagement', () => (props: any) => <View testID="account-profile-management" {...props} />);
 jest.mock('../tabs/FamilyRelationships', () => (props: any) => <View testID="family-relationships" {...props} />);
 jest.mock('../tabs/AccountTraits', () => (props: any) => <View testID="account-traits" {...props} />);
+jest.mock('../components/PrivacySettings', () => ({ AccountPrivacySettings: () => <View testID="privacy-settings" /> }));
 
 const styles = {
   button: {},
@@ -84,6 +85,17 @@ describe('Account profile links', () => {
     expect(onNavigate).toHaveBeenNthCalledWith(3, 'account-travel-profile');
   });
 
+  test('links to Preferences and returns to Profile', () => {
+    const onNavigate = jest.fn();
+    const view = render(<AccountTab {...defaultProps} onNavigate={onNavigate} />);
+    fireEvent.press(view.getByTestId('account-link-preferences'));
+    expect(onNavigate).toHaveBeenCalledWith('account-preferences');
+    view.rerender(<AccountTab {...defaultProps} onNavigate={onNavigate} activePage="account-preferences" />);
+    expect(view.getByTestId('account-profile-management').props.activePage).toBe('account-preferences');
+    fireEvent.press(view.getByTestId('account-subpage-back'));
+    expect(onNavigate).toHaveBeenLastCalledWith('account');
+  });
+
   test('opens the public privacy and terms pages from the profile footer', () => {
     const originalOS = Platform.OS;
     Platform.OS = 'ios';
@@ -97,5 +109,31 @@ describe('Account profile links', () => {
     } finally {
       Platform.OS = originalOS;
     }
+  });
+
+  test('links to Privacy without showing its settings inline, and provides a return to Profile', () => {
+    const onNavigate = jest.fn();
+    const props = { ...defaultProps, privacy: {} as any, onNavigate };
+    const view = render(<AccountTab {...props} />);
+    expect(view.queryByTestId('privacy-settings')).toBeNull();
+    expect(view.queryByTestId('blog-public-default-setting')).toBeNull();
+    fireEvent.press(view.getByTestId('account-link-privacy'));
+    expect(onNavigate).toHaveBeenCalledWith('account-privacy');
+    view.rerender(<AccountTab {...props} activePage="account-privacy" />);
+    expect(view.getByTestId('privacy-settings')).toBeTruthy();
+    expect(view.getByTestId('blog-public-default-setting')).toBeTruthy();
+    expect(view.queryByTestId('account-profile-management')).toBeNull();
+    fireEvent.press(view.getByTestId('account-subpage-back'));
+    expect(onNavigate).toHaveBeenLastCalledWith('account');
+  });
+
+  test('hides both the Travel Profile link and its restored page when AI generation is disabled', () => {
+    const view = render(<AccountTab {...defaultProps} aiItineraryGenerationEnabled={false} />);
+    expect(view.queryByTestId('account-link-travel-profile')).toBeNull();
+    view.rerender(<AccountTab {...defaultProps} activePage="account-travel-profile" aiItineraryGenerationEnabled={false} />);
+    expect(view.queryByTestId('account-traits')).toBeNull();
+    expect(view.getByTestId('account-profile-management')).toBeTruthy();
+    view.rerender(<AccountTab {...defaultProps} activePage="account-travel-profile" aiItineraryGenerationEnabled />);
+    expect(view.getByTestId('account-traits')).toBeTruthy();
   });
 });

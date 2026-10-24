@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { AppTheme } from '../theme/theme';
-import BlogPublicDefaultToggle from '../components/BlogPublicDefaultToggle';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import DraftTextInput from '../components/DraftTextInput';
 import OfflineDownloadSettings from '../components/OfflineDownloadSettings';
 import PlaidLinkButton from '../components/PlaidLinkButton';
+import { calendarAppOptions, isCalendarApp } from '../utils/calendarEvents';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
 import { normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
@@ -161,6 +161,7 @@ const AccountProfileManagement = ({
   const [addressForm, setAddressForm] = useState<AddressForm>(() => parseHomeAddress(accountProfile.homeAddress));
   const [preferredAirportSuggestions, setPreferredAirportSuggestions] = useState<string[]>([]);
   const [showPreferredAirportSuggestions, setShowPreferredAirportSuggestions] = useState(false);
+  const [airportLabels, setAirportLabels] = useState<Record<string, string>>({});
   const [multiEmailEnabled, setMultiEmailEnabled] = useState(false);
   const [emailManagerLoaded, setEmailManagerLoaded] = useState(false);
   const [accountEmails, setAccountEmails] = useState<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>>([]);
@@ -173,9 +174,28 @@ const AccountProfileManagement = ({
     const codeMatch = input.match(/\(([A-Za-z0-9]{3,4})\)/);
     if (codeMatch?.[1]) return codeMatch[1].toUpperCase();
     if (/^[A-Za-z0-9]{3,4}$/.test(input)) return input.toUpperCase();
-    const token = input.match(/\b([A-Za-z0-9]{3,4})\b/);
-    return token?.[1]?.toUpperCase() ?? input;
+    return input;
   };
+
+  const preferredAirportCode = parsePreferredAirportCode(accountProfile.preferredAirport ?? '');
+  const airportLabelOptions = [...airportOptions, ...fallbackAirportOptions];
+  const preferredAirportLabel = (airportLabelOptions.find((option) => parsePreferredAirportCode(option) === preferredAirportCode)
+    ?? airportLabels[preferredAirportCode] ?? preferredAirportCode).replace(/\(([A-Za-z0-9]{3,4})\)/, (_match, code: string) => `(${code.toUpperCase()})`);
+
+  useEffect(() => {
+    setAirportLabels((previous) => {
+      const next = { ...previous };
+      for (const option of airportOptions) {
+        const code = parsePreferredAirportCode(option);
+        if (option !== code) next[code] = option.replace(/\(([A-Za-z0-9]{3,4})\)/, `(${code})`);
+      }
+      return next;
+    });
+  }, [airportOptions]);
+
+  useEffect(() => {
+    if (/^[A-Z0-9]{3,4}$/.test(preferredAirportCode)) void onSearchAirports(preferredAirportCode);
+  }, [preferredAirportCode, onSearchAirports]);
 
   const buildAirportSuggestions = (query: string): string[] => {
     const trimmed = query.trim();
@@ -273,7 +293,12 @@ const AccountProfileManagement = ({
     const res = await fetch(`${backendUrl}/api/account/profile`, {
       method: 'PATCH',
       headers: jsonHeaders,
-      body: JSON.stringify({ ...accountProfile, mapPreference: accountProfile.mapPreference ?? mapApp }),
+      body: JSON.stringify(activePage === 'account-preferences' ? {
+        mapPreference: accountProfile.mapPreference ?? mapApp,
+        calendarPreference: accountProfile.calendarPreference ?? 'google',
+        appearancePreference: accountProfile.appearancePreference ?? appearancePreference,
+        temperatureUnit: accountProfile.temperatureUnit,
+      } : { ...accountProfile, preferredAirport: parsePreferredAirportCode(accountProfile.preferredAirport), mapPreference: accountProfile.mapPreference ?? mapApp }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -302,12 +327,13 @@ const AccountProfileManagement = ({
       lastName: updatedUser.lastName ?? '',
       email: updatedUser.email ?? '',
       homeAddress: updatedUser.homeAddress ?? '',
-      preferredAirport: updatedUser.preferredAirport ?? '',
+      preferredAirport: parsePreferredAirportCode(updatedUser.preferredAirport ?? ''),
       mapPreference: nextMapPreference,
+      calendarPreference: isCalendarApp(updatedUser.calendarPreference) ? updatedUser.calendarPreference : accountProfile.calendarPreference ?? 'google',
       appearancePreference: nextAppearancePreference,
       temperatureUnit: nextTemperatureUnit,
     });
-    setAccountMessage('Profile updated');
+    setAccountMessage(activePage === 'account-preferences' ? 'Preferences updated' : 'Profile updated');
   };
 
   const handleAddressSave = async () => {
@@ -484,70 +510,9 @@ const AccountProfileManagement = ({
     }
   };
 
-  return (
-    <View style={[styles.card, styles.accountSection]}>
-      <Text style={styles.sectionTitle}>Account</Text>
-      <Text style={styles.helperText}>Update your profile, change your password, or remove your account.</Text>
-      {accountMessage ? (
-        <View style={styles.successCard}>
-          <Text style={styles.bodyText}>{accountMessage}</Text>
-        </View>
-      ) : null}
-      <View style={styles.row}>
-        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} commitOnBlur={false} />
-        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} commitOnBlur={false} />
-      </View>
-      <DraftTextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} commitOnBlur={false} />
-      <TouchableOpacity
-        style={[styles.input, { justifyContent: 'center' }]}
-        onPress={() => setShowAddressEditor(true)}
-      >
-        <Text style={formattedHomeAddress ? styles.cellText : styles.placeholderText}>
-          {formattedHomeAddress || 'Home address (optional)'}
-        </Text>
-      </TouchableOpacity>
-      <View style={localStyles.airportFieldWrap}>
-        <TextInput
-          style={styles.input}
-          placeholder="Preferred airport (optional)"
-          value={accountProfile.preferredAirport ?? ''}
-          onFocus={() => {
-            setPreferredAirportSuggestions(buildAirportSuggestions(accountProfile.preferredAirport ?? ''));
-            setShowPreferredAirportSuggestions(true);
-          }}
-          onBlur={() => setTimeout(() => setShowPreferredAirportSuggestions(false), 120)}
-          onChangeText={handlePreferredAirportChange}
-          autoComplete="off"
-          autoCorrect={false}
-          textContentType="none"
-        />
-        {showPreferredAirportSuggestions ? (
-          <View style={[styles.dropdownList, localStyles.airportSuggestionList]}>
-            {preferredAirportSuggestions.length ? (
-              preferredAirportSuggestions.map((opt, idx) => (
-                <DropdownOptionButton
-                  key={opt}
-                  styles={styles}
-                  style={[
-                    localStyles.airportSuggestionOption,
-                    idx === preferredAirportSuggestions.length - 1 && { borderBottomWidth: 0 },
-                  ]}
-                  onPress={() => {
-                    setAccountProfile((p) => ({ ...p, preferredAirport: parsePreferredAirportCode(opt) }));
-                    setShowPreferredAirportSuggestions(false);
-                  }}
-                >
-                  <Text style={styles.cellText}>{opt}</Text>
-                </DropdownOptionButton>
-              ))
-            ) : (
-              <Text style={[styles.helperText, { paddingHorizontal: 12, paddingVertical: 10 }]}>
-                Type to search airports
-              </Text>
-            )}
-          </View>
-        ) : null}
-      </View>
+  if (activePage === 'account-preferences') return (
+    <View style={[styles.card, styles.accountSection]} testID="account-preferences-settings">
+      {accountMessage ? <Text style={styles.bodyText}>{accountMessage}</Text> : null}
       <Text style={styles.modalLabel}>Preferred maps app</Text>
       <View style={[styles.row, { flexWrap: 'wrap' }]}>
         {mapAppOptions.map((opt) => (
@@ -570,6 +535,18 @@ const AccountProfileManagement = ({
       <Text style={styles.helperText}>
         Selected: {mapAppOptions.find((opt) => opt.key === mapApp)?.label ?? 'Google Maps'}
       </Text>
+      <Text style={styles.modalLabel}>Preferred calendar app</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {calendarAppOptions.map((opt) => (
+          <TouchableOpacity key={opt.key} accessibilityRole="button"
+            accessibilityState={{ selected: (accountProfile.calendarPreference ?? 'google') === opt.key }}
+            style={[styles.mapOptionButton, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActive, { marginRight: 8, marginTop: 4 }]}
+            onPress={() => setAccountProfile((profile) => ({ ...profile, calendarPreference: opt.key }))}>
+            <Text style={[styles.mapOptionText, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.helperText}>Save preferences to remember this choice. Apple Calendar downloads a calendar (.ics) file on the web and opens the phone's calendar editor in the installed app. Later trip changes won't sync to saved events.</Text>
       <Text style={styles.modalLabel}>Appearance</Text>
       <View style={[styles.row, { flexWrap: 'wrap' }]}>
         {appearanceOptions.map((opt) => (
@@ -617,7 +594,76 @@ const AccountProfileManagement = ({
         Selected: {temperatureUnitOptions.find((opt) => opt.key === normalizeTemperatureUnit(accountProfile.temperatureUnit))?.label ?? 'Fahrenheit'}
       </Text>
       <OfflineDownloadSettings styles={styles} />
-      <BlogPublicDefaultToggle backendUrl={backendUrl} headers={headers} styles={styles} theme={theme} />
+      <TouchableOpacity style={styles.button} onPress={handleProfileUpdate} accessibilityRole="button">
+        <Text style={styles.buttonText}>Save Preferences</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <View style={[styles.card, styles.accountSection]}>
+      <Text style={styles.sectionTitle}>Account</Text>
+      <Text style={styles.helperText}>Update your profile, change your password, or remove your account.</Text>
+      {accountMessage ? (
+        <View style={styles.successCard}>
+          <Text style={styles.bodyText}>{accountMessage}</Text>
+        </View>
+      ) : null}
+      <View style={styles.row}>
+        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} commitOnBlur={false} />
+        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} commitOnBlur={false} />
+      </View>
+      <DraftTextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} commitOnBlur={false} />
+      <TouchableOpacity
+        style={[styles.input, { justifyContent: 'center' }]}
+        onPress={() => setShowAddressEditor(true)}
+      >
+        <Text style={formattedHomeAddress ? styles.cellText : styles.placeholderText}>
+          {formattedHomeAddress || 'Home address (optional)'}
+        </Text>
+      </TouchableOpacity>
+      <View style={localStyles.airportFieldWrap}>
+        <TextInput
+          style={styles.input}
+          placeholder="Preferred airport (optional)"
+          value={showPreferredAirportSuggestions ? accountProfile.preferredAirport ?? '' : preferredAirportLabel}
+          onFocus={() => {
+            setPreferredAirportSuggestions(buildAirportSuggestions(accountProfile.preferredAirport ?? ''));
+            setShowPreferredAirportSuggestions(true);
+          }}
+          onBlur={() => setTimeout(() => setShowPreferredAirportSuggestions(false), 120)}
+          onChangeText={handlePreferredAirportChange}
+          autoComplete="off"
+          autoCorrect={false}
+          textContentType="none"
+        />
+        {showPreferredAirportSuggestions ? (
+          <View style={[styles.dropdownList, localStyles.airportSuggestionList]}>
+            {preferredAirportSuggestions.length ? (
+              preferredAirportSuggestions.map((opt, idx) => (
+                <DropdownOptionButton
+                  key={opt}
+                  styles={styles}
+                  style={[
+                    localStyles.airportSuggestionOption,
+                    idx === preferredAirportSuggestions.length - 1 && { borderBottomWidth: 0 },
+                  ]}
+                  onPress={() => {
+                    setAccountProfile((p) => ({ ...p, preferredAirport: parsePreferredAirportCode(opt) }));
+                    setShowPreferredAirportSuggestions(false);
+                  }}
+                >
+                  <Text style={styles.cellText}>{opt}</Text>
+                </DropdownOptionButton>
+              ))
+            ) : (
+              <Text style={[styles.helperText, { paddingHorizontal: 12, paddingVertical: 10 }]}>
+                Type to search airports
+              </Text>
+            )}
+          </View>
+        ) : null}
+      </View>
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate}>
         <Text style={styles.buttonText}>Save Profile</Text>
       </TouchableOpacity>

@@ -20,6 +20,7 @@ export type AccountProfile = {
   appearancePreference: AppearancePreference;
   temperatureUnit: TemperatureUnit;
   mapPreference?: MapApp;
+  calendarPreference?: 'google' | 'apple';
   entitlements?: {
     costTracking?: boolean;
     receiptScanning?: boolean;

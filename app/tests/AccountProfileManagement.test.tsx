@@ -72,16 +72,21 @@ describe('AccountProfileManagement', () => {
     expect(getByPlaceholderText('First name')).toBeTruthy();
     expect(getByText(/123 Main St, Austin/)).toBeTruthy();
     expect(getByPlaceholderText('Preferred airport (optional)')).toBeTruthy();
-    expect(getByText('Temperature')).toBeTruthy();
-    expect(getByText('Fahrenheit')).toBeTruthy();
-    expect(getByText('Celsius')).toBeTruthy();
     expect(getByText('Save Profile')).toBeTruthy();
+  });
+
+  it('sets the calendar preference beside maps on Preferences', () => {
+    const setAccountProfile = jest.fn();
+    const { getByText } = render(<AccountProfileManagement {...defaultProps} activePage="account-preferences" setAccountProfile={setAccountProfile} />);
+    expect(getByText('Preferred calendar app')).toBeTruthy();
+    fireEvent.press(getByText('Apple Calendar'));
+    expect(setAccountProfile.mock.calls[0][0](defaultProps.accountProfile).calendarPreference).toBe('apple');
   });
 
   it('updates the selected temperature preference', () => {
     const setAccountProfile = jest.fn();
     const { getByText } = render(
-      <AccountProfileManagement {...defaultProps} setAccountProfile={setAccountProfile} />
+      <AccountProfileManagement {...defaultProps} activePage="account-preferences" setAccountProfile={setAccountProfile} />
     );
 
     fireEvent.press(getByText('Celsius'));
@@ -92,6 +97,30 @@ describe('AccountProfileManagement', () => {
       ...defaultProps.accountProfile,
       temperatureUnit: 'celsius',
     });
+  });
+
+  it('moves all preference controls off Profile and onto Preferences', () => {
+    const view = render(<AccountProfileManagement {...defaultProps} />);
+    for (const label of ['Preferred maps app', 'Preferred calendar app', 'Appearance', 'Temperature', 'Update saved trips']) {
+      expect(view.queryByText(label)).toBeNull();
+    }
+    view.rerender(<AccountProfileManagement {...defaultProps} activePage="account-preferences" />);
+    for (const label of ['Preferred maps app', 'Preferred calendar app', 'Appearance', 'Temperature', 'Update saved trips', 'Save Preferences']) {
+      expect(view.getByText(label)).toBeTruthy();
+    }
+    expect(view.queryByPlaceholderText('First name')).toBeNull();
+    expect(view.queryByText('Change Password')).toBeNull();
+  });
+
+  it('saves only preference fields from the Preferences page', async () => {
+    const fetcher = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ user: defaultProps.accountProfile }) } as Response);
+    try {
+      const view = render(<AccountProfileManagement {...defaultProps} activePage="account-preferences" />);
+      fireEvent.press(view.getByText('Save Preferences'));
+      await waitFor(() => expect(view.getByText('Preferences updated')).toBeTruthy());
+      const request = fetcher.mock.calls.find(([url, options]) => String(url).endsWith('/api/account/profile') && options?.method === 'PATCH');
+      expect(JSON.parse(String(request?.[1]?.body))).toEqual({ mapPreference: 'google', calendarPreference: 'google', appearancePreference: 'auto', temperatureUnit: 'fahrenheit' });
+    } finally { fetcher.mockRestore(); }
   });
 
   it('opens the home address editor dialog', () => {
@@ -136,6 +165,23 @@ describe('AccountProfileManagement', () => {
 
     expect(getByText('Financial Connections')).toBeTruthy();
     expect(getByText('Connect Bank Account')).toBeTruthy();
+  });
+
+  it('shows a city and uppercase code for a saved lowercase preferred airport', () => {
+    const view = render(<AccountProfileManagement {...defaultProps} accountProfile={{ ...defaultProps.accountProfile, preferredAirport: 'bos' }} />);
+    expect(view.getByPlaceholderText('Preferred airport (optional)').props.value).toBe('Boston (BOS)');
+    expect(view.queryByTestId('blog-public-default-setting')).toBeNull();
+  });
+
+  it('resolves an airport outside the fallback list and remembers its city label', async () => {
+    const onSearchAirports = jest.fn();
+    const profile = { ...defaultProps.accountProfile, preferredAirport: 'hnd' };
+    const view = render(<AccountProfileManagement {...defaultProps} accountProfile={profile} onSearchAirports={onSearchAirports} />);
+    await waitFor(() => expect(onSearchAirports).toHaveBeenCalledWith('HND'));
+    view.rerender(<AccountProfileManagement {...defaultProps} accountProfile={profile} onSearchAirports={onSearchAirports} airportOptions={['Tokyo (hnd)']} />);
+    expect(view.getByPlaceholderText('Preferred airport (optional)').props.value).toBe('Tokyo (HND)');
+    view.rerender(<AccountProfileManagement {...defaultProps} accountProfile={profile} onSearchAirports={onSearchAirports} airportOptions={[]} />);
+    expect(view.getByPlaceholderText('Preferred airport (optional)').props.value).toBe('Tokyo (HND)');
   });
 
   it('uses airport autocomplete suggestions for preferred airport', async () => {

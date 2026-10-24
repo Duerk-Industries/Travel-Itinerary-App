@@ -71,6 +71,7 @@
     "expo-age-range": "~0.2.1",
     "expo-apple-authentication": "~8.0.8",
     "expo-audio": "~1.1.1",
+    "expo-calendar": "~15.0.8",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.14",
     "expo-crypto": "~15.0.9",

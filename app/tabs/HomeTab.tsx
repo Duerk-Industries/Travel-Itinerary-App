@@ -171,13 +171,13 @@ const HomeTab: React.FC<HomeTabProps> = ({
     { key: 'blog', label: 'Trip Blog', icon: '📖' },
     { key: 'flights', label: 'Flights', icon: '✈️' },
     { key: 'lodging', label: 'Lodging', icon: '🏨' },
-    { key: 'ground-transfers', label: 'Ground Transfers', icon: '🚌' },
-    { key: 'packing', label: 'Packing', icon: '✓' },
     { key: 'tours', label: 'Activities', icon: '🎟️' },
-    { key: 'expenses', label: 'Daily Expenses', icon: '🧾' },
+    { key: 'ground-transfers', label: 'Ground Transfers', icon: '🚌' },
     { key: 'car', label: 'Car Rentals', icon: '🚗' },
+    { key: 'expenses', label: 'Daily Expenses', icon: '🧾' },
     { key: 'cost', label: 'Cost Report', icon: '💵' },
-    { key: 'ingest', label: 'Ingest', icon: '📥' },
+    { key: 'packing', label: 'Packing', icon: '✓' },
+    { key: 'ingest', label: 'Import Travel Confirmations', icon: '📥' },
   ]
     .filter((item) => userRole === 'admin' || !regularUserHiddenHomePages.has(item.key))
     .filter((item) => item.key !== 'ingest' || canAccessIngest)
