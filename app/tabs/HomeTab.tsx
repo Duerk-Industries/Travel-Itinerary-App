@@ -177,7 +177,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
     { key: 'expenses', label: 'Daily Expenses', icon: '🧾' },
     { key: 'cost', label: 'Cost Report', icon: '💵' },
     { key: 'packing', label: 'Packing', icon: '✓' },
-    { key: 'ingest', label: 'Ingest', icon: '📥' },
+    { key: 'ingest', label: 'Import Travel Confirmations', icon: '📥' },
   ]
     .filter((item) => userRole === 'admin' || !regularUserHiddenHomePages.has(item.key))
     .filter((item) => item.key !== 'ingest' || canAccessIngest)

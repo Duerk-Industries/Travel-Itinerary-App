@@ -43,3 +43,9 @@ export function transferMapLocation(location: string, hotels: TransferHotel[], d
   const names = [...new Set(candidates.map(hotel => hotel.name.trim()))];
   return names.length === 1 ? `${names[0]}, ${location.trim()}` : location;
 }
+
+/** Filled form fields include both pieces; saved data remains the address alone. */
+export function transferLocationFieldLabel(location: string, hotels: TransferHotel[], date: string, activities: TransferActivity[] = []): string {
+  const name = transferLocationLabel(location, hotels, date, activities);
+  return name !== location ? `${name}, ${location.trim()}` : location;
+}

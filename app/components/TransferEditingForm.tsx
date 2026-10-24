@@ -3,7 +3,7 @@ import { TRANSFER_TYPES as CANONICAL_TRANSFER_TYPES, normalizeTransferType } fro
 import TransferDirections from './TransferDirections';
 import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from './HotelAddressPicker';
-import { transferLocationLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
+import { transferLocationFieldLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 import React from 'react';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -283,7 +283,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
                 <HotelAddressPicker hotels={lodgings} activities={activities} date={flight.departureDate} styles={styles} testID="ground-departure-hotel"
                   onSelect={address => setFlight(prev => prev ? { ...prev, departureLocation: address } : prev)} />
                 <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} testID="flight-modal-departure-location"
-                  value={transferLocationLabel(flight.departureLocation, lodgings, flight.departureDate, activities)} placeholder="Location" autoComplete="off"
+                  value={transferLocationFieldLabel(flight.departureLocation, lodgings, flight.departureDate, activities)} placeholder="Location" autoComplete="off"
                   onChangeText={(text: string) => setFlight(prev => prev ? { ...prev, departureLocation: text } : prev)} />
               </View> : backendUrl ? (
                 <AirportInput backendUrl={backendUrl} headers={headers} styles={styles}
@@ -346,7 +346,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
                 <HotelAddressPicker hotels={lodgings} activities={activities} date={flight.arrivalDate || flight.departureDate} styles={styles} testID="ground-arrival-hotel"
                   onSelect={address => setFlight(prev => prev ? { ...prev, arrivalLocation: address } : prev)} />
                 <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} testID="flight-modal-arrival-location"
-                  value={transferLocationLabel(flight.arrivalLocation, lodgings, flight.arrivalDate || flight.departureDate, activities)} placeholder="Location" autoComplete="off"
+                  value={transferLocationFieldLabel(flight.arrivalLocation, lodgings, flight.arrivalDate || flight.departureDate, activities)} placeholder="Location" autoComplete="off"
                   onChangeText={(text: string) => setFlight(prev => prev ? { ...prev, arrivalLocation: text } : prev)} />
               </View> : backendUrl ? (
                 <AirportInput backendUrl={backendUrl} headers={headers} styles={styles}

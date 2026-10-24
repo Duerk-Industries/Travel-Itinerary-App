@@ -152,7 +152,8 @@ describe('IngestionTab', () => {
     await waitFor(() => {
       expect(queryByText(/PENDING/)).toBeNull();
     });
-    expect(await findByText(/COMPLETED/)).toBeTruthy();
+    expect(queryByText(/COMPLETED/)).toBeNull();
+    expect(queryByText('Recent Jobs')).toBeNull();
     expect(await findByText('flight • American Airlines')).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(6);
 
@@ -301,7 +302,8 @@ describe('IngestionTab role-based view', () => {
     expect(await findByText('travel.docs@wander-bunnies.com')).toBeTruthy();
     expect(await findByText('Manual Upload')).toBeTruthy();
     expect(await findByText('Queued Items')).toBeTruthy();
-    expect(await findByText('Recent Jobs')).toBeTruthy();
+    expect(queryByText('Recent Jobs')).toBeNull();
+    expect(await findByText('Import Travel Confirmations')).toBeTruthy();
 
     expect(queryByPlaceholderText('Search provider or confirmation')).toBeNull();
     expect(queryByPlaceholderText('Status or ALL')).toBeNull();

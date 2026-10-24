@@ -11,7 +11,7 @@ export default function HotelAddressPicker({ hotels, activities = [], date, onSe
   // this dropdown should neither refetch hotels nor repeat the date filtering.
   const options = useMemo(() => [
     ...hotelsForTransferDate(hotels, date),
-    ...activitiesForTransferDate(activities, date).map(activity => ({ id: `activity:${activity.id}`, name: `${activity.name} (Activity)`, address: activity.startLocation })),
+    ...activitiesForTransferDate(activities, date).map(activity => ({ id: `activity:${activity.id}`, name: activity.name, address: activity.startLocation })),
   ], [hotels, activities, date]);
   const disabled = options.length === 0;
   const actionLabel = activities.length ? 'Use hotel or activity address' : 'Use hotel address';
@@ -20,7 +20,7 @@ export default function HotelAddressPicker({ hotels, activities = [], date, onSe
     onChange={event => { const hotel = options.find(item => item.id === event.target.value); if (hotel) onSelect(hotel.address.trim()); }}
     style={toWebStyle(styles.input, { width: 180, opacity: disabled ? 0.45 : 1 })}>
     <option value="">{label}</option>
-    {options.map(hotel => <option key={hotel.id} value={hotel.id}>{hotel.name} · {hotel.address}</option>)}
+    {options.map(hotel => <option key={hotel.id} value={hotel.id}>{hotel.name}</option>)}
   </select>;
   return <View style={{ width: 180 }}>
     <TouchableOpacity testID={testID} accessibilityRole="button" accessibilityLabel={actionLabel} disabled={disabled}
@@ -30,7 +30,7 @@ export default function HotelAddressPicker({ hotels, activities = [], date, onSe
     </TouchableOpacity>
     {open && !disabled && options.map(hotel => <TouchableOpacity key={hotel.id} testID={`${testID}-${hotel.id}`} accessibilityRole="button"
       onPress={() => { onSelect(hotel.address.trim()); setOpen(false); }} style={[styles.input, { minHeight: 44 }]}>
-      <Text style={styles.cellText}>{hotel.name} · {hotel.address}</Text>
+      <Text style={styles.cellText}>{hotel.name}</Text>
     </TouchableOpacity>)}
   </View>;
 }

@@ -4,7 +4,7 @@ import type { TransferMode } from '../../server/src/types';
 import TransferDirections from '../components/TransferDirections';
 import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from '../components/HotelAddressPicker';
-import { transferLocationLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
+import { transferLocationFieldLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 import { isFlightTransfer } from '../utils/transferCategory';
 import { airportDisplayForCode } from '../utils/airportDisplay';
 import type { PlanningCoordinates } from '../../server/src/types';
@@ -1958,7 +1958,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       {ground ? <View style={{ flexDirection: 'row', gap: 8 }}>
                         <HotelAddressPicker hotels={lodgings} activities={activities} date={isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate}
                           styles={styles} testID={`ground-inline-${isDeparture ? 'departure' : 'arrival'}-hotel`} onSelect={setters[col.key]} />
-                        <TextInput style={[styles.input, { flex: 1 }]} value={transferLocationLabel(rawValue, lodgings, isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate, activities)} onChangeText={setters[col.key]} autoComplete="off" />
+                        <TextInput style={[styles.input, { flex: 1 }]} value={transferLocationFieldLabel(rawValue, lodgings, isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate, activities)} onChangeText={setters[col.key]} autoComplete="off" />
                       </View> : (
                       <TouchableOpacity
                         style={[styles.input, { justifyContent: 'center' }]}

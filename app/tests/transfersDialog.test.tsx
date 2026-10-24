@@ -100,8 +100,8 @@ describe('Flights dialog', () => {
     act(() => pressId('ground-departure-hotel-hotel'));
     act(() => pressId('ground-arrival-hotel'));
     act(() => pressId('ground-arrival-hotel-activity:museum'));
-    expect(root.findByProps({ testID: 'flight-modal-departure-location' }).props.value).toBe('Hotel A');
-    expect(root.findByProps({ testID: 'flight-modal-arrival-location' }).props.value).toBe('Museum');
+    expect(root.findByProps({ testID: 'flight-modal-departure-location' }).props.value).toBe('Hotel A, Hotel Road');
+    expect(root.findByProps({ testID: 'flight-modal-arrival-location' }).props.value).toBe('Museum, Museum Road');
     act(() => root.findByProps({ testID: 'transfer-directions' }).props.onPress());
     const url = new URL(open.mock.calls[0][0]);
     expect(url.searchParams.get('origin')).toBe('Hotel A, Hotel Road');

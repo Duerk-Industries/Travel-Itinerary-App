@@ -88,7 +88,7 @@ type IngestionTabProps = {
   // Admins get the full operational view (search/status/source/type/date/confidence filters,
   // forwarding provider/instructions detail, bulk select+assign+delete, and the Gmail section's
   // disabled state spelled out). Everyone else gets the simplified page below: the forwarding
-  // address, Manual Upload, Queued Items, Recent Jobs, and Gmail Import only when it's actually
+  // address, Manual Upload, Queued Items, and Gmail Import only when it's actually
   // enabled. Defaults to the simplified view — a caller that forgets to pass a role should never
   // land a regular user on the admin/debug surface by accident.
   userRole?: 'user' | 'admin';
@@ -521,15 +521,15 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   if (!config) {
     return (
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Ingest</Text>
-        <Text style={styles.helperText}>{loading ? 'Loading ingestion settings…' : error ?? 'Unable to load ingestion.'}</Text>
+        <Text style={styles.sectionTitle}>Import Travel Confirmations</Text>
+        <Text style={styles.helperText}>{loading ? 'Loading import settings…' : error ?? 'Unable to load travel confirmations.'}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Ingest & Review</Text>
+      <Text style={styles.sectionTitle}>Import Travel Confirmations</Text>
       {config.features.autoAssign ? <AutomaticImportSettings backendUrl={backendUrl} headers={headers} onChanged={() => void load()} /> : null}
       <ImportSuggestionReview backendUrl={backendUrl} headers={headers} styles={styles}
         onReviewItem={id => { const item = items.find(row => row.id === id); if (item) void beginEdit(item); else setError('Refresh Imports to review this booking.'); }}
@@ -781,21 +781,6 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
             </View>
           );
         })}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Jobs</Text>
-        {jobs.length === 0 ? (
-          <Text style={styles.helperText}>No import jobs yet — upload a file or run Gmail import to see processing history here.</Text>
-        ) : null}
-        {jobs.map((job) => (
-          <View key={job.id} style={styles.flightRow}>
-            <Text style={styles.flightTitle}>{job.originalFilename}</Text>
-            <Text style={styles.helperText}>{job.state} • {prettyDate(job.createdAt)}</Text>
-            {job.failureCode ? <Text style={styles.warningText}>{job.failureCode}</Text> : null}
-            {job.failureReason ? <Text style={styles.helperText}>{job.failureReason}</Text> : null}
-          </View>
-        ))}
       </View>
 
       {selectedItem ? (

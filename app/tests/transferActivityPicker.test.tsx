@@ -11,6 +11,9 @@ it('offers hotel and same-day activity addresses together and updates when the d
   ];
   const view = render(<HotelAddressPicker hotels={hotels} activities={activities} date="2027-03-02" styles={{}} testID="locations" onSelect={onSelect} />);
   fireEvent.press(view.getByTestId('locations'));
+  expect(view.getByText('Hotel')).toBeTruthy();
+  expect(view.getByText('Museum')).toBeTruthy();
+  expect(view.queryByText(/ · /)).toBeNull();
   expect(view.getByTestId('locations-hotel')).toBeTruthy();
   expect(view.queryByTestId('locations-activity:tour')).toBeNull();
   fireEvent.press(view.getByTestId('locations-activity:museum'));
