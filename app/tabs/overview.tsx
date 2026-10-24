@@ -2212,7 +2212,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const renderSelectedItemDialogs = () => (
     <>
       {selectedFlight ? React.createElement(isFlightTransfer(selectedFlight) ? FlightDetailsDialog : GroundTransferDetailsDialog, {
-        flight: selectedFlight, backendUrl, headers, styles, theme, readOnly, mapApp, lodgings,
+        flight: selectedFlight, backendUrl, headers, styles, theme, readOnly, mapApp, lodgings, activities: tours,
         onClose: () => setSelectedFlight(null),
         onEdit: () => editFlightFromDetails(selectedFlight),
         onDelete: () => setItemToDelete({ kind: 'flight', id: selectedFlight.id, name: selectedFlight.booking_reference || 'this transfer' }),
@@ -2436,6 +2436,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const OverviewTransferEditor = editingFlightDraft && !isFlightTransfer(editingFlightDraft) ? GroundTransferEditingForm : FlightEditingForm;
   const renderOverviewFlightEditor = () => (
     <OverviewTransferEditor
+      activities={tours}
       backendUrl={backendUrl}
       headers={headers}
       mapApp={mapApp}

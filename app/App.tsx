@@ -2383,7 +2383,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           break;
         case 'flights':
         case 'ground-transfers':
-          await Promise.all([fetchFlights(authToken), ...(currentPage === 'ground-transfers' ? [fetchLodgings(authToken)] : []), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
+          await Promise.all([fetchFlights(authToken), ...(currentPage === 'ground-transfers' ? [fetchLodgings(authToken), fetchTours(authToken)] : []), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
           break;
         case 'lodging':
           await Promise.all([fetchLodgings(authToken), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
@@ -3891,6 +3891,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       {(activePage === 'flights' || activePage === 'ground-transfers')
         ? renderSharedPageScroll(
             <FlightsTab
+          activities={tours}
               key={activePage}
               lodgings={lodgings}
               mapApp={mapApp}
@@ -3925,6 +3926,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         : null}
       {activePage !== 'flights' && activePage !== 'ground-transfers' && externalFlightEditId ? (
         <FlightsTab
+          activities={tours}
           mapApp={mapApp}
           lodgings={lodgings}
           backendUrl={backendUrl}

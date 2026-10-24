@@ -4,7 +4,7 @@ import type { TransferMode } from '../../server/src/types';
 import TransferDirections from '../components/TransferDirections';
 import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from '../components/HotelAddressPicker';
-import type { TransferHotel } from '../utils/transferHotels';
+import { transferLocationLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 import { isFlightTransfer } from '../utils/transferCategory';
 import { airportDisplayForCode } from '../utils/airportDisplay';
 import type { PlanningCoordinates } from '../../server/src/types';
@@ -483,6 +483,7 @@ type FlightsTabProps = {
   mapApp?: MapApp;
   transferScope?: 'all' | 'flights' | 'ground';
   lodgings?: TransferHotel[];
+  activities?: TransferActivity[];
   backendUrl: string;
   userToken: string | null;
   activeTripId: string | null;
@@ -568,6 +569,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   transferScope = 'all',
   mapApp,
   lodgings = [],
+  activities = [],
   backendUrl,
   userToken,
   activeTripId,
@@ -1671,7 +1673,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                           <Text style={styles.cellText}>View only</Text>
                         )}
                       </View>
-                      {!isFlightTransfer(item) && <TransferDirections compact origin={item.departure_location || item.departure_airport_label || item.departure_airport_code || ''}
+                      {!isFlightTransfer(item) && <TransferDirections compact lodgings={lodgings} departureDate={item.departure_date} arrivalDate={item.arrival_date || item.departure_date} origin={item.departure_location || item.departure_airport_label || item.departure_airport_code || ''}
                         destination={item.arrival_location || item.arrival_airport_label || item.arrival_airport_code || ''}
                         transferType={item.transfer_type || item.transferType || 'Flight'} mapApp={mapApp} styles={styles} />}
                     </View>
@@ -1954,9 +1956,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       ]}
                     >
                       {ground ? <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <HotelAddressPicker hotels={lodgings} date={isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate}
+                        <HotelAddressPicker hotels={lodgings} activities={activities} date={isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate}
                           styles={styles} testID={`ground-inline-${isDeparture ? 'departure' : 'arrival'}-hotel`} onSelect={setters[col.key]} />
-                        <TextInput style={[styles.input, { flex: 1 }]} value={rawValue} onChangeText={setters[col.key]} autoComplete="off" />
+                        <TextInput style={[styles.input, { flex: 1 }]} value={transferLocationLabel(rawValue, lodgings, isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate, activities)} onChangeText={setters[col.key]} autoComplete="off" />
                       </View> : (
                       <TouchableOpacity
                         style={[styles.input, { justifyContent: 'center' }]}
@@ -2172,7 +2174,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         </Modal>
       ) : null}
       {selectedTransfer ? React.createElement(isFlightTransfer(selectedTransfer) ? FlightDetailsDialog : GroundTransferDetailsDialog, {
-        flight: selectedTransfer, backendUrl, headers, styles, theme, readOnly, mapApp, lodgings,
+        flight: selectedTransfer, backendUrl, headers, styles, theme, readOnly, mapApp, lodgings, activities,
         testID: isFlightTransfer(selectedTransfer) ? 'flight-screen-details' : 'ground-transfer-screen-details',
         onClose: () => setSelectedTransfer(null),
         onEdit: () => { const item = selectedTransfer; setSelectedTransfer(null); openFlightDetails(item); },
@@ -2184,6 +2186,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         transferTypes={allowedTransferTypes}
         mapApp={mapApp}
         lodgings={lodgings}
+        activities={activities}
         visible={!readOnly && Boolean(editingFlight && editingFlightId)}
         flightId={editingFlightId}
         flight={editingFlight}

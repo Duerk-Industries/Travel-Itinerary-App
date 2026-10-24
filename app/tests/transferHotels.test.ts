@@ -1,4 +1,4 @@
-import { hotelsForTransferDate, transferLocationLabel, type TransferHotel } from '../utils/transferHotels';
+import { hotelsForTransferDate, activitiesForTransferDate, transferLocationLabel, type TransferHotel } from '../utils/transferHotels';
 
 const hotel = (id: string, checkInDate: string, checkOutDate: string, address = '123 Hotel Road'): TransferHotel => ({ id, name: id, checkInDate, checkOutDate, address, status: 'Booked' });
 
@@ -27,4 +27,13 @@ describe('transfer hotel address choices', () => {
     expect(hotelsForTransferDate([hotel('march', '2028-03-01', '2028-03-02')], '2028-02-29')).toHaveLength(1);
     expect(hotelsForTransferDate([hotel('hotel', '2027-03-01', '2027-03-04')], '')).toEqual([]);
   });
+});
+
+it('offers only activities on the selected day with a nonblank location and active status', () => {
+  const activity = { id: 'a', name: 'Museum', date: '2027-03-02', startLocation: 'Museum Road', status: 'Booked' as const };
+  const activities = [activity, { ...activity, id: 'yesterday', date: '2027-03-01' }, { ...activity, id: 'tomorrow', date: '2027-03-03' },
+    { ...activity, id: 'blank', startLocation: '   ' }, { ...activity, id: 'cancelled', status: 'Cancelled' as const }];
+  expect(activitiesForTransferDate(activities, '2027-03-02').map(row => row.id)).toEqual(['a']);
+  expect(activitiesForTransferDate(activities, '2027-03-03').map(row => row.id)).toEqual(['tomorrow']);
+  expect(activitiesForTransferDate(activities, '')).toEqual([]);
 });

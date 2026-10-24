@@ -24,7 +24,7 @@ it('shows hotel names at both endpoints but sends the full addresses to maps', (
   expect(getAllByText('Hotel A → Hotel B').length).toBeGreaterThan(0);
   fireEvent.press(getByTestId('transfer-directions'));
   const url = new URL(open.mock.calls[0][0]);
-  expect(url.searchParams.get('origin')).toBe(flight.departure_location);
-  expect(url.searchParams.get('destination')).toBe(flight.arrival_location);
+  expect(url.searchParams.get('origin')).toBe(`Hotel A, ${flight.departure_location}`);
+  expect(url.searchParams.get('destination')).toBe(`Hotel B, ${flight.arrival_location}`);
   open.mockRestore();
 });

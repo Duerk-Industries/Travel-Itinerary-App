@@ -5,8 +5,9 @@
 /// <reference types="node" />
 
 import React, { useState } from 'react';
+import { Linking } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
-import { FlightEditingForm } from '../components/TransferEditingForm';
+import { FlightEditingForm, GroundTransferEditingForm } from '../components/TransferEditingForm';
 import {
   buildFlightPayloadForCreate,
   canonicalizeMemberSelectionIds,
@@ -50,16 +51,20 @@ describe('Flights dialog', () => {
     });
   };
 
-  const Harness = ({ onSave }: { onSave: (flight: FlightEditDraft) => void }) => {
+  const Harness = ({ onSave, ground = false }: { onSave: (flight: FlightEditDraft) => void; ground?: boolean }) => {
     const [flight, setFlight] = useState<FlightEditDraft | null>(() => {
       const draft = createFlightDraftForTrip(trip, member.id);
+      if (ground) { draft.departureDate = '2027-03-02'; draft.arrivalDate = '2027-03-02'; draft.transferType = 'Private'; }
       draft.passengerIds = [member.id];
       draft.passengerName = member.email ?? 'Member';
       return draft;
     });
     if (!flight) return null;
+    const Editor = ground ? GroundTransferEditingForm : FlightEditingForm;
     return (
-      <FlightEditingForm
+      <Editor
+        lodgings={[{ id: 'hotel', name: 'Hotel A', address: 'Hotel Road', checkInDate: '2027-03-01', checkOutDate: '2027-03-03', status: 'Booked' }]}
+        activities={[{ id: 'museum', name: 'Museum', startLocation: 'Museum Road', date: '2027-03-02', status: 'Booked' }]}
         visible
         flightId="new"
         flight={flight}
@@ -83,6 +88,28 @@ describe('Flights dialog', () => {
       />
     );
   };
+
+  test('shows selected location names while saving addresses and sending hotel name plus address to maps', () => {
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    const onSave = jest.fn();
+    let tree: any;
+    act(() => { tree = renderer.create(<Harness ground onSave={onSave} />); });
+    const root = tree.root;
+    const pressId = (id: string) => root.findAllByProps({ testID: id }).find((node: any) => typeof node.props.onPress === 'function').props.onPress();
+    act(() => pressId('ground-departure-hotel'));
+    act(() => pressId('ground-departure-hotel-hotel'));
+    act(() => pressId('ground-arrival-hotel'));
+    act(() => pressId('ground-arrival-hotel-activity:museum'));
+    expect(root.findByProps({ testID: 'flight-modal-departure-location' }).props.value).toBe('Hotel A');
+    expect(root.findByProps({ testID: 'flight-modal-arrival-location' }).props.value).toBe('Museum');
+    act(() => root.findByProps({ testID: 'transfer-directions' }).props.onPress());
+    const url = new URL(open.mock.calls[0][0]);
+    expect(url.searchParams.get('origin')).toBe('Hotel A, Hotel Road');
+    expect(url.searchParams.get('destination')).toBe('Museum Road');
+    act(() => root.findByProps({ testID: 'flight-modal-save' }).props.onPress());
+    expect(onSave.mock.calls[0][0]).toMatchObject({ departureLocation: 'Hotel Road', arrivalLocation: 'Museum Road' });
+    act(() => tree.unmount()); open.mockRestore();
+  });
 
   test('saves dialog input with passengers and full details', () => {
     const saved: any[] = [];
@@ -145,7 +172,7 @@ describe('Flights dialog', () => {
 
     const saved: any[] = [];
 
-    const Harness = ({ onSave }: { onSave: (flight: FlightEditDraft) => void }) => {
+    const Harness = ({ onSave, ground = false }: { onSave: (flight: FlightEditDraft) => void; ground?: boolean }) => {
       const [flight, setFlight] = useState<FlightEditDraft | null>(() => {
         const draft = createFlightDraftForTrip(trip, member.id);
         draft.passengerIds = [member.id];
