@@ -224,9 +224,9 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               multiline
             />
             <ActivityDescriptionGenerator
-              key={JSON.stringify([draft.name, draft.startLocation, draft.date, draft.notes])}
+              key={JSON.stringify([draft.name, draft.startLocation, draft.date])}
               input={{ name: draft.name, location: draft.startLocation, notes: draft.notes }}
-              styles={styles} onApply={notes => onChange(previous => ({ ...previous, notes }))} />
+              styles={styles} onApply={notes => onChange(previous => ({ ...previous, notes: previous.notes.trim() ? `${previous.notes.trimEnd()}\n\n${notes}` : notes }))} />
             <Text style={styles.modalLabel}>Participants</Text>
             <View style={styles.payerChips}>
               {activeMembers.map((m) => {
