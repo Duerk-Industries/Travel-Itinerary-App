@@ -630,7 +630,14 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
             })}
       </View>
 
-      <View style={styles.card} testID="ledger-settlement">
+      <View
+        style={[styles.card, {
+          backgroundColor: theme?.mode === 'dark' ? '#163D46' : '#EFFAFB',
+          borderColor: theme?.mode === 'dark' ? '#397783' : '#9DCFD6',
+          borderWidth: 1,
+        }]}
+        testID="ledger-settlement"
+      >
         <Text style={styles.sectionTitle}>Settlement</Text>
         <Text style={styles.helperText}>
           {isNarrowLayout
