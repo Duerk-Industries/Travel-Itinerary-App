@@ -19,6 +19,10 @@ async function boot(page: Page) {
     else if (path === '/api/groups') json = [{ id: 'input-group', name: 'Input group', ownerId: user.userId, members, invites: [] }];
     else if (path.endsWith('/members')) json = members;
     else if (path.endsWith('/covered-by')) json = {};
+    else if (path === '/api/trips/input-trip/packing-list') json = {
+      travelers: Array.from({ length: 12 }, (_, i) => ({ id: `packer-${i}`, name: `Traveler ${String(i + 1).padStart(2, '0')}` })),
+      items: Array.from({ length: 30 }, (_, i) => ({ id: `pack-${i}`, label: `Packing item ${i + 1}`, category: 'Clothing', position: i, packedBy: [] })),
+    };
     else if (path.endsWith('/privacy-preferences')) json = { productCollectionEnabled: false, diagnosticsCollectionEnabled: false, productConsentCurrent: true, diagnosticsConsentCurrent: true };
     await route.fulfill({ json, headers: { 'access-control-allow-origin': '*' } });
   });
@@ -59,6 +63,39 @@ async function aboveKeyboard(page: Page, control: Locator, height: number, top =
 }
 
 for (const width of [390, 1280]) {
+  test(`packing traveler names head their own columns before and after scrolling at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await boot(page);
+    await page.getByTestId('home-nav-packing').click();
+    const scroll = page.getByTestId('packing-matrix-web-scroll');
+    await expect(scroll).toBeVisible();
+    await scroll.scrollIntoViewIfNeeded();
+    const verifyAlignment = async () => {
+      for (let i = 0; i < 12; i++) {
+        const header = page.getByTestId(`packing-matrix-web-header-packer-${i}`);
+        await expect(header).toHaveText(`Traveler ${String(i + 1).padStart(2, '0')}`);
+        const nameBox = (await header.boundingBox())!;
+        for (const item of ['pack-0', 'pack-29']) {
+          const cell = (await page.getByTestId(`packing-check-${item}-packer-${i}`).boundingBox())!;
+          expect(Math.abs(cell.x - nameBox.x)).toBeLessThan(1);
+          expect(Math.abs(cell.width - nameBox.width)).toBeLessThan(1);
+        }
+      }
+    };
+    await verifyAlignment();
+    await scroll.evaluate(el => { el.scrollTop = el.scrollHeight; el.scrollLeft = el.scrollWidth; });
+    await expect.poll(() => scroll.evaluate(el => el.scrollTop > 0 && el.scrollLeft > 0)).toBe(true);
+    await verifyAlignment();
+    const header = page.getByTestId('packing-matrix-web-header-packer-11');
+    const headerBox = (await header.boundingBox())!;
+    const scrollBox = (await scroll.boundingBox())!;
+    expect(Math.abs(headerBox.y - scrollBox.y)).toBeLessThan(3);
+    expect(await header.evaluate(el => {
+      const r = el.getBoundingClientRect();
+      return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    })).toBe(true);
+  });
+
   test(`activity and expense actions remain reachable above the keyboard at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await boot(page);

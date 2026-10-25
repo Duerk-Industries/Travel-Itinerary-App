@@ -22,6 +22,8 @@ The browser tests cover 390px and 1280px widths. They simulate visual viewport h
 
 Native regression tests in `selectFieldLayering.test.tsx`, `ExpenseCovering.test.tsx`, and `keyboardViewport.test.tsx` check independent modal windows, clipped parents, long option lists, selections, clearing rules, dismissal, and keyboard boundary restoration. They do not replace physical iOS/Android keyboard and popup testing.
 
+The same browser suite also checks packing-list traveler column headers at 390px and 1280px. With 12 travelers and 30 items, every name must match its column and align with that traveler's checkboxes in both the first and last item rows. The checks repeat after horizontal and vertical scrolling, and the visible header must remain at the top without being covered. `packingListMatrixSticky.test.tsx` additionally checks header/checkbox ordering on web, iOS, and Android, including duplicate first names and reordered travelers.
+
 ---
 
 ## Suite 1 — Authentication (`auth.test.ts`)

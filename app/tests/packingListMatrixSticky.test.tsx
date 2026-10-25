@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { Platform, Text } from 'react-native';
 
 jest.mock('react-native', () => ({
   Platform: { OS: 'web' },
@@ -64,5 +65,34 @@ describe('PackingListMatrix sticky header/column contract (web)', () => {
     // Same check-cell testID contract as the native matrix, so
     // PackingListTable's toggle wiring doesn't need to branch on platform.
     expect(getByTestId('packing-check-item-1-traveler-1')).toBeTruthy();
+  });
+
+  test.each(['web', 'ios', 'android'])('%s puts every traveler name in the matching checkbox column, including after reordering', platform => {
+    const originalPlatform = Platform.OS;
+    Object.assign(Platform, { OS: platform });
+    const party = [
+      { id: 'z', name: 'Alex Rider', displayName: 'Alex Rider' },
+      { id: 'a', name: 'Alex Lee', displayName: 'Alex Lee' },
+      { id: 'guest', name: 'Casey Guest', displayName: 'Casey' },
+    ];
+    const packingItems = [...items, { ...items[0], id: 'item-2', label: 'Shoes' }];
+    const screen = render(<PackingListMatrix items={packingItems} travelers={party} colors={colors} />);
+    const verifyColumns = (expected: typeof party) => {
+      const firstCell = screen.getByTestId('packing-check-item-1-z');
+      const bodyRow = firstCell.parent!;
+      const headerRow = screen.getByText('Item').parent!.parent!;
+      // Read the header row itself, not arbitrary occurrences of names elsewhere.
+      const headerLabels = headerRow.findAllByType(Text).map((node: any) => node.props.children);
+      expect(headerLabels).toEqual(['Item', ...expected.map(traveler => traveler.displayName)]);
+      const checkIds = bodyRow.findAll((node: any) => typeof node.props.testID === 'string' && node.props.testID.startsWith('packing-check-'))
+        .map((node: any) => node.props.testID);
+      expect(checkIds).toEqual(expected.map(traveler => `packing-check-item-1-${traveler.id}`));
+      for (const traveler of expected) expect(screen.getByTestId(`packing-check-item-2-${traveler.id}`)).toBeTruthy();
+    };
+    try {
+      verifyColumns(party);
+      screen.rerender(<PackingListMatrix items={packingItems} travelers={[party[2], party[0], party[1]]} colors={colors} />);
+      verifyColumns([party[2], party[0], party[1]]);
+    } finally { Object.assign(Platform, { OS: originalPlatform }); }
   });
 });
