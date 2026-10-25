@@ -1802,6 +1802,7 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       homeAddress: data.homeAddress ?? null,
       preferredAirport: data.preferredAirport ?? null,
       mapPreference: data.mapPreference ?? null,
+      calendarPreference: data.calendarPreference ?? null,
       appearancePreference: data.appearancePreference ?? null,
       temperatureUnit: data.temperatureUnit ?? null,
     };
@@ -1818,6 +1819,7 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       homeAddress: data.homeAddress ?? null,
       preferredAirport: data.preferredAirport ?? null,
       mapPreference: data.mapPreference ?? null,
+      calendarPreference: data.calendarPreference ?? null,
       appearancePreference: data.appearancePreference ?? null,
       temperatureUnit: data.temperatureUnit ?? null,
     };
@@ -1835,6 +1837,7 @@ export const updateWebUserProfile = async (
     homeAddress?: string;
     preferredAirport?: string;
     mapPreference?: string;
+    calendarPreference?: string;
     appearancePreference?: string;
     temperatureUnit?: string;
     age?: number;
@@ -1857,6 +1860,7 @@ export const updateWebUserProfile = async (
         : typeof (payload as any).mapPreference === 'undefined'
           ? undefined
           : null,
+    calendarPreference: payload.calendarPreference === 'google' || payload.calendarPreference === 'apple' ? payload.calendarPreference : undefined,
     appearancePreference:
       (payload as any).appearancePreference === 'light' ||
       (payload as any).appearancePreference === 'dark' ||
@@ -1883,6 +1887,7 @@ export const updateWebUserProfile = async (
     homeAddress: data.homeAddress ?? null,
     preferredAirport: data.preferredAirport ?? null,
     mapPreference: data.mapPreference ?? null,
+    calendarPreference: data.calendarPreference ?? null,
     appearancePreference: data.appearancePreference ?? null,
     temperatureUnit: data.temperatureUnit ?? null,
   };

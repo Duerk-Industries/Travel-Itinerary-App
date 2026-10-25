@@ -62,6 +62,26 @@ describe('PrivacyChoiceDialog', () => {
   });
 });
 
+describe('AccountPrivacySettings product preference', () => {
+  it('allows turning analytics off and back on when collection is unavailable', async () => {
+    const privacy = controller({ showPrompt: false, status: { ...controller().status!, productAnalytics: true, productCollectionEnabled: false } });
+    const view = render(<AccountPrivacySettings privacy={privacy} backendUrl="http://api.test" token="token-1" theme={theme} />);
+    fireEvent(view.getByLabelText('Product analytics'), 'valueChange', false);
+    await waitFor(() => expect(privacy.save).toHaveBeenCalledWith({ productAnalytics: false }));
+    privacy.status = { ...privacy.status!, productAnalytics: false };
+    view.rerender(<AccountPrivacySettings privacy={privacy} backendUrl="http://api.test" token="token-1" theme={theme} />);
+    expect(view.getByLabelText('Product analytics').props.disabled).toBe(false);
+    fireEvent(view.getByLabelText('Product analytics'), 'valueChange', true);
+    await waitFor(() => expect(privacy.save).toHaveBeenCalledWith({ productAnalytics: true }));
+  });
+
+  it('keeps an off preference locked under a browser privacy signal', () => {
+    const privacy = controller({ status: { ...controller().status!, productAnalytics: false, privacySignalActive: true } });
+    const view = render(<AccountPrivacySettings privacy={privacy} backendUrl="http://api.test" token="token-1" theme={theme} />);
+    expect(view.getByLabelText('Product analytics').props.disabled).toBe(true);
+  });
+});
+
 describe('AccountPrivacySettings: delete analytics data', () => {
   const originalFetch = global.fetch;
   afterEach(() => { global.fetch = originalFetch; });

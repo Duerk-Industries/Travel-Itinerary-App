@@ -463,10 +463,14 @@ router.post('/age-verification/apple', async (req, res) => {
 router.patch('/profile', async (req, res) => {
   const user = (req as any).user as { userId: string; email: string };
   const body = req.body ?? {};
-  const { firstName, lastName, email, homeAddress, preferredAirport, mapPreference, appearancePreference, temperatureUnit } = req.body ?? {};
-  const hasAnyProfileField = ['firstName', 'lastName', 'email', 'homeAddress', 'preferredAirport', 'mapPreference', 'appearancePreference', 'temperatureUnit'].some((key) =>
+  const { firstName, lastName, email, homeAddress, preferredAirport, mapPreference, calendarPreference, appearancePreference, temperatureUnit } = req.body ?? {};
+  const hasAnyProfileField = ['firstName', 'lastName', 'email', 'homeAddress', 'preferredAirport', 'mapPreference', 'calendarPreference', 'appearancePreference', 'temperatureUnit'].some((key) =>
     Object.prototype.hasOwnProperty.call(body, key)
   );
+  if (Object.prototype.hasOwnProperty.call(body, 'calendarPreference') && calendarPreference !== 'google' && calendarPreference !== 'apple') {
+    res.status(400).json({ error: 'Calendar preference must be google or apple' });
+    return;
+  }
   if (!hasAnyProfileField) {
     res.status(400).json({ error: 'At least one field is required' });
     return;
@@ -479,6 +483,7 @@ router.patch('/profile', async (req, res) => {
       homeAddress: typeof homeAddress === 'string' ? homeAddress.trim() : undefined,
       preferredAirport: typeof preferredAirport === 'string' ? preferredAirport.trim() : undefined,
       mapPreference: typeof mapPreference === 'string' ? mapPreference.trim().toLowerCase() : undefined,
+      calendarPreference,
       appearancePreference: typeof appearancePreference === 'string' ? appearancePreference.trim().toLowerCase() : undefined,
       temperatureUnit: typeof temperatureUnit === 'string' ? temperatureUnit.trim().toLowerCase() : undefined,
     });

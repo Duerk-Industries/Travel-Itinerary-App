@@ -1,3 +1,5 @@
+import AddToCalendarButton from './AddToCalendarButton';
+import { lodgingCalendarEvent } from '../utils/calendarEvents';
 import React, { memo, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, ScrollView, Text, View, TouchableOpacity, useWindowDimensions, Image, Platform } from 'react-native';
 import { type Lodging, fetchPlaceDetailsApi, type PlaceDetailsPayload } from '../tabs/lodging';
@@ -256,6 +258,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
               </View>
             </View>
           ) : null}
+          <AddToCalendarButton event={lodgingCalendarEvent({ ...lodging, check_in_date: lodging.checkInDate, check_out_date: lodging.checkOutDate })} styles={styles} />
         </ScrollView>
         <View style={[styles.row, styles.detailActionsRow]}>
           <View style={detailStyles.actionGroup}>

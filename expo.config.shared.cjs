@@ -197,6 +197,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       [resolvePluginFromApp('expo-sqlite/app.plugin.js', appDir), { useSQLCipher: true }],
       [resolvePluginFromApp('expo-secure-store/app.plugin.js', appDir), { configureAndroidBackup: true }],
       resolvePluginFromApp('@maplibre/maplibre-react-native/app.plugin.js', appDir),
+      ['expo-calendar', { calendarPermission: 'Allow WanderBunnies to add trip events to your calendar.' }],
       'expo-web-browser',
       'expo-video',
       'expo-dev-client',

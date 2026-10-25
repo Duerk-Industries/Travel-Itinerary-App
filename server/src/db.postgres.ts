@@ -532,6 +532,7 @@ export const initDb = async (): Promise<void> => {
       home_address TEXT,
       preferred_airport TEXT,
       map_preference TEXT,
+      calendar_preference TEXT,
       appearance_preference TEXT,
       temperature_unit TEXT,
       password_hash TEXT NOT NULL,
@@ -550,6 +551,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS home_address TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS preferred_airport TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS map_preference TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS calendar_preference TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS appearance_preference TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS temperature_unit TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
@@ -2455,6 +2457,7 @@ export const getWebUserProfile = async (
   homeAddress?: string | null;
   preferredAirport?: string | null;
   mapPreference?: 'google' | 'apple' | 'waze' | null;
+  calendarPreference?: 'google' | 'apple' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
   temperatureUnit?: 'fahrenheit' | 'celsius' | null;
 } | null> => {
@@ -2467,10 +2470,11 @@ export const getWebUserProfile = async (
     home_address: string | null;
     preferred_airport: string | null;
     map_preference: string | null;
+    calendar_preference: string | null;
     appearance_preference: string | null;
     temperature_unit: string | null;
   }>(
-    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, appearance_preference, temperature_unit FROM web_users WHERE id = $1 LIMIT 1`,
+    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, calendar_preference, appearance_preference, temperature_unit FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
   );
   if (rows.length) {
@@ -2483,6 +2487,7 @@ export const getWebUserProfile = async (
       homeAddress: row.home_address ?? null,
       preferredAirport: row.preferred_airport ?? null,
       mapPreference: row.map_preference === 'google' || row.map_preference === 'apple' || row.map_preference === 'waze' ? row.map_preference : null,
+      calendarPreference: row.calendar_preference === 'google' || row.calendar_preference === 'apple' ? row.calendar_preference : null,
       appearancePreference: row.appearance_preference === 'light' || row.appearance_preference === 'dark' || row.appearance_preference === 'auto' ? row.appearance_preference : null,
       temperatureUnit: row.temperature_unit === 'fahrenheit' || row.temperature_unit === 'celsius' ? row.temperature_unit : null,
     };
@@ -2509,6 +2514,7 @@ export const updateWebUserProfile = async (
     homeAddress?: string;
     preferredAirport?: string;
     mapPreference?: string;
+    calendarPreference?: string;
     appearancePreference?: string;
     temperatureUnit?: string;
   }
@@ -2520,6 +2526,7 @@ export const updateWebUserProfile = async (
   homeAddress?: string | null;
   preferredAirport?: string | null;
   mapPreference?: 'google' | 'apple' | 'waze' | null;
+  calendarPreference?: 'google' | 'apple' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
   temperatureUnit?: 'fahrenheit' | 'celsius' | null;
 }> => {
@@ -2559,6 +2566,7 @@ export const updateWebUserProfile = async (
       updates.mapPreference === 'google' || updates.mapPreference === 'apple' || updates.mapPreference === 'waze'
         ? updates.mapPreference
         : null;
+    const normalizedCalendarPreference = updates.calendarPreference === 'google' || updates.calendarPreference === 'apple' ? updates.calendarPreference : null;
     const normalizedAppearancePreference =
       updates.appearancePreference === 'light' || updates.appearancePreference === 'dark' || updates.appearancePreference === 'auto'
         ? updates.appearancePreference
@@ -2578,7 +2586,8 @@ export const updateWebUserProfile = async (
         preferred_airport = CASE WHEN $5::text IS NULL THEN preferred_airport ELSE NULLIF($5::text, '') END,
         map_preference = CASE WHEN $6::text IS NULL THEN map_preference ELSE NULLIF($6::text, '') END,
         appearance_preference = CASE WHEN $7::text IS NULL THEN appearance_preference ELSE NULLIF($7::text, '') END,
-        temperature_unit = CASE WHEN $8::text IS NULL THEN temperature_unit ELSE NULLIF($8::text, '') END
+        temperature_unit = CASE WHEN $8::text IS NULL THEN temperature_unit ELSE NULLIF($8::text, '') END,
+        calendar_preference = COALESCE($9::text, calendar_preference)
       WHERE id = $1
       RETURNING
         id,
@@ -2588,6 +2597,7 @@ export const updateWebUserProfile = async (
         home_address as "homeAddress",
         preferred_airport as "preferredAirport",
         map_preference as "mapPreference",
+        calendar_preference as "calendarPreference",
         appearance_preference as "appearancePreference",
         temperature_unit as "temperatureUnit"
     `,
@@ -2600,6 +2610,7 @@ export const updateWebUserProfile = async (
         normalizedMapPreference,
         normalizedAppearancePreference,
         normalizedTemperatureUnit,
+        normalizedCalendarPreference,
       ]
     );
 

@@ -1,3 +1,4 @@
+import ActivityDescriptionGenerator from './ActivityDescriptionGenerator';
 import React from 'react';
 import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -222,6 +223,10 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, notes: text }))}
               multiline
             />
+            <ActivityDescriptionGenerator
+              key={JSON.stringify([draft.name, draft.startLocation, draft.date, draft.notes])}
+              input={{ name: draft.name, location: draft.startLocation, notes: draft.notes }}
+              styles={styles} onApply={notes => onChange(previous => ({ ...previous, notes }))} />
             <Text style={styles.modalLabel}>Participants</Text>
             <View style={styles.payerChips}>
               {activeMembers.map((m) => {

@@ -1,3 +1,5 @@
+import AddToCalendarButton from './AddToCalendarButton';
+import { type CalendarEvent } from '../utils/calendarEvents';
 import React, { memo, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../theme/theme';
@@ -23,6 +25,7 @@ export type TripItemDetailsDialogProps = {
   onEdit: () => void;
   onDelete: () => void;
   supplementalContent?: React.ReactNode;
+  calendarEvent?: CalendarEvent | null;
   secondaryAction?: { label: string; onPress: () => void; testID?: string } | null;
   testID?: string;
 };
@@ -41,6 +44,7 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
   onEdit,
   onDelete,
   supplementalContent,
+  calendarEvent,
   secondaryAction = null,
   testID,
 }) => {
@@ -112,6 +116,8 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
           </View>
         ))}
         {supplementalContent}
+        <AddToCalendarButton event={calendarEvent ?? null} styles={styles} />
+        {calendarEvent && !calendarEvent.allDay ? <Text style={styles.helperText}>Check the event time zone before saving. Times use the booking's local time; no time zone is recorded.</Text> : null}
       </ScrollView>
       <View style={detailStyles.footer}>
         <View style={detailStyles.actionGroup}>

@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 /// <reference types="jest" />
+import { generateLocalActivityDescription, localDescriptionsAvailable } from '../utils/localActivityDescriptions';
 import { renderHook, act } from '@testing-library/react-native';
 import { useAssistantChat, MAX_CONVERSATION_MESSAGES } from '../hooks/useAssistantChat';
 
@@ -48,6 +49,24 @@ describe('useAssistantChat', () => {
     window.localStorage.clear();
     mockedDetectCapability.mockReturnValue({ supported: true });
     mockedLoadAssistantEngine.mockResolvedValue({ __fakeEngine: true });
+  });
+
+  it('offers isolated activity drafting only after loading and removes it on unmount', async () => {
+    const view = renderHook(() => useAssistantChat({ userId: 'writer' }));
+    expect(localDescriptionsAvailable()).toBe(false);
+    await act(async () => { await view.result.current.loadModel(); });
+    expect(localDescriptionsAvailable()).toBe(true);
+    mockedStreamAssistantReply.mockResolvedValue({ text: 'Visit the museum in Tokyo.', usage: null });
+    let text = '';
+    await act(async () => { text = await generateLocalActivityDescription({ name: 'Museum', location: 'Tokyo', notes: '' }); });
+    expect(text).toBe('Visit the museum in Tokyo.');
+    expect(mockedLoadAssistantEngine).toHaveBeenCalledTimes(1);
+    expect(view.result.current.messages).toEqual([]);
+    const prompt = mockedStreamAssistantReply.mock.calls[0][1];
+    expect(prompt[0].content).toContain('Do not invent');
+    expect(JSON.parse(prompt[1].content)).toEqual({ name: 'Museum', location: 'Tokyo', notes: '' });
+    view.unmount();
+    expect(localDescriptionsAvailable()).toBe(false);
   });
 
   it('starts idle and reflects an unsupported device without attempting to load', async () => {

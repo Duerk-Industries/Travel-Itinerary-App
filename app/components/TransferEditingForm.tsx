@@ -3,7 +3,7 @@ import { TRANSFER_TYPES as CANONICAL_TRANSFER_TYPES, normalizeTransferType } fro
 import TransferDirections from './TransferDirections';
 import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from './HotelAddressPicker';
-import type { TransferHotel } from '../utils/transferHotels';
+import { transferLocationFieldLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 import React from 'react';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -23,6 +23,7 @@ export type FlightEditingFormProps = {
   headers?: Record<string, string>;
   mapApp?: MapApp;
   lodgings?: TransferHotel[];
+  activities?: TransferActivity[];
   transferTypes?: TransferType[];
   visible: boolean;
   flightId: string | null;
@@ -62,6 +63,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
   modalKind,
   transferTypes = TRANSFER_TYPES,
   lodgings = [],
+  activities = [],
   mapApp,
   backendUrl,
   headers,
@@ -278,10 +280,10 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
               {ground ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
-                <HotelAddressPicker hotels={lodgings} date={flight.departureDate} styles={styles} testID="ground-departure-hotel"
+                <HotelAddressPicker hotels={lodgings} activities={activities} date={flight.departureDate} styles={styles} testID="ground-departure-hotel"
                   onSelect={address => setFlight(prev => prev ? { ...prev, departureLocation: address } : prev)} />
                 <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} testID="flight-modal-departure-location"
-                  value={flight.departureLocation} placeholder="Location" autoComplete="off"
+                  value={transferLocationFieldLabel(flight.departureLocation, lodgings, flight.departureDate, activities)} placeholder="Location" autoComplete="off"
                   onChangeText={(text: string) => setFlight(prev => prev ? { ...prev, departureLocation: text } : prev)} />
               </View> : backendUrl ? (
                 <AirportInput backendUrl={backendUrl} headers={headers} styles={styles}
@@ -341,10 +343,10 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
               {ground ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
-                <HotelAddressPicker hotels={lodgings} date={flight.arrivalDate || flight.departureDate} styles={styles} testID="ground-arrival-hotel"
+                <HotelAddressPicker hotels={lodgings} activities={activities} date={flight.arrivalDate || flight.departureDate} styles={styles} testID="ground-arrival-hotel"
                   onSelect={address => setFlight(prev => prev ? { ...prev, arrivalLocation: address } : prev)} />
                 <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} testID="flight-modal-arrival-location"
-                  value={flight.arrivalLocation} placeholder="Location" autoComplete="off"
+                  value={transferLocationFieldLabel(flight.arrivalLocation, lodgings, flight.arrivalDate || flight.departureDate, activities)} placeholder="Location" autoComplete="off"
                   onChangeText={(text: string) => setFlight(prev => prev ? { ...prev, arrivalLocation: text } : prev)} />
               </View> : backendUrl ? (
                 <AirportInput backendUrl={backendUrl} headers={headers} styles={styles}
@@ -375,7 +377,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             </View>
           </View>
 
-          {ground && <TransferDirections origin={flight.departureLocation} destination={flight.arrivalLocation} transferType={flight.transferType} mapApp={mapApp} styles={styles} />}
+          {ground && <TransferDirections lodgings={lodgings} departureDate={flight.departureDate} arrivalDate={flight.arrivalDate} origin={flight.departureLocation} destination={flight.arrivalLocation} transferType={flight.transferType} mapApp={mapApp} styles={styles} />}
           {!ground && <>
           <Text style={[styles.modalLabel, { marginTop: 16 }]}>Layover</Text>
           <View style={rowStyle}>

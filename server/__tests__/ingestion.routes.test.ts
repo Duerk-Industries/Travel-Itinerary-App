@@ -22,6 +22,22 @@ describe('ingestion routes', () => {
     await helpers.seedTiersForTest();
   });
 
+  it('reflects intake flag changes in config without clearing the entitlement cache', async () => {
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const db = require('../src/db') as typeof import('../src/db');
+    const helpers = require('./helpers') as typeof import('./helpers');
+    const { token, userId } = await helpers.registerAndLoginWebUser({ firstName: 'Flags', lastName: 'Test', email: 'ingest-flags@example.com', password: 'secret123' });
+    await helpers.setUserTierInDb(userId, 'premium');
+    const keys = ['feature_ingest_manual_upload', 'feature_ingest_forwarded_mailbox', 'feature_ingest_gmail_import'];
+    for (const enabled of [false, true, false]) {
+      for (const key of keys) await db.setFeatureFlag(key, enabled, null);
+      const response = await request(app).get('/api/ingestion/config').set('Authorization', `Bearer ${token}`).expect(200);
+      expect(response.body.features).toMatchObject({ manualUpload: enabled, forwardedMailbox: enabled, gmailImport: enabled });
+      expect(response.headers['cache-control']).toBe('private, no-store');
+    }
+  });
+
   it('allows premium users to upload, review, edit, assign, and soft-delete items', async () => {
     const request = require('supertest') as typeof import('supertest');
     const { app } = require('../src/app') as typeof import('../src/app');

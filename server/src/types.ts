@@ -301,6 +301,7 @@ export interface WebUser {
   homeAddress?: string | null;
   preferredAirport?: string | null;
   mapPreference?: 'google' | 'apple' | 'waze' | null;
+  calendarPreference?: 'google' | 'apple' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
   temperatureUnit?: 'fahrenheit' | 'celsius' | null;
   emailVerified?: boolean;

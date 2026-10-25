@@ -34,6 +34,9 @@ const styles: Record<string, any> = {
   errorText: {},
 };
 
+const flattenStyle = (style: any): Record<string, unknown> => Array.isArray(style)
+  ? Object.assign({}, ...style.map(flattenStyle)) : style ?? {};
+
 describe('shared dialog layouts', () => {
   it('renders the shared shell overlay, title, message, and card content', () => {
     const { getByTestId, getByText, queryByTestId, rerender } = render(
@@ -43,7 +46,11 @@ describe('shared dialog layouts', () => {
     );
 
     const overlay = getByTestId('layout-shell');
-    expect(overlay.props.style).toEqual([styles.modalOverlay, undefined]);
+    expect(overlay.props.style).toContain(styles.modalOverlay);
+    expect(flattenStyle(overlay.props.style)).toMatchObject({
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      justifyContent: 'flex-start', alignItems: 'center',
+    });
     expect(overlay.props.accessibilityViewIsModal).toBe(true);
     expect(overlay.props.accessibilityLabel).toBe('Layout Check');
     expect(getByText('Layout Check')).toBeTruthy();
@@ -132,6 +139,9 @@ describe('shared dialog layouts', () => {
       return Array.isArray(style) && style[0] === styles.confirmModal;
     });
 
-    expect(card?.props.style).toEqual([styles.confirmModal, [styles.modalCard, styles.expenseModalCard]]);
+    expect(card).toBeDefined();
+    expect(card!.props.style).toContain(styles.confirmModal);
+    expect(card!.props.style).toContainEqual([styles.modalCard, styles.expenseModalCard]);
+    expect(flattenStyle(card!.props.style)).toMatchObject({ name: 'expense-card', marginTop: 0, maxHeight: '100%' });
   });
 });

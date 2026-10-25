@@ -5,7 +5,7 @@
 /// <reference types="node" />
 
 import React, { useState } from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { ActivityTab, type Tour } from '../tabs/activities';
 
 jest.mock('react-native', () => {
@@ -146,9 +146,10 @@ describe('Activity dialog layout', () => {
 
     fireEvent.press(getByTestId('activity-details-tour-1'));
 
-    expect(getByText('Museum Tour').props.style.color).toBe(theme.colors.text);
-    expect(getByText('Date').props.style.color).toBe(theme.colors.text);
-    expect(getByTestId('activity-details-modal')).toBeTruthy();
+    const dialog = within(getByTestId('activity-details-modal'));
+    expect(dialog.getByText('Museum Tour').props.style.color).toBe(theme.colors.text);
+    expect(dialog.getByText('Date').props.style.color).toBe(theme.colors.text);
+    expect(dialog.getByLabelText('Add to calendar')).toBeTruthy();
   });
 
   it('opens as a contained modal, saves the draft, and closes without a network request', async () => {

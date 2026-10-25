@@ -1,3 +1,4 @@
+import { uiTransferCalendarEvent } from '../utils/calendarEvents';
 import React, { useEffect, useState } from 'react';
 import type { Flight } from '../tabs/transfers';
 import type { AppTheme } from '../theme/theme';
@@ -6,13 +7,15 @@ import { isFlightTransfer } from '../utils/transferCategory';
 import { formatFlightDetails } from '../utils/overviewBuilder';
 import TripItemDetailsDialog from './TripItemDetailsDialog';
 import TransferDirections from './TransferDirections';
+import { transferLocationLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 
 type Props = {
   flight: Flight; backendUrl: string; headers: Record<string, string>;
   styles: Record<string, any>; theme?: AppTheme; readOnly?: boolean; mapApp?: MapApp;
+  lodgings?: TransferHotel[]; activities?: TransferActivity[];
   onClose: () => void; onEdit: () => void; onDelete: () => void; testID?: string;
 };
-function TransferDetails({ flight, backendUrl, headers, styles, theme, readOnly, mapApp, onClose, onEdit, onDelete, testID }: Props) {
+function TransferDetails({ flight, backendUrl, headers, styles, theme, readOnly, mapApp, lodgings = [], activities = [], onClose, onEdit, onDelete, testID }: Props) {
   const [detailAirportLabels, setDetailAirportLabels] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!flight || !isFlightTransfer(flight)) return;
@@ -34,7 +37,8 @@ function TransferDetails({ flight, backendUrl, headers, styles, theme, readOnly,
   const detailAirportLocation = (flight: Flight, side: 'departure' | 'arrival') => {
     const code = String(flight[`${side}_airport_code`] || '').trim().toUpperCase();
     const location = String(flight[`${side}_location`] || '').trim();
-    if (!isFlightTransfer(flight)) return location || code || 'N/A';
+    if (!isFlightTransfer(flight)) return transferLocationLabel(location || code, lodgings,
+      side === 'departure' ? flight.departure_date : flight.arrival_date || flight.departure_date, activities) || 'N/A';
     if (detailAirportLabels[code]) return detailAirportLabels[code];
     if (location && location.toUpperCase() !== code) {
       return code && !location.toUpperCase().includes(`(${code})`) ? `${location} (${code})` : location;
@@ -43,13 +47,13 @@ function TransferDetails({ flight, backendUrl, headers, styles, theme, readOnly,
   };
 
   const ground = !isFlightTransfer(flight);
-  return <TripItemDetailsDialog visible kind="flight"
+  return <TripItemDetailsDialog visible kind="flight" calendarEvent={uiTransferCalendarEvent(flight)}
     title={`${detailAirportLocation(flight, 'departure')} → ${detailAirportLocation(flight, 'arrival')}`}
     status={flight.status || undefined}
     rows={formatFlightDetails(flight).map(item => ({ label: item.label,
       value: item.label === 'Departure' ? detailAirportLocation(flight, 'departure')
         : item.label === 'Arrival' ? detailAirportLocation(flight, 'arrival') : item.value }))}
-    supplementalContent={ground ? <TransferDirections origin={flight.departure_location || flight.departure_airport_code || ''}
+    supplementalContent={ground ? <TransferDirections lodgings={lodgings} departureDate={flight.departure_date} arrivalDate={flight.arrival_date || flight.departure_date} origin={flight.departure_location || flight.departure_airport_code || ''}
       destination={flight.arrival_location || flight.arrival_airport_code || ''}
       transferType={flight.transfer_type || flight.transferType || 'Other'} mapApp={mapApp} styles={styles} /> : undefined}
     styles={styles} theme={theme} readOnly={readOnly} onClose={onClose} onEdit={onEdit} onDelete={onDelete} testID={testID} />;
