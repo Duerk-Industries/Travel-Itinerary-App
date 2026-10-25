@@ -409,66 +409,13 @@ describe('DailyExpensesTab', () => {
     });
   });
 
-  it('surfaces unreachable expenses and opens linked itinerary items from their description', () => {
-    const setExpenses = jest.fn();
-    const onEditItineraryItem = jest.fn();
-
-    const list = [
-      ...expenses,
-      { id: 'act-1', tripId: 't1', groupId: 'g1', userId: 'u1', expenseDate: '2025-02-01', category: 'Activities', amount: 63.71, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'], createdAt: '', sourceType: 'activity', sourceId: 'a1' },
-      { id: 'act-0', tripId: 't1', groupId: 'g1', userId: 'u1', expenseDate: '2025-02-02', category: 'Activities', amount: 0, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'], createdAt: '', sourceType: 'activity', sourceId: 'a2' },
-      { id: 'old-1', tripId: 't1', groupId: 'g1', userId: 'u1', expenseDate: '2024-12-25', category: 'Lunch', amount: 9, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'], createdAt: '' },
-    ];
-
-    const screen = render(
-      <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
-        groupMembers={groupMembers} expenses={list as any} setExpenses={setExpenses} defaultPayerId="m1" styles={styles}
-        itineraryExpenseDescriptions={{ 'activity:a1': 'Rome Food Tour', 'activity:a2': 'Colosseum Tour' }}
-        onEditItineraryItem={onEditItineraryItem} costTrackingAllowed />
-    );
-
-    // Non-zero entries outside the grid appear here; zero-cost activities do not.
-    expect(screen.getByText('Other expenses (2)')).toBeTruthy();
-    expect(screen.queryByTestId('other-expense-row-act-0')).toBeNull();
-    expect(screen.getByTestId('other-expense-row-act-1')).toBeTruthy();
-    expect(screen.getByTestId('other-expense-row-old-1')).toBeTruthy();
-    expect(screen.getByText('Paid by')).toBeTruthy();
-    expect(within(screen.getByTestId('other-expense-row-act-1')).getByText('Rome Food Tour')).toBeTruthy();
-    expect(within(screen.getByTestId('other-expense-row-act-1')).getAllByText('Alex Rider')).toHaveLength(2);
-    expect(screen.queryByText('from itinerary')).toBeNull();
-    expect(screen.queryByText('Action')).toBeNull();
-    expect(screen.queryByTestId('expense-delete-act-1')).toBeNull();
-    // e1 (Breakfast, in range) stays in the grid, not here.
-    expect(screen.queryByTestId('other-expense-row-e1')).toBeNull();
-
-    fireEvent.press(screen.getByTestId('other-expense-edit-source-act-1'));
-    expect(onEditItineraryItem).toHaveBeenCalledWith('activity', 'a1');
-
-    // Zero entries no longer need manual cleanup.
-    expect(screen.queryByTestId('other-expenses-clear-zero')).toBeNull();
-  });
-
-  it('automatically hides zero entries, restores an activity when a cost is added, and hides it again at zero', () => {
-    const setExpenses = jest.fn();
-    const activity = { ...expenses[0], id: 'activity-zero', category: 'Activities', sourceType: 'activity', sourceId: 'a-zero', amount: 0 };
-    const zeroDinner = { ...expenses[0], id: 'dinner-zero', category: 'Dinner', amount: 0 };
-    const refund = { ...activity, id: 'refund', sourceId: 'a-refund', amount: -5 };
-    const draw = (amount: number) => <DailyExpensesTab
+  it('does not show Other Expenses on the Daily Expenses page', () => {
+    const paidActivity = { ...expenses[0], id: 'paid-activity', category: 'Activities', amount: 25, sourceType: 'activity', sourceId: 'activity' };
+    const screen = render(<DailyExpensesTab
       backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
-      groupMembers={groupMembers} expenses={[...expenses, { ...activity, amount }, zeroDinner, refund]}
-      setExpenses={setExpenses} defaultPayerId="m1" styles={styles} costTrackingAllowed
-      itineraryExpenseDescriptions={{ 'activity:a-zero': 'Museum visit' }} />;
-    const screen = render(draw(0));
-    expect(screen.queryByTestId('other-expense-row-activity-zero')).toBeNull();
-    expect(screen.getByTestId('other-expense-row-refund')).toBeTruthy();
-    expect(screen.getByText('Other expenses (1)')).toBeTruthy();
-    screen.rerender(draw(25));
-    expect(within(screen.getByTestId('other-expense-row-activity-zero')).getByText('$25.00')).toBeTruthy();
-    expect(screen.getByText('Other expenses (2)')).toBeTruthy();
-    screen.rerender(draw(0));
-    expect(screen.queryByTestId('other-expense-row-activity-zero')).toBeNull();
-    // Hiding entries must not delete the itinerary's underlying expense records.
-    expect(setExpenses).not.toHaveBeenCalled();
+      groupMembers={groupMembers} expenses={[...expenses, paidActivity]} setExpenses={jest.fn()}
+      defaultPayerId="m1" styles={styles} costTrackingAllowed />);
+    expect(screen.queryByTestId('other-expenses')).toBeNull();
   });
 
   it('omits Other Expenses entirely when all of its entries are zero', () => {

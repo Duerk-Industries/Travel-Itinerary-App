@@ -1,3 +1,4 @@
+import CostReportExpenses from './components/CostReportExpenses';
 import KeyboardViewport from './components/KeyboardViewport';
 import { isFlightTransfer } from './utils/transferCategory';
 import { shadowStyle } from './utils/shadowStyle';
@@ -1475,7 +1476,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const overallCost = useMemo(() => allExpenses.reduce((sum, e) => sum + e.amount, 0), [allExpenses]);
   const costReportRows = useMemo(() => {
-    const categories = [...new Set(allExpenses.map(e => e.category))].sort();
+    const categories = [...new Set(allExpenses.filter(e => e.amount !== 0).map(e => e.category))].sort();
     return categories.map(category => {
       const categoryExpenses = allExpenses.filter(e => e.category === category);
       const total = categoryExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -1529,7 +1530,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
 
   const downloadCsv = (csvContent: string, fileName: string) => {
-    void exportCsv(csvContent, fileName).then((result) => {
+    return exportCsv(csvContent, fileName).then((result) => {
       if (result === 'unavailable' || result === 'failed') {
         Alert.alert('CSV export', 'Could not export the CSV from this device.');
       }
@@ -3672,35 +3673,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 <Text style={styles.sectionTitle}>Cost Report</Text>
                 <View style={[styles.row, styles.sectionActions]}>
                   <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Download Cost Details"
+                    testID="cost-details-download"
                     style={[styles.button, styles.smallButton]}
-                    onPress={() => {
-                      const csv = convertExpensesToCsv('paid');
-                      const fileName = `paid-expenses-${activeTripName}.csv`;
-                      downloadCsv(csv, fileName);
+                    onPress={async () => {
+                      await downloadCsv(convertExpensesToCsv('paid'), 'Who_Paid.csv');
+                      await downloadCsv(convertExpensesToCsv('incurred'), 'Who_Spent_Money.csv');
                       track('report_exported', { report: 'cost_csv' }, { tripId: activeTripId });
                     }}
                   >
-                    <Text style={styles.buttonText}>Export Paid CSV</Text>
+                    <Text style={styles.buttonText}>Download Cost Details</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.smallButton]}
-                    onPress={() => {
-                      const csv = convertExpensesToCsv('incurred');
-                      const fileName = `incurred-expenses-${activeTripName}.csv`;
-                      downloadCsv(csv, fileName);
-                      track('report_exported', { report: 'cost_csv' }, { tripId: activeTripId });
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Export Incurred CSV</Text>
-                  </TouchableOpacity>
-                  {!isFollowingMode ? (
-                    <TouchableOpacity
-                      style={[styles.button, styles.smallButton]}
-                      onPress={() => requestPageChange('ledger')}
-                    >
-                      <Text style={styles.buttonText}>Settle Up</Text>
-                    </TouchableOpacity>
-                  ) : null}
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
@@ -3711,6 +3695,25 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 overallCost={overallCost}
                 styles={styles}
                 formatMemberName={formatMemberName}
+              />
+              {!isFollowingMode ? (
+                <View style={[styles.row, { marginTop: 16 }]}>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    testID="cost-settle-up"
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => requestPageChange('ledger')}
+                  >
+                    <Text style={styles.buttonText}>Settle Up</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              <CostReportExpenses
+                expenses={allExpenses}
+                members={groupMembers}
+                styles={styles}
+                readOnly={isFollowingMode || offlineReadOnly}
+                onEditItineraryItem={openItineraryExpenseEditor}
               />
             </View>
           ) : null}

@@ -58,6 +58,8 @@ export const computePayerTotals = <T>(
 
 // New unified expense structure
 export interface UnifiedExpense {
+  sourceType?: string;
+  sourceId?: string;
   id: string;
   date: string;
   category: string;
@@ -91,6 +93,8 @@ export const buildAllExpenses = (
       [];
     allExpenses.push({
       id: `flight-${f.id}`,
+      sourceType: 'flight',
+      sourceId: f.id,
       date: f.departureDate ?? f.departure_date,
       category: transferExpenseCategory(f),
       description: flightExpenseDescription(f),
@@ -112,6 +116,8 @@ export const buildAllExpenses = (
       [];
     allExpenses.push({
       id: `lodging-${l.id}`,
+      sourceType: 'lodging',
+      sourceId: l.id,
       date: l.checkInDate ?? l.check_in_date,
       category: 'Lodging',
       description: l.name ?? '',
@@ -133,6 +139,8 @@ export const buildAllExpenses = (
       [];
     allExpenses.push({
       id: `tour-${t.id}`,
+      sourceType: 'activity',
+      sourceId: t.id,
       date: t.date,
       category: 'Activities',
       description: t.name ?? '',
@@ -154,6 +162,8 @@ export const buildAllExpenses = (
       [];
     allExpenses.push({
       id: `car-${c.id}`,
+      sourceType: 'car_rental',
+      sourceId: c.id,
       date: c.pickupDate ?? c.pickup_date,
       category: 'Car Rentals',
       description: carRentalExpenseDescription(c),

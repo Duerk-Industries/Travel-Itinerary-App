@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 // Browser layout tests use the real frontend with isolated, deterministic API data.
 // They never sign in to or mutate an existing travel account.
-async function boot(page: Page) {
+async function boot(page: Page, expenses: unknown[] = []) {
   const user = { userId: 'input-user', role: 'user', email: 'input@example.com', firstName: 'Input', lastName: 'Tester', exp: Math.floor(Date.now() / 1000) + 3600 };
   const token = `${Buffer.from('{"alg":"HS256"}').toString('base64url')}.${Buffer.from(JSON.stringify(user)).toString('base64url')}.test`;
   const members = [
@@ -16,6 +16,7 @@ async function boot(page: Page) {
     let json: unknown = [];
     if (path === '/api/account') json = { ...user, id: user.userId, dateOfBirth: '1990-01-01', entitlements: { costTracking: true }, tierKey: 'pro' };
     else if (path === '/api/trips') json = [trip];
+    else if (path === '/api/expenses') json = expenses;
     else if (path === '/api/groups') json = [{ id: 'input-group', name: 'Input group', ownerId: user.userId, members, invites: [] }];
     else if (path.endsWith('/members')) json = [members[2], members[0], members[1]];
     else if (path.endsWith('/covered-by')) json = {};
@@ -63,6 +64,51 @@ async function aboveKeyboard(page: Page, control: Locator, height: number, top =
 }
 
 for (const width of [390, 1280]) {
+  test(`individual non-zero expenses appear after the Cost Report and not on Daily Expenses at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const base = { tripId: 'input-trip', groupId: 'input-group', userId: 'input-user', expenseDate: '2027-05-10', category: 'Lunch', currency: 'USD', payerIds: ['member-a'], forIds: ['member-a'], createdAt: '' };
+    await boot(page, [
+      { ...base, id: 'lunch-a', vendor: 'Lunch at cafe', amount: 15 },
+      { ...base, id: 'lunch-b', vendor: 'Lunch at market', amount: 20 },
+      { ...base, id: 'free', vendor: 'Free meal', amount: 0 },
+    ]);
+    await page.getByTestId('home-nav-cost').click();
+    const details = page.getByTestId('other-expenses');
+    await expect(details.getByTestId(/^other-expense-row-/)).toHaveCount(2);
+    await expect(details.getByText('Lunch at cafe', { exact: true })).toBeVisible();
+    await expect(details.getByText('Lunch at market', { exact: true })).toBeVisible();
+    await expect(details.getByText('Free meal', { exact: true })).toHaveCount(0);
+    const settleBounds = await page.getByTestId('cost-settle-up').boundingBox();
+    const detailsBounds = await details.boundingBox();
+    expect(detailsBounds!.y).toBeGreaterThan(settleBounds!.y);
+    await page.getByLabel('Home', { exact: true }).click();
+    await page.getByTestId('home-nav-expenses').click();
+    await expect(page.getByTestId('other-expenses')).toHaveCount(0);
+  });
+
+  test(`cost details download both CSVs and Settle Up follows the report at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await boot(page);
+    await page.getByTestId('home-nav-cost').click();
+    const download = page.getByRole('button', { name: 'Download Cost Details', exact: true });
+    await expect(download).toHaveCount(1);
+    await expect(page.getByText('Export Paid CSV', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Export Incurred CSV', { exact: true })).toHaveCount(0);
+    const downloads: string[] = [];
+    page.on('download', file => downloads.push(file.suggestedFilename()));
+    await download.click();
+    await expect.poll(() => downloads).toEqual(['Who_Paid.csv', 'Who_Spent_Money.csv']);
+    const settle = page.getByTestId('cost-settle-up');
+    const total = page.getByText('Overall', { exact: true });
+    await settle.scrollIntoViewIfNeeded();
+    const totalBounds = await total.boundingBox();
+    const settleBounds = await settle.boundingBox();
+    expect(totalBounds).not.toBeNull();
+    expect(settleBounds!.y).toBeGreaterThanOrEqual(totalBounds!.y + totalBounds!.height);
+    await settle.click();
+    await expect(page.getByTestId('cost-details-download')).toHaveCount(0);
+  });
+
   test(`payer dropdowns replace one alphabetized choice at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await boot(page);
