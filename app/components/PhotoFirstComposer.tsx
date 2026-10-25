@@ -10,7 +10,8 @@
 //
 // On commit it drives the existing uploadBlogFiles() batch once per day bucket.
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import { uploadBlogFiles, type PickedMediaFile } from '../utils/blogUpload';
 import { formatDateLong } from '../utils/formatDateLong';
 

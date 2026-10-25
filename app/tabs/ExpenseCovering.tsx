@@ -72,6 +72,7 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
             {formatMemberName(member)} is covered by:
           </Text>
           <SelectField
+            testID={`covering-select-${member.id}`}
             styles={styles}
             value={coveredBy[member.id] ?? ''}
             options={options}

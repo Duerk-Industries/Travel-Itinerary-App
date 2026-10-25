@@ -186,7 +186,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       // Play Console "Advertising ID: No" declaration (analytics plan, Phase 4).
       blockedPermissions: ['com.google.android.gms.permission.AD_ID'],
       edgeToEdgeEnabled: true,
-      softwareKeyboardLayoutMode: 'pan',
+      softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         foregroundImage: prefixAsset('./assets/wanderbunnies-android-foreground.png', assetPrefix),
         backgroundColor: '#0b3c79',

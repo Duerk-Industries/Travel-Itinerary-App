@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AppState, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import type { Notification, NotificationPreferences } from '../../server/src/types';
 import { getSocket } from '../utils/socket';
 import { registerForPushNotificationsAsync } from '../utils/pushNotifications';

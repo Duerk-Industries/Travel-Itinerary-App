@@ -4,7 +4,8 @@ import { keepsakeMapFallback } from '../utils/keepsakeMapData';
 import { captureKeepsakeMap, type KeepsakeMapCapture } from '../utils/keepsakeMapCapture';
 import type { BlogMapDay } from '../../server/src/services/blogMapService';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Modal, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import {
   KEEPSAKE_THEMES,
   buildKeepsakeHtml,

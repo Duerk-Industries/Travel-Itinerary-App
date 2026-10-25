@@ -7,6 +7,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import ExpenseCovering from '../tabs/ExpenseCovering';
+import { Modal } from 'react-native';
 
 const styles = {
   card: {},
@@ -87,5 +88,22 @@ describe('ExpenseCovering', () => {
     const { getByText } = render(<ExpenseCovering {...defaultProps} />);
     fireEvent.press(getByText('Save Covering Rules'));
     expect(mockSaveCoveredBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the first row options outside clipped rows and selects a traveler behind later rows', () => {
+    const screen = render(<ExpenseCovering {...defaultProps} styles={{ ...styles, row: { overflow: 'hidden', height: 44 } }} />);
+    fireEvent.press(within(screen.getByTestId('covering-row-m1')).getByText('No one'));
+    expect(screen.UNSAFE_getByType(Modal).props.visible).toBe(true);
+    fireEvent.press(screen.getByTestId('covering-select-m1-option-m3'));
+    const update = mockSetCoveredBy.mock.calls[0][0];
+    expect(update({ m2: 'm3' })).toEqual({ m1: 'm3', m2: 'm3' });
+    expect(screen.queryByTestId('covering-select-m1-options')).toBeNull();
+  });
+
+  it('can clear a coverage rule from the modal without changing another traveler', () => {
+    const screen = render(<ExpenseCovering {...defaultProps} coveredBy={{ m1: 'm2' }} />);
+    fireEvent.press(within(screen.getByTestId('covering-row-m1')).getByText('Blair Lee'));
+    fireEvent.press(screen.getByTestId('covering-select-m1-option-none'));
+    expect(mockSetCoveredBy.mock.calls[0][0]({ m1: 'm2', m3: 'm2' })).toEqual({ m3: 'm2' });
   });
 });

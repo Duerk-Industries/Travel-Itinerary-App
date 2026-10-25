@@ -43,6 +43,7 @@ jest.mock('react-native', () => {
     SectionList: 'SectionList',
     Switch: 'Switch',
     Modal: 'Modal',
+    KeyboardAvoidingView: 'KeyboardAvoidingView',
     SafeAreaView: 'SafeAreaView',
     ActivityIndicator: 'ActivityIndicator',
     StyleSheet: {

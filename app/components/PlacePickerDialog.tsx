@@ -1,6 +1,7 @@
 import { shadowStyle } from '../utils/shadowStyle';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import type { AppTheme } from '../theme/theme';
 import DateField from './DateField';
 

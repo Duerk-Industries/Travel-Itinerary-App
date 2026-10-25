@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { Modal, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import { useEscapeToClose } from '../hooks/useEscapeToClose';
 
 type DialogShellProps = {

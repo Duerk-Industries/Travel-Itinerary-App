@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import { parseClipboardMatrix, serializeClipboardMatrix } from '../utils/clipboardGrid';
 import { fixedTableColumn } from '../utils/tableColumns';
 import DateField from './DateField';

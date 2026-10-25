@@ -1,6 +1,7 @@
 import ActivityDescriptionGenerator from './ActivityDescriptionGenerator';
 import React from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
@@ -71,9 +72,9 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
     <Modal transparent visible animationType="fade" onRequestClose={onCancel}>
       <View style={styles.modalOverlay} testID="activity-form-modal">
         <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onCancel} />
-        <View style={[styles.modalCard, { marginTop: 0 }]}>
+        <View style={[styles.modalCard, { marginTop: 0, maxHeight: '100%', flexShrink: 1 }]}>
           <Text style={styles.sectionTitle}>{isNew ? 'Add Activity' : 'Edit Activity'}</Text>
-          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+          <ScrollView style={{ maxHeight: 420, flexShrink: 1 }} contentContainerStyle={{ paddingRight: 12, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             <Text style={styles.modalLabel}>Date</Text>
             <DateField
               value={draft.date}

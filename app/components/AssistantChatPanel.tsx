@@ -1,3 +1,4 @@
+import KeyboardViewport from './KeyboardViewport';
 import { shadowStyle } from '../utils/shadowStyle';
 /**
  * AssistantChatPanel — the on-device guide assistant's chat UI.
@@ -24,7 +25,6 @@ import {
   FlatList,
   StyleSheet,
   Platform,
-  KeyboardAvoidingView,
   ActivityIndicator,
 } from 'react-native';
 import type { AppTheme } from '../theme/theme';
@@ -327,9 +327,8 @@ const AssistantChatPanel: React.FC<Props> = ({
   if (!visible) return null;
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardViewport
       style={[themedStyles.container, panelStyle]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       testID="assistant-chat-panel"
     >
       <View style={themedStyles.header}>
@@ -371,7 +370,7 @@ const AssistantChatPanel: React.FC<Props> = ({
         )}
       </View>
       {renderBody()}
-    </KeyboardAvoidingView>
+    </KeyboardViewport>
   );
 };
 

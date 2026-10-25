@@ -3,7 +3,8 @@ import type { ImportTripDraft, ImportForwarderTrust, Trip as DomainTrip } from '
 import AutomaticImportSettings from '../components/AutomaticImportSettings';
 import ImportForwardingSetup from '../components/ImportForwardingSetup';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from '../components/KeyboardAwareModal';
 import { usePolling } from '../hooks/usePolling';
 import DateField from '../components/DateField';
 import type { AppTheme } from '../theme/theme';

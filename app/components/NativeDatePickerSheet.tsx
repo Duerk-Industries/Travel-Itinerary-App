@@ -17,7 +17,8 @@
 // sheet only left an empty dimmed sheet with a stray Done button visible behind the dialog, so
 // on Android the picker element is rendered bare.
 import React, { isValidElement, cloneElement } from 'react';
-import { Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import type { AppTheme } from '../theme/theme';
 
 export type NativeDatePickerSheetProps = {

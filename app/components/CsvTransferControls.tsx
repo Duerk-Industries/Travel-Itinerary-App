@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Platform, Text, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import { mapColumns, ACTIVITY_HEADER_ALIASES, LODGING_HEADER_ALIASES, parseCsv, toActivityReviewRows, toCsv, toLodgingReviewRows, type ImportReviewRow } from '../utils/dataTransfer';
 import { pickCsvFile, shareCsvFile } from '../utils/dataTransferPlatform';
 import { taskFailure, track, type TaskFailure } from '../utils/analytics/track';

@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import DropdownOptionButton from './DropdownOptionButton';
+import Modal from './KeyboardAwareModal';
 
 export type SelectFieldOption = {
   label: string;
@@ -73,9 +74,9 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
         data-testid={testID}
         onChange={(event) => onChange(event.currentTarget.value)}
       >
-        <option value="" style={{ color: themedWebStyle.color, backgroundColor: themedWebStyle.backgroundColor }}>
+        {!options.some(option => option.value === '') ? <option value="" style={{ color: themedWebStyle.color, backgroundColor: themedWebStyle.backgroundColor }}>
           {placeholder}
-        </option>
+        </option> : null}
         {options.map((option) => (
           <option key={option.value} value={option.value} style={{ color: themedWebStyle.color, backgroundColor: themedWebStyle.backgroundColor }}>
             {option.label}
@@ -100,26 +101,51 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
           <Text style={styles.selectCaret}>v</Text>
         </View>
       </TouchableOpacity>
-      {open ? (
-        <View style={[styles.dropdownList, listStyle]}>
-          <ScrollView
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator
-            contentContainerStyle={{ flexGrow: 1 }}
-          >
-            {options.map((option) => (
-              <DropdownOptionButton
-                key={option.value}
-                styles={styles}
-                onPress={() => selectValue(option.value)}
-                accessibilityLabel={`Select ${option.label}`}
+      {open && !disabled ? (
+        <Modal transparent visible animationType="fade" onRequestClose={() => setOpen(false)}>
+          <View style={{ flex: 1, padding: 24, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }}>
+            <TouchableOpacity
+              style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss options"
+              onPress={() => setOpen(false)}
+            />
+            <View
+              testID={testID ? `${testID}-options` : undefined}
+              accessibilityViewIsModal
+              accessibilityLabel={title ?? placeholder}
+              style={[
+                { backgroundColor: styles.input?.backgroundColor ?? '#fff', borderRadius: 12, padding: 12, width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center' },
+                { borderColor: styles.input?.borderColor, borderWidth: 1 },
+              ]}
+            >
+              <Text accessibilityRole="header" style={[styles.cellText, { fontWeight: '700', marginBottom: 8 }]}>{title ?? placeholder}</Text>
+              <ScrollView
+                // Inline dropdown positioning must not escape the modal's bounds.
+                style={[listStyle, { position: 'relative', top: 0, left: 0, right: 0, bottom: 0, flexShrink: 1 }]}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+                contentContainerStyle={{ flexGrow: 1 }}
               >
-                <Text style={styles.cellText}>{option.label}</Text>
-              </DropdownOptionButton>
-            ))}
-          </ScrollView>
-        </View>
+                {options.map((option) => (
+                  <DropdownOptionButton
+                    key={option.value}
+                    styles={styles}
+                    onPress={() => selectValue(option.value)}
+                    accessibilityLabel={`Select ${option.label}`}
+                    testID={testID ? `${testID}-option-${option.value || 'none'}` : undefined}
+                  >
+                    <Text style={styles.cellText}>{option.label}</Text>
+                  </DropdownOptionButton>
+                ))}
+              </ScrollView>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cancel selection" onPress={() => setOpen(false)} style={{ padding: 12 }}>
+                <Text style={styles.cellText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       ) : null}
     </View>
   );

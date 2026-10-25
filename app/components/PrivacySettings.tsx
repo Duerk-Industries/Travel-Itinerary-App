@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View, Platform } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View, Platform } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import type { PrivacyController } from '../hooks/usePrivacyConsent';
 import type { PrivacyChoice } from '../utils/privacyConsent';
 import type { AppTheme } from '../theme/theme';

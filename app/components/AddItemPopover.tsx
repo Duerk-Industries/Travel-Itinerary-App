@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import type { AppTheme } from '../theme/theme';
 
 export type AddItemKind = 'activity' | 'place' | 'note' | 'checklist';

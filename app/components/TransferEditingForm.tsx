@@ -1,3 +1,4 @@
+import KeyboardViewport from './KeyboardViewport';
 import AirportInput from './AirportInput';
 import { TRANSFER_TYPES as CANONICAL_TRANSFER_TYPES, normalizeTransferType } from '../utils/transferTypes';
 import TransferDirections from './TransferDirections';
@@ -5,7 +6,8 @@ import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from './HotelAddressPicker';
 import { transferLocationFieldLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 import React from 'react';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {  Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption, TransferType } from '../tabs/transfers';
@@ -140,8 +142,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
         <Text style={styles.helperText}>
           Current Departure: {formatDateLong(flight.departureDate)} at {flight.departureTime || '?'}
         </Text>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <KeyboardViewport
           style={{ flexShrink: 1 }}
         >
         <ScrollView
@@ -507,7 +508,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             })}
           </View>
         </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardViewport>
         <View style={[styles.row, { marginTop: 16 }]}>
           <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onClose}>
             <Text style={styles.dangerButtonText}>Cancel</Text>

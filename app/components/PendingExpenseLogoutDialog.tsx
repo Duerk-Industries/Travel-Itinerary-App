@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 
 export default function PendingExpenseLogoutDialog({ visible, count, onCancel, onSync, onKeep, onDiscard, busy = false, error }: {
   visible: boolean; count: number; onCancel: () => void; onSync: () => void;

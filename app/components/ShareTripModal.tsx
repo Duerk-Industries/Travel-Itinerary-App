@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import Constants from 'expo-constants';
 import { buildFollowShareLink } from '../utils/shareLinks';
 import { copyToClipboard } from '../utils/clipboard';

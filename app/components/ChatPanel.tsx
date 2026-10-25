@@ -1,3 +1,4 @@
+import KeyboardViewport from './KeyboardViewport';
 import { shadowStyle } from '../utils/shadowStyle';
 /**
  * ChatPanel — the sliding chat overlay for a trip.
@@ -15,7 +16,6 @@ import {
   FlatList,
   StyleSheet,
   Platform,
-  KeyboardAvoidingView,
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
@@ -305,9 +305,8 @@ const ChatPanel: React.FC<Props> = ({
     : themedStyles.panelDesktop;
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardViewport
       style={[themedStyles.container, panelStyle]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       testID="chat-panel"
     >
       {/* Header */}
@@ -398,7 +397,7 @@ const ChatPanel: React.FC<Props> = ({
           <Text style={themedStyles.sendBtnText}>Send</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardViewport>
   );
 };
 

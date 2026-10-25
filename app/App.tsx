@@ -1,3 +1,4 @@
+import KeyboardViewport from './components/KeyboardViewport';
 import { isFlightTransfer } from './utils/transferCategory';
 import { shadowStyle } from './utils/shadowStyle';
 import { CalendarPreferenceContext } from './contexts/CalendarPreferenceContext';
@@ -465,7 +466,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua);
     return isIOS && isSafari;
   }, []);
-  const [webViewportHeight, setWebViewportHeight] = useState<number | null>(null);
 
   useEffect(() => {
     initializeAppCheck();
@@ -522,36 +522,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     return () => clearInterval(intervalId);
   }, []);
 
-  useEffect(() => {
-    if (!isWebIOSSafari || typeof window === 'undefined') return;
-    const updateViewport = () => {
-      const vv = window.visualViewport;
-      const next = Math.round(vv?.height ?? window.innerHeight ?? 0);
-      if (next > 0) setWebViewportHeight(next);
-    };
-    updateViewport();
-    window.addEventListener('resize', updateViewport);
-    window.visualViewport?.addEventListener('resize', updateViewport);
-    window.visualViewport?.addEventListener('scroll', updateViewport);
-    return () => {
-      window.removeEventListener('resize', updateViewport);
-      window.visualViewport?.removeEventListener('resize', updateViewport);
-      window.visualViewport?.removeEventListener('scroll', updateViewport);
-    };
-  }, [isWebIOSSafari]);
-
   const iosSafariSafeAreaStyle = useMemo(
     () =>
       isWebIOSSafari
         ? ({
             paddingTop: 'env(safe-area-inset-top, 0px)',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-            height: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
             minHeight: 0,
-            maxHeight: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
           } as any)
         : null,
-    [isWebIOSSafari, webViewportHeight]
+    [isWebIOSSafari]
   );
 
   const iosSafariContentInsetStyle = useMemo(
@@ -3343,6 +3323,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const mainWorkspace = (
     <PresenceProvider activeTripId={activeTripId} userToken={userToken}>
       <ChatProvider activeTripId={activeTripId} userToken={userToken}>
+    <KeyboardViewport testID="app-keyboard-viewport">
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
       <PendingExpenseLogoutDialog visible={pendingLogoutVisible} count={pendingExpenses.entries.length} busy={pendingLogoutBusy} error={pendingLogoutError}
         onCancel={() => setPendingLogoutVisible(false)}
@@ -4473,6 +4454,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       ) : null}
       <OfflineSavePanel controller={offlineSave} theme={theme} />
     </SafeAreaView>
+    </KeyboardViewport>
       </ChatProvider>
     </PresenceProvider>
   );

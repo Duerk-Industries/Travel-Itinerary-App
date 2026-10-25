@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import type { AppTheme } from '../theme/theme';
 
 export type ChecklistSubmit = {
