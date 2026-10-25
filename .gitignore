@@ -65,3 +65,4 @@ tmp
 server/public
 # Generated from the pinned MapLibre dependency by the web scripts.
 app/public/map-assets/
+output
