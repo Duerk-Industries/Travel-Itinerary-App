@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -8,7 +11,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { AppTheme } from '../theme/theme';
+
 import DialogShell from './DialogShell';
 import SelectField from './SelectField';
 
@@ -37,7 +40,7 @@ type PlaidImportQueueProps = {
 };
 
 const PlaidImportQueue: React.FC<PlaidImportQueueProps> = ({
-  theme,
+  theme: _providedTheme,
   styles,
   backendUrl,
   jsonHeaders,
@@ -47,6 +50,8 @@ const PlaidImportQueue: React.FC<PlaidImportQueueProps> = ({
   onClose,
   onImported,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { colors, typography, spacing } = theme;
   const [loading, setLoading] = useState(true);
   const [candidates, setCandidates] = useState<PlaidCandidate[]>([]);
@@ -105,50 +110,37 @@ const PlaidImportQueue: React.FC<PlaidImportQueueProps> = ({
       onClose={onClose}
     >
       {loading ? (
-        <ActivityIndicator size="large" color={colors.link} style={{ padding: spacing.xl }} />
+        <ActivityIndicator size="large" color={colors.link} style={themeStyle('components_PlaidImportQueue_1', { spacing: spacing }, (theme ?? _styleTheme))} />
       ) : candidates.length === 0 ? (
-        <View style={{ padding: spacing.xl, alignItems: 'center' }}>
-          <Text style={{ color: colors.textMuted, fontSize: typography.body }}>No new transactions found.</Text>
+        <View style={themeStyle('components_PlaidImportQueue_2', { spacing: spacing }, (theme ?? _styleTheme))}>
+          <Text style={themeStyle('components_PlaidImportQueue_3', { colors: colors, typography: typography }, (theme ?? _styleTheme))}>No new transactions found.</Text>
         </View>
       ) : (
-        <ScrollView style={{ maxHeight: 500 }}>
+        <ScrollView style={themeStyle('components_PlaidImportQueue_4', {  }, (theme ?? _styleTheme))}>
           {candidates.map((c) => (
             <View
               key={c.id}
-              style={{
-                padding: spacing.md,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.border,
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
+              style={themeStyle('components_PlaidImportQueue_5', { spacing: spacing, colors: colors }, (theme ?? _styleTheme))}
             >
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: 'bold', color: colors.text }}>{c.merchantName || 'Unknown Merchant'}</Text>
-                <Text style={{ fontSize: typography.small, color: colors.textMuted }}>
+              <View style={themeStyle('components_PlaidImportQueue_6', {  }, (theme ?? _styleTheme))}>
+                <Text style={themeStyle('components_PlaidImportQueue_7', { colors: colors }, (theme ?? _styleTheme))}>{c.merchantName || 'Unknown Merchant'}</Text>
+                <Text style={themeStyle('components_PlaidImportQueue_8', { typography: typography, colors: colors }, (theme ?? _styleTheme))}>
                   {c.date} • {c.personalFinanceCategory || 'Uncategorized'}
                 </Text>
               </View>
-              <View style={{ alignItems: 'flex-end', marginLeft: spacing.md }}>
-                <Text style={{ fontWeight: 'bold', color: colors.text }}>
+              <View style={themeStyle('components_PlaidImportQueue_9', { spacing: spacing }, (theme ?? _styleTheme))}>
+                <Text style={themeStyle('components_PlaidImportQueue_10', { colors: colors }, (theme ?? _styleTheme))}>
                   {c.amount} {c.isoCurrencyCode}
                 </Text>
                 <TouchableOpacity
                   onPress={() => handleAssign(c)}
                   disabled={importingId === c.id}
-                  style={{
-                    backgroundColor: colors.cta,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.xs,
-                    borderRadius: 4,
-                    marginTop: spacing.xs,
-                  }}
+                  style={themeStyle('components_PlaidImportQueue_11', { colors: colors, spacing: spacing }, (theme ?? _styleTheme))}
                 >
                   {importingId === c.id ? (
-                    <ActivityIndicator size="small" color="#0B1726" />
+                    <ActivityIndicator size="small" color={themeStyle('components_PlaidImportQueue_13', {  }, (theme ?? _styleTheme))} />
                   ) : (
-                    <Text style={{ color: '#0B1726', fontWeight: 'bold', fontSize: typography.small }}>Import</Text>
+                    <Text style={themeStyle('components_PlaidImportQueue_12', { typography: typography }, (theme ?? _styleTheme))}>Import</Text>
                   )}
                 </TouchableOpacity>
               </View>

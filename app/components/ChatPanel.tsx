@@ -1,3 +1,7 @@
+import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import KeyboardViewport from './KeyboardViewport';
 import { shadowStyle } from '../utils/shadowStyle';
 /**
@@ -23,7 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Socket } from 'socket.io-client';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '../../packages/messaging/src/events';
 import type { ChatMessage } from '../../packages/messaging/src/types';
-import type { AppTheme } from '../theme/theme';
+
 
 interface Props {
   socket: Socket;
@@ -37,8 +41,8 @@ interface Props {
   theme?: AppTheme;
 }
 
-const PANEL_WIDTH = 360;
-const PANEL_HEIGHT = 480;
+const PANEL_WIDTH = layoutMetrics.ChatPanel_PANEL_WIDTH;
+const PANEL_HEIGHT = layoutMetrics.ChatPanel_PANEL_HEIGHT;
 
 // Keep the desktop panel within the browser width. Phone-sized browsers use
 // the full-screen layout below.
@@ -68,8 +72,10 @@ const ChatPanel: React.FC<Props> = ({
   onMinimize,
   unreadCount,
   onUnreadChange,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const themedStyles = React.useMemo(() => buildStyles(theme), [theme]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -275,7 +281,7 @@ const ChatPanel: React.FC<Props> = ({
           testID={`chat-message-${item.id}`}
         >
           {!isOwn && (
-            <View style={[themedStyles.avatarSmall, { backgroundColor: theme?.colors.textMuted ?? '#9e9e9e' }]}>
+            <View style={[themedStyles.avatarSmall, themeStyle('components_ChatPanel_1', { theme: theme }, (theme ?? _styleTheme))]}>
               <Text style={themedStyles.avatarText}>{item.senderInitials}</Text>
             </View>
           )}
@@ -297,11 +303,7 @@ const ChatPanel: React.FC<Props> = ({
   // Layout
   // -------------------------------------------------------------------------
   const panelStyle = isPhoneLayout
-    ? [themedStyles.panelMobile, {
-        // Absolute positioning ignores the parent SafeAreaView's padding.
-        top: (isWeb ? 'env(safe-area-inset-top, 0px)' : safeAreaInsets.top) as any,
-        bottom: (isWeb ? 'env(safe-area-inset-bottom, 0px)' : safeAreaInsets.bottom) as any,
-      }]
+    ? [themedStyles.panelMobile, themeStyle('components_ChatPanel_2', { isWeb: isWeb, safeAreaInsets: safeAreaInsets }, (theme ?? _styleTheme))]
     : themedStyles.panelDesktop;
 
   return (
@@ -381,7 +383,7 @@ const ChatPanel: React.FC<Props> = ({
           value={inputText}
           onChangeText={setInputText}
           placeholder="Message the group… (@ to mention)"
-          placeholderTextColor="#999"
+          placeholderTextColor={themeStyle('components_ChatPanel_4', {  }, (theme ?? _styleTheme))}
           multiline
           maxLength={2000}
           onSubmitEditing={isWeb ? sendMessage : undefined}
@@ -401,213 +403,6 @@ const ChatPanel: React.FC<Props> = ({
   );
 };
 
-const buildStyles = (theme?: AppTheme) => StyleSheet.create({
-  container: {
-    backgroundColor: theme?.colors.surface ?? '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 8,
-    ...shadowStyle('#000', 0.15, 0, 4, 12),
-  },
-  panelDesktop: {
-    position: 'absolute' as any,
-    bottom: 80,
-    right: 16,
-    width: getResponsivePanelWidth(),
-    height: PANEL_HEIGHT,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#e0e0e0',
-  },
-  panelMobile: {
-    position: 'absolute' as any,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 0,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1565C0',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  headerTitle: {
-    flex: 1,
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stateContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    gap: 8,
-  },
-  stateTitle: {
-    color: theme?.colors.text ?? '#1a1a1a',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  stateBody: {
-    color: theme?.colors.textMuted ?? '#555',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  messageList: {
-    padding: 10,
-    paddingBottom: 4,
-    flexGrow: 1,
-  },
-  loadOlderBtn: {
-    alignSelf: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginBottom: 8,
-    borderRadius: 12,
-    backgroundColor: theme?.colors.surfaceMuted ?? '#ececec',
-  },
-  loadOlderText: {
-    color: theme?.colors.textMuted ?? '#555',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  unreadSeparator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-    gap: 8,
-  },
-  unreadSeparatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme?.colors.error ?? '#d32f2f',
-    opacity: 0.4,
-  },
-  unreadSeparatorLabel: {
-    color: theme?.colors.error ?? '#d32f2f',
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    alignItems: 'flex-end',
-  },
-  ownRow: {
-    justifyContent: 'flex-end',
-  },
-  otherRow: {
-    justifyContent: 'flex-start',
-  },
-  avatarSmall: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  bubble: {
-    maxWidth: '75%',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  ownBubble: {
-    backgroundColor: '#1565C0',
-    borderBottomRightRadius: 4,
-  },
-  otherBubble: {
-    backgroundColor: theme?.colors.surfaceMuted ?? '#f0f0f0',
-    borderBottomLeftRadius: 4,
-  },
-  senderName: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: theme?.colors.textMuted ?? '#555',
-    marginBottom: 2,
-  },
-  ownText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  otherText: {
-    color: theme?.colors.text ?? '#1a1a1a',
-    fontSize: 14,
-  },
-  timestamp: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 3,
-    textAlign: 'right',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    borderTopWidth: 1,
-    borderTopColor: theme?.colors.border ?? '#e0e0e0',
-    padding: 8,
-    backgroundColor: theme?.colors.backgroundAlt ?? '#fafafa',
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#ccc',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    maxHeight: 100,
-    fontSize: 14,
-    backgroundColor: theme?.colors.surface ?? '#fff',
-    color: theme?.colors.text ?? '#1a1a1a',
-  },
-  sendBtn: {
-    marginLeft: 8,
-    backgroundColor: '#1565C0',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  sendBtnDisabled: {
-    backgroundColor: theme?.mode === 'dark' ? theme.colors.surfaceMuted : '#bdbdbd',
-  },
-  sendBtnText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-});
+const buildStyles = (theme?: AppTheme) => StyleSheet.create(themeStyle('components_ChatPanel_3', { theme: theme, shadowStyle: shadowStyle, getResponsivePanelWidth: getResponsivePanelWidth, PANEL_HEIGHT: PANEL_HEIGHT }, (theme ?? getStyleTheme('light', 'light'))));
 
 export default ChatPanel;

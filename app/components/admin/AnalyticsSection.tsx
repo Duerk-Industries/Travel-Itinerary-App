@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../../theme/ThemeContext';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Platform, Share, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import type { AppTheme } from '../../theme/theme';
+
 
 /**
  * Admin → Analytics (docs/implementation-plans/analytics-upgrade.md Phase 5): five aggregate
@@ -37,7 +40,9 @@ const PURPOSES: Array<{ key: 'product_analytics' | 'optional_diagnostics'; label
 ];
 
 /** Canary rollout editor (Phase 6). The feature flags remain the kill switches. */
-const RolloutPanel: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme }) => {
+const RolloutPanel: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const c = theme.colors;
   const [rollout, setRollout] = useState<Record<string, PurposeRollout> | null>(null);
   const [drafts, setDrafts] = useState<Record<string, PurposeRollout & { reason: string }>>({});
@@ -65,10 +70,10 @@ const RolloutPanel: React.FC<{ backendUrl: string; headers: Record<string, strin
       setMessage((e as Error).message);
     }
   };
-  if (!rollout) return message ? <Text style={[styles.note, { color: c.error }]}>{message}</Text> : null;
+  if (!rollout) return message ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_AnalyticsSection_1', { c: c }, (theme ?? _styleTheme))]}>{message}</Text> : null;
   return (
-    <View testID="admin-analytics-rollout" style={{ gap: 12 }}>
-      <Text style={[styles.note, { color: c.textMuted }]}>
+    <View testID="admin-analytics-rollout" style={themeStyle('components_admin_AnalyticsSection_2', {  }, (theme ?? _styleTheme))}>
+      <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_AnalyticsSection_3', { c: c }, (theme ?? _styleTheme))]}>
         Who is offered each optional purpose while its feature flag is on. Internal means admins and internal canary accounts.
         Excluding Europe keeps collection off for devices in European (or unknown) time zones until counsel signs off.
         Turning a flag off in Feature Flags stops everything immediately.
@@ -80,38 +85,38 @@ const RolloutPanel: React.FC<{ backendUrl: string; headers: Record<string, strin
           setDrafts((d) => ({ ...d, [p.key]: { ...d[p.key], ...patch } }));
         const canSave = draft.reason.trim().length >= 3;
         return (
-          <View key={p.key} style={[styles.card, { borderColor: c.border }]}>
-            <Text style={[styles.heading, { color: c.text, marginTop: 0 }]}>{p.label}</Text>
-            <Text style={[styles.note, { color: rollout[p.key].flagEnabled ? c.text : c.error }]}>
+          <View key={p.key} style={[styles((theme ?? _styleTheme)).card, themeStyle('components_admin_AnalyticsSection_4', { c: c }, (theme ?? _styleTheme))]}>
+            <Text style={[styles((theme ?? _styleTheme)).heading, themeStyle('components_admin_AnalyticsSection_5', { c: c }, (theme ?? _styleTheme))]}>{p.label}</Text>
+            <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_AnalyticsSection_6', { rollout: rollout, p: p, c: c }, (theme ?? _styleTheme))]}>
               {`Kill switch ${p.flag}: ${rollout[p.key].flagEnabled ? 'on' : 'OFF (nothing is collected)'}`}
             </Text>
-            <View style={styles.pills}>
+            <View style={styles((theme ?? _styleTheme)).pills}>
               {(['off', 'internal', 'percentage', 'all'] as RolloutMode[]).map((mode) => (
                 <TouchableOpacity key={mode} accessibilityRole="button" testID={`admin-rollout-${p.key}-${mode}`} onPress={() => update({ mode })}
-                  style={[styles.pill, { borderColor: draft.mode === mode ? c.primary : c.border, backgroundColor: draft.mode === mode ? c.primary : 'transparent' }]}>
-                  <Text style={{ color: draft.mode === mode ? c.onPrimary : c.text }}>{mode}</Text>
+                  style={[styles((theme ?? _styleTheme)).pill, themeStyle('components_admin_AnalyticsSection_7', { draft: draft, mode: mode, c: c }, (theme ?? _styleTheme))]}>
+                  <Text style={themeStyle('components_admin_AnalyticsSection_8', { draft: draft, mode: mode, c: c }, (theme ?? _styleTheme))}>{mode}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             {draft.mode === 'percentage' ? (
               <TextInput accessibilityLabel={`${p.label} percentage`} keyboardType="number-pad" value={String(draft.percent)}
                 onChangeText={(t) => update({ percent: Math.max(0, Math.min(100, Number(t.replace(/[^0-9]/g, '')) || 0)) })}
-                style={[styles.input, { borderColor: c.border, color: c.text }]} />
+                style={[styles((theme ?? _styleTheme)).input, themeStyle('components_admin_AnalyticsSection_9', { c: c }, (theme ?? _styleTheme))]} />
             ) : null}
-            <View style={[styles.row, { borderColor: 'transparent', alignItems: 'center' }]}>
-              <Text style={[styles.cell, { color: c.text }]}>Exclude Europe</Text>
+            <View style={[styles((theme ?? _styleTheme)).row, themeStyle('components_admin_AnalyticsSection_10', {  }, (theme ?? _styleTheme))]}>
+              <Text style={[styles((theme ?? _styleTheme)).cell, themeStyle('components_admin_AnalyticsSection_11', { c: c }, (theme ?? _styleTheme))]}>Exclude Europe</Text>
               <Switch accessibilityLabel={`${p.label} exclude Europe`} value={draft.excludeEurope} onValueChange={(v) => update({ excludeEurope: v })} />
             </View>
             <TextInput accessibilityLabel={`${p.label} reason`} placeholder="Reason (required, audited)" value={draft.reason}
-              onChangeText={(t) => update({ reason: t })} style={[styles.input, { borderColor: c.border, color: c.text }]} />
+              onChangeText={(t) => update({ reason: t })} style={[styles((theme ?? _styleTheme)).input, themeStyle('components_admin_AnalyticsSection_12', { c: c }, (theme ?? _styleTheme))]} />
             <TouchableOpacity accessibilityRole="button" testID={`admin-rollout-${p.key}-save`} onPress={() => { void save(p.key); }}
-              disabled={!canSave} style={[styles.pill, { borderColor: c.primary, alignSelf: 'flex-start', opacity: canSave ? 1 : 0.5 }]}>
-              <Text style={{ color: c.text }}>Save</Text>
+              disabled={!canSave} style={[styles((theme ?? _styleTheme)).pill, themeStyle('components_admin_AnalyticsSection_13', { c: c, canSave: canSave }, (theme ?? _styleTheme))]}>
+              <Text style={themeStyle('components_admin_AnalyticsSection_14', { c: c }, (theme ?? _styleTheme))}>Save</Text>
             </TouchableOpacity>
           </View>
         );
       })}
-      {message ? <Text style={[styles.note, { color: c.textMuted }]}>{message}</Text> : null}
+      {message ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_AnalyticsSection_15', { c: c }, (theme ?? _styleTheme))]}>{message}</Text> : null}
     </View>
   );
 };
@@ -123,8 +128,10 @@ const usd = (micros: number | null | undefined): string => (micros === null || m
 export const AnalyticsSection: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({
   backendUrl,
   headers,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [view, setView] = useState<View_>('adoption');
   const [days, setDays] = useState<(typeof WINDOWS)[number]>(30);
   const [report, setReport] = useState<any>(null);
@@ -180,23 +187,23 @@ export const AnalyticsSection: React.FC<{ backendUrl: string; headers: Record<st
 
   const c = theme.colors;
   const Row = ({ cells, header }: { cells: string[]; header?: boolean }) => (
-    <View style={[styles.row, { borderColor: c.border }]}>
+    <View style={[styles((theme ?? _styleTheme)).row, themeStyle('components_admin_AnalyticsSection_16', { c: c }, (theme ?? _styleTheme))]}>
       {cells.map((cell, i) => (
-        <Text key={i} style={[styles.cell, i === 0 && styles.firstCell, { color: header ? c.textMuted : c.text }, header && styles.headerCell]}>{cell}</Text>
+        <Text key={i} style={[styles((theme ?? _styleTheme)).cell, i === 0 && styles((theme ?? _styleTheme)).firstCell, themeStyle('components_admin_AnalyticsSection_17', { header: header, c: c }, (theme ?? _styleTheme)), header && styles((theme ?? _styleTheme)).headerCell]}>{cell}</Text>
       ))}
     </View>
   );
-  const Note = ({ children }: { children: React.ReactNode }) => <Text style={[styles.note, { color: c.textMuted }]}>{children}</Text>;
-  const Heading = ({ children }: { children: React.ReactNode }) => <Text style={[styles.heading, { color: c.text }]}>{children}</Text>;
+  const Note = ({ children }: { children: React.ReactNode }) => <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_AnalyticsSection_18', { c: c }, (theme ?? _styleTheme))]}>{children}</Text>;
+  const Heading = ({ children }: { children: React.ReactNode }) => <Text style={[styles((theme ?? _styleTheme)).heading, themeStyle('components_admin_AnalyticsSection_19', { c: c }, (theme ?? _styleTheme))]}>{children}</Text>;
 
   const meta = report?.meta;
   const definitions = meta?.definitions ?? {};
   const MetaBlock = () => meta ? (
-    <View style={styles.meta} testID="admin-analytics-meta">
+    <View style={styles((theme ?? _styleTheme)).meta} testID="admin-analytics-meta">
       <Note>{definitions.population}</Note>
       <Note>{`Window: last ${meta.windowDays} days (UTC) · ${meta.eventsScanned} events · freshest event ${meta.latestReceivedAt ?? 'none'} · metrics ${meta.metricVersion}`}</Note>
       <Note>{`Counts under ${meta.minCohort} accounts are hidden (—).`}</Note>
-      {meta.truncated ? <Text style={[styles.note, { color: c.error }]}>Truncated: more events than one report reads. Move to daily rollups.</Text> : null}
+      {meta.truncated ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_AnalyticsSection_20', { c: c }, (theme ?? _styleTheme))]}>Truncated: more events than one report reads. Move to daily rollups.</Text> : null}
     </View>
   ) : null;
 
@@ -288,35 +295,35 @@ export const AnalyticsSection: React.FC<{ backendUrl: string; headers: Record<st
   };
 
   return (
-    <View style={styles.section} testID="admin-analytics-section">
-      <Text style={[styles.title, { color: c.text }]}>Analytics</Text>
-      <View style={styles.pills}>
+    <View style={styles((theme ?? _styleTheme)).section} testID="admin-analytics-section">
+      <Text style={[styles((theme ?? _styleTheme)).title, themeStyle('components_admin_AnalyticsSection_21', { c: c }, (theme ?? _styleTheme))]}>Analytics</Text>
+      <View style={styles((theme ?? _styleTheme)).pills}>
         {VIEWS.map((v) => (
           <TouchableOpacity key={v.key} accessibilityRole="button" testID={`admin-analytics-view-${v.key}`}
             onPress={() => setView(v.key)}
-            style={[styles.pill, { borderColor: view === v.key ? c.primary : c.border, backgroundColor: view === v.key ? c.primary : 'transparent' }]}>
-            <Text style={{ color: view === v.key ? c.onPrimary : c.text }}>{v.label}</Text>
+            style={[styles((theme ?? _styleTheme)).pill, themeStyle('components_admin_AnalyticsSection_22', { view: view, v: v, c: c }, (theme ?? _styleTheme))]}>
+            <Text style={themeStyle('components_admin_AnalyticsSection_23', { view: view, v: v, c: c }, (theme ?? _styleTheme))}>{v.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
       {view !== 'cost' && view !== 'rollout' ? (
-        <View style={styles.pills}>
+        <View style={styles((theme ?? _styleTheme)).pills}>
           {WINDOWS.map((w) => (
             <TouchableOpacity key={w} accessibilityRole="button" testID={`admin-analytics-window-${w}`}
               onPress={() => setDays(w)}
-              style={[styles.pill, { borderColor: days === w ? c.primary : c.border }]}>
-              <Text style={{ color: c.text, fontWeight: days === w ? '700' : '400' }}>{`${w} days`}</Text>
+              style={[styles((theme ?? _styleTheme)).pill, themeStyle('components_admin_AnalyticsSection_24', { days: days, w: w, c: c }, (theme ?? _styleTheme))]}>
+              <Text style={themeStyle('components_admin_AnalyticsSection_25', { c: c, days: days, w: w }, (theme ?? _styleTheme))}>{`${w} days`}</Text>
             </TouchableOpacity>
           ))}
           {view === 'adoption' || view === 'platform' || view === 'trip_phase' ? (
-            <TouchableOpacity accessibilityRole="button" testID="admin-analytics-export" onPress={() => { void exportCsv(); }} style={[styles.pill, { borderColor: c.border }]}>
-              <Text style={{ color: c.text }}>Download CSV</Text>
+            <TouchableOpacity accessibilityRole="button" testID="admin-analytics-export" onPress={() => { void exportCsv(); }} style={[styles((theme ?? _styleTheme)).pill, themeStyle('components_admin_AnalyticsSection_26', { c: c }, (theme ?? _styleTheme))]}>
+              <Text style={themeStyle('components_admin_AnalyticsSection_27', { c: c }, (theme ?? _styleTheme))}>Download CSV</Text>
             </TouchableOpacity>
           ) : null}
         </View>
       ) : null}
       {exportMessage ? <Note>{exportMessage}</Note> : null}
-      {error ? <Text style={[styles.note, { color: c.error }]}>{error}</Text> : null}
+      {error ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_AnalyticsSection_28', { c: c }, (theme ?? _styleTheme))]}>{error}</Text> : null}
       {loading ? <Note>Loading…</Note> : null}
       {view !== 'cost' && view !== 'reliability' && view !== 'rollout' ? <MetaBlock /> : null}
       {renderBody()}
@@ -325,20 +332,6 @@ export const AnalyticsSection: React.FC<{ backendUrl: string; headers: Record<st
   );
 };
 
-const styles = StyleSheet.create({
-  section: { gap: 8 },
-  title: { fontSize: 20, fontWeight: '700' },
-  heading: { fontSize: 15, fontWeight: '700', marginTop: 12 },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
-  meta: { gap: 2, marginVertical: 4 },
-  note: { fontSize: 12, lineHeight: 18 },
-  row: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 6 },
-  cell: { flex: 1, fontSize: 13 },
-  firstCell: { flex: 1.6 },
-  headerCell: { fontWeight: '600', fontSize: 12 },
-  card: { borderWidth: 1, borderRadius: 8, padding: 12, gap: 8 },
-  input: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
-});
+const styles = (_theme: import('../../theme/theme').AppTheme) => themeStyle('components_admin_AnalyticsSection_29', { StyleSheet: StyleSheet }, _theme);
 
 export default AnalyticsSection;

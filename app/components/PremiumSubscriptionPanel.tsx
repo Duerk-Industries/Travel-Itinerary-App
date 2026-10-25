@@ -1,3 +1,5 @@
+import { themeStyle, getAppTheme as getStyleTheme, getAppTheme } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -7,7 +9,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { getAppTheme } from '../theme/theme';
+
 import { arePremiumTrialsEnabled } from '../config/premiumTrials';
 import {
   createCheckoutSession,
@@ -46,6 +48,7 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
   appearancePreference = 'auto',
   systemColorScheme,
 }) => {
+  const _styleTheme = useStyleTheme();
   const theme = getAppTheme(appearancePreference as any, systemColorScheme);
   const styles = makeStyles(theme);
 
@@ -257,7 +260,7 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
             accessibilityLabel={checkoutCtaLabel}
           >
             {actionLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={themeStyle('components_PremiumSubscriptionPanel_2', {  }, _styleTheme)} size="small" />
             ) : (
               <Text style={styles.ctaText}>{checkoutCtaLabel}</Text>
             )}
@@ -293,160 +296,6 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
 };
 
 const makeStyles = (theme: ReturnType<typeof getAppTheme>) =>
-  StyleSheet.create({
-    container: {
-      marginVertical: 12,
-      padding: 16,
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    sectionTitle: {
-      fontSize: theme.typography.h3,
-      fontWeight: theme.typography.weightSemibold,
-      color: theme.colors.text,
-      marginBottom: 10,
-    },
-    statusRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
-    },
-    badge: {
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-      borderRadius: 12,
-    },
-    badgeActive: {
-      backgroundColor: theme.colors.premium,
-    },
-    badgeText: {
-      color: '#fff',
-      fontSize: theme.typography.small,
-      fontWeight: theme.typography.weightSemibold,
-    },
-    statusNote: {
-      fontSize: theme.typography.small,
-      color: theme.colors.textMuted,
-    },
-    notificationList: {
-      gap: 8,
-      marginBottom: 12,
-    },
-    notificationItem: {
-      borderWidth: 1,
-      borderColor: theme.colors.warning,
-      backgroundColor: theme.colors.surfaceMuted,
-      borderRadius: 8,
-      padding: 10,
-      gap: 4,
-    },
-    notificationTitle: {
-      fontSize: theme.typography.small,
-      color: theme.colors.text,
-      fontWeight: theme.typography.weightSemibold,
-    },
-    notificationMessage: {
-      fontSize: theme.typography.small,
-      color: theme.colors.textMuted,
-    },
-    successBanner: {
-      borderWidth: 1,
-      borderColor: theme.colors.success,
-      backgroundColor: theme.colors.surfaceMuted,
-      borderRadius: 8,
-      padding: 10,
-      marginBottom: 12,
-      gap: 8,
-    },
-    successText: {
-      fontSize: theme.typography.small,
-      color: theme.colors.text,
-    },
-    dismissText: {
-      fontSize: theme.typography.small,
-      color: theme.colors.link,
-      fontWeight: theme.typography.weightSemibold,
-    },
-    warning: {
-      color: theme.colors.warning,
-    },
-    error: {
-      color: theme.colors.error,
-    },
-    pitch: {
-      fontSize: theme.typography.body,
-      color: theme.colors.text,
-      marginBottom: 12,
-      lineHeight: 22,
-    },
-    planRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-      marginBottom: 14,
-    },
-    planCard: {
-      flex: 1,
-      minWidth: 180,
-      maxWidth: '100%',
-      borderWidth: 2,
-      borderColor: theme.colors.border,
-      borderRadius: 10,
-      padding: 12,
-      alignItems: 'center',
-    },
-    planCardSelected: {
-      borderColor: theme.colors.premium,
-    },
-    planInterval: {
-      fontSize: theme.typography.small,
-      fontWeight: theme.typography.weightSemibold,
-      color: theme.colors.text,
-      marginBottom: 2,
-    },
-    planPrice: {
-      fontSize: theme.typography.h3,
-      fontWeight: theme.typography.weightBold,
-      color: theme.colors.text,
-    },
-    planTrial: {
-      fontSize: theme.typography.caption,
-      color: theme.colors.textMuted,
-      marginTop: 2,
-    },
-    ctaButton: {
-      backgroundColor: theme.colors.premium,
-      borderRadius: 8,
-      paddingVertical: 13,
-      alignItems: 'center',
-      marginBottom: 10,
-    },
-    ctaButtonDisabled: {
-      opacity: 0.6,
-    },
-    ctaText: {
-      color: '#fff',
-      fontSize: theme.typography.body,
-      fontWeight: theme.typography.weightSemibold,
-    },
-    manageButton: {
-      marginTop: 4,
-      alignItems: 'center',
-      paddingVertical: 8,
-    },
-    manageText: {
-      color: theme.colors.link,
-      fontSize: theme.typography.small,
-    },
-    errorText: {
-      marginTop: 8,
-      color: theme.colors.error,
-      fontSize: theme.typography.small,
-    },
-  });
+  StyleSheet.create(themeStyle('components_PremiumSubscriptionPanel_1', { theme: theme }, (theme ?? getStyleTheme('light', 'light'))));
 
 export default PremiumSubscriptionPanel;

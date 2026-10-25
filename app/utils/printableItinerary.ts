@@ -1,3 +1,4 @@
+import { printableItineraryCss } from '../theme/theme';
 type PrintableRecord = Record<string, any>;
 
 export type PrintableItineraryInput = {
@@ -139,40 +140,7 @@ export const buildPrintableItineraryHtml = (input: PrintableItineraryInput): str
   }).join('');
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>${text(trip.name, 'Trip itinerary')}</title>
-  <style>
-    @page { size: Letter; margin: 0.62in; }
-    :root { color-scheme: light; font-family: Arial, Helvetica, sans-serif; color: #18212b; background: #fff; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-size: 10.5pt; line-height: 1.45; }
-    .cover { border-bottom: 4px solid #d06b3c; padding: 0 0 22px; margin-bottom: 22px; }
-    .eyebrow { color: #d06b3c; font-size: 9pt; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
-    h1 { color: #142c3c; font-family: Georgia, serif; font-size: 31pt; line-height: 1.08; margin: 7px 0 8px; }
-    h2 { color: #142c3c; font-family: Georgia, serif; font-size: 18pt; margin: 0; }
-    h3 { color: #142c3c; font-size: 12pt; margin: 3px 0 0; }
-    .meta { color: #53616c; font-size: 10pt; }
-    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
-    .summary-card { background: #f1f5f3; border-left: 3px solid #6b9c8a; padding: 9px 11px; min-height: 46px; }
-    .summary-card span { display: block; color: #687772; font-size: 8pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-    .summary-card strong { display: block; margin-top: 3px; }
-    .intro { border-left: 3px solid #d06b3c; margin: 18px 0 25px; padding-left: 13px; white-space: pre-wrap; }
-    .day { break-inside: avoid; margin: 0 0 25px; }
-    .day-heading { align-items: baseline; border-bottom: 1px solid #cbd5d1; display: flex; gap: 12px; margin-bottom: 9px; padding-bottom: 6px; }
-    .day-heading span { color: #d06b3c; font-size: 8.5pt; font-weight: 800; letter-spacing: .13em; }
-    .item { border: 1px solid #dce4df; border-radius: 5px; break-inside: avoid; margin: 8px 0; padding: 10px 12px; }
-    .item-heading { align-items: baseline; display: flex; gap: 10px; }
-    .item-kind { color: #5f806f; font-size: 8pt; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 18px; margin-top: 7px; }
-    .field { display: flex; gap: 5px; min-width: 0; }
-    .field span { color: #66737b; flex: 0 0 auto; }
-    .field strong { overflow-wrap: anywhere; }
-    .item-note, .empty { color: #53616c; margin: 8px 0 0; }
-    .time { color: #d06b3c; font-weight: 700; margin-top: 5px; }
-    .checklist { list-style: none; margin: 8px 0 0; padding: 0; }
-    .checklist .checked { color: #718078; text-decoration: line-through; }
-    .practical { border-top: 2px solid #142c3c; break-inside: avoid; margin-top: 28px; padding-top: 12px; }
-    .footer { border-top: 1px solid #dce4df; color: #7a858a; font-size: 8.5pt; margin-top: 30px; padding-top: 8px; }
-    @media print { a { color: inherit; text-decoration: none; } .day-heading { break-after: avoid; } }
-  </style></head><body>
+  <style>${printableItineraryCss}</style></head><body>
     <header class="cover"><div class="eyebrow">Travel itinerary</div><h1>${text(trip.name, 'Trip itinerary')}</h1>
       <div class="meta">${tripDates}${input.locationLabel ? ` · ${text(input.locationLabel)}` : ''}</div></header>
     <div class="summary">

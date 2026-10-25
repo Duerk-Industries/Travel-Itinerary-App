@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { ThemedText as Text } from './ThemedText';
@@ -6,6 +8,7 @@ import type { RecentAutoAssignment } from '../../server/src/ingestion/shared/rep
 export default function AutomaticImportSettings({ backendUrl, headers, onChanged }: {
   backendUrl: string; headers: Record<string, string>; onChanged?: () => void;
 }) {
+  const _styleTheme = useStyleTheme();
   const [setting, setSetting] = useState<{ available: boolean; enabled: boolean; choice: boolean | null } | null>(null);
   const [recent, setRecent] = useState<RecentAutoAssignment[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -42,21 +45,21 @@ export default function AutomaticImportSettings({ backendUrl, headers, onChanged
     finally { busy.current = false; }
   };
   if (!setting?.available && !recent.length) return null;
-  return <View style={{ padding: 12, gap: 8 }}>
+  return <View style={themeStyle('components_AutomaticImportSettings_1', {  }, _styleTheme)}>
     <Text accessibilityRole="header">Automatically added bookings</Text>
     <Text>When enabled, an uploaded booking with one strong trip match can be added for you. Uncertain bookings need your review. Forwarded email still needs review. Undo is available for seven days unless someone edits the booking or its finances.</Text>
     {setting?.available && <TouchableOpacity accessibilityRole="switch" accessibilityLabel="Automatically add matching bookings"
-      accessibilityState={{ checked: setting.enabled }} style={{ minHeight: 44, padding: 12 }}
+      accessibilityState={{ checked: setting.enabled }} style={themeStyle('components_AutomaticImportSettings_2', {  }, _styleTheme)}
       onPress={() => void act('settings', 'PUT', { autoAssign: !setting.enabled })}>
       <Text>Automatically add matching bookings: {setting.enabled ? 'On' : 'Off'}</Text>
     </TouchableOpacity>}
     {error && <Text accessibilityRole="alert">{error}</Text>}
-    <TouchableOpacity accessibilityRole="button" style={{ minHeight: 44, padding: 12 }} onPress={() => void load()}><Text>Refresh automatically added bookings</Text></TouchableOpacity>
+    <TouchableOpacity accessibilityRole="button" style={themeStyle('components_AutomaticImportSettings_3', {  }, _styleTheme)} onPress={() => void load()}><Text>Refresh automatically added bookings</Text></TouchableOpacity>
     {recent.map(row => <View key={row.item.id}>
       <Text>{row.item.providerVendor || row.item.itemType} · Added to {row.tripName || 'your trip'}</Text>
       <Text>{row.reasons.join(' · ')} · Undo until {new Date(row.undoExpiresAt).toLocaleString()}</Text>
       <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Undo ${row.item.providerVendor || row.item.itemType}`}
-        style={{ minHeight: 44, padding: 12 }} onPress={() => void act(`review-items/${encodeURIComponent(row.item.id)}/undo`, 'POST')}><Text>Undo</Text></TouchableOpacity>
+        style={themeStyle('components_AutomaticImportSettings_4', {  }, _styleTheme)} onPress={() => void act(`review-items/${encodeURIComponent(row.item.id)}/undo`, 'POST')}><Text>Undo</Text></TouchableOpacity>
     </View>)}
   </View>;
 }

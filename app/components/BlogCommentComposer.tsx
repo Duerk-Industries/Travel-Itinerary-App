@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // Phase 4 of docs/trip-blog-social-implementation-plan.md (B2) — the comment/reply input box
 // used both at the foot of BlogCommentThread.tsx and inline under a comment for a reply. Carries
 // the "Visible publicly"/"Visible to travelers"/"Visible to followers" disclosure next to the
@@ -34,13 +36,18 @@ const BlogCommentComposer: React.FC<Props> = ({
   autoFocus = false,
   submitLabel = 'Post',
   onCancel,
-  textColor = '#111827',
-  mutedColor = '#6b7280',
-  borderColor = '#ccd4df',
-  backgroundColor = '#ffffff',
+  textColor: _textColorOverride,
+  mutedColor: _mutedColorOverride,
+  borderColor: _borderColorOverride,
+  backgroundColor: _backgroundColorOverride,
   styles,
   testID,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const textColor = _textColorOverride ?? themeStyle('components_BlogCommentComposer_8', {  }, _styleTheme);
+  const mutedColor = _mutedColorOverride ?? themeStyle('components_BlogCommentComposer_9', {  }, _styleTheme);
+  const borderColor = _borderColorOverride ?? themeStyle('components_BlogCommentComposer_10', {  }, _styleTheme);
+  const backgroundColor = _backgroundColorOverride ?? themeStyle('components_BlogCommentComposer_11', {  }, _styleTheme);
   const [value, setValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -58,7 +65,7 @@ const BlogCommentComposer: React.FC<Props> = ({
   };
 
   return (
-    <View testID={testID} style={{ gap: 6 }}>
+    <View testID={testID} style={themeStyle('components_BlogCommentComposer_1', {  }, _styleTheme)}>
       <AutoGrowTextInput
         testID={testID ? `${testID}-input` : undefined}
         value={value}
@@ -71,22 +78,19 @@ const BlogCommentComposer: React.FC<Props> = ({
         minHeight={40}
         maxLines={8}
         lineHeight={20}
-        style={{
-          borderWidth: 1, borderColor, borderRadius: 8, padding: 8, fontSize: 14, lineHeight: 20,
-          color: textColor, backgroundColor,
-        }}
+        style={themeStyle('components_BlogCommentComposer_2', { borderColor: borderColor, textColor: textColor, backgroundColor: backgroundColor }, _styleTheme)}
         accessibilityLabel={placeholder}
       />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={themeStyle('components_BlogCommentComposer_3', {  }, _styleTheme)}>
         {audienceLabel ? (
-          <Text testID={testID ? `${testID}-audience-label` : undefined} style={{ fontSize: 11, fontWeight: '600', color: mutedColor }}>
+          <Text testID={testID ? `${testID}-audience-label` : undefined} style={themeStyle('components_BlogCommentComposer_4', { mutedColor: mutedColor }, _styleTheme)}>
             {audienceLabel}
           </Text>
         ) : <View />}
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={themeStyle('components_BlogCommentComposer_5', {  }, _styleTheme)}>
           {onCancel ? (
             <TouchableOpacity testID={testID ? `${testID}-cancel` : undefined} accessibilityRole="button" onPress={onCancel} disabled={submitting}>
-              <Text style={{ color: mutedColor, fontWeight: '600', paddingVertical: 6, paddingHorizontal: 4 }}>Cancel</Text>
+              <Text style={themeStyle('components_BlogCommentComposer_6', { mutedColor: mutedColor }, _styleTheme)}>Cancel</Text>
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity
@@ -97,9 +101,9 @@ const BlogCommentComposer: React.FC<Props> = ({
             disabled={!canSubmit}
             hitSlop={8}
             onPress={handleSubmit}
-            style={[styles?.button, { opacity: canSubmit ? 1 : 0.5, paddingVertical: 6, paddingHorizontal: 12 }]}
+            style={[styles?.button, themeStyle('components_BlogCommentComposer_7', { canSubmit: canSubmit }, _styleTheme)]}
           >
-            {submitting ? <ActivityIndicator size="small" color={styles?.buttonText?.color ?? '#fff'} /> : (
+            {submitting ? <ActivityIndicator size="small" color={styles?.buttonText?.color ?? themeStyle('components_BlogCommentComposer_12', {  }, _styleTheme)} /> : (
               <Text style={styles?.buttonText}>{submitLabel}</Text>
             )}
           </TouchableOpacity>

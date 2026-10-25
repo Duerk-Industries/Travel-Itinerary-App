@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import PayerSelect from './PayerSelect';
 import React from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -5,7 +8,7 @@ import Modal from './KeyboardAwareModal';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
-import type { AppTheme } from '../theme/theme';
+
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import type { CarRentalDraft } from '../tabs/carRentals';
 import DateField from './DateField';
@@ -47,27 +50,19 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
   isNew,
   members,
   styles,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   // Keep this list in sync with lodging and activity editors: guests and
   // pending travelers are valid trip participants, while removed members are
   // never offered for new assignments.
   const activeMembers = members.filter((member) => member.status !== 'removed' && !member.removedAt);
 
-  const toggleBaseStyle = styles.toggleOption ?? {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#111',
-    backgroundColor: theme?.colors.surface ?? '#fff',
-  };
-  const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
-    borderColor: theme?.colors.link ?? '#111',
-  };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
+  const toggleBaseStyle = styles.toggleOption ?? themeStyle('components_CarRentalEditForm_1', { theme: theme }, (theme ?? _styleTheme));
+  const toggleSelectedStyle = styles.toggleOptionSelected ?? themeStyle('components_CarRentalEditForm_2', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextStyle = styles.toggleOptionText ?? themeStyle('components_CarRentalEditForm_3', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? themeStyle('components_CarRentalEditForm_4', { theme: theme }, (theme ?? _styleTheme));
 
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
 
@@ -75,15 +70,15 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
     <Modal transparent visible animationType="fade" onRequestClose={onCancel}>
       <View style={styles.modalOverlay} testID="car-rental-form-modal">
         <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onCancel} />
-        <View style={[styles.modalCard, { marginTop: 0, maxHeight: '100%', flexShrink: 1 }]}>
+        <View style={[styles.modalCard, themeStyle('components_CarRentalEditForm_5', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.sectionTitle}>{isNew ? 'Add Car Rental' : 'Edit Car Rental'}</Text>
-          <ScrollView style={{ maxHeight: 420, flexShrink: 1 }} contentContainerStyle={{ paddingRight: 12, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+          <ScrollView style={themeStyle('components_CarRentalEditForm_6', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('components_CarRentalEditForm_7', {  }, (theme ?? _styleTheme))} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             <Text style={styles.modalLabel}>Status</Text>
             {Platform.OS === 'web' ? (
               <select
                 value={status}
                 onChange={(e) => onChange((prev) => ({ ...prev, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                style={toWebStyle(styles.input, themeStyle('components_CarRentalEditForm_8', {  }, (theme ?? _styleTheme)))}
               >
                 {ITINERARY_STATUSES.map((opt) => (
                   <option key={opt} value={opt}>
@@ -185,7 +180,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
             />
             <Text style={styles.modalLabel}>Notes</Text>
             <TextInput
-              style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
+              style={[styles.input, themeStyle('components_CarRentalEditForm_9', {  }, (theme ?? _styleTheme))]}
               placeholder="Notes"
               value={draft.notes}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, notes: text }))}
@@ -215,7 +210,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
             <Text style={styles.modalLabel}>Paid by</Text>
             <PayerSelect members={activeMembers} value={draft.paidBy} formatName={formatMemberDisplayName} onChange={ids => onChange((prev) => ({ ...prev, paidBy: ids }))} styles={styles} testID="car-rental-payer" />
           </ScrollView>
-          <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
+          <View style={[styles.tableFooter, themeStyle('components_CarRentalEditForm_10', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onCancel} testID="car-rental-cancel">
               <Text style={styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>

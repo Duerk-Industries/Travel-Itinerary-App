@@ -1,4 +1,9 @@
 // @ts-nocheck
+import { themeFontFamilies, themeStyle } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 // The editorial public-reader page — the frontend `publicBlogRoutes.ts` never had. Reachable at
 // the app's own root as a bare two-segment path (`/{username}/{tripSlug}`, matching
 // blogRepository.getPublicPath's format), routed to by App.tsx *before* anything auth-related
@@ -96,20 +101,20 @@ const PublicReactionChoices: React.FC<{
   reacting: boolean;
   bodyFont?: string;
   targetLabel?: string;
-}> = ({ data, selectedReaction, onReact, reacting, bodyFont, targetLabel }) => (
-  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+}> = ({ data, selectedReaction, onReact, reacting, bodyFont, targetLabel }) => { const _styleTheme = useStyleTheme(); return ((
+  <View style={themeStyle('components_PublicTripBlogPage_1', {  }, _styleTheme)}>
     {REACTION_ORDER.map((emoji) => (
       <Pressable key={emoji} onPress={() => onReact(emoji)} disabled={reacting}
         accessibilityRole="button"
         accessibilityLabel={`${selectedReaction === emoji ? 'Remove' : 'React with'} ${emoji}${targetLabel ? ` on ${targetLabel}` : ''}`}
         accessibilityState={{ selected: selectedReaction === emoji, disabled: reacting }}
-        style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 16, borderWidth: 1, borderColor: selectedReaction === emoji ? '#2E96A6' : '#D7E1E5', backgroundColor: selectedReaction === emoji ? '#E6F6F8' : '#FFFFFF' }}>
-        <Text style={{ fontSize: 16 }}>{REACTION_GLYPH[emoji]}</Text>
-        {(data.reactionCounts[emoji] ?? 0) > 0 ? <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#38505D', marginLeft: 4 }}>{data.reactionCounts[emoji]}</Text> : null}
+        style={themeStyle('components_PublicTripBlogPage_2', { selectedReaction: selectedReaction, emoji: emoji }, _styleTheme)}>
+        <Text style={themeStyle('components_PublicTripBlogPage_3', {  }, _styleTheme)}>{REACTION_GLYPH[emoji]}</Text>
+        {(data.reactionCounts[emoji] ?? 0) > 0 ? <Text style={themeStyle('components_PublicTripBlogPage_4', { bodyFont: bodyFont }, _styleTheme)}>{data.reactionCounts[emoji]}</Text> : null}
       </Pressable>
     ))}
   </View>
-);
+)); };
 
 // Public readers may react to a day, while comments remain read-only.
 const DayEngagementFooter: React.FC<{
@@ -125,6 +130,7 @@ const DayEngagementFooter: React.FC<{
   reactionError: string | null;
   reactionsEnabled: boolean;
 }> = ({ data, bodyFont, backendUrl, username, tripSlug, localDate, selectedReaction, onReact, reacting, reactionError, reactionsEnabled }) => {
+  const _styleTheme = useStyleTheme();
   const [expanded, setExpanded] = useState(false);
   const [comments, setComments] = useState<PublicComment[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -135,7 +141,7 @@ const DayEngagementFooter: React.FC<{
     setLoading(true);
     setFailed(false);
     try {
-      const query = engagementQuery({ dayDate: localDate, limit: String(COMMENT_PAGE), ...(cursor ? { cursor } : {}) });
+      const query = engagementQuery({ dayDate: localDate, limit: String(COMMENT_PAGE), ...(cursor ? themeStyle('components_PublicTripBlogPage_5', { cursor: cursor }, _styleTheme) : {}) });
       const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}/engagement?${query}`);
       if (!response.ok) { setFailed(true); return; }
       const payload = await response.json();
@@ -160,42 +166,42 @@ const DayEngagementFooter: React.FC<{
   };
 
   return (
-    <View style={{ marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#EEF2F4' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+    <View style={themeStyle('components_PublicTripBlogPage_6', {  }, _styleTheme)}>
+      <View style={themeStyle('components_PublicTripBlogPage_7', {  }, _styleTheme)}>
         {reactionsEnabled ? <PublicReactionChoices data={data} selectedReaction={selectedReaction} onReact={onReact} reacting={reacting} bodyFont={bodyFont} /> : null}
         {commentCount ? (
           <Pressable
             onPress={toggle}
             accessibilityRole="button"
             accessibilityState={{ expanded }}
-            style={{ marginBottom: 4 }}
+            style={themeStyle('components_PublicTripBlogPage_8', {  }, _styleTheme)}
           >
-            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#2E96A6' }}>
+            <Text style={themeStyle('components_PublicTripBlogPage_9', { bodyFont: bodyFont }, _styleTheme)}>
               💬 {commentCount} {commentCount === 1 ? 'comment' : 'comments'} {expanded ? '▲' : '▼'}
             </Text>
           </Pressable>
         ) : null}
       </View>
-      {reactionError ? <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#B42318' }}>{reactionError}</Text> : null}
+      {reactionError ? <Text style={themeStyle('components_PublicTripBlogPage_10', { bodyFont: bodyFont }, _styleTheme)}>{reactionError}</Text> : null}
 
       {expanded && commentCount ? (
-        <View style={{ marginTop: 14 }}>
+        <View style={themeStyle('components_PublicTripBlogPage_11', {  }, _styleTheme)}>
           {loading && !comments ? (
-            <ActivityIndicator size="small" color="#2E96A6" />
+            <ActivityIndicator size="small" color={themeStyle('components_PublicTripBlogPage_55', {  }, _styleTheme)} />
           ) : failed && !comments ? (
-            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280' }}>Couldn't load comments right now.</Text>
+            <Text style={themeStyle('components_PublicTripBlogPage_12', { bodyFont: bodyFont }, _styleTheme)}>Couldn't load comments right now.</Text>
           ) : comments && comments.length ? (
             <>
               {comments.map((comment) => (
-                <View key={comment.id} style={{ marginBottom: 14 }}>
-                  <Text style={{ fontFamily: bodyFont, fontSize: 12, color: '#94A0AC', marginBottom: 3 }}>
+                <View key={comment.id} style={themeStyle('components_PublicTripBlogPage_13', {  }, _styleTheme)}>
+                  <Text style={themeStyle('components_PublicTripBlogPage_14', { bodyFont: bodyFont }, _styleTheme)}>
                     {ROLE_LABEL(comment.authorRole)} · {formatCommentWhen(comment.createdAt)}{comment.editedAt ? ' (edited)' : ''}
                   </Text>
-                  <Text style={{ fontFamily: bodyFont, fontSize: 15, lineHeight: 22, color: comment.deletedAt || comment.body == null ? '#94A0AC' : '#111827', fontStyle: comment.deletedAt || comment.body == null ? 'italic' : 'normal' }}>
+                  <Text style={themeStyle('components_PublicTripBlogPage_15', { bodyFont: bodyFont, comment: comment }, _styleTheme)}>
                     {comment.deletedAt || comment.body == null ? 'This comment was removed.' : comment.body}
                   </Text>
                   {comment.replyCount > 0 ? (
-                    <Text style={{ fontFamily: bodyFont, fontSize: 12, color: '#94A0AC', marginTop: 3 }}>
+                    <Text style={themeStyle('components_PublicTripBlogPage_16', { bodyFont: bodyFont }, _styleTheme)}>
                       {comment.replyCount} {comment.replyCount === 1 ? 'reply' : 'replies'}
                     </Text>
                   ) : null}
@@ -203,17 +209,17 @@ const DayEngagementFooter: React.FC<{
               ))}
               {hasMore ? (
                 <Pressable onPress={() => loadPage(comments[comments.length - 1]?.id)} accessibilityRole="button" disabled={loading}>
-                  <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#2E96A6', marginTop: 2 }}>
+                  <Text style={themeStyle('components_PublicTripBlogPage_17', { bodyFont: bodyFont }, _styleTheme)}>
                     {loading ? 'Loading…' : 'Show more comments'}
                   </Text>
                 </Pressable>
               ) : null}
               {failed ? (
-                <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280', marginTop: 4 }}>Couldn't load more comments.</Text>
+                <Text style={themeStyle('components_PublicTripBlogPage_18', { bodyFont: bodyFont }, _styleTheme)}>Couldn't load more comments.</Text>
               ) : null}
             </>
           ) : (
-            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280' }}>No public comments on this day.</Text>
+            <Text style={themeStyle('components_PublicTripBlogPage_19', { bodyFont: bodyFont }, _styleTheme)}>No public comments on this day.</Text>
           )}
         </View>
       ) : null}
@@ -222,6 +228,7 @@ const DayEngagementFooter: React.FC<{
 };
 
 const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
+  const _styleTheme = useStyleTheme();
   const [fontsLoaded] = useFonts({ Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic });
   const [state, setState] = useState<{ status: 'loading' | 'ready' | 'not-found' | 'error'; blog: PublicBlogPayload | null; message: string | null }>({
     status: 'loading', blog: null, message: null,
@@ -396,23 +403,23 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
     return null;
   }, [state.blog]);
 
-  const displayFont = fontsLoaded ? 'Fraunces_600SemiBold' : undefined;
-  const displayFontItalic = fontsLoaded ? 'Fraunces_600SemiBold_Italic' : undefined;
-  const bodyDisplayFont = fontsLoaded ? 'Fraunces_400Regular' : undefined;
+  const displayFont = fontsLoaded ? themeFontFamilies.display : undefined;
+  const displayFontItalic = fontsLoaded ? themeFontFamilies.displayItalic : undefined;
+  const bodyDisplayFont = fontsLoaded ? themeFontFamilies.bodyDisplay : undefined;
 
   if (state.status === 'loading') {
     return (
-      <View style={{ flex: 1, minHeight: '100vh' as any, backgroundColor: '#FAFCFD', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#2E96A6" />
+      <View style={themeStyle('components_PublicTripBlogPage_20', {  }, _styleTheme)}>
+        <ActivityIndicator size="large" color={themeStyle('components_PublicTripBlogPage_56', {  }, _styleTheme)} />
       </View>
     );
   }
 
   if (state.status === 'not-found') {
     return (
-      <View style={{ flex: 1, minHeight: '100vh' as any, backgroundColor: '#FAFCFD', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Text style={{ fontFamily: displayFont, fontSize: 26, color: '#152944', marginBottom: 8, textAlign: 'center' }}>This trip blog isn't public</Text>
-        <Text style={{ color: '#6B7280', fontSize: 15, textAlign: 'center', maxWidth: 420 }}>
+      <View style={themeStyle('components_PublicTripBlogPage_21', {  }, _styleTheme)}>
+        <Text style={themeStyle('components_PublicTripBlogPage_22', { displayFont: displayFont }, _styleTheme)}>This trip blog isn't public</Text>
+        <Text style={themeStyle('components_PublicTripBlogPage_23', {  }, _styleTheme)}>
           The link may be out of date, or the traveler may have made this trip private again.
         </Text>
       </View>
@@ -421,9 +428,9 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
 
   if (state.status === 'error' || !state.blog) {
     return (
-      <View style={{ flex: 1, minHeight: '100vh' as any, backgroundColor: '#FAFCFD', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Text style={{ fontFamily: displayFont, fontSize: 22, color: '#152944', marginBottom: 8, textAlign: 'center' }}>Something went wrong</Text>
-        <Text style={{ color: '#6B7280', fontSize: 15, textAlign: 'center', maxWidth: 420 }}>{state.message || 'Please try again in a moment.'}</Text>
+      <View style={themeStyle('components_PublicTripBlogPage_24', {  }, _styleTheme)}>
+        <Text style={themeStyle('components_PublicTripBlogPage_25', { displayFont: displayFont }, _styleTheme)}>Something went wrong</Text>
+        <Text style={themeStyle('components_PublicTripBlogPage_26', {  }, _styleTheme)}>{state.message || 'Please try again in a moment.'}</Text>
       </View>
     );
   }
@@ -440,48 +447,48 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
     const summary = postEngagement[key];
     if (!summary) return null;
     return (
-      <View style={{ marginTop: 8, marginBottom: 12 }}>
+      <View style={themeStyle('components_PublicTripBlogPage_27', {  }, _styleTheme)}>
         <PublicReactionChoices data={summary} selectedReaction={selectedReactions[key] ?? null}
           onReact={(emoji) => reactToTarget(kind, targetId, key, emoji)} reacting={reactingTarget === key}
           bodyFont={bodyDisplayFont} targetLabel={kind === 'item' ? 'note' : 'photo or video'} />
-        {reactionError[key] ? <Text style={{ color: '#B42318', fontSize: 13 }}>{reactionError[key]}</Text> : null}
+        {reactionError[key] ? <Text style={themeStyle('components_PublicTripBlogPage_28', {  }, _styleTheme)}>{reactionError[key]}</Text> : null}
       </View>
     );
   };
   const renderDay = (day: PublicBlogDay) => (
-    <View key={day.localDate} style={{ marginTop: 40, paddingTop: 40, borderTopWidth: 1, borderTopColor: '#E1E8EC' }}>
-      <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: '#2E96A6', marginBottom: 6 }}>
+    <View key={day.localDate} style={themeStyle('components_PublicTripBlogPage_29', {  }, _styleTheme)}>
+      <Text style={themeStyle('components_PublicTripBlogPage_30', {  }, _styleTheme)}>
         {formatDateLong(day.localDate)}
       </Text>
       {day.headline ? (
-        <Text style={{ fontFamily: displayFont, fontSize: 26, color: '#152944', marginBottom: day.summary ? 6 : 16 }}>{day.headline}</Text>
+        <Text style={themeStyle('components_PublicTripBlogPage_31', { displayFont: displayFont, day: day }, _styleTheme)}>{day.headline}</Text>
       ) : null}
       {mapDays.find(d => d.dayDate === day.localDate)?.mapPoints ? <BlogMap testID={`public-map-${day.localDate}`} map={mapDays.find(d => d.dayDate === day.localDate)!.mapPoints} /> : null}
                   {day.summary ? (
-        <Text style={{ color: '#6B7280', fontSize: 15, marginBottom: 16 }}>{day.summary}</Text>
+        <Text style={themeStyle('components_PublicTripBlogPage_32', {  }, _styleTheme)}>{day.summary}</Text>
       ) : null}
       {day.items.map((item) => {
         if (item.kindKey === 'core.text') {
           const text = stripHtml(item.body || '');
           if (!text) return null;
           return (
-            <View key={item.id} style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 17, lineHeight: 28, color: '#111827' }}>{text}</Text>
+            <View key={item.id} style={themeStyle('components_PublicTripBlogPage_33', {  }, _styleTheme)}>
+              <Text style={themeStyle('components_PublicTripBlogPage_34', {  }, _styleTheme)}>{text}</Text>
               {renderPostReactions(item)}
             </View>
           );
         }
         if (item.mediaKind === 'photo' && item.primaryUrl) {
           return (
-            <View key={item.id} style={{ marginBottom: 20 }}>
+            <View key={item.id} style={themeStyle('components_PublicTripBlogPage_35', {  }, _styleTheme)}>
               <Image
                 source={{ uri: item.primaryUrl }}
                 accessibilityLabel={item.altText || item.caption || 'Trip photo'}
-                style={{ width: '100%', aspectRatio: 3 / 2, borderRadius: 10, backgroundColor: '#F2F5F7' }}
+                style={themeStyle('components_PublicTripBlogPage_36', {  }, _styleTheme)}
                 resizeMode="cover"
               />
               {item.caption ? (
-                <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
+                <Text style={themeStyle('components_PublicTripBlogPage_37', {  }, _styleTheme)}>{item.caption}</Text>
               ) : null}
               {renderPostReactions(item)}
             </View>
@@ -489,14 +496,14 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
         }
         if (item.mediaKind === 'video' && item.primaryUrl && Platform.OS === 'web') {
           return (
-            <View key={item.id} style={{ marginBottom: 20 }}>
+            <View key={item.id} style={themeStyle('components_PublicTripBlogPage_38', {  }, _styleTheme)}>
               {React.createElement('video', {
                 src: item.primaryUrl,
                 controls: true,
-                style: { width: '100%', borderRadius: 10, display: 'block', backgroundColor: '#000' },
+                style: themeStyle('components_PublicTripBlogPage_39', {  }, _styleTheme),
               })}
               {item.caption ? (
-                <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
+                <Text style={themeStyle('components_PublicTripBlogPage_40', {  }, _styleTheme)}>{item.caption}</Text>
               ) : null}
               {renderPostReactions(item)}
             </View>
@@ -521,38 +528,38 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FAFCFD' }}>
+    <View style={themeStyle('components_PublicTripBlogPage_41', {  }, _styleTheme)}>
       {coverPhoto ? (
-        <View style={{ width: '100%', aspectRatio: 16 / 7, backgroundColor: '#152944' }}>
-          <Image source={{ uri: coverPhoto.primaryUrl! }} accessibilityLabel={coverPhoto.altText || coverPhoto.caption || ''} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+        <View style={themeStyle('components_PublicTripBlogPage_42', {  }, _styleTheme)}>
+          <Image source={{ uri: coverPhoto.primaryUrl! }} accessibilityLabel={coverPhoto.altText || coverPhoto.caption || ''} style={themeStyle('components_PublicTripBlogPage_43', {  }, _styleTheme)} resizeMode="cover" />
         </View>
       ) : null}
-      <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 24, paddingTop: coverPhoto ? 36 : 64, paddingBottom: 72 }}>
-        <Text style={{ fontFamily: displayFont, fontSize: 40, lineHeight: 46, color: '#152944', marginBottom: blog.subtitle ? 8 : 20 }}>
+      <View style={themeStyle('components_PublicTripBlogPage_44', { coverPhoto: coverPhoto }, _styleTheme)}>
+        <Text style={themeStyle('components_PublicTripBlogPage_45', { displayFont: displayFont, blog: blog }, _styleTheme)}>
           {blog.title || 'A trip'}
         </Text>
         {blog.subtitle ? (
-          <Text style={{ fontFamily: displayFontItalic, fontSize: 18, color: '#6B7280', marginBottom: 20 }}>{blog.subtitle}</Text>
+          <Text style={themeStyle('components_PublicTripBlogPage_46', { displayFontItalic: displayFontItalic }, _styleTheme)}>{blog.subtitle}</Text>
         ) : null}
         {blog.introduction ? (
-          <Text style={{ fontFamily: bodyDisplayFont, fontSize: 18, lineHeight: 30, color: '#111827', marginBottom: 40 }}>{blog.introduction}</Text>
+          <Text style={themeStyle('components_PublicTripBlogPage_47', { bodyDisplayFont: bodyDisplayFont }, _styleTheme)}>{blog.introduction}</Text>
         ) : null}
 
         {daySegments.map((segment) => segment.kind === 'gap' ? (
           // Marks days with nothing posted, so the dates don't appear to jump.
-          <View key={`gap-${segment.fromDate}`} testID={`public-blog-gap-${segment.fromDate}`} style={{ marginTop: 40, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E1E8EC' }} />
-            <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 0.5, color: '#9CA3AF' }}>{formatGapLabel(segment)}</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E1E8EC' }} />
+          <View key={`gap-${segment.fromDate}`} testID={`public-blog-gap-${segment.fromDate}`} style={themeStyle('components_PublicTripBlogPage_48', {  }, _styleTheme)}>
+            <View style={themeStyle('components_PublicTripBlogPage_49', {  }, _styleTheme)} />
+            <Text style={themeStyle('components_PublicTripBlogPage_50', {  }, _styleTheme)}>{formatGapLabel(segment)}</Text>
+            <View style={themeStyle('components_PublicTripBlogPage_51', {  }, _styleTheme)} />
           </View>
         ) : renderDay(segment.day))}
 
         {!daysWithContent.length ? (
-          <Text style={{ color: '#6B7280', fontSize: 15, marginTop: 20 }}>This trip's story hasn't been shared publicly yet.</Text>
+          <Text style={themeStyle('components_PublicTripBlogPage_52', {  }, _styleTheme)}>This trip's story hasn't been shared publicly yet.</Text>
         ) : null}
 
-        <View style={{ marginTop: 64, paddingTop: 24, borderTopWidth: 1, borderTopColor: '#E1E8EC', alignItems: 'center' }}>
-          <Text style={{ color: '#94A0AC', fontSize: 12 }}>Told with WanderBunnies</Text>
+        <View style={themeStyle('components_PublicTripBlogPage_53', {  }, _styleTheme)}>
+          <Text style={themeStyle('components_PublicTripBlogPage_54', {  }, _styleTheme)}>Told with WanderBunnies</Text>
         </View>
       </View>
     </View>

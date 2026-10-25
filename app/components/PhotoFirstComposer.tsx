@@ -1,4 +1,9 @@
 // @ts-nocheck
+import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 // Slice 2 of the photo-first composer (A2), docs/trip-blog-social-prd.md §5.1 / architecture §5.3.
 //
 // The user multi-selects photos in one action; this groups them by the day each was taken
@@ -42,9 +47,15 @@ const mb = (bytes: number): string => `${(bytes / MB).toFixed(1)} MB`;
 
 const PhotoFirstComposer: React.FC<Props> = ({
   visible, files, dayDates, context, defaultDayDate, defaultTags = [], onClose, onCommitted,
-  styles, theme, textColor = '#111827', mutedColor = '#6b7280', borderColor = '#ccd4df',
-  backgroundColor = '#ffffff', testID = 'photo-composer',
+  styles, theme: _providedTheme, textColor: _textColorOverride, mutedColor: _mutedColorOverride, borderColor: _borderColorOverride,
+  backgroundColor: _backgroundColorOverride, testID = 'photo-composer',
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const textColor = _textColorOverride ?? themeStyle('components_PhotoFirstComposer_36', {  }, (theme ?? _styleTheme));
+  const mutedColor = _mutedColorOverride ?? themeStyle('components_PhotoFirstComposer_37', {  }, (theme ?? _styleTheme));
+  const borderColor = _borderColorOverride ?? themeStyle('components_PhotoFirstComposer_38', {  }, (theme ?? _styleTheme));
+  const backgroundColor = _backgroundColorOverride ?? themeStyle('components_PhotoFirstComposer_39', {  }, (theme ?? _styleTheme));
   // Stable per-session id for each picked file — the grouping API and every assignment key off it.
   const clientFiles = useMemo(
     () => files.map((file, index) => ({ ...file, clientId: `f${index}` })),
@@ -170,7 +181,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
   };
 
   const dayChips = (clientId: string) => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={themeStyle('components_PhotoFirstComposer_1', {  }, (theme ?? _styleTheme))}>
       {pickableDays.map((dayDate) => {
         const active = assignment[clientId] === dayDate;
         return (
@@ -179,13 +190,9 @@ const PhotoFirstComposer: React.FC<Props> = ({
             testID={`${testID}-file-${clientId}-day-${dayDate}`}
             accessibilityRole="button"
             onPress={() => setDay(clientId, dayDate)}
-            style={{
-              borderWidth: 1, borderColor: active ? (theme?.colors?.link ?? '#0ea5e9') : borderColor,
-              backgroundColor: active ? (theme?.colors?.link ?? '#0ea5e9') : 'transparent',
-              borderRadius: 14, paddingVertical: 4, paddingHorizontal: 9, marginRight: 6,
-            }}
+            style={themeStyle('components_PhotoFirstComposer_2', { active: active, theme: theme, borderColor: borderColor }, (theme ?? _styleTheme))}
           >
-            <Text style={{ color: active ? '#0B1726' : textColor, fontSize: 12 }}>{formatDateLong(dayDate)}</Text>
+            <Text style={themeStyle('components_PhotoFirstComposer_3', { active: active, textColor: textColor }, (theme ?? _styleTheme))}>{formatDateLong(dayDate)}</Text>
           </TouchableOpacity>
         );
       })}
@@ -196,27 +203,27 @@ const PhotoFirstComposer: React.FC<Props> = ({
     const oor = outOfRange[file.clientId];
     const isVideo = /^video\//i.test(String(file.mimeType || ''));
     return (
-      <View key={file.clientId} testID={`${testID}-file-${file.clientId}`} style={{ borderTopWidth: 1, borderTopColor: borderColor, paddingVertical: 8, flexDirection: 'row' }}>
-        <View style={{ width: 48, height: 48, borderRadius: 6, marginRight: 10, backgroundColor: '#00000010', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+      <View key={file.clientId} testID={`${testID}-file-${file.clientId}`} style={themeStyle('components_PhotoFirstComposer_4', { borderColor: borderColor }, (theme ?? _styleTheme))}>
+        <View style={themeStyle('components_PhotoFirstComposer_5', {  }, (theme ?? _styleTheme))}>
           {file.previewUri && !isVideo
-            ? <Image source={{ uri: file.previewUri }} style={{ width: 48, height: 48 }} resizeMode="cover" />
-            : <Text style={{ fontSize: 18 }}>{isVideo ? '🎞️' : '🖼️'}</Text>}
+            ? <Image source={{ uri: file.previewUri }} style={themeStyle('components_PhotoFirstComposer_6', {  }, (theme ?? _styleTheme))} resizeMode="cover" />
+            : <Text style={themeStyle('components_PhotoFirstComposer_7', {  }, (theme ?? _styleTheme))}>{isVideo ? '🎞️' : '🖼️'}</Text>}
         </View>
-        <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ color: textColor, fontSize: 13, flex: 1 }} numberOfLines={1}>{file.name || 'photo'}</Text>
-          <TouchableOpacity testID={`${testID}-file-${file.clientId}-remove`} accessibilityRole="button" accessibilityLabel="Remove this photo" onPress={() => removeFile(file.clientId)} style={{ paddingHorizontal: 8, minHeight: 28, justifyContent: 'center' }}>
-            <Text style={{ color: mutedColor, fontSize: 15 }}>✕</Text>
+        <View style={themeStyle('components_PhotoFirstComposer_8', {  }, (theme ?? _styleTheme))}>
+        <View style={themeStyle('components_PhotoFirstComposer_9', {  }, (theme ?? _styleTheme))}>
+          <Text style={themeStyle('components_PhotoFirstComposer_10', { textColor: textColor }, (theme ?? _styleTheme))} numberOfLines={1}>{file.name || 'photo'}</Text>
+          <TouchableOpacity testID={`${testID}-file-${file.clientId}-remove`} accessibilityRole="button" accessibilityLabel="Remove this photo" onPress={() => removeFile(file.clientId)} style={themeStyle('components_PhotoFirstComposer_11', {  }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('components_PhotoFirstComposer_12', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>✕</Text>
           </TouchableOpacity>
         </View>
         {oor ? (
-          <Text style={{ color: theme?.mode === 'dark' ? '#FBBF24' : '#92400E', fontSize: 11, marginTop: 2 }}>
+          <Text style={themeStyle('components_PhotoFirstComposer_13', { theme: theme }, (theme ?? _styleTheme))}>
             Taken {formatDateLong(oor)} — outside this trip's dates. Pick a day or remove it.
           </Text>
         ) : file.capturedAt ? (
-          <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>Taken {formatDateLong(file.capturedAt)}</Text>
+          <Text style={themeStyle('components_PhotoFirstComposer_14', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Taken {formatDateLong(file.capturedAt)}</Text>
         ) : (
-          <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>No capture date — choose a day.</Text>
+          <Text style={themeStyle('components_PhotoFirstComposer_15', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>No capture date — choose a day.</Text>
         )}
         {dayChips(file.clientId)}
         </View>
@@ -230,27 +237,27 @@ const PhotoFirstComposer: React.FC<Props> = ({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' }}>
-        <View testID={testID} style={{ backgroundColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: '88%', paddingHorizontal: 18, paddingTop: 16, paddingBottom: 24 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <Text style={{ color: textColor, fontSize: 17, fontWeight: '700' }}>
+      <View style={themeStyle('components_PhotoFirstComposer_16', {  }, (theme ?? _styleTheme))}>
+        <View testID={testID} style={themeStyle('components_PhotoFirstComposer_17', { backgroundColor: backgroundColor }, (theme ?? _styleTheme))}>
+          <View style={themeStyle('components_PhotoFirstComposer_18', {  }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('components_PhotoFirstComposer_19', { textColor: textColor }, (theme ?? _styleTheme))}>
               Add {included.length} photo{included.length === 1 ? '' : 's'}
             </Text>
             <TouchableOpacity testID={`${testID}-close`} accessibilityRole="button" accessibilityLabel="Close" onPress={onClose}>
-              <Text style={{ color: mutedColor, fontSize: 18 }}>✕</Text>
+              <Text style={themeStyle('components_PhotoFirstComposer_20', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>✕</Text>
             </TouchableOpacity>
           </View>
 
           {phase === 'grouping' ? (
-            <View style={{ paddingVertical: 40, alignItems: 'center' }}><ActivityIndicator color={theme?.colors?.link ?? '#0ea5e9'} /></View>
+            <View style={themeStyle('components_PhotoFirstComposer_21', {  }, (theme ?? _styleTheme))}><ActivityIndicator color={theme?.colors?.link ?? themeStyle('components_PhotoFirstComposer_40', {  }, (theme ?? _styleTheme))} /></View>
           ) : phase === 'error' ? (
-            <View style={{ paddingVertical: 24 }}>
-              <Text style={{ color: textColor, fontSize: 14 }}>{message}</Text>
-              <TouchableOpacity style={[styles.button, { marginTop: 12 }]} onPress={onClose}><Text style={styles.buttonText}>Close</Text></TouchableOpacity>
+            <View style={themeStyle('components_PhotoFirstComposer_22', {  }, (theme ?? _styleTheme))}>
+              <Text style={themeStyle('components_PhotoFirstComposer_23', { textColor: textColor }, (theme ?? _styleTheme))}>{message}</Text>
+              <TouchableOpacity style={[styles.button, themeStyle('components_PhotoFirstComposer_24', {  }, (theme ?? _styleTheme))]} onPress={onClose}><Text style={styles.buttonText}>Close</Text></TouchableOpacity>
             </View>
           ) : (
             <>
-              <Text testID={`${testID}-headroom`} style={{ color: overQuota ? (theme?.mode === 'dark' ? '#FFB4AB' : '#B91C1C') : mutedColor, fontSize: 12, marginBottom: 8 }}>
+              <Text testID={`${testID}-headroom`} style={themeStyle('components_PhotoFirstComposer_25', { overQuota: overQuota, theme: theme, mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                 {headroom
                   ? overQuota
                     ? (headroom.entitlementActive
@@ -259,19 +266,19 @@ const PhotoFirstComposer: React.FC<Props> = ({
                     : `Using ${mb(neededBytes)} of ${mb(headroom.availableBytes)} available`
                   : `This batch is about ${mb(neededBytes)}`}
               </Text>
-              {defaultTags.length ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 8 }}>Tagged: {defaultTags.map((tag) => `#${tag}`).join(' ')}</Text> : null}
+              {defaultTags.length ? <Text style={themeStyle('components_PhotoFirstComposer_26', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Tagged: {defaultTags.map((tag) => `#${tag}`).join(' ')}</Text> : null}
 
-              <ScrollView style={{ flexGrow: 0 }}>
+              <ScrollView style={themeStyle('components_PhotoFirstComposer_27', {  }, (theme ?? _styleTheme))}>
                 {unplaced.length > 0 ? (
-                  <Text testID={`${testID}-unplaced-count`} style={{ color: theme?.mode === 'dark' ? '#FBBF24' : '#92400E', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>
+                  <Text testID={`${testID}-unplaced-count`} style={themeStyle('components_PhotoFirstComposer_28', { theme: theme }, (theme ?? _styleTheme))}>
                     {unplaced.length} photo{unplaced.length === 1 ? '' : 's'} still need a day
                   </Text>
                 ) : null}
                 {unplaced.map(fileRow)}
 
                 {placedByDay.map((group) => (
-                  <View key={group.dayDate} testID={`${testID}-day-${group.dayDate}`} style={{ marginTop: 12 }}>
-                    <Text testID={`${testID}-day-${group.dayDate}-count`} style={{ color: textColor, fontSize: 13, fontWeight: '700' }}>
+                  <View key={group.dayDate} testID={`${testID}-day-${group.dayDate}`} style={themeStyle('components_PhotoFirstComposer_29', {  }, (theme ?? _styleTheme))}>
+                    <Text testID={`${testID}-day-${group.dayDate}-count`} style={themeStyle('components_PhotoFirstComposer_30', { textColor: textColor }, (theme ?? _styleTheme))}>
                       {`${formatDateLong(group.dayDate)} · ${group.items.length} photo${group.items.length === 1 ? '' : 's'}`}
                     </Text>
                     {group.items.map(fileRow)}
@@ -280,14 +287,14 @@ const PhotoFirstComposer: React.FC<Props> = ({
               </ScrollView>
 
               {message ? (
-                <Text testID={`${testID}-error`} style={{ color: theme?.mode === 'dark' ? '#FFB4AB' : '#B91C1C', fontSize: 12, marginTop: 10 }}>{message}</Text>
+                <Text testID={`${testID}-error`} style={themeStyle('components_PhotoFirstComposer_31', { theme: theme }, (theme ?? _styleTheme))}>{message}</Text>
               ) : null}
 
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+              <View style={themeStyle('components_PhotoFirstComposer_32', {  }, (theme ?? _styleTheme))}>
                 <TouchableOpacity
                   testID={`${testID}-commit`}
                   accessibilityRole="button"
-                  style={[styles.button, !canCommit || phase === 'committing' ? { opacity: 0.5 } : null]}
+                  style={[styles.button, !canCommit || phase === 'committing' ? themeStyle('components_PhotoFirstComposer_33', {  }, (theme ?? _styleTheme)) : null]}
                   disabled={!canCommit || phase === 'committing'}
                   onPress={commit}
                 >
@@ -295,8 +302,8 @@ const PhotoFirstComposer: React.FC<Props> = ({
                     ? <Text style={styles.buttonText}>{progress ? `${progress.current}/${progress.total}…` : 'Adding…'}</Text>
                     : <Text style={styles.buttonText}>Add to blog</Text>}
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} onPress={onClose} disabled={phase === 'committing'}>
-                  <Text style={{ color: textColor }}>Cancel</Text>
+                <TouchableOpacity style={[styles.button, themeStyle('components_PhotoFirstComposer_34', { theme: theme }, (theme ?? _styleTheme))]} onPress={onClose} disabled={phase === 'committing'}>
+                  <Text style={themeStyle('components_PhotoFirstComposer_35', { textColor: textColor }, (theme ?? _styleTheme))}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </>

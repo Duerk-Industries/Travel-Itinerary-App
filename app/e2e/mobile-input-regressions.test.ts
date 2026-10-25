@@ -63,7 +63,66 @@ async function aboveKeyboard(page: Page, control: Locator, height: number, top =
   })).toBe(true);
 }
 
+async function expectReadable(text: Locator) {
+  await expect(text).toBeVisible();
+  const ratio = await text.evaluate(element => {
+    const rgb = (value: string) => (value.match(/[\d.]+/g) ?? []).map(Number);
+    const luminance = (values: number[]) => values.slice(0, 3).map(channel => {
+      const v = channel / 255;
+      return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    }).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+    const foreground = luminance(rgb(getComputedStyle(element).color));
+    let ancestor: Element | null = element;
+    while (ancestor) {
+      const background = rgb(getComputedStyle(ancestor).backgroundColor);
+      if (background.length === 3 || background[3] === 1) {
+        const bg = luminance(background);
+        return (Math.max(foreground, bg) + 0.05) / (Math.min(foreground, bg) + 0.05);
+      }
+      ancestor = ancestor.parentElement;
+    }
+    return 0;
+  });
+  expect(ratio).toBeGreaterThanOrEqual(4.5);
+}
+
 for (const width of [390, 1280]) {
+  for (const mode of ['light', 'dark'] as const) {
+    test(`shared theme keeps actions and settlement readable in ${mode} mode at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.emulateMedia({ colorScheme: mode === 'light' ? 'dark' : 'light' });
+      await page.addInitScript(mode => localStorage.setItem('stp.appearancePreference', mode), mode);
+      await boot(page);
+      await page.getByTestId('home-nav-cost').click();
+      await expectReadable(page.getByText('Download Cost Details', { exact: true }));
+      await page.getByTestId('cost-settle-up').click();
+      const settlement = page.getByTestId('ledger-settlement');
+      await expect(settlement).toBeVisible();
+      await expect(settlement).toHaveCSS('background-color', mode === 'dark' ? 'rgb(22, 61, 70)' : 'rgb(239, 250, 251)');
+      await expectReadable(settlement.getByText('Settlement', { exact: true }));
+      await expectReadable(width < 700
+        ? settlement.getByText('Everyone is settled up.', { exact: true })
+        : settlement.getByText(/Each row shows what that traveler owes/));
+      await page.screenshot({ path: `output/playwright/central-theme-${mode}-${width}.png` });
+    });
+
+    test(`anonymous public blog respects ${mode} appearance at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.emulateMedia({ colorScheme: mode === 'light' ? 'dark' : 'light' });
+      await page.addInitScript(mode => localStorage.setItem('stp.appearancePreference', mode), mode);
+      await page.route('**/public/blog/**', route => {
+        const url = route.request().url();
+        return route.fulfill(url.includes('engagement') ? { status: 404, json: {} } : { json: url.endsWith('/maps') ? { days: [] } : {
+          title: 'A themed public story', days: [{ localDate: '2027-05-10', headline: 'A day in Kyoto', summary: '', items: [{ id: 'post', kindKey: 'core.text', body: 'A walk through the gardens.' }] }],
+        } });
+      });
+      await page.goto('/theme-reader/example-trip');
+      await expectReadable(page.getByText('A themed public story', { exact: true }));
+      await expectReadable(page.getByText('A walk through the gardens.', { exact: true }));
+      await page.screenshot({ path: `output/playwright/public-theme-${mode}-${width}.png` });
+    });
+  }
+
   test(`individual non-zero expenses appear after the Cost Report and not on Daily Expenses at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const base = { tripId: 'input-trip', groupId: 'input-group', userId: 'input-user', expenseDate: '2027-05-10', category: 'Lunch', currency: 'USD', payerIds: ['member-a'], forIds: ['member-a'], createdAt: '' };

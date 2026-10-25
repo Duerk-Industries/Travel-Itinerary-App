@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useMemo, useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
@@ -40,6 +42,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
   styles,
   onClose,
 }) => {
+  const _styleTheme = useStyleTheme();
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState('');
   const [shareInviteRows, setShareInviteRows] = useState<ShareInvite[]>([]);
@@ -214,7 +217,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={[styles.modalCard, styles.detailModal]}>
-          <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+          <View style={[styles.row, themeStyle('components_ShareTripModal_1', {  }, _styleTheme)]}>
             <Text style={styles.sectionTitle}>Share Trip</Text>
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.linkText ?? styles.buttonText}>Close</Text>
@@ -237,7 +240,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
           <View style={styles.divider} />
           <Text style={styles.modalLabel}>Invite by email</Text>
           <TextInput
-            style={[styles.input, { minHeight: 72, textAlignVertical: 'top' }]}
+            style={[styles.input, themeStyle('components_ShareTripModal_2', {  }, _styleTheme)]}
             multiline
             placeholder="Enter one or more emails (comma or new line separated)"
             autoCapitalize="none"
@@ -272,10 +275,10 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
 
           <View style={styles.divider} />
           <Text style={styles.modalLabel}>Recent invites</Text>
-          <ScrollView style={{ maxHeight: 180 }}>
+          <ScrollView style={themeStyle('components_ShareTripModal_3', {  }, _styleTheme)}>
             {(shareInviteRows ?? []).length ? (
               shareInviteRows.map((invite) => (
-                <View key={invite.id} style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                <View key={invite.id} style={[styles.row, themeStyle('components_ShareTripModal_4', {  }, _styleTheme)]}>
                   <Text style={styles.bodyText}>
                     {invite.inviteeEmail} · {invite.role} · {invite.status}
                   </Text>
@@ -292,11 +295,11 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
           </ScrollView>
           <View style={styles.divider} />
           <Text style={styles.modalLabel}>Current followers</Text>
-          <ScrollView style={{ maxHeight: 180 }}>
+          <ScrollView style={themeStyle('components_ShareTripModal_5', {  }, _styleTheme)}>
             {followers.length ? followers.map((follower) => {
               const name = `${follower.firstName ?? ''} ${follower.lastName ?? ''}`.trim() || follower.email || 'Follower';
               return (
-                <View key={follower.userId} style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                <View key={follower.userId} style={[styles.row, themeStyle('components_ShareTripModal_6', {  }, _styleTheme)]}>
                   <Text style={styles.bodyText}>{name}</Text>
                   <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => void removeFollower(follower.userId)}>
                     <Text style={styles.dangerButtonText}>Remove</Text>

@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../../../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../../../theme/ThemeContext';
 import React from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
-import type { AppTheme } from '../../../theme/theme';
+
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
 import type { ItineraryInstructionDocument } from './types';
 
@@ -23,36 +26,37 @@ export const AiOpsItineraryInstructions: React.FC<{
   setSelected: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   setReason: (value: string) => void;
   onSave: () => void;
-}> = ({ theme, phases, drafts, selected, reason, saving, setDrafts, setSelected, setReason, onSave }) => (
+}> = ({ theme: _providedTheme, phases, drafts, selected, reason, saving, setDrafts, setSelected, setReason, onSave }) => { const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme); return ((
   <View>
-    <Text style={[aiOpsStyles.cardSub, { color: theme.colors.textMuted }]}>
+    <Text style={[aiOpsStyles((theme ?? _styleTheme)).cardSub, themeStyle('components_admin_aiOps_AiOpsItineraryInstructions_1', { theme: theme }, (theme ?? _styleTheme))]}>
       Markdown documents must include ## System and ## User sections. Saving changes affects future itinerary generations only.
     </Text>
     {phases.map((phase) => {
       const checked = selected[phase.phase] ?? false;
       return (
-        <View key={phase.phase} style={[aiOpsStyles.card, cardStyle(theme)]}>
-          <View style={aiOpsStyles.rowWrap}>
+        <View key={phase.phase} style={[aiOpsStyles((theme ?? _styleTheme)).card, cardStyle(theme)]}>
+          <View style={aiOpsStyles((theme ?? _styleTheme)).rowWrap}>
             <TouchableOpacity
               style={[
-                aiOpsStyles.button,
-                { backgroundColor: checked ? theme.colors.primary : theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
+                aiOpsStyles((theme ?? _styleTheme)).button,
+                themeStyle('components_admin_aiOps_AiOpsItineraryInstructions_2', { checked: checked, theme: theme }, (theme ?? _styleTheme)),
               ]}
               onPress={() => setSelected((prev) => ({ ...prev, [phase.phase]: !checked }))}
             >
-              <Text style={[aiOpsStyles.buttonText, { color: checked ? '#fff' : theme.colors.text }]}>
+              <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('components_admin_aiOps_AiOpsItineraryInstructions_3', { checked: checked, theme: theme }, (theme ?? _styleTheme))]}>
                 {checked ? 'Selected' : 'Select'}
               </Text>
             </TouchableOpacity>
             <View>
-              <Text style={[aiOpsStyles.cardTitle, { color: theme.colors.text }]}>{PHASE_LABELS[phase.phase] ?? phase.phase}</Text>
-              <Text style={[aiOpsStyles.cardSub, { color: theme.colors.textMuted }]}>
+              <Text style={[aiOpsStyles((theme ?? _styleTheme)).cardTitle, themeStyle('components_admin_aiOps_AiOpsItineraryInstructions_4', { theme: theme }, (theme ?? _styleTheme))]}>{PHASE_LABELS[phase.phase] ?? phase.phase}</Text>
+              <Text style={[aiOpsStyles((theme ?? _styleTheme)).cardSub, themeStyle('components_admin_aiOps_AiOpsItineraryInstructions_5', { theme: theme }, (theme ?? _styleTheme))]}>
                 {phase.source}{phase.updatedAt ? `, updated ${phase.updatedAt}` : ''}
               </Text>
             </View>
           </View>
           <TextInput
-            style={[aiOpsStyles.input, aiOpsStyles.textarea, inputStyle(theme)]}
+            style={[aiOpsStyles((theme ?? _styleTheme)).input, aiOpsStyles((theme ?? _styleTheme)).textarea, inputStyle(theme)]}
             value={drafts[phase.phase] ?? phase.markdown}
             onChangeText={(value) => {
               setDrafts((prev) => ({ ...prev, [phase.phase]: value }));
@@ -66,18 +70,18 @@ export const AiOpsItineraryInstructions: React.FC<{
       );
     })}
     <TextInput
-      style={[aiOpsStyles.input, inputStyle(theme)]}
+      style={[aiOpsStyles((theme ?? _styleTheme)).input, inputStyle(theme)]}
       value={reason}
       onChangeText={setReason}
       placeholder="Reason for instruction update"
       placeholderTextColor={theme.colors.textMuted}
     />
     <TouchableOpacity
-      style={[aiOpsStyles.button, { backgroundColor: theme.colors.primary }, saving === 'itinerary-instructions' && aiOpsStyles.disabled]}
+      style={[aiOpsStyles((theme ?? _styleTheme)).button, themeStyle('components_admin_aiOps_AiOpsItineraryInstructions_6', { theme: theme }, (theme ?? _styleTheme)), saving === 'itinerary-instructions' && aiOpsStyles((theme ?? _styleTheme)).disabled]}
       onPress={onSave}
       disabled={saving === 'itinerary-instructions'}
     >
-      <Text style={aiOpsStyles.buttonText}>Save selected instructions</Text>
+      <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>Save selected instructions</Text>
     </TouchableOpacity>
   </View>
-);
+)); };

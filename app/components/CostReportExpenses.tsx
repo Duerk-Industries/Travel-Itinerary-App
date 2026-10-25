@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
@@ -15,12 +17,13 @@ type Props = {
 };
 
 export default function CostReportExpenses({ expenses, members, styles, readOnly, onEditItineraryItem }: Props) {
+  const _styleTheme = useStyleTheme();
   const memberNameMap = new Map(members.map(member => [member.id, formatMemberDisplayName(member)]));
   const visibleExpenses = expenses.filter(expense => Number.isFinite(Number(expense.amount)) && Number(expense.amount) !== 0)
     .slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.id.localeCompare(b.id));
   return <>
       {visibleExpenses.length ? (
-        <View style={{ marginTop: 18 }} testID="other-expenses">
+        <View style={themeStyle('components_CostReportExpenses_1', {  }, _styleTheme)} testID="other-expenses">
           <Text style={styles.sectionTitle}>Other Expenses ({visibleExpenses.length})</Text>
           <Text style={styles.helperText}>
             Individual daily expenses and itinerary items with non-zero costs. Select a linked description to edit its itinerary item.

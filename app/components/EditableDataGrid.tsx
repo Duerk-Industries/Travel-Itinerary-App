@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useMemo, useState } from 'react';
 import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
@@ -5,7 +8,7 @@ import { parseClipboardMatrix, serializeClipboardMatrix } from '../utils/clipboa
 import { fixedTableColumn } from '../utils/tableColumns';
 import DateField from './DateField';
 import SelectField from './SelectField';
-import type { AppTheme } from '../theme/theme';
+
 
 export type GridEditorKind = 'text' | 'date' | 'time' | 'decimal' | 'select' | 'singleSelect' | 'multiSelect' | 'textarea' | 'readonly' | 'action';
 
@@ -83,8 +86,10 @@ export function EditableDataGrid<Row extends { id: string }>({
   onSort,
   onError,
   styles = {},
-  theme,
+  theme: _providedTheme,
 }: EditableDataGridProps<Row>) {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [anchor, setAnchor] = useState<CellPosition | null>(null);
   const [active, setActive] = useState<CellPosition | null>(null);
   const [cutSelection, setCutSelection] = useState<Array<{ rowId: string; columnKey: string }>>([]);
@@ -95,44 +100,32 @@ export function EditableDataGrid<Row extends { id: string }>({
   // Style fallbacks are declared up front, before anything that renders a row, so
   // renderEditor/renderRows (invoked eagerly below while building `content`) never
   // reference a const ahead of its declaration.
-  const selectedCellStyle = styles.selectedCell ?? { backgroundColor: theme?.colors?.surface ?? '#eff6ff' };
-  const errorCellStyle = styles.errorCell ?? { borderColor: theme?.colors.error ?? '#dc2626', borderWidth: 1 };
-  const deletedRowStyle = styles.deletedRow ?? { opacity: 0.5 };
-  const errorTextStyle = styles.errorText ?? { color: theme?.colors.error ?? '#dc2626', fontSize: 11 };
-  const disabledButtonStyle = styles.disabledButton ?? { opacity: 0.45 };
-  const pickerButtonStyle = styles.gridPickerButton ?? { justifyContent: 'center' };
-  const pickerLinkStyle = styles.gridPickerLink ?? { marginHorizontal: 4, marginBottom: 4 };
-  const pickerLinkTextStyle = styles.linkText ?? { color: theme?.colors?.link ?? '#2563eb', fontSize: 12 };
-  const pickerOverlayStyle = styles.modalOverlay ?? { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.5)' };
-  const pickerCardStyle = styles.modalCard ?? { backgroundColor: theme?.colors?.surface ?? '#fff', borderRadius: 12, padding: 16, minWidth: 260, maxHeight: '80%' };
-  const pickerOptionRowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, paddingVertical: 8 };
+  const selectedCellStyle = styles.selectedCell ?? themeStyle('components_EditableDataGrid_1', { theme: theme }, (theme ?? _styleTheme));
+  const errorCellStyle = styles.errorCell ?? themeStyle('components_EditableDataGrid_2', { theme: theme }, (theme ?? _styleTheme));
+  const deletedRowStyle = styles.deletedRow ?? themeStyle('components_EditableDataGrid_3', {  }, (theme ?? _styleTheme));
+  const errorTextStyle = styles.errorText ?? themeStyle('components_EditableDataGrid_4', { theme: theme }, (theme ?? _styleTheme));
+  const disabledButtonStyle = styles.disabledButton ?? themeStyle('components_EditableDataGrid_5', {  }, (theme ?? _styleTheme));
+  const pickerButtonStyle = styles.gridPickerButton ?? themeStyle('components_EditableDataGrid_6', {  }, (theme ?? _styleTheme));
+  const pickerLinkStyle = styles.gridPickerLink ?? themeStyle('components_EditableDataGrid_7', {  }, (theme ?? _styleTheme));
+  const pickerLinkTextStyle = styles.linkText ?? themeStyle('components_EditableDataGrid_8', { theme: theme }, (theme ?? _styleTheme));
+  const pickerOverlayStyle = styles.modalOverlay ?? themeStyle('components_EditableDataGrid_9', {  }, (theme ?? _styleTheme));
+  const pickerCardStyle = styles.modalCard ?? themeStyle('components_EditableDataGrid_10', { theme: theme }, (theme ?? _styleTheme));
+  const pickerOptionRowStyle = themeStyle('components_EditableDataGrid_11', {  }, (theme ?? _styleTheme));
   const stickyIdentityStyle = Platform.OS === 'web'
-    ? ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors?.surface ?? '#fff' } as any)
+    ? (themeStyle('components_EditableDataGrid_12', { theme: theme }, (theme ?? _styleTheme)) as any)
     : null;
   const stickyActionsStyle = Platform.OS === 'web'
-    ? ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors?.surface ?? '#fff' } as any)
+    ? (themeStyle('components_EditableDataGrid_13', { theme: theme }, (theme ?? _styleTheme)) as any)
     : null;
-  const gridInputThemeStyle = {
-    backgroundColor: theme?.colors?.surface ?? '#fff',
-    color: theme?.colors?.text ?? '#111827',
-    borderColor: theme?.colors?.border ?? '#ccd4df',
-  };
-  const webInputStyle = {
-    ...gridInputThemeStyle,
-    boxSizing: 'border-box' as const,
-  };
+  const gridInputThemeStyle = themeStyle('components_EditableDataGrid_14', { theme: theme }, (theme ?? _styleTheme));
+  const webInputStyle = themeStyle('components_EditableDataGrid_15', { gridInputThemeStyle: gridInputThemeStyle }, (theme ?? _styleTheme));
 
   const errorByCell = useMemo(() => new Map(cellErrors.map((error) => [cellKey(error.rowId, error.columnKey), error.message])), [cellErrors]);
 
   const selection = useMemo(() => {
     if (!anchor || !active) return null;
-    return {
-      top: Math.min(anchor.rowIndex, active.rowIndex),
-      bottom: Math.max(anchor.rowIndex, active.rowIndex),
-      left: Math.min(anchor.columnIndex, active.columnIndex),
-      right: Math.max(anchor.columnIndex, active.columnIndex),
-    };
-  }, [anchor, active]);
+    return themeStyle('components_EditableDataGrid_16', { anchor: anchor, active: active }, (theme ?? _styleTheme));
+  }, [anchor, active, _styleTheme]);
 
   const selectedCells = (): Array<{ row: Row; column: GridColumn<Row>; rowIndex: number; columnIndex: number }> => {
     if (!selection) return [];
@@ -287,7 +280,7 @@ export function EditableDataGrid<Row extends { id: string }>({
         return next;
       });
     };
-    const inputStyle = [styles.input, gridInputThemeStyle, { minWidth: column.width - 16, width: column.width - 16, margin: 4 }];
+    const inputStyle = [styles.input, gridInputThemeStyle, themeStyle('components_EditableDataGrid_17', { column: column }, (theme ?? _styleTheme))];
     let editor: React.ReactNode;
     if (column.editor === 'singleSelect') {
       editor = <SelectField
@@ -299,7 +292,7 @@ export function EditableDataGrid<Row extends { id: string }>({
       />;
     } else if (column.editor === 'select') {
       if (Platform.OS === 'web') {
-        editor = React.createElement('select', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 } }, (column.options ?? []).map((option) => React.createElement('option', { key: option, value: option }, option)));
+        editor = React.createElement('select', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: themeStyle('components_EditableDataGrid_18', { webInputStyle: webInputStyle, column: column }, (theme ?? _styleTheme)) }, (column.options ?? []).map((option) => React.createElement('option', { key: option, value: option }, option)));
       } else {
         // Native gets the same picker affordance as the app's existing status/type
         // choosers elsewhere, instead of requiring the exact option text be typed.
@@ -320,19 +313,19 @@ export function EditableDataGrid<Row extends { id: string }>({
           disabled={disabled}
           testID={`grid-${column.key}-${row.id}`}
           accessibilityLabel={column.label}
-          style={[gridInputThemeStyle, { minWidth: column.width - 16, width: column.width - 16, margin: 4 }]}
+          style={[gridInputThemeStyle, themeStyle('components_EditableDataGrid_19', { column: column }, (theme ?? _styleTheme))]}
         />
       );
     } else if (column.editor === 'decimal') {
       if (Platform.OS === 'web') {
-        editor = React.createElement('input', { type: 'number', value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 } });
+        editor = React.createElement('input', { type: 'number', value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: themeStyle('components_EditableDataGrid_20', { webInputStyle: webInputStyle, column: column }, (theme ?? _styleTheme)) });
       } else {
         editor = <TextInput style={inputStyle} value={value} onChangeText={onChange} keyboardType="decimal-pad" placeholder="0.00" />;
       }
     } else if (column.editor === 'textarea') {
       editor = Platform.OS === 'web'
-        ? React.createElement('textarea', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, minHeight: 36, margin: 4 } })
-        : <TextInput style={[inputStyle, { minHeight: 42 }]} value={value} onChangeText={onChange} multiline />;
+        ? React.createElement('textarea', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: themeStyle('components_EditableDataGrid_21', { webInputStyle: webInputStyle, column: column }, (theme ?? _styleTheme)) })
+        : <TextInput style={[inputStyle, themeStyle('components_EditableDataGrid_22', {  }, (theme ?? _styleTheme))]} value={value} onChangeText={onChange} multiline />;
     } else if (column.editor === 'multiSelect') {
       const textEditor = Platform.OS === 'web'
         ? React.createElement('input', {
@@ -345,7 +338,7 @@ export function EditableDataGrid<Row extends { id: string }>({
                 commitMultiSelect();
               }
             },
-            style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 },
+            style: themeStyle('components_EditableDataGrid_23', { webInputStyle: webInputStyle, column: column }, (theme ?? _styleTheme)),
             placeholder: 'Name; Name',
           })
         : <TextInput style={inputStyle} value={multiSelectValue} onChangeText={onMultiSelectChange} onBlur={commitMultiSelect} onEndEditing={commitMultiSelect} placeholder="Name; Name" />;
@@ -353,7 +346,7 @@ export function EditableDataGrid<Row extends { id: string }>({
       // still supports typing/pasting semicolon-separated names) so the column is
       // discoverable on both platforms without removing the clipboard-paste path.
       editor = column.pickerOptions?.length ? (
-        <View style={{ minWidth: column.width, width: column.width }}>
+        <View style={themeStyle('components_EditableDataGrid_24', { column: column }, (theme ?? _styleTheme))}>
           {textEditor}
           <TouchableOpacity disabled={disabled} style={pickerLinkStyle} onPress={() => openMultiSelectPicker(row, column)}>
             <Text style={pickerLinkTextStyle}>Pick…</Text>
@@ -362,7 +355,7 @@ export function EditableDataGrid<Row extends { id: string }>({
       ) : textEditor;
     } else {
       editor = Platform.OS === 'web'
-        ? React.createElement('input', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 } })
+        ? React.createElement('input', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: themeStyle('components_EditableDataGrid_25', { webInputStyle: webInputStyle, column: column }, (theme ?? _styleTheme)) })
         : <TextInput style={inputStyle} value={value} onChangeText={onChange} />;
     }
     return (
@@ -428,7 +421,7 @@ export function EditableDataGrid<Row extends { id: string }>({
         onCopy: copySelection,
         onCut: (event: { clipboardData?: { setData: (type: string, value: string) => void }; preventDefault: () => void }) => copySelection(event, true),
         onPaste: pasteSelection,
-        style: { outline: 'none' },
+        style: themeStyle('components_EditableDataGrid_26', {  }, (theme ?? _styleTheme)),
       }
     : {};
 
@@ -444,7 +437,7 @@ export function EditableDataGrid<Row extends { id: string }>({
                   <Text style={styles.cellText}>{option}</Text>
                 </TouchableOpacity>
               ))}
-              <TouchableOpacity style={[styles.button, { marginTop: 12 }]} onPress={closePicker}><Text style={styles.buttonText}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('components_EditableDataGrid_27', {  }, (theme ?? _styleTheme))]} onPress={closePicker}><Text style={styles.buttonText}>Cancel</Text></TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -465,9 +458,9 @@ export function EditableDataGrid<Row extends { id: string }>({
                   </TouchableOpacity>
                 );
               })}
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={closePicker}><Text style={styles.dangerButtonText}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={commitMultiSelectPicker}><Text style={styles.buttonText}>Done</Text></TouchableOpacity>
+              <View style={themeStyle('components_EditableDataGrid_28', {  }, (theme ?? _styleTheme))}>
+                <TouchableOpacity style={[styles.button, styles.dangerButton, themeStyle('components_EditableDataGrid_29', {  }, (theme ?? _styleTheme))]} onPress={closePicker}><Text style={styles.dangerButtonText}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.button, themeStyle('components_EditableDataGrid_30', {  }, (theme ?? _styleTheme))]} onPress={commitMultiSelectPicker}><Text style={styles.buttonText}>Done</Text></TouchableOpacity>
               </View>
             </View>
           </View>

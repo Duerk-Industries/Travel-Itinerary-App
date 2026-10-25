@@ -1,4 +1,7 @@
 // @ts-nocheck
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 // Phase 5 (A1) of docs/trip-blog-social-implementation-plan.md — the Day Starter card.
 //
 // The server assembles a deterministic draft from that day's itinerary (transfers, activities,
@@ -29,51 +32,56 @@ type Props = {
 
 const BlogDayStarterCard: React.FC<Props> = ({
   draft, onUse, onDismiss, busy = false,
-  displayFont, textColor = '#111827', mutedColor = '#6b7280',
-  borderColor = '#ccd4df', backgroundColor = '#ffffff', accentColor = '#2E96A6',
+  displayFont, textColor: _textColorOverride, mutedColor: _mutedColorOverride,
+  borderColor: _borderColorOverride, backgroundColor: _backgroundColorOverride, accentColor: _accentColorOverride,
   styles, testID,
-}) => (
+}) => { const _styleTheme = useStyleTheme();
+  const textColor = _textColorOverride ?? themeStyle('components_BlogDayStarterCard_11', {  }, _styleTheme);
+  const mutedColor = _mutedColorOverride ?? themeStyle('components_BlogDayStarterCard_12', {  }, _styleTheme);
+  const borderColor = _borderColorOverride ?? themeStyle('components_BlogDayStarterCard_13', {  }, _styleTheme);
+  const backgroundColor = _backgroundColorOverride ?? themeStyle('components_BlogDayStarterCard_14', {  }, _styleTheme);
+  const accentColor = _accentColorOverride ?? themeStyle('components_BlogDayStarterCard_15', {  }, _styleTheme); return ((
   <View
     testID={testID}
-    style={{ borderWidth: 1, borderColor, borderRadius: 12, backgroundColor, padding: 14, marginBottom: 12 }}
+    style={themeStyle('components_BlogDayStarterCard_1', { borderColor: borderColor, backgroundColor: backgroundColor }, _styleTheme)}
   >
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-      <Text style={{ fontFamily: displayFont, color: accentColor, fontSize: 14, fontWeight: '600' }}>✨ Day Starter</Text>
+    <View style={themeStyle('components_BlogDayStarterCard_2', {  }, _styleTheme)}>
+      <Text style={themeStyle('components_BlogDayStarterCard_3', { displayFont: displayFont, accentColor: accentColor }, _styleTheme)}>✨ Day Starter</Text>
       <TouchableOpacity
         testID={testID ? `${testID}-dismiss` : undefined}
         accessibilityRole="button"
         accessibilityLabel="Dismiss this Day Starter"
         onPress={busy ? undefined : onDismiss}
         disabled={busy}
-        style={{ minHeight: 32, minWidth: 32, alignItems: 'center', justifyContent: 'center' }}
+        style={themeStyle('components_BlogDayStarterCard_4', {  }, _styleTheme)}
       >
-        <Text style={{ color: mutedColor, fontSize: 16 }}>✕</Text>
+        <Text style={themeStyle('components_BlogDayStarterCard_5', { mutedColor: mutedColor }, _styleTheme)}>✕</Text>
       </TouchableOpacity>
     </View>
 
-    <Text style={{ color: textColor, fontSize: 15, lineHeight: 22, marginBottom: 12 }}>{draft}</Text>
+    <Text style={themeStyle('components_BlogDayStarterCard_6', { textColor: textColor }, _styleTheme)}>{draft}</Text>
 
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    <View style={themeStyle('components_BlogDayStarterCard_7', {  }, _styleTheme)}>
       <TouchableOpacity
         testID={testID ? `${testID}-use` : undefined}
         accessibilityRole="button"
-        style={[styles.button, busy ? { opacity: 0.6 } : null]}
+        style={[styles.button, busy ? themeStyle('components_BlogDayStarterCard_8', {  }, _styleTheme) : null]}
         disabled={busy}
         onPress={busy ? undefined : onUse}
       >
-        {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.buttonText}>Use this draft</Text>}
+        {busy ? <ActivityIndicator size="small" color={themeStyle('components_BlogDayStarterCard_16', {  }, _styleTheme)} /> : <Text style={styles.buttonText}>Use this draft</Text>}
       </TouchableOpacity>
       <TouchableOpacity
         testID={testID ? `${testID}-notnow` : undefined}
         accessibilityRole="button"
-        style={[styles.button, { backgroundColor: 'transparent', borderWidth: 1, borderColor }]}
+        style={[styles.button, themeStyle('components_BlogDayStarterCard_9', { borderColor: borderColor }, _styleTheme)]}
         disabled={busy}
         onPress={busy ? undefined : onDismiss}
       >
-        <Text style={{ color: textColor }}>Not now</Text>
+        <Text style={themeStyle('components_BlogDayStarterCard_10', { textColor: textColor }, _styleTheme)}>Not now</Text>
       </TouchableOpacity>
     </View>
   </View>
-);
+)); };
 
 export default BlogDayStarterCard;

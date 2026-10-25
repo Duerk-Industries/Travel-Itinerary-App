@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // The one date/time-entry control every screen should use (`mode="date"`, the default, or
 // `mode="time"`). Before this, ~10 files each reimplemented their own picker independently —
 // some `<input type="date">`, some three `<select>` dropdowns, native handling copy-pasted with
@@ -21,7 +24,7 @@ import { Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { toWebStyle } from '../utils/webStyle';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
-import type { AppTheme } from '../theme/theme';
+
 import NativeDateTimePicker from './NativeDateTimePicker';
 import NativeDatePickerSheet from './NativeDatePickerSheet';
 
@@ -69,8 +72,10 @@ const formatTimeValue = (date: Date): string =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
 const DateField: React.FC<DateFieldProps> = ({
-  value, onChange, styles, theme, mode = 'date', placeholder, minDate, maxDate, pickerInitialDate, testID, accessibilityLabel, style, disabled = false, onOpen,
+  value, onChange, styles, theme: _providedTheme, mode = 'date', placeholder, minDate, maxDate, pickerInitialDate, testID, accessibilityLabel, style, disabled = false, onOpen,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const isTime = mode === 'time';
   const parseValue = (raw: string) => (isTime ? parseTimeValue(raw) : parseLocalDateOnly(raw, pickerInitialDate ? parseLocalDateOnly(pickerInitialDate) : new Date()));
   const formatValue = (date: Date) => (isTime ? formatTimeValue(date) : formatLocalDateOnly(date));
@@ -89,14 +94,10 @@ const DateField: React.FC<DateFieldProps> = ({
   const webInputStyle = useMemo(
     // Precedence: theme input style < full-width defaults < caller `style` (e.g. a grid cell's
     // fixed width) < color-scheme, which always tracks the app appearance.
-    () => toWebStyle({
-      ...flattenStyle(styles.input),
-      width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
-      ...flattenStyle(style),
-    }, {
+    () => toWebStyle(themeStyle('components_DateField_1', { flattenStyle: flattenStyle, styles: styles, style: style }, (theme ?? _styleTheme)), {
       colorScheme: theme?.mode === 'dark' ? 'dark' : 'light',
     }),
-    [styles, style, theme?.mode]
+    [styles, style, theme?.mode, _styleTheme]
   );
 
   if (Platform.OS === 'web') {
@@ -134,11 +135,11 @@ const DateField: React.FC<DateFieldProps> = ({
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel || resolvedPlaceholder}
-        style={[styles.input, { justifyContent: 'center' }, style, disabled && styles.buttonDisabled]}
+        style={[styles.input, themeStyle('components_DateField_2', {  }, (theme ?? _styleTheme)), style, disabled && styles.buttonDisabled]}
         onPress={openPicker}
         disabled={disabled}
       >
-        <Text style={[styles.cellText, !value && { color: theme?.colors.textMuted }]}>{value || resolvedPlaceholder}</Text>
+        <Text style={[styles.cellText, !value && themeStyle('components_DateField_3', { theme: theme }, (theme ?? _styleTheme))]}>{value || resolvedPlaceholder}</Text>
       </TouchableOpacity>
       <NativeDatePickerSheet
         visible={pickerOpen}

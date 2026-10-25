@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import { shadowStyle } from '../utils/shadowStyle';
 /**
  * ChatButton — floating action button (lower-right) that opens the ChatPanel.
@@ -12,6 +14,7 @@ interface Props {
 }
 
 const ChatButton: React.FC<Props> = ({ onPress, unreadCount }) => {
+  const _styleTheme = useStyleTheme();
   const accessibilityLabel =
     unreadCount > 0
       ? `Open trip chat, ${unreadCount > 99 ? 'over 99' : unreadCount} unread`
@@ -19,58 +22,21 @@ const ChatButton: React.FC<Props> = ({ onPress, unreadCount }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={styles.fab}
+      style={styles(_styleTheme).fab}
       testID="chat-fab"
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <Text style={styles.icon} accessibilityElementsHidden importantForAccessibility="no">💬</Text>
+      <Text style={styles(_styleTheme).icon} accessibilityElementsHidden importantForAccessibility="no">💬</Text>
       {unreadCount > 0 && (
-        <View style={styles.badge} testID="chat-unread-badge" accessibilityElementsHidden importantForAccessibility="no">
-          <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+        <View style={styles(_styleTheme).badge} testID="chat-unread-badge" accessibilityElementsHidden importantForAccessibility="no">
+          <Text style={styles(_styleTheme).badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
         </View>
       )}
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#1565C0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 6,
-    ...shadowStyle('#000', 0.2, 0, 3, 6),
-    zIndex: 1000,
-  },
-  icon: {
-    fontSize: 24,
-  },
-  badge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#E53935',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: '#fff',
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_ChatButton_1', { StyleSheet: StyleSheet, shadowStyle: shadowStyle }, _theme);
 
 export default ChatButton;

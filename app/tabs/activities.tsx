@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import { singlePayerIds } from '../utils/payerSelection';
 import AddToCalendarButton from '../components/AddToCalendarButton';
 import { activityCalendarEvent } from '../utils/calendarEvents';
@@ -10,7 +13,7 @@ import { startItemSaveTask } from '../utils/analytics/track';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
-import type { AppTheme } from '../theme/theme';
+
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import GetYourGuideCta from '../components/GetYourGuideCta';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
@@ -330,7 +333,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   payerTotals,
   toursTotal,
   styles,
-  theme,
+  theme: _providedTheme,
   fetchTours,
   onDataChanged,
   mode = 'live',
@@ -350,6 +353,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   featureActivityRecap = false,
   onOpenActivityRecap,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
@@ -863,10 +868,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const renderDetailRow = (label: string, value: React.ReactNode) => (
-    <View style={[styles.modalRow, { alignItems: 'flex-start' }]} key={label}>
-      <Text style={[styles.cellText, { minWidth: 140, flexShrink: 0, fontWeight: '600' }]}>{label}</Text>
+    <View style={[styles.modalRow, themeStyle('tabs_activities_1', {  }, (theme ?? _styleTheme))]} key={label}>
+      <Text style={[styles.cellText, themeStyle('tabs_activities_2', {  }, (theme ?? _styleTheme))]}>{label}</Text>
       {typeof value === 'string' || typeof value === 'number' ? (
-        <Text style={[styles.cellText, { flex: 1 }]}>{value || '-'}</Text>
+        <Text style={[styles.cellText, themeStyle('tabs_activities_3', {  }, (theme ?? _styleTheme))]}>{value || '-'}</Text>
       ) : (
         value
       )}
@@ -880,7 +885,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Activities</Text>
         {!readOnly ? (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          <View style={themeStyle('tabs_activities_4', {  }, (theme ?? _styleTheme))}>
             {featureGridEditing && !tableEditing ? (
               <TouchableOpacity style={styles.button} onPress={beginGridEdit} testID="activity-table-edit">
                 <Text style={styles.buttonText}>Edit table</Text>
@@ -891,7 +896,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               <>
                 <TouchableOpacity
                   disabled={gridSaving}
-                  style={[styles.button, styles.dangerButton, gridSaving && { opacity: 0.45 }]}
+                  style={[styles.button, styles.dangerButton, gridSaving && themeStyle('tabs_activities_5', {  }, (theme ?? _styleTheme))]}
                   onPress={cancelGridEdit}
                   testID="activity-table-cancel"
                 >
@@ -899,7 +904,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={gridSaving}
-                  style={[styles.button, gridSaving && { opacity: 0.45 }]}
+                  style={[styles.button, gridSaving && themeStyle('tabs_activities_6', {  }, (theme ?? _styleTheme))]}
                   onPress={saveGridEdit}
                   testID="activity-table-save"
                 >
@@ -907,7 +912,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={gridSaving || gridHistory.length === 0}
-                  style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, (gridSaving || gridHistory.length === 0) && { opacity: 0.45 }]}
+                  style={[styles.button, themeStyle('tabs_activities_7', {  }, (theme ?? _styleTheme)), (gridSaving || gridHistory.length === 0) && themeStyle('tabs_activities_8', {  }, (theme ?? _styleTheme))]}
                   onPress={undoGridChange}
                   accessibilityLabel="Undo activity table change"
                   testID="activity-table-undo"
@@ -916,7 +921,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={gridSaving || gridRedo.length === 0}
-                  style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, (gridSaving || gridRedo.length === 0) && { opacity: 0.45 }]}
+                  style={[styles.button, themeStyle('tabs_activities_9', {  }, (theme ?? _styleTheme)), (gridSaving || gridRedo.length === 0) && themeStyle('tabs_activities_10', {  }, (theme ?? _styleTheme))]}
                   onPress={redoGridChange}
                   accessibilityLabel="Redo activity table change"
                   testID="activity-table-redo"
@@ -977,7 +982,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ].map((col, idx, arr) => (
               <TouchableOpacity
                 key={col.key}
-                style={[styles.cell, fixedColumnStyle(col.width), col.key === 'name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any), idx === arr.length - 1 && styles.lastCell]}
+                style={[styles.cell, fixedColumnStyle(col.width), col.key === 'name' && Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_activities_11', { theme: theme }, (theme ?? _styleTheme)) as any), idx === arr.length - 1 && styles.lastCell]}
                 onPress={() => sortActivityTable(col.key)}
                 accessibilityRole="button"
                 accessibilityLabel={`Sort by ${col.label}`}
@@ -995,13 +1000,13 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               <View style={[styles.cell, fixedColumnStyle(180)]}>
                 <Text style={styles.cellText}>{t.activityType || 'Tour'}</Text>
               </View>
-              <View style={[styles.cell, fixedColumnStyle(220), Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+              <View style={[styles.cell, fixedColumnStyle(220), Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_activities_12', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
                 <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); setSelectedTourId(t.id); }} testID={`activity-details-${t.id}`}>
                   <Text numberOfLines={1} style={[styles.cellText, styles.linkText]}>{t.name || '-'}</Text>
                 </TouchableOpacity>
                 {!readOnly && featureActivityRecap && normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                  <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); onOpenActivityRecap?.(t); }} testID={`activity-recap-${t.id}`} style={{ alignSelf: 'flex-start', marginTop: 3 }}>
-                    <Text style={[styles.linkText, { fontSize: 12 }]}>Recap</Text>
+                  <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); onOpenActivityRecap?.(t); }} testID={`activity-recap-${t.id}`} style={themeStyle('tabs_activities_13', {  }, (theme ?? _styleTheme))}>
+                    <Text style={[styles.linkText, themeStyle('tabs_activities_14', {  }, (theme ?? _styleTheme))]}>Recap</Text>
                   </TouchableOpacity>
                 ) : null}
                 {mode !== 'wizard' ? (
@@ -1036,10 +1041,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         </View>
         </HorizontalTableScroll>
       </> : null}
-      <View style={{ marginTop: 8 }}>
+      <View style={themeStyle('tabs_activities_15', {  }, (theme ?? _styleTheme))}>
             <Text style={styles.flightTitle}>Total activity cost: ${toursTotal.toFixed(2)}</Text>
         {payerTotalsList.length ? (
-          <View style={{ marginTop: 4 }}>
+          <View style={themeStyle('tabs_activities_16', {  }, (theme ?? _styleTheme))}>
             {payerTotalsList.map(([id, total]) => (
               <Text key={id} style={styles.helperText}>
                 {payerName(id)}: ${total.toFixed(2)}
@@ -1054,11 +1059,11 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         <Modal transparent visible={Boolean(selectedTour)} animationType="fade" onRequestClose={() => setSelectedTourId(null)}>
           <View style={styles.modalOverlay} testID="activity-details-modal">
             <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setSelectedTourId(null)} />
-            <View style={[styles.modalCard, { marginTop: 0 }]}>
+            <View style={[styles.modalCard, themeStyle('tabs_activities_17', {  }, (theme ?? _styleTheme))]}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Activity Details</Text>
               </View>
-              <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+              <ScrollView style={themeStyle('tabs_activities_18', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('tabs_activities_19', {  }, (theme ?? _styleTheme))}>
                 <AddToCalendarButton event={activityCalendarEvent(selectedTour)} styles={styles} />
                 {renderDetailRow('Date', formatDateLong(selectedTour.date))}
                 {renderDetailRow('Type', selectedTour.activityType || 'Tour')}

@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { orderDayActivities } from '../../packages/domain/src/dayOrder';
@@ -51,6 +53,7 @@ const OPTIMIZE_REASON_COPY: Record<string, string> = {
 export default function DayActivitiesOrdering<T extends OrderableActivity>({
   tripId, date, backendUrl, headers, activities, lodgingAnchor, readOnly, onChanged, styles, renderRow,
 }: Props<T>) {
+  const _styleTheme = useStyleTheme();
   const [enabled, setEnabled] = useState(false);
   const [optimizationEnabled, setOptimizationEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -219,19 +222,19 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
 
   const canReorder = enabled && !readOnly && ordered.length > 1;
   const hasCoordinates = ordered.filter((a) => typeof a.lat === 'number' && typeof a.lng === 'number').length;
-  const touch = { minHeight: 44, minWidth: 44, alignItems: 'center' as const, justifyContent: 'center' as const };
+  const touch = themeStyle('components_DayActivitiesOrdering_1', {  }, _styleTheme);
 
   return (
     <View>
       {canReorder && optimizationEnabled ? (
-        <View testID="day-order-tools" style={{ gap: 8, marginBottom: 8 }}>
+        <View testID="day-order-tools" style={themeStyle('components_DayActivitiesOrdering_2', {  }, _styleTheme)}>
           <TouchableOpacity
             testID="day-order-optimize"
             accessibilityRole="button"
             accessibilityLabel="Suggest a shorter order for this day"
             accessibilityState={{ disabled: busy || hasCoordinates < 2, busy }}
             disabled={busy || hasCoordinates < 2}
-            style={[styles.dayInfoButton, touch, hasCoordinates < 2 ? { opacity: 0.5 } : null]}
+            style={[styles.dayInfoButton, touch, hasCoordinates < 2 ? themeStyle('components_DayActivitiesOrdering_3', {  }, _styleTheme) : null]}
             onPress={showPreview}
           >
             <Text style={styles.dayInfoButtonText}>Optimize order</Text>
@@ -256,7 +259,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
       ) : null}
 
       {preview && optimizationEnabled ? (
-        <View testID="day-order-preview" style={{ gap: 6, marginBottom: 10 }} accessibilityLabel="Suggested order">
+        <View testID="day-order-preview" style={themeStyle('components_DayActivitiesOrdering_4', {  }, _styleTheme)} accessibilityLabel="Suggested order">
           <Text style={styles.flightTitle}>Suggested order</Text>
           <Text style={styles.helperText}>
             {`Straight-line distance: ${km(preview.beforeKm)} now, ${km(preview.afterKm)} suggested. These are rough distances, not walking or driving times, and they don't check opening hours.`}
@@ -267,13 +270,13 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
           {preview.keptInPlace.length ? (
             <Text style={styles.helperText}>Pinned stops, booked activities with a set time and activities without a map location stay where they are.</Text>
           ) : null}
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={themeStyle('components_DayActivitiesOrdering_5', {  }, _styleTheme)}>
             <TouchableOpacity
               testID="day-order-apply"
               accessibilityRole="button"
               accessibilityLabel="Use this order"
               disabled={busy}
-              style={[styles.dayInfoButton, touch, { flex: 1 }]}
+              style={[styles.dayInfoButton, touch, themeStyle('components_DayActivitiesOrdering_6', {  }, _styleTheme)]}
               onPress={applyPreview}
             >
               <Text style={styles.dayInfoButtonText}>{busy ? 'Saving…' : 'Use this order'}</Text>
@@ -283,7 +286,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
               accessibilityRole="button"
               accessibilityLabel="Keep my order"
               disabled={busy}
-              style={[styles.dayInfoButton, touch, { flex: 1 }]}
+              style={[styles.dayInfoButton, touch, themeStyle('components_DayActivitiesOrdering_7', {  }, _styleTheme)]}
               onPress={() => setPreview(null)}
             >
               <Text style={styles.dayInfoButtonText}>Keep my order</Text>
@@ -293,7 +296,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
       ) : null}
 
       {notice ? (
-        <View style={{ marginBottom: 8, gap: 4 }}>
+        <View style={themeStyle('components_DayActivitiesOrdering_8', {  }, _styleTheme)}>
           <Text
             testID="day-order-notice"
             accessibilityRole="alert"
@@ -320,12 +323,12 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
       {ordered.map((activity, index) => <DayOrderRow key={activity.id} id={activity.id} name={activity.name}
         disabled={!canReorder || busy} onStart={id => { drag.current = { id, ids: orderedIds, pins: pinnedIds, scope }; }}
         onDrop={id => void drop(id)} onEnd={endDrag}
-        onLayout={(id, y, height) => { layouts.current.set(id, { y, height }); }}>
+        onLayout={(id, y, height) => { layouts.current.set(id, themeStyle('components_DayActivitiesOrdering_9', { y: y, height: height }, _styleTheme)); }}>
         {
         renderRow(
           activity,
           canReorder ? (
-            <View style={{ flexDirection: 'row', gap: 4 }}>
+            <View style={themeStyle('components_DayActivitiesOrdering_10', {  }, _styleTheme)}>
               <TouchableOpacity testID={`day-order-pin-${activity.id}`} accessibilityRole="switch"
                 accessibilityLabel={`Keep ${activity.name} in place when optimizing`}
                 aria-checked={Boolean(activity.dayOrderPinned)}
@@ -339,7 +342,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
                 accessibilityLabel={`Move ${activity.name} up`}
                 accessibilityState={{ disabled: busy || index === 0 }}
                 disabled={busy || index === 0}
-                style={[touch, index === 0 ? { opacity: 0.3 } : null]}
+                style={[touch, index === 0 ? themeStyle('components_DayActivitiesOrdering_11', {  }, _styleTheme) : null]}
                 onPress={() => move(activity.id, -1)}
               >
                 <Text style={styles.dayInfoButtonText}>↑</Text>
@@ -350,7 +353,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
                 accessibilityLabel={`Move ${activity.name} down`}
                 accessibilityState={{ disabled: busy || index === ordered.length - 1 }}
                 disabled={busy || index === ordered.length - 1}
-                style={[touch, index === ordered.length - 1 ? { opacity: 0.3 } : null]}
+                style={[touch, index === ordered.length - 1 ? themeStyle('components_DayActivitiesOrdering_12', {  }, _styleTheme) : null]}
                 onPress={() => move(activity.id, 1)}
               >
                 <Text style={styles.dayInfoButtonText}>↓</Text>

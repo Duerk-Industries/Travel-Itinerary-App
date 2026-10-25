@@ -1,4 +1,9 @@
 // @ts-nocheck
+import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // Photo mosaic for a day's combined media (every traveler's uploads, not just the current user's).
 // Phase 0 of the trip-blog visual redesign (docs/trip-blog-social-prd.md §6.2's gallery + reaction
 // badges): replaces the old one-item-at-a-time carousel with a predictable editorial mosaic — 1
@@ -42,7 +47,7 @@ type DayMediaGalleryProps = {
   proposedCoverAssetId?: string | null;
 };
 
-const MOSAIC_HEIGHT = 220;
+const MOSAIC_HEIGHT = layoutMetrics.DayMediaGallery_MOSAIC_HEIGHT;
 const GAP = 4;
 const MAX_TILES = 4;
 
@@ -64,7 +69,7 @@ const DayMediaGallery = ({
   borderColor,
   backgroundColor,
   styles,
-  theme,
+  theme: _providedTheme,
   canEditMetadata = false,
   canSuggestMetadata = false,
   canRecordCaption = false,
@@ -74,6 +79,8 @@ const DayMediaGallery = ({
   onTranscribeMetadata,
   proposedCoverAssetId = null,
 }: DayMediaGalleryProps) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [expandedMetadataItemId, setExpandedMetadataItemId] = useState(null);
 
   if (!items.length) return null;
@@ -88,7 +95,7 @@ const DayMediaGallery = ({
     const showMetadata = (canEditMetadata || canRecordCaption) && !isAudioItem(item) && onSaveMetadata;
     if (!showCoverControl && !canRemove && !showMetadata) return null;
     return (
-      <View style={{ position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4, pointerEvents: 'box-none' }}>
+      <View style={themeStyle('components_DayMediaGallery_1', {  }, (theme ?? _styleTheme))}>
         {showCoverControl ? (
           // Every eligible tile always carries a cover control -- either the filled badge marking
           // the current cover, or an outlined button offering to make this the cover -- rather than
@@ -99,10 +106,10 @@ const DayMediaGallery = ({
             <View
               testID={`day-media-cover-badge-${item.id}`}
               accessibilityLabel="This is the current cover photo for this day"
-              style={{ backgroundColor: '#F59E0B', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 3 }}
+              style={themeStyle('components_DayMediaGallery_2', {  }, (theme ?? _styleTheme))}
             >
-              <Text style={{ fontSize: 12 }}>⭐</Text>
-              <Text style={{ color: '#111827', fontSize: 11, fontWeight: '700' }}>Cover</Text>
+              <Text style={themeStyle('components_DayMediaGallery_3', {  }, (theme ?? _styleTheme))}>⭐</Text>
+              <Text style={themeStyle('components_DayMediaGallery_4', {  }, (theme ?? _styleTheme))}>Cover</Text>
             </View>
           ) : (
             <TouchableOpacity
@@ -111,9 +118,9 @@ const DayMediaGallery = ({
               accessibilityLabel="Set as this day's cover photo"
               disabled={settingCover}
               onPress={() => onSetCover(item)}
-              style={{ backgroundColor: 'rgba(17,24,39,0.65)', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 7 }}
+              style={themeStyle('components_DayMediaGallery_5', {  }, (theme ?? _styleTheme))}
             >
-              <Text style={{ color: '#fff', fontSize: 13 }}>{settingCover ? '…' : '☆'}</Text>
+              <Text style={themeStyle('components_DayMediaGallery_6', {  }, (theme ?? _styleTheme))}>{settingCover ? '…' : '☆'}</Text>
             </TouchableOpacity>
           )
         ) : null}
@@ -123,9 +130,9 @@ const DayMediaGallery = ({
             accessibilityRole="button"
             accessibilityLabel="Edit photo details"
             onPress={() => setExpandedMetadataItemId((current) => (current === item.id ? null : item.id))}
-            style={{ backgroundColor: 'rgba(17,24,39,0.65)', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 7 }}
+            style={themeStyle('components_DayMediaGallery_7', {  }, (theme ?? _styleTheme))}
           >
-            <Text style={{ color: '#fff', fontSize: 13 }}>✎</Text>
+            <Text style={themeStyle('components_DayMediaGallery_8', {  }, (theme ?? _styleTheme))}>✎</Text>
           </TouchableOpacity>
         ) : null}
         {canRemove ? (
@@ -135,9 +142,9 @@ const DayMediaGallery = ({
             accessibilityLabel="Remove"
             disabled={removing}
             onPress={() => onRemove(item)}
-            style={{ backgroundColor: 'rgba(185,28,28,0.85)', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 7 }}
+            style={themeStyle('components_DayMediaGallery_9', {  }, (theme ?? _styleTheme))}
           >
-            <Text style={{ color: '#fff', fontSize: 13 }}>{removing ? '…' : '✕'}</Text>
+            <Text style={themeStyle('components_DayMediaGallery_10', {  }, (theme ?? _styleTheme))}>{removing ? '…' : '✕'}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -145,7 +152,7 @@ const DayMediaGallery = ({
   };
 
   const tile = (item: any, tileHeight: number, isLast: boolean, extraStyle: any = {}) => (
-    <View key={item.id} style={[{ position: 'relative', overflow: 'hidden', borderRadius: 8 }, extraStyle]}>
+    <View key={item.id} style={[themeStyle('components_DayMediaGallery_11', {  }, (theme ?? _styleTheme)), extraStyle]}>
       <TouchableOpacity
         testID={`day-media-grid-tile-${item.id}`}
         accessibilityRole="button"
@@ -155,15 +162,15 @@ const DayMediaGallery = ({
       >
         <BlogMediaPreview item={item} backgroundColor={backgroundColor} tileHeight={tileHeight} />
         {isLast && overflowCount > 0 ? (
-          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(17,24,39,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-            <Text testID="day-media-overflow-count" style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>+{overflowCount}</Text>
+          <View style={themeStyle('components_DayMediaGallery_12', {  }, (theme ?? _styleTheme))}>
+            <Text testID="day-media-overflow-count" style={themeStyle('components_DayMediaGallery_13', {  }, (theme ?? _styleTheme))}>+{overflowCount}</Text>
           </View>
         ) : null}
       </TouchableOpacity>
       {editRow(item)}
       {item.assetId === proposedCoverAssetId && item.id !== coverItemId ? (
-        <View testID={`day-media-cover-proposal-${item.id}`} style={{ position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(124,58,237,0.85)', borderRadius: 12, paddingVertical: 2, paddingHorizontal: 8 }}>
-          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>♥ Most-loved</Text>
+        <View testID={`day-media-cover-proposal-${item.id}`} style={themeStyle('components_DayMediaGallery_14', {  }, (theme ?? _styleTheme))}>
+          <Text style={themeStyle('components_DayMediaGallery_15', {  }, (theme ?? _styleTheme))}>♥ Most-loved</Text>
         </View>
       ) : null}
     </View>
@@ -174,28 +181,28 @@ const DayMediaGallery = ({
   const mosaic = visible.length === 1 ? (
     <View>{tile(visible[0], MOSAIC_HEIGHT, true)}</View>
   ) : visible.length === 2 ? (
-    <View style={{ flexDirection: 'row', gap: GAP }}>
-      {tile(visible[0], MOSAIC_HEIGHT, false, { flex: 1 })}
-      {tile(visible[1], MOSAIC_HEIGHT, true, { flex: 1 })}
+    <View style={themeStyle('components_DayMediaGallery_16', { GAP: GAP }, (theme ?? _styleTheme))}>
+      {tile(visible[0], MOSAIC_HEIGHT, false, themeStyle('components_DayMediaGallery_17', {  }, (theme ?? _styleTheme)))}
+      {tile(visible[1], MOSAIC_HEIGHT, true, themeStyle('components_DayMediaGallery_18', {  }, (theme ?? _styleTheme)))}
     </View>
   ) : (
-    <View style={{ flexDirection: 'row', gap: GAP, height: MOSAIC_HEIGHT }}>
-      {tile(visible[0], MOSAIC_HEIGHT, false, { flex: 1.6 })}
-      <View style={{ flex: 1, gap: GAP }}>
+    <View style={themeStyle('components_DayMediaGallery_19', { GAP: GAP, MOSAIC_HEIGHT: MOSAIC_HEIGHT }, (theme ?? _styleTheme))}>
+      {tile(visible[0], MOSAIC_HEIGHT, false, themeStyle('components_DayMediaGallery_20', {  }, (theme ?? _styleTheme)))}
+      <View style={themeStyle('components_DayMediaGallery_21', { GAP: GAP }, (theme ?? _styleTheme))}>
         {visible.slice(1).map((item, i) =>
-          tile(item, (MOSAIC_HEIGHT - GAP * (visible.length - 2)) / (visible.length - 1), i === visible.length - 2, { flex: 1 })
+          tile(item, (MOSAIC_HEIGHT - GAP * (visible.length - 2)) / (visible.length - 1), i === visible.length - 2, themeStyle('components_DayMediaGallery_22', {  }, (theme ?? _styleTheme)))
         )}
       </View>
     </View>
   );
 
   return (
-    <View style={{ marginTop: 8 }}>
+    <View style={themeStyle('components_DayMediaGallery_23', {  }, (theme ?? _styleTheme))}>
       {mosaic}
       {visible.some((item) => item.caption) ? (
-        <View style={{ marginTop: 4, gap: 2 }}>
+        <View style={themeStyle('components_DayMediaGallery_24', {  }, (theme ?? _styleTheme))}>
           {visible.filter((item) => item.caption).map((item) => (
-            <Text key={item.id} testID={`day-media-caption-${item.id}`} style={{ color: mutedColor, fontSize: 12 }}>{item.caption}</Text>
+            <Text key={item.id} testID={`day-media-caption-${item.id}`} style={themeStyle('components_DayMediaGallery_25', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{item.caption}</Text>
           ))}
         </View>
       ) : null}

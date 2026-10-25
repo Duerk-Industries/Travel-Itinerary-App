@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import PayerSelect from './PayerSelect';
 import React, { memo, useMemo } from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
@@ -5,7 +8,7 @@ import type { LodgingDraft } from '../tabs/lodging';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
-import type { AppTheme } from '../theme/theme';
+
 import DateField from './DateField';
 import DraftTextInput from './DraftTextInput';
 
@@ -39,9 +42,11 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
   payerName,
   defaultPayerId,
   styles,
-  theme,
+  theme: _providedTheme,
   isCompact,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const activeMembers = useMemo(
     () => groupMembers.filter((m) => m.status !== 'removed' && !m.removedAt),
     [groupMembers]
@@ -51,20 +56,10 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
     setDraft((prev) => ({ ...prev, travelerIds: nextIds.filter(Boolean) }));
   };
 
-  const toggleBaseStyle = styles.toggleOption ?? {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#111',
-    backgroundColor: theme?.colors.surface ?? '#fff',
-  };
-  const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
-    borderColor: theme?.colors.link ?? '#111',
-  };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
+  const toggleBaseStyle = styles.toggleOption ?? themeStyle('components_LodgingForm_1', { theme: theme }, (theme ?? _styleTheme));
+  const toggleSelectedStyle = styles.toggleOptionSelected ?? themeStyle('components_LodgingForm_2', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextStyle = styles.toggleOptionText ?? themeStyle('components_LodgingForm_3', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? themeStyle('components_LodgingForm_4', { theme: theme }, (theme ?? _styleTheme));
 
   const renderDateInput = (
     field: 'checkIn' | 'checkOut' | 'refundBy',
@@ -83,8 +78,8 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
 
   return (
     <>
-      <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
-        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
+      <View style={[styles.modalRow, isCompact && themeStyle('components_LodgingForm_5', {  }, (theme ?? _styleTheme))]}>
+        <View style={[styles.modalField, isCompact && themeStyle('components_LodgingForm_6', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.modalLabel}>Status</Text>
           {Platform.OS === 'web' ? (
             <select
@@ -92,7 +87,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
               onChange={(e) =>
                 setDraft((prev) => ({ ...prev, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))
               }
-              style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+              style={toWebStyle(styles.input, themeStyle('components_LodgingForm_7', {  }, (theme ?? _styleTheme)))}
             >
               {ITINERARY_STATUSES.map((opt) => (
                 <option key={`lodging-status-${opt}`} value={opt}>
@@ -119,8 +114,8 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
         </View>
       </View>
 
-      <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
-        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
+      <View style={[styles.modalRow, isCompact && themeStyle('components_LodgingForm_8', {  }, (theme ?? _styleTheme))]}>
+        <View style={[styles.modalField, isCompact && themeStyle('components_LodgingForm_9', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.modalLabel}>Name</Text>
           <DraftTextInput
             style={styles.input}
@@ -130,7 +125,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
             commitOnBlur={false}
           />
         </View>
-        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
+        <View style={[styles.modalField, isCompact && themeStyle('components_LodgingForm_10', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.modalLabel}>Rooms</Text>
           <DraftTextInput
             style={styles.input}
@@ -143,14 +138,14 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
         </View>
       </View>
 
-      <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
-        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
+      <View style={[styles.modalRow, isCompact && themeStyle('components_LodgingForm_11', {  }, (theme ?? _styleTheme))]}>
+        <View style={[styles.modalField, isCompact && themeStyle('components_LodgingForm_12', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.modalLabel}>Check-in date</Text>
           {renderDateInput('checkIn', draft.checkInDate, (value) =>
             setDraft((prev) => ({ ...prev, checkInDate: value }))
           )}
         </View>
-        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
+        <View style={[styles.modalField, isCompact && themeStyle('components_LodgingForm_13', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.modalLabel}>Check-out date</Text>
           {renderDateInput('checkOut', draft.checkOutDate, (value) =>
             setDraft((prev) => ({ ...prev, checkOutDate: value }))
@@ -158,8 +153,8 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
         </View>
       </View>
 
-      <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
-        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
+      <View style={[styles.modalRow, isCompact && themeStyle('components_LodgingForm_14', {  }, (theme ?? _styleTheme))]}>
+        <View style={[styles.modalField, isCompact && themeStyle('components_LodgingForm_15', {  }, (theme ?? _styleTheme))]}>
           <View style={styles.modalRow}>
             <Text style={styles.modalLabel}>Refund by</Text>
             <TouchableOpacity onPress={() => setDraft((prev) => ({ ...prev, refundBy: '' }))}>
@@ -170,7 +165,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
             setDraft((prev) => ({ ...prev, refundBy: value }))
           )}
         </View>
-        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
+        <View style={[styles.modalField, isCompact && themeStyle('components_LodgingForm_16', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.modalLabel}>Total cost</Text>
           <DraftTextInput
             style={styles.input}
@@ -224,7 +219,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
 
       <Text style={styles.modalLabel}>Notes</Text>
       <DraftTextInput
-        style={[styles.input, { minHeight: 70 }]}
+        style={[styles.input, themeStyle('components_LodgingForm_17', {  }, (theme ?? _styleTheme))]}
         placeholder="Notes"
         value={draft.notes ?? ''}
         onChangeText={(text: string) => setDraft((prev) => ({ ...prev, notes: text }))}

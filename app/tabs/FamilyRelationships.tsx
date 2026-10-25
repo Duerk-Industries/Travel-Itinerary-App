@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DraftTextInput from '../components/DraftTextInput';
@@ -64,6 +66,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
   hideFamilySection = false,
   styles,
 }) => {
+  const _styleTheme = useStyleTheme();
   const [familyForm, setFamilyForm] = useState<FamilyForm>({ givenName: '', middleName: '', familyName: '', email: '', relationship: 'Not Applicable' });
   const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
   const [editingFamilyDraft, setEditingFamilyDraft] = useState<FamilyForm | null>(null);
@@ -215,13 +218,13 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
       <Text style={styles.helperText}>Add relatives, accept invites, and manage non-user profiles.</Text>
       <View style={styles.row}>
         <TextInput
-          style={[styles.input, { flex: 1 }]}
+          style={[styles.input, themeStyle('tabs_FamilyRelationships_1', {  }, _styleTheme)]}
           placeholder="Given name"
           value={familyForm.givenName}
           onChangeText={(text: string) => setFamilyForm((p) => ({ ...p, givenName: text }))}
         />
         <TextInput
-          style={[styles.input, { flex: 1 }]}
+          style={[styles.input, themeStyle('tabs_FamilyRelationships_2', {  }, _styleTheme)]}
           placeholder="Middle name"
           value={familyForm.middleName}
           onChangeText={(text: string) => setFamilyForm((p) => ({ ...p, middleName: text }))}
@@ -229,7 +232,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
       </View>
       <View style={styles.row}>
         <TextInput
-          style={[styles.input, { flex: 1 }]}
+          style={[styles.input, themeStyle('tabs_FamilyRelationships_3', {  }, _styleTheme)]}
           placeholder="Family name"
           value={familyForm.familyName}
           onChangeText={(text: string) => setFamilyForm((p) => ({ ...p, familyName: text }))}
@@ -240,7 +243,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
           options={relationshipSelectOptions}
           placeholder="Not Applicable"
           title="Relationship"
-          style={{ flex: 1 }}
+          style={themeStyle('tabs_FamilyRelationships_4', {  }, _styleTheme)}
           onChange={(value) => {
             setFamilyForm((p) => ({ ...p, relationship: value || 'Not Applicable' }));
             setShowRelationshipDropdown(false);
@@ -262,7 +265,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
       </TouchableOpacity>
 
       {familyRelationships.length ? (
-        <View style={{ marginTop: 12 }}>
+        <View style={themeStyle('tabs_FamilyRelationships_5', {  }, _styleTheme)}>
           {familyRelationships.map((rel) => {
             const normalize = (val?: string | null) => {
               const t = String(val ?? '').trim();
@@ -285,10 +288,10 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                 <Text style={styles.helperText}>Relationship: {rel.relationship} | Status: {rel.status}</Text>
                 {isPendingInbound ? (
                   <View style={styles.row}>
-                    <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => acceptFamilyLink(rel.id)}>
+                    <TouchableOpacity style={[styles.button, themeStyle('tabs_FamilyRelationships_6', {  }, _styleTheme)]} onPress={() => acceptFamilyLink(rel.id)}>
                       <Text style={styles.buttonText}>Accept</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={() => rejectFamilyLink(rel.id)}>
+                    <TouchableOpacity style={[styles.button, styles.dangerButton, themeStyle('tabs_FamilyRelationships_7', {  }, _styleTheme)]} onPress={() => rejectFamilyLink(rel.id)}>
                       <Text style={styles.dangerButtonText}>Reject</Text>
                     </TouchableOpacity>
                   </View>
@@ -318,17 +321,17 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                 )}
 
                 {isEditable && isEditing && editingFamilyDraft ? (
-                  <View style={{ marginTop: 8 }}>
+                  <View style={themeStyle('tabs_FamilyRelationships_8', {  }, _styleTheme)}>
                     <Text style={styles.modalLabel}>Edit profile</Text>
                     <View style={styles.row}>
                       <TextInput
-                        style={[styles.input, { flex: 1 }]}
+                        style={[styles.input, themeStyle('tabs_FamilyRelationships_9', {  }, _styleTheme)]}
                         placeholder="Given"
                         value={editingFamilyDraft.givenName}
                         onChangeText={(text: string) => setEditingFamilyDraft((p) => (p ? { ...p, givenName: text } : p))}
                       />
                       <TextInput
-                        style={[styles.input, { flex: 1 }]}
+                        style={[styles.input, themeStyle('tabs_FamilyRelationships_10', {  }, _styleTheme)]}
                         placeholder="Middle"
                         value={editingFamilyDraft.middleName}
                         onChangeText={(text: string) => setEditingFamilyDraft((p) => (p ? { ...p, middleName: text } : p))}
@@ -357,11 +360,11 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                       onChangeText={(text: string) => setEditingFamilyDraft((p) => (p ? { ...p, relationship: text } : p))}
                     />
                     <View style={styles.row}>
-                      <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={saveFamilyProfile}>
+                      <TouchableOpacity style={[styles.button, themeStyle('tabs_FamilyRelationships_11', {  }, _styleTheme)]} onPress={saveFamilyProfile}>
                         <Text style={styles.buttonText}>Save</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                        style={[styles.button, styles.dangerButton, themeStyle('tabs_FamilyRelationships_12', {  }, _styleTheme)]}
                         onPress={() => {
                           setEditingFamilyId(null);
                           setEditingFamilyDraft(null);
@@ -386,7 +389,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
       <Text style={styles.helperText}>Manage travelers from your past trips. Email is optional.</Text>
       <View style={styles.row}>
         <DraftTextInput
-          style={[styles.input, { flex: 1 }]}
+          style={[styles.input, themeStyle('tabs_FamilyRelationships_13', {  }, _styleTheme)]}
           placeholder="First name"
           autoComplete="given-name"
           textContentType="givenName"
@@ -395,7 +398,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
           commitOnBlur={false}
         />
         <DraftTextInput
-          style={[styles.input, { flex: 1 }]}
+          style={[styles.input, themeStyle('tabs_FamilyRelationships_14', {  }, _styleTheme)]}
           placeholder="Last name"
           autoComplete="family-name"
           textContentType="familyName"
@@ -420,7 +423,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
       </TouchableOpacity>
 
       {fellowTravelers.length ? (
-        <View style={{ marginTop: 12 }}>
+        <View style={themeStyle('tabs_FamilyRelationships_15', {  }, _styleTheme)}>
           {fellowTravelers.map((traveler) => {
             const isEditing = editingFellowId === traveler.id;
             return (
@@ -448,10 +451,10 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                   ) : null}
                 </View>
                 {isEditing && editingFellowDraft ? (
-                  <View style={{ marginTop: 8 }}>
+                  <View style={themeStyle('tabs_FamilyRelationships_16', {  }, _styleTheme)}>
                     <View style={styles.row}>
       <DraftTextInput
-                        style={[styles.input, { flex: 1 }]}
+                        style={[styles.input, themeStyle('tabs_FamilyRelationships_17', {  }, _styleTheme)]}
                         placeholder="First name"
                         autoComplete="given-name"
                         textContentType="givenName"
@@ -460,7 +463,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                         commitOnBlur={false}
                       />
                       <TextInput
-                        style={[styles.input, { flex: 1 }]}
+                        style={[styles.input, themeStyle('tabs_FamilyRelationships_18', {  }, _styleTheme)]}
                         placeholder="Last name"
                         autoComplete="family-name"
                         textContentType="familyName"
@@ -479,11 +482,11 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                       onChangeText={(text: string) => setEditingFellowDraft((p) => (p ? { ...p, email: text } : p))}
                     />
                     <View style={styles.row}>
-                      <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={saveFellowTraveler}>
+                      <TouchableOpacity style={[styles.button, themeStyle('tabs_FamilyRelationships_19', {  }, _styleTheme)]} onPress={saveFellowTraveler}>
                         <Text style={styles.buttonText}>Save</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                        style={[styles.button, styles.dangerButton, themeStyle('tabs_FamilyRelationships_20', {  }, _styleTheme)]}
                         onPress={() => {
                           setEditingFellowId(null);
                           setEditingFellowDraft(null);

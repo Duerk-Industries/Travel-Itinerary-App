@@ -1,5 +1,8 @@
+import { ThemedText as Text } from './ThemedText';
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AppState, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
 import type { Notification, NotificationPreferences } from '../../server/src/types';
 import { getSocket } from '../utils/socket';
@@ -10,6 +13,7 @@ const LABELS: Record<string, string> = { import_result: 'Imported bookings', can
 export default function NotificationInbox({ backendUrl, token, onOpen, openNotificationId, onOpenHandled }: {
   backendUrl: string; token: string; openNotificationId?: string | null; onOpenHandled?: () => void; onOpen: (target: { tripId: string | null; page: 'ingest' | 'blog' | 'overview'; activityId?: string }) => void;
 }) {
+  const _styleTheme = useStyleTheme();
   const [enabled, setEnabled] = useState(false);
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<InboxRow[]>([]);
@@ -115,16 +119,16 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
     finally { busy.current = false; }
   };
   if (!enabled) return null;
-  const buttonStyle = { minHeight: 44, padding: 10, justifyContent: 'center' as const };
+  const buttonStyle = themeStyle('components_NotificationInbox_1', {  }, _styleTheme);
   return <>
     <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Notifications, ${count} unread`} onPress={() => { setOpen(true); void load(); }} style={buttonStyle}><Text>🔔{count ? ` ${count}` : ''}</Text></TouchableOpacity>
     <Modal visible={open} transparent animationType="none" onRequestClose={() => setOpen(false)}>
-      <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 16 }}>
-        <View accessibilityViewIsModal style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, maxHeight: '90%', width: '100%', maxWidth: 600, alignSelf: 'center' }}>
-          <Text accessibilityRole="header" style={{ fontSize: 22 }}>Notifications</Text>
+      <View style={themeStyle('components_NotificationInbox_2', {  }, _styleTheme)}>
+        <View accessibilityViewIsModal style={themeStyle('components_NotificationInbox_3', {  }, _styleTheme)}>
+          <Text accessibilityRole="header" style={themeStyle('components_NotificationInbox_4', {  }, _styleTheme)}>Notifications</Text>
           <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => setOpen(false)}><Text>Close notifications</Text></TouchableOpacity>
           {error && <Text accessibilityRole="alert">{error}</Text>}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          <View style={themeStyle('components_NotificationInbox_5', {  }, _styleTheme)}>
             <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void load()}><Text>Refresh</Text></TouchableOpacity>
             <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void read('all').then(() => load()).catch(error => setError(error.message))}><Text>Mark all read</Text></TouchableOpacity>
             <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void showSettings()}><Text>Alert settings</Text></TouchableOpacity>
@@ -132,16 +136,16 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
           <ScrollView>
             {settings ? <>
               <Text>Important updates and Daily summary have independent inbox, mobile alert, and email choices. Turning mobile alerts off never enables email.</Text>
-              {preferences.map(preference => <View key={preference.category} style={{ paddingVertical: 8 }}>
-                <Text style={{ fontWeight: '700' }}>{LABELS[preference.category] || preference.category.replace(/_/g, ' ')}</Text>
+              {preferences.map(preference => <View key={preference.category} style={themeStyle('components_NotificationInbox_6', {  }, _styleTheme)}>
+                <Text style={themeStyle('components_NotificationInbox_7', {  }, _styleTheme)}>{LABELS[preference.category] || preference.category.replace(/_/g, ' ')}</Text>
                 {preference.category === 'trip_digest' && <>
                   <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => {
                     setDigestTime(preference.digestTiming?.time || '08:00'); setDigestTimezone(preference.digestTiming?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'); setDigestEditing(true);
                   }}><Text>{preference.digestTiming ? 'Edit daily summary time' : 'Set daily summary time'}</Text></TouchableOpacity>
                   {digestEditing && <View>
                     <Text>Summaries cover a UTC calendar day and arrive at your next chosen local time. Clock-change gaps use the next valid time. Mobile alerts and email also respect quiet hours.</Text>
-                    <TextInput accessibilityLabel="Daily summary timezone" value={digestTimezone} onChangeText={setDigestTimezone} style={{ minHeight: 44 }} />
-                    <TextInput accessibilityLabel="Daily summary time, 24 hour time" value={digestTime} onChangeText={setDigestTime} style={{ minHeight: 44 }} />
+                    <TextInput accessibilityLabel="Daily summary timezone" value={digestTimezone} onChangeText={setDigestTimezone} style={themeStyle('components_NotificationInbox_8', {  }, _styleTheme)} />
+                    <TextInput accessibilityLabel="Daily summary time, 24 hour time" value={digestTime} onChangeText={setDigestTime} style={themeStyle('components_NotificationInbox_9', {  }, _styleTheme)} />
                     <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void saveDigest(preference)}><Text>Save summary time</Text></TouchableOpacity>
                     <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void saveDigest(preference, true)}><Text>Use midnight UTC</Text></TouchableOpacity>
                   </View>}
@@ -152,9 +156,9 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
                 }}><Text>{preference.quietTiming ? 'Edit quiet hours' : 'Set quiet hours'}</Text></TouchableOpacity>
                 {timingCategory === preference.category && <View>
                   <Text>Mobile alerts and email wait until quiet hours end. Updates still appear in your inbox.</Text>
-                  <TextInput accessibilityLabel="Quiet hours timezone" value={timezone} onChangeText={setTimezone} style={{ minHeight: 44 }} />
-                  <TextInput accessibilityLabel="Quiet hours start, 24 hour time" value={quietStart} onChangeText={setQuietStart} style={{ minHeight: 44 }} />
-                  <TextInput accessibilityLabel="Quiet hours end, 24 hour time" value={quietEnd} onChangeText={setQuietEnd} style={{ minHeight: 44 }} />
+                  <TextInput accessibilityLabel="Quiet hours timezone" value={timezone} onChangeText={setTimezone} style={themeStyle('components_NotificationInbox_10', {  }, _styleTheme)} />
+                  <TextInput accessibilityLabel="Quiet hours start, 24 hour time" value={quietStart} onChangeText={setQuietStart} style={themeStyle('components_NotificationInbox_11', {  }, _styleTheme)} />
+                  <TextInput accessibilityLabel="Quiet hours end, 24 hour time" value={quietEnd} onChangeText={setQuietEnd} style={themeStyle('components_NotificationInbox_12', {  }, _styleTheme)} />
                   <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void saveTiming(preference)}><Text>Save quiet hours</Text></TouchableOpacity>
                   <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void saveTiming(preference, true)}><Text>Turn quiet hours off</Text></TouchableOpacity>
                 </View>}
@@ -164,8 +168,8 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
               <TouchableOpacity style={buttonStyle} onPress={() => setSettings(false)}><Text>Back to updates</Text></TouchableOpacity>
             </> : <>
               {!rows.length && <Text>You’re all caught up.</Text>}
-              {rows.map(row => <TouchableOpacity key={row.id} style={{ ...buttonStyle, borderBottomWidth: 1, borderBottomColor: '#ddd' }} accessibilityRole="button" onPress={() => void visit(row)}>
-                <Text style={{ fontWeight: row.readAt ? '400' : '700' }}>{row.readAt ? '' : 'Unread · '}{row.title}</Text><Text>{row.body}</Text><Text>{new Date(row.createdAt).toLocaleString()}</Text>
+              {rows.map(row => <TouchableOpacity key={row.id} style={themeStyle('components_NotificationInbox_13', { buttonStyle: buttonStyle }, _styleTheme)} accessibilityRole="button" onPress={() => void visit(row)}>
+                <Text style={themeStyle('components_NotificationInbox_14', { row: row }, _styleTheme)}>{row.readAt ? '' : 'Unread · '}{row.title}</Text><Text>{row.body}</Text><Text>{new Date(row.createdAt).toLocaleString()}</Text>
               </TouchableOpacity>)}
               {cursor && <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void load(cursor)}><Text>Older updates</Text></TouchableOpacity>}
             </>}

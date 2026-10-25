@@ -1,4 +1,11 @@
 // @ts-nocheck
+import { themeFontFamilies, resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ImageBackground, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import Modal from '../components/KeyboardAwareModal';
@@ -77,7 +84,9 @@ const promptsForDay = (dayDate) => {
   return [0, 1, 2].map((offset) => WRITING_PROMPTS[(start + offset) % WRITING_PROMPTS.length]);
 };
 
-const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {}, autoOpenActivityCapture = null as { date: string; tags: string[] } | null, onAutoOpenActivityCaptureHandled = () => {}, temperatureUnit = defaultTemperatureUnitForRegion() as TemperatureUnit, onChangeTemperatureUnit = null as ((unit: TemperatureUnit) => void) | null }) => {
+const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], styles, theme: _providedTheme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {}, autoOpenActivityCapture = null as { date: string; tags: string[] } | null, onAutoOpenActivityCaptureHandled = () => {}, temperatureUnit = defaultTemperatureUnitForRegion() as TemperatureUnit, onChangeTemperatureUnit = null as ((unit: TemperatureUnit) => void) | null }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width: viewportWidth } = useWindowDimensions();
   const compactMasthead = viewportWidth < 600;
   // Phase 1 typography (redesign proposal §5) — Fraunces for the masthead title and day
@@ -85,8 +94,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   // root so this stays scoped to the trip blog; while it loads, headings just render in the
   // system font (no flash of unstyled layout, only of the display face).
   const [fraunceLoaded] = useFonts({ Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic });
-  const displayFont = fraunceLoaded ? 'Fraunces_600SemiBold' : undefined;
-  const displayFontItalic = fraunceLoaded ? 'Fraunces_600SemiBold_Italic' : undefined;
+  const displayFont = fraunceLoaded ? themeFontFamilies.display : undefined;
+  const displayFontItalic = fraunceLoaded ? themeFontFamilies.displayItalic : undefined;
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -176,11 +185,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const handleCommentError = (message) => alertMessage('Trip blog', message || 'Something went wrong');
   const loadedCommentDays = useRef(new Set());
 
-  const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? '#111827';
-  const mutedColor = theme?.colors?.textMuted ?? '#6b7280';
-  const surfaceColor = theme?.colors?.surface ?? '#ffffff';
+  const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? themeStyle('tabs_tripBlog_189', {  }, (theme ?? _styleTheme));
+  const mutedColor = theme?.colors?.textMuted ?? themeStyle('tabs_tripBlog_190', {  }, (theme ?? _styleTheme));
+  const surfaceColor = theme?.colors?.surface ?? themeStyle('tabs_tripBlog_191', {  }, (theme ?? _styleTheme));
   const inputColor = theme?.colors?.input ?? surfaceColor;
-  const borderColor = theme?.colors?.border ?? '#ccd4df';
+  const borderColor = theme?.colors?.border ?? themeStyle('tabs_tripBlog_192', {  }, (theme ?? _styleTheme));
   const publicPageUrl = useMemo(() => {
     const publicPath = typeof blog?.publicPath === 'string' ? blog.publicPath.trim() : '';
     if (!publicPath) return null;
@@ -1376,12 +1385,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   };
   const removeMediaItem = (item) => (item.isGalleryMember ? removeGalleryAsset(item.assetId) : deleteItem(item));
 
-  if (!activeTripId) return <View style={{ padding: 18 }}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
+  if (!activeTripId) return <View style={themeStyle('tabs_tripBlog_1', {  }, (theme ?? _styleTheme))}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
   // Only take over the whole tab with a spinner on the very first load (no data yet). Every
   // later refetch — accepting a Day Starter draft, "Load more days", saving a field, any
   // mutation that calls load() — keeps the existing content mounted so the ScrollView doesn't
   // unmount and snap back to the top. A slim "Updating…" bar (below) signals the refresh.
-  if (loading && !blog) return <View style={{ padding: 18, alignItems: 'center' }}><ActivityIndicator /></View>;
+  if (loading && !blog) return <View style={themeStyle('tabs_tripBlog_2', {  }, (theme ?? _styleTheme))}><ActivityIndicator /></View>;
   const publicationState = publication?.state ?? blog?.visibilityState ?? 'private';
   const hasPendingConsent = publicationState === 'pending_consent' && publication?.userDecision === 'pending';
   // FR-A5.2: a visible Saving…/Saved/Not saved state for any autosaved field, shared by the
@@ -1401,33 +1410,33 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   // other tab — the masthead below gets its own quiet surface, and each day becomes its own
   // "chapter" further down, rather than one long bordered form.
   return (
-    <View style={{ flex: 1, minHeight: 0 }}>
+    <View style={themeStyle('tabs_tripBlog_3', {  }, (theme ?? _styleTheme))}>
       {loading && blog ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 6, backgroundColor: theme?.colors?.surfaceMuted ?? '#eef2f4' }}>
+        <View style={themeStyle('tabs_tripBlog_4', { theme: theme }, (theme ?? _styleTheme))}>
           <ActivityIndicator size="small" />
-          <Text style={{ color: mutedColor, fontSize: 12 }}>Updating…</Text>
+          <Text style={themeStyle('tabs_tripBlog_5', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Updating…</Text>
         </View>
       ) : null}
       <ScrollView
         ref={scrollRef}
-        style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        style={themeStyle('tabs_tripBlog_6', {  }, (theme ?? _styleTheme))}
+        contentContainerStyle={themeStyle('tabs_tripBlog_7', {  }, (theme ?? _styleTheme))}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         showsVerticalScrollIndicator
       >
-        <View style={{ width: '100%', maxWidth: 1200, alignSelf: 'center', gap: 20 }}>
-      <View style={{ backgroundColor: surfaceColor, borderRadius: 16, padding: 18 }}>
-        <View testID="blog-masthead-layout" style={{ flexDirection: compactMasthead ? 'column' : 'row', alignItems: compactMasthead ? 'stretch' : 'center', justifyContent: 'space-between', gap: 12 }}>
+        <View style={themeStyle('tabs_tripBlog_8', {  }, (theme ?? _styleTheme))}>
+      <View style={themeStyle('tabs_tripBlog_9', { surfaceColor: surfaceColor }, (theme ?? _styleTheme))}>
+        <View testID="blog-masthead-layout" style={themeStyle('tabs_tripBlog_10', { compactMasthead: compactMasthead }, (theme ?? _styleTheme))}>
           {canEdit ? (
-            <View style={{ flex: compactMasthead ? undefined : 1, minWidth: compactMasthead ? undefined : 200 }}>
+            <View style={themeStyle('tabs_tripBlog_11', { compactMasthead: compactMasthead }, (theme ?? _styleTheme))}>
               <TextInput
                 testID="blog-masthead-title-input"
                 value={mastheadDraft?.title ?? (blog?.title ?? '')}
                 onChangeText={(text) => scheduleMastheadSave({ title: text.slice(0, 200) })}
                 placeholder="Trip Blog"
                 placeholderTextColor={mutedColor}
-                style={[styles.sectionTitle, { color: textColor, padding: 0, fontFamily: displayFont, fontSize: 26 }]}
+                style={[styles.sectionTitle, themeStyle('tabs_tripBlog_12', { textColor: textColor, displayFont: displayFont }, (theme ?? _styleTheme))]}
               />
               <TextInput
                 testID="blog-masthead-subtitle-input"
@@ -1435,25 +1444,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 onChangeText={(text) => scheduleMastheadSave({ subtitle: text.slice(0, 300) })}
                 placeholder="Add a subtitle…"
                 placeholderTextColor={mutedColor}
-                style={{ color: mutedColor, fontSize: 14, marginTop: 2, padding: 0 }}
+                style={themeStyle('tabs_tripBlog_13', { mutedColor: mutedColor }, (theme ?? _styleTheme))}
               />
-              {saveStateLabel('masthead') ? <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>{saveStateLabel('masthead')}</Text> : null}
+              {saveStateLabel('masthead') ? <Text style={themeStyle('tabs_tripBlog_14', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{saveStateLabel('masthead')}</Text> : null}
             </View>
           ) : (
-            <View style={{ flex: compactMasthead ? undefined : 1, minWidth: compactMasthead ? undefined : 200 }}>
-              <Text style={[styles.sectionTitle, { fontFamily: displayFont, fontSize: 26 }]}>{blog?.title || 'Trip Blog'}</Text>
-              {blog?.subtitle ? <Text style={{ color: mutedColor, fontSize: 14, marginTop: 2, fontFamily: displayFontItalic }}>{blog.subtitle}</Text> : null}
+            <View style={themeStyle('tabs_tripBlog_15', { compactMasthead: compactMasthead }, (theme ?? _styleTheme))}>
+              <Text style={[styles.sectionTitle, themeStyle('tabs_tripBlog_16', { displayFont: displayFont }, (theme ?? _styleTheme))]}>{blog?.title || 'Trip Blog'}</Text>
+              {blog?.subtitle ? <Text style={themeStyle('tabs_tripBlog_17', { mutedColor: mutedColor, displayFontItalic: displayFontItalic }, (theme ?? _styleTheme))}>{blog.subtitle}</Text> : null}
             </View>
           )}
-          <View testID="blog-masthead-actions" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: compactMasthead ? 'flex-start' : 'flex-end', gap: 8, maxWidth: compactMasthead ? '100%' : '60%' }}>
+          <View testID="blog-masthead-actions" style={themeStyle('tabs_tripBlog_18', { compactMasthead: compactMasthead }, (theme ?? _styleTheme))}>
             {!readOnly ? (
               <TouchableOpacity
                 testID="blog-edit-toggle"
                 accessibilityRole="button"
                 onPress={toggleEditMode}
-                style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : (theme?.colors?.cta ?? '#F59E0B') }]}
+                style={[styles.button, themeStyle('tabs_tripBlog_19', { editMode: editMode, theme: theme }, (theme ?? _styleTheme))]}
               >
-                <Text style={[styles.buttonText, { color: editMode ? textColor : '#0B1726' }]}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
+                <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_20', { editMode: editMode, textColor: textColor }, (theme ?? _styleTheme))]}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
               </TouchableOpacity>
             ) : null}
             {!readOnly && !editMode ? (
@@ -1462,55 +1471,55 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 accessibilityRole="button"
                 disabled={quickCapturing || uploading}
                 onPress={quickCapturePhoto}
-                style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb', opacity: quickCapturing || uploading ? 0.6 : 1 }]}
+                style={[styles.button, themeStyle('tabs_tripBlog_21', { theme: theme, quickCapturing: quickCapturing, uploading: uploading }, (theme ?? _styleTheme))]}
               >
-                <Text style={[styles.buttonText, { color: textColor }]}>{quickCapturing ? 'Opening camera…' : '📷 Add photo'}</Text>
+                <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_22', { textColor: textColor }, (theme ?? _styleTheme))]}>{quickCapturing ? 'Opening camera…' : '📷 Add photo'}</Text>
               </TouchableOpacity>
             ) : null}
             {publicPageUrl ? (
               <TouchableOpacity
                 accessibilityRole="link"
                 onPress={() => { void Linking.openURL(publicPageUrl).catch(() => {}); }}
-                style={{ paddingVertical: 6, paddingHorizontal: 8 }}
+                style={themeStyle('tabs_tripBlog_23', {  }, (theme ?? _styleTheme))}
               >
-                <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>View public page ↗</Text>
+                <Text style={themeStyle('tabs_tripBlog_24', { theme: theme }, (theme ?? _styleTheme))}>View public page ↗</Text>
               </TouchableOpacity>
             ) : null}
             {canEdit && ((Platform.OS === 'ios' && capabilities.trip_blog_mobile_share_ios) || (Platform.OS === 'android' && capabilities.trip_blog_mobile_share_android)) ? (
-              <TouchableOpacity testID="blog-quick-capture" accessibilityRole="button" onPress={() => { const today = new Date().toISOString().slice(0, 10); const day = visibleDays.find((candidate) => candidate.localDate === today)?.localDate ?? visibleDays[0]?.localDate; if (day) { setAddingDay(day); setNewBody(''); } }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
-                <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>Quick capture</Text>
+              <TouchableOpacity testID="blog-quick-capture" accessibilityRole="button" onPress={() => { const today = new Date().toISOString().slice(0, 10); const day = visibleDays.find((candidate) => candidate.localDate === today)?.localDate ?? visibleDays[0]?.localDate; if (day) { setAddingDay(day); setNewBody(''); } }} style={themeStyle('tabs_tripBlog_25', {  }, (theme ?? _styleTheme))}>
+                <Text style={themeStyle('tabs_tripBlog_26', { theme: theme }, (theme ?? _styleTheme))}>Quick capture</Text>
               </TouchableOpacity>
             ) : null}
-            {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton nativeEnabled={capabilities.planning_native_map === true} backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
+            {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton nativeEnabled={capabilities.planning_native_map === true} backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? themeStyle('tabs_tripBlog_193', {  }, (theme ?? _styleTheme))} /> : null}
           </View>
         </View>
         {/* Phase 1 masthead stat row (redesign proposal §1) — the "trip at a glance" strip. */}
-        <View testID="blog-trip-stats" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 6, marginBottom: 10 }}>
-          <Text style={{ color: mutedColor, fontSize: 13 }}>
-            <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.dayCount}</Text> {tripStats.dayCount === 1 ? 'day' : 'days'}
+        <View testID="blog-trip-stats" style={themeStyle('tabs_tripBlog_27', {  }, (theme ?? _styleTheme))}>
+          <Text style={themeStyle('tabs_tripBlog_28', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('tabs_tripBlog_29', { textColor: textColor }, (theme ?? _styleTheme))}>{tripStats.dayCount}</Text> {tripStats.dayCount === 1 ? 'day' : 'days'}
           </Text>
           {tripStats.photoCount > 0 ? (
-            <Text style={{ color: mutedColor, fontSize: 13 }}>
-              <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.photoCount}</Text> {tripStats.photoCount === 1 ? 'photo' : 'photos'}
+            <Text style={themeStyle('tabs_tripBlog_30', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
+              <Text style={themeStyle('tabs_tripBlog_31', { textColor: textColor }, (theme ?? _styleTheme))}>{tripStats.photoCount}</Text> {tripStats.photoCount === 1 ? 'photo' : 'photos'}
             </Text>
           ) : null}
           {tripStats.videoCount > 0 ? (
-            <Text style={{ color: mutedColor, fontSize: 13 }}>
-              <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.videoCount}</Text> {tripStats.videoCount === 1 ? 'video' : 'videos'}
+            <Text style={themeStyle('tabs_tripBlog_32', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
+              <Text style={themeStyle('tabs_tripBlog_33', { textColor: textColor }, (theme ?? _styleTheme))}>{tripStats.videoCount}</Text> {tripStats.videoCount === 1 ? 'video' : 'videos'}
             </Text>
           ) : null}
           {tripStats.contributorCount > 0 ? (
-            <Text style={{ color: mutedColor, fontSize: 13 }}>
-              <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.contributorCount}</Text> {tripStats.contributorCount === 1 ? 'traveler' : 'travelers'}
+            <Text style={themeStyle('tabs_tripBlog_34', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
+              <Text style={themeStyle('tabs_tripBlog_35', { textColor: textColor }, (theme ?? _styleTheme))}>{tripStats.contributorCount}</Text> {tripStats.contributorCount === 1 ? 'traveler' : 'travelers'}
             </Text>
           ) : null}
           {tripStats.distanceKm != null ? (
-            <Text style={{ color: mutedColor, fontSize: 13 }}>
-              approx. <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.distanceKm}</Text> km
+            <Text style={themeStyle('tabs_tripBlog_36', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
+              approx. <Text style={themeStyle('tabs_tripBlog_37', { textColor: textColor }, (theme ?? _styleTheme))}>{tripStats.distanceKm}</Text> km
             </Text>
           ) : null}
           {onChangeTemperatureUnit && hasWeatherFacts ? (
-            <View testID="blog-temperature-unit" accessibilityRole="radiogroup" accessibilityLabel="Temperature unit" style={{ flexDirection: 'row', borderWidth: 1, borderColor, borderRadius: 10, overflow: 'hidden', marginLeft: 'auto' }}>
+            <View testID="blog-temperature-unit" accessibilityRole="radiogroup" accessibilityLabel="Temperature unit" style={themeStyle('tabs_tripBlog_38', { borderColor: borderColor }, (theme ?? _styleTheme))}>
               {(['fahrenheit', 'celsius'] as TemperatureUnit[]).map((unit) => {
                 const selected = temperatureUnit === unit;
                 return (
@@ -1521,9 +1530,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     accessibilityState={{ selected }}
                     accessibilityLabel={unit === 'fahrenheit' ? 'Fahrenheit' : 'Celsius'}
                     onPress={() => { if (!selected) onChangeTemperatureUnit(unit); }}
-                    style={{ paddingHorizontal: 9, paddingVertical: 2, backgroundColor: selected ? (theme?.colors?.link ?? '#0ea5e9') : 'transparent' }}
+                    style={themeStyle('tabs_tripBlog_39', { selected: selected, theme: theme }, (theme ?? _styleTheme))}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: selected ? '#fff' : mutedColor }}>{unit === 'fahrenheit' ? '°F' : '°C'}</Text>
+                    <Text style={themeStyle('tabs_tripBlog_40', { selected: selected, mutedColor: mutedColor }, (theme ?? _styleTheme))}>{unit === 'fahrenheit' ? '°F' : '°C'}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -1533,7 +1542,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         {tripMapPoints.length ? (
           <TripDayMap points={tripMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="trip-blog-route-map" />
         ) : null}
-        <Text style={{ color: mutedColor, marginBottom: 12 }}>
+        <Text style={themeStyle('tabs_tripBlog_41', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
           {editMode
             ? 'Editing mode — changes are saved to the trip blog.'
             : publicPreview
@@ -1541,9 +1550,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               : 'Traveler/follower view — all shared trip blog content is shown.'}
         </Text>
         {capabilities.trip_blog_offline_queue && offlineQueueCount > 0 ? (
-          <View testID="blog-offline-queue-status" style={{ padding: 10, borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, marginBottom: 12, backgroundColor: '#fffbeb' }}>
-            <Text style={{ color: '#92400e', fontWeight: '700' }}>{offlineQueueCount} {offlineQueueCount === 1 ? 'entry is' : 'entries are'} saved on this device</Text>
-            <Text style={{ color: '#92400e', fontSize: 12 }}>{connection.status === 'online' ? 'Syncing now…' : 'They will publish when this device reconnects.'}</Text>
+          <View testID="blog-offline-queue-status" style={themeStyle('tabs_tripBlog_42', {  }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('tabs_tripBlog_43', {  }, (theme ?? _styleTheme))}>{offlineQueueCount} {offlineQueueCount === 1 ? 'entry is' : 'entries are'} saved on this device</Text>
+            <Text style={themeStyle('tabs_tripBlog_44', {  }, (theme ?? _styleTheme))}>{connection.status === 'online' ? 'Syncing now…' : 'They will publish when this device reconnects.'}</Text>
           </View>
         ) : null}
         {canEdit ? (
@@ -1556,14 +1565,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
             minHeight={44}
             maxLines={10}
             lineHeight={20}
-            style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 8, padding: 8, marginBottom: 4, lineHeight: 20, backgroundColor: inputColor }}
+            style={themeStyle('tabs_tripBlog_45', { textColor: textColor, borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}
           />
-        ) : (blog?.introduction ? <Text style={{ color: textColor, marginBottom: 4 }}>{blog.introduction}</Text> : null)}
+        ) : (blog?.introduction ? <Text style={themeStyle('tabs_tripBlog_46', { textColor: textColor }, (theme ?? _styleTheme))}>{blog.introduction}</Text> : null)}
       </View>
         {canEdit && capabilities.trip_blog_photo_composer && visibleDays.length > 0 ? (
-          <View style={[styles.row, { alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }]}>
+          <View style={[styles.row, themeStyle('tabs_tripBlog_47', {  }, (theme ?? _styleTheme))]}>
             {trips.length > 1 ? (
-              <View style={[styles.input, styles.dropdown, { paddingVertical: 6, paddingHorizontal: 10, minWidth: 160 }]}>
+              <View style={[styles.input, styles.dropdown, themeStyle('tabs_tripBlog_48', {  }, (theme ?? _styleTheme))]}>
                 <TouchableOpacity testID="blog-upload-trip-select" onPress={() => setShowUploadTripDropdown((open) => !open)}>
                   <Text style={styles.cellText}>{uploadTrip?.name || uploadTrip?.destination || 'Select trip'}</Text>
                 </TouchableOpacity>
@@ -1590,7 +1599,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
             <TouchableOpacity
               testID="blog-add-photos"
               accessibilityRole="button"
-              style={[styles.button, { backgroundColor: '#0ea5e9', alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12 }]}
+              style={[styles.button, themeStyle('tabs_tripBlog_49', {  }, (theme ?? _styleTheme))]}
               onPress={() => openPhotoComposer(localDateString())}
               disabled={uploading}
             >
@@ -1615,33 +1624,27 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
           <View
             key={day.id}
             testID={`blog-day-${day.localDate}`}
-            style={{
-              marginBottom: 20,
-              backgroundColor: canEdit ? (theme?.colors?.surfaceMuted ?? '#f3f4f6') : surfaceColor,
-              borderRadius: 16,
-              padding: 18,
-              ...(canEdit ? { borderWidth: 1, borderColor: theme?.colors?.link ?? borderColor, borderStyle: 'dashed' as const } : {}),
-            }}
+            style={themeStyle('tabs_tripBlog_50', { canEdit: canEdit, theme: theme, surfaceColor: surfaceColor, borderColor: borderColor }, (theme ?? _styleTheme))}
           >
             {showHeroHeader ? (
               <ImageBackground
                 testID={`blog-day-hero-${day.localDate}`}
                 source={{ uri: dayCoverUrl }}
-                style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 10, minHeight: 160 }}
-                imageStyle={{ borderRadius: 12 }}
+                style={themeStyle('tabs_tripBlog_51', {  }, (theme ?? _styleTheme))}
+                imageStyle={themeStyle('tabs_tripBlog_52', {  }, (theme ?? _styleTheme))}
               >
                 <LinearGradient
-                  colors={['rgba(11,23,38,0)', 'rgba(11,23,38,0.05)', 'rgba(11,23,38,0.78)']}
-                  style={{ minHeight: 160, justifyContent: 'flex-end', padding: 16, borderRadius: 12 }}
+                  colors={[themeStyle('tabs_tripBlog_194', {  }, (theme ?? _styleTheme)), themeStyle('tabs_tripBlog_195', {  }, (theme ?? _styleTheme)), themeStyle('tabs_tripBlog_196', {  }, (theme ?? _styleTheme))]}
+                  style={themeStyle('tabs_tripBlog_53', {  }, (theme ?? _styleTheme))}
                 >
-                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '600', letterSpacing: 0.3 }}>
+                  <Text style={themeStyle('tabs_tripBlog_54', {  }, (theme ?? _styleTheme))}>
                     {formatDateLong(day.localDate)}{dayWeatherFact ? `  ·  ${formatWeatherFactValue(dayWeatherFact, temperatureUnit)}` : ''}
                   </Text>
-                  <Text style={{ color: '#fff', fontSize: 24, fontFamily: displayFont, marginTop: 2 }}>
+                  <Text style={themeStyle('tabs_tripBlog_55', { displayFont: displayFont }, (theme ?? _styleTheme))}>
                     {day.headline || formatDateLong(day.localDate)}
                   </Text>
                   {day.summary ? (
-                    <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, marginTop: 4, fontFamily: displayFontItalic }}>{day.summary}</Text>
+                    <Text style={themeStyle('tabs_tripBlog_56', { displayFontItalic: displayFontItalic }, (theme ?? _styleTheme))}>{day.summary}</Text>
                   ) : null}
                 </LinearGradient>
               </ImageBackground>
@@ -1650,36 +1653,29 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 let them wrap, instead of pushing off-screen and squeezing the headline column. */}
             <View
               testID={`blog-day-header-${day.localDate}`}
-              style={{
-                flexDirection: compactMasthead && canEdit ? 'column' : 'row',
-                justifyContent: 'space-between',
-                alignItems: canEdit ? (compactMasthead ? 'stretch' : 'flex-start') : 'center',
-                gap: compactMasthead && canEdit ? 10 : 0,
-                marginBottom: 8,
-                display: showHeroHeader && !canEdit ? 'none' as const : 'flex' as const,
-              }}
+              style={themeStyle('tabs_tripBlog_57', { compactMasthead: compactMasthead, canEdit: canEdit, showHeroHeader: showHeroHeader }, (theme ?? _styleTheme))}
             >
               {canEdit ? (
-                <View style={{ flex: compactMasthead ? undefined : 1, marginRight: compactMasthead ? 0 : 8 }}>
+                <View style={themeStyle('tabs_tripBlog_58', { compactMasthead: compactMasthead }, (theme ?? _styleTheme))}>
                   <TextInput
                     testID={`blog-day-headline-input-${day.localDate}`}
                     value={dayHeadline}
                     onChangeText={(text) => scheduleDayMetaSave(day, { headline: text.slice(0, 120) })}
                     placeholder="Add a headline for this day…"
                     placeholderTextColor={mutedColor}
-                    style={[styles.sectionTitle, { color: textColor, padding: 0 }]}
+                    style={[styles.sectionTitle, themeStyle('tabs_tripBlog_59', { textColor: textColor }, (theme ?? _styleTheme))]}
                   />
-                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 1 }}>{formatDateLong(day.localDate)}</Text>
+                  <Text style={themeStyle('tabs_tripBlog_60', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{formatDateLong(day.localDate)}</Text>
                   <TextInput
                     testID={`blog-day-summary-input-${day.localDate}`}
                     value={daySummary}
                     onChangeText={(text) => scheduleDayMetaSave(day, { summary: text.slice(0, 500) })}
                     placeholder="Add a one-line summary of this day…"
                     placeholderTextColor={mutedColor}
-                    style={{ color: mutedColor, fontSize: 13, marginTop: 4, padding: 0 }}
+                    style={themeStyle('tabs_tripBlog_61', { mutedColor: mutedColor }, (theme ?? _styleTheme))}
                   />
                   {saveStateLabel(`day-meta-${day.localDate}`) ? (
-                    <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>{saveStateLabel(`day-meta-${day.localDate}`)}</Text>
+                    <Text style={themeStyle('tabs_tripBlog_62', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{saveStateLabel(`day-meta-${day.localDate}`)}</Text>
                   ) : null}
                   {dayMetaConflict ? (
                     <BlogConflictBanner
@@ -1695,19 +1691,19 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   ) : null}
                 </View>
               ) : (
-                <View style={{ flex: 1 }}>
+                <View style={themeStyle('tabs_tripBlog_63', {  }, (theme ?? _styleTheme))}>
                   <Text style={styles.sectionTitle}>{day.headline || formatDateLong(day.localDate)}</Text>
-                  {day.headline ? <Text style={{ color: mutedColor, fontSize: 11 }}>{formatDateLong(day.localDate)}</Text> : null}
-                  {day.summary ? <Text style={{ color: mutedColor, fontSize: 13, marginTop: 2 }}>{day.summary}</Text> : null}
+                  {day.headline ? <Text style={themeStyle('tabs_tripBlog_64', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{formatDateLong(day.localDate)}</Text> : null}
+                  {day.summary ? <Text style={themeStyle('tabs_tripBlog_65', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{day.summary}</Text> : null}
                 </View>
               )}
-              <View testID={`blog-day-actions-${day.localDate}`} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+              <View testID={`blog-day-actions-${day.localDate}`} style={themeStyle('tabs_tripBlog_66', {  }, (theme ?? _styleTheme))}>
                 {canEdit && (
                   <TouchableOpacity
-                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8 }]}
+                    style={[styles.button, themeStyle('tabs_tripBlog_67', {  }, (theme ?? _styleTheme))]}
                     onPress={() => { setAddingDay(day.localDate); setNewBody(''); }}
                   >
-                    <Text style={[styles.buttonText, { fontSize: 12 }]}>+ Add note</Text>
+                    <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_68', {  }, (theme ?? _styleTheme))]}>+ Add note</Text>
                   </TouchableOpacity>
                 )}
                 {canEdit && capabilities.trip_blog_audio ? (
@@ -1715,11 +1711,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     testID={`blog-add-voice-${day.localDate}`}
                     accessibilityRole="button"
                     accessibilityLabel="Add a voice note"
-                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}
+                    style={[styles.button, themeStyle('tabs_tripBlog_69', { theme: theme }, (theme ?? _styleTheme))]}
                     onPress={() => handleVoiceNote(day.localDate)}
                     disabled={uploading}
                   >
-                    <Text style={[styles.buttonText, { fontSize: 12 }]}>+ Voice note</Text>
+                    <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_70', {  }, (theme ?? _styleTheme))]}>+ Voice note</Text>
                   </TouchableOpacity>
                 ) : null}
                 {/* Recording only needs voice notes on; handleRecordedVoiceNote skips the transcript when
@@ -1731,27 +1727,27 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     processingLabel={capabilities.trip_blog_audio_transcription ? 'Transcribing…' : 'Saving…'}
                     onRecorded={(recording) => handleRecordedVoiceNote(day.localDate, recording)}
                     onError={(message) => setVoiceUploadFailures((current) => ({ ...current, [day.localDate]: message }))}
-                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}
-                    activeStyle={{ backgroundColor: theme?.colors?.error ?? '#b91c1c' }}
-                    textStyle={[styles.buttonText, { fontSize: 12 }]}
+                    style={[styles.button, themeStyle('tabs_tripBlog_71', { theme: theme }, (theme ?? _styleTheme))]}
+                    activeStyle={themeStyle('tabs_tripBlog_72', { theme: theme }, (theme ?? _styleTheme))}
+                    textStyle={[styles.buttonText, themeStyle('tabs_tripBlog_73', {  }, (theme ?? _styleTheme))]}
                   />
                 ) : null}
                 {canEdit && (
                   <TouchableOpacity
-                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#0ea5e9' }]}
+                    style={[styles.button, themeStyle('tabs_tripBlog_74', {  }, (theme ?? _styleTheme))]}
                     onPress={() => (capabilities.trip_blog_photo_composer ? openPhotoComposer(day.localDate) : handleUpload(day.localDate))}
                     disabled={uploading}
                   >
-                    <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo/Video'}</Text>
+                    <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_75', {  }, (theme ?? _styleTheme))]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo/Video'}</Text>
                   </TouchableOpacity>
                 )}
               </View>
             </View>
             {canEdit && voiceUploadFailures[day.localDate] ? (
-              <View testID={`blog-voice-upload-failure-${day.localDate}`} style={{ borderWidth: 1, borderColor: theme?.colors?.error ?? '#b91c1c', borderRadius: 8, padding: 8, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <Text style={{ color: theme?.colors?.error ?? '#b91c1c', flex: 1 }}>Voice note failed: {voiceUploadFailures[day.localDate]}</Text>
+              <View testID={`blog-voice-upload-failure-${day.localDate}`} style={themeStyle('tabs_tripBlog_76', { theme: theme }, (theme ?? _styleTheme))}>
+                <Text style={themeStyle('tabs_tripBlog_77', { theme: theme }, (theme ?? _styleTheme))}>Voice note failed: {voiceUploadFailures[day.localDate]}</Text>
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dismiss voice note failure" onPress={() => setVoiceUploadFailures((current) => ({ ...current, [day.localDate]: null }))}>
-                  <Text style={{ color: textColor }}>Dismiss</Text>
+                  <Text style={themeStyle('tabs_tripBlog_78', { textColor: textColor }, (theme ?? _styleTheme))}>Dismiss</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -1763,14 +1759,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 static map artifact), not display text — it gets its own thumbnail rather than
                 being stringified into a text chip like every other fact. */}
             {dayFacts[day.localDate]?.some((fact) => fact.key !== 'media' && (canEdit || (fact.key !== 'places' && fact.key !== 'plannedVsActual'))) ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4, marginBottom: 4 }}>
+              <View style={themeStyle('tabs_tripBlog_79', {  }, (theme ?? _styleTheme))}>
                 {dayFacts[day.localDate].filter((fact) => fact.key !== 'dayMap' && fact.key !== 'media' && (canEdit || (fact.key !== 'places' && fact.key !== 'plannedVsActual'))).map((fact) => (
                   <View
                     key={fact.key}
                     testID={`blog-day-fact-${day.localDate}-${fact.key}`}
-                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme?.colors?.surfaceMuted ?? '#f0f9ff', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12 }}
+                    style={themeStyle('tabs_tripBlog_80', { theme: theme }, (theme ?? _styleTheme))}
                   >
-                    <Text style={{ fontSize: 12.5, fontWeight: '600', color: theme?.colors?.link ?? '#0369a1' }}>
+                    <Text style={themeStyle('tabs_tripBlog_81', { theme: theme }, (theme ?? _styleTheme))}>
                       {fact.key === 'weather' ? formatWeatherFactValue(fact, temperatureUnit) : `${fact.label}: ${fact.value}`}
                     </Text>
                   </View>
@@ -1783,7 +1779,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                       testID={`blog-day-fact-${day.localDate}-dayMap`}
                       source={{ uri: mapFact.value }}
                       accessibilityLabel="Map of this day's route"
-                      style={{ width: 100, height: 52, borderRadius: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#f0f9ff' }}
+                      style={themeStyle('tabs_tripBlog_82', { theme: theme }, (theme ?? _styleTheme))}
                       resizeMode="cover"
                     />
                   );
@@ -1791,7 +1787,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               </View>
             ) : null}
             {!publicPreview && dayMapPoints[day.localDate] ? (
-              <View style={{ marginTop: 4, marginBottom: 4 }}>
+              <View style={themeStyle('tabs_tripBlog_83', {  }, (theme ?? _styleTheme))}>
                 <TripMap
                   nativeEnabled={capabilities.planning_native_map === true}
                   testID={`blog-day-map-${day.localDate}`}
@@ -1802,14 +1798,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   }))}
                 />
                 {dayMapPoints[day.localDate].precision === 'approximate' ? (
-                  <Text style={{ fontSize: 12, color: theme?.colors?.textMuted ?? '#64748b' }}>Locations are approximate (about 1 km) and omit where the travelers stayed.</Text>
+                  <Text style={themeStyle('tabs_tripBlog_84', { theme: theme }, (theme ?? _styleTheme))}>Locations are approximate (about 1 km) and omit where the travelers stayed.</Text>
                 ) : null}
               </View>
             ) : null}
             {(day.items || []).filter((item) => item.kindKey !== 'core.gallery' && !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (
               <View
                 key={item.id}
-                style={{ marginTop: 8 }}
+                style={themeStyle('tabs_tripBlog_85', {  }, (theme ?? _styleTheme))}
                 ref={Platform.OS === 'web' && canEdit && capabilities.trip_blog_authoring_assist ? (node) => {
                   // react-native-web's View only forwards a fixed prop allowlist onto the
                   // underlying <div> (modules/forwardedProps) -- draggable/onDragStart/onDragOver/
@@ -1827,8 +1823,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   node.ondrop = (event) => { event?.preventDefault?.(); void dropItem(day, item); };
                 } : undefined}
               >
-                {canEdit && capabilities.trip_blog_authoring_assist ? <Text style={{ color: mutedColor, fontSize: 11, marginBottom: 3 }}>⠿ Drag to reorder</Text> : null}
-                {canEdit && item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
+                {canEdit && capabilities.trip_blog_authoring_assist ? <Text style={themeStyle('tabs_tripBlog_86', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>⠿ Drag to reorder</Text> : null}
+                {canEdit && item.sourceId ? <Text style={themeStyle('tabs_tripBlog_87', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
                 {canEdit ? (
                   <BlogRichTextEditor
                     key={item.id}
@@ -1845,13 +1841,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     testID={`blog-item-view-${item.id}`}
                     value={item.body || ''}
                     editable={false}
-                    backgroundColor="transparent"
+                    backgroundColor={themeStyle('tabs_tripBlog_197', {  }, (theme ?? _styleTheme))}
                     textColor={textColor}
                   />
                 )}
-                {(item.tags || []).length ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>Note tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
+                {(item.tags || []).length ? <Text style={themeStyle('tabs_tripBlog_88', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Note tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
                 {!editMode && item.engagement ? (
-                  <View style={{ marginTop: 6 }}>
+                  <View style={themeStyle('tabs_tripBlog_89', {  }, (theme ?? _styleTheme))}>
                     <BlogReactionBar
                       testID={`blog-item-reactions-${item.id}`}
                       targetKind="item"
@@ -1869,19 +1865,19 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 ) : null}
                 {canEdit ? (
                   <>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                    <View style={themeStyle('tabs_tripBlog_90', {  }, (theme ?? _styleTheme))}>
                       {/* FR-A5.1/A5.2: the explicit Save button is gone — edits autosave 1.5s after
                           the last keystroke, and this text is the only save-state affordance. */}
                       {saveStateLabel(`item-${item.id}`) ? (
-                        <Text style={{ color: mutedColor, fontSize: 12 }}>{saveStateLabel(`item-${item.id}`)}</Text>
+                        <Text style={themeStyle('tabs_tripBlog_91', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{saveStateLabel(`item-${item.id}`)}</Text>
                       ) : null}
                       {capabilities.trip_blog_authoring_assist ? (
                         <>
-                          <TouchableOpacity accessibilityLabel="Move entry up" disabled={reorderBusy || (day.items || [])[0]?.id === item.id} onPress={() => moveItem(day, item, -1)} style={{ padding: 6 }}><Text style={{ color: textColor }}>↑</Text></TouchableOpacity>
-                          <TouchableOpacity accessibilityLabel="Move entry down" disabled={reorderBusy || (day.items || [])[(day.items || []).length - 1]?.id === item.id} onPress={() => moveItem(day, item, 1)} style={{ padding: 6 }}><Text style={{ color: textColor }}>↓</Text></TouchableOpacity>
+                          <TouchableOpacity accessibilityLabel="Move entry up" disabled={reorderBusy || (day.items || [])[0]?.id === item.id} onPress={() => moveItem(day, item, -1)} style={themeStyle('tabs_tripBlog_92', {  }, (theme ?? _styleTheme))}><Text style={themeStyle('tabs_tripBlog_93', { textColor: textColor }, (theme ?? _styleTheme))}>↑</Text></TouchableOpacity>
+                          <TouchableOpacity accessibilityLabel="Move entry down" disabled={reorderBusy || (day.items || [])[(day.items || []).length - 1]?.id === item.id} onPress={() => moveItem(day, item, 1)} style={themeStyle('tabs_tripBlog_94', {  }, (theme ?? _styleTheme))}><Text style={themeStyle('tabs_tripBlog_95', { textColor: textColor }, (theme ?? _styleTheme))}>↓</Text></TouchableOpacity>
                         </>
                       ) : null}
-                      <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>
+                      <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_96', { theme: theme }, (theme ?? _styleTheme))]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>
                     </View>
                     {itemConflicts[item.id] ? (
                       <BlogConflictBanner
@@ -1929,8 +1925,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   {readyMedia.length ? (
                     <>
                       {canEdit && capabilities.trip_blog_reactions ? (
-                        <TouchableOpacity testID={`blog-cover-proposal-${day.localDate}`} onPress={() => loadCoverProposal(day.localDate)} style={{ alignSelf: 'flex-start', paddingVertical: 5, marginTop: 5 }}>
-                          <Text style={{ color: theme?.colors?.link ?? '#7c3aed', fontWeight: '700' }}>{coverProposals[day.localDate] ? '♥ Most-loved photo selected below' : 'Find the most-loved photo'}</Text>
+                        <TouchableOpacity testID={`blog-cover-proposal-${day.localDate}`} onPress={() => loadCoverProposal(day.localDate)} style={themeStyle('tabs_tripBlog_97', {  }, (theme ?? _styleTheme))}>
+                          <Text style={themeStyle('tabs_tripBlog_98', { theme: theme }, (theme ?? _styleTheme))}>{coverProposals[day.localDate] ? '♥ Most-loved photo selected below' : 'Find the most-loved photo'}</Text>
                         </TouchableOpacity>
                       ) : null}
                       <DayMediaGallery
@@ -1962,31 +1958,31 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     </>
                   ) : null}
                   {processingMedia.map((item) => (
-                    <View key={item.id} style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor, marginTop: 8 }}>
-                      <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
-                      {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
+                    <View key={item.id} style={themeStyle('tabs_tripBlog_99', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
+                      <Text style={themeStyle('tabs_tripBlog_100', { textColor: textColor }, (theme ?? _styleTheme))}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
+                      {item.caption ? <Text style={themeStyle('tabs_tripBlog_101', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{item.caption}</Text> : null}
                       {canEdit ? (
-                        <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => removeMediaItem(item)}>
+                        <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_102', { theme: theme }, (theme ?? _styleTheme))]} disabled={deleting} onPress={() => removeMediaItem(item)}>
                           <Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text>
                         </TouchableOpacity>
                       ) : null}
                     </View>
                   ))}
                   {audioItems.map((item) => (
-                    <View key={item.id} testID={`blog-voice-note-${item.id}`} style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor, marginTop: 8 }}>
-                      <Text style={{ color: textColor, fontWeight: '600' }}>🎙 Voice note</Text>
-                      {item.caption ? <Text style={{ color: textColor, marginTop: 4 }}>{item.caption}</Text> : null}
+                    <View key={item.id} testID={`blog-voice-note-${item.id}`} style={themeStyle('tabs_tripBlog_103', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
+                      <Text style={themeStyle('tabs_tripBlog_104', { textColor: textColor }, (theme ?? _styleTheme))}>🎙 Voice note</Text>
+                      {item.caption ? <Text style={themeStyle('tabs_tripBlog_105', { textColor: textColor }, (theme ?? _styleTheme))}>{item.caption}</Text> : null}
                       {item.primaryUrl ? (
-                        <View style={{ marginTop: 8 }}>
+                        <View style={themeStyle('tabs_tripBlog_106', {  }, (theme ?? _styleTheme))}>
                           <BlogMediaPreview item={item} backgroundColor={inputColor} />
                         </View>
                       ) : (
-                        <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>
+                        <Text style={themeStyle('tabs_tripBlog_107', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                           {item.state === 'ready' ? 'Audio unavailable — please add this voice note again.' : 'Upload incomplete — please add this voice note again.'}
                         </Text>
                       )}
                       {canEdit ? (
-                        <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => removeMediaItem(item)}>
+                        <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_108', { theme: theme }, (theme ?? _styleTheme))]} disabled={deleting} onPress={() => removeMediaItem(item)}>
                           <Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text>
                         </TouchableOpacity>
                       ) : null}
@@ -2039,7 +2035,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               />
             ) : null}
             {!publicPreview && day.engagement && (day.items || []).length > 0 ? (
-              <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>
+              <View style={themeStyle('tabs_tripBlog_109', { borderColor: borderColor }, (theme ?? _styleTheme))}>
                 <BlogCommentThread
                   testID={`blog-day-comments-${day.localDate}`}
                   comments={comments.getDayState(day.localDate).comments.filter((c) => c.targetKind === 'day' && c.targetId === day.id)}
@@ -2067,23 +2063,23 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               </View>
             ) : null}
             {canEdit && (day.activities || []).length > 0 ? (
-              <View style={{ marginTop: 14 }}>
-                <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Planned activities</Text>
+              <View style={themeStyle('tabs_tripBlog_110', {  }, (theme ?? _styleTheme))}>
+                <Text style={themeStyle('tabs_tripBlog_111', { textColor: textColor }, (theme ?? _styleTheme))}>Planned activities</Text>
                 {(day.activities || []).map((activity) => (
-                  <View key={activity.id} style={{ borderLeftWidth: 3, borderLeftColor: theme?.colors?.link ?? '#0ea5e9', paddingLeft: 10, marginBottom: 8 }}>
-                    <Text style={{ color: textColor, fontWeight: '600' }}>{activity.name}</Text>
-                    <Text style={{ color: mutedColor }}>{activity.activityType}{activity.startTime ? ` · ${activity.startTime}` : ''}{activity.startLocation ? ` · ${activity.startLocation}` : ''}</Text>
+                  <View key={activity.id} style={themeStyle('tabs_tripBlog_112', { theme: theme }, (theme ?? _styleTheme))}>
+                    <Text style={themeStyle('tabs_tripBlog_113', { textColor: textColor }, (theme ?? _styleTheme))}>{activity.name}</Text>
+                    <Text style={themeStyle('tabs_tripBlog_114', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{activity.activityType}{activity.startTime ? ` · ${activity.startTime}` : ''}{activity.startLocation ? ` · ${activity.startLocation}` : ''}</Text>
                   </View>
                 ))}
               </View>
             ) : null}
             {canEdit && addingDay === day.localDate ? (
-              <View style={{ marginTop: 10 }}>
+              <View style={themeStyle('tabs_tripBlog_115', {  }, (theme ?? _styleTheme))}>
                 {capabilities.trip_blog_authoring_assist ? (
-                  <View testID={`blog-writing-prompts-${day.localDate}`} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  <View testID={`blog-writing-prompts-${day.localDate}`} style={themeStyle('tabs_tripBlog_116', {  }, (theme ?? _styleTheme))}>
                     {promptsForDay(day.localDate).map((prompt) => (
-                      <TouchableOpacity key={prompt} accessibilityRole="button" onPress={() => setNewBody(`<p><strong>${prompt}</strong></p><p></p>`)} style={{ borderWidth: 1, borderColor, borderRadius: 16, paddingVertical: 5, paddingHorizontal: 9, backgroundColor: inputColor }}>
-                        <Text style={{ color: textColor, fontSize: 12 }}>{prompt}</Text>
+                      <TouchableOpacity key={prompt} accessibilityRole="button" onPress={() => setNewBody(`<p><strong>${prompt}</strong></p><p></p>`)} style={themeStyle('tabs_tripBlog_117', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
+                        <Text style={themeStyle('tabs_tripBlog_118', { textColor: textColor }, (theme ?? _styleTheme))}>{prompt}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -2103,11 +2099,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   onChangeText={setNewTags}
                   placeholder="Tags (optional, comma-separated)"
                   placeholderTextColor={mutedColor}
-                  style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8 }}
+                  style={themeStyle('tabs_tripBlog_119', { textColor: textColor, borderColor: borderColor }, (theme ?? _styleTheme))}
                 />
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                <View style={themeStyle('tabs_tripBlog_120', {  }, (theme ?? _styleTheme))}>
                   <TouchableOpacity style={styles.button} disabled={creating || isRichTextEmpty(newBody)} onPress={() => createTextItem(day.localDate)}><Text style={styles.buttonText}>{creating ? 'Adding…' : 'Add to blog'}</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} onPress={() => { setAddingDay(null); setNewTags(''); }}><Text style={{ color: textColor }}>Cancel</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_121', { theme: theme }, (theme ?? _styleTheme))]} onPress={() => { setAddingDay(null); setNewTags(''); }}><Text style={themeStyle('tabs_tripBlog_122', { textColor: textColor }, (theme ?? _styleTheme))}>Cancel</Text></TouchableOpacity>
                 </View>
               </View>
             ) : null}
@@ -2125,18 +2121,18 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     mutedColor={mutedColor}
                     borderColor={borderColor}
                     backgroundColor={inputColor}
-                    accentColor={theme?.colors?.link ?? '#2E96A6'}
+                    accentColor={theme?.colors?.link ?? themeStyle('tabs_tripBlog_198', {  }, (theme ?? _styleTheme))}
                     styles={styles}
                   />
                 ) : null}
-                <Text style={{ color: mutedColor }}>
+                <Text style={themeStyle('tabs_tripBlog_123', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                   {dayStarters[day.localDate]?.draft ? 'Or start from scratch — click “+ Add note”.' : 'No notes yet. Click “+ Add note” to start this day.'}
                 </Text>
                 {capabilities.trip_blog_authoring_assist ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  <View style={themeStyle('tabs_tripBlog_124', {  }, (theme ?? _styleTheme))}>
                     {promptsForDay(day.localDate).map((prompt) => (
-                      <TouchableOpacity key={prompt} onPress={() => { setAddingDay(day.localDate); setNewBody(`<p><strong>${prompt}</strong></p><p></p>`); }} style={{ borderWidth: 1, borderColor, borderRadius: 16, paddingVertical: 5, paddingHorizontal: 9 }}>
-                        <Text style={{ color: textColor, fontSize: 12 }}>{prompt}</Text>
+                      <TouchableOpacity key={prompt} onPress={() => { setAddingDay(day.localDate); setNewBody(`<p><strong>${prompt}</strong></p><p></p>`); }} style={themeStyle('tabs_tripBlog_125', { borderColor: borderColor }, (theme ?? _styleTheme))}>
+                        <Text style={themeStyle('tabs_tripBlog_126', { textColor: textColor }, (theme ?? _styleTheme))}>{prompt}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -2148,11 +2144,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         })}
         {cursor ? (
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: '#f3f4f6', marginTop: 12 }]}
+            style={[styles.button, themeStyle('tabs_tripBlog_127', {  }, (theme ?? _styleTheme))]}
             onPress={loadMore}
             disabled={loading}
           >
-            <Text style={[styles.buttonText, { color: '#374151' }]}>
+            <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_128', {  }, (theme ?? _styleTheme))]}>
               {loading ? 'Loading...' : 'Load more days'}
             </Text>
           </TouchableOpacity>
@@ -2160,7 +2156,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         {/* Phase 0 reorder — the recap is the "Relive this trip" moment (redesign notes §1), kept
             prominent after the last day rather than buried above the story. */}
         {capabilities.trip_blog_recap ? (
-          <View style={{ marginTop: 8 }} onLayout={(e) => { recapY.current = e.nativeEvent.layout.y; }}>
+          <View style={themeStyle('tabs_tripBlog_129', {  }, (theme ?? _styleTheme))} onLayout={(e) => { recapY.current = e.nativeEvent.layout.y; }}>
             {recap ? (
               <TripRecapCards
                 nativeEnabled={capabilities.planning_native_map === true}
@@ -2182,10 +2178,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               />
             ) : (
               <View>
-                <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}>
+                <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, themeStyle('tabs_tripBlog_130', { theme: theme }, (theme ?? _styleTheme))]}>
                   <Text style={styles.buttonText}>{recapBusy ? 'Building recap…' : 'Relive this trip'}</Text>
                 </TouchableOpacity>
-                {recapNotice ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>{recapNotice}</Text> : null}
+                {recapNotice ? <Text style={themeStyle('tabs_tripBlog_131', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{recapNotice}</Text> : null}
               </View>
             )}
           </View>
@@ -2195,55 +2191,55 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
             §1/§4's "Blog tools" drawer). Hidden entirely when the current viewer (e.g. a follower)
             has nothing in it. */}
         {blogToolsHasContent ? (
-        <View style={{ marginTop: 12 }}>
+        <View style={themeStyle('tabs_tripBlog_132', {  }, (theme ?? _styleTheme))}>
           <TouchableOpacity
             testID="blog-tools-toggle"
             accessibilityRole="button"
             onPress={() => setShowBlogTools((current) => !current)}
-            style={{ alignSelf: 'flex-start', paddingVertical: 6 }}
+            style={themeStyle('tabs_tripBlog_133', {  }, (theme ?? _styleTheme))}
           >
-            <Text style={{ color: mutedColor, fontWeight: '700', fontSize: 13 }}>{showBlogTools ? '▾' : '▸'} Blog tools</Text>
+            <Text style={themeStyle('tabs_tripBlog_134', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{showBlogTools ? '▾' : '▸'} Blog tools</Text>
           </TouchableOpacity>
           {showBlogTools ? (
-            <View testID="blog-tools-panel" style={{ backgroundColor: surfaceColor, borderRadius: 16, padding: 18, marginTop: 6, gap: 14 }}>
+            <View testID="blog-tools-panel" style={themeStyle('tabs_tripBlog_135', { surfaceColor: surfaceColor }, (theme ?? _styleTheme))}>
               {canEdit ? (
-                <View style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                    <Text style={{ color: textColor, fontWeight: '700' }}>
+                <View style={themeStyle('tabs_tripBlog_136', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
+                  <View style={themeStyle('tabs_tripBlog_137', {  }, (theme ?? _styleTheme))}>
+                    <Text style={themeStyle('tabs_tripBlog_138', { textColor: textColor }, (theme ?? _styleTheme))}>
                       Public viewing: {publicationState === 'public' ? 'On' : publicationState === 'pending_consent' ? 'Awaiting consent' : 'Off'}
                     </Text>
                     {publicationState === 'public' ? (
-                      <TouchableOpacity testID="blog-make-private" accessibilityRole="button" style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={() => setPublicOptOut(true)}>
-                        <Text style={{ color: textColor }}>{publicationBusy ? 'Updating…' : 'Make private'}</Text>
+                      <TouchableOpacity testID="blog-make-private" accessibilityRole="button" style={[styles.button, themeStyle('tabs_tripBlog_139', { theme: theme }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={() => setPublicOptOut(true)}>
+                        <Text style={themeStyle('tabs_tripBlog_140', { textColor: textColor }, (theme ?? _styleTheme))}>{publicationBusy ? 'Updating…' : 'Make private'}</Text>
                       </TouchableOpacity>
                     ) : hasPendingConsent ? (
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={() => respondToPublication('approved')}>
+                      <View style={themeStyle('tabs_tripBlog_141', {  }, (theme ?? _styleTheme))}>
+                        <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_142', {  }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={() => respondToPublication('approved')}>
                           <Text style={styles.buttonText}>{publicationBusy ? 'Updating…' : 'Approve'}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={() => respondToPublication('declined')}>
-                          <Text style={{ color: textColor }}>Decline</Text>
+                        <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_143', { theme: theme }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={() => respondToPublication('declined')}>
+                          <Text style={themeStyle('tabs_tripBlog_144', { textColor: textColor }, (theme ?? _styleTheme))}>Decline</Text>
                         </TouchableOpacity>
                       </View>
                     ) : publicationState === 'pending_consent' ? (
-                      <Text style={{ color: mutedColor }}>Waiting for other adult travelers</Text>
+                      <Text style={themeStyle('tabs_tripBlog_145', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Waiting for other adult travelers</Text>
                     ) : blog?.publicOptOut ? (
-                      <TouchableOpacity testID="blog-allow-public" accessibilityRole="button" style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={() => setPublicOptOut(false)}>
+                      <TouchableOpacity testID="blog-allow-public" accessibilityRole="button" style={[styles.button, themeStyle('tabs_tripBlog_146', {  }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={() => setPublicOptOut(false)}>
                         <Text style={styles.buttonText}>{publicationBusy ? 'Updating…' : 'Allow public viewing'}</Text>
                       </TouchableOpacity>
                     ) : (
-                      <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={requestPublication}>
+                      <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_147', {  }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={requestPublication}>
                         <Text style={styles.buttonText}>{publicationBusy ? 'Requesting…' : 'Make public'}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
-                  {publicationNotice ? <Text style={{ color: mutedColor, marginTop: 8 }}>{publicationNotice}</Text> : null}
+                  {publicationNotice ? <Text style={themeStyle('tabs_tripBlog_148', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{publicationNotice}</Text> : null}
                   {publicationState === 'public' && capabilities.trip_blog_alt_text && missingAccessibilityCount > 0 ? (
-                    <Text testID="blog-accessibility-remediation" style={{ color: '#b45309', marginTop: 8, fontSize: 12 }}>
+                    <Text testID="blog-accessibility-remediation" style={themeStyle('tabs_tripBlog_149', {  }, (theme ?? _styleTheme))}>
                       Accessibility reminder: {missingAccessibilityCount} public {missingAccessibilityCount === 1 ? 'photo needs' : 'photos need'} alt text or a decorative mark. Your existing public blog remains available while you fix this.
                     </Text>
                   ) : null}
-                  <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>
+                  <Text style={themeStyle('tabs_tripBlog_150', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                     {publicationState === 'public'
                       ? 'Anyone can view this blog on the web. Any traveler can make it private.'
                       : blog?.publicOptOut
@@ -2255,9 +2251,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               ) : null}
               {canEdit && !readOnly && <ActivitySharingControls tripId={activeTripId} backendUrl={backendUrl} headers={headers} />}
               {canEdit && !readOnly ? (
-                <View testID="blog-photo-location-settings" style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
-                  <Text style={{ color: textColor, fontWeight: '700' }}>Keep photo locations: {blog?.photoLocationEnabled ? 'On' : 'Off'}</Text>
-                  <Text style={{ color: mutedColor, marginTop: 4, fontSize: 12 }}>
+                <View testID="blog-photo-location-settings" style={themeStyle('tabs_tripBlog_151', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
+                  <Text style={themeStyle('tabs_tripBlog_152', { textColor: textColor }, (theme ?? _styleTheme))}>Keep photo locations: {blog?.photoLocationEnabled ? 'On' : 'Off'}</Text>
+                  <Text style={themeStyle('tabs_tripBlog_153', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                     Off by default. When on, photos added from now on keep where they were taken, which lets this trip draw a map of each day. Photos already added are not changed, and turning this off does not remove locations already saved. Only travelers see exact locations; followers see a map only if you also share day maps below.
                   </Text>
                   <TouchableOpacity
@@ -2266,38 +2262,38 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     accessibilityState={{ checked: Boolean(blog?.photoLocationEnabled), disabled: photoLocationBusy }}
                     disabled={photoLocationBusy}
                     onPress={() => setPhotoLocation(!blog?.photoLocationEnabled)}
-                    style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 5, paddingHorizontal: 10, minHeight: 44, justifyContent: 'center', ...(blog?.photoLocationEnabled ? { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' } : {}) }]}
+                    style={[styles.button, themeStyle('tabs_tripBlog_154', { blog: blog, theme: theme }, (theme ?? _styleTheme))]}
                   >
-                    <Text style={blog?.photoLocationEnabled ? { color: textColor } : styles.buttonText}>{photoLocationBusy ? 'Updating…' : blog?.photoLocationEnabled ? 'Stop keeping locations' : 'Keep photo locations'}</Text>
+                    <Text style={blog?.photoLocationEnabled ? themeStyle('tabs_tripBlog_155', { textColor: textColor }, (theme ?? _styleTheme)) : styles.buttonText}>{photoLocationBusy ? 'Updating…' : blog?.photoLocationEnabled ? 'Stop keeping locations' : 'Keep photo locations'}</Text>
                   </TouchableOpacity>
-                  {photoLocationNotice ? <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>{photoLocationNotice}</Text> : null}
+                  {photoLocationNotice ? <Text style={themeStyle('tabs_tripBlog_156', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{photoLocationNotice}</Text> : null}
                 </View>
               ) : null}
               {canEdit && !readOnly ? (
-                <View testID="blog-shared-map-settings" style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
-                  <Text style={{ color: textColor, fontWeight: '700' }}>Follower day maps: {blog?.sharedMapEnabled ? 'On' : 'Off'}</Text>
-                  <Text style={{ color: mutedColor, marginTop: 4, fontSize: 12 }}>
+                <View testID="blog-shared-map-settings" style={themeStyle('tabs_tripBlog_157', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
+                  <Text style={themeStyle('tabs_tripBlog_158', { textColor: textColor }, (theme ?? _styleTheme))}>Follower day maps: {blog?.sharedMapEnabled ? 'On' : 'Off'}</Text>
+                  <Text style={themeStyle('tabs_tripBlog_159', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                     Off by default. When on, followers see a map of each day built from your photo locations, rounded to about 1 km, without places near where you stayed. Any traveler can change this. Travelers always see their own exact locations.
                   </Text>
                   {blog?.sharedMapEnabled ? (
-                    <TouchableOpacity testID="blog-shared-map-off" accessibilityRole="button" disabled={mapShareBusy} onPress={() => setSharedMap(false)} style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]}>
-                      <Text style={{ color: textColor }}>{mapShareBusy ? 'Updating…' : 'Stop sharing maps'}</Text>
+                    <TouchableOpacity testID="blog-shared-map-off" accessibilityRole="button" disabled={mapShareBusy} onPress={() => setSharedMap(false)} style={[styles.button, themeStyle('tabs_tripBlog_160', { theme: theme }, (theme ?? _styleTheme))]}>
+                      <Text style={themeStyle('tabs_tripBlog_161', { textColor: textColor }, (theme ?? _styleTheme))}>{mapShareBusy ? 'Updating…' : 'Stop sharing maps'}</Text>
                     </TouchableOpacity>
                   ) : (
-                    <View style={{ marginTop: 8, gap: 8 }}>
-                      <TouchableOpacity testID="blog-shared-map-preview" accessibilityRole="button" disabled={mapShareBusy} onPress={loadMapPreview} style={[styles.button, { alignSelf: 'flex-start', paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]}>
-                        <Text style={{ color: textColor }}>{mapShareBusy && !mapPreview ? 'Building preview…' : 'Preview what followers would see'}</Text>
+                    <View style={themeStyle('tabs_tripBlog_162', {  }, (theme ?? _styleTheme))}>
+                      <TouchableOpacity testID="blog-shared-map-preview" accessibilityRole="button" disabled={mapShareBusy} onPress={loadMapPreview} style={[styles.button, themeStyle('tabs_tripBlog_163', { theme: theme }, (theme ?? _styleTheme))]}>
+                        <Text style={themeStyle('tabs_tripBlog_164', { textColor: textColor }, (theme ?? _styleTheme))}>{mapShareBusy && !mapPreview ? 'Building preview…' : 'Preview what followers would see'}</Text>
                       </TouchableOpacity>
                       {mapPreview ? (
-                        <View testID="blog-shared-map-preview-result" style={{ gap: 6 }}>
+                        <View testID="blog-shared-map-preview-result" style={themeStyle('tabs_tripBlog_165', {  }, (theme ?? _styleTheme))}>
                           {mapPreview.length === 0 ? (
-                            <Text style={{ color: mutedColor, fontSize: 12 }}>No day has enough photo locations to show a map, so followers would see none.</Text>
+                            <Text style={themeStyle('tabs_tripBlog_166', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>No day has enough photo locations to show a map, so followers would see none.</Text>
                           ) : (
                             <>
-                              <Text style={{ color: textColor, fontSize: 12 }}>Followers would see a map on {mapPreview.length} {mapPreview.length === 1 ? 'day' : 'days'}:</Text>
+                              <Text style={themeStyle('tabs_tripBlog_167', { textColor: textColor }, (theme ?? _styleTheme))}>Followers would see a map on {mapPreview.length} {mapPreview.length === 1 ? 'day' : 'days'}:</Text>
                               {mapPreview.map((day) => (
-                                <View key={day.dayDate} style={{ gap: 2 }}>
-                                  <Text style={{ color: mutedColor, fontSize: 12 }}>{day.dayDate} · {day.points.length} approximate areas</Text>
+                                <View key={day.dayDate} style={themeStyle('tabs_tripBlog_168', {  }, (theme ?? _styleTheme))}>
+                                  <Text style={themeStyle('tabs_tripBlog_169', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{day.dayDate} · {day.points.length} approximate areas</Text>
                                   {Platform.OS === 'web' ? (
                                     <TripMap
                                       testID={`blog-shared-map-preview-${day.dayDate}`}
@@ -2308,14 +2304,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                               ))}
                             </>
                           )}
-                          <TouchableOpacity testID="blog-shared-map-on" accessibilityRole="button" disabled={mapShareBusy || mapPreview.length === 0} onPress={() => setSharedMap(true)} style={[styles.button, { alignSelf: 'flex-start', paddingVertical: 5, paddingHorizontal: 10, opacity: mapPreview.length === 0 ? 0.5 : 1 }]}>
+                          <TouchableOpacity testID="blog-shared-map-on" accessibilityRole="button" disabled={mapShareBusy || mapPreview.length === 0} onPress={() => setSharedMap(true)} style={[styles.button, themeStyle('tabs_tripBlog_170', { mapPreview: mapPreview }, (theme ?? _styleTheme))]}>
                             <Text style={styles.buttonText}>{mapShareBusy ? 'Updating…' : 'Share these maps with followers'}</Text>
                           </TouchableOpacity>
                         </View>
                       ) : null}
                     </View>
                   )}
-                  {mapShareNotice ? <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>{mapShareNotice}</Text> : null}
+                  {mapShareNotice ? <Text style={themeStyle('tabs_tripBlog_171', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{mapShareNotice}</Text> : null}
                 </View>
               ) : null}
               <BlogDiscoveryPanel
@@ -2331,9 +2327,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 theme={theme}
               />
               {capabilities.trip_blog_spend_summary && !readOnly ? (
-                <View testID="trip-blog-spend-summary" style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor }}>
-                  <Text style={{ color: textColor, fontWeight: '700' }}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency: tripCurrency }).format(spendTotal)}</Text>
-                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>Calculated on this device from the trip's expenses.</Text>
+                <View testID="trip-blog-spend-summary" style={themeStyle('tabs_tripBlog_172', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
+                  <Text style={themeStyle('tabs_tripBlog_173', { textColor: textColor }, (theme ?? _styleTheme))}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency: tripCurrency }).format(spendTotal)}</Text>
+                  <Text style={themeStyle('tabs_tripBlog_174', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Calculated on this device from the trip's expenses.</Text>
                 </View>
               ) : null}
             </View>
@@ -2359,11 +2355,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         backgroundColor={surfaceColor}
       />
       <Modal visible={!!quickCaptureAsset} transparent animationType="slide" onRequestClose={() => setQuickCaptureAsset(null)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={{ backgroundColor: surfaceColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, maxHeight: '85%' }}>
+        <View style={themeStyle('tabs_tripBlog_175', {  }, (theme ?? _styleTheme))}>
+          <View style={themeStyle('tabs_tripBlog_176', { surfaceColor: surfaceColor }, (theme ?? _styleTheme))}>
             <ScrollView>
-              <Text style={{ color: textColor, fontSize: 18, fontWeight: 'bold', marginBottom: 4 }}>Photo added</Text>
-              <Text style={{ color: mutedColor, marginBottom: 8, fontSize: 13 }}>Add a caption now, or tap Done to add one later.</Text>
+              <Text style={themeStyle('tabs_tripBlog_177', { textColor: textColor }, (theme ?? _styleTheme))}>Photo added</Text>
+              <Text style={themeStyle('tabs_tripBlog_178', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Add a caption now, or tap Done to add one later.</Text>
               {quickCaptureAsset ? (
                 <BlogMediaMetadataEditor
                   item={quickCaptureAsset}
@@ -2383,34 +2379,34 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               ) : null}
               <TouchableOpacity
                 testID="blog-quick-capture-done"
-                style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb', marginTop: 14 }]}
+                style={[styles.button, themeStyle('tabs_tripBlog_179', { theme: theme }, (theme ?? _styleTheme))]}
                 onPress={() => setQuickCaptureAsset(null)}
               >
-                <Text style={{ color: textColor }}>Done</Text>
+                <Text style={themeStyle('tabs_tripBlog_180', { textColor: textColor }, (theme ?? _styleTheme))}>Done</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
       </Modal>
       <Modal visible={showQuotaModal} transparent animationType="slide" onRequestClose={() => setShowQuotaModal(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={{ backgroundColor: surfaceColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
-            <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginBottom: 8 }}>Storage quota exceeded</Text>
-            <Text style={{ color: mutedColor, marginBottom: 20 }}>You don't have enough storage to upload this photo. Upgrade your storage to continue.</Text>
+        <View style={themeStyle('tabs_tripBlog_181', {  }, (theme ?? _styleTheme))}>
+          <View style={themeStyle('tabs_tripBlog_182', { surfaceColor: surfaceColor }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('tabs_tripBlog_183', { textColor: textColor }, (theme ?? _styleTheme))}>Storage quota exceeded</Text>
+            <Text style={themeStyle('tabs_tripBlog_184', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>You don't have enough storage to upload this photo. Upgrade your storage to continue.</Text>
             {storagePlans.map(plan => (
               <TouchableOpacity
                 key={plan.planKey}
-                style={[styles.button, { marginBottom: 10, backgroundColor: '#0284c7' }]}
+                style={[styles.button, themeStyle('tabs_tripBlog_185', {  }, (theme ?? _styleTheme))]}
                 onPress={() => purchaseStorage(plan.planKey)}
               >
-                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Add {plan.planKey.split('_')[1].toUpperCase()} Storage</Text>
+                <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_186', {  }, (theme ?? _styleTheme))]}>Add {plan.planKey.split('_')[1].toUpperCase()} Storage</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb', marginTop: 10 }]}
+              style={[styles.button, themeStyle('tabs_tripBlog_187', { theme: theme }, (theme ?? _styleTheme))]}
               onPress={() => setShowQuotaModal(false)}
             >
-              <Text style={{ color: textColor }}>Cancel</Text>
+              <Text style={themeStyle('tabs_tripBlog_188', { textColor: textColor }, (theme ?? _styleTheme))}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Text, View } from 'react-native';
 import type { ConnectionStatus } from '../hooks/useConnectionState';
@@ -16,18 +18,9 @@ type OfflineBannerProps = {
   canAddExpenses?: boolean;
 };
 
-const defaultContainer: Record<string, unknown> = {
-  paddingVertical: 6,
-  paddingHorizontal: 12,
-  backgroundColor: '#d97706',
-  alignItems: 'center',
-};
+const defaultContainer = (_theme: import('../theme/theme').AppTheme): Record<string, unknown> => themeStyle('components_OfflineBanner_1', {  }, _theme);
 
-const defaultText: Record<string, unknown> = {
-  color: '#ffffff',
-  fontSize: 13,
-  fontWeight: '600',
-};
+const defaultText = (_theme: import('../theme/theme').AppTheme): Record<string, unknown> => themeStyle('components_OfflineBanner_2', {  }, _theme);
 
 const messageFor = (status: string): string => {
   if (status === 'offline') return 'Offline — changes will not be saved until you reconnect.';
@@ -38,6 +31,7 @@ const messageFor = (status: string): string => {
 const OfflineBanner: React.FC<OfflineBannerProps> = ({
   containerStyle, textStyle, status, offlineReadOnly = false, signedIn = true, canAddExpenses = false,
 }) => {
+  const _styleTheme = useStyleTheme();
   const isDegraded = status !== 'online';
   if (!isDegraded && !offlineReadOnly) return null;
   const message = !signedIn && status === 'offline'
@@ -49,14 +43,14 @@ const OfflineBanner: React.FC<OfflineBannerProps> = ({
         : messageFor(status);
   return (
     <View
-      style={[defaultContainer, containerStyle] as any}
+      style={[defaultContainer(_styleTheme), containerStyle] as any}
       testID="offline-banner"
       accessible
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
       accessibilityLabel={message}
     >
-      <Text style={[defaultText, textStyle] as any}>{message}</Text>
+      <Text style={[defaultText(_styleTheme), textStyle] as any}>{message}</Text>
     </View>
   );
 };

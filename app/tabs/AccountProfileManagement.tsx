@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
@@ -124,7 +127,7 @@ interface AccountProfileManagementProps {
 }
 
 const AccountProfileManagement = ({
-  theme,
+  theme: _providedTheme,
   backendUrl,
   userToken,
   activePage,
@@ -146,6 +149,8 @@ const AccountProfileManagement = ({
   logout,
   styles,
 }: AccountProfileManagementProps) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width, height } = useWindowDimensions();
   const { spacing } = theme;
   const isCompactDialog = width < 480 || height < 700;
@@ -271,21 +276,7 @@ const AccountProfileManagement = ({
     };
   }, [backendUrl, headers, userToken]);
 
-  const localStyles = StyleSheet.create({
-    airportFieldWrap: {
-      position: 'relative',
-      zIndex: 6,
-    },
-    airportSuggestionList: {
-      marginTop: 4,
-      maxHeight: 220,
-      overflow: 'hidden',
-    },
-    airportSuggestionOption: {
-      paddingVertical: 10,
-      paddingHorizontal: 12,
-    },
-  });
+  const localStyles = StyleSheet.create(themeStyle('tabs_AccountProfileManagement_1', {  }, (theme ?? _styleTheme)));
 
   const handleProfileUpdate = async () => {
     if (!userToken) return;
@@ -514,14 +505,14 @@ const AccountProfileManagement = ({
     <View style={[styles.card, styles.accountSection]} testID="account-preferences-settings">
       {accountMessage ? <Text style={styles.bodyText}>{accountMessage}</Text> : null}
       <Text style={styles.modalLabel}>Preferred maps app</Text>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      <View style={[styles.row, themeStyle('tabs_AccountProfileManagement_2', {  }, (theme ?? _styleTheme))]}>
         {mapAppOptions.map((opt) => (
           <TouchableOpacity
             key={opt.key}
             style={[
               styles.mapOptionButton,
               mapApp === opt.key && styles.mapOptionActive,
-              { marginRight: 8, marginTop: 4 },
+              themeStyle('tabs_AccountProfileManagement_3', {  }, (theme ?? _styleTheme)),
             ]}
             onPress={() => {
               onChangeMapApp(opt.key);
@@ -536,11 +527,11 @@ const AccountProfileManagement = ({
         Selected: {mapAppOptions.find((opt) => opt.key === mapApp)?.label ?? 'Google Maps'}
       </Text>
       <Text style={styles.modalLabel}>Preferred calendar app</Text>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      <View style={[styles.row, themeStyle('tabs_AccountProfileManagement_4', {  }, (theme ?? _styleTheme))]}>
         {calendarAppOptions.map((opt) => (
           <TouchableOpacity key={opt.key} accessibilityRole="button"
             accessibilityState={{ selected: (accountProfile.calendarPreference ?? 'google') === opt.key }}
-            style={[styles.mapOptionButton, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActive, { marginRight: 8, marginTop: 4 }]}
+            style={[styles.mapOptionButton, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActive, themeStyle('tabs_AccountProfileManagement_5', {  }, (theme ?? _styleTheme))]}
             onPress={() => setAccountProfile((profile) => ({ ...profile, calendarPreference: opt.key }))}>
             <Text style={[styles.mapOptionText, (accountProfile.calendarPreference ?? 'google') === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
           </TouchableOpacity>
@@ -548,14 +539,14 @@ const AccountProfileManagement = ({
       </View>
       <Text style={styles.helperText}>Save preferences to remember this choice. Apple Calendar downloads a calendar (.ics) file on the web and opens the phone's calendar editor in the installed app. Later trip changes won't sync to saved events.</Text>
       <Text style={styles.modalLabel}>Appearance</Text>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      <View style={[styles.row, themeStyle('tabs_AccountProfileManagement_6', {  }, (theme ?? _styleTheme))]}>
         {appearanceOptions.map((opt) => (
           <TouchableOpacity
             key={opt.key}
             style={[
               styles.mapOptionButton,
               appearancePreference === opt.key && styles.mapOptionActive,
-              { marginRight: 8, marginTop: 4 },
+              themeStyle('tabs_AccountProfileManagement_7', {  }, (theme ?? _styleTheme)),
             ]}
             onPress={() => {
               onChangeAppearancePreference(opt.key);
@@ -570,7 +561,7 @@ const AccountProfileManagement = ({
         Selected: {appearanceOptions.find((opt) => opt.key === appearancePreference)?.label ?? 'Auto'}
       </Text>
       <Text style={styles.modalLabel}>Temperature</Text>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      <View style={[styles.row, themeStyle('tabs_AccountProfileManagement_8', {  }, (theme ?? _styleTheme))]}>
         {temperatureUnitOptions.map((opt) => {
           const selected = normalizeTemperatureUnit(accountProfile.temperatureUnit) === opt.key;
           return (
@@ -579,7 +570,7 @@ const AccountProfileManagement = ({
               style={[
                 styles.mapOptionButton,
                 selected && styles.mapOptionActive,
-                { marginRight: 8, marginTop: 4 },
+                themeStyle('tabs_AccountProfileManagement_9', {  }, (theme ?? _styleTheme)),
               ]}
               onPress={() => {
                 setAccountProfile((p) => ({ ...p, temperatureUnit: opt.key }));
@@ -610,12 +601,12 @@ const AccountProfileManagement = ({
         </View>
       ) : null}
       <View style={styles.row}>
-        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} commitOnBlur={false} />
-        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} commitOnBlur={false} />
+        <DraftTextInput style={[styles.input, themeStyle('tabs_AccountProfileManagement_10', {  }, (theme ?? _styleTheme))]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} commitOnBlur={false} />
+        <DraftTextInput style={[styles.input, themeStyle('tabs_AccountProfileManagement_11', {  }, (theme ?? _styleTheme))]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} commitOnBlur={false} />
       </View>
       <DraftTextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} commitOnBlur={false} />
       <TouchableOpacity
-        style={[styles.input, { justifyContent: 'center' }]}
+        style={[styles.input, themeStyle('tabs_AccountProfileManagement_12', {  }, (theme ?? _styleTheme))]}
         onPress={() => setShowAddressEditor(true)}
       >
         <Text style={formattedHomeAddress ? styles.cellText : styles.placeholderText}>
@@ -646,7 +637,7 @@ const AccountProfileManagement = ({
                   styles={styles}
                   style={[
                     localStyles.airportSuggestionOption,
-                    idx === preferredAirportSuggestions.length - 1 && { borderBottomWidth: 0 },
+                    idx === preferredAirportSuggestions.length - 1 && themeStyle('tabs_AccountProfileManagement_13', {  }, (theme ?? _styleTheme)),
                   ]}
                   onPress={() => {
                     setAccountProfile((p) => ({ ...p, preferredAirport: parsePreferredAirportCode(opt) }));
@@ -657,7 +648,7 @@ const AccountProfileManagement = ({
                 </DropdownOptionButton>
               ))
             ) : (
-              <Text style={[styles.helperText, { paddingHorizontal: 12, paddingVertical: 10 }]}>
+              <Text style={[styles.helperText, themeStyle('tabs_AccountProfileManagement_14', {  }, (theme ?? _styleTheme))]}>
                 Type to search airports
               </Text>
             )}
@@ -673,8 +664,8 @@ const AccountProfileManagement = ({
           <Text style={styles.modalLabel}>Account emails</Text>
           <Text style={styles.helperText}>Add verified emails, choose your primary sign-in email, and remove non-primary emails.</Text>
           {accountEmails.map((entry) => (
-            <View key={entry.email} style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
-              <View style={{ flex: 1, marginRight: 8 }}>
+            <View key={entry.email} style={[styles.row, themeStyle('tabs_AccountProfileManagement_15', {  }, (theme ?? _styleTheme))]}>
+              <View style={themeStyle('tabs_AccountProfileManagement_16', {  }, (theme ?? _styleTheme))}>
                 <Text style={styles.cellText}>{entry.email}</Text>
                 <Text style={styles.helperText}>
                   {entry.isPrimary ? 'Primary' : 'Secondary'} | {entry.isVerified ? 'Verified' : 'Pending verification'}
@@ -703,7 +694,7 @@ const AccountProfileManagement = ({
           ))}
           <View style={styles.row}>
             <DraftTextInput
-              style={[styles.input, { flex: 1 }]}
+              style={[styles.input, themeStyle('tabs_AccountProfileManagement_17', {  }, (theme ?? _styleTheme))]}
               placeholder="Add email"
               autoCapitalize="none"
               keyboardType="email-address"
@@ -731,7 +722,7 @@ const AccountProfileManagement = ({
           <DraftTextInput style={styles.input} placeholder="Confirm new password" secureTextEntry value={passwordForm.newPasswordConfirm} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPasswordConfirm: text }))} commitOnBlur={false} />
           <View style={styles.row}>
             <TouchableOpacity
-              style={[styles.button, styles.dangerButton, { flex: 1 }]}
+              style={[styles.button, styles.dangerButton, themeStyle('tabs_AccountProfileManagement_18', {  }, (theme ?? _styleTheme))]}
               onPress={() => {
                 setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
                 setShowPasswordEditor(false);
@@ -739,7 +730,7 @@ const AccountProfileManagement = ({
             >
               <Text style={styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={handlePasswordChange}>
+            <TouchableOpacity style={[styles.button, themeStyle('tabs_AccountProfileManagement_19', {  }, (theme ?? _styleTheme))]} onPress={handlePasswordChange}>
               <Text style={styles.buttonText}>Update Password</Text>
             </TouchableOpacity>
           </View>
@@ -761,7 +752,7 @@ const AccountProfileManagement = ({
               void itemId;
               Alert.alert('Connected', 'Your bank account has been connected. Recent transactions will be available to import in the expenses tab.');
             }}
-            style={{ marginTop: spacing.sm }}
+            style={themeStyle('tabs_AccountProfileManagement_20', { spacing: spacing }, (theme ?? _styleTheme))}
           />
         </>
       ) : null}
@@ -787,12 +778,12 @@ const AccountProfileManagement = ({
           styles={styles}
           onClose={() => setShowAddressEditor(false)}
           useNativeModal
-          cardStyle={isCompactDialog ? { width: '100%', maxHeight: '92%' } : undefined}
+          cardStyle={isCompactDialog ? themeStyle('tabs_AccountProfileManagement_21', {  }, (theme ?? _styleTheme)) : undefined}
         >
             <ScrollView
               testID="address-editor-scroll"
-              style={{ maxHeight: isCompactDialog ? 380 : 440 }}
-              contentContainerStyle={{ gap: 10 }}
+              style={themeStyle('tabs_AccountProfileManagement_22', { isCompactDialog: isCompactDialog }, (theme ?? _styleTheme))}
+              contentContainerStyle={themeStyle('tabs_AccountProfileManagement_23', {  }, (theme ?? _styleTheme))}
               keyboardShouldPersistTaps="handled"
             >
               <DraftTextInput
@@ -811,14 +802,14 @@ const AccountProfileManagement = ({
               />
               <View style={styles.row}>
                 <DraftTextInput
-                  style={[styles.input, { flex: 1 }]}
+                  style={[styles.input, themeStyle('tabs_AccountProfileManagement_24', {  }, (theme ?? _styleTheme))]}
                   placeholder="City"
                   value={addressForm.city}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, city: text }))}
                   commitOnBlur={false}
                 />
                 <DraftTextInput
-                  style={[styles.input, { flex: 1 }]}
+                  style={[styles.input, themeStyle('tabs_AccountProfileManagement_25', {  }, (theme ?? _styleTheme))]}
                   placeholder="State / Province"
                   value={addressForm.state}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, state: text }))}
@@ -827,14 +818,14 @@ const AccountProfileManagement = ({
               </View>
               <View style={styles.row}>
                 <DraftTextInput
-                  style={[styles.input, { flex: 1 }]}
+                  style={[styles.input, themeStyle('tabs_AccountProfileManagement_26', {  }, (theme ?? _styleTheme))]}
                   placeholder="Postal code"
                   value={addressForm.postalCode}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, postalCode: text }))}
                   commitOnBlur={false}
                 />
                 <DraftTextInput
-                  style={[styles.input, { flex: 1 }]}
+                  style={[styles.input, themeStyle('tabs_AccountProfileManagement_27', {  }, (theme ?? _styleTheme))]}
                   placeholder="Country"
                   value={addressForm.country}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, country: text }))}
@@ -844,7 +835,7 @@ const AccountProfileManagement = ({
             </ScrollView>
               <View style={styles.row}>
                 <TouchableOpacity
-                  style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                  style={[styles.button, styles.dangerButton, themeStyle('tabs_AccountProfileManagement_28', {  }, (theme ?? _styleTheme))]}
                   onPress={() => {
                     setAddressForm(parseHomeAddress(accountProfile.homeAddress));
                     setShowAddressEditor(false);
@@ -853,7 +844,7 @@ const AccountProfileManagement = ({
                   <Text style={styles.dangerButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.button, { flex: 1 }]}
+                  style={[styles.button, themeStyle('tabs_AccountProfileManagement_29', {  }, (theme ?? _styleTheme))]}
                   onPress={handleAddressSave}
                 >
                   <Text style={styles.buttonText}>Save Address</Text>

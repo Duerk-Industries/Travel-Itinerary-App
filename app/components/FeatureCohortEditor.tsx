@@ -1,10 +1,15 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
-import type { AppTheme } from '../theme/theme';
 
-export default function FeatureCohortEditor({ featureKey, backendUrl, headers, theme }: {
+
+export default function FeatureCohortEditor({ featureKey, backendUrl, headers, theme: _providedTheme }: {
   featureKey: string; backendUrl: string; headers: Record<string, string>; theme: AppTheme;
 }) {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [open, setOpen] = useState(false), [busy, setBusy] = useState(false);
   const [userIds, setUserIds] = useState(''), [owner, setOwner] = useState('');
   const [retireAfter, setRetireAfter] = useState(new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10));
@@ -44,11 +49,11 @@ export default function FeatureCohortEditor({ featureKey, backendUrl, headers, t
     } catch (error) { if (current === epoch.current) setNotice((error as Error).message); }
     finally { lock.current = false; if (current === epoch.current) setBusy(false); }
   };
-  const text = { color: theme.colors.text }, input = { color: theme.colors.text, borderWidth: 1, borderColor: theme.colors.textMuted, minHeight: 44, padding: 8 };
-  const button = (label: string, action: () => void) => <TouchableOpacity disabled={busy} accessibilityRole="button" accessibilityState={{ disabled: busy, busy }} style={{ minHeight: 44, padding: 8 }} onPress={action}><Text style={{ color: theme.colors.link }}>{label}</Text></TouchableOpacity>;
+  const text = themeStyle('components_FeatureCohortEditor_1', { theme: theme }, (theme ?? _styleTheme)), input = themeStyle('components_FeatureCohortEditor_2', { theme: theme }, (theme ?? _styleTheme));
+  const button = (label: string, action: () => void) => <TouchableOpacity disabled={busy} accessibilityRole="button" accessibilityState={{ disabled: busy, busy }} style={themeStyle('components_FeatureCohortEditor_3', {  }, (theme ?? _styleTheme))} onPress={action}><Text style={themeStyle('components_FeatureCohortEditor_4', { theme: theme }, (theme ?? _styleTheme))}>{label}</Text></TouchableOpacity>;
   return <View>
     {button(open ? 'Refresh cohort settings' : 'Manage rollout cohort', () => void load())}
-    {open && <View style={{ gap: 8 }}>
+    {open && <View style={themeStyle('components_FeatureCohortEditor_5', {  }, (theme ?? _styleTheme))}>
       <Text style={text}>Only listed user IDs qualify while the global flag is on. An empty list blocks everyone. Expired cohorts deny access until reviewed or removed.</Text>
       <TextInput style={input} placeholderTextColor={theme.colors.textMuted} accessibilityLabel="Cohort user IDs" multiline value={userIds} onChangeText={setUserIds} placeholder="User UUIDs, one per line" />
       <TextInput style={input} placeholderTextColor={theme.colors.textMuted} accessibilityLabel="Cohort owner" value={owner} onChangeText={setOwner} placeholder="Rollout owner" />

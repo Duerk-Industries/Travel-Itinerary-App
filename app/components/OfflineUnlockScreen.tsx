@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
@@ -9,9 +11,9 @@ type OfflineUnlockScreenProps = {
   styles: Record<string, any>;
 };
 
-const OfflineUnlockScreen: React.FC<OfflineUnlockScreenProps> = ({ name, isUnlocking, message, onUnlock, styles }) => (
-  <View style={[styles.signedOutScroll, { justifyContent: 'center', padding: 24 }]} testID="offline-unlock-screen">
-    <View style={[styles.card, { maxWidth: 460, width: '100%', alignSelf: 'center', gap: 12 }]}>
+const OfflineUnlockScreen: React.FC<OfflineUnlockScreenProps> = ({ name, isUnlocking, message, onUnlock, styles }) => { const _styleTheme = useStyleTheme(); return ((
+  <View style={[styles.signedOutScroll, themeStyle('components_OfflineUnlockScreen_1', {  }, _styleTheme)]} testID="offline-unlock-screen">
+    <View style={[styles.card, themeStyle('components_OfflineUnlockScreen_2', {  }, _styleTheme)]}>
       <Text style={styles.sectionTitle}>Unlock cached trips</Text>
       <Text style={styles.helperText}>
         {name ? `${name}'s` : 'Your'} trip information is available on this phone for up to 30 days after an online sign-in.
@@ -30,6 +32,6 @@ const OfflineUnlockScreen: React.FC<OfflineUnlockScreenProps> = ({ name, isUnloc
       </TouchableOpacity>
     </View>
   </View>
-);
+)); };
 
 export default OfflineUnlockScreen;

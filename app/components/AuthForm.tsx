@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AuthFormFields, AuthMode } from '../hooks/useAuthForm';
@@ -59,6 +61,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
   backendUrl,
   styles,
 }) => {
+  const _styleTheme = useStyleTheme();
   const openLegal = (path: string) => {
     const baseUrl = Platform.OS === 'web' ? window.location.origin : (backendUrl || '').replace(/\/api$/, '');
     void Linking.openURL(`${baseUrl}/${path}`);
@@ -182,30 +185,30 @@ const AuthForm: React.FC<AuthFormProps> = ({
     >
       <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
     </TouchableOpacity>
-    <View style={{ marginTop: 12 }}>
+    <View style={themeStyle('components_AuthForm_1', {  }, _styleTheme)}>
       <GoogleSignInButton onPress={loginWithGoogle} testID="auth-form-google" />
     </View>
     {loginWithApple && appleOAuthEnabled ? (
-      <View style={{ marginTop: 8 }}>
+      <View style={themeStyle('components_AuthForm_2', {  }, _styleTheme)}>
         <AppleSignInButton onPress={loginWithApple} testID="auth-form-apple" />
       </View>
     ) : null}
 
-    <View style={{ marginTop: 24, alignItems: 'center', opacity: 0.7 }}>
-      <Text style={[styles.helperText, { fontSize: 12, textAlign: 'center' }]}>
+    <View style={themeStyle('components_AuthForm_3', {  }, _styleTheme)}>
+      <Text style={[styles.helperText, themeStyle('components_AuthForm_4', {  }, _styleTheme)]}>
         By continuing, you agree to our
       </Text>
-      <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+      <View style={themeStyle('components_AuthForm_5', {  }, _styleTheme)}>
         <TouchableOpacity onPress={() => openLegal('terms.html')}>
-          <Text style={[styles.linkText, { fontSize: 12, fontWeight: '600' }]}>Terms of Service</Text>
+          <Text style={[styles.linkText, themeStyle('components_AuthForm_6', {  }, _styleTheme)]}>Terms of Service</Text>
         </TouchableOpacity>
-        <Text style={[styles.helperText, { fontSize: 12 }]}>and</Text>
+        <Text style={[styles.helperText, themeStyle('components_AuthForm_7', {  }, _styleTheme)]}>and</Text>
         <TouchableOpacity onPress={() => openLegal('privacy.html')}>
-          <Text style={[styles.linkText, { fontSize: 12, fontWeight: '600' }]}>Privacy Policy</Text>
+          <Text style={[styles.linkText, themeStyle('components_AuthForm_8', {  }, _styleTheme)]}>Privacy Policy</Text>
         </TouchableOpacity>
       </View>
-      <TouchableOpacity onPress={() => openLegal('privacy-choices.html')} style={{ marginTop: 4 }} testID="auth-privacy-choices-link">
-        <Text style={[styles.linkText, { fontSize: 12, fontWeight: '600' }]}>Your Privacy Choices</Text>
+      <TouchableOpacity onPress={() => openLegal('privacy-choices.html')} style={themeStyle('components_AuthForm_9', {  }, _styleTheme)} testID="auth-privacy-choices-link">
+        <Text style={[styles.linkText, themeStyle('components_AuthForm_10', {  }, _styleTheme)]}>Your Privacy Choices</Text>
       </TouchableOpacity>
     </View>
   </View>

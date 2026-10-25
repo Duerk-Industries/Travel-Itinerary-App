@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { generateLocalActivityDescription, localDescriptionsAvailable, subscribeLocalDescriptions, type ActivityDescriptionInput } from '../utils/localActivityDescriptions';
@@ -5,13 +7,14 @@ import { generateLocalActivityDescription, localDescriptionsAvailable, subscribe
 export default function ActivityDescriptionGenerator({ input, onApply, styles }: {
   input: ActivityDescriptionInput; onApply: (description: string) => void; styles: Record<string, any>;
 }) {
+  const _styleTheme = useStyleTheme();
   const available = useSyncExternalStore(subscribeLocalDescriptions, localDescriptionsAvailable, () => false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const live = useRef(true), pending = useRef(false);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   if (!available && !generating && !error) return null;
-  return <View style={{ gap: 8, marginVertical: 8 }}>
+  return <View style={themeStyle('components_ActivityDescriptionGenerator_1', {  }, _styleTheme)}>
     {available && <TouchableOpacity style={styles.button} accessibilityRole="button" disabled={!input.name.trim() || generating}
       onPress={async () => {
         if (pending.current) return;

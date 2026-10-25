@@ -1,25 +1,28 @@
+import { mapFontFamily as FONT_STACK, themeStyle, linkTextColor } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme, useAppTheme } from '../theme/ThemeContext';
 import { configureMapLibre } from '../utils/maplibreConfig.web';
 import { isLocatedMapPoint } from '../utils/planningMapGeometry';
 import { travelEstimate } from '../../packages/domain/src/planningTravelEstimates';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { ThemedText as Text } from './ThemedText';
-import { useAppTheme } from '../theme/ThemeContext';
-import { linkTextColor } from '../theme/theme';
+
+
 import type { Map as LibreMap } from 'maplibre-gl';
 import type { TripMapProps } from './TripMap.types';
 import type { PlanningMapPoint } from '../../server/src/types';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import BasicTripMap from './BasicTripMap.web';
 
-const COLORS = { flight: '#4285F4', lodging: '#FB8C00', activity: '#34A853', car_rental: '#9C27B0' };
+const COLORS = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_TripMap_web_12', {  }, _theme);
 const located = isLocatedMapPoint;
 // The stop list is plain HTML, so it has to ask for the app's font; the browser default is a serif.
-const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 // Every transfer (flight, train, bus, ferry) is drawn as one kind, so name it for what it is.
 const KIND_LABEL: Record<string, string> = { flight: 'transfer', lodging: 'lodging', activity: 'activity', car_rental: 'car rental' };
 
 export default function TripMap({ points, selectedId, onSelect, testID, onOpenChange, locating = false, locationNotice }: TripMapProps) {
+  const _styleTheme = useStyleTheme();
   const theme = useAppTheme();
   const { colors } = theme;
   const host = useRef<HTMLDivElement | null>(null);
@@ -73,18 +76,18 @@ export default function TripMap({ points, selectedId, onSelect, testID, onOpenCh
         const button = document.createElement('button');
         button.type = 'button'; button.textContent = point.label || String(points.findIndex(candidate => candidate.id === point.id) + 1);
         button.setAttribute('aria-label', `${index + 1}. ${point.title}`);
-        Object.assign(button.style, { background: COLORS[point.kind], color: 'white', border: '2px solid white', borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', fontWeight: 'bold' });
+        Object.assign(button.style, themeStyle('components_TripMap_web_1', { COLORS: COLORS(_styleTheme), point: point }, _styleTheme));
         button.onclick = () => { chooseRef.current(point.id); rowRefs.current[point.id]?.scrollIntoView({ block: 'nearest', behavior: 'auto' }); };
         markers.push(new lib.Marker({ element: button }).setLngLat([point.lng!, point.lat!]).addTo(instance));
       });
-      if (resolved.length > 1) instance.fitBounds(resolved.reduce((bounds, point) => bounds.extend([point.lng!, point.lat!]), new lib.LngLatBounds()), { padding: 60, maxZoom: 15, duration: 0 });
+      if (resolved.length > 1) instance.fitBounds(resolved.reduce((bounds, point) => bounds.extend([point.lng!, point.lat!]), new lib.LngLatBounds()), themeStyle('components_TripMap_web_2', {  }, _styleTheme));
       let loaded = false;
       instance.on('load', () => {
         loaded = true;
         if (!cancelled) setFailed(false);
         if (cancelled || resolved.length < 2) return;
         instance.addSource('visit-order', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: resolved.map(point => [point.lng!, point.lat!]) } } });
-        instance.addLayer({ id: 'visit-order', type: 'line', source: 'visit-order', paint: { 'line-color': '#475569', 'line-width': 3, 'line-dasharray': [2, 2] } });
+        instance.addLayer({ id: 'visit-order', type: 'line', source: 'visit-order', paint: { 'line-color': themeStyle('components_TripMap_web_13', {  }, _styleTheme), 'line-width': 3, 'line-dasharray': [2, 2] } });
       });
       instance.on('error', (event) => {
         const detail = event as { error?: { message?: string }; sourceId?: string; tile?: unknown };
@@ -99,36 +102,36 @@ export default function TripMap({ points, selectedId, onSelect, testID, onOpenCh
       if (typeof ResizeObserver !== 'undefined') { resize = new ResizeObserver(() => instance.resize()); resize.observe(host.current); }
     }).catch((error) => { console.warn('[map] could not start', error); dispose?.(); dispose = undefined; if (!cancelled) setFailed(true); });
     return () => { cancelled = true; dispose?.(); };
-  }, [open, visible, key, retryKey]);
+  }, [open, visible, key, retryKey, _styleTheme]);
   useEffect(() => {
     const point = resolved.find(candidate => candidate.id === selected);
     if (point && map.current) map.current.easeTo({ center: [point.lng!, point.lat!], zoom: Math.max(map.current.getZoom(), 13), duration: typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250 });
   }, [selected, key]);
-  return <View testID={testID} style={{ gap: 8 }}>
-    <TouchableOpacity accessibilityRole="button" onPress={() => { setOpen(!open); onOpenChange?.(!open); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
+  return <View testID={testID} style={themeStyle('components_TripMap_web_3', {  }, _styleTheme)}>
+    <TouchableOpacity accessibilityRole="button" onPress={() => { setOpen(!open); onOpenChange?.(!open); }} style={themeStyle('components_TripMap_web_4', {  }, _styleTheme)}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
     {open && <>
       {failed && <>
         <Text accessibilityRole="alert">Interactive map unavailable — showing a basic map instead.</Text>
-        <TouchableOpacity accessibilityRole="button" onPress={() => setRetryKey(value => value + 1)} style={{ minHeight: 44, justifyContent: 'center' }}><Text tone="link">Retry map</Text></TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setRetryKey(value => value + 1)} style={themeStyle('components_TripMap_web_5', {  }, _styleTheme)}><Text tone="link">Retry map</Text></TouchableOpacity>
       </>}
       {!resolved.length && <Text>No coordinates yet. Your stops are listed below.</Text>}
       {locating && <Text accessibilityLiveRegion="polite">Finding locations…</Text>}
       {locationNotice && <Text accessibilityLiveRegion="polite">{locationNotice}</Text>}
-      <div ref={viewport} style={{ display: 'flex', flexDirection: width >= 1024 ? 'row' : 'column-reverse', gap: 16 }}>
-        <ol aria-label="Day stops" style={{ flex: 1, margin: 0, padding: '0 0 0 24px', color: colors.text, fontFamily: FONT_STACK, fontSize: 14, lineHeight: 1.4, maxHeight: width >= 1024 ? 400 : undefined, overflowY: 'auto' }}>
+      <div ref={viewport} style={themeStyle('components_TripMap_web_6', { width: width }, _styleTheme)}>
+        <ol aria-label="Day stops" style={themeStyle('components_TripMap_web_7', { colors: colors, FONT_STACK: FONT_STACK, width: width }, _styleTheme)}>
           {points.map((point, index) => <li key={point.id}><button ref={node => { rowRefs.current[point.id] = node; }} type="button" aria-pressed={selected === point.id}
-            onClick={() => chooseRef.current(point.id)} style={{ minHeight: 44, width: '100%', textAlign: 'left', color: colors.text, font: 'inherit', background: selected === point.id ? colors.surfaceMuted : 'transparent', border: selected === point.id ? `1px solid ${colors.border}` : '1px solid transparent', borderRadius: 6, cursor: 'pointer', padding: 8 }}>
+            onClick={() => chooseRef.current(point.id)} style={themeStyle('components_TripMap_web_8', { colors: colors, selected: selected, point: point }, _styleTheme)}>
             {point.label || String(index + 1)} · {point.title} · {KIND_LABEL[point.kind] ?? point.kind.replace('_', ' ')}{!located(point) ? ' · Not on the map yet' : ''}
-            {located(point) && index > 0 && located(points[index - 1]) && <span style={{ display: 'block', color: colors.textMuted }}>{travelEstimate(points[index - 1], point)}</span>}
+            {located(point) && index > 0 && located(points[index - 1]) && <span style={themeStyle('components_TripMap_web_9', { colors: colors }, _styleTheme)}>{travelEstimate(points[index - 1], point)}</span>}
           </button></li>)}
         </ol>
         {failed && <BasicTripMap points={resolved} selectedId={selected} onSelect={id => chooseRef.current(id)} />}
-        <div ref={host} aria-label="Interactive map of day stops" style={{ flex: failed ? 0 : 2, minHeight: failed ? 0 : 360, height: failed ? 0 : 400, display: !resolved.length ? 'none' : 'block', borderRadius: 12, overflow: 'hidden' }} />
+        <div ref={host} aria-label="Interactive map of day stops" style={themeStyle('components_TripMap_web_10', { failed: failed, resolved: resolved }, _styleTheme)} />
       </div>
       {[...new Set(points.map(point => point.coordinateAttribution).filter((value): value is string => Boolean(value)))].map(value => <Text key={value}>{value}</Text>)}
       <Text>Straight-line estimates, not directions. Roads, barriers, traffic and accessibility can change travel time. Letters show visit order. Blue: transfer · Orange: lodging · Green: activity · Purple: car rental.</Text>
       {[...new Map(points.flatMap(point => point.coordinateCreditLinks ?? []).map(link => [link.url, link])).values()].map(link =>
-        <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" style={{ minHeight: 24, color: linkTextColor(theme) }}>{link.label}</a>)}
+        <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" style={themeStyle('components_TripMap_web_11', { linkTextColor: linkTextColor, theme: theme }, _styleTheme)}>{link.label}</a>)}
       <Text tone="muted">© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors</Text>
     </>}
   </View>;

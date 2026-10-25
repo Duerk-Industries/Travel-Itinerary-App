@@ -1,7 +1,9 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme, useAppTheme } from '../theme/ThemeContext';
 import React, { useState } from 'react';
 import { Platform, TextInput, TouchableOpacity, View } from 'react-native';
 import { ThemedText as Text } from './ThemedText';
-import { useAppTheme } from '../theme/ThemeContext';
+
 import { exportCsv } from '../utils/csvExport';
 import { readRecoveryFile } from '../utils/pendingQueueRepair';
 import type { RepairOutcome } from '../hooks/usePendingWrites';
@@ -35,6 +37,7 @@ const FILE_PROBLEMS = {
 } as const;
 
 export default function PendingExpenseRecovery({ error, getRecoveryData, ownerId, environment, repairQueue }: Props) {
+  const _styleTheme = useStyleTheme();
   const { colors } = useAppTheme();
   const [notice, setNotice] = useState<string | null>(null);
   const [exported, setExported] = useState(false);
@@ -71,12 +74,12 @@ export default function PendingExpenseRecovery({ error, getRecoveryData, ownerId
 
   const button = (label: string, onPress: () => void, testID: string, disabled = false) => (
     <TouchableOpacity testID={testID} accessibilityRole="button" accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy}
-      style={{ minHeight: 44, padding: 8, justifyContent: 'center', opacity: disabled || busy ? 0.5 : 1 }} onPress={onPress}>
+      style={themeStyle('components_PendingExpenseRecovery_1', { disabled: disabled, busy: busy }, _styleTheme)} onPress={onPress}>
       <Text>{label}</Text>
     </TouchableOpacity>
   );
 
-  return <View style={{ padding: 12 }}>
+  return <View style={themeStyle('components_PendingExpenseRecovery_2', {  }, _styleTheme)}>
     {error ? <>
       <Text accessibilityRole="alert">{error}</Text>
       <Text>Export a recovery copy before changing device storage. It contains private financial data. Keep its operation keys when recovering expenses to prevent duplicate charges in your trip ledger.</Text>
@@ -92,12 +95,12 @@ export default function PendingExpenseRecovery({ error, getRecoveryData, ownerId
         } catch { setNotice('Could not read the recovery copy. The original has not been removed. Try again when device storage is available.'); }
       })(), 'expense-recovery-export')}
       {repairQueue ? <>
-        <Text style={{ marginTop: 8 }}>Repair keeps every expense that can still be read, with the same operation keys, and puts the original in a backup on this device. Nothing is deleted. Export first so you also have a copy.</Text>
+        <Text style={themeStyle('components_PendingExpenseRecovery_3', {  }, _styleTheme)}>Repair keeps every expense that can still be read, with the same operation keys, and puts the original in a backup on this device. Nothing is deleted. Export first so you also have a copy.</Text>
         {button('Repair saved expenses', () => { if (exported) void runRepair([]); }, 'expense-recovery-repair', !exported)}
-        <Text style={{ marginTop: 8 }}>Or restore from a recovery file you exported earlier. It must be from this account.</Text>
+        <Text style={themeStyle('components_PendingExpenseRecovery_4', {  }, _styleTheme)}>Or restore from a recovery file you exported earlier. It must be from this account.</Text>
         {Platform.OS === 'web' ? button('Choose a recovery file', chooseFile, 'expense-recovery-choose-file') : null}
         <TextInput testID="expense-recovery-paste" multiline value={pasted} onChangeText={setPasted} placeholder="Or paste the file contents here" placeholderTextColor={colors.textMuted}
-          accessibilityLabel="Recovery file contents" autoCapitalize="none" autoCorrect={false} style={{ minHeight: 64, color: colors.text, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 8 }} />
+          accessibilityLabel="Recovery file contents" autoCapitalize="none" autoCorrect={false} style={themeStyle('components_PendingExpenseRecovery_5', { colors: colors }, _styleTheme)} />
         {button('Restore from pasted contents', () => void restoreFrom(pasted), 'expense-recovery-restore', !pasted.trim())}
       </> : null}
     </> : null}

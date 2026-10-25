@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, avatarColor as colorForUser } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // Phase 4 of docs/trip-blog-social-implementation-plan.md (B2/B11) — the comment thread for a
 // day, text note, photo or video. Two levels only (top-level comment + its replies, PRD §6.6's
 // mockup), each top-level comment arriving with up to 3 preview replies from the day-level fetch
@@ -7,7 +10,8 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import BlogCommentComposer from './BlogCommentComposer';
-import { colorForUser, initialsForName } from '../../packages/messaging/src/colors';
+import { initialsForName } from '../../packages/messaging/src/colors';
+
 import type { BlogComment, BlogCommentTargetKind } from '../utils/useBlogComments';
 
 const REPORT_REASONS: Array<{ value: 'spam' | 'harassment' | 'private_info' | 'other'; label: string }> = [
@@ -54,8 +58,10 @@ const audienceChipLabel = (audience: BlogComment['audience']): string | null => 
 const CommentRow: React.FC<CommonProps & { comment: BlogComment; isReply: boolean }> = ({
   comment, isReply, currentUserId, canModerate, canEngage,
   onReply, onEdit, onDelete, onReport, onHide, onUnhide, onError,
-  textColor, mutedColor, borderColor, backgroundColor, styles, theme, testID,
+  textColor, mutedColor, borderColor, backgroundColor, styles, theme: _providedTheme, testID,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [menuOpen, setMenuOpen] = useState(false);
   const [replying, setReplying] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -84,39 +90,32 @@ const CommentRow: React.FC<CommonProps & { comment: BlogComment; isReply: boolea
   return (
     <View
       testID={testID}
-      style={{ marginLeft: isReply ? 20 : 0, borderLeftWidth: isReply ? 2 : 0, borderLeftColor: borderColor, paddingLeft: isReply ? 8 : 0, marginTop: isReply ? 8 : 12 }}
+      style={themeStyle('components_BlogCommentThread_1', { isReply: isReply, borderColor: borderColor }, (theme ?? _styleTheme))}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+      <View style={themeStyle('components_BlogCommentThread_2', {  }, (theme ?? _styleTheme))}>
         <View
           testID={testID ? `${testID}-avatar` : undefined}
-          style={{
-            width: 22, height: 22, borderRadius: 11,
-            // Same colored initials as the day's contributor strip, so a commenter is recognizable.
-            backgroundColor: comment.authorUserId ? colorForUser(comment.authorUserId) : mutedColor,
-            justifyContent: 'center', alignItems: 'center',
-            borderWidth: isFollower ? 2 : 0, borderColor: isFollower ? (theme?.colors?.info ?? '#0369a1') : 'transparent',
-            marginTop: 2,
-          }}
+          style={themeStyle('components_BlogCommentThread_3', { comment: comment, colorForUser: colorForUser, mutedColor: mutedColor, isFollower: isFollower, theme: theme }, (theme ?? _styleTheme))}
         >
           {comment.authorUserId ? (
-            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{initialsForName(displayName)}</Text>
+            <Text style={themeStyle('components_BlogCommentThread_4', {  }, (theme ?? _styleTheme))}>{initialsForName(displayName)}</Text>
           ) : null}
         </View>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <Text style={{ color: textColor, fontWeight: '700' }}>{displayName}</Text>
+        <View style={themeStyle('components_BlogCommentThread_5', {  }, (theme ?? _styleTheme))}>
+          <View style={themeStyle('components_BlogCommentThread_6', {  }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('components_BlogCommentThread_7', { textColor: textColor }, (theme ?? _styleTheme))}>{displayName}</Text>
             {isFollower ? (
-              <View style={{ backgroundColor: theme?.colors?.surfaceMuted ?? '#e0f2fe', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 }}>
-                <Text style={{ fontSize: 10, fontWeight: '700', color: theme?.colors?.info ?? '#0369a1' }}>Following</Text>
+              <View style={themeStyle('components_BlogCommentThread_8', { theme: theme }, (theme ?? _styleTheme))}>
+                <Text style={themeStyle('components_BlogCommentThread_9', { theme: theme }, (theme ?? _styleTheme))}>Following</Text>
               </View>
             ) : null}
             {audienceLabel ? (
-              <Text testID={testID ? `${testID}-audience-chip` : undefined} style={{ fontSize: 10, fontWeight: '600', color: mutedColor }}>
+              <Text testID={testID ? `${testID}-audience-chip` : undefined} style={themeStyle('components_BlogCommentThread_10', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                 {audienceLabel}
               </Text>
             ) : null}
             {isHidden && canModerate ? (
-              <Text style={{ fontSize: 10, fontWeight: '700', color: theme?.colors?.error ?? '#b91c1c' }}>Hidden</Text>
+              <Text style={themeStyle('components_BlogCommentThread_11', { theme: theme }, (theme ?? _styleTheme))}>Hidden</Text>
             ) : null}
             {!menuOpen && canEngage && !isTombstone ? (
               <TouchableOpacity
@@ -125,15 +124,15 @@ const CommentRow: React.FC<CommonProps & { comment: BlogComment; isReply: boolea
                 accessibilityLabel="Comment options"
                 hitSlop={8}
                 onPress={() => setMenuOpen(true)}
-                style={{ marginLeft: 'auto' }}
+                style={themeStyle('components_BlogCommentThread_12', {  }, (theme ?? _styleTheme))}
               >
-                <Text style={{ color: mutedColor, fontWeight: '700' }}>⋯</Text>
+                <Text style={themeStyle('components_BlogCommentThread_13', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>⋯</Text>
               </TouchableOpacity>
             ) : null}
           </View>
 
           {editing ? (
-            <View style={{ marginTop: 4 }}>
+            <View style={themeStyle('components_BlogCommentThread_14', {  }, (theme ?? _styleTheme))}>
               <BlogCommentComposer
                 testID={testID ? `${testID}-edit` : undefined}
                 placeholder="Edit your comment…"
@@ -151,28 +150,28 @@ const CommentRow: React.FC<CommonProps & { comment: BlogComment; isReply: boolea
               />
             </View>
           ) : (
-            <Text style={{ color: isTombstone ? mutedColor : textColor, fontStyle: isTombstone ? 'italic' : 'normal', marginTop: 2 }}>
+            <Text style={themeStyle('components_BlogCommentThread_15', { isTombstone: isTombstone, mutedColor: mutedColor, textColor: textColor }, (theme ?? _styleTheme))}>
               {isTombstone ? 'This comment was deleted.' : (comment.body ?? '')}
             </Text>
           )}
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
-            <Text style={{ color: mutedColor, fontSize: 11 }}>
+          <View style={themeStyle('components_BlogCommentThread_16', {  }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('components_BlogCommentThread_17', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
               {formatWhen(comment.createdAt)}{comment.editedAt ? '  (edited)' : ''}
             </Text>
             {!isReply && !isTombstone && canEngage && onReply ? (
               <TouchableOpacity testID={testID ? `${testID}-reply-toggle` : undefined} accessibilityRole="button" onPress={() => setReplying((v) => !v)}>
-                <Text style={{ color: mutedColor, fontWeight: '700', fontSize: 11 }}>Reply</Text>
+                <Text style={themeStyle('components_BlogCommentThread_18', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Reply</Text>
               </TouchableOpacity>
             ) : null}
             {busy ? <ActivityIndicator size="small" color={mutedColor} /> : null}
           </View>
 
           {menuOpen ? (
-            <View testID={testID ? `${testID}-menu-open` : undefined} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+            <View testID={testID ? `${testID}-menu-open` : undefined} style={themeStyle('components_BlogCommentThread_19', {  }, (theme ?? _styleTheme))}>
               {canEditNow ? (
                 <TouchableOpacity testID={testID ? `${testID}-edit-action` : undefined} accessibilityRole="button" onPress={() => { setEditing(true); setMenuOpen(false); }}>
-                  <Text style={{ color: mutedColor, fontWeight: '600', fontSize: 12 }}>Edit</Text>
+                  <Text style={themeStyle('components_BlogCommentThread_20', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Edit</Text>
                 </TouchableOpacity>
               ) : null}
               {isOwn && !isTombstone ? (
@@ -181,12 +180,12 @@ const CommentRow: React.FC<CommonProps & { comment: BlogComment; isReply: boolea
                   accessibilityRole="button"
                   onPress={() => run(async () => { await onDelete(comment.id); setMenuOpen(false); })}
                 >
-                  <Text style={{ color: theme?.colors?.error ?? '#b91c1c', fontWeight: '600', fontSize: 12 }}>Delete</Text>
+                  <Text style={themeStyle('components_BlogCommentThread_21', { theme: theme }, (theme ?? _styleTheme))}>Delete</Text>
                 </TouchableOpacity>
               ) : null}
               {!isOwn && !isTombstone ? (
                 <TouchableOpacity testID={testID ? `${testID}-report-action` : undefined} accessibilityRole="button" onPress={() => setReporting((v) => !v)}>
-                  <Text style={{ color: mutedColor, fontWeight: '600', fontSize: 12 }}>Report</Text>
+                  <Text style={themeStyle('components_BlogCommentThread_22', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Report</Text>
                 </TouchableOpacity>
               ) : null}
               {canModerate && !isTombstone && !isHidden ? (
@@ -195,7 +194,7 @@ const CommentRow: React.FC<CommonProps & { comment: BlogComment; isReply: boolea
                   accessibilityRole="button"
                   onPress={() => run(async () => { await onHide(comment.id); setMenuOpen(false); })}
                 >
-                  <Text style={{ color: theme?.colors?.error ?? '#b91c1c', fontWeight: '600', fontSize: 12 }}>Hide</Text>
+                  <Text style={themeStyle('components_BlogCommentThread_23', { theme: theme }, (theme ?? _styleTheme))}>Hide</Text>
                 </TouchableOpacity>
               ) : null}
               {canModerate && isHidden ? (
@@ -204,33 +203,33 @@ const CommentRow: React.FC<CommonProps & { comment: BlogComment; isReply: boolea
                   accessibilityRole="button"
                   onPress={() => run(async () => { await onUnhide(comment.id); setMenuOpen(false); })}
                 >
-                  <Text style={{ color: mutedColor, fontWeight: '600', fontSize: 12 }}>Unhide</Text>
+                  <Text style={themeStyle('components_BlogCommentThread_24', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Unhide</Text>
                 </TouchableOpacity>
               ) : null}
               <TouchableOpacity testID={testID ? `${testID}-menu-close` : undefined} accessibilityRole="button" onPress={() => { setMenuOpen(false); setReporting(false); }}>
-                <Text style={{ color: mutedColor, fontSize: 12 }}>Close</Text>
+                <Text style={themeStyle('components_BlogCommentThread_25', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Close</Text>
               </TouchableOpacity>
             </View>
           ) : null}
 
           {reporting ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+            <View style={themeStyle('components_BlogCommentThread_26', {  }, (theme ?? _styleTheme))}>
               {REPORT_REASONS.map((reason) => (
                 <TouchableOpacity
                   key={reason.value}
                   testID={testID ? `${testID}-report-${reason.value}` : undefined}
                   accessibilityRole="button"
                   onPress={() => run(async () => { await onReport(comment.id, reason.value); setReporting(false); setMenuOpen(false); })}
-                  style={{ borderWidth: 1, borderColor, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}
+                  style={themeStyle('components_BlogCommentThread_27', { borderColor: borderColor }, (theme ?? _styleTheme))}
                 >
-                  <Text style={{ color: textColor, fontSize: 11 }}>{reason.label}</Text>
+                  <Text style={themeStyle('components_BlogCommentThread_28', { textColor: textColor }, (theme ?? _styleTheme))}>{reason.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           ) : null}
 
           {replying && onReply ? (
-            <View style={{ marginTop: 6 }}>
+            <View style={themeStyle('components_BlogCommentThread_29', {  }, (theme ?? _styleTheme))}>
               <BlogCommentComposer
                 testID={testID ? `${testID}-reply` : undefined}
                 placeholder={`Reply to ${displayName}…`}
@@ -267,11 +266,13 @@ type ThreadProps = Omit<CommonProps, 'onReply'> & {
 const BlogCommentThread: React.FC<ThreadProps> = ({
   comments, audienceLabel, onPostTopLevel, onReply, onShowEarlierReplies,
   currentUserId, canModerate, canEngage, onEdit, onDelete, onReport, onHide, onUnhide, onError,
-  textColor, mutedColor, borderColor, backgroundColor, styles, theme, testID,
+  textColor, mutedColor, borderColor, backgroundColor, styles, theme: _providedTheme, testID,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
 
-  const commonRowProps = { currentUserId, canModerate, canEngage, onEdit, onDelete, onReport, onHide, onUnhide, onError, textColor, mutedColor, borderColor, backgroundColor, styles, theme };
+  const commonRowProps = themeStyle('components_BlogCommentThread_30', { currentUserId: currentUserId, canModerate: canModerate, canEngage: canEngage, onEdit: onEdit, onDelete: onDelete, onReport: onReport, onHide: onHide, onUnhide: onUnhide, onError: onError, textColor: textColor, mutedColor: mutedColor, borderColor: borderColor, backgroundColor: backgroundColor, styles: styles, theme: theme }, (theme ?? _styleTheme));
 
   return (
     <View testID={testID}>
@@ -301,7 +302,7 @@ const BlogCommentThread: React.FC<ThreadProps> = ({
               <TouchableOpacity
                 testID={testID ? `${testID}-show-earlier-${comment.id}` : undefined}
                 accessibilityRole="button"
-                style={{ marginLeft: 20, marginTop: 2 }}
+                style={themeStyle('components_BlogCommentThread_31', {  }, (theme ?? _styleTheme))}
                 onPress={async () => {
                   setExpandedReplies((current) => ({ ...current, [comment.id]: true }));
                   try {
@@ -311,7 +312,7 @@ const BlogCommentThread: React.FC<ThreadProps> = ({
                   }
                 }}
               >
-                <Text style={{ color: mutedColor, fontWeight: '600', fontSize: 12 }}>
+                <Text style={themeStyle('components_BlogCommentThread_32', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                   ▾ Show {comment.replyCount - previewReplies.length} earlier {comment.replyCount - previewReplies.length === 1 ? 'comment' : 'comments'}
                 </Text>
               </TouchableOpacity>
@@ -320,7 +321,7 @@ const BlogCommentThread: React.FC<ThreadProps> = ({
         );
       })}
       {canEngage ? (
-        <View style={{ marginTop: 12 }}>
+        <View style={themeStyle('components_BlogCommentThread_33', {  }, (theme ?? _styleTheme))}>
           <BlogCommentComposer
             testID={testID ? `${testID}-composer` : undefined}
             placeholder="Write a comment…"

@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // Shared presentation for every native `@react-native-community/datetimepicker` render in the
 // app. `DateField` is the only intended caller — screens should render a `DateField` (with
 // `mode="date"` or `mode="time"`) rather than wiring this sheet up themselves, so presentation
@@ -19,7 +22,7 @@
 import React, { isValidElement, cloneElement } from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
-import type { AppTheme } from '../theme/theme';
+
 
 export type NativeDatePickerSheetProps = {
   visible: boolean;
@@ -34,58 +37,45 @@ export type NativeDatePickerSheetProps = {
 
 export const getPickerSheetColors = (theme?: AppTheme) => {
   const isDark = theme?.mode === 'dark';
-  return {
-    surface: theme?.colors.surface ?? (isDark ? '#243647' : '#FFFFFF'),
-    border: theme?.colors.border ?? (isDark ? '#385266' : '#E6ECEF'),
-    text: theme?.colors.text ?? (isDark ? '#E6ECEF' : '#111827'),
-    mutedText: theme?.colors.textMuted ?? (isDark ? '#B8C2CC' : '#6B7280'),
-    // Tint handed to the native picker (matches the app's link/accent color).
-    accent: theme?.colors.link ?? (isDark ? '#5FD2E0' : '#45B7C6'),
-    // The light theme's link cyan is too low-contrast for text on a white sheet, so the Done
-    // label uses the navy brand color in light mode and the (bright) link color in dark mode.
-    action: isDark ? (theme?.colors.link ?? '#5FD2E0') : (theme?.colors.primary ?? '#152944'),
-  };
+  return themeStyle('components_NativeDatePickerSheet_1', { theme: theme, isDark: isDark }, (theme ?? getStyleTheme('light', 'light')));
 };
 
 const NativeDatePickerSheet: React.FC<NativeDatePickerSheetProps> = ({
-  visible, onRequestClose, onDone, onCancel, theme, doneLabel = 'Done', testID, children,
+  visible, onRequestClose, onDone, onCancel, theme: _providedTheme, doneLabel = 'Done', testID, children,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   if (!visible) return null;
   if (Platform.OS === 'android') return <>{children}</>;
   const colors = getPickerSheetColors(theme);
   const picker = isValidElement(children) && Platform.OS === 'ios'
-    ? cloneElement(children as React.ReactElement<any>, {
-        display: 'spinner',
-        themeVariant: theme?.mode,
-        textColor: colors.text,
-        accentColor: colors.accent,
-      })
+    ? cloneElement(children as React.ReactElement<any>, themeStyle('components_NativeDatePickerSheet_2', { theme: theme, colors: colors }, (theme ?? _styleTheme)))
     : children;
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onRequestClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
-        <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 24 }}>
-          <View style={{ flexDirection: 'row', justifyContent: onCancel ? 'space-between' : 'flex-end', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={themeStyle('components_NativeDatePickerSheet_3', {  }, (theme ?? _styleTheme))}>
+        <View style={themeStyle('components_NativeDatePickerSheet_4', { colors: colors }, (theme ?? _styleTheme))}>
+          <View style={themeStyle('components_NativeDatePickerSheet_5', { onCancel: onCancel, colors: colors }, (theme ?? _styleTheme))}>
             {onCancel ? (
               <TouchableOpacity
                 testID={testID ? `${testID}-cancel` : undefined}
                 accessibilityRole="button"
                 onPress={onCancel}
-                style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
+                style={themeStyle('components_NativeDatePickerSheet_6', {  }, (theme ?? _styleTheme))}
               >
-                <Text style={{ color: colors.mutedText, fontSize: 16 }}>Cancel</Text>
+                <Text style={themeStyle('components_NativeDatePickerSheet_7', { colors: colors }, (theme ?? _styleTheme))}>Cancel</Text>
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
               testID={testID ? `${testID}-done` : undefined}
               accessibilityRole="button"
               onPress={onDone ?? onRequestClose}
-              style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
+              style={themeStyle('components_NativeDatePickerSheet_8', {  }, (theme ?? _styleTheme))}
             >
-              <Text style={{ color: colors.action, fontSize: 16, fontWeight: '700' }}>{doneLabel}</Text>
+              <Text style={themeStyle('components_NativeDatePickerSheet_9', { colors: colors }, (theme ?? _styleTheme))}>{doneLabel}</Text>
             </TouchableOpacity>
           </View>
-          <View style={{ alignItems: 'center' }}>{picker}</View>
+          <View style={themeStyle('components_NativeDatePickerSheet_10', {  }, (theme ?? _styleTheme))}>{picker}</View>
         </View>
       </View>
     </Modal>

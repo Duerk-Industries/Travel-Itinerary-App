@@ -1,10 +1,14 @@
+import { layoutMetrics, themeStyle, avatarColor as colorForUser } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // Phase 3 of docs/trip-blog-social-implementation-plan.md (B5) — "3 travelers · 47 photos · 12
 // reactions" plus small avatars, crediting everyone who wrote or uploaded on a given day. Reuses
 // colorForUser/initialsForName from packages/messaging (the same deterministic avatar palette
 // PresenceAvatars.tsx already uses) rather than inventing a second one.
 import React from 'react';
 import { Text, View } from 'react-native';
-import { colorForUser, initialsForName } from '../../packages/messaging/src/colors';
+import { initialsForName } from '../../packages/messaging/src/colors';
+
 
 export type BlogContributor = {
   userId: string;
@@ -21,11 +25,13 @@ type Props = {
   testID?: string;
 };
 
-const AVATAR_SIZE = 22;
-const OVERLAP = 6;
+const AVATAR_SIZE = layoutMetrics.BlogContributorStrip_AVATAR_SIZE;
+const OVERLAP = layoutMetrics.BlogContributorStrip_OVERLAP;
 const MAX_VISIBLE = 4;
 
-const BlogContributorStrip: React.FC<Props> = ({ contributors, reactionTotal = 0, spotlightUserId = null, mutedColor = '#6b7280', testID }) => {
+const BlogContributorStrip: React.FC<Props> = ({ contributors, reactionTotal = 0, spotlightUserId = null, mutedColor: _mutedColorOverride, testID }) => {
+  const _styleTheme = useStyleTheme();
+  const mutedColor = _mutedColorOverride ?? themeStyle('components_BlogContributorStrip_10', {  }, _styleTheme);
   if (!contributors.length) return null;
 
   const visible = contributors.slice(0, MAX_VISIBLE);
@@ -39,33 +45,27 @@ const BlogContributorStrip: React.FC<Props> = ({ contributors, reactionTotal = 0
   ].filter(Boolean);
 
   return (
-    <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 2 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+    <View testID={testID} style={themeStyle('components_BlogContributorStrip_1', {  }, _styleTheme)}>
+      <View style={themeStyle('components_BlogContributorStrip_2', {  }, _styleTheme)}>
         {visible.map((contributor, index) => (
           <View
             key={contributor.userId}
             testID={testID ? `${testID}-avatar-${contributor.userId}` : undefined}
-            style={{
-              width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2,
-              justifyContent: 'center', alignItems: 'center',
-              backgroundColor: colorForUser(contributor.userId),
-              marginLeft: index === 0 ? 0 : -OVERLAP,
-              borderWidth: 1.5, borderColor: '#fff',
-            }}
+            style={themeStyle('components_BlogContributorStrip_3', { AVATAR_SIZE: AVATAR_SIZE, colorForUser: colorForUser, contributor: contributor, index: index, OVERLAP: OVERLAP }, _styleTheme)}
           >
-            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{initialsForName(contributor.displayName)}</Text>
+            <Text style={themeStyle('components_BlogContributorStrip_4', {  }, _styleTheme)}>{initialsForName(contributor.displayName)}</Text>
           </View>
         ))}
         {overflow > 0 ? (
-          <View style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, justifyContent: 'center', alignItems: 'center', backgroundColor: '#9e9e9e', marginLeft: -OVERLAP, borderWidth: 1.5, borderColor: '#fff' }}>
-            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>+{overflow}</Text>
+          <View style={themeStyle('components_BlogContributorStrip_5', { AVATAR_SIZE: AVATAR_SIZE, OVERLAP: OVERLAP }, _styleTheme)}>
+            <Text style={themeStyle('components_BlogContributorStrip_6', {  }, _styleTheme)}>+{overflow}</Text>
           </View>
         ) : null}
       </View>
-      <View style={{ flexShrink: 1 }}>
-        <Text style={{ color: mutedColor, fontSize: 12 }}>{summaryParts.join(' · ')}</Text>
+      <View style={themeStyle('components_BlogContributorStrip_7', {  }, _styleTheme)}>
+        <Text style={themeStyle('components_BlogContributorStrip_8', { mutedColor: mutedColor }, _styleTheme)}>{summaryParts.join(' · ')}</Text>
         {spotlightUserId ? (
-          <Text testID={testID ? `${testID}-spotlight` : undefined} style={{ color: '#7c3aed', fontSize: 11, fontWeight: '700' }}>
+          <Text testID={testID ? `${testID}-spotlight` : undefined} style={themeStyle('components_BlogContributorStrip_9', {  }, _styleTheme)}>
             ✨ Traveler spotlight: {contributors.find((c) => c.userId === spotlightUserId)?.displayName || 'top contributor'}
           </Text>
         ) : null}

@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -7,6 +9,7 @@ type Address = { id: string; email: string; status: 'PENDING' | 'VERIFIED'; veri
  * entering it proves they can read that mailbox. For now this does not change how forwarded
  * bookings are handled, and the copy says so. */
 export default function ImportSenderAddresses({ backendUrl, headers, styles }: { backendUrl: string; headers: Record<string, string>; styles: Record<string, any> }) {
+  const _styleTheme = useStyleTheme();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -59,15 +62,15 @@ export default function ImportSenderAddresses({ backendUrl, headers, styles }: {
   });
 
   const confirmed = addresses.filter(a => a.status === 'VERIFIED');
-  const input = { minHeight: 44, borderWidth: 1, borderColor: '#94a3b8', borderRadius: 8, paddingHorizontal: 10 };
+  const input = themeStyle('components_ImportSenderAddresses_1', {  }, _styleTheme);
   const button = (label: string, action: () => void, testID: string, disabled = false) => (
-    <TouchableOpacity testID={testID} style={[styles.button, { minHeight: 44, opacity: disabled || busy ? 0.6 : 1 }]} accessibilityRole="button" accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={action}>
+    <TouchableOpacity testID={testID} style={[styles.button, themeStyle('components_ImportSenderAddresses_2', { disabled: disabled, busy: busy }, _styleTheme)]} accessibilityRole="button" accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={action}>
       <Text style={styles.buttonText}>{label}</Text>
     </TouchableOpacity>
   );
-  return <View testID="import-sender-addresses" style={{ gap: 8, marginTop: 12 }}>
+  return <View testID="import-sender-addresses" style={themeStyle('components_ImportSenderAddresses_3', {  }, _styleTheme)}>
     <Text style={styles.sectionTitle}>Other email addresses you forward from</Text>
-    <TouchableOpacity testID="import-sender-toggle" accessibilityRole="button" accessibilityState={{ expanded: open }} style={[styles.button, { minHeight: 44, alignSelf: 'flex-start' }]} onPress={() => setOpen(value => !value)}>
+    <TouchableOpacity testID="import-sender-toggle" accessibilityRole="button" accessibilityState={{ expanded: open }} style={[styles.button, themeStyle('components_ImportSenderAddresses_4', {  }, _styleTheme)]} onPress={() => setOpen(value => !value)}>
       <Text style={styles.buttonText}>{open ? 'Hide' : 'Add or manage addresses'}</Text>
     </TouchableOpacity>
     {open ? <>

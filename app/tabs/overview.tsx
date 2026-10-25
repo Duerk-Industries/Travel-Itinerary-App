@@ -1,4 +1,9 @@
 // @ts-nocheck
+import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 import AddToCalendarButton from '../components/AddToCalendarButton';
 import { activityCalendarEvent, uiTransferCalendarEvent, lodgingCalendarEvent, rentalCalendarEvent, makeCalendarEvent, type CalendarEvent } from '../utils/calendarEvents';
 import { normalizeTransferType } from '../utils/transferTypes';
@@ -476,7 +481,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onUpdateCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
-  theme,
+  theme: _providedTheme,
   readOnly = false,
   featureStandardizedItemDialogs = false,
   featureCoverPhotoFallbackV2 = true,
@@ -487,6 +492,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   cachedItinerary,
   onItineraryCacheChange,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
   const isTabletLayout = viewportWidth >= 700 && viewportWidth < 1100;
@@ -504,11 +511,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const lodgingImageStyle = useMemo(() => stripResizeMode(styles.lodgingImage), [stripResizeMode, styles.lodgingImage]);
   const getImageSource = useImageSourceGetter();
   const responsiveCardStyle = useMemo(
-    () => ({
-      padding: isPhoneLayout ? 12 : 16,
-      borderRadius: isPhoneLayout ? 10 : 12,
-    }),
-    [isPhoneLayout]
+    () => (themeStyle('tabs_overview_1', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))),
+    [isPhoneLayout, _styleTheme]
   );
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
@@ -2118,12 +2122,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
             </TouchableOpacity>
           ) : (
-            <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
+            <Text style={[styles.bodyText, themeStyle('tabs_overview_2', {  }, (theme ?? _styleTheme))]}>{item.value}</Text>
           );
           return (
-            <View key={item.label} style={[styles.row, { alignItems: 'center' }]}>
+            <View key={item.label} style={[styles.row, themeStyle('tabs_overview_3', {  }, (theme ?? _styleTheme))]}>
               <Text style={styles.headerText}>{item.label}:</Text>
-              <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
+              <View style={themeStyle('tabs_overview_4', {  }, (theme ?? _styleTheme))}>{content}</View>
             </View>
           );
         })}
@@ -2189,12 +2193,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
                     </TouchableOpacity>
                   ) : (
-                    <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
+                    <Text style={[styles.bodyText, themeStyle('tabs_overview_5', {  }, (theme ?? _styleTheme))]}>{item.value}</Text>
                   );
                   return (
-                    <View key={`${section.title ?? 'section'}-${item.label}`} style={[styles.row, { alignItems: 'center' }]}>
+                    <View key={`${section.title ?? 'section'}-${item.label}`} style={[styles.row, themeStyle('tabs_overview_6', {  }, (theme ?? _styleTheme))]}>
                       <Text style={styles.headerText}>{item.label}:</Text>
-                      <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
+                      <View style={themeStyle('tabs_overview_7', {  }, (theme ?? _styleTheme))}>{content}</View>
                     </View>
                   );
                 })}
@@ -2280,8 +2284,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const startLabel = formatFriendlyDate(overviewStartDate);
   const endLabel = formatFriendlyDate(overviewEndDate);
   const dateRange = startLabel || endLabel ? `${startLabel ?? 'Start'} - ${endLabel ?? 'End'}` : null;
-  const dayColStyle = { minWidth: 90, width: 90 };
-  const dateColStyle = { minWidth: 200, width: 200 };
+  const dayColStyle = themeStyle('tabs_overview_8', {  }, (theme ?? _styleTheme));
+  const dateColStyle = themeStyle('tabs_overview_9', {  }, (theme ?? _styleTheme));
   const normalizedAttendees = useMemo(() => dedupeAttendees(attendees), [attendees]);
   const attendeeLabel = (member: OverviewTabProps['attendees'][number]) => formatAttendeeLabel(member);
   const attendeeTestId = (member: OverviewTabProps['attendees'][number]) => {
@@ -2493,7 +2497,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <View style={[styles.card, responsiveCardStyle]} testID="overview-plan-notes-card">
         <TouchableOpacity
           testID="overview-plan-notes-toggle"
-          style={[styles.row, { justifyContent: 'space-between' }]}
+          style={[styles.row, themeStyle('tabs_overview_10', {  }, (theme ?? _styleTheme))]}
           onPress={() => setShowItineraryPlanNotes((prev) => !prev)}
         >
           <Text style={styles.sectionTitle}>Trip Guide</Text>
@@ -2519,12 +2523,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const renderTripNotes = () => (
-    <View style={{ gap: 6 }} testID="overview-trip-notes">
+    <View style={themeStyle('tabs_overview_11', {  }, (theme ?? _styleTheme))} testID="overview-trip-notes">
       <Text style={styles.headerText}>Notes</Text>
       {isEditing ? (
         <TextInput
           testID="overview-trip-notes-input"
-          style={[styles.input, { minHeight: 120, textAlignVertical: 'top' }]}
+          style={[styles.input, themeStyle('tabs_overview_12', {  }, (theme ?? _styleTheme))]}
           multiline
           placeholder="Add general notes for this trip"
           value={notesDraft}
@@ -2615,7 +2619,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <View style={[styles.card, responsiveCardStyle]} testID="overview-booking-priorities-card">
         <Text style={styles.sectionTitle}>What to book now</Text>
         {bookingPriorities.slice(0, 6).map((item) => (
-          <View key={`${item.kind}-${item.id}`} style={[styles.row, { justifyContent: 'space-between' }]} testID={`overview-booking-priority-${item.kind}-${item.id}`}>
+          <View key={`${item.kind}-${item.id}`} style={[styles.row, themeStyle('tabs_overview_13', {  }, (theme ?? _styleTheme))]} testID={`overview-booking-priority-${item.kind}-${item.id}`}>
             <Text style={styles.bodyText}>
               {bookingPriorityKindLabel[item.kind]}: {item.label}
               {item.date ? ` (${item.date})` : ''}
@@ -2636,8 +2640,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       horizontal
       showsHorizontalScrollIndicator
       nestedScrollEnabled
-      style={{ width: '100%', maxWidth: '100%', minWidth: 0, flexGrow: 0, flexShrink: 1, alignSelf: 'stretch', marginVertical: 8 }}
-      contentContainerStyle={{ paddingRight: 8, flexGrow: 0, flexShrink: 0 }}
+      style={themeStyle('tabs_overview_14', {  }, (theme ?? _styleTheme))}
+      contentContainerStyle={themeStyle('tabs_overview_15', {  }, (theme ?? _styleTheme))}
       testID="overview-day-bar-scroll"
     >
       <TouchableOpacity
@@ -2693,7 +2697,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             testID={testID}
             style={[
               styles.dayHeroCard,
-              { height: dayHeroHeight },
+              themeStyle('tabs_overview_16', { dayHeroHeight: dayHeroHeight }, (theme ?? _styleTheme)),
             ]}
             onPress={onPress}
             disabled={!onPress}
@@ -2711,25 +2715,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
             {weatherLabel ? (
               <View
-                style={{
-                  position: 'absolute',
-                  top: 12,
-                  right: 12,
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(15, 23, 42, 0.74)',
-                }}
+                style={themeStyle('tabs_overview_17', {  }, (theme ?? _styleTheme))}
                 testID={`${testID || 'day-hero'}-weather`}
               >
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{weatherLabel}</Text>
+                <Text style={themeStyle('tabs_overview_18', {  }, (theme ?? _styleTheme))}>{weatherLabel}</Text>
               </View>
             ) : null}
             <View style={styles.dayHeroTextWrap}>
               <Text
                 style={[
                   styles.dayHeroTitle,
-                  isPhoneLayout ? { fontSize: 18, lineHeight: 23 } : isTabletLayout ? { fontSize: 20 } : null,
+                  isPhoneLayout ? themeStyle('tabs_overview_19', {  }, (theme ?? _styleTheme)) : isTabletLayout ? themeStyle('tabs_overview_20', {  }, (theme ?? _styleTheme)) : null,
                 ]}
                 numberOfLines={isPhoneLayout ? 4 : 3}
                 ellipsizeMode="tail"
@@ -2737,7 +2733,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 {title}
               </Text>
               {showAction ? (
-                <Text style={[styles.dayHeroAction, isPhoneLayout ? { fontSize: 11 } : null]}>View details</Text>
+                <Text style={[styles.dayHeroAction, isPhoneLayout ? themeStyle('tabs_overview_21', {  }, (theme ?? _styleTheme)) : null]}>View details</Text>
               ) : null}
             </View>
           </TouchableOpacity>
@@ -2787,18 +2783,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const showLodgingNames = new Set(lodgingParticipantKeys).size > 1;
 
         return (
-          <View style={[styles.card, responsiveCardStyle, { position: 'relative', flex: 1, minHeight: 0 }]}>
+          <View style={[styles.card, responsiveCardStyle, themeStyle('tabs_overview_22', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity testID="day-details-back" style={styles.dayDetailsBackButton} onPress={() => setSelectedDay(null)}>
               <Text style={styles.dayDetailsBackText}>← Back</Text>
             </TouchableOpacity>
             <ScrollView
               ref={scrollRef}
-              style={{ flex: 1, minHeight: 0 }}
-              contentContainerStyle={{
-                gap: isPhoneLayout ? 12 : 16,
-                paddingTop: isPhoneLayout ? 48 : 56,
-                paddingBottom: 24,
-              }}
+              style={themeStyle('tabs_overview_23', {  }, (theme ?? _styleTheme))}
+              contentContainerStyle={themeStyle('tabs_overview_24', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}
               onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
               scrollEventThrottle={16}
               keyboardShouldPersistTaps="handled"
@@ -2843,7 +2835,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           accessibilityRole="link"
                           onPress={() => setSelectedFlight(flight)}
                         >
-                          <Text style={[styles.dayInfoRoute, styles.linkText, { textDecorationLine: 'underline' }]}>{`${dep} → ${arr}`}</Text>
+                          <Text style={[styles.dayInfoRoute, styles.linkText, themeStyle('tabs_overview_25', {  }, (theme ?? _styleTheme))]}>{`${dep} → ${arr}`}</Text>
                         </TouchableOpacity>
                         <Text style={styles.helperText}>{`${flight.departure_time || '--:--'} / ${
                           flight.arrival_time || '--:--'
@@ -2856,7 +2848,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     testID="day-details-add-transfer-button"
                     accessibilityRole="button"
                     accessibilityLabel="Add transfer to this day"
-                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    style={[styles.dayInfoButton, themeStyle('tabs_overview_26', {  }, (theme ?? _styleTheme))]}
                     onPress={() => addFlightForDay(activeDayCard.date)}
                   >
                     <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
@@ -2895,7 +2887,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     testID="day-details-add-rental-button"
                     accessibilityRole="button"
                     accessibilityLabel="Add rental car to this day"
-                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    style={[styles.dayInfoButton, themeStyle('tabs_overview_27', {  }, (theme ?? _styleTheme))]}
                     onPress={() => addRentalForDay(activeDayCard.date)}
                   >
                     <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
@@ -2979,7 +2971,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     testID="day-details-add-activity-button"
                     accessibilityRole="button"
                     accessibilityLabel="Add activity to this day"
-                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    style={[styles.dayInfoButton, themeStyle('tabs_overview_28', {  }, (theme ?? _styleTheme))]}
                     onPress={() => addTourForDay(activeDayCard.date)}
                   >
                     <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
@@ -3004,7 +2996,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       >
                         {lodging.imageUrl ? (
                           <Image
-                            style={[lodgingImageStyle, { width: lodgingThumbnailSize, height: lodgingThumbnailSize }]}
+                            style={[lodgingImageStyle, themeStyle('tabs_overview_29', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme))]}
                             source={getImageSource(lodging.imageUrl)}
                             resizeMode="cover"
                           />
@@ -3012,7 +3004,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           <View
                             style={[
                               styles.lodgingImageFallback,
-                              { width: lodgingThumbnailSize, height: lodgingThumbnailSize },
+                              themeStyle('tabs_overview_30', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme)),
                             ]}
                           />
                         )}
@@ -3030,7 +3022,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     testID="day-details-add-accommodation-button"
                     accessibilityRole="button"
                     accessibilityLabel="Add accommodation to this day"
-                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    style={[styles.dayInfoButton, themeStyle('tabs_overview_31', {  }, (theme ?? _styleTheme))]}
                     onPress={() => addLodgingForDay(activeDayCard.date)}
                   >
                     <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
@@ -3040,13 +3032,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
               {/* Phase 3: per-day itinerary items (place / note / checklist / custom activity). */}
               <View style={styles.dayInfoCard} testID="day-details-itinerary-items">
-                <View style={[styles.sectionHeaderRow, { marginBottom: 0 }]}>
-                  <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Locations, notes & checklists</Text>
+                <View style={[styles.sectionHeaderRow, themeStyle('tabs_overview_32', {  }, (theme ?? _styleTheme))]}>
+                  <Text style={[styles.sectionTitle, themeStyle('tabs_overview_33', {  }, (theme ?? _styleTheme))]}>Locations, notes & checklists</Text>
                   <TouchableOpacity
                     testID={isEditingDayItems ? 'day-details-save-items-button' : 'day-details-edit-items-button'}
                     accessibilityRole="button"
                     accessibilityLabel={isEditingDayItems ? 'Save section edits' : 'Edit section'}
-                    style={[styles.dayInfoButton, { marginLeft: 'auto', paddingVertical: 6 }]}
+                    style={[styles.dayInfoButton, themeStyle('tabs_overview_34', {  }, (theme ?? _styleTheme))]}
                     onPress={() => setIsEditingDayItems((prev) => !prev)}
                   >
                     <Text style={styles.dayInfoButtonText}>{isEditingDayItems ? 'Save' : 'Edit'}</Text>
@@ -3060,25 +3052,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   (activeDayInfo.details ?? []).map((d) => {
                     const isActivity = !d.kind || d.kind === 'activity';
                     return (
-                      <View key={d.id} style={[styles.dayInfoRow, { alignItems: 'flex-start', gap: 8 }]}>
-                        <View style={{ flex: 1, gap: 4 }}>
+                      <View key={d.id} style={[styles.dayInfoRow, themeStyle('tabs_overview_35', {  }, (theme ?? _styleTheme))]}>
+                        <View style={themeStyle('tabs_overview_36', {  }, (theme ?? _styleTheme))}>
                           {d.kind === 'place' ? (
                             <View>
                               <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
                               {d.noteBody ? (
-                                <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
+                                <Text style={[styles.helperText, themeStyle('tabs_overview_37', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
                               ) : null}
                             </View>
                           ) : d.kind === 'note' ? (
                             <View>
                               <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
                               {d.noteBody ? (
-                                <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
+                                <Text style={[styles.helperText, themeStyle('tabs_overview_38', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
                               ) : null}
                             </View>
                           ) : d.kind === 'checklist' ? (
-                            <View style={{ width: '100%' }}>
-                              <Text style={[styles.dayInfoRoute, { marginBottom: 4 }]}>{`📋 ${d.activity}`}</Text>
+                            <View style={themeStyle('tabs_overview_39', {  }, (theme ?? _styleTheme))}>
+                              <Text style={[styles.dayInfoRoute, themeStyle('tabs_overview_40', {  }, (theme ?? _styleTheme))]}>{`📋 ${d.activity}`}</Text>
                               {(d.checklistItems ?? []).map((it) => {
                                 const checked = !!it.checkedBy;
                                 return (
@@ -3090,8 +3082,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     disabled={!featureItineraryItemKinds}
                                     onPress={() => toggleChecklistItem(d.id, it)}
                                     style={[
-                                      { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 },
-                                      !featureItineraryItemKinds && { opacity: 0.5 },
+                                      themeStyle('tabs_overview_41', {  }, (theme ?? _styleTheme)),
+                                      !featureItineraryItemKinds && themeStyle('tabs_overview_42', {  }, (theme ?? _styleTheme)),
                                     ]}
                                   >
                                     <View
@@ -3105,7 +3097,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     <Text
                                       style={[
                                         styles.helperText,
-                                        checked && { textDecorationLine: 'line-through', color: theme.colors.textMuted },
+                                        checked && themeStyle('tabs_overview_43', { theme: theme }, (theme ?? _styleTheme)),
                                       ]}
                                     >
                                       {it.label}
@@ -3120,7 +3112,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         </View>
                         {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
                         {isActivity ? (
-                          <View style={{ flexShrink: 0 }}>
+                          <View style={themeStyle('tabs_overview_44', {  }, (theme ?? _styleTheme))}>
                             <ReactionBar
                               detailId={d.id}
                               summary={d.reactions ?? emptyReactionSummary}
@@ -3138,7 +3130,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             accessibilityLabel="Delete item"
                             onPress={() => deleteDetail(d.id)}
                             style={styles.detailDeleteButton}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            hitSlop={themeStyle('tabs_overview_45', {  }, (theme ?? _styleTheme))}
                           >
                             <Text style={styles.detailDeleteButtonText}>×</Text>
                           </TouchableOpacity>
@@ -3151,7 +3143,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   testID="day-details-add-item-button"
                   accessibilityRole="button"
                   accessibilityLabel="Add item to this day"
-                  style={[styles.dayInfoButton, { marginTop: 8 }]}
+                  style={[styles.dayInfoButton, themeStyle('tabs_overview_46', {  }, (theme ?? _styleTheme))]}
                   onPress={() => {
                     setAddPopoverDay(activeDayInfo?.index ?? 1);
                     setAddPopoverOpen(true);
@@ -3162,7 +3154,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </View>
 
               {!flightsForDay.length || !rentalsForDay.length || !toursForDay.length || !lodgingsForDay.length ? (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <View style={themeStyle('tabs_overview_47', {  }, (theme ?? _styleTheme))}>
                   {!flightsForDay.length ? (
                     <TouchableOpacity
                       testID="day-details-add-transfer-button"
@@ -3232,8 +3224,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return (
         <ScrollView
           ref={scrollRef}
-          style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
+          style={[styles.card, responsiveCardStyle, themeStyle('tabs_overview_48', {  }, (theme ?? _styleTheme))]}
+          contentContainerStyle={themeStyle('tabs_overview_49', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}
           onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
@@ -3241,9 +3233,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           nestedScrollEnabled
           contentInsetAdjustmentBehavior="automatic"
         >
-          <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
+          <View style={[styles.row, isPhoneLayout ? themeStyle('tabs_overview_50', {  }, (theme ?? _styleTheme)) : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0, width: '100%' } : null]}>
+            <View style={[styles.row, themeStyle('tabs_overview_51', {  }, (theme ?? _styleTheme)), isPhoneLayout ? themeStyle('tabs_overview_52', {  }, (theme ?? _styleTheme)) : null]}>
               {renderDocumentImportButton()}
               <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={handlePrintItinerary}>
                 <Text style={styles.buttonText}>Print itinerary</Text>
@@ -3256,7 +3248,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           {renderDocumentImporter()}
           <Text style={styles.flightTitle}>{trip.name}</Text>
           {travelerAvatars.length ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }} testID="overview-travelers">
+            <View style={themeStyle('tabs_overview_53', {  }, (theme ?? _styleTheme))} testID="overview-travelers">
               <AvatarStack people={travelerAvatars} size={26} max={6} testID="overview-traveler-avatars" />
               <Text style={styles.helperText}>
                 {travelerAvatars.length} {travelerAvatars.length === 1 ? 'traveler' : 'travelers'} planning together
@@ -3284,7 +3276,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
           {renderDayBar(null)}
 
-          <View style={{ gap: 12 }}>
+          <View style={themeStyle('tabs_overview_54', {  }, (theme ?? _styleTheme))}>
             {dayCards.map((card, idx) => {
               const info = dayDataByDate.get(card.date);
               const startLocation = buildDayStartLocation(info);
@@ -3304,8 +3296,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return (
       <ScrollView
         ref={scrollRef}
-        style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
+        style={[styles.card, responsiveCardStyle, themeStyle('tabs_overview_55', {  }, (theme ?? _styleTheme))]}
+        contentContainerStyle={themeStyle('tabs_overview_56', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}
           onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
@@ -3313,10 +3305,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         nestedScrollEnabled
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
+        <View style={[styles.row, isPhoneLayout ? themeStyle('tabs_overview_57', {  }, (theme ?? _styleTheme)) : null]}>
           <Text style={styles.sectionTitle}>Overview</Text>
           {isEditing ? (
-            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0 } : null]}>
+            <View style={[styles.row, themeStyle('tabs_overview_58', {  }, (theme ?? _styleTheme)), isPhoneLayout ? themeStyle('tabs_overview_59', {  }, (theme ?? _styleTheme)) : null]}>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveOverviewEdits}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
@@ -3328,7 +3320,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0 } : null]}>
+            <View style={[styles.row, themeStyle('tabs_overview_60', {  }, (theme ?? _styleTheme)), isPhoneLayout ? themeStyle('tabs_overview_61', {  }, (theme ?? _styleTheme)) : null]}>
               {renderDocumentImportButton()}
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
                 <Text style={styles.buttonText}>Edit</Text>
@@ -3356,7 +3348,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <>
             <View style={styles.divider} />
             <Text style={styles.headerText}>Currency</Text>
-            <View style={[styles.input, styles.dropdown, { marginTop: 6 }]}>
+            <View style={[styles.input, styles.dropdown, themeStyle('tabs_overview_62', {  }, (theme ?? _styleTheme))]}>
               <TouchableOpacity style={styles.selectButtonRow} onPress={() => setShowCurrencyDropdown((prev) => !prev)}>
                 <Text style={styles.cellText}>{currentCurrency}</Text>
                 <Text style={styles.selectCaret}>▾</Text>
@@ -3385,7 +3377,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         {renderTripNotes()}
 
-        <View style={[styles.row, { alignItems: 'flex-start' }]}>
+        <View style={[styles.row, themeStyle('tabs_overview_63', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.headerText}>Trip Dates</Text>
         </View>
         {isEditing ? (
@@ -3406,24 +3398,24 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
             {dateDraft.mode === 'range' ? (
               <>
-                <View style={[styles.row, { gap: 8 }]}>
+                <View style={[styles.row, themeStyle('tabs_overview_64', {  }, (theme ?? _styleTheme))]}>
                   <DateField
                     value={dateDraft.startDate}
                     onChange={(startDate) => setDateDraft((prev) => ({ ...prev, startDate }))}
                     styles={styles}
                     theme={theme}
-                    style={{ maxWidth: 200 }}
+                    style={themeStyle('tabs_overview_65', {  }, (theme ?? _styleTheme))}
                     testID="overview-trip-start-date"
                     accessibilityLabel="Start date"
                   />
                 </View>
-                <View style={[styles.row, { gap: 8 }]}>
+                <View style={[styles.row, themeStyle('tabs_overview_66', {  }, (theme ?? _styleTheme))]}>
                   <DateField
                     value={dateDraft.endDate}
                     onChange={(endDate) => setDateDraft((prev) => ({ ...prev, endDate }))}
                     styles={styles}
                     theme={theme}
-                    style={{ maxWidth: 200 }}
+                    style={themeStyle('tabs_overview_67', {  }, (theme ?? _styleTheme))}
                     testID="overview-trip-end-date"
                     accessibilityLabel="End date"
                   />
@@ -3433,7 +3425,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <>
                 {Platform.OS === 'web' ? (
                   <>
-                    <View style={[styles.row, { gap: 8 }]}>
+                    <View style={[styles.row, themeStyle('tabs_overview_68', {  }, (theme ?? _styleTheme))]}>
                       <select
                         aria-label="Trip start month"
                         value={dateDraft.startMonth}
@@ -3479,14 +3471,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <>
                     <View style={styles.row}>
                       <TextInput
-                        style={[styles.input, { flex: 1, maxWidth: 160 }]}
+                        style={[styles.input, themeStyle('tabs_overview_69', {  }, (theme ?? _styleTheme))]}
                         placeholder="Month (1-12)"
                         keyboardType="numeric"
                         value={dateDraft.startMonth}
                         onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startMonth: text }))}
                       />
                       <TextInput
-                        style={[styles.input, { flex: 1, maxWidth: 160 }]}
+                        style={[styles.input, themeStyle('tabs_overview_70', {  }, (theme ?? _styleTheme))]}
                         placeholder="Year (YYYY)"
                         keyboardType="numeric"
                         value={dateDraft.startYear}
@@ -3494,7 +3486,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       />
                     </View>
                     <TextInput
-                      style={[styles.input, { maxWidth: 200 }]}
+                      style={[styles.input, themeStyle('tabs_overview_71', {  }, (theme ?? _styleTheme))]}
                       placeholder="Number of days"
                       keyboardType="numeric"
                       value={dateDraft.durationDays}
@@ -3507,7 +3499,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </View>
         ) : null}
 
-        <View style={[styles.row, { alignItems: 'flex-start' }]}>
+        <View style={[styles.row, themeStyle('tabs_overview_72', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.headerText}>Description</Text>
         </View>
         {!isEditing ? (
@@ -3527,7 +3519,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ) : (
           <View>
             <TextInput
-              style={[styles.input, { minHeight: 120 }]}
+              style={[styles.input, themeStyle('tabs_overview_73', {  }, (theme ?? _styleTheme))]}
               multiline
               value={descriptionDraft}
               onChangeText={setDescriptionDraft}
@@ -3541,7 +3533,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <Text style={styles.headerText}>Travelers</Text>
           {isEditing && (
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              style={[styles.button, styles.smallButton, themeStyle('tabs_overview_74', {  }, (theme ?? _styleTheme))]}
               onPress={() => setShowAddTraveler((prev) => !prev)}
             >
               <Text style={styles.buttonText}>+ Add</Text>
@@ -3550,9 +3542,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </View>
         {isEditing && showAddTraveler ? (
           <View style={styles.addTravelerForm}>
-            <View style={[styles.row, { gap: 8 }]}>
+            <View style={[styles.row, themeStyle('tabs_overview_75', {  }, (theme ?? _styleTheme))]}>
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, themeStyle('tabs_overview_76', {  }, (theme ?? _styleTheme))]}
                 placeholder="First name"
                 autoComplete="given-name"
                 textContentType="givenName"
@@ -3560,7 +3552,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, firstName: text }))}
               />
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, themeStyle('tabs_overview_77', {  }, (theme ?? _styleTheme))]}
                 placeholder="Last name"
                 autoComplete="family-name"
                 textContentType="familyName"
@@ -3578,7 +3570,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               value={travelerDraft.email}
               onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, email: text }))}
             />
-            <View style={[styles.row, { justifyContent: 'flex-end', gap: 8 }]}>
+            <View style={[styles.row, themeStyle('tabs_overview_78', {  }, (theme ?? _styleTheme))]}>
               <TouchableOpacity
                 style={[styles.button, styles.smallButton, styles.dangerButton]}
                 onPress={() => setShowAddTraveler(false)}
@@ -3607,7 +3599,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <TouchableOpacity
                   style={styles.attendeeRemoveButton}
                   onPress={() => removeTraveler(member.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  hitSlop={themeStyle('tabs_overview_79', {  }, (theme ?? _styleTheme))}
                 >
                   <Text style={styles.attendeeRemoveText}>✕</Text>
                 </TouchableOpacity>
@@ -3616,7 +3608,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ))}
         </View>
         {isEditing ? (
-          <View style={{ marginTop: 10 }}>
+          <View style={themeStyle('tabs_overview_80', {  }, (theme ?? _styleTheme))}>
             <Text style={styles.headerText}>Pending Invites</Text>
             {pendingInvites.length ? (
               pendingInvites.map((invite) => (
@@ -3632,18 +3624,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         <View style={styles.divider} />
 
-        <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        <View style={[styles.row, themeStyle('tabs_overview_81', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.headerText}>Transfers</Text>
           {isEditing && (
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              style={[styles.button, styles.smallButton, themeStyle('tabs_overview_82', {  }, (theme ?? _styleTheme))]}
               onPress={() => openFlightAdd()}
             >
               <Text style={styles.buttonText}>+ Add Transfer</Text>
             </TouchableOpacity>
           )}
         </View>
-        <View style={{ gap: 8 }}>
+        <View style={themeStyle('tabs_overview_83', {  }, (theme ?? _styleTheme))}>
           {rows
             .filter((r) => r.type === 'flight')
             .map((row, idx) => {
@@ -3696,14 +3688,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <Text style={styles.headerText}>Lodging</Text>
           {isEditing && (
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              style={[styles.button, styles.smallButton, themeStyle('tabs_overview_84', {  }, (theme ?? _styleTheme))]}
               onPress={() => openAddLodging()}
             >
               <Text style={styles.buttonText}>+ Add Lodging</Text>
             </TouchableOpacity>
           )}
         </View>
-        <View style={{ gap: 8 }}>
+        <View style={themeStyle('tabs_overview_85', {  }, (theme ?? _styleTheme))}>
           {rows
             .filter((r) => r.type === 'lodging')
             .map((row) => {
@@ -3746,12 +3738,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.row}>
           <Text style={styles.headerText}>Activities</Text>
           {isEditing && (
-            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddTour}>
+            <TouchableOpacity style={[styles.button, styles.smallButton, themeStyle('tabs_overview_86', {  }, (theme ?? _styleTheme))]} onPress={openAddTour}>
               <Text style={styles.buttonText}>+ Add Activity</Text>
             </TouchableOpacity>
           )}
         </View>
-        <View style={{ gap: 8 }}>
+        <View style={themeStyle('tabs_overview_87', {  }, (theme ?? _styleTheme))}>
           {rows
             .filter((r) => r.type === 'tour')
             .map((row) => {
@@ -3783,12 +3775,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.row}>
           <Text style={styles.headerText}>Rental Cars</Text>
           {isEditing && (
-            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddRental}>
+            <TouchableOpacity style={[styles.button, styles.smallButton, themeStyle('tabs_overview_88', {  }, (theme ?? _styleTheme))]} onPress={openAddRental}>
               <Text style={styles.buttonText}>+ Add Rental</Text>
             </TouchableOpacity>
           )}
         </View>
-        <View style={{ gap: 8 }}>
+        <View style={themeStyle('tabs_overview_89', {  }, (theme ?? _styleTheme))}>
           {rows
             .filter((r) => r.type === 'rental')
             .map((row) => {
@@ -3810,14 +3802,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   return (
-    <View style={{ flex: 1, minHeight: 0 }}>
+    <View style={themeStyle('tabs_overview_90', {  }, (theme ?? _styleTheme))}>
       {trip && aiItineraryPending ? (
         <View
-          style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}
+          style={[styles.card, themeStyle('tabs_overview_91', {  }, (theme ?? _styleTheme))]}
           testID="ai-itinerary-pending-banner"
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ActivityIndicator size="small" color="#2563eb" testID="ai-itinerary-pending-spinner" />
+          <View style={themeStyle('tabs_overview_92', {  }, (theme ?? _styleTheme))}>
+            <ActivityIndicator size="small" color={themeStyle('tabs_overview_96', {  }, (theme ?? _styleTheme))} testID="ai-itinerary-pending-spinner" />
             <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
           </View>
           <Text style={styles.helperText} testID="ai-itinerary-stage-label">
@@ -3830,13 +3822,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </View>
       ) : null}
       {trip && !aiItineraryPending && aiItineraryFailedMessage ? (
-        <View style={[styles.card, { borderColor: '#fecaca', borderWidth: 1, marginBottom: 10, paddingVertical: 8 }]}>
+        <View style={[styles.card, themeStyle('tabs_overview_93', {  }, (theme ?? _styleTheme))]}>
           <Text
-            style={[styles.helperText, { color: theme.colors.error }]}
+            style={[styles.helperText, themeStyle('tabs_overview_94', { theme: theme }, (theme ?? _styleTheme))]}
           >
             AI itinerary generation failed: {aiItineraryFailedMessage}
           </Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+          <View style={themeStyle('tabs_overview_95', {  }, (theme ?? _styleTheme))}>
             {aiItineraryGenerationAllowed ? (
               <TouchableOpacity
                 style={[styles.button, styles.smallButton]}

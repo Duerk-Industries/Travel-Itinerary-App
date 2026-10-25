@@ -1,10 +1,13 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View, TouchableOpacity, useWindowDimensions } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ExpenseCovering from './ExpenseCovering';
 import PaymentDialog from '../components/PaymentDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
-import type { AppTheme } from '../theme/theme';
+
 import { fixedTableColumn } from '../utils/tableColumns';
 import {
   buildSettlementMatrix,
@@ -172,7 +175,7 @@ const renderLedgerCards = ({
 }: LedgerRenderParams) => {
   if (!memberIds.length) {
     return (
-      <View style={[styles.card, { marginBottom: 8 }]} testID="ledger-empty">
+      <View style={[styles.card, themeStyle('tabs_ledger_1', {  }, getStyleTheme('auto', null))]} testID="ledger-empty">
         <Text style={styles.helperText}>No travelers available.</Text>
       </View>
     );
@@ -182,41 +185,41 @@ const renderLedgerCards = ({
       {memberIds.map((memberId) => (
         <View
           key={memberId}
-          style={[styles.card, { marginBottom: 8 }]}
+          style={[styles.card, themeStyle('tabs_ledger_2', {  }, getStyleTheme('auto', null))]}
           testID={`ledger-row-${memberId}`}
         >
-          <View style={{ marginBottom: 6 }}>
-            <Text style={[styles.cellText, { fontWeight: '600' }]}>
+          <View style={themeStyle('tabs_ledger_3', {  }, getStyleTheme('auto', null))}>
+            <Text style={[styles.cellText, themeStyle('tabs_ledger_4', {  }, getStyleTheme('auto', null))]}>
               {memberNameMap.get(memberId) ?? 'Traveler'}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 4 }}>
+          <View style={themeStyle('tabs_ledger_5', {  }, getStyleTheme('auto', null))}>
             <Text style={styles.cellText}>
-              <Text style={{ fontWeight: '600' }}>Paid: </Text>
+              <Text style={themeStyle('tabs_ledger_6', {  }, getStyleTheme('auto', null))}>Paid: </Text>
               {formatMoney(paidTotals[memberId] ?? 0)}
             </Text>
             <Text style={styles.cellText}>
-              <Text style={{ fontWeight: '600' }}>Used: </Text>
+              <Text style={themeStyle('tabs_ledger_7', {  }, getStyleTheme('auto', null))}>Used: </Text>
               {formatMoney(usedTotals[memberId] ?? 0)}
             </Text>
           </View>
         </View>
       ))}
-      <View style={[styles.card, styles.tableHeader, { marginBottom: 8 }]} testID="ledger-overall-row">
-        <View style={{ marginBottom: 6 }}>
-          <Text style={[styles.headerText, { fontWeight: '600' }]}>Overall</Text>
+      <View style={[styles.card, styles.tableHeader, themeStyle('tabs_ledger_8', {  }, getStyleTheme('auto', null))]} testID="ledger-overall-row">
+        <View style={themeStyle('tabs_ledger_9', {  }, getStyleTheme('auto', null))}>
+          <Text style={[styles.headerText, themeStyle('tabs_ledger_10', {  }, getStyleTheme('auto', null))]}>Overall</Text>
         </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 4 }}>
+        <View style={themeStyle('tabs_ledger_11', {  }, getStyleTheme('auto', null))}>
           <Text style={styles.headerText}>
-            <Text style={{ fontWeight: '600' }}>Paid: </Text>
+            <Text style={themeStyle('tabs_ledger_12', {  }, getStyleTheme('auto', null))}>Paid: </Text>
             {formatMoney(overallPaid)}
           </Text>
           <Text style={styles.headerText}>
-            <Text style={{ fontWeight: '600' }}>Used: </Text>
+            <Text style={themeStyle('tabs_ledger_13', {  }, getStyleTheme('auto', null))}>Used: </Text>
             {formatMoney(overallUsed)}
           </Text>
           <Text style={styles.headerText}>
-            <Text style={{ fontWeight: '600' }}>Total: </Text>
+            <Text style={themeStyle('tabs_ledger_14', {  }, getStyleTheme('auto', null))}>Total: </Text>
             {formatMoney(overallTotal)}
           </Text>
         </View>
@@ -240,7 +243,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   paidTotals,
   usedTotals,
   styles,
-  theme,
+  theme: _providedTheme,
   downloadCsv,
   findActiveTrip,
   onNavigate,
@@ -255,6 +258,8 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   onAddPayment,
   onDeletePayment,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width: viewportWidth } = useWindowDimensions();
   const isNarrowLayout = viewportWidth < 700;
   const tripCurrency = (trip?.currency ?? 'USD').toUpperCase();
@@ -398,8 +403,8 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
     );
   }
 
-  const greyCellBg = (styles.tableHeader?.backgroundColor as string) ?? '#d1d5db';
-  const greyCellStyle = { backgroundColor: greyCellBg };
+  const greyCellBg = (styles.tableHeader?.backgroundColor as string) ?? themeStyle('tabs_ledger_34', {  }, (theme ?? _styleTheme));
+  const greyCellStyle = themeStyle('tabs_ledger_15', { greyCellBg: greyCellBg }, (theme ?? _styleTheme));
 
   const renderMatrixCell = (fromId: string, toId: string, isDiagonal: boolean) => {
     const cents = matrix.matrixCents[fromId]?.[toId] ?? 0;
@@ -509,15 +514,15 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
         {transfers.map(({ fromId, toId, cents }) => (
           <View
             key={`settle-${fromId}-${toId}`}
-            style={[styles.card, { marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }]}
+            style={[styles.card, themeStyle('tabs_ledger_16', {  }, (theme ?? _styleTheme))]}
             testID={`settlement-transfer-${fromId}-${toId}`}
           >
-            <Text style={[styles.cellText, { flex: 1, minWidth: 0 }]}>
-              <Text style={{ fontWeight: '600' }}>{memberNameMap.get(fromId) ?? 'Traveler'}</Text>
+            <Text style={[styles.cellText, themeStyle('tabs_ledger_17', {  }, (theme ?? _styleTheme))]}>
+              <Text style={themeStyle('tabs_ledger_18', {  }, (theme ?? _styleTheme))}>{memberNameMap.get(fromId) ?? 'Traveler'}</Text>
               {' pays '}
-              <Text style={{ fontWeight: '600' }}>{memberNameMap.get(toId) ?? 'Traveler'}</Text>
+              <Text style={themeStyle('tabs_ledger_19', {  }, (theme ?? _styleTheme))}>{memberNameMap.get(toId) ?? 'Traveler'}</Text>
             </Text>
-            <Text style={[styles.cellText, { fontWeight: '700' }]}>{formatCents(cents, tripCurrency)}</Text>
+            <Text style={[styles.cellText, themeStyle('tabs_ledger_20', {  }, (theme ?? _styleTheme))]}>{formatCents(cents, tripCurrency)}</Text>
           </View>
         ))}
       </View>
@@ -535,7 +540,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
       return <Text style={styles.helperText}>No payments recorded yet.</Text>;
     }
     return (
-      <View style={{ gap: 6 }}>
+      <View style={themeStyle('tabs_ledger_21', {  }, (theme ?? _styleTheme))}>
         {payments.map((payment) => {
           const label = `${memberNameMap.get(payment.payerId) ?? 'Someone'} paid ${
             memberNameMap.get(payment.receiverId) ?? 'someone'
@@ -547,32 +552,25 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
               key={`payment-${payment.id}`}
               style={[
                 styles.row,
-                {
-                  alignItems: isNarrowLayout ? 'stretch' : 'center',
-                  flexDirection: isNarrowLayout ? 'column' : 'row',
-                  flexWrap: isNarrowLayout ? 'wrap' : 'nowrap',
-                  gap: 8,
-                  width: '100%',
-                  maxWidth: '100%',
-                },
+                themeStyle('tabs_ledger_22', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme)),
               ]}
               testID={`payment-row-${payment.id}`}
             >
               {isNarrowLayout ? (
-                <View style={{ width: '100%', minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Text style={[styles.cellText, { flex: 1, minWidth: 0 }]}>
+                <View style={themeStyle('tabs_ledger_23', {  }, (theme ?? _styleTheme))}>
+                  <Text style={[styles.cellText, themeStyle('tabs_ledger_24', {  }, (theme ?? _styleTheme))]}>
                     {formatShortPaymentDate(payment.paymentDate)} · {paymentDescription}
                   </Text>
-                  <Text style={[styles.cellText, { fontWeight: '700' }]}>{paymentAmount}</Text>
+                  <Text style={[styles.cellText, themeStyle('tabs_ledger_25', {  }, (theme ?? _styleTheme))]}>{paymentAmount}</Text>
                 </View>
               ) : (
-                <Text style={[styles.cellText, { flex: 1, minWidth: 0, flexShrink: 1 }]}>
+                <Text style={[styles.cellText, themeStyle('tabs_ledger_26', {  }, (theme ?? _styleTheme))]}>
                   {payment.paymentDate} — {label}
                 </Text>
               )}
               {!readOnly ? (
                 <TouchableOpacity
-                  style={[styles.button, styles.smallButton, styles.dangerButton, isNarrowLayout && { alignSelf: 'flex-start' }]}
+                  style={[styles.button, styles.smallButton, styles.dangerButton, isNarrowLayout && themeStyle('tabs_ledger_27', {  }, (theme ?? _styleTheme))]}
                   onPress={() => setPendingDeleteId(payment.id)}
                   testID={`payment-delete-${payment.id}`}
                 >
@@ -587,18 +585,18 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   };
 
   return (
-    <View style={{ gap: 12 }}>
+    <View style={themeStyle('tabs_ledger_28', {  }, (theme ?? _styleTheme))}>
       <View style={styles.card} testID="ledger-summary">
         <View style={styles.row}>
           <Text style={styles.sectionTitle}>Balances</Text>
           <TouchableOpacity
-            style={[styles.button, styles.smallButton, { marginLeft: 8 }]}
+            style={[styles.button, styles.smallButton, themeStyle('tabs_ledger_29', {  }, (theme ?? _styleTheme))]}
             onPress={() => onNavigate('cost')}
           >
             <Text style={styles.buttonText}>Cost Report</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+            style={[styles.button, styles.smallButton, themeStyle('tabs_ledger_30', {  }, (theme ?? _styleTheme))]}
             onPress={handleExportCsv}
           >
             <Text style={styles.buttonText}>Export CSV</Text>
@@ -631,11 +629,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
       </View>
 
       <View
-        style={[styles.card, {
-          backgroundColor: theme?.mode === 'dark' ? '#163D46' : '#EFFAFB',
-          borderColor: theme?.mode === 'dark' ? '#397783' : '#9DCFD6',
-          borderWidth: 1,
-        }]}
+        style={[styles.card, themeStyle('settlementPanel', {}, (theme ?? _styleTheme))]}
         testID="ledger-settlement"
       >
         <Text style={styles.sectionTitle}>Settlement</Text>
@@ -646,7 +640,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
         </Text>
         {isNarrowLayout ? renderSettlementList() : renderSettlementMatrix()}
         {!balanceCheckOk ? (
-          <Text style={styles.warningText ?? { color: '#b45309' }}>
+          <Text style={styles.warningText ?? themeStyle('tabs_ledger_32', {  }, (theme ?? _styleTheme))}>
             Warning: row total sum minus column total sum is {balanceCheckDelta.toFixed(2)} (expected within $0.01).
           </Text>
         ) : null}
@@ -657,7 +651,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
           <Text style={styles.sectionTitle}>Payments</Text>
           {!readOnly ? (
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              style={[styles.button, styles.smallButton, themeStyle('tabs_ledger_33', {  }, (theme ?? _styleTheme))]}
               onPress={() => setPaymentDialogOpen(true)}
               testID="record-payment-button"
               disabled={eligibleSortedIds.length < 2}

@@ -1,7 +1,10 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
-import type { AppTheme } from '../theme/theme';
+
 
 export type ChecklistSubmit = {
   day: number;
@@ -22,8 +25,10 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
   defaultDay,
   onSubmit,
   onCancel,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [title, setTitle] = useState('');
   const [items, setItems] = useState<string[]>(['', '']);
   const [error, setError] = useState('');
@@ -67,32 +72,32 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
-      <Pressable style={styles.overlay} onPress={handleCancel} testID="checklist-dialog-overlay">
+      <Pressable style={styles((theme ?? _styleTheme)).overlay} onPress={handleCancel} testID="checklist-dialog-overlay">
         <Pressable
-          style={[styles.dialog, colors && { backgroundColor: colors.surface }]}
+          style={[styles((theme ?? _styleTheme)).dialog, colors && themeStyle('components_ChecklistInputDialog_1', { colors: colors }, (theme ?? _styleTheme))]}
           onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
           accessibilityRole={'dialog' as any}
           accessibilityLabel="Add a checklist"
           testID="checklist-dialog"
         >
-          <Text style={[styles.title, colors && { color: colors.text }]}>Add a checklist</Text>
-          <Text style={[styles.label, colors && { color: colors.textMuted }]}>Title</Text>
+          <Text style={[styles((theme ?? _styleTheme)).title, colors && themeStyle('components_ChecklistInputDialog_2', { colors: colors }, (theme ?? _styleTheme))]}>Add a checklist</Text>
+          <Text style={[styles((theme ?? _styleTheme)).label, colors && themeStyle('components_ChecklistInputDialog_3', { colors: colors }, (theme ?? _styleTheme))]}>Title</Text>
           <TextInput
             testID="checklist-dialog-title"
-            style={[styles.input, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+            style={[styles((theme ?? _styleTheme)).input, colors && themeStyle('components_ChecklistInputDialog_4', { colors: colors }, (theme ?? _styleTheme))]}
             placeholderTextColor={colors?.textMuted}
             value={title}
             onChangeText={setTitle}
             placeholder="e.g. Packing list"
             autoFocus
           />
-          <Text style={[styles.label, { marginTop: 8 }, colors && { color: colors.textMuted }]}>Items</Text>
-          <ScrollView style={styles.itemsScroll} keyboardShouldPersistTaps="handled">
+          <Text style={[styles((theme ?? _styleTheme)).label, themeStyle('components_ChecklistInputDialog_5', {  }, (theme ?? _styleTheme)), colors && themeStyle('components_ChecklistInputDialog_6', { colors: colors }, (theme ?? _styleTheme))]}>Items</Text>
+          <ScrollView style={styles((theme ?? _styleTheme)).itemsScroll} keyboardShouldPersistTaps="handled">
             {items.map((value, idx) => (
-              <View key={idx} style={styles.itemRow}>
+              <View key={idx} style={styles((theme ?? _styleTheme)).itemRow}>
                 <TextInput
                   testID={`checklist-dialog-item-${idx}`}
-                  style={[styles.input, { flex: 1 }, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+                  style={[styles((theme ?? _styleTheme)).input, themeStyle('components_ChecklistInputDialog_7', {  }, (theme ?? _styleTheme)), colors && themeStyle('components_ChecklistInputDialog_8', { colors: colors }, (theme ?? _styleTheme))]}
                   placeholderTextColor={colors?.textMuted}
                   value={value}
                   onChangeText={(v: string) => updateItem(idx, v)}
@@ -101,11 +106,11 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
                 <Pressable
                   testID={`checklist-dialog-remove-${idx}`}
                   onPress={() => removeItem(idx)}
-                  style={styles.removeBtn}
+                  style={styles((theme ?? _styleTheme)).removeBtn}
                   accessibilityLabel={`Remove item ${idx + 1}`}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  hitSlop={themeStyle('components_ChecklistInputDialog_9', {  }, (theme ?? _styleTheme))}
                 >
-                  <Text style={[styles.removeBtnText, theme?.mode === 'dark' && { color: '#FFB4AB' }]}>−</Text>
+                  <Text style={[styles((theme ?? _styleTheme)).removeBtnText, theme?.mode === 'dark' && themeStyle('components_ChecklistInputDialog_10', {  }, (theme ?? _styleTheme))]}>−</Text>
                 </Pressable>
               </View>
             ))}
@@ -113,17 +118,17 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
           <Pressable
             testID="checklist-dialog-add-item"
             onPress={addItem}
-            style={({ pressed }: { pressed: boolean }) => [styles.addBtn, pressed && { backgroundColor: colors?.surfaceMuted ?? '#f3f4f6' }]}
+            style={({ pressed }: { pressed: boolean }) => [styles((theme ?? _styleTheme)).addBtn, pressed && themeStyle('components_ChecklistInputDialog_11', { colors: colors }, (theme ?? _styleTheme))]}
           >
-            <Text style={[styles.addBtnText, colors && { color: theme?.mode === 'dark' ? colors.link : colors.primary }]}>+ Add another item</Text>
+            <Text style={[styles((theme ?? _styleTheme)).addBtnText, colors && themeStyle('components_ChecklistInputDialog_12', { theme: theme, colors: colors }, (theme ?? _styleTheme))]}>+ Add another item</Text>
           </Pressable>
-          {error ? <Text style={[styles.error, theme?.mode === 'dark' && { color: '#FFB4AB' }]}>{error}</Text> : null}
-          <View style={styles.actions}>
-            <Pressable testID="checklist-dialog-cancel" style={styles.btnGhost} onPress={handleCancel}>
-              <Text style={[styles.btnGhostText, colors && { color: colors.textMuted }]}>Cancel</Text>
+          {error ? <Text style={[styles((theme ?? _styleTheme)).error, theme?.mode === 'dark' && themeStyle('components_ChecklistInputDialog_13', {  }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+          <View style={styles((theme ?? _styleTheme)).actions}>
+            <Pressable testID="checklist-dialog-cancel" style={styles((theme ?? _styleTheme)).btnGhost} onPress={handleCancel}>
+              <Text style={[styles((theme ?? _styleTheme)).btnGhostText, colors && themeStyle('components_ChecklistInputDialog_14', { colors: colors }, (theme ?? _styleTheme))]}>Cancel</Text>
             </Pressable>
-            <Pressable testID="checklist-dialog-submit" style={styles.btnPrimary} onPress={handleSubmit}>
-              <Text style={styles.btnPrimaryText}>Add checklist</Text>
+            <Pressable testID="checklist-dialog-submit" style={styles((theme ?? _styleTheme)).btnPrimary} onPress={handleSubmit}>
+              <Text style={styles((theme ?? _styleTheme)).btnPrimaryText}>Add checklist</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -132,31 +137,6 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  dialog: { width: '100%', maxWidth: 460, backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 8, maxHeight: '90%' },
-  title: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  label: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 4 },
-  input: {
-    borderWidth: 1, borderColor: '#d1d5db', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8,
-    fontSize: 14, color: '#111827', backgroundColor: '#fff',
-  },
-  itemsScroll: { maxHeight: 220 },
-  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  removeBtn: {
-    width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: 'rgba(220, 38, 38, 0.1)', borderWidth: 1, borderColor: 'rgba(220, 38, 38, 0.4)',
-  },
-  removeBtnText: { fontSize: 18, fontWeight: '700', color: '#dc2626', lineHeight: 18 },
-  addBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 6, alignSelf: 'flex-start' },
-  addBtnPressed: { backgroundColor: 'rgba(0,0,0,0.06)' },
-  addBtnText: { color: '#2563eb', fontWeight: '600' },
-  error: { color: '#dc2626', fontSize: 12, marginTop: 4 },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
-  btnGhost: { paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
-  btnGhostText: { color: '#374151', fontWeight: '600' },
-  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
-  btnPrimaryText: { color: '#fff', fontWeight: '700' },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_ChecklistInputDialog_15', { StyleSheet: StyleSheet }, _theme);
 
 export default ChecklistInputDialog;

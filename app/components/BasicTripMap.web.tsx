@@ -1,12 +1,15 @@
+import { layoutMetrics, mapFontFamily as FONT_STACK, themeStyle, linkTextColor } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme, useAppTheme } from '../theme/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import type { PlanningMapPoint } from '../../server/src/types';
-import { useAppTheme } from '../theme/ThemeContext';
-import { linkTextColor } from '../theme/theme';
+
+
 import { fitView, placeInView, tilesForView } from '../utils/tileMap';
 
-const COLORS = { flight: '#4285F4', lodging: '#FB8C00', activity: '#34A853', car_rental: '#9C27B0' };
-const HEIGHT = 400;
-const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const COLORS = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_BasicTripMap_web_8', {  }, _theme);
+const HEIGHT = layoutMetrics.BasicTripMap_web_HEIGHT;
 
 /**
  * Shown when the interactive map cannot start (no WebGL, a blocked GPU, a locked-down browser). It needs nothing but
@@ -17,6 +20,7 @@ const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neu
  * handful of tiles per day, never the main map, and it carries the required credit.
  */
 export default function BasicTripMap({ points, selectedId, onSelect }: { points: PlanningMapPoint[]; selectedId: string | null; onSelect?: (id: string) => void }) {
+  const _styleTheme = useStyleTheme();
   const theme = useAppTheme();
   const { colors } = theme;
   const box = useRef<HTMLDivElement | null>(null);
@@ -38,24 +42,24 @@ export default function BasicTripMap({ points, selectedId, onSelect }: { points:
   const view = fitView(located.map((point) => ({ lat: point.lat!, lng: point.lng! })), width, HEIGHT);
   const tiles = tilesForView(view);
   const link = `https://www.openstreetmap.org/?mlat=${selected.lat}&mlon=${selected.lng}#map=16/${selected.lat}/${selected.lng}`;
-  return <div style={{ flex: 2, minWidth: 0, fontFamily: FONT_STACK, fontSize: 14, color: colors.text }}>
-    <div ref={box} role="group" aria-label="Basic map of day stops" style={{ position: 'relative', width: '100%', height: HEIGHT, overflow: 'hidden', borderRadius: 12, background: colors.surfaceMuted }}>
+  return <div style={themeStyle('components_BasicTripMap_web_1', { FONT_STACK: FONT_STACK, colors: colors }, _styleTheme)}>
+    <div ref={box} role="group" aria-label="Basic map of day stops" style={themeStyle('components_BasicTripMap_web_2', { HEIGHT: HEIGHT, colors: colors }, _styleTheme)}>
       {tiles.map((tile) => <img key={tile.key} alt="" draggable={false} src={tile.url} referrerPolicy="strict-origin-when-cross-origin"
-        style={{ position: 'absolute', left: tile.left, top: tile.top, width: 256, height: 256, userSelect: 'none' }} />)}
+        style={themeStyle('components_BasicTripMap_web_3', { tile: tile }, _styleTheme)} />)}
       {located.map((point, index) => {
         const spot = placeInView({ lat: point.lat!, lng: point.lng! }, view);
         const isSelected = point.id === selected.id;
         return <button key={point.id} type="button" aria-label={`${index + 1}. ${point.title}`} aria-pressed={isSelected} onClick={() => onSelect?.(point.id)}
-          style={{ position: 'absolute', left: spot.x, top: spot.y, transform: 'translate(-50%, -50%)', zIndex: isSelected ? 2 : 1, width: isSelected ? 44 : 34, height: isSelected ? 44 : 34, borderRadius: '50%', cursor: 'pointer', fontWeight: 'bold', color: 'white', background: COLORS[point.kind], border: `${isSelected ? 3 : 2}px solid white`, boxShadow: '0 1px 4px rgba(0,0,0,.5)', padding: 0 }}>
+          style={themeStyle('components_BasicTripMap_web_4', { spot: spot, isSelected: isSelected, COLORS: COLORS(_styleTheme), point: point }, _styleTheme)}>
           {point.label || String(index + 1)}
         </button>;
       })}
       <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer"
-        style={{ position: 'absolute', right: 0, bottom: 0, zIndex: 3, padding: '2px 6px', fontSize: 11, background: 'rgba(255,255,255,.8)', color: '#1f2937' }}>© OpenStreetMap contributors</a>
+        style={themeStyle('components_BasicTripMap_web_5', {  }, _styleTheme)}>© OpenStreetMap contributors</a>
     </div>
-    <p style={{ margin: '8px 0 0' }}>
+    <p style={themeStyle('components_BasicTripMap_web_6', {  }, _styleTheme)}>
       Basic map: no 3D graphics needed. Select a stop to highlight it.{' '}
-      <a href={link} target="_blank" rel="noopener noreferrer" style={{ color: linkTextColor(theme) }}>Open {selected.title} in OpenStreetMap</a>
+      <a href={link} target="_blank" rel="noopener noreferrer" style={themeStyle('components_BasicTripMap_web_7', { linkTextColor: linkTextColor, theme: theme }, _styleTheme)}>Open {selected.title} in OpenStreetMap</a>
     </p>
   </div>;
 }

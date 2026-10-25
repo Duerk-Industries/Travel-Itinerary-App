@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { ThemedText as Text } from './ThemedText';
@@ -7,6 +9,7 @@ import type { SharedActivityTemplate } from '../../server/src/types';
 export default function ActivitySharingControls({ tripId, backendUrl, headers }: {
   tripId: string; backendUrl: string; headers: Record<string, string>;
 }) {
+  const _styleTheme = useStyleTheme();
   const scope = `${backendUrl}:${tripId}:${JSON.stringify(headers)}`;
   const current = useRef(scope); current.current = scope;
   useEffect(() => () => { if (current.current === scope) current.current = ''; }, [scope]);
@@ -34,17 +37,17 @@ export default function ActivitySharingControls({ tripId, backendUrl, headers }:
     finally { lock.current = false; if (current.current === scope) setBusy(false); }
   };
   if (state?.scope !== scope) return null;
-  return <View style={{ gap: 8, padding: 12 }}>
-    <Text style={{ fontWeight: '700' }}>Share activity ideas: {state.enabled ? 'On' : 'Off'}</Text>
+  return <View style={themeStyle('components_ActivitySharingControls_1', {  }, _styleTheme)}>
+    <Text style={themeStyle('components_ActivitySharingControls_2', {  }, _styleTheme)}>Share activity ideas: {state.enabled ? 'On' : 'Off'}</Text>
     <Text>When this blog is public and discoverable, other travelers can copy its catalog-backed activity ideas. Only public catalog names, categories, estimated durations and catalog coordinates are shared, now and for future catalog additions. Notes, costs, bookings, traveler details and private addresses are excluded. Existing copies remain after sharing stops.</Text>
     {error ? <Text accessibilityRole="alert">{error}</Text> : null}
-    {state.enabled ? <TouchableOpacity accessibilityRole="button" disabled={busy} style={{ minHeight: 44 }} onPress={() => void update(false)}><Text>{busy ? 'Updating…' : 'Stop sharing activity ideas'}</Text></TouchableOpacity>
-      : <TouchableOpacity accessibilityRole="button" disabled={busy} style={{ minHeight: 44 }} onPress={() => setPreview(value => !value)}><Text>Preview activity sharing</Text></TouchableOpacity>}
-    {preview && <View style={{ gap: 6 }}>
+    {state.enabled ? <TouchableOpacity accessibilityRole="button" disabled={busy} style={themeStyle('components_ActivitySharingControls_3', {  }, _styleTheme)} onPress={() => void update(false)}><Text>{busy ? 'Updating…' : 'Stop sharing activity ideas'}</Text></TouchableOpacity>
+      : <TouchableOpacity accessibilityRole="button" disabled={busy} style={themeStyle('components_ActivitySharingControls_4', {  }, _styleTheme)} onPress={() => setPreview(value => !value)}><Text>Preview activity sharing</Text></TouchableOpacity>}
+    {preview && <View style={themeStyle('components_ActivitySharingControls_5', {  }, _styleTheme)}>
       <Text>These public catalog ideas can be copied:</Text>
       {state.activities.map(activity => <Text key={activity.id}>{activity.name} · {activity.activityType} · {activity.duration}</Text>)}
       {!state.activities.length && <Text>No eligible catalog activities yet. Add an idea from Nearby first.</Text>}
-      <TouchableOpacity accessibilityRole="button" disabled={busy || !state.activities.length} style={{ minHeight: 44 }} onPress={() => void update(true)}><Text>{busy ? 'Updating…' : 'Allow travelers to copy these activity ideas'}</Text></TouchableOpacity>
+      <TouchableOpacity accessibilityRole="button" disabled={busy || !state.activities.length} style={themeStyle('components_ActivitySharingControls_6', {  }, _styleTheme)} onPress={() => void update(true)}><Text>{busy ? 'Updating…' : 'Allow travelers to copy these activity ideas'}</Text></TouchableOpacity>
     </View>}
   </View>;
 }

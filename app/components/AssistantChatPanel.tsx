@@ -1,3 +1,7 @@
+import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import KeyboardViewport from './KeyboardViewport';
 import { shadowStyle } from '../utils/shadowStyle';
 /**
@@ -27,7 +31,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+
 import { useAssistantChat, type AssistantChatUIMessage } from '../hooks/useAssistantChat';
 import { DEFAULT_MODEL_ID, HIGH_QUALITY_MODEL_ID } from '../utils/assistantLocalModel';
 import type { ActionDispatchContext } from '../utils/assistantTools';
@@ -66,8 +70,8 @@ interface Props {
   activities?: Tour[];
 }
 
-const PANEL_WIDTH = 360;
-const PANEL_HEIGHT = 480;
+const PANEL_WIDTH = layoutMetrics.AssistantChatPanel_PANEL_WIDTH;
+const PANEL_HEIGHT = layoutMetrics.AssistantChatPanel_PANEL_HEIGHT;
 
 const getResponsivePanelWidth = (): number => {
   if (typeof window !== 'undefined' && window.innerWidth) {
@@ -86,13 +90,15 @@ const CAPABILITY_REASON_TEXT: Record<string, string> = {
 
 const AssistantChatPanel: React.FC<Props> = ({
   onClose,
-  theme,
+  theme: _providedTheme,
   visible = true,
   userId,
   actionsAllowed = false,
   dispatchContext = null,
   activities = [],
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const themedStyles = React.useMemo(() => buildStyles(theme), [theme]);
   const {
     engineState,
@@ -128,7 +134,7 @@ const AssistantChatPanel: React.FC<Props> = ({
   // shared default for guide mode's smaller/faster download, which doesn't
   // carry the same accuracy bar. Guide-only sessions are unaffected.
   const modelToLoad = actionsAllowed ? HIGH_QUALITY_MODEL_ID : DEFAULT_MODEL_ID;
-  const panelSize = React.useMemo(() => ({ width: getResponsivePanelWidth(), height: PANEL_HEIGHT }), []);
+  const panelSize = React.useMemo(() => (themeStyle('components_AssistantChatPanel_1', { getResponsivePanelWidth: getResponsivePanelWidth, PANEL_HEIGHT: PANEL_HEIGHT }, (theme ?? _styleTheme))), [_styleTheme]);
   const [position, setPosition] = useState<PanelPosition>(() =>
     computeInitialPanelPosition(getViewportSize(), panelSize)
   );
@@ -162,13 +168,10 @@ const AssistantChatPanel: React.FC<Props> = ({
       const drag = dragStateRef.current;
       if (!drag) return;
       const { pageX, pageY } = evt.nativeEvent;
-      const next = {
-        top: drag.startTop + (pageY - drag.startPageY),
-        left: drag.startLeft + (pageX - drag.startPageX),
-      };
+      const next = themeStyle('components_AssistantChatPanel_2', { drag: drag, pageY: pageY, pageX: pageX }, (theme ?? _styleTheme));
       setPosition(clampPanelPosition(next, getViewportSize(), panelSize));
     },
-    [panelSize]
+    [panelSize, _styleTheme]
   );
 
   const handleDragRelease = useCallback(() => {
@@ -199,7 +202,7 @@ const AssistantChatPanel: React.FC<Props> = ({
       >
         <View style={[themedStyles.bubble, isUser ? themedStyles.ownBubble : themedStyles.otherBubble]}>
           {isPendingAssistantReply ? (
-            <ActivityIndicator size="small" color={theme?.colors.textMuted ?? '#7C3AED'} />
+            <ActivityIndicator size="small" color={theme?.colors.textMuted ?? themeStyle('components_AssistantChatPanel_5', {  }, (theme ?? _styleTheme))} />
           ) : (
             <Text style={isUser ? themedStyles.ownText : themedStyles.otherText}>{item.content}</Text>
           )}
@@ -259,7 +262,7 @@ const AssistantChatPanel: React.FC<Props> = ({
           <ActivityIndicator />
           <Text style={themedStyles.stateBody}>{loadProgress?.text || 'Loading assistant…'}</Text>
           <View style={themedStyles.progressTrack}>
-            <View style={[themedStyles.progressFill, { width: `${pct}%` }]} />
+            <View style={[themedStyles.progressFill, themeStyle('components_AssistantChatPanel_3', { pct: pct }, (theme ?? _styleTheme))]} />
           </View>
         </View>
       );
@@ -296,7 +299,7 @@ const AssistantChatPanel: React.FC<Props> = ({
             value={inputText}
             onChangeText={setInputText}
             placeholder="Ask how to do something…"
-            placeholderTextColor={theme?.colors.textMuted ?? '#999'}
+            placeholderTextColor={theme?.colors.textMuted ?? themeStyle('components_AssistantChatPanel_6', {  }, (theme ?? _styleTheme))}
             multiline
             maxLength={1000}
             editable={engineState !== 'generating'}
@@ -374,196 +377,6 @@ const AssistantChatPanel: React.FC<Props> = ({
   );
 };
 
-const buildStyles = (theme?: AppTheme) => StyleSheet.create({
-  container: {
-    backgroundColor: theme?.colors.surface ?? '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 8,
-    ...shadowStyle('#000', 0.15, 0, 4, 12),
-  },
-  panelDesktop: {
-    // top/left are supplied dynamically (draggable position state) rather
-    // than fixed here -- see the `position` style merged in alongside this
-    // one where panelStyle is computed.
-    position: 'absolute' as any,
-    width: getResponsivePanelWidth(),
-    height: PANEL_HEIGHT,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#e0e0e0',
-  },
-  panelMobile: {
-    position: 'absolute' as any,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 0,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  headerTitleDragHandle: {
-    flex: 1,
-    cursor: 'grab' as any,
-    // Without this, dragging the mouse over the "App Guide" text triggers
-    // the browser's native text-selection drag, which fights the
-    // responder-based drag below and makes it randomly stop tracking
-    // mid-gesture -- userSelect: 'none' is inherited by the Text child, so
-    // it only needs to be set here, not on headerTitle too.
-    userSelect: 'none' as any,
-  },
-  headerTitleDragging: {
-    cursor: 'grabbing' as any,
-  },
-  headerTitle: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  headerBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  stateContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    gap: 10,
-  },
-  stateTitle: {
-    color: theme?.colors.text ?? '#1a1a1a',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  stateBody: {
-    color: theme?.colors.textMuted ?? '#555',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  errorText: {
-    color: theme?.colors.error ?? '#d32f2f',
-  },
-  inlineError: {
-    paddingHorizontal: 12,
-    paddingTop: 6,
-  },
-  primaryButton: {
-    marginTop: 4,
-    backgroundColor: '#7C3AED',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  progressTrack: {
-    width: '100%',
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme?.colors.surfaceMuted ?? '#ececec',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#7C3AED',
-  },
-  messageList: {
-    padding: 10,
-    paddingBottom: 4,
-    flexGrow: 1,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  ownRow: {
-    justifyContent: 'flex-end',
-  },
-  otherRow: {
-    justifyContent: 'flex-start',
-  },
-  bubble: {
-    maxWidth: '85%',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minHeight: 20,
-    justifyContent: 'center',
-  },
-  ownBubble: {
-    backgroundColor: '#7C3AED',
-    borderBottomRightRadius: 4,
-  },
-  otherBubble: {
-    backgroundColor: theme?.colors.surfaceMuted ?? '#f0f0f0',
-    borderBottomLeftRadius: 4,
-  },
-  ownText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  otherText: {
-    color: theme?.colors.text ?? '#1a1a1a',
-    fontSize: 14,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    borderTopWidth: 1,
-    borderTopColor: theme?.colors.border ?? '#e0e0e0',
-    padding: 8,
-    backgroundColor: theme?.colors.backgroundAlt ?? '#fafafa',
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#ccc',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    maxHeight: 100,
-    fontSize: 14,
-    backgroundColor: theme?.colors.surface ?? '#fff',
-    color: theme?.colors.text ?? '#1a1a1a',
-  },
-  sendBtn: {
-    marginLeft: 8,
-    backgroundColor: '#7C3AED',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  sendBtnDisabled: {
-    backgroundColor: theme?.mode === 'dark' ? theme.colors.surfaceMuted : '#c4b5fd',
-  },
-  sendBtnText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  footerNote: {
-    fontSize: 10,
-    color: theme?.colors.textMuted ?? '#999',
-    textAlign: 'center',
-    paddingVertical: 4,
-  },
-});
+const buildStyles = (theme?: AppTheme) => StyleSheet.create(themeStyle('components_AssistantChatPanel_4', { theme: theme, shadowStyle: shadowStyle, getResponsivePanelWidth: getResponsivePanelWidth, PANEL_HEIGHT: PANEL_HEIGHT }, (theme ?? getStyleTheme('light', 'light'))));
 
 export default AssistantChatPanel;

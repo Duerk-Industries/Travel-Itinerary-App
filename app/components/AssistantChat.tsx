@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 /**
  * AssistantChat — composition root for the on-device guide assistant.
  *
@@ -19,7 +22,7 @@
  */
 import React, { Suspense, lazy, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+
 import type { ActionDispatchContext } from '../utils/assistantTools';
 import type { Tour } from '../tabs/activities';
 import AssistantChatButton from './AssistantChatButton';
@@ -38,13 +41,15 @@ type Props = {
   activities?: Tour[];
 };
 
-const PanelLoadingFallback: React.FC = () => (
-  <View style={styles.fallback} testID="assistant-chunk-loading">
+const PanelLoadingFallback: React.FC = () => { const _styleTheme = useStyleTheme(); return ((
+  <View style={styles(_styleTheme).fallback} testID="assistant-chunk-loading">
     <ActivityIndicator />
   </View>
-);
+)); };
 
-const AssistantChat: React.FC<Props> = ({ theme, userId, actionsAllowed, dispatchContext, activities }) => {
+const AssistantChat: React.FC<Props> = ({ theme: _providedTheme, userId, actionsAllowed, dispatchContext, activities }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   // Two flags, not one: `hasOpenedOnce` is sticky (never goes back to
   // false) so the panel -- and the useAssistantChat() state living inside
   // it, i.e. the loaded model + the conversation so far -- stays mounted
@@ -81,19 +86,6 @@ const AssistantChat: React.FC<Props> = ({ theme, userId, actionsAllowed, dispatc
   );
 };
 
-const styles = StyleSheet.create({
-  fallback: {
-    position: 'absolute',
-    bottom: 24,
-    left: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#7C3AED',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_AssistantChat_1', { StyleSheet: StyleSheet }, _theme);
 
 export default AssistantChat;

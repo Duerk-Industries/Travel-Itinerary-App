@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../../../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../../../theme/ThemeContext';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import type { AppTheme } from '../../../theme/theme';
+
 import { AiOpsAiAuditLog } from './AiOpsAiAuditLog';
 import { AiOpsCaptures } from './AiOpsCaptures';
 import { AiOpsExecutiveDashboard } from './AiOpsExecutiveDashboard';
@@ -40,7 +43,9 @@ export const AiOperationsSection: React.FC<{
   initialAiOpsSection?: AiOpsSection;
   onAiOpsSectionChange?: (section: AiOpsSection) => void;
   theme: AppTheme;
-}> = ({ backendUrl, headers, initialAiOpsSection = 'overview', onAiOpsSectionChange, theme }) => {
+}> = ({ backendUrl, headers, initialAiOpsSection = 'overview', onAiOpsSectionChange, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [aiOpsSection, setAiOpsSection] = useState<AiOpsSection>(initialAiOpsSection);
   const [features, setFeatures] = useState<AiProviderFeatureConfig[]>([]);
   const [providers, setProviders] = useState<AiProviderOption[]>([]);
@@ -349,13 +354,13 @@ export const AiOperationsSection: React.FC<{
     }
   };
 
-  if (loading) return <Text style={[aiOpsStyles.cardSub, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (loading) return <Text style={[aiOpsStyles((theme ?? _styleTheme)).cardSub, themeStyle('components_admin_aiOps_AiOperationsSection_1', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text>;
 
   return (
-    <View style={aiOpsStyles.section}>
-      <Text style={[aiOpsStyles.sectionTitle, { color: theme.colors.text }]}>AI Operations</Text>
-      {error ? <Text style={[aiOpsStyles.error, { color: theme.colors.error }]}>{error}</Text> : null}
-      {saveMsg ? <Text style={[aiOpsStyles.save, { color: theme.colors.success }]}>{saveMsg}</Text> : null}
+    <View style={aiOpsStyles((theme ?? _styleTheme)).section}>
+      <Text style={[aiOpsStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('components_admin_aiOps_AiOperationsSection_2', { theme: theme }, (theme ?? _styleTheme))]}>AI Operations</Text>
+      {error ? <Text style={[aiOpsStyles((theme ?? _styleTheme)).error, themeStyle('components_admin_aiOps_AiOperationsSection_3', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+      {saveMsg ? <Text style={[aiOpsStyles((theme ?? _styleTheme)).save, themeStyle('components_admin_aiOps_AiOperationsSection_4', { theme: theme }, (theme ?? _styleTheme))]}>{saveMsg}</Text> : null}
       <AiOpsNav active={aiOpsSection} theme={theme} onSelect={goToAiOps} />
       {aiOpsSection === 'overview' ? <AiOpsOverview theme={theme} providerCount={providers.length} experimentCount={experiments.length} recommendationCount={recommendations.length} metricCount={analytics.length} /> : null}
       {aiOpsSection === 'providers' ? <AiOpsProviders theme={theme} features={features} providers={providers} certifications={certifications} certificationVersion={providerCertificationVersion} certificationReason={providerCertificationReason} drafts={drafts} reasons={reasons} saving={saving} setCertificationVersion={setProviderCertificationVersion} setCertificationReason={setProviderCertificationReason} setDrafts={setDrafts} setReasons={setReasons} onSave={saveProviderConfig} onCertify={certifyProvider} /> : null}

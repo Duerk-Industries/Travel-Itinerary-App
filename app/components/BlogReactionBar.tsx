@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // Phase 3 of docs/trip-blog-social-implementation-plan.md (B1) — the reaction control for a blog
 // day, text item, photo or video. Collapsed by default to existing (non-zero) reaction chips plus
 // a compact "+" — the PRD's mobile note is specific about this: six full-width emoji buttons don't
@@ -31,15 +34,19 @@ const BlogReactionBar: React.FC<Props> = ({
   canEngage,
   onToggle,
   onError,
-  textColor = '#111827',
-  mutedColor = '#6b7280',
-  theme,
+  textColor: _textColorOverride,
+  mutedColor: _mutedColorOverride,
+  theme: _providedTheme,
   size = 'default',
   testID,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const textColor = _textColorOverride ?? themeStyle('components_BlogReactionBar_9', {  }, (theme ?? _styleTheme));
+  const mutedColor = _mutedColorOverride ?? themeStyle('components_BlogReactionBar_10', {  }, (theme ?? _styleTheme));
   const [expanded, setExpanded] = useState(false);
   const [pending, setPending] = useState(false);
-  const activeChipBg = theme?.colors?.surfaceMuted ?? '#e5e7eb';
+  const activeChipBg = theme?.colors?.surfaceMuted ?? themeStyle('components_BlogReactionBar_11', {  }, (theme ?? _styleTheme));
   const compact = size === 'compact';
 
   // The caller's saved choice should remain visible even if an eventually consistent
@@ -60,21 +67,10 @@ const BlogReactionBar: React.FC<Props> = ({
     }
   };
 
-  const chipStyle = (active: boolean) => ({
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 3,
-    paddingHorizontal: compact ? 5 : 7,
-    paddingVertical: compact ? 3 : 4,
-    borderRadius: 999,
-    minHeight: compact ? 28 : 32,
-    backgroundColor: active ? activeChipBg : 'transparent',
-    borderWidth: 1,
-    borderColor: active ? (theme?.colors?.border ?? '#ccd4df') : 'transparent',
-  });
+  const chipStyle = (active: boolean) => (themeStyle('components_BlogReactionBar_1', { compact: compact, active: active, activeChipBg: activeChipBg, theme: theme }, (theme ?? _styleTheme)));
 
   return (
-    <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+    <View testID={testID} style={themeStyle('components_BlogReactionBar_2', {  }, (theme ?? _styleTheme))}>
       {presentEmojis.map((emoji) => (
         <Pressable
           key={emoji}
@@ -87,8 +83,8 @@ const BlogReactionBar: React.FC<Props> = ({
           onPress={() => handlePress(emoji)}
           style={chipStyle(summary.userReaction === emoji)}
         >
-          <Text style={{ fontSize: compact ? 13 : 15 }}>{EMOJI_GLYPH[emoji]}</Text>
-          <Text style={{ fontSize: 12, fontWeight: '600', color: summary.userReaction === emoji ? textColor : mutedColor }}>
+          <Text style={themeStyle('components_BlogReactionBar_3', { compact: compact }, (theme ?? _styleTheme))}>{EMOJI_GLYPH[emoji]}</Text>
+          <Text style={themeStyle('components_BlogReactionBar_4', { summary: summary, emoji: emoji, textColor: textColor, mutedColor: mutedColor }, (theme ?? _styleTheme))}>
             {visibleCount(emoji)}
           </Text>
         </Pressable>
@@ -101,15 +97,15 @@ const BlogReactionBar: React.FC<Props> = ({
           hitSlop={8}
           disabled={pending}
           onPress={() => setExpanded((current) => !current)}
-          style={[chipStyle(false), { minWidth: compact ? 28 : 32, justifyContent: 'center' }]}
+          style={[chipStyle(false), themeStyle('components_BlogReactionBar_5', { compact: compact }, (theme ?? _styleTheme))]}
         >
-          <Text style={{ fontSize: compact ? 13 : 15, color: mutedColor }}>{expanded ? '×' : '＋'}</Text>
+          <Text style={themeStyle('components_BlogReactionBar_6', { compact: compact, mutedColor: mutedColor }, (theme ?? _styleTheme))}>{expanded ? '×' : '＋'}</Text>
         </Pressable>
       ) : null}
       {expanded ? (
         <View
           testID={testID ? `${testID}-picker` : undefined}
-          style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, width: '100%', marginTop: 2 }}
+          style={themeStyle('components_BlogReactionBar_7', {  }, (theme ?? _styleTheme))}
         >
           {BLOG_REACTION_EMOJIS.map((emoji) => (
             <Pressable
@@ -123,7 +119,7 @@ const BlogReactionBar: React.FC<Props> = ({
               onPress={() => handlePress(emoji)}
               style={chipStyle(summary.userReaction === emoji)}
             >
-              <Text style={{ fontSize: 16 }}>{EMOJI_GLYPH[emoji]}</Text>
+              <Text style={themeStyle('components_BlogReactionBar_8', {  }, (theme ?? _styleTheme))}>{EMOJI_GLYPH[emoji]}</Text>
             </Pressable>
           ))}
         </View>

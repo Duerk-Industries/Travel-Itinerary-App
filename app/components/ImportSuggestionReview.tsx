@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { ImportReviewSuggestion } from '../../server/src/types';
@@ -7,6 +9,7 @@ export default function ImportSuggestionReview({ backendUrl, headers, onConfirme
   onConfirmed: (assigned: Array<{ id: string; tripId: string; itemType: string }>) => Promise<void> | void;
   onReviewItem: (id: string) => void;
 }) {
+  const _styleTheme = useStyleTheme();
   const scope = `${backendUrl}:${JSON.stringify(headers)}`;
   const current = useRef(scope); current.current = scope;
   const [preview, setPreview] = useState<{ scope: string; suggestions: ImportReviewSuggestion[]; needsIndividualReview: number; remaining: number; nextAfter?: string | null } | null>(null);
@@ -48,30 +51,30 @@ export default function ImportSuggestionReview({ backendUrl, headers, onConfirme
     finally { if (lock.current === scope) lock.current = null; if (current.current === scope) setBusy(false); }
   };
   const rows = preview?.scope === scope ? preview.suggestions : [];
-  return <View style={{ gap: 8, marginVertical: 12 }}>
-    <TouchableOpacity accessibilityRole="button" style={[styles.button, { minHeight: 44 }]} disabled={busy} onPress={() => void load()}>
+  return <View style={themeStyle('components_ImportSuggestionReview_1', {  }, _styleTheme)}>
+    <TouchableOpacity accessibilityRole="button" style={[styles.button, themeStyle('components_ImportSuggestionReview_2', {  }, _styleTheme)]} disabled={busy} onPress={() => void load()}>
       <Text style={styles.buttonText}>{busy ? 'Checking bookings…' : preview ? 'Refresh matching bookings' : 'Review matching bookings'}</Text>
     </TouchableOpacity>
     {notice ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.helperText}>{notice}</Text> : null}
     {preview?.scope === scope && <>
       <Text style={styles.helperText}>Confirming adds these bookings and their reported costs to shared trips. Review the details before selecting.</Text>
       {rows.length ? <TouchableOpacity accessibilityRole="checkbox" aria-checked={selected.size === rows.length} accessibilityState={{ checked: selected.size === rows.length, disabled: busy }}
-        accessibilityLabel="Select all matching suggestions" style={{ minHeight: 44, justifyContent: 'center' }} disabled={busy}
+        accessibilityLabel="Select all matching suggestions" style={themeStyle('components_ImportSuggestionReview_3', {  }, _styleTheme)} disabled={busy}
         onPress={() => setSelected(selected.size === rows.length ? new Set() : new Set(rows.map(row => row.itemId)))}><Text style={styles.helperText}>{selected.size === rows.length ? 'Clear selection' : 'Select all suggestions'}</Text></TouchableOpacity> : <Text style={styles.helperText}>No uniquely matched bookings in this batch. Review the queued items individually.</Text>}
-      {rows.map(row => <View key={row.itemId} style={{ gap: 4, paddingVertical: 8 }}>
+      {rows.map(row => <View key={row.itemId} style={themeStyle('components_ImportSuggestionReview_4', {  }, _styleTheme)}>
         <TouchableOpacity accessibilityRole="checkbox" accessibilityLabel={`Select ${row.label} for ${row.tripName}`} aria-checked={selected.has(row.itemId)} accessibilityState={{ checked: selected.has(row.itemId), disabled: busy }}
-          style={{ minHeight: 44, justifyContent: 'center' }} disabled={busy} onPress={() => setSelected(previous => { const next = new Set(previous); if (next.has(row.itemId)) next.delete(row.itemId); else next.add(row.itemId); return next; })}>
+          style={themeStyle('components_ImportSuggestionReview_5', {  }, _styleTheme)} disabled={busy} onPress={() => setSelected(previous => { const next = new Set(previous); if (next.has(row.itemId)) next.delete(row.itemId); else next.add(row.itemId); return next; })}>
           <Text style={styles.flightTitle}>{selected.has(row.itemId) ? '✓ ' : '○ '}{row.label} → {row.tripName}</Text>
         </TouchableOpacity>
         <Text style={styles.helperText}>{row.startDate || 'Date to check'}{row.endDate && row.endDate !== row.startDate ? ` – ${row.endDate}` : ''} · {row.amount === null ? 'Amount not provided — check before adding' : `${row.currency ?? ''} ${row.amount}`}</Text>
         <Text style={styles.helperText}>{row.reasons.join('. ')}</Text>
         {row.forwarderTrust === 'uncertain' && <Text style={styles.helperText}>We couldn’t confirm who forwarded this — check it before adding.</Text>}
-        <TouchableOpacity accessibilityRole="button" style={{ minHeight: 44 }} disabled={busy} onPress={() => onReviewItem(row.itemId)}><Text style={styles.helperText}>Review booking details</Text></TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" style={themeStyle('components_ImportSuggestionReview_6', {  }, _styleTheme)} disabled={busy} onPress={() => onReviewItem(row.itemId)}><Text style={styles.helperText}>Review booking details</Text></TouchableOpacity>
       </View>)}
-      {rows.length > 0 && <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Confirm ${selected.size} selected suggestions`} disabled={busy || !selected.size} style={[styles.button, { minHeight: 44 }]} onPress={() => void confirm()}><Text style={styles.buttonText}>{busy ? 'Confirming…' : selected.size === rows.length ? `Confirm all suggestions (${selected.size})` : `Confirm ${selected.size} selected suggestion${selected.size === 1 ? '' : 's'}`}</Text></TouchableOpacity>}
-      {failures.map(row => <View key={row.id}><Text accessibilityRole="alert" style={styles.warningText}>{row.reason}</Text><TouchableOpacity accessibilityRole="button" style={{ minHeight: 44 }} onPress={() => onReviewItem(row.id)}><Text style={styles.helperText}>Review this booking</Text></TouchableOpacity></View>)}
+      {rows.length > 0 && <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Confirm ${selected.size} selected suggestions`} disabled={busy || !selected.size} style={[styles.button, themeStyle('components_ImportSuggestionReview_7', {  }, _styleTheme)]} onPress={() => void confirm()}><Text style={styles.buttonText}>{busy ? 'Confirming…' : selected.size === rows.length ? `Confirm all suggestions (${selected.size})` : `Confirm ${selected.size} selected suggestion${selected.size === 1 ? '' : 's'}`}</Text></TouchableOpacity>}
+      {failures.map(row => <View key={row.id}><Text accessibilityRole="alert" style={styles.warningText}>{row.reason}</Text><TouchableOpacity accessibilityRole="button" style={themeStyle('components_ImportSuggestionReview_8', {  }, _styleTheme)} onPress={() => onReviewItem(row.id)}><Text style={styles.helperText}>Review this booking</Text></TouchableOpacity></View>)}
       {preview.needsIndividualReview > 0 && <Text style={styles.helperText}>{preview.needsIndividualReview} booking(s) need an individual trip choice or detail check.</Text>}
-      {preview.remaining > 0 && preview.nextAfter && <TouchableOpacity accessibilityRole="button" disabled={busy} style={{ minHeight: 44 }} onPress={() => void load(preview.nextAfter!)}><Text style={styles.helperText}>Review next batch ({preview.remaining} remaining)</Text></TouchableOpacity>}
+      {preview.remaining > 0 && preview.nextAfter && <TouchableOpacity accessibilityRole="button" disabled={busy} style={themeStyle('components_ImportSuggestionReview_9', {  }, _styleTheme)} onPress={() => void load(preview.nextAfter!)}><Text style={styles.helperText}>Review next batch ({preview.remaining} remaining)</Text></TouchableOpacity>}
     </>}
   </View>;
 }

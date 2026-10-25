@@ -1,9 +1,12 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import PayerSelect from '../components/PayerSelect';
 import { singlePayerIds } from '../utils/payerSelection';
 import { exportCsv } from '../utils/csvExport';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
@@ -127,29 +130,12 @@ type DailyExpenseDraft = {
 };
 
 const dayCardStyles = {
-  card: {
-    padding: 12,
-    marginBottom: 8,
-  } as const,
-  headerRow: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    marginBottom: 6,
-  } as const,
-  dateLabel: {
-    fontWeight: '600' as const,
-  } as const,
-  dayTotal: {
-    fontWeight: '600' as const,
-  } as const,
-  categoryRow: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    paddingVertical: 4,
-  } as const,
-  emptyNote: {
-    fontStyle: 'italic' as const,
-  } as const,
+  card: themeStyle('tabs_dailyExpenses_1', {  }, getStyleTheme('auto', null)),
+  headerRow: themeStyle('tabs_dailyExpenses_2', {  }, getStyleTheme('auto', null)),
+  dateLabel: themeStyle('tabs_dailyExpenses_3', {  }, getStyleTheme('auto', null)),
+  dayTotal: themeStyle('tabs_dailyExpenses_4', {  }, getStyleTheme('auto', null)),
+  categoryRow: themeStyle('tabs_dailyExpenses_5', {  }, getStyleTheme('auto', null)),
+  emptyNote: themeStyle('tabs_dailyExpenses_6', {  }, getStyleTheme('auto', null)),
 };
 
 const formatDateLabel = (iso: string): string => {
@@ -180,7 +166,7 @@ const buildDateRange = (trip: Trip | null): string[] => {
 };
 
 const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
-  theme,
+  theme: _providedTheme,
   backendUrl,
   headers,
   jsonHeaders,
@@ -199,6 +185,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   allowOfflineAdd = false,
   pendingExpenses,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null);
   const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
   const tripPendingEntries = useMemo(
@@ -605,9 +593,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     );
   }
 
-  const fullWidthExpenseField = isNarrowLayout ? { flexBasis: '100%', minWidth: '100%', maxWidth: '100%' } : null;
-  const narrowSelectField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 150, minWidth: 132, maxWidth: '100%' } : null;
-  const narrowAmountField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 120, minWidth: 120, maxWidth: '100%' } : null;
+  const fullWidthExpenseField = isNarrowLayout ? themeStyle('tabs_dailyExpenses_7', {  }, (theme ?? _styleTheme)) : null;
+  const narrowSelectField = isNarrowLayout ? themeStyle('tabs_dailyExpenses_8', {  }, (theme ?? _styleTheme)) : null;
+  const narrowAmountField = isNarrowLayout ? themeStyle('tabs_dailyExpenses_9', {  }, (theme ?? _styleTheme)) : null;
   const categoryFieldStyle = [styles.expenseFieldCategory, narrowSelectField];
   const currencyFieldStyle = [styles.expenseFieldCurrency, narrowSelectField];
   const dateFieldStyle = isNarrowLayout
@@ -618,21 +606,17 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const narrowCardsScrollStyle = isNarrowLayout
     ? [
         styles.dailyExpensesVerticalScroll,
-        { maxHeight: Math.max(360, viewportHeight - 220), flexGrow: 0 },
+        themeStyle('tabs_dailyExpenses_10', { viewportHeight: viewportHeight }, (theme ?? _styleTheme)),
       ]
     : styles.dailyExpensesVerticalScroll;
-  const webFieldBase = {
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box',
-  };
+  const webFieldBase = themeStyle('tabs_dailyExpenses_11', {  }, (theme ?? _styleTheme));
 
   return (
     <View style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Daily Expenses</Text>
         <TouchableOpacity
-          style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+          style={[styles.button, styles.smallButton, themeStyle('tabs_dailyExpenses_12', {  }, (theme ?? _styleTheme))]}
           onPress={openAddExpenseModal}
           disabled={readOnly && !(allowOfflineAdd && pendingExpenses)}
           testID="expense-add-button"
@@ -676,7 +660,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           accept="image/*"
           capture="environment"
           onChange={(event) => handleReceiptFile(event.target.files?.[0])}
-          style={{ display: 'none' }}
+          style={themeStyle('tabs_dailyExpenses_13', {  }, (theme ?? _styleTheme))}
           data-testid="expense-receipt-input"
         />
       ) : null}
@@ -697,7 +681,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
             const { payload } = entry.args;
             return (
               <View key={entry.id} style={styles.groupRow} testID={`expense-pending-${entry.id}`}>
-                <View style={{ flex: 1 }}>
+                <View style={themeStyle('tabs_dailyExpenses_14', {  }, (theme ?? _styleTheme))}>
                   <Text style={styles.cellText}>
                     {formatDateLong(payload.expenseDate)} · {payload.category}
                     {payload.vendor ? ` · ${payload.vendor}` : ''} · {payload.amount.toFixed(2)} {payload.currency}
@@ -790,13 +774,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           cardStyle={[styles.modalCard, styles.expenseModalCard]}
         >
               {receiptNotice ? (
-                <Text style={[styles.helperText, { marginBottom: 8 }]} testID="expense-receipt-review-notice">
+                <Text style={[styles.helperText, themeStyle('tabs_dailyExpenses_15', {  }, (theme ?? _styleTheme))]} testID="expense-receipt-review-notice">
                   {receiptNotice}
                 </Text>
               ) : null}
               <View style={styles.row}>
                 <TouchableOpacity
-                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+                  style={[styles.button, styles.smallButton, themeStyle('tabs_dailyExpenses_16', {  }, (theme ?? _styleTheme))]}
                   onPress={cancelAddExpenseModal}
                   accessibilityRole="button"
                   accessibilityLabel="Cancel expense"
@@ -805,7 +789,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   <Text style={styles.buttonText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.expenseModalScroll} contentContainerStyle={{ gap: 8, overflow: 'visible', paddingBottom: 8 }}>
+              <ScrollView style={styles.expenseModalScroll} contentContainerStyle={themeStyle('tabs_dailyExpenses_17', {  }, (theme ?? _styleTheme))}>
                 <View style={styles.expenseFieldRow}>
                   <DateField
                     value={draftDate}
@@ -825,11 +809,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     placeholder="Category"
                     title="Expense category"
                     style={categoryFieldStyle}
-                    webStyle={toWebStyle(styles.input, {
-                      ...toWebStyle(styles.expenseFieldCategory),
-                      ...toWebStyle(narrowSelectField),
-                      ...webFieldBase,
-                    })}
+                    webStyle={toWebStyle(styles.input, themeStyle('expenseSelectWeb1', { toWebStyle: toWebStyle, styles: styles, narrowSelectField: narrowSelectField, webFieldBase: webFieldBase }, _styleTheme))}
                     onChange={(value) => setDraftCategory((value || 'Other') as CategoryOption)}
                   />
                   <SelectField
@@ -839,11 +819,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     placeholder="Currency"
                     title="Expense currency"
                     style={currencyFieldStyle}
-                    webStyle={toWebStyle(styles.input, {
-                      ...toWebStyle(styles.expenseFieldCurrency),
-                      ...toWebStyle(narrowSelectField),
-                      ...webFieldBase,
-                    })}
+                    webStyle={toWebStyle(styles.input, themeStyle('expenseSelectWeb2', { toWebStyle: toWebStyle, styles: styles, narrowSelectField: narrowSelectField, webFieldBase: webFieldBase }, _styleTheme))}
                     onChange={setDraftCurrency}
                   />
                   <DraftTextInput
@@ -904,7 +880,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <ScrollView
           testID="daily-expenses-cards"
           style={narrowCardsScrollStyle}
-          contentContainerStyle={[styles.dailyExpensesVerticalContent, { paddingBottom: 24 }]}
+          contentContainerStyle={[styles.dailyExpensesVerticalContent, themeStyle('tabs_dailyExpenses_18', {  }, (theme ?? _styleTheme))]}
           nestedScrollEnabled
           showsVerticalScrollIndicator
           keyboardShouldPersistTaps="handled"
@@ -1008,15 +984,15 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           cardStyle={[styles.modalCard, styles.detailModal]}
         >
               <View style={styles.row}>
-                <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => setDetailTarget(null)}>
+                <TouchableOpacity style={[styles.button, styles.smallButton, themeStyle('tabs_dailyExpenses_19', {  }, (theme ?? _styleTheme))]} onPress={() => setDetailTarget(null)}>
                   <Text style={styles.buttonText}>Close</Text>
                 </TouchableOpacity>
               </View>
               {pendingDeleteExpense && detailItems.some((e) => e.id === pendingDeleteExpense.id) ? (
                 // Inline confirm — a second stacked Modal can render behind this one on web.
-                <View testID="expense-detail-delete-confirm" style={{ borderWidth: 1, borderColor: theme?.colors?.alert ?? '#b91c1c', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                <View testID="expense-detail-delete-confirm" style={themeStyle('tabs_dailyExpenses_20', { theme: theme }, (theme ?? _styleTheme))}>
                   <Text style={styles.cellText}>Delete this ${(Number(pendingDeleteExpense.amount) || 0).toFixed(2)} expense? This cannot be undone.</Text>
-                  <View style={[styles.row, { marginTop: 8, gap: 8 }]}>
+                  <View style={[styles.row, themeStyle('tabs_dailyExpenses_21', {  }, (theme ?? _styleTheme))]}>
                     <TouchableOpacity testID="expense-detail-delete-confirm-yes" accessibilityRole="button" accessibilityLabel="Confirm delete" style={[styles.button, styles.smallButton, styles.tableActionButtonDanger]} onPress={() => deleteExpense(pendingDeleteExpense)}>
                       <Text style={styles.buttonText}>Delete</Text>
                     </TouchableOpacity>
@@ -1026,8 +1002,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   </View>
                 </View>
               ) : null}
-              <HorizontalTableScroll style={{ marginTop: 8 }} contentContainerStyle={styles.tableScrollContent}>
-                <View style={[styles.table, { minWidth: 620 }]}>
+              <HorizontalTableScroll style={themeStyle('tabs_dailyExpenses_22', {  }, (theme ?? _styleTheme))} contentContainerStyle={styles.tableScrollContent}>
+                <View style={[styles.table, themeStyle('tabs_dailyExpenses_23', {  }, (theme ?? _styleTheme))]}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
                     {['Description', 'For', 'Payer', 'Amount', 'Action'].map((header, index) => (
                       <View key={header} style={[styles.cell, fixedTableColumn(index === 3 ? 90 : 150), index === 4 && styles.lastCell]}>
@@ -1035,7 +1011,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                       </View>
                     ))}
                   </View>
-                  <ScrollView style={{ maxHeight: viewportHeight ? Math.min(360, viewportHeight * 0.4) : 360 }} nestedScrollEnabled>
+                  <ScrollView style={themeStyle('tabs_dailyExpenses_24', { viewportHeight: viewportHeight }, (theme ?? _styleTheme))} nestedScrollEnabled>
                     {detailItems.map((expense, index) => (
                       <View key={expense.id} style={[styles.tableRow, index === detailItems.length - 1 && styles.lastRow]}>
                         <View style={[styles.cell, fixedTableColumn(150)]}>
@@ -1055,7 +1031,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                           <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
                         </View>
                         <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>
-                          <View style={[styles.actionCell, { flexWrap: 'wrap' }]}>
+                          <View style={[styles.actionCell, themeStyle('tabs_dailyExpenses_25', {  }, (theme ?? _styleTheme))]}>
                             <TouchableOpacity
                               style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
                               onPress={() => openEditExpenseModal(expense)}

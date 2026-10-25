@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { LocationOption } from './LocationSelector';
@@ -38,6 +40,7 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
   placeholder = 'Must See Attractions',
   title = 'Must See Attractions',
 }) => {
+  const _styleTheme = useStyleTheme();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<AttractionOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -191,12 +194,12 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
   const activeDropdownZIndex = showDropdown ? 800 : 1;
 
   return (
-    <View style={{ marginTop: 12, position: 'relative', zIndex: activeDropdownZIndex }} testID="must-see-attraction-selector-root">
-      <View style={[styles.row, { alignItems: 'flex-start', zIndex: activeDropdownZIndex }]}>
-        <View style={[styles.dropdown, { flex: 1 }]}>
+    <View style={themeStyle('components_MustSeeAttractionSelector_1', { activeDropdownZIndex: activeDropdownZIndex }, _styleTheme)} testID="must-see-attraction-selector-root">
+      <View style={[styles.row, themeStyle('components_MustSeeAttractionSelector_2', { activeDropdownZIndex: activeDropdownZIndex }, _styleTheme)]}>
+        <View style={[styles.dropdown, themeStyle('components_MustSeeAttractionSelector_3', {  }, _styleTheme)]}>
           <TextInput
             ref={inputRef}
-            style={[styles.input, { flex: 1 }]}
+            style={[styles.input, themeStyle('components_MustSeeAttractionSelector_4', {  }, _styleTheme)]}
             placeholder={placeholder}
             value={query}
             onChangeText={setQuery}
@@ -214,7 +217,7 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
                   onPress={() => handleAddSuggestion(item)}
                   testID={`must-see-suggestion-${item.id}`}
                 >
-                  <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                  <View style={[styles.row, themeStyle('components_MustSeeAttractionSelector_5', {  }, _styleTheme)]}>
                     <Text style={styles.bodyText}>{item.name}</Text>
                     <Text style={styles.helperText}>{helperLabel(item)}</Text>
                   </View>
@@ -227,7 +230,7 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
                   onPress={handleManualAdd}
                   testID="manual-must-see-option"
                 >
-                  <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                  <View style={[styles.row, themeStyle('components_MustSeeAttractionSelector_6', {  }, _styleTheme)]}>
                     <Text style={styles.bodyText}>Add "{query.trim()}"</Text>
                     <Text style={styles.helperText}>Manual Attraction</Text>
                   </View>
@@ -236,9 +239,9 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
             </View>
           )}
         </View>
-        {loading && <ActivityIndicator size="small" color="#0d6efd" style={{ marginLeft: 8 }} testID="must-see-loading" />}
+        {loading && <ActivityIndicator size="small" color={themeStyle('components_MustSeeAttractionSelector_11', {  }, _styleTheme)} style={themeStyle('components_MustSeeAttractionSelector_7', {  }, _styleTheme)} testID="must-see-loading" />}
         <TouchableOpacity
-          style={[styles.button, styles.smallButton, { marginLeft: 8 }]}
+          style={[styles.button, styles.smallButton, themeStyle('components_MustSeeAttractionSelector_8', {  }, _styleTheme)]}
           onPress={handleSubmit}
           testID="add-must-see-button"
           disabled={!canSearch}
@@ -248,13 +251,13 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
       </View>
 
       {!canSearch && (
-        <Text style={[styles.helperText, { marginTop: 4 }]}>
+        <Text style={[styles.helperText, themeStyle('components_MustSeeAttractionSelector_9', {  }, _styleTheme)]}>
           Select at least one destination, country, or state to load attractions.
         </Text>
       )}
 
       {selectedAttractions.length > 0 && (
-        <View style={[styles.row, { flexWrap: 'wrap', gap: 8, marginTop: 8 }]}>
+        <View style={[styles.row, themeStyle('components_MustSeeAttractionSelector_10', {  }, _styleTheme)]}>
           {selectedAttractions.map((item) => (
             <View key={`selected-attraction-${item.id}`} style={styles.payerChip} testID={`selected-attraction-${item.id}`}>
               <Text style={styles.cellText}>{item.name}</Text>

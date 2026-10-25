@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import FormField from './FormField';
@@ -9,14 +11,15 @@ type PasswordFieldProps = React.ComponentProps<typeof TextInput> & {
 };
 
 const PasswordField: React.FC<PasswordFieldProps> = ({ label, styles, testID, style, ...inputProps }) => {
+  const _styleTheme = useStyleTheme();
   const [visible, setVisible] = useState(false);
   return (
     <FormField label={label} styles={styles} testID={testID ? `${testID}-field` : undefined}>
-      <View style={{ position: 'relative' }}>
+      <View style={themeStyle('components_PasswordField_1', {  }, _styleTheme)}>
         <TextInput
           {...inputProps}
           testID={testID}
-          style={[style ?? styles.input, { paddingRight: 52 }]}
+          style={[style ?? styles.input, themeStyle('components_PasswordField_2', {  }, _styleTheme)]}
           secureTextEntry={!visible}
         />
         <TouchableOpacity
@@ -24,7 +27,7 @@ const PasswordField: React.FC<PasswordFieldProps> = ({ label, styles, testID, st
           accessibilityRole="button"
           accessibilityLabel={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
           testID={testID ? `${testID}-toggle` : undefined}
-          style={{ position: 'absolute', right: 8, top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: 8 }}
+          style={themeStyle('components_PasswordField_3', {  }, _styleTheme)}
         >
           <Text style={styles.cellText}>{visible ? 'Hide' : 'Show'}</Text>
         </TouchableOpacity>

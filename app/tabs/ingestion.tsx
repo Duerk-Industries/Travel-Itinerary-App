@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import ImportSuggestionReview from '../components/ImportSuggestionReview';
 import type { ImportTripDraft, ImportForwarderTrust, Trip as DomainTrip } from '../../server/src/types';
 import AutomaticImportSettings from '../components/AutomaticImportSettings';
@@ -7,7 +10,7 @@ import { Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View 
 import Modal from '../components/KeyboardAwareModal';
 import { usePolling } from '../hooks/usePolling';
 import DateField from '../components/DateField';
-import type { AppTheme } from '../theme/theme';
+
 import { taskFailure, track } from '../utils/analytics/track';
 
 // Imports from the Imports tab carry no trip: items are assigned to a trip later, in review.
@@ -124,12 +127,14 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   backendUrl,
   headers,
   styles,
-  theme,
+  theme: _providedTheme,
   onNavigate,
   onAssignmentApplied,
   onCreateTripFromImport, initialReview, onInitialReviewHandled,
   userRole = 'user',
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const isAdmin = userRole === 'admin';
   const scope = `${backendUrl}:${JSON.stringify(headers)}`;
   const scopeRef = useRef(scope); scopeRef.current = scope;
@@ -545,7 +550,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
       ) : null}
       <View style={styles.row}>
         {isAdmin ? (
-          <TextInput style={[styles.input, { flex: 1, minWidth: 220 }]} value={search} onChangeText={setSearch} placeholder="Search provider or confirmation" />
+          <TextInput style={[styles.input, themeStyle('tabs_ingestion_1', {  }, (theme ?? _styleTheme))]} value={search} onChangeText={setSearch} placeholder="Search provider or confirmation" />
         ) : null}
         <TouchableOpacity style={styles.button} onPress={load}>
           <Text style={styles.buttonText}>Refresh</Text>
@@ -558,11 +563,11 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
       </View>
       {isAdmin ? (
         <View style={styles.row}>
-          <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={statusFilter} onChangeText={setStatusFilter} placeholder="Status or ALL" />
-          <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={sourceFilter} onChangeText={setSourceFilter} placeholder="Source or ALL" />
-          <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={typeFilter} onChangeText={setTypeFilter} placeholder="Type or ALL" />
-          <DateField value={dateFilter} onChange={setDateFilter} styles={styles} theme={theme} style={{ flex: 1, minWidth: 120 }} placeholder="Date from" testID="ingestion-date-filter" accessibilityLabel="Date from" />
-          <TextInput style={[styles.input, { flex: 1, minWidth: 100 }]} value={confidenceFilter} onChangeText={setConfidenceFilter} placeholder="Min confidence" keyboardType="numeric" />
+          <TextInput style={[styles.input, themeStyle('tabs_ingestion_2', {  }, (theme ?? _styleTheme))]} value={statusFilter} onChangeText={setStatusFilter} placeholder="Status or ALL" />
+          <TextInput style={[styles.input, themeStyle('tabs_ingestion_3', {  }, (theme ?? _styleTheme))]} value={sourceFilter} onChangeText={setSourceFilter} placeholder="Source or ALL" />
+          <TextInput style={[styles.input, themeStyle('tabs_ingestion_4', {  }, (theme ?? _styleTheme))]} value={typeFilter} onChangeText={setTypeFilter} placeholder="Type or ALL" />
+          <DateField value={dateFilter} onChange={setDateFilter} styles={styles} theme={theme} style={themeStyle('tabs_ingestion_5', {  }, (theme ?? _styleTheme))} placeholder="Date from" testID="ingestion-date-filter" accessibilityLabel="Date from" />
+          <TextInput style={[styles.input, themeStyle('tabs_ingestion_6', {  }, (theme ?? _styleTheme))]} value={confidenceFilter} onChangeText={setConfidenceFilter} placeholder="Min confidence" keyboardType="numeric" />
         </View>
       ) : null}
 
@@ -706,7 +711,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
               <Text style={styles.dangerButtonText}>Delete Selected</Text>
             </TouchableOpacity>
             <TextInput
-              style={[styles.input, { flex: 1, minWidth: 180 }]}
+              style={[styles.input, themeStyle('tabs_ingestion_7', {  }, (theme ?? _styleTheme))]}
               value={bulkAssignTripId}
               onChangeText={setBulkAssignTripId}
               placeholder="Trip id for bulk assign"
@@ -727,10 +732,10 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
         {filteredItems.map((item) => {
           const checked = selectedIds.has(item.id);
           return (
-            <View key={item.id} style={[styles.row, { alignItems: 'flex-start' }]}>
+            <View key={item.id} style={[styles.row, themeStyle('tabs_ingestion_8', {  }, (theme ?? _styleTheme))]}>
               {isAdmin ? (
                 <TouchableOpacity
-                  style={[styles.button, { paddingHorizontal: 10 }]}
+                  style={[styles.button, themeStyle('tabs_ingestion_9', {  }, (theme ?? _styleTheme))]}
                   onPress={() => toggleSelected(item.id)}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked }}
@@ -740,7 +745,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                 </TouchableOpacity>
               ) : null}
               <TouchableOpacity
-                style={[styles.flightRow, { flex: 1 }]}
+                style={[styles.flightRow, themeStyle('tabs_ingestion_10', {  }, (theme ?? _styleTheme))]}
                 onPress={() => {
                   const now = Date.now();
                   const last = lastTapRef.current;
@@ -787,8 +792,8 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
       {selectedItem ? (
         <Modal transparent animationType="fade" visible onRequestClose={() => setSelectedItem(null)}>
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalCard, { maxWidth: 720 }]}>
-              <ScrollView style={{ maxHeight: 520 }}>
+            <View style={[styles.modalCard, themeStyle('tabs_ingestion_11', {  }, (theme ?? _styleTheme))]}>
+              <ScrollView style={themeStyle('tabs_ingestion_12', {  }, (theme ?? _styleTheme))}>
                 <Text style={styles.sectionTitle}>Review Item</Text>
                 {error && <Text accessibilityRole="alert" style={styles.warningText}>{error}</Text>}
                 <Text style={styles.helperText}>{isAdmin ? `${selectedItem.itemType} • ${selectedItem.status}` : `${selectedItem.itemType.replace(/_/g, ' ')} · Review before adding`}</Text>
@@ -813,14 +818,14 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                 <Text style={styles.modalLabel}>Confirmation</Text>
                 <TextInput style={styles.input} editable={detailReady && mutationScope !== scope} value={editConfirmation} onChangeText={setEditConfirmation} />
                 <Text style={styles.modalLabel}>Notes</Text>
-                <TextInput style={[styles.input, { minHeight: 100, textAlignVertical: 'top' }]} multiline editable={detailReady && mutationScope !== scope} value={editNotes} onChangeText={setEditNotes} />
+                <TextInput style={[styles.input, themeStyle('tabs_ingestion_13', {  }, (theme ?? _styleTheme))]} multiline editable={detailReady && mutationScope !== scope} value={editNotes} onChangeText={setEditNotes} />
                 <Text style={styles.modalLabel}>Assign to Trip</Text>
-                {choices.map(choice => <TouchableOpacity key={choice.tripId} accessibilityRole="button" disabled={!detailReady || mutationScope === scope} style={[styles.navButton, { minHeight: 44 }]}
+                {choices.map(choice => <TouchableOpacity key={choice.tripId} accessibilityRole="button" disabled={!detailReady || mutationScope === scope} style={[styles.navButton, themeStyle('tabs_ingestion_14', {  }, (theme ?? _styleTheme))]}
                   onPress={() => { setAssignTripId(choice.tripId); setSuggestionReasons(choice.reasons); }}>
                   <Text style={styles.navButtonText}>Suggestion: {choice.tripName || trips.find(trip => trip.id === choice.tripId)?.name || 'Trip'}</Text>
                   <Text style={styles.helperText}>{choice.reasons.join('. ')}</Text>
                 </TouchableOpacity>)}
-                {tripDraft && onCreateTripFromImport && <TouchableOpacity accessibilityRole="button" style={[styles.button, { minHeight: 44 }]} disabled={!detailReady || mutationScope === scope}
+                {tripDraft && onCreateTripFromImport && <TouchableOpacity accessibilityRole="button" style={[styles.button, themeStyle('tabs_ingestion_15', {  }, (theme ?? _styleTheme))]} disabled={!detailReady || mutationScope === scope}
                   onPress={() => { editRequest.current += 1; setSelectedItem(null); onCreateTripFromImport(selectedItem.id, tripDraft); }}>
                   <Text style={styles.buttonText}>Create a trip from this booking</Text>
                 </TouchableOpacity>}

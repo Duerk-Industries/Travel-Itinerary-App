@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useMemo } from 'react';
 import { Platform, Text, View } from 'react-native';
 
@@ -7,26 +9,22 @@ type DestinationPlaceholderCardProps = {
   testID?: string;
 };
 
-const palettes = [
-  ['#12344d', '#3a7d8c'], ['#3f2b63', '#b06ab3'], ['#7b341e', '#d97706'],
-  ['#164e63', '#0f766e'], ['#334155', '#64748b'], ['#365314', '#65a30d'],
-];
+const palettes = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_DestinationPlaceholderCard_6', {  }, _theme);
 
 const hashText = (value: string): number => Array.from(value).reduce((hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0, 7);
 
-const labelShadow = Platform.OS === 'web'
-  ? { textShadow: '0px 1px 3px rgba(0,0,0,0.3)' }
-  : { textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 };
+const labelShadow = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_DestinationPlaceholderCard_7', { Platform: Platform }, _theme);
 
 const DestinationPlaceholderCard: React.FC<DestinationPlaceholderCardProps> = ({ title, style, testID }) => {
+  const _styleTheme = useStyleTheme();
   const label = String(title ?? '').trim() || 'Your destination';
-  const [start, end] = useMemo(() => palettes[hashText(label) % palettes.length], [label]);
+  const [start, end] = useMemo(() => palettes(_styleTheme)[hashText(label) % palettes(_styleTheme).length], [label, _styleTheme]);
   return (
-    <View style={[style, { overflow: 'hidden', backgroundColor: start }]} testID={testID}>
-      <View style={{ position: 'absolute', left: '-15%', top: '-35%', width: '75%', height: '130%', borderRadius: 999, backgroundColor: end, opacity: 0.75, transform: [{ rotate: '-18deg' }] }} />
-      <View style={{ position: 'absolute', right: '-20%', bottom: '-45%', width: '80%', height: '120%', borderRadius: 999, backgroundColor: start, opacity: 0.7, transform: [{ rotate: '22deg' }] }} />
-      <View style={{ flex: 1, justifyContent: 'flex-end', padding: 18 }}>
-        <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800', ...labelShadow }} numberOfLines={2}>{label}</Text>
+    <View style={[style, themeStyle('components_DestinationPlaceholderCard_1', { start: start }, _styleTheme)]} testID={testID}>
+      <View style={themeStyle('components_DestinationPlaceholderCard_2', { end: end }, _styleTheme)} />
+      <View style={themeStyle('components_DestinationPlaceholderCard_3', { start: start }, _styleTheme)} />
+      <View style={themeStyle('components_DestinationPlaceholderCard_4', {  }, _styleTheme)}>
+        <Text style={themeStyle('components_DestinationPlaceholderCard_5', { labelShadow: labelShadow(_styleTheme) }, _styleTheme)} numberOfLines={2}>{label}</Text>
       </View>
     </View>
   );

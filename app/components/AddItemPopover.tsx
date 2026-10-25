@@ -1,7 +1,10 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
-import type { AppTheme } from '../theme/theme';
+
 
 export type AddItemKind = 'activity' | 'place' | 'note' | 'checklist';
 
@@ -25,7 +28,9 @@ const OPTIONS: Array<{ kind: AddItemKind; icon: string; label: string; descripti
   { kind: 'activity', icon: '🗓️', label: 'Add a custom activity', description: 'Time + activity + cost' },
 ];
 
-const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onClose, hiddenKinds, theme }) => {
+const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onClose, hiddenKinds, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const visibleOptions = hiddenKinds?.length ? OPTIONS.filter((opt) => !hiddenKinds.includes(opt.kind)) : OPTIONS;
   const colors = theme?.colors;
   return (
@@ -36,15 +41,15 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
     onRequestClose={onClose}
     accessibilityViewIsModal
   >
-    <Pressable style={styles.overlay} onPress={onClose} testID="add-item-popover-overlay">
+    <Pressable style={styles((theme ?? _styleTheme)).overlay} onPress={onClose} testID="add-item-popover-overlay">
       <Pressable
-        style={[styles.menu, colors && { backgroundColor: colors.surface }]}
+        style={[styles((theme ?? _styleTheme)).menu, colors && themeStyle('components_AddItemPopover_1', { colors: colors }, (theme ?? _styleTheme))]}
         onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
         accessibilityRole="menu"
         testID="add-item-popover"
       >
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
-        <Text style={[styles.title, colors && { color: colors.text }]}>Add to itinerary</Text>
+        <Text style={[styles((theme ?? _styleTheme)).title, colors && themeStyle('components_AddItemPopover_2', { colors: colors }, (theme ?? _styleTheme))]}>Add to itinerary</Text>
         {visibleOptions.map((opt) => (
           <Pressable
             key={opt.kind}
@@ -52,21 +57,21 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
             accessibilityRole="menuitem"
             accessibilityLabel={opt.label}
             onPress={() => onSelect(opt.kind)}
-            style={({ pressed }: { pressed: boolean }) => [styles.option, pressed && { backgroundColor: colors?.surfaceMuted ?? '#f3f4f6' }]}
+            style={({ pressed }: { pressed: boolean }) => [styles((theme ?? _styleTheme)).option, pressed && themeStyle('components_AddItemPopover_3', { colors: colors }, (theme ?? _styleTheme))]}
           >
-            <Text style={styles.optionIcon}>{opt.icon}</Text>
-            <View style={styles.optionTextWrap}>
-              <Text style={[styles.optionLabel, colors && { color: colors.text }]}>{opt.label}</Text>
-              <Text style={[styles.optionDescription, colors && { color: colors.textMuted }]}>{opt.description}</Text>
+            <Text style={styles((theme ?? _styleTheme)).optionIcon}>{opt.icon}</Text>
+            <View style={styles((theme ?? _styleTheme)).optionTextWrap}>
+              <Text style={[styles((theme ?? _styleTheme)).optionLabel, colors && themeStyle('components_AddItemPopover_4', { colors: colors }, (theme ?? _styleTheme))]}>{opt.label}</Text>
+              <Text style={[styles((theme ?? _styleTheme)).optionDescription, colors && themeStyle('components_AddItemPopover_5', { colors: colors }, (theme ?? _styleTheme))]}>{opt.description}</Text>
             </View>
           </Pressable>
         ))}
         <Pressable
           testID="add-item-option-cancel"
-          style={({ pressed }: { pressed: boolean }) => [styles.cancel, pressed && { backgroundColor: colors?.surfaceMuted ?? '#f3f4f6' }]}
+          style={({ pressed }: { pressed: boolean }) => [styles((theme ?? _styleTheme)).cancel, pressed && themeStyle('components_AddItemPopover_6', { colors: colors }, (theme ?? _styleTheme))]}
           onPress={onClose}
         >
-          <Text style={[styles.cancelText, colors && { color: colors.textMuted }]}>Cancel</Text>
+          <Text style={[styles((theme ?? _styleTheme)).cancelText, colors && themeStyle('components_AddItemPopover_7', { colors: colors }, (theme ?? _styleTheme))]}>Cancel</Text>
         </Pressable>
         </ScrollView>
       </Pressable>
@@ -75,85 +80,6 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  menu: {
-    width: '100%',
-    maxWidth: 360,
-    maxHeight: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 4px 12px rgba(0,0,0,0.25)' }
-      : {
-        elevation: 6,
-        shadowColor: '#000',
-        shadowOpacity: 0.25,
-        shadowOffset: { width: 0, height: 4 },
-        shadowRadius: 12,
-      }),
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1f2937',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    gap: 12,
-  },
-  optionPressed: {
-    backgroundColor: 'rgba(0,0,0,0.06)',
-  },
-  optionIcon: {
-    fontSize: 20,
-    width: 28,
-    textAlign: 'center',
-  },
-  optionTextWrap: {
-    flex: 1,
-  },
-  optionLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  optionDescription: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  cancel: {
-    marginTop: 6,
-    alignSelf: 'flex-end',
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  cancelPressed: {
-    backgroundColor: 'rgba(0,0,0,0.06)',
-  },
-  cancelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_AddItemPopover_8', { StyleSheet: StyleSheet, Platform: Platform }, _theme);
 
 export default AddItemPopover;

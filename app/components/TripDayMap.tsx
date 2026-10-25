@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import { useAutomaticMapLocations } from '../hooks/useAutomaticMapLocations';
 import TripMap from './TripMap';
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
@@ -20,26 +22,21 @@ type TripDayMapProps = {
 // hand -- same reasoning as TripMapPoint in utils/googleMaps.ts.
 const LEGEND_ORDER: TripMapPointKind[] = ['flight', 'lodging', 'activity', 'car_rental'];
 
-const LEGEND_ENTRY: Record<TripMapPointKind, { label: string; color: string }> = {
-  flight: { label: 'Flight', color: '#4285F4' },
-  lodging: { label: 'Lodging', color: '#FB8C00' },
-  activity: { label: 'Activity', color: '#34A853' },
-  car_rental: { label: 'Car rental', color: '#9C27B0' },
-};
+const LEGEND_ENTRY = (_theme: import('../theme/theme').AppTheme): Record<TripMapPointKind, { label: string; color: string }> => themeStyle('components_TripDayMap_1', {  }, _theme);
 
 // Small teardrop pin, same silhouette as the markers Google Static Maps draws
 // on the image itself, so the legend keys visually match what's pinned above.
-const LegendPin: React.FC<{ color: string }> = ({ color }) => (
+const LegendPin: React.FC<{ color: string }> = ({ color }) => { const _styleTheme = useStyleTheme(); return ((
   <Svg width={14} height={18} viewBox="0 0 24 24">
     <Path
       d="M12 1.5C7.31 1.5 3.5 5.28 3.5 9.9c0 6.2 7.2 12.02 8.06 12.7a.7.7 0 0 0 .88 0c.86-.68 8.06-6.5 8.06-12.7 0-4.62-3.81-8.4-8.5-8.4z"
       fill={color}
-      stroke="#ffffff"
+      stroke={themeStyle('components_TripDayMap_3', {  }, _styleTheme)}
       strokeWidth={1}
     />
-    <Circle cx={12} cy={9.9} r={2.9} fill="#ffffff" />
+    <Circle cx={12} cy={9.9} r={2.9} fill={themeStyle('components_TripDayMap_4', {  }, _styleTheme)} />
   </Svg>
-);
+)); };
 
 /**
  * Static, multi-pin map for one day of an itinerary (flights, lodging,
@@ -52,6 +49,7 @@ const LegendPin: React.FC<{ color: string }> = ({ color }) => (
  * plain color box instead of surfacing a fetch failure to the user.
  */
 const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, requestHeaders, testID, tripId, dayDate, onOpenChange }) => {
+  const _styleTheme = useStyleTheme();
   const [nativeEnabled, setNativeEnabled] = useState(false);
   const [canLocate, setCanLocate] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
@@ -129,89 +127,40 @@ const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, re
   if (!mapUrl || !imageSource || failed) return null;
 
   return (
-    <View style={styles.wrap} testID={testID}>
+    <View style={styles(_styleTheme).wrap} testID={testID}>
       <Image
-        style={styles.image}
+        style={styles(_styleTheme).image}
         source={imageSource}
         resizeMode="cover"
         accessibilityLabel="Map of today's stops"
         onError={() => setFailed(true)}
       />
       {presentKinds.length ? (
-        <View style={styles.legend} testID={testID ? `${testID}-legend` : undefined}>
-          <Text style={styles.legendTitle}>Map key</Text>
-          <View style={styles.legendRow}>
+        <View style={styles(_styleTheme).legend} testID={testID ? `${testID}-legend` : undefined}>
+          <Text style={styles(_styleTheme).legendTitle}>Map key</Text>
+          <View style={styles(_styleTheme).legendRow}>
             {presentKinds.map((kind) => {
-              const entry = LEGEND_ENTRY[kind];
+              const entry = LEGEND_ENTRY(_styleTheme)[kind];
               return (
                 <View
                   key={kind}
-                  style={styles.legendItem}
+                  style={styles(_styleTheme).legendItem}
                   accessibilityLabel={`${entry.label} pins are shown in this color`}
                 >
                   <LegendPin color={entry.color} />
-                  <Text style={styles.legendLabel}>{entry.label}</Text>
+                  <Text style={styles(_styleTheme).legendLabel}>{entry.label}</Text>
                 </View>
               );
             })}
           </View>
-          <Text style={styles.legendNote}>Letters (A, B, C…) show the order you'll visit each stop</Text>
+          <Text style={styles(_styleTheme).legendNote}>Letters (A, B, C…) show the order you'll visit each stop</Text>
         </View>
       ) : null}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  wrap: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  image: {
-    width: '100%',
-    aspectRatio: 640 / 400,
-  },
-  legend: {
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 10,
-    gap: 8,
-  },
-  legendTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: '#94a3b8',
-  },
-  legendRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    rowGap: 8,
-    columnGap: 16,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#334155',
-  },
-  legendNote: {
-    fontSize: 11,
-    color: '#94a3b8',
-    fontStyle: 'italic',
-  },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_TripDayMap_2', { StyleSheet: StyleSheet }, _theme);
 
 const TripDayMap = memo(TripDayMapComponent);
 export default TripDayMap;

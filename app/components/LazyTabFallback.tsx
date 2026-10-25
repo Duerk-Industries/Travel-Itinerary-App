@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -9,25 +11,13 @@ type LazyTabFallbackProps = {
 const LazyTabFallback: React.FC<LazyTabFallbackProps> = ({
   label = 'Loading…',
   testID = 'lazy-tab-fallback',
-}) => (
-  <View style={styles.container} testID={testID}>
-    <ActivityIndicator size="large" color="#45B7C6" />
-    <Text style={styles.label}>{label}</Text>
+}) => { const _styleTheme = useStyleTheme(); return ((
+  <View style={styles(_styleTheme).container} testID={testID}>
+    <ActivityIndicator size="large" color={themeStyle('components_LazyTabFallback_2', {  }, _styleTheme)} />
+    <Text style={styles(_styleTheme).label}>{label}</Text>
   </View>
-);
+)); };
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 24,
-  },
-  label: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#6B7280',
-  },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_LazyTabFallback_1', { StyleSheet: StyleSheet }, _theme);
 
 export default LazyTabFallback;

@@ -1,10 +1,13 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Platform, Text, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
 import { mapColumns, ACTIVITY_HEADER_ALIASES, LODGING_HEADER_ALIASES, parseCsv, toActivityReviewRows, toCsv, toLodgingReviewRows, type ImportReviewRow } from '../utils/dataTransfer';
 import { pickCsvFile, shareCsvFile } from '../utils/dataTransferPlatform';
 import { taskFailure, track, type TaskFailure } from '../utils/analytics/track';
-import { getAppTheme, type AppTheme } from '../theme/theme';
+
 
 type Props = {
   entity: 'activities' | 'lodgings';
@@ -33,7 +36,9 @@ const createImportId = (): string => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
-const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tripId, tripStart, tripEnd, rows, styles, theme, enabledImport = false, enabledExport = false, readOnly = false, onImported }) => {
+const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tripId, tripStart, tripEnd, rows, styles, theme: _providedTheme, enabledImport = false, enabledExport = false, readOnly = false, onImported }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const colors = (theme ?? getAppTheme('light', 'light')).colors;
   const [reviewRows, setReviewRows] = useState<Array<ImportReviewRow<Record<string, unknown>>>>([]);
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
@@ -138,24 +143,24 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
 
   if ((!enabledImport || readOnly) && !enabledExport) return null;
   return <>
-    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+    <View style={themeStyle('components_CsvTransferControls_1', {  }, (theme ?? _styleTheme))}>
       {enabledImport && !readOnly ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Import ${entity} CSV`} style={styles.button} onPress={importCsv} testID={`${entity}-import`}><Text style={styles.buttonText}>Import CSV</Text></TouchableOpacity> : null}
       {enabledExport ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Export ${entity} CSV`} style={styles.outlineButton ?? styles.button} onPress={exportCsv} testID={`${entity}-export`}><Text style={styles.buttonText}>Export CSV</Text></TouchableOpacity> : null}
     </View>
     <Modal visible={modalVisible} animationType="slide" onRequestClose={cancelReview}>
-      <View style={{ flex: 1, padding: 16, paddingTop: Platform.OS === 'web' ? 16 : 48, backgroundColor: colors.surface }}>
-        <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 8, color: colors.text }}>Review {entity}</Text>
-        <Text style={{ marginBottom: 12, color: colors.textMuted }}>{visibleRows.length} rows selected; {reviewRows.length - visibleRows.length} skipped.{blockingRows.length ? ` ${blockingRows.length} rows need correction or skipping.` : ''}</Text>
+      <View style={themeStyle('components_CsvTransferControls_2', { Platform: Platform, colors: colors }, (theme ?? _styleTheme))}>
+        <Text style={themeStyle('components_CsvTransferControls_3', { colors: colors }, (theme ?? _styleTheme))}>Review {entity}</Text>
+        <Text style={themeStyle('components_CsvTransferControls_4', { colors: colors }, (theme ?? _styleTheme))}>{visibleRows.length} rows selected; {reviewRows.length - visibleRows.length} skipped.{blockingRows.length ? ` ${blockingRows.length} rows need correction or skipping.` : ''}</Text>
         <FlatList
-          style={{ flex: 1 }}
+          style={themeStyle('components_CsvTransferControls_5', {  }, (theme ?? _styleTheme))}
           data={reviewRows}
           keyExtractor={(row) => String(row.sourceRow)}
           initialNumToRender={24}
           windowSize={8}
           removeClippedSubviews={Platform.OS !== 'web'}
-          renderItem={({ item: row }) => <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: excluded.has(row.sourceRow) ? colors.surfaceMuted : colors.surface }}><Text style={{ fontWeight: '600', color: colors.text }}>Source row {row.sourceRow}: {String(row.fields.name ?? '')}</Text><Text style={{ color: colors.textMuted }}>{row.errors.length ? row.errors.map((issue) => issue.message).join(' ') : row.warnings.map((issue) => issue.message).join(' ') || 'Ready to import'}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={`${excluded.has(row.sourceRow) ? 'Include' : 'Skip'} source row ${row.sourceRow}`} onPress={() => setExcluded((current) => { const next = new Set(current); if (next.has(row.sourceRow)) next.delete(row.sourceRow); else next.add(row.sourceRow); return next; })}><Text style={{ color: theme?.mode === 'dark' ? colors.link : colors.primary, marginTop: 6 }}>{excluded.has(row.sourceRow) ? 'Include row' : 'Skip row'}</Text></TouchableOpacity></View>}
+          renderItem={({ item: row }) => <View style={themeStyle('components_CsvTransferControls_6', { colors: colors, excluded: excluded, row: row }, (theme ?? _styleTheme))}><Text style={themeStyle('components_CsvTransferControls_7', { colors: colors }, (theme ?? _styleTheme))}>Source row {row.sourceRow}: {String(row.fields.name ?? '')}</Text><Text style={themeStyle('components_CsvTransferControls_8', { colors: colors }, (theme ?? _styleTheme))}>{row.errors.length ? row.errors.map((issue) => issue.message).join(' ') : row.warnings.map((issue) => issue.message).join(' ') || 'Ready to import'}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={`${excluded.has(row.sourceRow) ? 'Include' : 'Skip'} source row ${row.sourceRow}`} onPress={() => setExcluded((current) => { const next = new Set(current); if (next.has(row.sourceRow)) next.delete(row.sourceRow); else next.add(row.sourceRow); return next; })}><Text style={themeStyle('components_CsvTransferControls_9', { theme: theme, colors: colors }, (theme ?? _styleTheme))}>{excluded.has(row.sourceRow) ? 'Include row' : 'Skip row'}</Text></TouchableOpacity></View>}
         />
-        <View style={{ flexDirection: 'row', gap: 10, paddingTop: 12 }}><TouchableOpacity style={[styles.outlineButton ?? styles.button, { minHeight: 44, justifyContent: 'center' }]} onPress={cancelReview} disabled={busy}><Text style={[styles.buttonText, { color: styles.outlineButton ? colors.text : '#0B1726' }]}>Cancel</Text></TouchableOpacity><TouchableOpacity style={[styles.button, { minHeight: 44, justifyContent: 'center' }]} onPress={commit} disabled={busy || !visibleRows.length || blockingRows.length > 0}><Text style={styles.buttonText}>{busy ? 'Importing…' : 'Import selected'}</Text></TouchableOpacity></View>
+        <View style={themeStyle('components_CsvTransferControls_10', {  }, (theme ?? _styleTheme))}><TouchableOpacity style={[styles.outlineButton ?? styles.button, themeStyle('components_CsvTransferControls_11', {  }, (theme ?? _styleTheme))]} onPress={cancelReview} disabled={busy}><Text style={[styles.buttonText, themeStyle('components_CsvTransferControls_12', { styles: styles, colors: colors }, (theme ?? _styleTheme))]}>Cancel</Text></TouchableOpacity><TouchableOpacity style={[styles.button, themeStyle('components_CsvTransferControls_13', {  }, (theme ?? _styleTheme))]} onPress={commit} disabled={busy || !visibleRows.length || blockingRows.length > 0}><Text style={styles.buttonText}>{busy ? 'Importing…' : 'Import selected'}</Text></TouchableOpacity></View>
       </View>
     </Modal>
   </>;

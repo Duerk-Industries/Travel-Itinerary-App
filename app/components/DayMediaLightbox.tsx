@@ -1,4 +1,9 @@
 // @ts-nocheck
+import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // Tiled grid of every photo/video for a day, opened by tapping the DayMediaGallery default view.
 // Tapping a photo tile enlarges it inline; tapping a video tile plays it inline (via the same
 // platform-conditional BlogMediaPreview branch the default view already uses).
@@ -51,16 +56,19 @@ type DayMediaLightboxProps = {
 
 // PRD §6.5's breakpoint is expressed elsewhere in this feature as "mobile (< 700px)" (§6.9) — reused
 // here rather than inventing a second breakpoint for the same rail/sheet decision.
-const WIDE_LAYOUT_MIN_WIDTH = 700;
+const WIDE_LAYOUT_MIN_WIDTH = layoutMetrics.DayMediaLightbox_WIDE_LAYOUT_MIN_WIDTH;
 
 const DayMediaLightbox = ({
-  visible, items, onClose, dayDate, styles, textColor, mutedColor, borderColor = '#ccd4df', backgroundColor,
+  visible, items, onClose, dayDate, styles, textColor, mutedColor, borderColor: _borderColorOverride, backgroundColor,
   canRemove = false, removing = false, onRemove = () => {},
-  canEngage = false, canReact = canEngage, getEngagementSummary, onToggleReaction, onReactionError, theme,
+  canEngage = false, canReact = canEngage, getEngagementSummary, onToggleReaction, onReactionError, theme: _providedTheme,
   currentUserId = null, canModerate = false, audienceLabel = null, getComments,
   onPostComment, onEditComment, onDeleteComment, onReportComment, onHideComment, onUnhideComment,
   onShowEarlierReplies, onCommentError,
 }: DayMediaLightboxProps) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const borderColor = _borderColorOverride ?? themeStyle('components_DayMediaLightbox_32', {  }, (theme ?? _styleTheme));
   const [expandedIndex, setExpandedIndex] = useState(null);
   const { width } = useWindowDimensions();
   const wideLayout = width >= WIDE_LAYOUT_MIN_WIDTH;
@@ -79,14 +87,14 @@ const DayMediaLightbox = ({
       styles={styles}
       onClose={close}
       useNativeModal
-      cardStyle={{ maxWidth: 720, width: '92%', maxHeight: '85%' }}
+      cardStyle={themeStyle('components_DayMediaLightbox_1', {  }, (theme ?? _styleTheme))}
     >
       {expandedItem ? (
-        <View style={{ flexDirection: wideLayout ? 'row' : 'column', gap: 12 }}>
-          <View style={{ flex: wideLayout ? 3 : undefined }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <View style={themeStyle('components_DayMediaLightbox_2', { wideLayout: wideLayout }, (theme ?? _styleTheme))}>
+          <View style={themeStyle('components_DayMediaLightbox_3', { wideLayout: wideLayout }, (theme ?? _styleTheme))}>
+            <View style={themeStyle('components_DayMediaLightbox_4', {  }, (theme ?? _styleTheme))}>
               <TouchableOpacity accessibilityRole="button" onPress={() => setExpandedIndex(null)}>
-                <Text style={{ color: textColor, fontWeight: '700' }}>‹ Back to all photos</Text>
+                <Text style={themeStyle('components_DayMediaLightbox_5', { textColor: textColor }, (theme ?? _styleTheme))}>‹ Back to all photos</Text>
               </TouchableOpacity>
               {canRemove ? (
                 <TouchableOpacity
@@ -94,16 +102,16 @@ const DayMediaLightbox = ({
                   accessibilityRole="button"
                   disabled={removing}
                   onPress={() => { onRemove(expandedItem); setExpandedIndex(null); }}
-                  style={{ backgroundColor: 'rgba(185,28,28,0.9)', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10 }}
+                  style={themeStyle('components_DayMediaLightbox_6', {  }, (theme ?? _styleTheme))}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>{removing ? 'Removing…' : 'Remove'}</Text>
+                  <Text style={themeStyle('components_DayMediaLightbox_7', {  }, (theme ?? _styleTheme))}>{removing ? 'Removing…' : 'Remove'}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
             <BlogMediaPreview item={expandedItem} backgroundColor={backgroundColor} />
-            {expandedItem.caption ? <Text style={{ color: mutedColor, marginTop: 6 }}>{expandedItem.caption}</Text> : null}
+            {expandedItem.caption ? <Text style={themeStyle('components_DayMediaLightbox_8', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{expandedItem.caption}</Text> : null}
             {canReact && getEngagementSummary && onToggleReaction ? (
-              <View style={{ marginTop: 6 }}>
+              <View style={themeStyle('components_DayMediaLightbox_9', {  }, (theme ?? _styleTheme))}>
                 <BlogReactionBar
                   testID={`lightbox-reactions-${expandedItem.assetId}`}
                   targetKind="asset"
@@ -123,11 +131,11 @@ const DayMediaLightbox = ({
             <View
               testID="lightbox-comment-rail"
               style={[
-                { flex: wideLayout ? 2 : undefined, borderColor, paddingTop: wideLayout ? 0 : 10 },
-                wideLayout ? { borderLeftWidth: 1, paddingLeft: 12 } : { borderTopWidth: 1 },
+                themeStyle('components_DayMediaLightbox_10', { wideLayout: wideLayout, borderColor: borderColor }, (theme ?? _styleTheme)),
+                wideLayout ? themeStyle('components_DayMediaLightbox_11', {  }, (theme ?? _styleTheme)) : themeStyle('components_DayMediaLightbox_12', {  }, (theme ?? _styleTheme)),
               ]}
             >
-              <ScrollView style={{ maxHeight: wideLayout ? 420 : 260 }}>
+              <ScrollView style={themeStyle('components_DayMediaLightbox_13', { wideLayout: wideLayout }, (theme ?? _styleTheme))}>
                 <BlogCommentThread
                   testID={`lightbox-comments-${expandedItem.assetId}`}
                   comments={getComments(expandedItem.assetId)}
@@ -158,39 +166,39 @@ const DayMediaLightbox = ({
           ) : null}
         </View>
       ) : (
-        <ScrollView style={{ maxHeight: 480 }}>
+        <ScrollView style={themeStyle('components_DayMediaLightbox_14', {  }, (theme ?? _styleTheme))}>
           {canRemove ? (
-            <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 8 }}>Tap ✕ on a photo to remove it from this day.</Text>
+            <Text style={themeStyle('components_DayMediaLightbox_15', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Tap ✕ on a photo to remove it from this day.</Text>
           ) : null}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <View style={themeStyle('components_DayMediaLightbox_16', {  }, (theme ?? _styleTheme))}>
             {items.map((item, index) => {
               const summary = getEngagementSummary?.(item.assetId);
               return (
               // Wrapper View so the Remove control is a *sibling* of the tap target, not nested
               // inside it — nested Touchables don't reliably deliver the inner press on web.
-              <View key={item.id} style={{ width: '31%', aspectRatio: 1, position: 'relative' }}>
+              <View key={item.id} style={themeStyle('components_DayMediaLightbox_17', {  }, (theme ?? _styleTheme))}>
               <TouchableOpacity
                 testID={`day-media-tile-${item.id}`}
                 accessibilityRole="button"
                 accessibilityLabel={item.kindKey === 'media.video' ? 'Play video' : item.kindKey === 'media.audio' ? 'Play voice note' : 'View photo'}
                 onPress={() => setExpandedIndex(index)}
-                style={{ width: '100%', height: '100%', borderRadius: 6, overflow: 'hidden', backgroundColor, borderWidth: 1, borderColor }}
+                style={themeStyle('components_DayMediaLightbox_18', { backgroundColor: backgroundColor, borderColor: borderColor }, (theme ?? _styleTheme))}
               >
                 {item.kindKey === 'media.audio' ? (
-                  <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 28 }}>🎙</Text><Text style={{ color: textColor, fontSize: 11 }}>Voice note</Text></View>
-                ) : <Image source={{ uri: item.thumbnailUrl || item.primaryUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />}
+                  <View style={themeStyle('components_DayMediaLightbox_19', {  }, (theme ?? _styleTheme))}><Text style={themeStyle('components_DayMediaLightbox_20', {  }, (theme ?? _styleTheme))}>🎙</Text><Text style={themeStyle('components_DayMediaLightbox_21', { textColor: textColor }, (theme ?? _styleTheme))}>Voice note</Text></View>
+                ) : <Image source={{ uri: item.thumbnailUrl || item.primaryUrl }} style={themeStyle('components_DayMediaLightbox_22', {  }, (theme ?? _styleTheme))} resizeMode="cover" />}
                 {item.kindKey === 'media.video' ? (
-                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 24 }}>▶️</Text>
+                  <View style={themeStyle('components_DayMediaLightbox_23', {  }, (theme ?? _styleTheme))}>
+                    <Text style={themeStyle('components_DayMediaLightbox_24', {  }, (theme ?? _styleTheme))}>▶️</Text>
                   </View>
                 ) : null}
                 {canReact && summary && summary.reactionTotal > 0 ? (
                   <View
                     testID={`day-media-tile-reaction-badge-${item.id}`}
-                    style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 2 }}
+                    style={themeStyle('components_DayMediaLightbox_25', {  }, (theme ?? _styleTheme))}
                   >
-                    <Text style={{ fontSize: 10 }}>❤️</Text>
-                    <Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>{summary.reactionTotal}</Text>
+                    <Text style={themeStyle('components_DayMediaLightbox_26', {  }, (theme ?? _styleTheme))}>❤️</Text>
+                    <Text style={themeStyle('components_DayMediaLightbox_27', {  }, (theme ?? _styleTheme))}>{summary.reactionTotal}</Text>
                   </View>
                 ) : null}
               </TouchableOpacity>
@@ -201,9 +209,9 @@ const DayMediaLightbox = ({
                   accessibilityLabel="Remove this photo"
                   disabled={removing}
                   onPress={() => onRemove(item)}
-                  style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(185,28,28,0.92)', borderRadius: 14, minWidth: 26, minHeight: 26, alignItems: 'center', justifyContent: 'center' }}
+                  style={themeStyle('components_DayMediaLightbox_28', {  }, (theme ?? _styleTheme))}
                 >
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>{removing ? '…' : '✕'}</Text>
+                  <Text style={themeStyle('components_DayMediaLightbox_29', {  }, (theme ?? _styleTheme))}>{removing ? '…' : '✕'}</Text>
                 </TouchableOpacity>
               ) : null}
               </View>
@@ -215,9 +223,9 @@ const DayMediaLightbox = ({
       <TouchableOpacity
         accessibilityRole="button"
         onPress={close}
-        style={[styles?.button, { marginTop: 12, backgroundColor: styles?.buttonSecondary?.backgroundColor ?? styles?.card?.backgroundColor ?? backgroundColor }]}
+        style={[styles?.button, themeStyle('components_DayMediaLightbox_30', { styles: styles, backgroundColor: backgroundColor }, (theme ?? _styleTheme))]}
       >
-        <Text style={[styles?.buttonText, { color: textColor ?? styles?.buttonText?.color }]}>Close</Text>
+        <Text style={[styles?.buttonText, themeStyle('components_DayMediaLightbox_31', { textColor: textColor, styles: styles }, (theme ?? _styleTheme))]}>Close</Text>
       </TouchableOpacity>
     </DialogShell>
   );

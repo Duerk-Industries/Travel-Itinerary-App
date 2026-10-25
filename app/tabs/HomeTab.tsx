@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Modal from '../components/KeyboardAwareModal';
@@ -75,6 +77,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   hiddenPages,
   featureCoverPhotoFallbackV2 = true,
 }) => {
+  const _styleTheme = useStyleTheme();
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 680;
   const isCompactLayout = viewportWidth < 520;
@@ -203,29 +206,22 @@ const HomeTab: React.FC<HomeTabProps> = ({
   };
 
   return (
-    <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
+    <View style={[styles.card, themeStyle('tabs_HomeTab_1', {  }, _styleTheme)]}>
       <ScrollView
-        style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={[styles.homeScrollContent, { flexGrow: 1 }]}
+        style={themeStyle('tabs_HomeTab_2', {  }, _styleTheme)}
+        contentContainerStyle={[styles.homeScrollContent, themeStyle('tabs_HomeTab_3', {  }, _styleTheme)]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         nestedScrollEnabled
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', gap: 8 }]}>
-          <Text style={[styles.homeTitle, { flexShrink: 1, minWidth: 0 }]}>Your trip</Text>
+        <View style={[styles.row, themeStyle('tabs_HomeTab_4', {  }, _styleTheme)]}>
+          <Text style={[styles.homeTitle, themeStyle('tabs_HomeTab_5', {  }, _styleTheme)]}>Your trip</Text>
           <View
             style={[
               styles.row,
-              {
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: 8,
-                flex: 1,
-                minWidth: 0,
-                marginBottom: 0,
-              },
+              themeStyle('tabs_HomeTab_6', {  }, _styleTheme),
             ]}
           >
             {!hiddenPages?.has('create-trip') ? (
@@ -276,7 +272,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
           testID="home-hero-card"
           style={({ pressed }: { pressed: boolean }) => [
             styles.homeHeroCard,
-            { height: heroHeight },
+            themeStyle('tabs_HomeTab_7', { heroHeight: heroHeight }, _styleTheme),
             pressed && styles.homeHeroCardPressed,
           ]}
           onPress={() => {
@@ -300,14 +296,14 @@ const HomeTab: React.FC<HomeTabProps> = ({
           <View
             style={[
               styles.homeHeroTextWrap,
-              isCompactLayout && { left: 14, right: 14, bottom: 54, paddingRight: 0 },
+              isCompactLayout && themeStyle('tabs_HomeTab_8', {  }, _styleTheme),
             ]}
           >
             {heroSubtitle ? (
-              <Text style={[styles.homeHeroSubtitle, isCompactLayout && { fontSize: 14 }]}>{heroSubtitle}</Text>
+              <Text style={[styles.homeHeroSubtitle, isCompactLayout && themeStyle('tabs_HomeTab_9', {  }, _styleTheme)]}>{heroSubtitle}</Text>
             ) : null}
             <Text
-              style={[styles.homeHeroTitle, isCompactLayout && { fontSize: 25, lineHeight: 30 }]}
+              style={[styles.homeHeroTitle, isCompactLayout && themeStyle('tabs_HomeTab_10', {  }, _styleTheme)]}
               numberOfLines={isCompactLayout ? 3 : 2}
               ellipsizeMode="tail"
             >
@@ -315,7 +311,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
             </Text>
           </View>
           <View
-            style={[styles.homeHeroChangeTripBadge, { pointerEvents: 'none' }, isCompactLayout && { left: 14, right: 'auto', bottom: 12 }]}
+            style={[styles.homeHeroChangeTripBadge, themeStyle('tabs_HomeTab_11', {  }, _styleTheme), isCompactLayout && themeStyle('tabs_HomeTab_12', {  }, _styleTheme)]}
           >
             <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>
           </View>
@@ -440,7 +436,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                 <Text style={styles.homeModalTitle}>Create a trip first</Text>
               </View>
               <Text style={styles.homeModalRowMeta}>A trip needs to be created before you can select one.</Text>
-              <View style={[styles.row, { justifyContent: 'flex-end', marginTop: 16 }]}>
+              <View style={[styles.row, themeStyle('tabs_HomeTab_13', {  }, _styleTheme)]}>
                 <Pressable
                   testID="home-no-trips-create"
                   style={({ pressed }: { pressed: boolean }) => [
@@ -460,7 +456,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                   style={({ pressed }: { pressed: boolean }) => [
                     styles.button,
                     styles.smallButton,
-                    { marginLeft: 8 },
+                    themeStyle('tabs_HomeTab_14', {  }, _styleTheme),
                     pressed && styles.homeNavButtonPressed,
                   ]}
                   onPress={() => setShowNoTripsDialog(false)}
@@ -489,7 +485,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
               <Text style={styles.homeModalRowMeta}>Enter a follow code to add a shared trip.</Text>
               <TextInput
                 testID="home-follow-code-input"
-                style={[styles.input, { marginTop: 12 }]}
+                style={[styles.input, themeStyle('tabs_HomeTab_15', {  }, _styleTheme)]}
                 placeholder="Follow code"
                 autoCapitalize="characters"
                 autoCorrect={false}
@@ -499,8 +495,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
                   if (followCodeError) setFollowCodeError('');
                 }}
               />
-              {followCodeError ? <Text style={[styles.homeModalRowMeta, { marginTop: 8 }]}>{followCodeError}</Text> : null}
-              <View style={[styles.row, { justifyContent: 'flex-end', marginTop: 16 }]}>
+              {followCodeError ? <Text style={[styles.homeModalRowMeta, themeStyle('tabs_HomeTab_16', {  }, _styleTheme)]}>{followCodeError}</Text> : null}
+              <View style={[styles.row, themeStyle('tabs_HomeTab_17', {  }, _styleTheme)]}>
                 <Pressable
                   testID="home-follow-cancel"
                   style={({ pressed }: { pressed: boolean }) => [
@@ -518,7 +514,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                   style={({ pressed }: { pressed: boolean }) => [
                     styles.button,
                     styles.smallButton,
-                    { marginLeft: 8 },
+                    themeStyle('tabs_HomeTab_18', {  }, _styleTheme),
                     pressed && styles.homeNavButtonPressed,
                   ]}
                   onPress={() => void submitFollowCode()}

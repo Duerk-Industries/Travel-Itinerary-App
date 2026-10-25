@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import PayerSelect from './PayerSelect';
 import ActivityDescriptionGenerator from './ActivityDescriptionGenerator';
 import React from 'react';
@@ -6,7 +9,7 @@ import Modal from './KeyboardAwareModal';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
-import type { AppTheme } from '../theme/theme';
+
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
 import type { TourDraft } from '../tabs/activities';
@@ -46,24 +49,16 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
   isNew,
   members,
   styles,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const activeMembers = members.filter((m) => m.status !== 'removed' && !m.removedAt);
 
-  const toggleBaseStyle = styles.toggleOption ?? {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#111',
-    backgroundColor: theme?.colors.surface ?? '#fff',
-  };
-  const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
-    borderColor: theme?.colors.link ?? '#111',
-  };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
+  const toggleBaseStyle = styles.toggleOption ?? themeStyle('components_ActivityEditForm_1', { theme: theme }, (theme ?? _styleTheme));
+  const toggleSelectedStyle = styles.toggleOptionSelected ?? themeStyle('components_ActivityEditForm_2', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextStyle = styles.toggleOptionText ?? themeStyle('components_ActivityEditForm_3', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? themeStyle('components_ActivityEditForm_4', { theme: theme }, (theme ?? _styleTheme));
 
 
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
@@ -73,9 +68,9 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
     <Modal transparent visible animationType="fade" onRequestClose={onCancel}>
       <View style={styles.modalOverlay} testID="activity-form-modal">
         <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onCancel} />
-        <View style={[styles.modalCard, { marginTop: 0, maxHeight: '100%', flexShrink: 1 }]}>
+        <View style={[styles.modalCard, themeStyle('components_ActivityEditForm_5', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.sectionTitle}>{isNew ? 'Add Activity' : 'Edit Activity'}</Text>
-          <ScrollView style={{ maxHeight: 420, flexShrink: 1 }} contentContainerStyle={{ paddingRight: 12, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+          <ScrollView style={themeStyle('components_ActivityEditForm_6', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('components_ActivityEditForm_7', {  }, (theme ?? _styleTheme))} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             <Text style={styles.modalLabel}>Date</Text>
             <DateField
               value={draft.date}
@@ -90,7 +85,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               <select
                 value={status}
                 onChange={(e) => onChange((prev) => ({ ...prev, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                style={toWebStyle(styles.input, themeStyle('components_ActivityEditForm_8', {  }, (theme ?? _styleTheme)))}
               >
                 {ITINERARY_STATUSES.map((opt) => (
                   <option key={opt} value={opt}>
@@ -124,7 +119,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
                     activityType: ACTIVITY_TYPES.includes(e.target.value as ActivityType) ? (e.target.value as ActivityType) : 'Tour',
                   }))
                 }
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                style={toWebStyle(styles.input, themeStyle('components_ActivityEditForm_9', {  }, (theme ?? _styleTheme)))}
               >
                 {ACTIVITY_TYPES.map((opt) => (
                   <option key={opt} value={opt}>
@@ -203,15 +198,15 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               accessibilityLabel="Free cancellation by date"
             />
             <Text style={styles.modalLabel}>Platform Booked On</Text>
-            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <View style={themeStyle('components_ActivityEditForm_10', {  }, (theme ?? _styleTheme))}>
               <TextInput
-                style={[styles.input, { flex: 1, minWidth: 220 }]}
+                style={[styles.input, themeStyle('components_ActivityEditForm_11', {  }, (theme ?? _styleTheme))]}
                 placeholder="Viator, Get Your Guide, Klook, etc."
                 value={draft.bookedOn}
                 onChangeText={(text: string) => onChange((prev) => ({ ...prev, bookedOn: text }))}
               />
               <TextInput
-                style={[styles.input, { flex: 1, minWidth: 220 }]}
+                style={[styles.input, themeStyle('components_ActivityEditForm_12', {  }, (theme ?? _styleTheme))]}
                 placeholder="Reference"
                 value={draft.reference}
                 onChangeText={(text: string) => onChange((prev) => ({ ...prev, reference: text }))}
@@ -219,7 +214,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
             </View>
             <Text style={styles.modalLabel}>Description</Text>
             <TextInput
-              style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
+              style={[styles.input, themeStyle('components_ActivityEditForm_13', {  }, (theme ?? _styleTheme))]}
               placeholder="Description"
               value={draft.notes}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, notes: text }))}
@@ -254,7 +249,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
             <Text style={styles.modalLabel}>Paid by</Text>
             <PayerSelect members={activeMembers} value={draft.paidBy} formatName={formatMemberDisplayName} onChange={ids => onChange((prev) => ({ ...prev, paidBy: ids }))} styles={styles} testID="activity-payer" />
           </ScrollView>
-          <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
+          <View style={[styles.tableFooter, themeStyle('components_ActivityEditForm_14', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onCancel} testID="activity-cancel">
               <Text style={styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>

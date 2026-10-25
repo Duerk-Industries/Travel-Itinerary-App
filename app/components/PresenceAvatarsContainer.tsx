@@ -1,7 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, type AppTheme } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import PresenceAvatars from './PresenceAvatars';
 import { usePresenceUsers } from '../contexts/PresenceContext';
-import type { AppTheme } from '../theme/theme';
+
 
 type Props = {
   currentUserId: string;
@@ -14,7 +16,9 @@ type Props = {
  * <PresenceAvatars/> view. Only this leaf re-renders on presence updates,
  * so the rest of the AppShell tree is unaffected by heartbeats.
  */
-const PresenceAvatarsContainer: React.FC<Props> = ({ currentUserId, maxVisible, theme }) => {
+const PresenceAvatarsContainer: React.FC<Props> = ({ currentUserId, maxVisible, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const presenceUsers = usePresenceUsers();
   return (
     <PresenceAvatars

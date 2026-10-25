@@ -1,3 +1,5 @@
+import { themeStyle, richTextHeadingSizes as HEADING_SIZES } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // Read-only display of a blog note's rich text. Sizes exactly to its content (no frame, no
 // scrolling, no trailing blank space) because it is plain React Native <Text>, not the WebView
 // editor -- whose auto-height is unavailable under Expo. See utils/blogHtml.ts for what is parsed.
@@ -12,9 +14,12 @@ type Props = {
   testID?: string;
 };
 
-const HEADING_SIZES: Record<number, number> = { 1: 24, 2: 21, 3: 18, 4: 17, 5: 16, 6: 16 };
 
-const BlogRichTextView = ({ html, textColor = '#111827', linkColor = '#2563eb', testID }: Props) => {
+
+const BlogRichTextView = ({ html, textColor: _textColorOverride, linkColor: _linkColorOverride, testID }: Props) => {
+  const _styleTheme = useStyleTheme();
+  const textColor = _textColorOverride ?? themeStyle('components_BlogRichTextView_16', {  }, _styleTheme);
+  const linkColor = _linkColorOverride ?? themeStyle('components_BlogRichTextView_17', {  }, _styleTheme);
   const blocks = useMemo(() => parseBlogHtml(html), [html]);
   if (!blocks.length) return null;
 
@@ -23,15 +28,7 @@ const BlogRichTextView = ({ html, textColor = '#111827', linkColor = '#2563eb', 
       key={index}
       onPress={run.href ? () => { void Linking.openURL(run.href as string); } : undefined}
       accessibilityRole={run.href ? 'link' : undefined}
-      style={{
-        ...(run.bold ? { fontWeight: '700' as const } : {}),
-        ...(run.italic ? { fontStyle: 'italic' as const } : {}),
-        ...((run.underline || run.href) && run.strike ? { textDecorationLine: 'underline line-through' as const } : {}),
-        ...((run.underline || run.href) && !run.strike ? { textDecorationLine: 'underline' as const } : {}),
-        ...(!(run.underline || run.href) && run.strike ? { textDecorationLine: 'line-through' as const } : {}),
-        ...(run.code ? { fontFamily: 'monospace' } : {}),
-        ...(run.href ? { color: linkColor } : {}),
-      }}
+      style={themeStyle('richTextRun1', { run: run, linkColor: linkColor }, _styleTheme)}
     >
       {run.text}
     </Text>
@@ -40,33 +37,33 @@ const BlogRichTextView = ({ html, textColor = '#111827', linkColor = '#2563eb', 
   const renderBlock = (block: BlogHtmlBlock, index: number) => {
     const blank = block.runs.every((run) => !run.text.trim());
     const last = index === blocks.length - 1;
-    const base = { color: textColor, fontSize: 16, lineHeight: 24 };
+    const base = themeStyle('components_BlogRichTextView_8', { textColor: textColor }, _styleTheme);
     const spacing = last ? 0 : blank ? 4 : 10;
     if (block.kind === 'listItem') {
       return (
-        <View key={index} style={{ flexDirection: 'row', marginBottom: last ? 0 : 4, paddingLeft: 4 }}>
-          <Text style={{ ...base, width: 22 }}>{block.ordinal ? `${block.ordinal}.` : '•'}</Text>
-          <Text style={{ ...base, flex: 1 }}>{block.runs.map(renderRun)}</Text>
+        <View key={index} style={themeStyle('components_BlogRichTextView_9', { last: last }, _styleTheme)}>
+          <Text style={themeStyle('components_BlogRichTextView_10', { base: base }, _styleTheme)}>{block.ordinal ? `${block.ordinal}.` : '•'}</Text>
+          <Text style={themeStyle('components_BlogRichTextView_11', { base: base }, _styleTheme)}>{block.runs.map(renderRun)}</Text>
         </View>
       );
     }
     if (block.kind === 'heading') {
       const size = HEADING_SIZES[block.level ?? 3] ?? 18;
       return (
-        <Text key={index} accessibilityRole="header" style={{ ...base, fontSize: size, lineHeight: Math.round(size * 1.3), fontWeight: '700', marginBottom: spacing }}>
+        <Text key={index} accessibilityRole="header" style={themeStyle('components_BlogRichTextView_12', { base: base, size: size, spacing: spacing }, _styleTheme)}>
           {block.runs.map(renderRun)}
         </Text>
       );
     }
     if (block.kind === 'quote') {
       return (
-        <View key={index} style={{ borderLeftWidth: 3, borderLeftColor: linkColor, paddingLeft: 10, marginBottom: spacing }}>
-          <Text style={{ ...base, fontStyle: 'italic' }}>{block.runs.map(renderRun)}</Text>
+        <View key={index} style={themeStyle('components_BlogRichTextView_13', { linkColor: linkColor, spacing: spacing }, _styleTheme)}>
+          <Text style={themeStyle('components_BlogRichTextView_14', { base: base }, _styleTheme)}>{block.runs.map(renderRun)}</Text>
         </View>
       );
     }
     return (
-      <Text key={index} style={{ ...base, marginBottom: spacing }}>
+      <Text key={index} style={themeStyle('components_BlogRichTextView_15', { base: base, spacing: spacing }, _styleTheme)}>
         {block.runs.length ? block.runs.map(renderRun) : ' '}
       </Text>
     );

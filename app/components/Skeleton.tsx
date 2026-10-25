@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -6,24 +8,17 @@ type SkeletonProps = {
   testID?: string;
 };
 
-const SkeletonComponent: React.FC<SkeletonProps> = ({ style, testID }) => (
+const SkeletonComponent: React.FC<SkeletonProps> = ({ style, testID }) => { const _styleTheme = useStyleTheme(); return ((
   <View
     accessibilityRole="progressbar"
     accessibilityLabel="Loading"
     testID={testID ?? 'skeleton'}
-    style={[styles.base, style]}
+    style={[styles(_styleTheme).base, style]}
   />
-);
+)); };
 
 const Skeleton = memo(SkeletonComponent);
 
-const styles = StyleSheet.create({
-  base: {
-    backgroundColor: '#E5E7EB',
-    borderRadius: 8,
-    overflow: 'hidden',
-    opacity: 0.8,
-  },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_Skeleton_1', { StyleSheet: StyleSheet }, _theme);
 
 export default Skeleton;

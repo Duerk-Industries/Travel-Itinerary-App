@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import PayerSelect from '../components/PayerSelect';
 import { singlePayerIds } from '../utils/payerSelection';
 import type { ImportTripDraft } from '../../server/src/types';
@@ -29,7 +32,7 @@ import { toWebStyle } from '../utils/webStyle';
 import { track } from '../utils/analytics/track';
 
 const CREATE_TRIP_TASK = { task: 'create_trip', feature: 'create_trip' } as const;
-import type { AppTheme } from '../theme/theme';
+
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   ITINERARY_STATUSES,
@@ -235,7 +238,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   airportOptions,
   onSearchAirports,
   styles,
-  theme,
+  theme: _providedTheme,
   onCancel,
   onTripCreated,
   onAiItineraryQueued,
@@ -247,6 +250,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   featureQuickStartTripWizard = true,
   aiItineraryGenerationAllowed = true,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const destinationAttractionWizardEnabled = !['0', 'false', 'off', 'no'].includes(
     String(process.env.EXPO_PUBLIC_WIZARD_DESTINATION_ATTRACTIONS_ENABLED ?? 'true')
       .trim()
@@ -396,30 +401,24 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     []
   );
   const webInputStyle = useMemo(() => toWebStyle(styles.input), [styles]);
-  const webInputStyleFlex = useMemo(() => ({ ...webInputStyle, flex: 1 }), [webInputStyle]);
+  const webInputStyleFlex = useMemo(() => (themeStyle('tabs_createTripWizard_1', { webInputStyle: webInputStyle }, (theme ?? _styleTheme))), [webInputStyle, _styleTheme]);
   const webDateInputStyle = useMemo(
     () =>
-      toWebStyle([styles.input, styles.webDateInput], {
-        width: '100%',
-        maxWidth: '100%',
-        minWidth: 0,
-        boxSizing: 'border-box',
-        colorScheme: theme?.mode === 'dark' ? 'dark' : 'light',
-      }),
-    [styles, theme?.mode]
+      toWebStyle([styles.input, styles.webDateInput], themeStyle('tabs_createTripWizard_2', { theme: theme }, (theme ?? _styleTheme))),
+    [styles, theme?.mode, _styleTheme]
   );
-  const webDateInputStyleFlex = useMemo(() => ({ ...webDateInputStyle, flex: 1 }), [webDateInputStyle]);
-  const wizardCarInputStyle = useMemo(() => [styles.input, { marginBottom: 0, minHeight: 42 }], [styles]);
-  const wizardCarDateInputStyle = useMemo(() => ({ marginBottom: 0, minHeight: 42 }), []);
+  const webDateInputStyleFlex = useMemo(() => (themeStyle('tabs_createTripWizard_3', { webDateInputStyle: webDateInputStyle }, (theme ?? _styleTheme))), [webDateInputStyle, _styleTheme]);
+  const wizardCarInputStyle = useMemo(() => [styles.input, themeStyle('tabs_createTripWizard_4', {  }, (theme ?? _styleTheme))], [styles, _styleTheme]);
+  const wizardCarDateInputStyle = useMemo(() => (themeStyle('tabs_createTripWizard_5', {  }, (theme ?? _styleTheme))), [_styleTheme]);
   const wizardCarWebInputStyle = useMemo(
-    () => ({ ...webDateInputStyle, height: 42, minHeight: 42, marginBottom: 0 }),
-    [webDateInputStyle]
+    () => (themeStyle('tabs_createTripWizard_6', { webDateInputStyle: webDateInputStyle }, (theme ?? _styleTheme))),
+    [webDateInputStyle, _styleTheme]
   );
   const wizardCarDateWrapStyle = useMemo(
-    () => [styles.dateInputWrap, { minWidth: 0, width: '100%', flex: 0, minHeight: 42 }],
-    [styles]
+    () => [styles.dateInputWrap, themeStyle('tabs_createTripWizard_7', {  }, (theme ?? _styleTheme))],
+    [styles, _styleTheme]
   );
-  const wizardCarInputCellStyle = useMemo(() => [styles.cell, { justifyContent: 'flex-start' }], [styles]);
+  const wizardCarInputCellStyle = useMemo(() => [styles.cell, themeStyle('tabs_createTripWizard_8', {  }, (theme ?? _styleTheme))], [styles, _styleTheme]);
   const hasKnownInfo = useMemo(
     () => [knownInfo.flights, knownInfo.lodging, knownInfo.tours, knownInfo.cars].some((val) => val.trim().length > 0),
     [knownInfo]
@@ -563,16 +562,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     const node = itineraryAirportRef.current as any;
     if (node?.measureInWindow) {
       node.measureInWindow((x: number, y: number, width: number, height: number) => {
-        setItineraryAirportAnchor({ x, y, width, height });
+        setItineraryAirportAnchor(themeStyle('tabs_createTripWizard_9', { x: x, y: y, width: width, height: height }, (theme ?? _styleTheme)));
       });
     } else if (typeof node?.getBoundingClientRect === 'function') {
       const rect = node.getBoundingClientRect();
-      setItineraryAirportAnchor({
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height,
-      });
+      setItineraryAirportAnchor(themeStyle('tabs_createTripWizard_10', { rect: rect }, (theme ?? _styleTheme)));
     }
   };
 
@@ -1319,8 +1313,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         showCitySearch={!destinationAttractionWizardEnabled}
       />
       <Text style={styles.modalLabel}>Dates</Text>
-      <View style={[styles.row, { flexWrap: isNarrowLayout ? 'wrap' : 'nowrap' }]}>
-        <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+      <View style={[styles.row, themeStyle('tabs_createTripWizard_11', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
+        <View style={[styles.dateInputWrap, themeStyle('tabs_createTripWizard_12', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
           <DateField
             value={dates.startDate}
             onChange={setStartDateWithRangeGuard}
@@ -1331,7 +1325,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             accessibilityLabel="Start date"
           />
         </View>
-        <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+        <View style={[styles.dateInputWrap, themeStyle('tabs_createTripWizard_13', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
           <DateField
             value={dates.endDate}
             onChange={(endDate) => setDates((prev) => ({ ...prev, mode: 'range', endDate }))}
@@ -1345,7 +1339,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       </View>
       {computedDays ? <Text style={styles.helperText}>{computedDays} day(s)</Text> : null}
       <TouchableOpacity
-        style={[styles.button, styles.outlineButton ?? styles.button, { alignSelf: 'flex-start', marginTop: 8 }]}
+        style={[styles.button, styles.outlineButton ?? styles.button, themeStyle('tabs_createTripWizard_14', {  }, (theme ?? _styleTheme))]}
         onPress={() => { setQuickStartMode(false); setDateModeSelected(dates.startDate || dates.endDate ? 'range' : null); setDates((prev) => ({ ...prev, mode: 'range' })); }}
         testID="quick-start-customize"
       >
@@ -1402,7 +1396,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             ) : null}
             <TextInput
               ref={descriptionRef}
-              style={[styles.input, { minHeight: 120 }]}
+              style={[styles.input, themeStyle('tabs_createTripWizard_15', {  }, (theme ?? _styleTheme))]}
               placeholder="Description (optional)"
               accessibilityLabel="Description"
               multiline
@@ -1419,16 +1413,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <View style={styles.row}>
               <TouchableOpacity
                 style={[
-                  {
-                    backgroundColor: dateModeSelected === 'range' ? '#0d6efd' : (theme?.colors.surface ?? '#fff'),
-                    borderColor: '#0d6efd',
-                    borderWidth: 1,
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    borderRadius: 6,
-                    alignItems: 'center',
-                  },
-                  { marginRight: 8 },
+                  themeStyle('tabs_createTripWizard_16', { dateModeSelected: dateModeSelected, theme: theme }, (theme ?? _styleTheme)),
+                  themeStyle('tabs_createTripWizard_17', {  }, (theme ?? _styleTheme)),
                 ]}
                 onPress={() => {
                   setDateModeSelected('range');
@@ -1437,7 +1423,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               >
                 <Text
                   style={[
-                    { color: dateModeSelected === 'range' ? '#fff' : '#0d6efd', fontWeight: '600' },
+                    themeStyle('tabs_createTripWizard_18', { dateModeSelected: dateModeSelected }, (theme ?? _styleTheme)),
                   ]}
                 >
                   I know which dates I'm going
@@ -1445,15 +1431,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
-                  {
-                    backgroundColor: dateModeSelected === 'month' ? '#0d6efd' : (theme?.colors.surface ?? '#fff'),
-                    borderColor: '#0d6efd',
-                    borderWidth: 1,
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    borderRadius: 6,
-                    alignItems: 'center',
-                  },
+                  themeStyle('tabs_createTripWizard_19', { dateModeSelected: dateModeSelected, theme: theme }, (theme ?? _styleTheme)),
                 ]}
                 onPress={() => {
                   setDateModeSelected('month');
@@ -1462,7 +1440,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               >
                 <Text
                   style={[
-                    { color: dateModeSelected === 'month' ? '#fff' : '#0d6efd', fontWeight: '600' },
+                    themeStyle('tabs_createTripWizard_20', { dateModeSelected: dateModeSelected }, (theme ?? _styleTheme)),
                   ]}
                 >
                   Flexible Timeline
@@ -1473,8 +1451,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <Text style={styles.helperText}>Select a date option to continue.</Text>
             ) : dates.mode === 'range' ? (
               <>
-                <View style={[styles.row, { flexWrap: isNarrowLayout ? 'wrap' : 'nowrap' }]}>
-                  <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+                <View style={[styles.row, themeStyle('tabs_createTripWizard_21', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
+                  <View style={[styles.dateInputWrap, themeStyle('tabs_createTripWizard_22', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
                     <DateField
                       value={dates.startDate}
                       onChange={setStartDateWithRangeGuard}
@@ -1485,7 +1463,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       accessibilityLabel="Start date"
                     />
                   </View>
-                  <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+                  <View style={[styles.dateInputWrap, themeStyle('tabs_createTripWizard_23', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
                     <DateField
                       value={dates.endDate}
                       onChange={(endDate) => setDates((prev) => ({ ...prev, endDate }))}
@@ -1508,7 +1486,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     value={dates.startMonth}
                     placeholder="Month"
                     title="Select month"
-                    style={{ flex: 1 }}
+                    style={themeStyle('tabs_createTripWizard_24', {  }, (theme ?? _styleTheme))}
                     webStyle={webDateInputStyleFlex}
                     onChange={(value) => setDates((prev) => ({ ...prev, startMonth: value }))}
                   />
@@ -1518,7 +1496,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     value={dates.startYear}
                     placeholder="Year"
                     title="Select year"
-                    style={{ flex: 1 }}
+                    style={themeStyle('tabs_createTripWizard_25', {  }, (theme ?? _styleTheme))}
                     webStyle={webDateInputStyleFlex}
                     onChange={(value) => setDates((prev) => ({ ...prev, startYear: value }))}
                   />
@@ -1583,7 +1561,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </View>
             <View style={styles.row}>
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, themeStyle('tabs_createTripWizard_26', {  }, (theme ?? _styleTheme))]}
                 placeholder="First name"
                 accessibilityLabel="First name"
                 autoComplete="given-name"
@@ -1592,7 +1570,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 onChangeText={(text: string) => setParticipantDraft((prev) => ({ ...prev, firstName: text }))}
               />
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, themeStyle('tabs_createTripWizard_27', {  }, (theme ?? _styleTheme))]}
                 placeholder="Last name"
                 accessibilityLabel="Last name"
                 autoComplete="family-name"
@@ -1616,7 +1594,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <Text style={styles.buttonText}>Add Participant</Text>
             </TouchableOpacity>
             {participants.length ? (
-              <View style={{ marginTop: 12 }}>
+              <View style={themeStyle('tabs_createTripWizard_28', {  }, (theme ?? _styleTheme))}>
                 {participants.map((p, idx) => (
                   <View key={`${p.firstName}-${p.lastName}-${idx}`} style={styles.memberPill}>
                     <Text style={styles.cellText}>
@@ -1647,7 +1625,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     style={[
                       styles.mapOptionButton ?? styles.button,
                       itineraryMode === 'ai' && (styles.mapOptionActive ?? styles.toggleActive),
-                      { marginRight: 8 },
+                      themeStyle('tabs_createTripWizard_29', {  }, (theme ?? _styleTheme)),
                     ]}
                     onPress={() => selectItineraryMode('ai')}
                   >
@@ -1675,8 +1653,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             )}
             {itineraryMode === 'ai' ? (
               <ScrollView
-                style={{ maxHeight: 520 }}
-                contentContainerStyle={{ paddingBottom: 12 }}
+                style={themeStyle('tabs_createTripWizard_30', {  }, (theme ?? _styleTheme))}
+                contentContainerStyle={themeStyle('tabs_createTripWizard_31', {  }, (theme ?? _styleTheme))}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled
                 keyboardShouldPersistTaps="handled"
@@ -1794,8 +1772,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   const value = wizardPromptTraits.tt.w[field.key];
                   const descriptor = descriptorForValue(value, field);
                   return (
-                    <View key={`wizard-weight-${field.key}`} style={{ marginBottom: 10 }}>
-                      <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+                    <View key={`wizard-weight-${field.key}`} style={themeStyle('tabs_createTripWizard_32', {  }, (theme ?? _styleTheme))}>
+                      <View style={[styles.row, themeStyle('tabs_createTripWizard_33', {  }, (theme ?? _styleTheme))]}>
                         <Text style={styles.cellText}>{field.label}</Text>
                         <Text style={styles.helperText}>{descriptor}</Text>
                       </View>
@@ -1807,7 +1785,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                           step={1}
                           value={value}
                           onChange={(e: any) => setWizardWeight(field.key, Number(e.target.value))}
-                          style={{ width: '100%' }}
+                          style={themeStyle('tabs_createTripWizard_34', {  }, (theme ?? _styleTheme))}
                         />
                       ) : (
                         <TextInput
@@ -1834,7 +1812,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <Text style={[styles.traitChipText, wizardPromptTraits.ut.no && styles.traitChipTextSelected]}>Night Owl</Text>
                   </TouchableOpacity>
                 </View>
-                <View style={{ position: 'relative', marginTop: 16 }}>
+                <View style={themeStyle('tabs_createTripWizard_35', {  }, (theme ?? _styleTheme))}>
                   <TextInput
                     ref={itineraryAirportRef}
                     style={styles.input}
@@ -1848,7 +1826,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     }}
                   />
                   <TouchableOpacity
-                    style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
+                    style={themeStyle('tabs_createTripWizard_36', {  }, (theme ?? _styleTheme))}
                     onPress={showItineraryAirportDropdown}
                   >
                     <Text style={styles.selectCaret}></Text>
@@ -1858,8 +1836,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             ) : null}
             {itineraryMode === 'manual' ? (
               <ScrollView
-                style={{ maxHeight: 520 }}
-                contentContainerStyle={{ paddingBottom: 12 }}
+                style={themeStyle('tabs_createTripWizard_37', {  }, (theme ?? _styleTheme))}
+                contentContainerStyle={themeStyle('tabs_createTripWizard_38', {  }, (theme ?? _styleTheme))}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled
                 keyboardShouldPersistTaps="handled"
@@ -1885,7 +1863,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     onChangeText={setItineraryDays}
                   />
                 ) : null}
-                <View style={{ gap: 8 }}>
+                <View style={themeStyle('tabs_createTripWizard_39', {  }, (theme ?? _styleTheme))}>
                   {manualDayList.map((day) => {
                     const items = manualItemsByDay.get(day) ?? [];
                     return (
@@ -1945,11 +1923,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, activity: text }))}
                 />
                 <View style={styles.row}>
-                  <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => addManualItem(manualDay)}>
+                  <TouchableOpacity style={[styles.button, themeStyle('tabs_createTripWizard_40', {  }, (theme ?? _styleTheme))]} onPress={() => addManualItem(manualDay)}>
                     <Text style={styles.buttonText}>Add Itinerary Item</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                    style={[styles.button, styles.dangerButton, themeStyle('tabs_createTripWizard_41', {  }, (theme ?? _styleTheme))]}
                     onPress={() => setManualDay(null)}
                   >
                     <Text style={styles.dangerButtonText}>Done</Text>
@@ -1985,14 +1963,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               theme={theme}
               airportOptions={airportOptions}
               onSearchAirports={onSearchAirports}
-              modalOverlayStyle={{
-                ...(Platform.OS === 'web'
-                  ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }
-                  : { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }),
-                zIndex: 45000,
-                elevation: 80,
-              }}
-              modalCardStyle={{ zIndex: 46000, elevation: 84 }}
+              modalOverlayStyle={themeStyle('tabs_createTripWizard_42', { Platform: Platform }, (theme ?? _styleTheme))}
+              modalCardStyle={themeStyle('tabs_createTripWizard_43', {  }, (theme ?? _styleTheme))}
               showList
               mode="wizard"
             />
@@ -2096,7 +2068,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         styles.actionCell,
                         styles.lodgingActionCol,
                         styles.lastCell,
-                        { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' },
+                        themeStyle('tabs_createTripWizard_44', {  }, (theme ?? _styleTheme)),
                       ]}
                     >
                       <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openWizardLodgingEditor(l)}>
@@ -2134,7 +2106,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 onCancel={closeWizardLodgingEditor}
               />
             ) : null}
-            <View style={{ marginTop: 12 }}>
+            <View style={themeStyle('tabs_createTripWizard_45', {  }, (theme ?? _styleTheme))}>
               <Text style={styles.flightTitle}>Total lodging cost: ${wizardLodgingTotal.toFixed(2)}</Text>
               <Text style={styles.helperText}>Breakdown (aligned with total even when no payers are set):</Text>
               {wizardGroupMembers.map((m) => (
@@ -2142,7 +2114,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   {formatWizardMemberName(m)}: ${Number(wizardLodgingTotalsBalanced[m.id] ?? 0).toFixed(2)}
                 </Text>
               ))}
-              <Text style={[styles.helperText, { marginTop: 4 }]}>Subtotal across payers: ${wizardLodgingBreakdownSum.toFixed(2)}</Text>
+              <Text style={[styles.helperText, themeStyle('tabs_createTripWizard_46', {  }, (theme ?? _styleTheme))]}>Subtotal across payers: ${wizardLodgingBreakdownSum.toFixed(2)}</Text>
             </View>
           </>
         );
@@ -2242,7 +2214,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </View>
                   </View>
                 ))}
-                <View style={[styles.tableRow, styles.inputRow, styles.lastRow, { alignItems: 'stretch' }]}>
+                <View style={[styles.tableRow, styles.inputRow, styles.lastRow, themeStyle('tabs_createTripWizard_47', {  }, (theme ?? _styleTheme))]}>
                   <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <TextInput
                       style={wizardCarInputStyle}
@@ -2297,7 +2269,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                             status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS),
                           }))
                         }
-                        style={{ ...wizardCarWebInputStyle, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                        style={themeStyle('tabs_createTripWizard_48', { wizardCarWebInputStyle: wizardCarWebInputStyle }, (theme ?? _styleTheme))}
                       >
                         {ITINERARY_STATUSES.map((opt) => (
                           <option key={`wizard-car-status-${opt}`} value={opt}>
@@ -2334,9 +2306,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       value={wizardCarDraft.prepaid}
                       placeholder="Select Yes/No"
                       title="Prepaid status"
-                      style={{ width: '100%' }}
+                      style={themeStyle('tabs_createTripWizard_49', {  }, (theme ?? _styleTheme))}
                       webStyle={wizardCarWebInputStyle}
-                      listStyle={{ position: 'relative', top: 0 }}
+                      listStyle={themeStyle('tabs_createTripWizard_50', {  }, (theme ?? _styleTheme))}
                       onChange={(value) => setWizardCarDraft((p) => ({ ...p, prepaid: value }))}
                     />
                   </View>
@@ -2434,7 +2406,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               </Text>
             ) : null}
             {details.description ? (
-              <View style={{ marginTop: 8 }}>
+              <View style={themeStyle('tabs_createTripWizard_51', {  }, (theme ?? _styleTheme))}>
                 {renderRichTextBlocks(details.description, {
                   base: styles.bodyText,
                   bold: styles.headerText,
@@ -2520,9 +2492,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }
 
   return (
-    <View style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-      <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
-        <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }]}>
+    <View style={themeStyle('tabs_createTripWizard_52', {  }, (theme ?? _styleTheme))}>
+      <View style={[styles.card, themeStyle('tabs_createTripWizard_53', {  }, (theme ?? _styleTheme))]}>
+        <View style={[styles.row, themeStyle('tabs_createTripWizard_54', {  }, (theme ?? _styleTheme))]}>
           <View>
             <Text style={styles.sectionTitle}>{quickStartMode ? 'Create a trip' : 'Create Trip Wizard'}</Text>
             <Text style={styles.helperText}>
@@ -2530,7 +2502,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.button, styles.dangerButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
+            style={[styles.button, styles.dangerButton, themeStyle('tabs_createTripWizard_55', {  }, (theme ?? _styleTheme))]}
             onPress={() => setShowExitConfirm(true)}
           >
             <Text style={styles.dangerButtonText}>X</Text>
@@ -2539,17 +2511,17 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
         {/* Step content scrolls; nav buttons stay anchored below */}
         <ScrollView
-          style={{ flex: 1, minHeight: 0 }}
-          contentContainerStyle={{ gap: 12, flexGrow: 1 }}
+          style={themeStyle('tabs_createTripWizard_56', {  }, (theme ?? _styleTheme))}
+          contentContainerStyle={themeStyle('tabs_createTripWizard_57', {  }, (theme ?? _styleTheme))}
           keyboardShouldPersistTaps="handled"
         >
           {renderStepContent()}
         </ScrollView>
-        <View style={[styles.row, { marginTop: 8 }]}>
+        <View style={[styles.row, themeStyle('tabs_createTripWizard_58', {  }, (theme ?? _styleTheme))]}>
           <TouchableOpacity
             style={[
               styles.button,
-              { flex: 1 },
+              themeStyle('tabs_createTripWizard_59', {  }, (theme ?? _styleTheme)),
               stepIndex === 0 ? styles.dangerButton : (styles.mapOptionButton ?? styles.button),
             ]}
             onPress={quickStartMode || stepIndex === 0 ? cancelWizard : goBack}
@@ -2559,28 +2531,21 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </Text>
           </TouchableOpacity>
           {quickStartMode ? (
-            <View style={[styles.row, { flex: 1, marginBottom: 0, flexWrap: 'nowrap' }]}>
-              <TouchableOpacity style={[styles.button, { flex: 1 }, !quickStartReady && { opacity: 0.6 }]} onPress={submitWizard} disabled={!quickStartReady || isSubmitting} testID="quick-start-create">
+            <View style={[styles.row, themeStyle('tabs_createTripWizard_60', {  }, (theme ?? _styleTheme))]}>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_createTripWizard_61', {  }, (theme ?? _styleTheme)), !quickStartReady && themeStyle('tabs_createTripWizard_62', {  }, (theme ?? _styleTheme))]} onPress={submitWizard} disabled={!quickStartReady || isSubmitting} testID="quick-start-create">
                 <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
               </TouchableOpacity>
               <View
                 accessibilityLabel="Beta feature"
-                style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: theme?.colors.border ?? '#385266',
-                  backgroundColor: theme?.mode === 'dark' ? '#35516A' : '#E8F0F6',
-                }}
+                style={themeStyle('tabs_createTripWizard_63', { theme: theme }, (theme ?? _styleTheme))}
               >
-                <Text style={{ color: theme?.colors.text ?? '#111827', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>BETA</Text>
+                <Text style={themeStyle('tabs_createTripWizard_64', { theme: theme }, (theme ?? _styleTheme))}>BETA</Text>
               </View>
             </View>
           ) : stepIndex < totalSteps - 1 ? (
             <>
               <TouchableOpacity
-                style={[styles.button, { flex: 1 }, !canMoveNext && { opacity: 0.6 }]}
+                style={[styles.button, themeStyle('tabs_createTripWizard_65', {  }, (theme ?? _styleTheme)), !canMoveNext && themeStyle('tabs_createTripWizard_66', {  }, (theme ?? _styleTheme))]}
                 onPress={goNext}
                 disabled={!canMoveNext}
               >
@@ -2588,7 +2553,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               </TouchableOpacity>
               {stepIndex >= 3 ? (
                 <TouchableOpacity
-                  style={[styles.button, { flex: 1 }, !canMoveNext && { opacity: 0.6 }]}
+                  style={[styles.button, themeStyle('tabs_createTripWizard_67', {  }, (theme ?? _styleTheme)), !canMoveNext && themeStyle('tabs_createTripWizard_68', {  }, (theme ?? _styleTheme))]}
                   onPress={submitWizard}
                   disabled={!canMoveNext || isSubmitting}
                 >
@@ -2597,43 +2562,30 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               ) : null}
             </>
           ) : (
-            <View style={[styles.row, { flex: 1, marginBottom: 0, flexWrap: 'nowrap' }]}>
-              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={submitWizard} disabled={isSubmitting}>
+            <View style={[styles.row, themeStyle('tabs_createTripWizard_69', {  }, (theme ?? _styleTheme))]}>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_createTripWizard_70', {  }, (theme ?? _styleTheme))]} onPress={submitWizard} disabled={isSubmitting}>
                 <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
               </TouchableOpacity>
               <View
                 accessibilityLabel="Beta feature"
-                style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: theme?.colors.border ?? '#385266',
-                  backgroundColor: theme?.mode === 'dark' ? '#35516A' : '#E8F0F6',
-                }}
+                style={themeStyle('tabs_createTripWizard_71', { theme: theme }, (theme ?? _styleTheme))}
               >
-                <Text style={{ color: theme?.colors.text ?? '#111827', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>BETA</Text>
+                <Text style={themeStyle('tabs_createTripWizard_72', { theme: theme }, (theme ?? _styleTheme))}>BETA</Text>
               </View>
             </View>
           )}
         </View>
       </View>
       {showItineraryAirportSuggestions && itineraryAirportAnchor ? (
-        <View style={[styles.passengerOverlay, { backgroundColor: 'transparent', zIndex: 52000, elevation: 80 }]}>
+        <View style={[styles.passengerOverlay, themeStyle('tabs_createTripWizard_73', {  }, (theme ?? _styleTheme))]}>
           <TouchableOpacity
-            style={[styles.passengerOverlayBackdrop, { backgroundColor: 'transparent' }]}
+            style={[styles.passengerOverlayBackdrop, themeStyle('tabs_createTripWizard_74', {  }, (theme ?? _styleTheme))]}
             onPress={hideItineraryAirportDropdown}
           />
           <View
             style={[
               styles.passengerOverlayList,
-              {
-                zIndex: 53000,
-                elevation: 84,
-                left: itineraryAirportAnchor.x,
-                top: itineraryAirportAnchor.y + itineraryAirportAnchor.height,
-                width: itineraryAirportAnchor.width || 280,
-              },
+              themeStyle('tabs_createTripWizard_75', { itineraryAirportAnchor: itineraryAirportAnchor }, (theme ?? _styleTheme)),
             ]}
           >
             {itineraryAirportSuggestions.length ? (
@@ -2662,7 +2614,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeWizardLodgingEditor} />
           <View style={styles.modalCard}>
             <Text style={styles.sectionTitle}>Edit Lodging</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
+            <ScrollView style={themeStyle('tabs_createTripWizard_76', {  }, (theme ?? _styleTheme))}>
               <Text style={styles.modalLabel}>Name</Text>
               <TextInput
                 style={styles.input}
