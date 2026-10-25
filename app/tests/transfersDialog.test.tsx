@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { Linking } from 'react-native';
+import PayerSelect from '../components/PayerSelect';
 import renderer, { act } from 'react-test-renderer';
 import { FlightEditingForm, GroundTransferEditingForm } from '../components/TransferEditingForm';
 import {
@@ -231,6 +232,9 @@ describe('Flights dialog', () => {
     act(() => {
       pressAllByText(root, 'emailonly@example.com');
     });
+    act(() => {
+      root.findByType(PayerSelect).props.onChange(['member-3']);
+    });
 
     act(() => {
       root.findByProps({ testID: 'flight-modal-save' }).props.onPress();
@@ -238,7 +242,7 @@ describe('Flights dialog', () => {
 
     expect(saved).toHaveLength(1);
     expect(saved[0].passengerIds).toEqual(['member-1', 'member-2', 'member-3']);
-    expect(saved[0].paidBy).toEqual(['member-1', 'member-2', 'member-3']);
+    expect(saved[0].paidBy).toEqual(['member-3']);
   });
 
   test('does not render caret buttons in location fields', () => {

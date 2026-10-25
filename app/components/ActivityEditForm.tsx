@@ -1,3 +1,4 @@
+import PayerSelect from './PayerSelect';
 import ActivityDescriptionGenerator from './ActivityDescriptionGenerator';
 import React from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -251,26 +252,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               })}
             </View>
             <Text style={styles.modalLabel}>Paid by</Text>
-            <View style={styles.payerChips}>
-              {activeMembers.map((m) => {
-                const selected = draft.paidBy.includes(m.id);
-                const name = formatMemberDisplayName(m);
-                return (
-                  <TouchableOpacity
-                    key={`tour-payer-${m.id}`}
-                    style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                    onPress={() =>
-                      onChange((prev) => {
-                        const next = selected ? prev.paidBy.filter((id) => id !== m.id) : [...prev.paidBy, m.id];
-                        return { ...prev, paidBy: next };
-                      })
-                    }
-                  >
-                    <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <PayerSelect members={activeMembers} value={draft.paidBy} formatName={formatMemberDisplayName} onChange={ids => onChange((prev) => ({ ...prev, paidBy: ids }))} styles={styles} testID="activity-payer" />
           </ScrollView>
           <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onCancel} testID="activity-cancel">

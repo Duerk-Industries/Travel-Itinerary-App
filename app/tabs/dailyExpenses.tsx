@@ -1,3 +1,5 @@
+import PayerSelect from '../components/PayerSelect';
+import { singlePayerIds } from '../utils/payerSelection';
 import { exportCsv } from '../utils/csvExport';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
@@ -289,9 +291,15 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const receiptFileInputRef = useRef<any>(null);
 
-  const expenseItems = useMemo(
-    () => expenses.filter((expense) => categoryOptions.includes(expense.category as CategoryOption)),
+  // Keep zero-cost itinerary records intact so a later cost update can surface
+  // them again, without requiring users to repeatedly delete mirrored $0 rows.
+  const nonZeroExpenses = useMemo(
+    () => expenses.filter((expense) => (Number(expense.amount) || 0) !== 0),
     [expenses]
+  );
+  const expenseItems = useMemo(
+    () => nonZeroExpenses.filter((expense) => categoryOptions.includes(expense.category as CategoryOption)),
+    [nonZeroExpenses]
   );
 
   const dailyTotals = useMemo(() => {
@@ -330,10 +338,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   // trip's range. Without this they'd be invisible in this tab and impossible to delete here.
   const tripDateSet = useMemo(() => new Set(tripDates), [tripDates]);
   const otherExpenses = useMemo(
-    () => expenses
+    () => nonZeroExpenses
       .filter((e) => !categoryOptions.includes(e.category as CategoryOption) || !tripDateSet.has(e.expenseDate))
       .sort((a, b) => (a.expenseDate < b.expenseDate ? -1 : a.expenseDate > b.expenseDate ? 1 : 0)),
-    [expenses, tripDateSet]
+    [nonZeroExpenses, tripDateSet]
   );
 
   const toggleSelection = (ids: string[], id: string): string[] =>
@@ -509,7 +517,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       amountInTripCurrency: amountInTripCurrency ?? undefined,
       exchangeRateToTripCurrency: exchangeRateToTripCurrency ?? undefined,
       exchangeRateDate: exchangeRateDate ?? undefined,
-      payerIds: draftPayerIds,
+      payerIds: singlePayerIds(draftPayerIds, defaultPayerId),
       forIds: draftForIds,
       vendor: draftVendor || undefined,
     };
@@ -590,27 +598,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       setPendingDeleteExpense(null);
     } catch (err) {
       alertMessage((err as Error).message || 'Unable to delete expense');
-    }
-  };
-
-  const [bulkDeleting, setBulkDeleting] = useState(false);
-  const deleteExpensesByIds = async (ids: string[]) => {
-    if (readOnly) {
-      alertMessage('Offline trip information is read-only. Reconnect to delete expenses.');
-      return;
-    }
-    if (!costTrackingAllowed || !ids.length) return;
-    setBulkDeleting(true);
-    const deleted: string[] = [];
-    try {
-      for (const id of ids) {
-        const res = await fetch(`${backendUrl}/api/expenses/${id}`, { method: 'DELETE', headers });
-        if (res.ok) deleted.push(id);
-      }
-      if (deleted.length) setExpenses((prev) => prev.filter((e) => !deleted.includes(e.id)));
-      if (deleted.length < ids.length) alertMessage(`Deleted ${deleted.length} of ${ids.length}. Some could not be removed.`);
-    } finally {
-      setBulkDeleting(false);
     }
   };
 
@@ -914,26 +901,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   })}
                 </View>
 
-                <Text style={styles.headerText}>Payers</Text>
-                <View style={styles.toggleGroup}>
-                  {activeMembers.map((member) => {
-                    const selected = draftPayerIds.includes(member.id);
-                    return (
-                      <TouchableOpacity
-                        key={`payer-toggle-${member.id}`}
-                        style={[
-                          styles.expenseToggleButton,
-                          selected ? styles.expenseToggleSelected : styles.expenseToggleUnselected,
-                        ]}
-                        onPress={() => setDraftPayerIds((prev) => toggleSelection(prev, member.id))}
-                      >
-                        <Text style={[styles.expenseToggleText, selected && styles.expenseToggleTextSelected]}>
-                          {memberNameMap.get(member.id) ?? 'Traveler'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <Text style={styles.headerText}>Payer</Text>
+                <PayerSelect members={activeMembers} value={draftPayerIds} onChange={setDraftPayerIds} styles={styles} testID="expense-payer" />
 
                 <View style={styles.row}>
                   <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveExpense} testID="expense-save">
@@ -1047,18 +1016,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           <Text style={styles.helperText}>
             Expenses outside the daily grid above — a different category (often mirrored from a flight, lodging, activity or car rental) or a date outside this trip. Select a linked description to edit its itinerary item.
           </Text>
-          {otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).length >= 2 ? (
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton, { alignSelf: 'flex-start', marginTop: 6, marginBottom: 4 }]}
-              disabled={bulkDeleting}
-              onPress={() => deleteExpensesByIds(otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).map((e) => e.id))}
-              testID="other-expenses-clear-zero"
-            >
-              <Text style={styles.buttonText}>
-                {bulkDeleting ? 'Removing…' : `Remove ${otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).length} zero-amount entries`}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
           <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table} testID="other-expenses-table">
               <View style={[styles.tableRow, styles.tableHeader]}>
@@ -1138,7 +1095,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
               <HorizontalTableScroll style={{ marginTop: 8 }} contentContainerStyle={styles.tableScrollContent}>
                 <View style={[styles.table, { minWidth: 620 }]}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
-                    {['Description', 'For', 'Payers', 'Amount', 'Action'].map((header, index) => (
+                    {['Description', 'For', 'Payer', 'Amount', 'Action'].map((header, index) => (
                       <View key={header} style={[styles.cell, fixedTableColumn(index === 3 ? 90 : 150), index === 4 && styles.lastCell]}>
                         <Text style={styles.headerText}>{header}</Text>
                       </View>

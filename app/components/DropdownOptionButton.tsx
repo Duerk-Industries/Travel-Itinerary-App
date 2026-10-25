@@ -8,6 +8,7 @@ type DropdownOptionButtonProps = {
   onPressIn?: () => void;
   testID?: string;
   disabled?: boolean;
+  selected?: boolean;
   style?: any;
   accessibilityLabel?: string;
 };
@@ -25,6 +26,7 @@ const DropdownOptionButtonComponent: React.FC<DropdownOptionButtonProps> = ({
   onPressIn,
   testID,
   disabled,
+  selected,
   style,
   accessibilityLabel,
 }) => (
@@ -36,7 +38,7 @@ const DropdownOptionButtonComponent: React.FC<DropdownOptionButtonProps> = ({
     {...WEB_IMMEDIATE_PRESS_IN}
     accessibilityRole="menuitem"
     accessibilityLabel={accessibilityLabel}
-    accessibilityState={{ disabled: !!disabled }}
+    accessibilityState={{ disabled: !!disabled, ...(selected === undefined ? {} : { selected }) }}
     style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => [
       styles.dropdownOption,
       hovered ? styles.dropdownOptionHover : null,

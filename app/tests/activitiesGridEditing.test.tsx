@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { ActivityTab, type Tour } from '../tabs/activities';
+import EditableDataGrid from '../components/EditableDataGrid';
 
 jest.mock('react-native', () => {
   return {
@@ -153,6 +154,22 @@ const renderActivityHarness = (initialTours: Tour[], extraProps: Record<string, 
 };
 
 describe('Activities grid editing', () => {
+  it('replaces a payer from the dropdown and rejects multiple pasted payers', () => {
+    const view = renderActivityHarness([tourOne], { groupMembers: [
+      { id: 'member-2', firstName: 'Zoe', status: 'active' }, ...members,
+    ] });
+    fireEvent.press(view.getByTestId('activity-table-edit'));
+    fireEvent.press(within(view.getByTestId('grid-paidBy-tour-1')).getByLabelText('Paid By'));
+    fireEvent.press(view.getByTestId('grid-paidBy-tour-1-option-member-2'));
+    expect(view.UNSAFE_getByType(EditableDataGrid).props.rows[0].paidBy).toEqual(['member-2']);
+
+    act(() => view.UNSAFE_getByType(EditableDataGrid).props.onCellsChange([
+      { rowId: 'tour-1', columnKey: 'paidBy', value: 'Bryan Duerk; Zoe' },
+    ]));
+    expect(view.getByText('Select only one payer.')).toBeTruthy();
+    expect(view.UNSAFE_getByType(EditableDataGrid).props.rows[0].paidBy).toEqual(['member-2']);
+  });
+
   it('opens the edit form when a non-name activity cell is tapped', () => {
     const view = renderActivityHarness([tourOne]);
 

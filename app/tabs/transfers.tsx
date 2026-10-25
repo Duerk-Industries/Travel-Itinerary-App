@@ -1,3 +1,4 @@
+import { singlePayerIds } from '../utils/payerSelection';
 import { FlightDetailsDialog, GroundTransferDetailsDialog } from '../components/TransferDetailsDialog';
 import { TRANSFER_TYPES as CANONICAL_TRANSFER_TYPES, normalizeTransferType } from '../utils/transferTypes';
 import type { TransferMode } from '../../server/src/types';
@@ -346,7 +347,7 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
     carrier: trim(flight.carrier),
     flightNumber: trim(flight.flightNumber),
     bookingReference: trim(flight.bookingReference),
-    paidBy: flight.paidBy?.length ? flight.paidBy : defaultPayerId ? [defaultPayerId] : [],
+    paidBy: singlePayerIds(flight.paidBy, defaultPayerId),
     ...(tripId ? { tripId } : {}),
   };
 };

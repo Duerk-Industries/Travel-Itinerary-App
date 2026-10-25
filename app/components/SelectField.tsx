@@ -135,6 +135,7 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
                     onPress={() => selectValue(option.value)}
                     accessibilityLabel={`Select ${option.label}`}
                     testID={testID ? `${testID}-option-${option.value || 'none'}` : undefined}
+                    selected={option.value === value}
                   >
                     <Text style={styles.cellText}>{option.label}</Text>
                   </DropdownOptionButton>

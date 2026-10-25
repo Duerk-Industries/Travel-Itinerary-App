@@ -1,3 +1,4 @@
+import PayerSelect from './PayerSelect';
 import React from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
@@ -212,26 +213,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
               })}
             </View>
             <Text style={styles.modalLabel}>Paid by</Text>
-            <View style={styles.payerChips}>
-              {activeMembers.map((m) => {
-                const selected = draft.paidBy.includes(m.id);
-                const name = formatMemberDisplayName(m);
-                return (
-                  <TouchableOpacity
-                    key={`car-payer-${m.id}`}
-                    style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                    onPress={() =>
-                      onChange((prev) => {
-                        const next = selected ? prev.paidBy.filter((id) => id !== m.id) : [...prev.paidBy, m.id];
-                        return { ...prev, paidBy: next };
-                      })
-                    }
-                  >
-                    <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <PayerSelect members={activeMembers} value={draft.paidBy} formatName={formatMemberDisplayName} onChange={ids => onChange((prev) => ({ ...prev, paidBy: ids }))} styles={styles} testID="car-rental-payer" />
           </ScrollView>
           <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onCancel} testID="car-rental-cancel">

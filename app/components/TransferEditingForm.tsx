@@ -1,3 +1,4 @@
+import PayerSelect from './PayerSelect';
 import KeyboardViewport from './KeyboardViewport';
 import AirportInput from './AirportInput';
 import { TRANSFER_TYPES as CANONICAL_TRANSFER_TYPES, normalizeTransferType } from '../utils/transferTypes';
@@ -486,27 +487,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             }
           />
           <Text style={[styles.modalLabel, { marginTop: 16 }]}>Paid by</Text>
-          <View style={styles.payerChips}>
-            {groupMembers.map((m) => {
-              const selected = flight.paidBy.includes(m.id);
-              const name = formatMemberName(m);
-              return (
-                <TouchableOpacity
-                  key={`payer-${m.id}`}
-                  style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                  onPress={() =>
-                    setFlight((prev) => {
-                      if (!prev) return prev;
-                      const next = selected ? prev.paidBy.filter((id) => id !== m.id) : [...prev.paidBy, m.id];
-                      return { ...prev, paidBy: next };
-                    })
-                  }
-                >
-                  <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <PayerSelect members={groupMembers} value={flight.paidBy} formatName={formatMemberName} onChange={ids => setFlight((prev) => prev ? ({ ...prev, paidBy: ids }) : prev)} styles={styles} testID="transfer-payer" />
         </ScrollView>
         </KeyboardViewport>
         <View style={[styles.row, { marginTop: 16 }]}>

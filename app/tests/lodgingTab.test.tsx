@@ -352,8 +352,8 @@ describe('LodgingTab', () => {
             const editDialog = getByTestId('lodging-editor-dialog');
             expect(within(editDialog).getByText('Lodging Details')).toBeTruthy();
 
-            const addButtons = getAllByText('Jane Doe');
-            fireEvent.press(addButtons[addButtons.length - 1]);
+            fireEvent.press(within(editDialog).getByLabelText('Payer'));
+            fireEvent.press(getByTestId('lodging-payer-option-m2'));
 
             fireEvent.press(getByText('Save'));
 
@@ -362,7 +362,7 @@ describe('LodgingTab', () => {
             expect(String(url)).toContain('/api/lodgings/l1');
             expect(options.method).toBe('PUT');
             const payload = JSON.parse(options.body);
-            expect(payload.paidBy).toEqual(['m1', 'm2']);
+            expect(payload.paidBy).toEqual(['m2']);
             expect(onRefreshLodgings).toHaveBeenCalled();
         } finally {
             (global as any).fetch = originalFetch;

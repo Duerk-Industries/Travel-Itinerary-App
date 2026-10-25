@@ -427,8 +427,9 @@ describe('DailyExpensesTab', () => {
         onEditItineraryItem={onEditItineraryItem} costTrackingAllowed />
     );
 
-    // The grid can't show any of these three; the "Other expenses" table does.
-    expect(screen.getByText('Other expenses (3)')).toBeTruthy();
+    // Non-zero entries outside the grid appear here; zero-cost activities do not.
+    expect(screen.getByText('Other expenses (2)')).toBeTruthy();
+    expect(screen.queryByTestId('other-expense-row-act-0')).toBeNull();
     expect(screen.getByTestId('other-expense-row-act-1')).toBeTruthy();
     expect(screen.getByTestId('other-expense-row-old-1')).toBeTruthy();
     expect(screen.getByText('Paid by')).toBeTruthy();
@@ -443,7 +444,40 @@ describe('DailyExpensesTab', () => {
     fireEvent.press(screen.getByTestId('other-expense-edit-source-act-1'));
     expect(onEditItineraryItem).toHaveBeenCalledWith('activity', 'a1');
 
-    // The bulk "remove zero-amount" shortcut only shows with 2+ zero entries; here there is 1.
+    // Zero entries no longer need manual cleanup.
+    expect(screen.queryByTestId('other-expenses-clear-zero')).toBeNull();
+  });
+
+  it('automatically hides zero entries, restores an activity when a cost is added, and hides it again at zero', () => {
+    const setExpenses = jest.fn();
+    const activity = { ...expenses[0], id: 'activity-zero', category: 'Activities', sourceType: 'activity', sourceId: 'a-zero', amount: 0 };
+    const zeroDinner = { ...expenses[0], id: 'dinner-zero', category: 'Dinner', amount: 0 };
+    const refund = { ...activity, id: 'refund', sourceId: 'a-refund', amount: -5 };
+    const draw = (amount: number) => <DailyExpensesTab
+      backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+      groupMembers={groupMembers} expenses={[...expenses, { ...activity, amount }, zeroDinner, refund]}
+      setExpenses={setExpenses} defaultPayerId="m1" styles={styles} costTrackingAllowed
+      itineraryExpenseDescriptions={{ 'activity:a-zero': 'Museum visit' }} />;
+    const screen = render(draw(0));
+    expect(screen.queryByTestId('other-expense-row-activity-zero')).toBeNull();
+    expect(screen.getByTestId('other-expense-row-refund')).toBeTruthy();
+    expect(screen.getByText('Other expenses (1)')).toBeTruthy();
+    screen.rerender(draw(25));
+    expect(within(screen.getByTestId('other-expense-row-activity-zero')).getByText('$25.00')).toBeTruthy();
+    expect(screen.getByText('Other expenses (2)')).toBeTruthy();
+    screen.rerender(draw(0));
+    expect(screen.queryByTestId('other-expense-row-activity-zero')).toBeNull();
+    // Hiding entries must not delete the itinerary's underlying expense records.
+    expect(setExpenses).not.toHaveBeenCalled();
+  });
+
+  it('omits Other Expenses entirely when all of its entries are zero', () => {
+    const zeroActivity = { ...expenses[0], id: 'free', category: 'Activities', amount: 0, sourceType: 'activity', sourceId: 'free-activity' };
+    const screen = render(<DailyExpensesTab
+      backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+      groupMembers={groupMembers} expenses={[zeroActivity]} setExpenses={jest.fn()}
+      defaultPayerId="m1" styles={styles} costTrackingAllowed />);
+    expect(screen.queryByTestId('other-expenses')).toBeNull();
     expect(screen.queryByTestId('other-expenses-clear-zero')).toBeNull();
   });
 

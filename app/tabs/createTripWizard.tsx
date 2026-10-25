@@ -1,3 +1,5 @@
+import PayerSelect from '../components/PayerSelect';
+import { singlePayerIds } from '../utils/payerSelection';
 import type { ImportTripDraft } from '../../server/src/types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
@@ -72,7 +74,7 @@ import DialogShell from '../components/DialogShell';
 import DateField from '../components/DateField';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { fixedTableColumn } from '../utils/tableColumns';
-  
+
 type Suggestion = {
   id: string;
   firstName?: string;
@@ -933,7 +935,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
     const totalNum = Number(draft.totalCost) || 0;
     const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
-    const paidBy = draft.paidBy.length ? draft.paidBy : wizardDefaultPayerId ? [wizardDefaultPayerId] : [];
+    const paidBy = singlePayerIds(draft.paidBy, wizardDefaultPayerId);
     const next: Lodging = {
       id: lodgingId ?? `wizard-lodging-${Date.now()}-${Math.round(Math.random() * 10000)}`,
       userId: '',
@@ -2394,29 +2396,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </View>
                   </View>
                   <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
-                    <View style={styles.payerChips}>
-                      {wizardCarDraft.paidBy.map((id) => (
-                        <View key={id} style={styles.payerChip}>
-                          <Text style={styles.cellText}>{wizardPayerName(id)}</Text>
-                          <TouchableOpacity onPress={() => setWizardCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                            <Text style={styles.removeText}>x</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                    <View style={styles.payerOptions}>
-                      {wizardGroupMembers
-                        .filter((m) => !wizardCarDraft.paidBy.includes(m.id))
-                        .map((m) => (
-                          <TouchableOpacity
-                            key={m.id}
-                            style={styles.smallButton}
-                            onPress={() => setWizardCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                          >
-                            <Text style={styles.buttonText}>Add {formatWizardMemberName(m)}</Text>
-                          </TouchableOpacity>
-                        ))}
-                    </View>
+                    <PayerSelect members={wizardGroupMembers} value={wizardCarDraft.paidBy} formatName={formatWizardMemberName} onChange={ids => setWizardCarDraft(prev => ({ ...prev, paidBy: ids }))} styles={styles} testID="wizard-car-payer" />
+
                   </View>
                   <View style={[styles.cell, styles.actionCell, fixedTableColumn(160), styles.lastCell]}>
                     <TouchableOpacity style={styles.button} onPress={addWizardCarRental}>
@@ -2739,44 +2720,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <Text style={styles.helperText}>{editingWizardLodging.costPerNight ? `$${editingWizardLodging.costPerNight}` : '-'}</Text>
 
               <Text style={styles.modalLabel}>Paid by</Text>
-              <View style={[styles.input, styles.payerBox]}>
-                <View style={styles.payerChips}>
-                  {editingWizardLodging.paidBy.map((id) => (
-                    <View key={id} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{wizardPayerName(id)}</Text>
-                      <TouchableOpacity
-                        onPress={() =>
-                          setEditingWizardLodging((p) =>
-                            p
-                              ? {
-                                  ...p,
-                                  paidBy: p.paidBy.filter((x) => x !== id),
-                                }
-                              : p
-                          )
-                        }
-                      >
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {wizardGroupMembers
-                    .filter((m) => !editingWizardLodging.paidBy.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={styles.smallButton}
-                        onPress={() =>
-                          setEditingWizardLodging((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))
-                        }
-                      >
-                        <Text style={styles.buttonText}>Add {formatWizardMemberName(m)}</Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
-              </View>
+              <PayerSelect members={wizardGroupMembers} value={editingWizardLodging.paidBy} formatName={formatWizardMemberName} onChange={ids => setEditingWizardLodging(prev => prev ? ({ ...prev, paidBy: ids }) : prev)} styles={styles} testID="wizard-lodging-payer" />
 
               <Text style={styles.modalLabel}>Address</Text>
               <TextInput

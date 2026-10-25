@@ -7,6 +7,7 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { OverviewTab, dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
+import PayerSelect from '../components/PayerSelect';
 import LodgingDialog from '../components/LodgingDialog';
 import { FlightDetailsDialog, GroundTransferDetailsDialog } from '../components/TransferDetailsDialog';
 import { FlightEditingForm, GroundTransferEditingForm } from '../components/TransferEditingForm';
@@ -415,7 +416,7 @@ describe('Overview edit controls', () => {
 
     const lodgingDialog = root.findByType(LodgingDialog);
     act(() => {
-      pressByTextContainsWithin(lodgingDialog, 'Jane Doe');
+      lodgingDialog.findByType(PayerSelect).props.onChange(['member-2']);
     });
 
     await act(async () => {
@@ -429,7 +430,7 @@ describe('Overview edit controls', () => {
     const options = lodgingCall[1];
     expect(options.method).toBe('PUT');
     const payload = JSON.parse(options.body);
-    expect(payload.paidBy).toEqual(['member-1', 'member-2']);
+    expect(payload.paidBy).toEqual(['member-2']);
   });
 
   test('saves lodging opened from its overview details dialog and returns to view mode', async () => {

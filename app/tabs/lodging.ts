@@ -1,3 +1,4 @@
+import { singlePayerIds } from '../utils/payerSelection';
 import type { PlanningCoordinates } from '../../server/src/types';
 import { formatDateLong } from '../utils/formatDateLong';
 import { startItemSaveTask } from '../utils/analytics/track';
@@ -143,7 +144,7 @@ export const buildLodgingPayload = (
   const totalNum = Number(cleanTotal) || 0;
   const rooms = Number(draft.rooms) || 1;
   const costPerNight = totalNum && rooms > 0 && nights > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
-  const paidBy = draft.paidBy.length ? draft.paidBy : defaultPayerId ? [defaultPayerId] : [];
+  const paidBy = singlePayerIds(draft.paidBy, defaultPayerId);
   const travelerIds = draft.travelerIds.length ? draft.travelerIds : paidBy;
 
   return {

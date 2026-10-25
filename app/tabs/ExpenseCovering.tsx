@@ -60,7 +60,8 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
           { label: 'No one', value: '' },
           ...activeMembers
             .filter((m) => m.id !== member.id && !wouldCreateCycle(member.id, m.id))
-            .map((coveringMember) => ({ label: formatMemberName(coveringMember), value: coveringMember.id })),
+            .map((coveringMember) => ({ label: formatMemberName(coveringMember), value: coveringMember.id }))
+            .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true })),
         ];
         return (
         <View

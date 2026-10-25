@@ -4,9 +4,10 @@ import Modal from './KeyboardAwareModal';
 import { parseClipboardMatrix, serializeClipboardMatrix } from '../utils/clipboardGrid';
 import { fixedTableColumn } from '../utils/tableColumns';
 import DateField from './DateField';
+import SelectField from './SelectField';
 import type { AppTheme } from '../theme/theme';
 
-export type GridEditorKind = 'text' | 'date' | 'time' | 'decimal' | 'select' | 'multiSelect' | 'textarea' | 'readonly' | 'action';
+export type GridEditorKind = 'text' | 'date' | 'time' | 'decimal' | 'select' | 'singleSelect' | 'multiSelect' | 'textarea' | 'readonly' | 'action';
 
 export type GridPickerOption = { id: string; label: string };
 
@@ -20,9 +21,9 @@ export type GridColumn<Row extends { id: string }> = {
   editable?: boolean;
   sortable?: boolean;
   options?: readonly string[];
-  /** multiSelect only: the full set of choices offered by the "Pick…" picker modal. */
+  /** Member selection choices for singleSelect and multiSelect editors. */
   pickerOptions?: readonly GridPickerOption[];
-  /** multiSelect only: current selection by id, used to pre-check the picker modal. */
+  /** Current member selection by id for singleSelect and multiSelect editors. */
   getSelectedIds?: (row: Row) => string[];
   getValue: (row: Row) => string;
   parseValue?: (value: string, row: Row) => { ok: true; value: unknown } | { ok: false; error: string };
@@ -288,7 +289,15 @@ export function EditableDataGrid<Row extends { id: string }>({
     };
     const inputStyle = [styles.input, gridInputThemeStyle, { minWidth: column.width - 16, width: column.width - 16, margin: 4 }];
     let editor: React.ReactNode;
-    if (column.editor === 'select') {
+    if (column.editor === 'singleSelect') {
+      editor = <SelectField
+        styles={styles} title={column.label} placeholder="Select payer" disabled={disabled}
+        testID={`grid-${column.key}-${row.id}`}
+        value={column.getSelectedIds?.(row)[0] ?? ''}
+        options={[...(column.pickerOptions ?? [])].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true })).map(option => ({ value: option.id, label: option.label }))}
+        onChange={id => { if (id) onChange(id); }}
+      />;
+    } else if (column.editor === 'select') {
       if (Platform.OS === 'web') {
         editor = React.createElement('select', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 } }, (column.options ?? []).map((option) => React.createElement('option', { key: option, value: option }, option)));
       } else {

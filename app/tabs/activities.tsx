@@ -1,3 +1,4 @@
+import { singlePayerIds } from '../utils/payerSelection';
 import AddToCalendarButton from '../components/AddToCalendarButton';
 import { activityCalendarEvent } from '../utils/calendarEvents';
 import type { PlanningCoordinates } from '../../server/src/types';
@@ -163,7 +164,7 @@ export const buildActivityPayload = (draft: TourDraft, defaultPayerId?: string |
   const activityType = ACTIVITY_TYPES.includes(draft.activityType) ? draft.activityType : 'Tour';
   if (!shouldRelaxRequiredFields(status) && !draft.name.trim()) return { error: 'Please enter an activity name.' };
   const cleanCost = sanitizeCostInput(draft.cost || '');
-  let payload: TourDraft = { ...draft, activityType, status, cost: cleanCost };
+  let payload: TourDraft = { ...draft, activityType, status, cost: cleanCost, paidBy: singlePayerIds(draft.paidBy, defaultPayerId) };
   if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
     payload = { ...payload, paidBy: [defaultPayerId] };
   }
@@ -430,6 +431,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     const cleanCost = (editingTour.cost || '').replace(/[^0-9.]/g, '');
     let payload: TourDraft = {
       ...editingTour,
+      paidBy: singlePayerIds(editingTour.paidBy, defaultPayerId),
       activityType: ACTIVITY_TYPES.includes(editingTour.activityType) ? editingTour.activityType : 'Tour',
       status,
       cost: cleanCost,
@@ -567,7 +569,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         key: 'paidBy',
         label: 'Paid By',
         width: 210,
-        editor: 'multiSelect',
+        editor: 'singleSelect',
         getValue: (row) => people(row.paidBy),
         getSelectedIds: (row) => row.paidBy ?? [],
         pickerOptions: activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member) })),
@@ -673,10 +675,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       setGridError(rowId, columnKey, 'Select a supported option.');
       return;
     }
-    if (column.editor === 'multiSelect') {
+    if (column.editor === 'multiSelect' || column.editor === 'singleSelect') {
       const resolved = resolveMemberClipboardValue(rawValue, activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member), email: member.email })));
       if (!resolved.ok) {
         setGridError(rowId, columnKey, resolved.error);
+        return;
+      }
+      if (column.editor === 'singleSelect' && resolved.value.length > 1) {
+        setGridError(rowId, columnKey, 'Select only one payer.');
         return;
       }
       value = resolved.value;
@@ -719,10 +725,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: 'Select a supported option.' });
         continue;
       }
-      if (column.editor === 'multiSelect') {
+      if (column.editor === 'multiSelect' || column.editor === 'singleSelect') {
         const resolved = resolveMemberClipboardValue(change.value, activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member), email: member.email })));
         if (!resolved.ok) {
           nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: resolved.error });
+          continue;
+        }
+        if (column.editor === 'singleSelect' && resolved.value.length > 1) {
+          nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: 'Select only one payer.' });
           continue;
         }
         value = resolved.value;

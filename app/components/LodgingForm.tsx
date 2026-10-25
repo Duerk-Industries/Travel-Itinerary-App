@@ -1,3 +1,4 @@
+import PayerSelect from './PayerSelect';
 import React, { memo, useMemo } from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import type { LodgingDraft } from '../tabs/lodging';
@@ -46,21 +47,8 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
     [groupMembers]
   );
 
-  const ensurePaidBy = (nextPaidBy: string[]) => {
-    if (nextPaidBy.length) return nextPaidBy;
-    if (defaultPayerId) return [defaultPayerId];
-    if (draft.travelerIds.length) return [draft.travelerIds[0]];
-    return [];
-  };
-
   const updateTravelerIds = (nextIds: string[]) => {
-    const filtered = nextIds.filter(Boolean);
-    const nextPaidBy = draft.paidBy.filter((id) => filtered.includes(id));
-    setDraft((prev) => ({
-      ...prev,
-      travelerIds: filtered,
-      paidBy: ensurePaidBy(nextPaidBy),
-    }));
+    setDraft((prev) => ({ ...prev, travelerIds: nextIds.filter(Boolean) }));
   };
 
   const toggleBaseStyle = styles.toggleOption ?? {
@@ -223,26 +211,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
       </View>
 
       <Text style={styles.modalLabel}>Paid by</Text>
-      <View style={styles.payerChips}>
-        {activeMembers.map((m) => {
-          const selected = draft.paidBy.includes(m.id);
-          const name = formatMemberName(m);
-          return (
-            <TouchableOpacity
-              key={`payer-toggle-${m.id}`}
-              style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-              onPress={() => {
-                const nextPaidBy = selected
-                  ? draft.paidBy.filter((id) => id !== m.id)
-                  : [...draft.paidBy, m.id];
-                setDraft((prev) => ({ ...prev, paidBy: ensurePaidBy(nextPaidBy) }));
-              }}
-            >
-              <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <PayerSelect members={activeMembers} value={draft.paidBy} formatName={formatMemberName} onChange={ids => setDraft((prev) => ({ ...prev, paidBy: ids }))} styles={styles} testID="lodging-payer" />
 
       <Text style={styles.modalLabel}>Address</Text>
       <DraftTextInput

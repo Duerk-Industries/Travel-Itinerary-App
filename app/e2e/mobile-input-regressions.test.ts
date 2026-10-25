@@ -17,7 +17,7 @@ async function boot(page: Page) {
     if (path === '/api/account') json = { ...user, id: user.userId, dateOfBirth: '1990-01-01', entitlements: { costTracking: true }, tierKey: 'pro' };
     else if (path === '/api/trips') json = [trip];
     else if (path === '/api/groups') json = [{ id: 'input-group', name: 'Input group', ownerId: user.userId, members, invites: [] }];
-    else if (path.endsWith('/members')) json = members;
+    else if (path.endsWith('/members')) json = [members[2], members[0], members[1]];
     else if (path.endsWith('/covered-by')) json = {};
     else if (path === '/api/trips/input-trip/packing-list') json = {
       travelers: Array.from({ length: 12 }, (_, i) => ({ id: `packer-${i}`, name: `Traveler ${String(i + 1).padStart(2, '0')}` })),
@@ -63,6 +63,29 @@ async function aboveKeyboard(page: Page, control: Locator, height: number, top =
 }
 
 for (const width of [390, 1280]) {
+  test(`payer dropdowns replace one alphabetized choice at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await boot(page);
+    await page.getByTestId('home-nav-tours').click();
+    await page.getByTestId('activity-add').click();
+    const activityPayer = page.getByTestId('activity-payer');
+    await expect(activityPayer.locator('option')).toHaveText(['Select payer', 'Input Tester', 'Second Traveler', 'Third Traveler']);
+    await activityPayer.selectOption('member-b');
+    await activityPayer.selectOption('member-c');
+    await expect(activityPayer).toHaveValue('member-c');
+    expect(await activityPayer.evaluate((el: HTMLSelectElement) => el.multiple)).toBe(false);
+    await page.getByTestId('activity-cancel').click();
+    await page.getByLabel('Home', { exact: true }).click();
+    await page.getByTestId('home-nav-expenses').click();
+    await page.getByTestId('expense-add-button').click();
+    const expensePayer = page.getByTestId('expense-payer');
+    await expect(expensePayer.locator('option')).toHaveText(['Select payer', 'Input Tester', 'Second Traveler', 'Third Traveler']);
+    await expensePayer.selectOption('member-c');
+    await expensePayer.selectOption('member-b');
+    await expect(expensePayer).toHaveValue('member-b');
+    expect(await expensePayer.evaluate((el: HTMLSelectElement) => el.selectedOptions.length)).toBe(1);
+  });
+
   test(`packing traveler names head their own columns before and after scrolling at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await boot(page);

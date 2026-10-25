@@ -1,7 +1,7 @@
+import SelectField from './SelectField';
 import React, { memo, useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
-import { toWebStyle } from '../utils/webStyle';
 import DialogShell from './DialogShell';
 import DateField from './DateField';
 import DraftTextInput from './DraftTextInput';
@@ -122,57 +122,12 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
     options: string[],
     testIdPrefix: string
   ) => {
-    if (Platform.OS === 'web') {
-      return (
-        <View style={{ gap: 4 }}>
-          <Text style={styles.headerText}>{label}</Text>
-          <select
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            style={{
-              ...toWebStyle(styles.input),
-              width: '100%',
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-            }}
-            data-testid={`${testIdPrefix}-select`}
-            aria-label={label}
-          >
-            {options.map((id) => (
-              <option key={id} value={id}>
-                {participantLabel(id)}
-              </option>
-            ))}
-          </select>
-        </View>
-      );
-    }
     return (
       <View style={{ gap: 4 }}>
         <Text style={styles.headerText}>{label}</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {options.map((id) => {
-            const selected = id === value;
-            return (
-              <TouchableOpacity
-                key={`${testIdPrefix}-${id}`}
-                style={[
-                  styles.expenseToggleButton,
-                  selected ? styles.expenseToggleSelected : styles.expenseToggleUnselected,
-                ]}
-                onPress={() => setValue(id)}
-                testID={`${testIdPrefix}-${id}`}
-                accessibilityRole="button"
-                accessibilityLabel={`${label}: ${participantLabel(id)}`}
-                accessibilityState={{ selected }}
-              >
-                <Text style={[styles.expenseToggleText, selected && styles.expenseToggleTextSelected]}>
-                  {participantLabel(id)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <SelectField styles={styles} title={label} testID={`${testIdPrefix}-select`} value={value}
+          options={options.map(id => ({ value: id, label: participantLabel(id) })).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }))}
+          onChange={id => { if (id) setValue(id); }} />
       </View>
     );
   };
