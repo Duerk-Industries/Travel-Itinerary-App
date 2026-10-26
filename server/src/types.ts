@@ -1,4 +1,4 @@
-export type ItineraryStatus = 'Needed' | 'Proposed' | 'Needs Booking' | 'Booked' | 'Cancelled' | 'Completed';
+export type ItineraryStatus = 'Proposed' | 'Needs Booking' | 'Booked' | 'Cancelled' | 'Completed';
 export type ActivityType =
   | 'Class'
   | 'Concert/Show'
@@ -380,6 +380,7 @@ export interface GroupMember {
 }
 
 export interface Trip {
+  createdBy?: string | null;
   id: string;
   groupId: string;
   name: string;
@@ -864,7 +865,7 @@ export interface ItineraryComparison {
 }
 
 export interface ItineraryGeneratedTransfer {
-  status: 'Needed';
+  status: 'Proposed';
   transferType: TransferMode;
   departureDate: string;
   arrivalDate: string;
@@ -879,7 +880,7 @@ export interface ItineraryGeneratedTransfer {
 }
 
 export interface ItineraryGeneratedLodging {
-  status: 'Needed';
+  status: 'Proposed';
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -905,7 +906,7 @@ export interface ItineraryGeneratedActivity {
 }
 
 export interface ItineraryGeneratedCarRental {
-  status: 'Needed';
+  status: 'Proposed';
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;

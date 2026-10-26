@@ -35,7 +35,7 @@ export const GUIDE_CORPUS: GuideCorpusEntry[] = [
     keywords: ['flight', 'flights', 'train', 'transfer', 'transfers', 'airport', 'departure', 'arrival', 'layover'],
     content:
       'Use Flights for air travel. Use Ground Transfers for Public Transit (trains, buses, ferries), Private Transfer, ' +
-      'and Other. Ground Transfers appears directly below Lodging on Home. Their expense totals are separate. Each entry has a status (Needed, Proposed, Needs Booking, ' +
+      'and Other. Ground Transfers appears directly below Lodging on Home. Their expense totals are separate. Each entry has a status (Proposed, Needs Booking, ' +
       'Booked, Completed, or Cancelled). Add one manually by tapping the round "+" button -- it has no ' +
       'text label; there is no "Add Flight" button. To add one automatically instead, tap the separate ' +
       '"Paste Info" button and paste a confirmation email/text; the flight parser will fill in the ' +
@@ -55,7 +55,7 @@ export const GUIDE_CORPUS: GuideCorpusEntry[] = [
     keywords: ['activity', 'activities', 'tour', 'tours', 'sightseeing', 'things to do', 'event'],
     content:
       'The Activities tab tracks tours, sights, and events for each day of the trip -- start time, ' +
-      'duration, location, and cost. Activities can be voted on and rated by everyone on the trip.',
+      'duration, location, and cost. Completed activities can be rated by everyone on the trip.',
   },
   {
     id: 'car-rentals',
@@ -89,7 +89,7 @@ export const GUIDE_CORPUS: GuideCorpusEntry[] = [
     title: 'Overview and day view',
     keywords: ['overview', 'day view', 'today', 'schedule', 'itinerary status', 'needed', 'proposed', 'booked'],
     content:
-      'The Overview tab shows the trip day by day, with each item\'s status (Needed -> Proposed -> Needs Booking -> Booked ' +
+      'The Overview tab shows the trip day by day, with each item\'s status (Proposed -> Needs Booking -> Booked ' +
       '-> Completed, or Cancelled). Tap a day to see everything happening on it and edit items in place.',
   },
   {

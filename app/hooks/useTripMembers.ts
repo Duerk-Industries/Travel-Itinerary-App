@@ -8,7 +8,7 @@ export interface TripMembersDerivation {
   memberIds: string[];
   /** The signed-in user's member id in the current trip's group, or null if not a member. */
   currentUserMemberId: string | null;
-  /** Best-guess default payer: the signed-in user, else the first user member, else null. */
+  /** Trip creator when still a traveler, else the signed-in user or first active traveler. */
   defaultPayerId: string | null;
 }
 
@@ -24,6 +24,7 @@ export interface TripMembersDerivation {
 export function useTripMembers(
   groupMembers: GroupMemberOption[],
   userEmail: string | null | undefined,
+  tripCreatorId?: string | null,
 ): TripMembersDerivation {
   const userMembers = useMemo(
     () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
@@ -40,10 +41,12 @@ export function useTripMembers(
   }, [userMembers, userEmail]);
 
   const defaultPayerId = useMemo(() => {
+    const creator = tripCreatorId ? userMembers.find((member) => member.userId === tripCreatorId) : null;
+    if (creator) return creator.id;
     if (currentUserMemberId) return currentUserMemberId;
     if (userMembers.length) return userMembers[0].id;
     return null;
-  }, [currentUserMemberId, userMembers]);
+  }, [currentUserMemberId, userMembers, tripCreatorId]);
 
   return { userMembers, memberIds, currentUserMemberId, defaultPayerId };
 }

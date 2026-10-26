@@ -60,14 +60,11 @@ describe('LodgingTab phone layout', () => {
     expect(queryByTestId('lodging-table-horizontal-scroll')).toBeNull();
   });
 
-  it('shows thumbs up/down counts with the voters as avatars', () => {
-    const { getByTestId, getByText, getAllByText } = renderTab();
-    expect(getByText('👍 3')).toBeTruthy();
-    expect(getByTestId('lodging-upvoters-l1-u1')).toBeTruthy();
-    expect(getByTestId('lodging-upvoters-l1-u3')).toBeTruthy();
-    expect(getByTestId('lodging-downvoters-l2-u3')).toBeTruthy();
+  it('keeps status badges but hides retired proposal votes', () => {
+    const { queryByTestId, queryByText, getByText } = renderTab();
     expect(getByText('✓ Booked')).toBeTruthy();
-    // Only the still-Proposed stay the user hasn't voted on offers vote buttons.
-    expect(getAllByText('👍 Vote up')).toHaveLength(1);
+    expect(queryByTestId('lodging-votes-l1')).toBeNull();
+    expect(queryByTestId('lodging-upvoters-l1-u1')).toBeNull();
+    expect(queryByText('👍 Vote up')).toBeNull();
   });
 });

@@ -25,7 +25,7 @@ import { FlightEditingForm, GroundTransferEditingForm } from '../components/Tran
 import { toWebStyle } from '../utils/webStyle';
 import { buildMemberDisplayLookup, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeTimeInput } from '../utils/normalizeTimeInput';
-import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import DateField from '../components/DateField';
 
@@ -543,11 +543,10 @@ const fallbackAirports: Airport[] = [
   { name: 'Dubai International', city: 'Dubai', country: 'UAE', iata_code: 'DXB' },
 ];
 
-const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'votes' | 'rating'; label: string; minWidth?: number }[] = [
+const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'rating'; label: string; minWidth?: number }[] = [
   { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
   { key: 'status', label: 'Status', minWidth: 120 },
   { key: 'transfer_type', label: 'Type', minWidth: 120 },
-  { key: 'votes', label: 'Votes', minWidth: 96 },
   { key: 'rating', label: 'Rating', minWidth: 96 },
   { key: 'departure_date', label: 'Departure Date' },
   { key: 'departure_location', label: 'Departure Location' },
@@ -773,7 +772,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     { key: 'carrier', label: 'Airline', width: 150, editor: 'text', getValue: (row) => row.carrier || '' },
     { key: 'flight_number', label: 'Flight Number', width: 125, editor: 'text', getValue: (row) => row.flight_number || '' },
     { key: 'booking_reference', label: 'Booking Ref', width: 160, editor: 'text', getValue: (row) => row.booking_reference || '' },
-    { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], [allowedTransferTypes]);
@@ -948,7 +946,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     const MAX_COLUMN_WIDTH_PX = layoutMetrics.transfers_MAX_COLUMN_WIDTH_PX;
     const widths: Record<string, number> = {};
     for (const col of tableColumns) {
-      if (col.key === 'actions' || col.key === 'votes' || col.key === 'rating') continue;
+      if (col.key === 'actions' || col.key === 'rating') continue;
       let longest = col.label.length;
       for (const item of sortedFlights) {
         const text = getColumnDisplayValue(item, col.key);
@@ -1382,24 +1380,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     onDataChanged ? onDataChanged() : fetchFlights();
   };
 
-  const voteOnFlight = async (id: string, value: 1 | -1) => {
-    if (readOnly) return;
-    try {
-      const res = await fetch(`${backendUrl}/api/transfers/${id}/vote`, {
-        method: 'POST',
-        headers: jsonHeaders,
-        body: JSON.stringify({ value }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Unable to submit vote');
-      }
-      onDataChanged ? onDataChanged() : fetchFlights();
-    } catch (err: any) {
-      Alert.alert(err?.message || 'Unable to submit vote');
-    }
-  };
-
   const rateFlight = async (id: string, value: 1 | -1) => {
     if (readOnly) return;
     try {
@@ -1672,44 +1652,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     </View>
                   );
                 }
-                if (col.key === 'votes') {
-                  const showButtons = shouldShowVoteButtons(
-                    normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS),
-                    item.userVote
-                  );
-                  return (
-                    <View
-                      key={`${item.id}-${col.key}`}
-                      style={[
-                        styles.cell,
-                        styles.actionCell,
-                        fixedTableColumn(colWidth(col)),
-                        isLast && styles.lastCell,
-                      ]}
-                    >
-                      {!readOnly && showButtons ? (
-                        <>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton, COMPACT_ICON_BUTTON]}
-                            onPress={() => voteOnFlight(item.id, 1)}
-                            testID={`flight-vote-up-${item.id}`}
-                          >
-                            <Text style={styles.buttonText}>👍</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton, styles.dangerButton, COMPACT_ICON_BUTTON]}
-                            onPress={() => voteOnFlight(item.id, -1)}
-                            testID={`flight-vote-down-${item.id}`}
-                          >
-                            <Text style={styles.buttonText}>👎</Text>
-                          </TouchableOpacity>
-                        </>
-                      ) : (
-                        <Text style={styles.cellText}>{formatNetVotes(item.netVotes ?? 0)}</Text>
-                      )}
-                    </View>
-                  );
-                }
                 if (col.key === 'rating') {
                   const showButtons = shouldShowRatingButtons(
                     normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS),
@@ -1799,7 +1741,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     </View>
                   );
                 }
-                if (col.key === 'votes' || col.key === 'rating') {
+                if (col.key === 'rating') {
                   return (
                     <View
                       key={`input-${col.key}`}

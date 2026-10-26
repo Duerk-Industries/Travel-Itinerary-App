@@ -57,6 +57,7 @@ import { type Trait } from './tabs/traits';
 import { FollowTab, type FollowedTrip } from './tabs/follow';
 import FollowingTab from './tabs/following';
 import HomeTab from './tabs/HomeTab';
+import AllTripsTab from './tabs/allTrips';
 import DailyExpensesTab from './tabs/dailyExpenses';
 import LedgerTab from './tabs/ledger';
 const IngestionTab = lazy(() => import('./tabs/ingestion'));
@@ -138,7 +139,7 @@ import AuthForm from './components/AuthForm';
 import PasswordField from './components/PasswordField';
 import LandingPage from './components/LandingPage';
 import { toWebStyle } from './utils/webStyle';
-import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
+import { formatNetVotes, shouldShowRatingButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 import { buildWebOAuthRedirectUrl } from './utils/oauthRedirect';
 import { installPermissionDeniedInterceptor } from './utils/permissionDeniedInterceptor';
@@ -228,6 +229,7 @@ const formatMemberName = (member: GroupMemberOption): string => {
 };
 
 type Page =
+  | 'all-trips'
   | 'home'
   | 'overview'
   | 'blog'
@@ -914,9 +916,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     },
   });
 
+  const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
+  const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
+  const activeGroup = useMemo(
+    () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
+    [activeTrip?.groupId, groupById]
+  );
   const { userMembers, memberIds, currentUserMemberId, defaultPayerId } = useTripMembers(
     groupMembers,
     userEmail,
+    activeTrip?.createdBy ?? activeGroup?.ownerId,
   );
 
   const flightsTotal = useMemo(
@@ -968,13 +977,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   // updateMapPreference + updateAppearancePreference are now provided by useAccountProfile.
 
-  const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
   const offlineSave = useSaveTripOffline({ trip: isFollowingMode ? null : activeTrip, trips, groups, owner: offlineOwner, token: userToken, costTrackingAllowed, disabled: offlineReadOnly });
-  const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
-  const activeGroup = useMemo(
-    () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
-    [activeTrip?.groupId, groupById]
-  );
   // followedTripById + selectedFollowedTrip were moved above useTripsData so
   // that useSelectedFollowedTripDetails can run before useTripsData consumes
   // selectedFollowedTripDetails.
@@ -1343,24 +1346,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setCarRentals(cars);
     }
   }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode, costTrackingAllowed]);
-
-  const voteOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
-    if (isFollowingMode) return;
-    const res = await fetch(`${backendUrl}/api/car-rentals/${id}/vote`, {
-      method: 'POST',
-      headers: jsonHeaders,
-      body: JSON.stringify({ value }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      Alert.alert(data.error || 'Unable to submit vote');
-      return;
-    }
-    if (activeTripId && userToken) {
-      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
-      setCarRentals(cars);
-    }
-  }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode]);
 
   const rateOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
     if (isFollowingMode) return;
@@ -3443,9 +3428,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onSelectTrip={handleSelectOwnedTrip}
                   onSelectFollowedTrip={handleSelectFollowedTrip}
                   onNavigate={handleHomeNavigate}
-                  onFollowTrip={handleFollowTripByCode}
-                  onOpenShareTrip={handleOpenShareTrip}
-                  canOpenShareTrip={Boolean(activeTrip?.id && !isFollowingMode)}
                   onDeleteTrip={confirmDeleteTrip}
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
@@ -3453,6 +3435,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 />
               )
             : null}
+
+          {activePage === 'all-trips' ? renderBoundedPage(
+            <AllTripsTab backendUrl={backendUrl} headers={headers} trips={trips} followedTrips={followedTrips}
+              activeTripId={activeTripId} styles={styles}
+              onSelectTrip={(id) => { handleSelectOwnedTrip(id); requestPageChange('home'); }}
+              onSelectFollowedTrip={handleSelectFollowedTrip}
+              onNavigate={handleHomeNavigate} onFollowTrip={handleFollowTripByCode} hiddenPages={hiddenPages}
+              onBack={() => requestPageChange('home')} />
+          ) : null}
 
           {activePage === 'blog'
             ? renderBoundedPage(
@@ -3824,7 +3815,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onAddCarRental={addCarRental}
           onUpdateCarRental={updateCarRental}
           onRemoveCarRental={removeCarRental}
-          onVoteCarRental={voteOnCarRental}
           onRateCarRental={rateOnCarRental}
           featureTapToEditTables={featureTapToEditTables}
         />
@@ -3843,7 +3833,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onAddCarRental={addCarRental}
           onUpdateCarRental={updateCarRental}
           onRemoveCarRental={removeCarRental}
-          onVoteCarRental={voteOnCarRental}
           onRateCarRental={rateOnCarRental}
           externalEditCarRentalId={externalCarRentalEditId}
           onExternalEditHandled={handleExternalCarRentalEditHandled}
@@ -4039,6 +4028,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
           {activePage === 'overview'
             ? renderBoundedPage(
+              <View style={{ flex: 1 }}>
+                {activeTrip?.id && !isFollowingMode ? <View style={{ alignItems: 'flex-end', padding: 8 }}>
+                  <TouchableOpacity accessibilityRole="button" testID="itinerary-share-trip-button" style={[styles.button, styles.smallButton]} onPress={handleOpenShareTrip}>
+                    <Text style={styles.buttonText}>Share</Text>
+                  </TouchableOpacity>
+                </View> : null}
                 <OverviewTab
                   backendUrl={backendUrl}
                   headers={headers}
@@ -4094,6 +4089,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   cachedItinerary={offlineReadOnly ? offlineItineraries[(activeTripForHome ?? activeTrip)?.id ?? activeTripId ?? ''] ?? null : undefined}
                   onItineraryCacheChange={cacheItineraryForOfflineUse}
                 />
+              </View>
               )
             : null}
 

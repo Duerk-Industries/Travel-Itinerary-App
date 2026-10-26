@@ -18,6 +18,7 @@ export interface GroupView {
 }
 
 export interface Trip {
+  createdBy?: string | null;
   id: string;
   groupId: string;
   groupName: string;

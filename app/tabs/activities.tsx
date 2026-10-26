@@ -14,7 +14,7 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 
-import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
 import GetYourGuideCta from '../components/GetYourGuideCta';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
@@ -506,24 +506,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       .catch((err) => Alert.alert(err.message));
   };
 
-  const voteOnTour = async (id: string, value: 1 | -1) => {
-    if (readOnly) return;
-    try {
-      const res = await fetch(`${backendUrl}/api/activities/${id}/vote`, {
-        method: 'POST',
-        headers: jsonHeaders,
-        body: JSON.stringify({ value }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Unable to submit vote');
-      }
-      onDataChanged ? onDataChanged() : await fetchTours();
-    } catch (err: any) {
-      Alert.alert(err?.message || 'Unable to submit vote');
-    }
-  };
-
   const rateTour = async (id: string, value: 1 | -1) => {
     if (readOnly) return;
     try {
@@ -590,7 +572,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       },
       { key: 'netRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
       { key: 'userRating', label: 'Your Rating', width: 120, editor: 'readonly', editable: false, getValue: (row) => row.userRating ? String(row.userRating) : '-' },
-      { key: 'netVotes', label: 'Votes', width: 100, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
       { key: 'suggestions', label: 'Suggestions', width: 140, editor: 'readonly', editable: false, getValue: () => 'See details' },
       { key: 'actions', label: 'Actions', width: 110, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
     ];
@@ -1097,22 +1078,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 {renderDetailRow('Description', selectedTour.notes || '-')}
                 {renderDetailRow('Paid by', formatPeopleList(selectedTour.paidBy))}
                 {renderDetailRow('Attendees', formatPeopleList(selectedTour.travelerIds))}
-                {renderDetailRow(
-                  'Votes',
-                  !readOnly && shouldShowVoteButtons(selectedTour.status, selectedTour.userVote) ? (
-                    <View style={styles.actionCell}>
-                      <Text style={styles.cellText}>{formatNetVotes(selectedTour.netVotes ?? 0)}</Text>
-                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnTour(selectedTour.id, 1)}>
-                        <Text style={styles.buttonText}>👍</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnTour(selectedTour.id, -1)}>
-                        <Text style={styles.buttonText}>👎</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    formatNetVotes(selectedTour.netVotes ?? 0)
-                  )
-                )}
                 <Text style={styles.modalLabel}>Actions</Text>
                 <View style={styles.actionCell}>
                   {!readOnly && featureActivityRecap && normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
@@ -1176,7 +1141,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             { label: 'Paid by', value: formatPeopleList(selectedTour.paidBy) },
             { label: 'Attendees', value: formatPeopleList(selectedTour.travelerIds) },
             { label: 'Rating', value: formatNetVotes(selectedTour.netRating ?? 0) },
-            { label: 'Votes', value: formatNetVotes(selectedTour.netVotes ?? 0) },
           ]}
           theme={theme}
           onClose={() => setSelectedTourId(null)}

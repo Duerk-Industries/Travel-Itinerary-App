@@ -20,7 +20,7 @@ type ActivityType =
   | 'Tour';
 
 type GeneratedTransfer = {
-  status?: 'Needed';
+  status?: 'Proposed';
   transferType?: TransferMode;
   departureDate?: string;
   arrivalDate?: string;
@@ -35,7 +35,7 @@ type GeneratedTransfer = {
 };
 
 type GeneratedLodging = {
-  status?: 'Needed';
+  status?: 'Proposed';
   name?: string;
   checkInDate?: string;
   checkOutDate?: string;
@@ -46,7 +46,7 @@ type GeneratedLodging = {
 };
 
 type GeneratedActivity = {
-  status?: 'Needed' | 'Proposed';
+  status?: 'Proposed';
   activityType?: ActivityType;
   date?: string;
   name?: string;
@@ -61,7 +61,7 @@ type GeneratedActivity = {
 };
 
 type GeneratedCarRental = {
-  status?: 'Needed';
+  status?: 'Proposed';
   pickupLocation?: string;
   pickupDate?: string;
   dropoffLocation?: string;
@@ -323,7 +323,7 @@ const buildPreferredAirportTransferPlan = async (params: {
 
   const sortedGroups = Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
   const firstTransfers: GeneratedTransfer[] = sortedGroups.map(([airport, passengerIds]) => ({
-    status: 'Needed',
+    status: 'Proposed',
     transferType: 'Flight',
     departureDate: firstDate,
     arrivalDate: firstDate,
@@ -337,7 +337,7 @@ const buildPreferredAirportTransferPlan = async (params: {
     passengerIds,
   }));
   const lastTransfers: GeneratedTransfer[] = sortedGroups.map(([airport, passengerIds]) => ({
-    status: 'Needed',
+    status: 'Proposed',
     transferType: 'Flight',
     departureDate: lastDate,
     arrivalDate: lastDate,
@@ -392,7 +392,7 @@ export const addGeneratedItemsToTrip = async (params: {
       ? Array.from(new Set(transfer.passengerIds.map((id) => safeString(id)).filter(Boolean)))
       : [];
     const payload = {
-      status: 'Needed',
+      status: 'Proposed',
       transferType: validTransferType(transfer.transferType),
       passengerName: 'Traveler',
       passengerIds,
@@ -423,7 +423,7 @@ export const addGeneratedItemsToTrip = async (params: {
     const lodging = lodgings[i];
     const checkInDate = safeString(lodging.checkInDate) || today;
     const payload = {
-      status: 'Needed',
+      status: 'Proposed',
       tripId,
       name: safeString(lodging.name) || 'Suggested lodging',
       checkInDate,
@@ -444,7 +444,7 @@ export const addGeneratedItemsToTrip = async (params: {
   for (let i = 0; i < activities.length; i += 1) {
     const activity = activities[i];
     const payload = {
-      status: safeString(activity.status) === 'Needed' ? 'Needed' : 'Proposed',
+      status: 'Proposed',
       tripId,
       activityType: validActivityType(activity.activityType),
       date: safeString(activity.date) || today,
@@ -469,7 +469,7 @@ export const addGeneratedItemsToTrip = async (params: {
     const rental = carRentals[i];
     const pickupDate = safeString(rental.pickupDate) || today;
     const payload = {
-      status: 'Needed',
+      status: 'Proposed',
       tripId,
       pickupLocation: safeString(rental.pickupLocation),
       pickupDate,

@@ -88,11 +88,11 @@ describe('Tours', () => {
     expect(result.payload?.notes).toBe('Vegetarian options requested');
   });
 
-  test('buildActivityPayload allows blank name when status is Needed', () => {
+  test('buildActivityPayload allows blank name when status is Proposed', () => {
     const result = buildActivityPayload(
       {
         date: '2025-04-10',
-        status: 'Needed',
+        status: 'Proposed',
         activityType: 'Tour',
         name: '',
         startLocation: '',
@@ -109,7 +109,7 @@ describe('Tours', () => {
       null
     );
     expect(result.error).toBeUndefined();
-    expect(result.payload?.status).toBe('Needed');
+    expect(result.payload?.status).toBe('Proposed');
   });
 });
 

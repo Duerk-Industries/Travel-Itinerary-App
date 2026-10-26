@@ -4,22 +4,23 @@
 // (or vice versa) — a contract test in server/__tests__/domainSync.test.ts
 // catches drift between the two.
 
-export const ITINERARY_STATUSES = ['Needed', 'Proposed', 'Needs Booking', 'Booked', 'Cancelled', 'Completed'] as const;
+export const ITINERARY_STATUSES = ['Proposed', 'Needs Booking', 'Booked', 'Cancelled', 'Completed'] as const;
 
 export type ItineraryStatus = (typeof ITINERARY_STATUSES)[number];
 
-export const DEFAULT_NEW_ITINERARY_STATUS: ItineraryStatus = 'Needed';
+export const DEFAULT_NEW_ITINERARY_STATUS: ItineraryStatus = 'Proposed';
 export const LEGACY_ITINERARY_STATUS: ItineraryStatus = 'Booked';
 
 export const normalizeItineraryStatus = (
   value: unknown,
   fallback: ItineraryStatus = LEGACY_ITINERARY_STATUS
 ): ItineraryStatus =>
+  value === 'Needed' ? 'Proposed' :
   (ITINERARY_STATUSES as readonly string[]).includes(String(value))
     ? (value as ItineraryStatus)
     : fallback;
 
 export const shouldRelaxRequiredFields = (status: unknown): boolean => {
   const normalized = normalizeItineraryStatus(status, DEFAULT_NEW_ITINERARY_STATUS);
-  return normalized === 'Needed' || normalized === 'Cancelled';
+  return normalized === 'Proposed' || normalized === 'Cancelled';
 };

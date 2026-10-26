@@ -1069,7 +1069,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
 
         const draft = {
-          status: (tour as any).status ?? 'Needed',
+          status: (tour as any).status ?? 'Proposed',
           activityType: (tour as any).activityType ?? 'Tour',
           date: tour.date,
           name: tour.name,

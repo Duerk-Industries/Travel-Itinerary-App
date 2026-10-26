@@ -192,7 +192,7 @@ export const toActivityReviewRows = (rows: Array<Record<string, string>>, mappin
     cell(row, mapping, 'bookAhead') ? `Book ahead required: ${cell(row, mapping, 'bookAhead')}` : '',
   ].filter(Boolean);
   const notes = [cell(row, mapping, 'notes'), ...sourceContext].filter(Boolean).join('\n');
-  return { sourceRow: index + 2, action: 'create', fields: { date, name, activityType: type.value, startTime: cell(row, mapping, 'startTime'), duration: cell(row, mapping, 'duration'), startLocation: cell(row, mapping, 'startLocation'), notes, status: 'Needed', cost: 0 }, warnings, errors };
+  return { sourceRow: index + 2, action: 'create', fields: { date, name, activityType: type.value, startTime: cell(row, mapping, 'startTime'), duration: cell(row, mapping, 'duration'), startLocation: cell(row, mapping, 'startLocation'), notes, status: 'Proposed', cost: 0 }, warnings, errors };
 });
 
 export const toLodgingReviewRows = (rows: Array<Record<string, string>>, mapping: Record<string, string>, tripStart: string, tripEnd: string): ImportReviewRow<Record<string, unknown>>[] => rows.map((row, index) => {
@@ -221,7 +221,7 @@ export const toLodgingReviewRows = (rows: Array<Record<string, string>>, mapping
   const notes = [suggested ? `Suggested location: ${suggested}` : '', cell(row, mapping, 'bookedOn') ? `Booked via: ${cell(row, mapping, 'bookedOn')}` : '', ...featureNotes].filter(Boolean).join('\n');
   const totalCost = parseMoney(cell(row, mapping, 'totalCost'));
   const nights = checkInDate && checkOutDate ? Math.max(0, Math.round((Date.parse(`${checkOutDate}T00:00:00Z`) - Date.parse(`${checkInDate}T00:00:00Z`)) / 86400000)) : 0;
-  return { sourceRow: index + 2, action: 'create', fields: { name, checkInDate, checkOutDate, status: /^yes$/i.test(cell(row, mapping, 'booked')) ? 'Booked' : 'Needed', refundBy: parseImportDate(cell(row, mapping, 'refundBy'), tripStart, tripEnd), totalCost, costPerNight: nights ? totalCost / nights : 0, rooms: 1, address: cell(row, mapping, 'address'), notes, features }, warnings, errors };
+  return { sourceRow: index + 2, action: 'create', fields: { name, checkInDate, checkOutDate, status: /^yes$/i.test(cell(row, mapping, 'booked')) ? 'Booked' : 'Proposed', refundBy: parseImportDate(cell(row, mapping, 'refundBy'), tripStart, tripEnd), totalCost, costPerNight: nights ? totalCost / nights : 0, rooms: 1, address: cell(row, mapping, 'address'), notes, features }, warnings, errors };
 });
 
 const csvCell = (value: unknown): string => {

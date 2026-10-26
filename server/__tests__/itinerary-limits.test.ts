@@ -324,7 +324,7 @@ describe('AI itinerary limits and idempotency', () => {
         transfers: [],
         lodgings: [
           {
-            status: 'Needed',
+            status: 'Proposed',
             name: 'Suggested base',
             checkInDate: '2026-07-01',
             checkOutDate: '2026-07-05',

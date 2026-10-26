@@ -2556,6 +2556,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
       const data = t.data() as any;
       return {
         id: t.id,
+        createdBy: data.createdBy ?? null,
         groupId: data.groupId,
         name: data.name,
         description: data.description ?? null,
@@ -2595,6 +2596,7 @@ export const createTrip = async (
   }
   const id = randomUUID();
   const payload = {
+    createdBy: userId,
     groupId,
     name,
     description: details.description ?? null,

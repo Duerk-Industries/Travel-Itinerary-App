@@ -338,7 +338,7 @@ describe('Overview UI (nested itinerary)', () => {
 
   test('hides What to book now when there are no Needs Booking entries', async () => {
     const { queryByTestId, queryByText } = await renderOverview(<OverviewTab {...baseProps} tours={[
-      { id: 'needed', name: 'Needed activity', status: 'Needed', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
+      { id: 'needed', name: 'Needed activity', status: 'Proposed', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
       { id: 'proposed', name: 'Proposed activity', status: 'Proposed', date: '2026-01-29', startTime: '', cost: '0', paidBy: [] },
     ] as any} />);
     expect(queryByTestId('overview-booking-priorities-card')).toBeNull();

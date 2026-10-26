@@ -13,6 +13,7 @@ import {
   insertFlight,
   insertLodging,
   listGroupMembers,
+  listGroupsForUser,
   listItineraries,
   listItineraryDetails,
   setItineraryPlanMarkdown,
@@ -417,7 +418,7 @@ const buildTerminalTransfers = async (params: {
   const first = entries
     .filter(([airport]) => !hasExistingFirstTransfer(airport))
     .map(([airport, passengerIds]) => ({
-      status: 'Needed' as const,
+      status: 'Proposed' as const,
       transferType: 'Flight' as const,
       departureDate: firstDate,
       arrivalDate: firstDate,
@@ -433,7 +434,7 @@ const buildTerminalTransfers = async (params: {
   const last = entries
     .filter(([airport]) => !hasExistingLastTransfer(airport))
     .map(([airport, passengerIds]) => ({
-      status: 'Needed' as const,
+      status: 'Proposed' as const,
       transferType: 'Flight' as const,
       departureDate: lastDate,
       arrivalDate: lastDate,
@@ -544,10 +545,17 @@ const persistResult = async (params: {
   }
 
   const members = await listGroupMembers(membership.groupId, params.userId).catch(() => []);
-  const defaultPayerId = safeString((members?.[0] as any)?.id);
   const activeMembers = (Array.isArray(members) ? members : []).filter(
     (member: any) => safeString(member?.id) && safeString(member?.status || 'active') !== 'removed'
   );
+  const tripForPayer = await getTripById(params.tripId).catch(() => null);
+  let creatorId = tripForPayer?.createdBy;
+  if (!creatorId) {
+    const groups = await listGroupsForUser(params.userId);
+    creatorId = groups?.find((group) => group.id === membership.groupId)?.ownerId;
+  }
+  const creator = creatorId ? activeMembers.find((member) => member.userId === creatorId) : null;
+  const defaultPayerId = safeString((creator ?? activeMembers[0])?.id);
   const defaultTravelerIds = activeMembers
     .map((m: any) => safeString(m?.id))
     .filter(Boolean);
@@ -608,7 +616,7 @@ const persistResult = async (params: {
     const passengerName = passengerIds.map((id) => memberNameById.get(id) || 'Traveler').join(', ') || 'Traveler';
     const saved = await insertFlight({
       userId: params.userId,
-      status: 'Needed',
+      status: 'Proposed',
       transferType: validTransferType(transfer.transferType),
       passengerName,
       passengerIds,
@@ -656,7 +664,7 @@ const persistResult = async (params: {
     const saved = await insertLodging({
       userId: params.userId,
       tripId: params.tripId,
-      status: 'Needed',
+      status: 'Proposed',
       name: safeString(lodging.name) || 'Suggested lodging',
       checkInDate,
       checkOutDate,
@@ -694,7 +702,7 @@ const persistResult = async (params: {
     const saved = await insertActivity({
       userId: params.userId,
       tripId: params.tripId,
-      status: safeString(activity.status) === 'Needed' ? 'Needed' : 'Proposed',
+      status: 'Proposed',
       activityType: validActivityType(activity.activityType),
       date,
       name: safeString(activity.name) || 'Suggested activity',
@@ -733,7 +741,7 @@ const persistResult = async (params: {
     const saved = await insertCarRental({
       userId: params.userId,
       tripId: params.tripId,
-      status: 'Needed',
+      status: 'Proposed',
       pickupLocation: safeString(rental.pickupLocation),
       pickupDate,
       dropoffLocation: safeString(rental.dropoffLocation),

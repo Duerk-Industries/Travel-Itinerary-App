@@ -1,8 +1,7 @@
 import { normalizeItineraryStatus } from './itineraryStatus';
 
-export const shouldShowVoteButtons = (status: unknown, userVote: number | null | undefined): boolean => {
-  return normalizeItineraryStatus(status, 'Booked') === 'Proposed' && !(userVote === 1 || userVote === -1);
-};
+// Kept for older callers; proposal voting has been retired.
+export const shouldShowVoteButtons = (_status: unknown, _userVote: number | null | undefined): boolean => false;
 
 export const shouldShowRatingButtons = (status: unknown, userRating: number | null | undefined): boolean => {
   return normalizeItineraryStatus(status, 'Booked') === 'Completed' && !(userRating === 1 || userRating === -1);

@@ -125,7 +125,7 @@ router.post('/activities/import', authenticate, async (req, res) => {
     for (const row of dto.rows) {
       const fields = row.fields;
       const payload: any = {
-        userId, tripId: dto.tripId, status: normalizeItineraryStatus(text(fields.status) || 'Needed'), activityType: text(fields.activityType) || 'Other',
+        userId, tripId: dto.tripId, status: normalizeItineraryStatus(text(fields.status) || 'Proposed'), activityType: text(fields.activityType) || 'Other',
         date: text(fields.date), name: text(fields.name), startLocation: text(fields.startLocation), startTime: text(fields.startTime), duration: text(fields.duration),
         cost: finite(fields.cost), freeCancelBy: text(fields.freeCancelBy) || null, bookedOn: text(fields.bookedOn), reference: text(fields.reference), notes: text(fields.notes),
         paidBy: Array.isArray(fields.paidBy) ? fields.paidBy.map(String) : [], travelerIds: Array.isArray(fields.travelerIds) && fields.travelerIds.length ? fields.travelerIds.map(String) : defaultTravelers,
@@ -186,7 +186,7 @@ router.post('/lodgings/import', authenticate, async (req, res) => {
       const fields = row.fields;
       const paidBy = Array.isArray(fields.paidBy) ? fields.paidBy.map(String) : [];
       const travelers = Array.isArray(fields.travelerIds) && fields.travelerIds.length ? fields.travelerIds.map(String) : (paidBy.length ? paidBy : defaultTravelers);
-      const payload: any = { userId, tripId: dto.tripId, status: normalizeItineraryStatus(text(fields.status) || 'Needed'), name: text(fields.name), checkInDate: text(fields.checkInDate), checkOutDate: text(fields.checkOutDate), rooms: Math.max(1, Number(fields.rooms) || 1), refundBy: text(fields.refundBy) || null, totalCost: finite(fields.totalCost), costPerNight: finite(fields.costPerNight), address: text(fields.address), notes: text(fields.notes) || null, features: Array.isArray(fields.features) ? fields.features.map(String).filter(Boolean) : [], paid_by: paidBy, traveler_ids: travelers, imageUrl: null };
+      const payload: any = { userId, tripId: dto.tripId, status: normalizeItineraryStatus(text(fields.status) || 'Proposed'), name: text(fields.name), checkInDate: text(fields.checkInDate), checkOutDate: text(fields.checkOutDate), rooms: Math.max(1, Number(fields.rooms) || 1), refundBy: text(fields.refundBy) || null, totalCost: finite(fields.totalCost), costPerNight: finite(fields.costPerNight), address: text(fields.address), notes: text(fields.notes) || null, features: Array.isArray(fields.features) ? fields.features.map(String).filter(Boolean) : [], paid_by: paidBy, traveler_ids: travelers, imageUrl: null };
       const updatePayload: any = { name: payload.name, status: payload.status, check_in_date: payload.checkInDate, check_out_date: payload.checkOutDate, rooms: payload.rooms, refund_by: payload.refundBy, total_cost: payload.totalCost, cost_per_night: payload.costPerNight, address: payload.address, notes: payload.notes, features: payload.features, paid_by: payload.paid_by, traveler_ids: payload.traveler_ids, trip_id: dto.tripId };
       const record = row.action === 'update' ? await updateLodging(row.existingId!, userId, updatePayload) : await insertLodging(payload);
       if (!record) throw new Error(`Lodging row ${row.sourceRow} could not be saved.`);

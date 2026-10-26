@@ -65,6 +65,22 @@ describe('useTripMembers', () => {
     expect(renderHook(() => useTripMembers([], 'alice@example.com')).result.current.defaultPayerId).toBeNull();
   });
 
+  it('defaults to the creator rather than the signed-in traveler and ignores removed creators', () => {
+    const members = [
+      mk({ id: '1', userId: 'creator', email: 'creator@example.com', status: 'active' }),
+      mk({ id: '2', userId: 'viewer', email: 'viewer@example.com', status: 'active' }),
+    ];
+    const { result, rerender } = renderHook(({ creator }: { creator: string }) => useTripMembers(members, 'viewer@example.com', creator), {
+      initialProps: { creator: 'creator' },
+    });
+    expect(result.current.defaultPayerId).toBe('m-1');
+    expect(result.current.currentUserMemberId).toBe('m-2');
+    rerender({ creator: 'viewer' });
+    expect(result.current.defaultPayerId).toBe('m-2');
+    const removed = [{ ...members[0], status: 'removed' as const }, members[1]];
+    expect(renderHook(() => useTripMembers(removed, 'viewer@example.com', 'creator')).result.current.defaultPayerId).toBe('m-2');
+  });
+
   it('memoizes — stable references when inputs do not change', () => {
     const members: GroupMemberOption[] = [
       mk({ id: '1', email: 'alice@example.com', status: 'active' }),

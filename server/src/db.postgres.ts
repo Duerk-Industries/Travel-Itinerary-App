@@ -709,6 +709,7 @@ export const initDb = async (): Promise<void> => {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS created_by UUID;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS description TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS notes TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination TEXT;`);
@@ -4114,7 +4115,7 @@ export const updateTripDetails = async (
          currency = COALESCE($11, currency),
          must_see_attractions = COALESCE($12::jsonb, must_see_attractions)
      WHERE id = $6
-     RETURNING id,
+     RETURNING created_by as "createdBy", id,
        group_id as "groupId",
        name,
        description,
@@ -6699,6 +6700,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
   if (process.env.USE_IN_MEMORY_DB === '1') {
     const { rows } = await p.query(
        `SELECT t.id,
+              t.created_by as "createdBy",
               t.group_id as "groupId",
               t.name,
               t.description,
@@ -6727,6 +6729,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
   }
   const { rows } = await p.query(
     `SELECT t.id,
+              t.created_by as "createdBy",
             t.group_id as "groupId",
             t.name,
             t.description,
@@ -6799,9 +6802,9 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by, must_see_attractions)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-     RETURNING id,
+    `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by, must_see_attractions, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+     RETURNING created_by as "createdBy", id,
                group_id as "groupId",
                name,
                description,
@@ -6833,6 +6836,7 @@ export const createTrip = async (
       details?.currency ?? 'USD',
       {},
       JSON.stringify(Array.isArray(details?.mustSeeAttractions) ? details?.mustSeeAttractions : []),
+      userId,
     ]
   );
   await ensureTripPackingListWithRunner(p, id);
@@ -6918,7 +6922,7 @@ export const updateTripGroup = async (userId: string, tripId: string, newGroupId
     `UPDATE trips
      SET group_id = $1
      WHERE id = $2
-     RETURNING id,
+     RETURNING created_by as "createdBy", id,
        group_id as "groupId",
        name,
        description,
@@ -7071,9 +7075,9 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const tripId = randomUUID();
     const { rows } = await client.query<Trip>(
-      `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, must_see_attractions)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-       RETURNING id,
+      `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, must_see_attractions, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+       RETURNING created_by as "createdBy", id,
                  group_id as "groupId",
                  name,
                  description,
@@ -7103,6 +7107,7 @@ export const createTripWithGroupAndMembers = async (payload: {
         payload.durationDays ?? null,
         payload.currency ?? 'USD',
         JSON.stringify(Array.isArray(payload.mustSeeAttractions) ? payload.mustSeeAttractions : []),
+        payload.ownerId,
       ]
     );
 
@@ -9310,7 +9315,7 @@ export const getTripGroupId = async (tripId: string): Promise<string | null> => 
 export const getTripById = async (tripId: string): Promise<Trip | null> => {
   const p = getPool();
   const { rows } = await p.query<Trip>(
-    `SELECT id,
+    `SELECT created_by as "createdBy", id,
             group_id as "groupId",
             name,
             description,

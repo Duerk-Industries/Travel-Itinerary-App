@@ -7,6 +7,7 @@ import { registerAndLoginWebUser, cleanupTestUsersByEmail } from './helpers';
 
 describe('Trip wizard flow', () => {
   let token: string;
+  let creatorId: string;
   const owner = { email: 'wizard-owner@example.com', firstName: 'Wizard', lastName: 'Owner', password: 'testtest' };
 
   beforeAll(async () => {
@@ -16,6 +17,7 @@ describe('Trip wizard flow', () => {
 
     const login = await registerAndLoginWebUser(owner);
     token = login.token;
+    creatorId = login.userId;
   });
 
   afterAll(async () => {
@@ -42,6 +44,9 @@ describe('Trip wizard flow', () => {
       .expect(201);
 
     expect(create.body.trip).toBeTruthy();
+    expect(create.body.trip.createdBy).toBe(creatorId);
+    const listed = await request(app).get('/api/trips').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(listed.body.find((trip: { id: string }) => trip.id === create.body.trip.id).createdBy).toBe(creatorId);
     expect(create.body.trip.locationIds).toEqual(['paris-abc123', 'london-def456']);
     expect(create.body.trip.mustSeeAttractions).toEqual(['Eiffel Tower', 'Louvre Museum']);
     expect(create.body.invites.length).toBe(1);

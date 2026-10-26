@@ -1,4 +1,5 @@
 import { getItemVoteSummaries } from '../db';
+import { normalizeItineraryStatus } from '../utils/itineraryStatus';
 
 export type VoteItemType = 'flight' | 'lodging' | 'activity' | 'car_rental';
 
@@ -33,6 +34,7 @@ export const applyVoteSummary = async <T extends { id: string }>(
     const vote = normalizedVoteSummary[normalizeVoteSummaryKey(item.id)];
     return {
       ...item,
+      ...('status' in item ? { status: normalizeItineraryStatus(item.status) } : {}),
       netVotes: vote?.netVotes ?? 0,
       userVote: vote?.userVote ?? null,
       upVotes: vote?.upVotes ?? 0,

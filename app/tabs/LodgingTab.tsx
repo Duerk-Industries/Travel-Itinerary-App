@@ -9,7 +9,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { Alert, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
-import AvatarStack, { type AvatarPerson } from '../components/AvatarStack';
 import { type Lodging, type LodgingDraft, buildLodgingPayload, createLodgingDraftForTrip, saveLodgingApi, removeLodgingApi } from './lodging';
 import { formatUserDisplayName } from './overview';
 import LodgingDialog from '../components/LodgingDialog';
@@ -18,7 +17,7 @@ import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CsvTransferControls from '../components/CsvTransferControls';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
-import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
 
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import { ITINERARY_STATUSES } from '../utils/itineraryStatus';
@@ -108,12 +107,6 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const activeTripId = trip?.id;
   const { width: viewportWidth } = useWindowDimensions();
   const isNarrowLayout = viewportWidth < 700;
-  // Voter ids are account user ids; map them to the trip's members for avatar initials.
-  const voterPeople = (userIds?: string[]): AvatarPerson[] => (userIds ?? []).map((userId) => {
-    const member = groupMembers.find((m) => String(m?.userId ?? '') === String(userId));
-    return { id: String(userId), name: member ? formatUserDisplayName(member) : 'Traveler' };
-  });
-
   const openAddDialog = () => {
     if (readOnly) return;
     if (!activeTripId) {
@@ -206,8 +199,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     }
   };
 
-  // Phone layout: one card per stay with its status, dates, cost and the group's votes
-  // (thumbs up/down counts plus who voted), instead of the 878px-wide table.
+  // Phone layout: one card per stay with status, dates, and cost.
   const renderLodgingCards = () => {
     if (!sortedLodgings.length) {
       return <Text style={styles.helperText}>No lodging yet.</Text>;
@@ -221,10 +213,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             : status === 'Proposed'
               ? { bg: themeStyle('tabs_LodgingTab_26', {  }, (theme ?? _styleTheme)), fg: themeStyle('tabs_LodgingTab_27', {  }, (theme ?? _styleTheme)) }
               : { bg: themeStyle('tabs_LodgingTab_28', {  }, (theme ?? _styleTheme)), fg: themeStyle('tabs_LodgingTab_29', {  }, (theme ?? _styleTheme)) };
-          const upVoters = voterPeople(lodging.upVoterIds);
-          const downVoters = voterPeople(lodging.downVoterIds);
           const cost = Number(lodging.totalCost) || 0;
-          const canVote = !readOnly && shouldShowVoteButtons(lodging.status, lodging.userVote ?? null);
           return (
             <View key={lodging.id} style={[styles.card, themeStyle('tabs_LodgingTab_2', {  }, (theme ?? _styleTheme))]} testID={`lodging-card-${lodging.id}`}>
               <View style={themeStyle('tabs_LodgingTab_3', {  }, (theme ?? _styleTheme))}>
@@ -239,46 +228,12 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                 {formatShortDate(lodging.checkInDate)} → {formatShortDate(lodging.checkOutDate)}
                 {cost > 0 ? ` · $${cost.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : ''}
               </Text>
-              <View style={themeStyle('tabs_LodgingTab_8', {  }, (theme ?? _styleTheme))} testID={`lodging-votes-${lodging.id}`}>
-                <View style={themeStyle('tabs_LodgingTab_9', {  }, (theme ?? _styleTheme))}>
-                  <Text style={styles.cellText}>👍 {lodging.upVotes ?? 0}</Text>
-                  <AvatarStack people={upVoters} size={20} testID={`lodging-upvoters-${lodging.id}`} />
-                </View>
-                <View style={themeStyle('tabs_LodgingTab_10', {  }, (theme ?? _styleTheme))}>
-                  <Text style={styles.cellText}>👎 {lodging.downVotes ?? 0}</Text>
-                  <AvatarStack people={downVoters} size={20} testID={`lodging-downvoters-${lodging.id}`} />
-                </View>
-              </View>
-              {canVote ? (
-                <View style={themeStyle('tabs_LodgingTab_11', {  }, (theme ?? _styleTheme))}>
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnLodging(lodging.id, 1)}>
-                    <Text style={styles.buttonText}>👍 Vote up</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnLodging(lodging.id, -1)}>
-                    <Text style={styles.dangerButtonText ?? styles.buttonText}>👎 Vote down</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
+
             </View>
           );
         })}
       </View>
     );
-  };
-
-  const voteOnLodging = async (lodgingId: string, value: 1 | -1) => {
-    if (readOnly) return;
-    const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}/vote`, {
-      method: 'POST',
-      headers: jsonHeaders,
-      body: JSON.stringify({ value }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      Alert.alert(data.error || 'Unable to submit vote');
-      return;
-    }
-    onRefreshLodgings?.();
   };
 
   const rateOnLodging = async (lodgingId: string, value: 1 | -1) => {
@@ -332,7 +287,6 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     { key: 'refundBy', label: 'Refund By', width: 140, editor: 'date', getValue: (row) => row.refundBy || '' },
     { key: 'totalCost', label: 'Total Cost', width: 115, editor: 'decimal', getValue: (row) => String(row.totalCost || '') },
     { key: 'address', label: 'Address', width: 230, editor: 'text', getValue: (row) => row.address || '' },
-    { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
@@ -449,9 +403,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('status')}>
               <Text style={styles.headerText}>Status</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('netVotes')}>
-              <Text style={styles.headerText}>Votes</Text>
-            </TouchableOpacity>
+
             <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('netRating')}>
               <Text style={styles.headerText}>Rating</Text>
             </TouchableOpacity>
@@ -478,20 +430,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               <View style={[styles.tableCell, fixedTableColumn(110)]}>
                 <Text style={styles.cellText}>{normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
-              <View style={[styles.tableCell, fixedTableColumn(110)]}>
-                {!readOnly && shouldShowVoteButtons(lodging.status, (lodging as any).userVote) ? (
-                  <View style={styles.actionCell}>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnLodging(lodging.id, 1)}>
-                      <Text style={styles.buttonText}>👍</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnLodging(lodging.id, -1)}>
-                      <Text style={styles.buttonText}>👎</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <Text style={styles.cellText}>{formatNetVotes((lodging as any).netVotes ?? 0)}</Text>
-                )}
-              </View>
+
               <View style={[styles.tableCell, fixedTableColumn(110)]}>
                 {!readOnly && shouldShowRatingButtons(lodging.status, (lodging as any).userRating) ? (
                   <View style={styles.actionCell}>
@@ -558,7 +497,6 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             { label: 'Travelers', value: selectedLodging.travelerIds?.length ? selectedLodging.travelerIds.map(travelerName).join(', ') : '-' },
             { label: 'Total cost', value: selectedLodging.totalCost ? `$${selectedLodging.totalCost}` : '-' },
             { label: 'Cost per night', value: selectedLodging.costPerNight ? `$${selectedLodging.costPerNight}` : '-' },
-            { label: 'Votes', value: formatNetVotes(selectedLodging.netVotes ?? 0) },
             { label: 'Rating', value: formatNetVotes(selectedLodging.netRating ?? 0) },
           ]}
           styles={styles}

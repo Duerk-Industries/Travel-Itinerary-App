@@ -10,7 +10,7 @@ import type { PendingAction } from '../hooks/useAssistantChat';
 
 const makeTour = (overrides: Partial<Tour> = {}): Tour => ({
   id: 'tour-1',
-  status: 'Needed',
+  status: 'Proposed',
   activityType: 'Tour',
   date: '2026-09-02',
   name: 'Museum Tour',

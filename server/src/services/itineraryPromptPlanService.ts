@@ -209,7 +209,7 @@ type PromptItinerary = {
 };
 
 export type ItineraryGeneratedTransfer = {
-  status: 'Needed';
+  status: 'Proposed';
   transferType: PromptTransferMode;
   departureDate: string;
   arrivalDate: string;
@@ -224,7 +224,7 @@ export type ItineraryGeneratedTransfer = {
 };
 
 export type ItineraryGeneratedLodging = {
-  status: 'Needed';
+  status: 'Proposed';
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -250,7 +250,7 @@ export type ItineraryGeneratedActivity = {
 };
 
 export type ItineraryGeneratedCarRental = {
-  status: 'Needed';
+  status: 'Proposed';
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;
@@ -2949,7 +2949,7 @@ export const mapItems = (
   destinationTransferTimingByDate?: Map<string, DestinationTransferTiming>
 ): ItineraryGeneratedItems => {
   const transfers: ItineraryGeneratedTransfer[] = itinerary.x.map((transfer) => ({
-    status: 'Needed',
+    status: 'Proposed',
     transferType: transfer.m,
     departureDate: transfer.dt,
     arrivalDate: transfer.dt,
@@ -2964,7 +2964,7 @@ export const mapItems = (
   }));
 
   const lodgings: ItineraryGeneratedLodging[] = itinerary.b.map((base) => ({
-    status: 'Needed',
+    status: 'Proposed',
     name: `Lodging at '${base.l}'`,
     checkInDate: base.ci,
     checkOutDate: base.co,
@@ -3031,7 +3031,7 @@ export const mapItems = (
   const carRentals: ItineraryGeneratedCarRental[] = itinerary.rc
     ? [
         {
-          status: 'Needed',
+          status: 'Proposed',
           pickupLocation: itinerary.rc.pu || itinerary.eh,
           pickupDate: itinerary.dy[0]?.dt ?? itinerary.b[0]?.ci ?? '',
           dropoffLocation: itinerary.rc.do || itinerary.xh,

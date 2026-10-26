@@ -121,10 +121,10 @@ describe('Flights helpers', () => {
     expect(normalized.layover_duration).toBe('2h 30m');
   });
 
-  test('allows missing business fields when status is Needed', () => {
+  test('allows missing business fields when status is Proposed', () => {
     const draft = {
       ...createInitialFlightCreateDraft(),
-      status: 'Needed' as const,
+      status: 'Proposed' as const,
       departureDate: '',
       departureTime: '',
       arrivalTime: '',

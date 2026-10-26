@@ -14,7 +14,7 @@ import {
   LEGACY_ITINERARY_STATUS,
   normalizeItineraryStatus,
 } from '../utils/itineraryStatus';
-import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
 import CarRentalEditForm from './CarRentalEditForm';
 import EditableDataGrid, { type GridCellError, type GridColumn } from './EditableDataGrid';
 
@@ -42,8 +42,6 @@ export type CarRentalsPanelProps = {
   onUpdateCarRental: (id: string, draft?: CarRentalDraft) => boolean | void | Promise<boolean | void>;
   /** Delete a car-rental row by id. */
   onRemoveCarRental: (id: string) => void | Promise<void>;
-  /** Upvote/downvote a proposed rental (±1). */
-  onVoteCarRental: (id: string, value: 1 | -1) => void | Promise<void>;
   /** Post-trip rating (±1). */
   onRateCarRental: (id: string, value: 1 | -1) => void | Promise<void>;
   theme?: AppTheme;
@@ -77,7 +75,6 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   onAddCarRental,
   onUpdateCarRental,
   onRemoveCarRental,
-  onVoteCarRental,
   onRateCarRental,
   theme: _providedTheme,
   externalEditCarRentalId,
@@ -173,7 +170,6 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
     { key: 'cost', label: 'Cost', width: 110, editor: 'decimal', getValue: (row) => String(row.cost || '') },
     { key: 'model', label: 'Car Model', width: 150, editor: 'text', getValue: (row) => row.model || '' },
     { key: 'notes', label: 'Notes', width: 230, editor: 'textarea', getValue: (row) => row.notes || '' },
-    { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
@@ -252,9 +248,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
           <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('status')}>
             <Text style={styles.headerText}>Status</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('netVotes')}>
-            <Text style={styles.headerText}>Votes</Text>
-          </TouchableOpacity>
+
           <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('netRating')}>
             <Text style={styles.headerText}>Rating</Text>
           </TouchableOpacity>
@@ -286,9 +280,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                 {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}
               </Text>
             </View>
-            <View style={[styles.tableCell, fixedTableColumn(110)]}>
-              <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
-            </View>
+
             <View style={[styles.tableCell, fixedTableColumn(110)]}>
               {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
                 <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
@@ -299,16 +291,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
             <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_7', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
               <View style={styles.actionCell}>
                 <AddToCalendarButton event={rentalCalendarEvent(car)} styles={styles} />
-                {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
-                  <>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => onVoteCarRental(car.id, 1)}>
-                      <Text style={styles.buttonText}>👍</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => onVoteCarRental(car.id, -1)}>
-                      <Text style={styles.buttonText}>👎</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : null}
+
                 {!isFollowingMode && shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
                   <>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => onRateCarRental(car.id, 1)}>

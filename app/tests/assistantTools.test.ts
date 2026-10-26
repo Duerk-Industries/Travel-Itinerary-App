@@ -12,7 +12,7 @@ import {
 
 const makeTour = (overrides: Partial<Tour> = {}): Tour => ({
   id: 'tour-1',
-  status: 'Needed',
+  status: 'Proposed',
   activityType: 'Tour',
   date: '2026-09-02',
   name: 'Museum Tour',
@@ -36,7 +36,8 @@ describe('buildActionSystemPrompt / buildActionToolsPrompt', () => {
 
   it('lists the exact status enum values so the model can map phrasing onto them', () => {
     const prompt = buildActionToolsPrompt();
-    expect(prompt).toMatch(/Needed/);
+    expect(prompt).toMatch(/Proposed/);
+    expect(prompt).not.toMatch(/Needed/);
     expect(prompt).toMatch(/Booked/);
     expect(prompt).toMatch(/Cancelled/);
   });
