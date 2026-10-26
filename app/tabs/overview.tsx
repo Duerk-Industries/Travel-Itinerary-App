@@ -63,6 +63,8 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import AvatarStack from '../components/AvatarStack';
+import { formatStayRange, stayDayNote } from '../utils/stayDates';
+import { linkTextColor } from '../theme/theme';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import ActivityEditForm from '../components/ActivityEditForm';
 import CarRentalEditForm from '../components/CarRentalEditForm';
@@ -3043,15 +3045,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           />
                         ) : (
                           <View
+                            testID={`day-details-lodging-placeholder-${lodging.id}`}
                             style={[
                               styles.lodgingImageFallback,
                               { width: lodgingThumbnailSize, height: lodgingThumbnailSize },
                             ]}
-                          />
+                          >
+                            <Text style={{ fontSize: Math.round(lodgingThumbnailSize * 0.42) }}>🏨</Text>
+                          </View>
                         )}
                         <View style={styles.dayInfoText}>
                           <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
-                          <Text style={styles.helperText}>{`${lodging.checkInDate} → ${lodging.checkOutDate}`}</Text>
+                          <Text style={styles.helperText}>{formatStayRange(lodging.checkInDate, lodging.checkOutDate)}</Text>
+                          {stayDayNote(lodging.checkInDate, lodging.checkOutDate, activeDayCard.date) ? (
+                            <Text style={[styles.helperText, { fontWeight: '700', color: theme ? linkTextColor(theme) : undefined }]}>
+                              {stayDayNote(lodging.checkInDate, lodging.checkOutDate, activeDayCard.date)}
+                            </Text>
+                          ) : null}
                           {showLodgingNames && participants ? (
                             <Text style={styles.helperText}>Travelers: {participants}</Text>
                           ) : null}
