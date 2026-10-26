@@ -2952,8 +2952,8 @@ export const insertFlight = async (
 ): Promise<Flight> => {
   const p = getPool();
 
-  // Only an airport code (IATA/ICAO letters) is upper-cased; a place name such as "Tokyo Station" keeps its case.
-  const normalizeCode = (code?: string | null) => (code ? (/^[A-Za-z]{3,4}$/.test(code.trim()) ? code.trim().toUpperCase() : code) : null);
+  // Only an airport code (three-letter IATA code) is upper-cased; a place name such as "Tokyo Station" keeps its case.
+  const normalizeCode = (code?: string | null) => (code ? (/^[A-Za-z]{3}$/.test(code.trim()) ? code.trim().toUpperCase() : code) : null);
   const departureCode = normalizeCode(flight.departureLocation ?? flight.departureAirportCode);
   const arrivalCode = normalizeCode(flight.arrivalLocation ?? flight.arrivalAirportCode);
   const layoverCode = normalizeCode(flight.layoverLocation ?? flight.layoverLocationCode);
@@ -3076,8 +3076,8 @@ export const updateFlight = async (
 ): Promise<Flight> => {
   const p = getPool();
   const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
-  // Only an airport code (IATA/ICAO letters) is upper-cased; a place name such as "Tokyo Station" keeps its case.
-  const normalizeCode = (code?: string | null) => (code ? (/^[A-Za-z]{3,4}$/.test(code.trim()) ? code.trim().toUpperCase() : code) : null);
+  // Only an airport code (three-letter IATA code) is upper-cased; a place name such as "Tokyo Station" keeps its case.
+  const normalizeCode = (code?: string | null) => (code ? (/^[A-Za-z]{3}$/.test(code.trim()) ? code.trim().toUpperCase() : code) : null);
   const departureCode = normalizeCode(updates.departureLocation ?? updates.departureAirportCode);
   const arrivalCode = normalizeCode(updates.arrivalLocation ?? updates.arrivalAirportCode);
   const layoverCode = normalizeCode(updates.layoverLocation ?? updates.layoverLocationCode);

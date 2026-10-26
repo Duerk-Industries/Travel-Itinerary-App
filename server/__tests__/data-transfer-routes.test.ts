@@ -91,6 +91,16 @@ describe('CSV import routes', () => {
       expect(flight.body.rows[0].error).toMatch(/flights are not imported/i);
     });
 
+    it('upper-cases a three-letter airport code but keeps the case of a place name', async () => {
+      const created = await post('/api/transfers/import', [
+        row(2, { ...train, departureLocation: 'nrt', arrivalLocation: 'Rome Termini' }),
+        row(3, { ...train, departureDate: '2027-05-04', arrivalDate: '2027-05-04', departureLocation: 'Tokyo Station', arrivalLocation: 'hnd' }),
+      ]).expect(201);
+      const [first, second] = created.body.records;
+      expect([first.departureLocation, first.arrivalLocation]).toEqual(['NRT', 'Rome Termini']);
+      expect([second.departureLocation, second.arrivalLocation]).toEqual(['Tokyo Station', 'HND']);
+    });
+
     it('validates times and ordering, and updates only the fields sent', async () => {
       const bad = await post('/api/transfers/import', [row(2, { ...train, departureTime: '9am', arrivalTime: '08:00' })]).expect(422);
       expect(bad.body.rows.map((entry: { error: string }) => entry.error).join(' ')).toMatch(/HH:mm/);
