@@ -398,7 +398,8 @@ describe('Overview UI (nested itinerary)', () => {
       />
     );
 
-    expect(await findByText('Test City - Cached museum visit')).toBeTruthy();
+    // Day titles are the day's plan; the location is no longer prefixed.
+    expect(await findByText('Cached museum visit')).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]: [unknown]) => String(url).includes('/api/itineraries'))).toBe(false);
     expect(onItineraryCacheChange).not.toHaveBeenCalled();
   });
@@ -1023,6 +1024,31 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByText('☀ 22°C')).toBeTruthy();
   });
 
+  test('a train day gets a train icon and short station names in its subtitle', async () => {
+    const trainProps = {
+      ...baseProps,
+      trip: { ...baseProps.trip, startDate: '2026-09-01', endDate: '2026-09-02' },
+      flights: [
+        {
+          id: 'train-1',
+          transfer_type: 'Public Transit',
+          passenger_ids: [],
+          trip_id: baseProps.trip.id,
+          departure_date: '2026-09-01',
+          departure_location: 'Kawaguchiko Station (Fujikyu Railway)',
+          departure_airport_code: 'Kawaguchiko Station (Fujikyu Railway)',
+          departure_time: '09:00',
+          arrival_date: '2026-09-01',
+          arrival_location: 'Otsuki Station',
+          arrival_airport_code: 'Otsuki Station',
+          arrival_time: '10:00',
+        },
+      ] as any[],
+    };
+    const { findByTestId } = await renderOverview(<OverviewTab {...trainProps} />);
+    expect((await findByTestId('overview-day-card-1-subtitle')).props.children).toBe('🚆 Kawaguchiko Station → Otsuki Station');
+  });
+
   test('renders transfer rows for a followed-style trip payload', async () => {
     const followedTripProps = {
       ...baseProps,
@@ -1058,9 +1084,11 @@ describe('Overview UI (nested itinerary)', () => {
       ] as any[],
     };
 
-    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...followedTripProps} />);
-    expect(await findByText(/MXP - Travel day/i)).toBeTruthy();
+    const { findByTestId, findByText, findAllByText } = await renderOverview(<OverviewTab {...followedTripProps} />);
+    // Title is the day's plan; the route moves to a short subtitle under it.
+    expect(await findByText('Travel day')).toBeTruthy();
+    expect((await findByTestId('overview-day-card-1-subtitle')).props.children).toBe('✈ MXP → OTP');
     fireEvent.press(await findByTestId('overview-day-card-1'));
-    expect(await findByText(/MXP → OTP/i)).toBeTruthy();
+    expect((await findAllByText(/MXP → OTP/i)).length).toBeGreaterThan(0);
   });
 });

@@ -2371,32 +2371,33 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return parts.length > 1 ? parts[1] : trimmed;
   };
 
-  // Priority mirrors the day title rule: activities beat the transfer, which
-  // beats lodging, so a lodging stay no longer masks a day that has activities
-  // (or at least a transfer) happening on it. Empty when nothing is known, so
-  // titles read "Train to Sintra" rather than a placeholder "Trip Day - Train to Sintra".
-  const buildDayStartLocation = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[] }) => {
-    if (!info) return tripLocationLabel || '';
-    const tour = info.tours[0];
-    if (tour) return (tour.startLocation ? shortenLocationToCity(tour.startLocation) : '') || tour.name || tripLocationLabel || '';
+  // Day card titles are the day's plan (buildDaySummary). Travel logistics go in a short subtitle
+  // instead of a title prefix: repeating the hotel name, or an all-caps airport name, on every
+  // day made titles long and hard to scan on phones.
+  const buildDaySubtitle = (
+    info: { flights: Flight[]; lodgings: Lodging[] } | undefined,
+    date: string,
+  ): string | null => {
+    if (!info) return null;
     const flight = info.flights[0];
-    if (flight) return (flight.departure_location ? shortenLocationToCity(flight.departure_location) : '') || flight.departure_airport_code || tripLocationLabel || '';
-    const lodging = info.lodgings[0];
-    if (lodging) return lodging.name || tripLocationLabel || '';
-    const rental = info.rentals[0];
-    if (rental) return (rental.pickupLocation ? shortenLocationToCity(rental.pickupLocation) : '') || rental.vendor || tripLocationLabel || '';
-    return tripLocationLabel || '';
-  };
-
-  // startLocation and summary can end up describing the same activity (e.g. a
-  // day with only a tour and no flight/lodging) — collapse them instead of
-  // showing the same text twice, joined by " - ".
-  const buildHeroTitle = (startLocation: string, summary: string) => {
-    const parts = [startLocation, summary].filter(Boolean);
-    if (parts.length === 2 && parts[0].trim().toLowerCase() === parts[1].trim().toLowerCase()) {
-      return parts[0];
+    if (flight) {
+      // Prefer a real code (EWR, LIS); ground transfers keep station names in the code field, so
+      // fall back to the place name minus any "(Fujikyu Railway)"-style detail.
+      const shortPlace = (code?: string | null, location?: string | null) => {
+        const c = String(code ?? '').trim();
+        if (/^[A-Z0-9]{3,4}$/.test(c)) return c;
+        return String(c || location || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+      };
+      const from = shortPlace(flight.departure_airport_code, flight.departure_location);
+      const to = shortPlace(flight.arrival_airport_code, flight.arrival_location);
+      const type = normalizeTransferType(flight.transfer_type || flight.transferType);
+      const icon = type === 'Flight' ? '✈' : type === 'Public Transit' ? '🚆' : type === 'Private Transfer' ? '🚗' : '➜';
+      if (from && to) return `${icon} ${from} → ${to}`;
     }
-    return parts.join(' - ');
+    const day = normalizeDateString(date ?? '');
+    const checkIn = info.lodgings.find((lodging) => normalizeDateString(lodging.checkInDate) === day);
+    if (checkIn?.name) return `🏨 Check in: ${checkIn.name}`;
+    return null;
   };
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
@@ -2681,7 +2682,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         activeDayInfo?.index ?? (activeDayCard ? dayCards.findIndex((card) => card.date === activeDayCard.date) + 1 : null);
       const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
 
-      const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
+      const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string, subtitle?: string | null) => {
         const img = blogDayImages[card.date] ?? dayImages[card.date];
         const weather = dayWeather[card.date];
         const weatherLabel =
@@ -2736,6 +2737,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               >
                 {title}
               </Text>
+              {subtitle ? (
+                <Text
+                  testID={`${testID || 'day-hero'}-subtitle`}
+                  style={[styles.dayHeroAction, { marginTop: 4, fontWeight: '600' }, isPhoneLayout ? { fontSize: 12 } : null]}
+                  numberOfLines={1}
+                >
+                  {subtitle}
+                </Text>
+              ) : null}
               {showAction ? (
                 <Text style={[styles.dayHeroAction, isPhoneLayout ? { fontSize: 11 } : null]}>View details</Text>
               ) : null}
@@ -2745,9 +2755,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       };
 
       if (selectedDay && activeDayCard && activeDayInfo) {
-        const startLocation = buildDayStartLocation(activeDayInfo);
-        const summary = buildDaySummary(activeDayInfo);
-        const heroTitle = buildHeroTitle(startLocation, summary);
+        const heroTitle = buildDaySummary(activeDayInfo);
+        const heroSubtitle = buildDaySubtitle(activeDayInfo, activeDayCard.date);
         const narrativeLines = buildDayNarrative(activeDayInfo, activeDayCard.date);
         const flightsForDay = activeDayInfo.flights;
         // Same order the day map letters its pins in: an explicit saved position first, then start time.
@@ -2809,7 +2818,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
               {renderDayBar(selectedDay)}
-              {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
+              {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero', heroSubtitle)}
               {dayMapPoints.length ? (
                 <TripDayMap key={activeDayCard.date} onOpenChange={open => setVisibleMapDate(open ? activeDayCard.date : null)} tripId={trip.id} dayDate={activeDayCard.date} points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
               ) : null}
@@ -3303,12 +3312,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <View style={{ gap: 12 }}>
             {dayCards.map((card, idx) => {
               const info = dayDataByDate.get(card.date);
-              const startLocation = buildDayStartLocation(info);
-              const summary = buildDaySummary(info);
-              const heroTitle = buildHeroTitle(startLocation, summary);
+              const heroTitle = buildDaySummary(info);
+              const heroSubtitle = buildDaySubtitle(info, card.date);
               return (
                 <View key={card.date}>
-                  {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`)}
+                  {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`, heroSubtitle)}
                 </View>
               );
             })}
