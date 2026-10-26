@@ -302,6 +302,32 @@ type DetailModalState = {
   item?: Flight | Lodging | Tour;
 };
 
+// Short labels for a transfer's route, shared by the day card subtitle and the day view. Prefers a
+// real code (EWR, LIS); ground transfers keep station names in the code field, so those fall back
+// to the place name minus "(Fujikyu Railway)"-style detail. Icon follows the transfer type.
+export const describeTransferRoute = (flight: {
+  departure_airport_code?: string | null;
+  arrival_airport_code?: string | null;
+  departure_location?: string | null;
+  arrival_location?: string | null;
+  transfer_type?: string | null;
+  transferType?: string | null;
+}): { icon: string; from: string; to: string; fullFrom: string; fullTo: string } => {
+  const shortPlace = (code?: string | null, location?: string | null) => {
+    const c = String(code ?? '').trim();
+    if (/^[A-Z0-9]{3,4}$/.test(c)) return c;
+    return String(c || location || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  };
+  const type = normalizeTransferType(flight.transfer_type || flight.transferType);
+  return {
+    icon: type === 'Flight' ? '✈' : type === 'Public Transit' ? '🚆' : type === 'Private Transfer' ? '🚗' : '➜',
+    from: shortPlace(flight.departure_airport_code, flight.departure_location),
+    to: shortPlace(flight.arrival_airport_code, flight.arrival_location),
+    fullFrom: String(flight.departure_location || flight.departure_airport_code || '').trim(),
+    fullTo: String(flight.arrival_location || flight.arrival_airport_code || '').trim(),
+  };
+};
+
 export const dedupeAttendees = (
   attendees: OverviewTabProps['attendees']
 ): OverviewTabProps['attendees'] => {
@@ -2381,17 +2407,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (!info) return null;
     const flight = info.flights[0];
     if (flight) {
-      // Prefer a real code (EWR, LIS); ground transfers keep station names in the code field, so
-      // fall back to the place name minus any "(Fujikyu Railway)"-style detail.
-      const shortPlace = (code?: string | null, location?: string | null) => {
-        const c = String(code ?? '').trim();
-        if (/^[A-Z0-9]{3,4}$/.test(c)) return c;
-        return String(c || location || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
-      };
-      const from = shortPlace(flight.departure_airport_code, flight.departure_location);
-      const to = shortPlace(flight.arrival_airport_code, flight.arrival_location);
-      const type = normalizeTransferType(flight.transfer_type || flight.transferType);
-      const icon = type === 'Flight' ? '✈' : type === 'Public Transit' ? '🚆' : type === 'Private Transfer' ? '🚗' : '➜';
+      const { icon, from, to } = describeTransferRoute(flight);
       if (from && to) return `${icon} ${from} → ${to}`;
     }
     const day = normalizeDateString(date ?? '');
@@ -2839,24 +2855,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <View style={styles.dayInfoCard}>
                   <Text style={styles.sectionTitle}>Your transfer</Text>
                   {flightsForDay.map((flight) => {
-                    const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
-                    const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
+                    const route = describeTransferRoute(flight);
+                    const showFullNames = (route.fullFrom && route.fullFrom !== route.from) || (route.fullTo && route.fullTo !== route.to);
+                    const carrierLine = [flight.carrier, flight.flight_number].filter(Boolean).join(' ');
                     const passengers =
                       Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
                         ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
                         : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
+                    // Stacked rather than side by side: long airport/station names used to push the
+                    // route off the card and hide the times on phones.
                     return (
-                      <View key={flight.id} style={styles.dayInfoRow}>
+                      <View key={flight.id} style={{ paddingVertical: 6, gap: 2 }} testID={`day-details-transfer-row-${flight.id}`}>
                         <TouchableOpacity
                           testID={`day-details-transfer-${flight.id}`}
                           accessibilityRole="link"
                           onPress={() => setSelectedFlight(flight)}
                         >
-                          <Text style={[styles.dayInfoRoute, styles.linkText, { textDecorationLine: 'underline' }]}>{`${dep} → ${arr}`}</Text>
+                          <Text style={[styles.dayInfoRoute, styles.linkText, { textDecorationLine: 'underline' }]}>
+                            {`${route.icon} ${route.from || 'Departure'} → ${route.to || 'Arrival'}`}
+                          </Text>
                         </TouchableOpacity>
-                        <Text style={styles.helperText}>{`${flight.departure_time || '--:--'} / ${
-                          flight.arrival_time || '--:--'
-                        }`}</Text>
+                        {showFullNames ? (
+                          <Text style={styles.helperText}>{`${route.fullFrom || route.from} → ${route.fullTo || route.to}`}</Text>
+                        ) : null}
+                        <Text style={styles.helperText}>
+                          {`${flight.departure_time || '--:--'} → ${flight.arrival_time || '--:--'}${carrierLine ? ` · ${carrierLine}` : ''}`}
+                        </Text>
                         {showFlightNames && passengers ? <Text style={styles.helperText}>Travelers: {passengers}</Text> : null}
                       </View>
                     );

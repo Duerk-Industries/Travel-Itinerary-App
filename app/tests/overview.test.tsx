@@ -15,7 +15,7 @@ import {
   buildRentalDraftFromRow,
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Image } from 'react-native';
 import { OverviewTab, buildDayWeatherLocation, makeWeatherLocationGeofriendly } from '../tabs/overview';
 import React from 'react';
@@ -560,8 +560,9 @@ describe('Overview UI (nested itinerary)', () => {
     );
 
     fireEvent.press(await findByTestId('overview-day-card-8'));
-    expect(await findByText('SFO → BOS')).toBeTruthy();
-    expect(await findByText('13:01 / 21:45')).toBeTruthy();
+    const returnRow = await findByTestId('day-details-transfer-row-flight-return');
+    expect(within(returnRow).getByText('✈ SFO → BOS')).toBeTruthy();
+    expect(within(returnRow).getByText(/^13:01 → 21:45/)).toBeTruthy();
   });
 
   test('opens flight details modal from day details', async () => {
@@ -1090,5 +1091,10 @@ describe('Overview UI (nested itinerary)', () => {
     expect((await findByTestId('overview-day-card-1-subtitle')).props.children).toBe('✈ MXP → OTP');
     fireEvent.press(await findByTestId('overview-day-card-1'));
     expect((await findAllByText(/MXP → OTP/i)).length).toBeGreaterThan(0);
+    // Day view transfer entry: route on its own line, then times and the airline (stacked so long
+    // names can't push it off the card).
+    const transferRow = await findByTestId('day-details-transfer-row-flight-followed-1');
+    expect(within(transferRow).getByText('✈ MXP → OTP')).toBeTruthy();
+    expect(within(transferRow).getByText('08:00 → 11:00 · Ryanair FR259')).toBeTruthy();
   });
 });
