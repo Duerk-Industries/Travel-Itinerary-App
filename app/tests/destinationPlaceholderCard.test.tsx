@@ -27,6 +27,12 @@ describe('DestinationPlaceholderCard', () => {
     expect(getByText('Your destination')).toBeTruthy();
   });
 
+  it('can hide its label when the card behind it prints its own title', () => {
+    const { queryByText, getByTestId } = render(<DestinationPlaceholderCard title="Lisbon" testID="placeholder" showLabel={false} />);
+    expect(getByTestId('placeholder')).toBeTruthy();
+    expect(queryByText('Lisbon')).toBeNull();
+  });
+
   it('honors a custom testID', () => {
     const { getByTestId } = render(<DestinationPlaceholderCard title="Lisbon" testID="day-1-placeholder" />);
     expect(getByTestId('day-1-placeholder')).toBeTruthy();

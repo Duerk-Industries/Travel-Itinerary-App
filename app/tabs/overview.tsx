@@ -2701,7 +2701,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             {img ? (
               <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
             ) : featureCoverPhotoFallbackV2 ? (
-              <DestinationPlaceholderCard title={card.location || title} style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-placeholder`} />
+              <DestinationPlaceholderCard title={card.location || title} style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-placeholder`} showLabel={false} />
             ) : (
               <View style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-fallback-legacy`} />
             )}
