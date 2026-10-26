@@ -76,4 +76,30 @@ describe('trip blog write-path sync', () => {
       return found;
     });
   });
+  it.each([false, true])('removes a deleted itinerary note from its blog day (blog copy edited=%s)', async (editCopy) => {
+    const detail = await request(app).post(`/api/itineraries/${itineraryId}/details`)
+      .set('Authorization', `Bearer ${token}`).send({ day: 2, kind: 'note', activity: 'Delete this note', noteBody: 'Only the linked note should be removed.' }).expect(201);
+    let copy: { id: string; version: number } | undefined;
+    await waitUntil(async () => {
+      const blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).query({ limit: 100 }).expect(200);
+      copy = blog.body.days.flatMap((day: any) => day.items).find((item: any) => item.sourceId === detail.body.id);
+      return Boolean(copy);
+    });
+    const independent = await request(app).post(`/api/trips/${tripId}/blog/items`).set('Authorization', `Bearer ${token}`)
+      .send({ dayDate: tripEndDate, body: 'Keep this independently written blog note.' }).expect(201);
+    if (editCopy) {
+      await request(app).patch(`/api/trips/${tripId}/blog/items/${copy!.id}`).set('Authorization', `Bearer ${token}`)
+        .send({ version: copy!.version, body: 'An edited copy of the itinerary note.' }).expect(200);
+    }
+    markSynced(tripId);
+    await request(app).delete(`/api/itineraries/details/${detail.body.id}`).set('Authorization', `Bearer ${token}`).expect(204);
+    const refreshed = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).query({ limit: 100 }).expect(200);
+    const items = refreshed.body.days.flatMap((day: any) => day.items);
+    expect(items.some((item: any) => item.id === copy!.id || item.sourceId === detail.body.id)).toBe(false);
+    expect(items.some((item: any) => item.id === independent.body.id)).toBe(true);
+    // A later sync must not recreate the removed note.
+    const repeated = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(repeated.body.days.flatMap((day: any) => day.items).some((item: any) => item.sourceId === detail.body.id)).toBe(false);
+  });
+
 });
