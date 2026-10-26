@@ -191,6 +191,25 @@ describe('DailyExpensesTab', () => {
     }
   });
 
+  it.each([
+    ['web', true, true, true, false, true, true],
+    ['ios', true, true, true, false, false, true],
+    ['web', false, false, true, false, false, false],
+    ['web', true, true, true, true, false, false],
+    ['web', true, true, false, false, false, false],
+  ] as const)('hides unavailable actions on %s (receipt=%s, import=%s, costs=%s, readOnly=%s)',
+    (platform, receiptAllowed, importAllowed, costAllowed, readOnly, scanVisible, importVisible) => {
+      const originalOS = Platform.OS;
+      Platform.OS = platform;
+      try {
+        const screen = render(<DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+          groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles}
+          costTrackingAllowed={costAllowed} receiptScanningAllowed={receiptAllowed} expenseImportAllowed={importAllowed} readOnly={readOnly} />);
+        expect(Boolean(screen.queryByTestId('expense-scan-receipt-button'))).toBe(scanVisible);
+        expect(Boolean(screen.queryByTestId('expense-import-button'))).toBe(importVisible);
+      } finally { Platform.OS = originalOS; }
+    });
+
   it('hides receipt scanning when the user is not entitled', () => {
     const screen = render(
       <DailyExpensesTab
@@ -281,8 +300,8 @@ describe('DailyExpensesTab', () => {
       );
 
       expect(screen.getByTestId('expense-add-button').props.disabled).toBe(true);
-      expect(screen.getByTestId('expense-scan-receipt-button').props.disabled).toBe(true);
-      expect(screen.getByTestId('expense-import-button').props.disabled).toBe(true);
+      expect(screen.queryByTestId('expense-scan-receipt-button')).toBeNull();
+      expect(screen.queryByTestId('expense-import-button')).toBeNull();
       // Testing Library can invoke an onPress even when a native Touchable is
       // disabled. Exercise that stale/programmatic path too: Save still must
       // not post an expense while the cached trip is read-only.
@@ -326,7 +345,7 @@ describe('DailyExpensesTab', () => {
         const screen = renderOffline();
         expect(screen.getByTestId('expense-add-button').props.disabled).toBe(false);
         // Editing, scanning and importing stay unavailable offline.
-        expect(screen.getByTestId('expense-import-button').props.disabled).toBe(true);
+        expect(screen.queryByTestId('expense-import-button')).toBeNull();
 
         fireEvent.press(screen.getByTestId('expense-add-button'));
         fireEvent.changeText(screen.getByPlaceholderText('Amount'), '18.75');

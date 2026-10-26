@@ -1,4 +1,5 @@
-import { rollUpTotals } from './coveredBy';
+import { rollUpTotals } from './coveredBy';
+import { singlePayerIds } from './payerSelection';
 import { transferExpenseCategory } from './transferCategory';
 
 import { carRentalExpenseDescription, flightExpenseDescription } from './expenseDescription';
@@ -78,8 +79,10 @@ export const buildAllExpenses = (
   carRentals: any[],
   dailyExpenses: any[],
   tripCurrency: string,
-  allMemberIds: string[]
+  allMemberIds: string[],
+  defaultPayerId?: string | null
 ): UnifiedExpense[] => {
+  const resolvePayers = (ids?: readonly string[] | null) => singlePayerIds(ids, defaultPayerId ?? allMemberIds[0]);
   const allExpenses: UnifiedExpense[] = [];
 
   flights.forEach((f) => {
@@ -100,7 +103,7 @@ export const buildAllExpenses = (
       description: flightExpenseDescription(f),
       amount: Number(f.cost) || 0,
       currency: tripCurrency,
-      payerIds: paidBy.length ? paidBy : passengerIds.length ? passengerIds : allMemberIds,
+      payerIds: resolvePayers(paidBy),
       forIds: passengerIds.length ? passengerIds : allMemberIds,
     });
   });
@@ -123,7 +126,7 @@ export const buildAllExpenses = (
       description: l.name ?? '',
       amount: Number(l.totalCost ?? l.total_cost) || 0,
       currency: tripCurrency,
-      payerIds: paidBy.length ? paidBy : allMemberIds,
+      payerIds: resolvePayers(paidBy),
       forIds: travelerIds.length ? travelerIds : allMemberIds,
     });
   });
@@ -146,7 +149,7 @@ export const buildAllExpenses = (
       description: t.name ?? '',
       amount: Number(t.cost) || 0,
       currency: tripCurrency,
-      payerIds: paidBy.length ? paidBy : allMemberIds,
+      payerIds: resolvePayers(paidBy),
       forIds: travelerIds.length ? travelerIds : paidBy.length ? paidBy : allMemberIds,
     });
   });
@@ -169,7 +172,7 @@ export const buildAllExpenses = (
       description: carRentalExpenseDescription(c),
       amount: Number(c.cost) || 0,
       currency: tripCurrency,
-      payerIds: paidBy.length ? paidBy : allMemberIds,
+      payerIds: resolvePayers(paidBy),
       forIds: travelerIds.length ? travelerIds : allMemberIds,
     });
   });
@@ -184,7 +187,7 @@ export const buildAllExpenses = (
         description: e.vendor || e.notes || '',
         amount: Number(e.amountInTripCurrency ?? e.amount) || 0,
         currency: tripCurrency,
-        payerIds: Array.isArray(e.payerIds) && e.payerIds.length > 0 ? e.payerIds : allMemberIds,
+        payerIds: resolvePayers(Array.isArray(e.payerIds) ? e.payerIds : Array.isArray(e.payer_ids) ? e.payer_ids : []),
         forIds: Array.isArray(e.forIds) && e.forIds.length > 0 ? e.forIds : allMemberIds,
       })
     );

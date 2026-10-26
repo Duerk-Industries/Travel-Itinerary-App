@@ -1429,8 +1429,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const allExpenses = useMemo(
-    () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, activeTrip?.currency ?? 'USD', allMemberIds),
-    [flights, lodgings, tours, carRentals, expenses, allMemberIds, activeTrip?.currency]
+    () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, activeTrip?.currency ?? 'USD', allMemberIds, defaultPayerId),
+    [flights, lodgings, tours, carRentals, expenses, allMemberIds, activeTrip?.currency, defaultPayerId]
   );
 
   const { ledgerPaidTotals, ledgerUsedTotals, finalBalances } = useMemo(
@@ -3555,6 +3555,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onOpenBalances={isFollowingMode ? undefined : () => requestPageChange('ledger')}
                   costTrackingAllowed={costTrackingAllowed}
                   receiptScanningAllowed={receiptScanningAllowed}
+                  expenseImportAllowed={featureExpenseImportPlaid}
                   readOnly={isFollowingMode || offlineReadOnly}
                   allowOfflineAdd={!isFollowingMode && Boolean(userId) && !offlineMode}
                   pendingExpenses={{

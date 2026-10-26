@@ -96,6 +96,7 @@ type DailyExpensesTabProps = {
   onOpenBalances?: () => void;
   costTrackingAllowed?: boolean;
   receiptScanningAllowed?: boolean;
+  expenseImportAllowed?: boolean;
   readOnly?: boolean;
   /** Lets "Add Expense" work while the rest of the tab is read-only because the device is offline. */
   allowOfflineAdd?: boolean;
@@ -181,10 +182,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   onOpenBalances,
   costTrackingAllowed,
   receiptScanningAllowed,
+  expenseImportAllowed = false,
   readOnly = false,
   allowOfflineAdd = false,
   pendingExpenses,
 }) => {
+  const canScanReceipt = Boolean(receiptScanningAllowed && costTrackingAllowed && !readOnly && Platform.OS === 'web');
+  const canImportExpenses = Boolean(expenseImportAllowed && costTrackingAllowed && !readOnly);
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null);
@@ -353,6 +357,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const handleReceiptPickerPress = () => {
+    if (!canScanReceipt) return;
     if (!receiptScanningAllowed) {
       alertMessage('Receipt scanning is available with Premium.');
       return;
@@ -394,6 +399,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const handleReceiptFile = async (file: File | null | undefined) => {
+    if (!canScanReceipt) return;
     if (!receiptScanningAllowed) {
       alertMessage('Receipt scanning is available with Premium.');
       return;
@@ -623,7 +629,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         >
           <Text style={styles.buttonText}>+ Add Expense</Text>
         </TouchableOpacity>
-        {receiptScanningAllowed ? (
+        {canScanReceipt ? (
           <TouchableOpacity
             style={[styles.button, styles.smallButton, receiptParsing && styles.buttonDisabled]}
             onPress={handleReceiptPickerPress}
@@ -633,14 +639,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
             <Text style={styles.buttonText}>{receiptParsing ? 'Scanning...' : 'Scan Receipt'}</Text>
           </TouchableOpacity>
         ) : null}
+        {canImportExpenses ? (
         <TouchableOpacity
           style={[styles.button, styles.smallButton]}
-          onPress={() => setImportExpensesVisible(true)}
+          onPress={() => { if (canImportExpenses) setImportExpensesVisible(true); }}
           disabled={readOnly}
           testID="expense-import-button"
         >
           <Text style={styles.buttonText}>Import</Text>
         </TouchableOpacity>
+        ) : null}
         {onOpenBalances ? (
           <TouchableOpacity
             style={[styles.button, styles.smallButton]}
@@ -653,7 +661,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           </TouchableOpacity>
         ) : null}
       </View>
-      {receiptScanningAllowed && Platform.OS === 'web' ? (
+      {canScanReceipt ? (
         <input
           ref={receiptFileInputRef}
           type="file"
@@ -748,7 +756,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           useNativeModal
         />
       ) : null}
-      {importExpensesVisible && trip && (
+      {canImportExpenses && importExpensesVisible && trip && (
         <PlaidImportQueue
           theme={theme}
           styles={styles}

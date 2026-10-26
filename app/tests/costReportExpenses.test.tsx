@@ -37,3 +37,17 @@ it('responds when an item changes between zero and non-zero, and respects read-o
   screen.rerender(draw(0));
   expect(screen.queryByTestId('other-expense-row-tour-activity')).toBeNull();
 });
+
+it('shows one Paid by person while keeping multiple travelers in For', () => {
+  const people = [
+    { id: 'vicky', firstName: 'Vicky', lastName: 'Duerk' },
+    { id: 'bryan', firstName: 'Bryan', lastName: 'Duerk' },
+  ];
+  const expenses = buildAllExpenses([{ id: 'flight', cost: 100, passengerIds: ['vicky', 'bryan'] }],
+    [], [], [], [], 'USD', ['vicky', 'bryan'], 'bryan');
+  const screen = render(<CostReportExpenses expenses={expenses} members={people} styles={{}} />);
+  const row = within(screen.getByTestId('other-expense-row-flight-flight'));
+  expect(row.getByText('Bryan Duerk')).toBeTruthy();
+  // The combined names appear only in For, not again in Paid by.
+  expect(row.getAllByText('Vicky Duerk, Bryan Duerk')).toHaveLength(1);
+});
