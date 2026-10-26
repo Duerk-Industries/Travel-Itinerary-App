@@ -3059,9 +3059,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 ) : (
                   (activeDayInfo.details ?? []).map((d) => {
                     const isActivity = !d.kind || d.kind === 'activity';
+                    // On phones the calendar/vote/delete controls don't fit beside the name: stack them
+                    // under it in a wrapping row, instead of crushing the name to a few letters per line.
                     return (
-                      <View key={d.id} style={[styles.dayInfoRow, { alignItems: 'flex-start', gap: 8 }]}>
-                        <View style={{ flex: 1, gap: 4 }}>
+                      <View
+                        key={d.id}
+                        testID={`day-details-item-${d.id}`}
+                        style={[
+                          styles.dayInfoRow,
+                          isPhoneLayout
+                            ? { flexDirection: 'column', alignItems: 'stretch', gap: 8 }
+                            : { alignItems: 'flex-start', gap: 8 },
+                        ]}
+                      >
+                        <View style={isPhoneLayout ? { gap: 4 } : { flex: 1, gap: 4 }}>
                           {d.kind === 'place' ? (
                             <View>
                               <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
@@ -3118,31 +3129,36 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             <Text style={styles.dayInfoRoute}>{d.activity}</Text>
                           )}
                         </View>
-                        {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
-                        {isActivity ? (
-                          <View style={{ flexShrink: 0 }}>
-                            <ReactionBar
-                              detailId={d.id}
-                              summary={d.reactions ?? emptyReactionSummary}
-                              canReact={featureItineraryReactions}
-                              onCast={castReactionForDetail}
-                              onClear={clearReactionForDetail}
-                              theme={theme}
-                            />
-                          </View>
-                        ) : null}
-                        {isEditingDayItems ? (
-                          <TouchableOpacity
-                            testID={`day-details-delete-${d.id}`}
-                            accessibilityRole="button"
-                            accessibilityLabel="Delete item"
-                            onPress={() => deleteDetail(d.id)}
-                            style={styles.detailDeleteButton}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          >
-                            <Text style={styles.detailDeleteButtonText}>×</Text>
-                          </TouchableOpacity>
-                        ) : null}
+                        <View
+                          testID={`day-details-item-actions-${d.id}`}
+                          style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, ...(isPhoneLayout ? {} : { flexShrink: 0 }) }}
+                        >
+                          {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
+                          {isActivity ? (
+                            <View style={{ flexShrink: 0 }}>
+                              <ReactionBar
+                                detailId={d.id}
+                                summary={d.reactions ?? emptyReactionSummary}
+                                canReact={featureItineraryReactions}
+                                onCast={castReactionForDetail}
+                                onClear={clearReactionForDetail}
+                                theme={theme}
+                              />
+                            </View>
+                          ) : null}
+                          {isEditingDayItems ? (
+                            <TouchableOpacity
+                              testID={`day-details-delete-${d.id}`}
+                              accessibilityRole="button"
+                              accessibilityLabel="Delete item"
+                              onPress={() => deleteDetail(d.id)}
+                              style={styles.detailDeleteButton}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <Text style={styles.detailDeleteButtonText}>×</Text>
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
                       </View>
                     );
                   })

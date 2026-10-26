@@ -637,6 +637,36 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('day-details-add-item-button')).toBeTruthy();
   });
 
+  // Regression: on phones, Add to calendar + the vote bar used to sit beside the item name in one
+  // row, crushing the name to a column one or two letters wide. They now stack under the name.
+  test.each([
+    ['phone', 390, 'column'],
+    ['desktop', 1280, 'row'],
+  ])('day items lay out the name and actions for %s widths', async (_label, width, expectedDirection) => {
+    const RN = require('react-native');
+    const dims = jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({ width, height: 900, scale: 2, fontScale: 1 } as any);
+    fetchMock.mockImplementation(async (input: any) => {
+      const url = String(input);
+      if (url.endsWith('/api/itineraries')) {
+        return { ok: true, json: async () => [{ id: 'itin-1', tripId: baseProps.trip.id, createdAt: '2026-01-01T00:00:00Z' }] } as any;
+      }
+      if (url.endsWith('/api/itineraries/itin-1/details')) {
+        return { ok: true, json: async () => [{ id: 'd1', day: 1, time: '09:00', activity: 'Wander Alfama + Miradouro de Santa Luzia', kind: 'activity' }] } as any;
+      }
+      return { ok: true, json: async () => [] } as any;
+    });
+    try {
+      const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+      fireEvent.press(await findByTestId('overview-day-card-1'));
+      const row = await findByTestId('day-details-item-d1');
+      const flat = Array.isArray(row.props.style) ? Object.assign({}, ...row.props.style.filter(Boolean)) : row.props.style;
+      expect(flat.flexDirection ?? 'row').toBe(expectedDirection);
+      expect(await findByTestId('day-details-item-actions-d1')).toBeTruthy();
+    } finally {
+      dims.mockRestore();
+    }
+  });
+
   test('day with no items shows all four "+ Add X" buttons grouped in one row', async () => {
     const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
