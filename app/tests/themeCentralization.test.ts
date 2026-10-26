@@ -23,7 +23,14 @@ it('keeps color literals and style definitions in the central theme', () => {
     };
     const visit = (node: ts.Node) => {
       if (ts.isStringLiteralLike(node) && (/^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i.test(node.text) || /^(?:rgba?|hsla?)\(/i.test(node.text))) report(node, 'local color literal');
-      if (ts.isObjectLiteralExpression(node) && node.properties.some(property => property.name && presentationKeys.has(property.name.getText(source).replace(/['"]/g, '')))) {
+      // `position` is also a data field (e.g. packing-list sort order); it only styles when set to a CSS keyword literal.
+      const isPresentationProperty = (property: ts.ObjectLiteralElementLike) => {
+        if (!property.name) return false;
+        const name = property.name.getText(source).replace(/['"]/g, '');
+        if (!presentationKeys.has(name)) return false;
+        return name !== 'position' || (ts.isPropertyAssignment(property) && ts.isStringLiteralLike(property.initializer));
+      };
+      if (ts.isObjectLiteralExpression(node) && node.properties.some(isPresentationProperty)) {
         let parent: ts.Node | undefined = node.parent;
         while (parent && !(ts.isCallExpression(parent) && parent.expression.getText(source) === 'themeStyle')) parent = parent.parent;
         if (!parent) report(node, 'local presentation definition');
