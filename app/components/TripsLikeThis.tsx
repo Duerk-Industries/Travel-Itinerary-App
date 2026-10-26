@@ -47,7 +47,7 @@ export default function TripsLikeThis({ tripId, date, backendUrl, headers, onAdd
     const refresh = () => { if (active && !cancelled && current.current === scope) void load(scope); };
     const app = AppState.addEventListener('change', state => { if (state === 'active') { setResult(null); refresh(); } });
     const interval = setInterval(() => { if (AppState.currentState === 'active') refresh(); }, 30_000);
-    return () => { cancelled = true; app.remove(); clearInterval(interval); };
+    return () => { cancelled = true; clearInterval(interval); app?.remove(); };
   }, [scope]);
 
   const copy = async (source: PublicTripInspiration, activity: SharedActivityTemplate) => {

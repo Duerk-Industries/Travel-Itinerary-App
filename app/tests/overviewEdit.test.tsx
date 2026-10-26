@@ -13,6 +13,15 @@ import { FlightEditingForm, GroundTransferEditingForm } from '../components/Tran
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
+// OverviewTab mounts TripsLikeThis, whose 30s refresh interval keeps Jest alive after the run
+// unless every tree is unmounted, so record each render and unmount it after the test.
+const mountedTrees: ReturnType<typeof renderer.create>[] = [];
+const renderTracked = (element: React.ReactElement) => {
+  const tree = renderer.create(element);
+  mountedTrees.push(tree);
+  return tree;
+};
+
 const baseTrip = {
   id: 'trip-1',
   groupId: 'group-1',
@@ -119,13 +128,14 @@ describe('Overview edit controls', () => {
   });
 
   afterEach(() => {
+    act(() => { mountedTrees.splice(0).forEach((tree) => tree.unmount()); });
     jest.resetAllMocks();
   });
 
   test('save applies changes via PATCH', async () => {
     let tree: any;
     await act(async () => {
-      tree = renderer.create(<OverviewTab {...baseProps} />);
+      tree = renderTracked(<OverviewTab {...baseProps} />);
     });
     const root = tree!.root;
 
@@ -154,7 +164,7 @@ describe('Overview edit controls', () => {
   test('cancel discards changes without PATCH', async () => {
     let tree: any;
     await act(async () => {
-      tree = renderer.create(<OverviewTab {...baseProps} />);
+      tree = renderTracked(<OverviewTab {...baseProps} />);
     });
     const root = tree!.root;
 
@@ -188,7 +198,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderer.create(
+      tree = renderTracked(
         <OverviewTab
           {...baseProps}
           trip={{ ...baseTrip, currency: 'USD' } as any}
@@ -264,7 +274,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderer.create(<OverviewTab {...baseProps} />);
+      tree = renderTracked(<OverviewTab {...baseProps} />);
     });
     const root = tree!.root;
 
@@ -336,7 +346,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderer.create(<OverviewTab {...baseProps} attendees={attendees} />);
+      tree = renderTracked(<OverviewTab {...baseProps} attendees={attendees} />);
     });
     const root = tree!.root;
 
@@ -394,7 +404,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderer.create(
+      tree = renderTracked(
         <OverviewTab
           {...baseProps}
           attendees={attendees}
@@ -462,7 +472,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderer.create(
+      tree = renderTracked(
         <OverviewTab
           {...baseProps}
           lodgings={[lodging] as any}
@@ -532,7 +542,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderer.create(
+      tree = renderTracked(
         <OverviewTab
           {...baseProps}
           flights={[flight] as any}
