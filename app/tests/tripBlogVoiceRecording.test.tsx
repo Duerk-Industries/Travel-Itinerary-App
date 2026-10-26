@@ -75,9 +75,10 @@ describe('TripBlogTab in-app voice note recording', () => {
   );
 
   it('records a voice note, uploads it, and saves the transcript as its caption -- no prerecorded file required', async () => {
-    const { findByText, getByTestId, getByLabelText } = renderTab();
+    const { findByText, getByTestId, getByLabelText, queryByTestId } = renderTab();
     fireEvent.press(await findByText('Edit blog'));
 
+    expect(queryByTestId('blog-add-voice-2026-09-01')).toBeNull();
     const recordButton = await waitFor(() => getByTestId('blog-record-voice-2026-09-01'));
     fireEvent.press(recordButton);
     await waitFor(() => expect(getByLabelText('Stop recording')).toBeTruthy());

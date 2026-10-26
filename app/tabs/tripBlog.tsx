@@ -13,7 +13,6 @@ import { useBlogMediaUrlRefresh } from '../hooks/useBlogMediaUrlRefresh';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 import VoiceNoteRecorder from '../components/VoiceNoteRecorder';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -46,7 +45,6 @@ import {
   SUPPORTED_MIME_TYPES,
   SUPPORTED_PHOTO_MIME_TYPES,
   SUPPORTED_VIDEO_MIME_TYPES,
-  SUPPORTED_AUDIO_MIME_TYPES,
   isVideoMimeType,
   guessMimeTypeFromName,
   uploadBlogFiles,
@@ -1000,38 +998,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     }
   };
 
-  const handleVoiceNote = async (dayDate) => {
-    if (!canEdit || uploading) return;
-    setUploading(true);
-    setVoiceUploadFailures((current) => ({ ...current, [dayDate]: null }));
-    try {
-      const result = await DocumentPicker.getDocumentAsync({ type: SUPPORTED_AUDIO_MIME_TYPES, multiple: false, copyToCacheDirectory: true });
-      if (result.canceled || !result.assets?.[0]) return;
-      const asset = result.assets[0];
-      let blob;
-      try {
-        blob = await readLocalBlob(asset.uri);
-      } catch (error) {
-        throw new Error(`Couldn't read that audio file on this device (${error.message || 'unknown error'}). Please try again.`);
-      }
-      const mimeType = asset.mimeType || guessMimeTypeFromName(asset.name);
-      if (!mimeType || !SUPPORTED_AUDIO_MIME_TYPES.includes(mimeType)) throw new Error('Choose an MP3, M4A, WAV, or WebM audio file.');
-      const uploaded = await uploadBlogFiles(
-        { backendUrl, headers, tripId: activeTripId },
-        dayDate,
-        [{ blob, mimeType, size: asset.size ?? blob.size, name: asset.name }]
-      );
-      if (!uploaded.succeeded) throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : uploaded.errors?.[0] || 'Unable to add the voice note.');
-      await load();
-    } catch (error) {
-      setVoiceUploadFailures((current) => ({ ...current, [dayDate]: error.message || 'Unable to add the voice note.' }));
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // Records in-app instead of requiring a prerecorded file (handleVoiceNote above stays as the
-  // "choose an existing audio file" path, unchanged). Uploads the clip through the exact same
+  // Records in-app and uploads the clip through the same
   // path as any voice note, then reuses the transcribe-caption pipeline already built for photo
   // captions (transcribeMediaCaption / saveMediaMetadata above) to turn the recording into the
   // new item's caption -- no new server route, no new AI cost path, same Premium/Pro tier gate
@@ -1706,18 +1673,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_68', {  }, (theme ?? _styleTheme))]}>+ Add note</Text>
                   </TouchableOpacity>
                 )}
-                {canEdit && capabilities.trip_blog_audio ? (
-                  <TouchableOpacity
-                    testID={`blog-add-voice-${day.localDate}`}
-                    accessibilityRole="button"
-                    accessibilityLabel="Add a voice note"
-                    style={[styles.button, themeStyle('tabs_tripBlog_69', { theme: theme }, (theme ?? _styleTheme))]}
-                    onPress={() => handleVoiceNote(day.localDate)}
-                    disabled={uploading}
-                  >
-                    <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_70', {  }, (theme ?? _styleTheme))]}>+ Voice note</Text>
-                  </TouchableOpacity>
-                ) : null}
                 {/* Recording only needs voice notes on; handleRecordedVoiceNote skips the transcript when
                     transcription is off, so the audio is still saved. */}
                 {canEdit && capabilities.trip_blog_audio ? (
