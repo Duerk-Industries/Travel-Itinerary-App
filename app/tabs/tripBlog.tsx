@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import VoiceNoteRecorder from '../components/VoiceNoteRecorder';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { formatDateLong } from '../utils/formatDateLong';
+import { localTodayDateOnly } from '../utils/dateOnly';
 import TripDayMap from '../components/TripDayMap';
 import ActivitySharingControls from '../components/ActivitySharingControls';
 import { type TripMapPoint } from '../utils/googleMaps';
@@ -82,7 +83,21 @@ const promptsForDay = (dayDate) => {
   return [0, 1, 2].map((offset) => WRITING_PROMPTS[(start + offset) % WRITING_PROMPTS.length]);
 };
 
-const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], styles, theme: _providedTheme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {}, autoOpenActivityCapture = null as { date: string; tags: string[] } | null, onAutoOpenActivityCaptureHandled = () => {}, temperatureUnit = defaultTemperatureUnitForRegion() as TemperatureUnit, onChangeTemperatureUnit = null as ((unit: TemperatureUnit) => void) | null }) => {
+const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], tripEndDate = null as string | null, styles, theme: _providedTheme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {}, autoOpenActivityCapture = null as { date: string; tags: string[] } | null, onAutoOpenActivityCaptureHandled = () => {}, temperatureUnit = defaultTemperatureUnitForRegion() as TemperatureUnit, onChangeTemperatureUnit = null as ((unit: TemperatureUnit) => void) | null }) => {
+  const [currentDay, setCurrentDay] = useState(localTodayDateOnly);
+  const finalTripDay = String(tripEndDate ?? trips.find((trip) => trip.id === activeTripId)?.endDate ?? '').slice(0, 10);
+  const canReliveTrip = /^\d{4}-\d{2}-\d{2}$/.test(finalTripDay) && currentDay > finalTripDay;
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const updateDay = () => {
+      setCurrentDay(localTodayDateOnly());
+      const now = new Date();
+      const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      timer = setTimeout(updateDay, midnight.getTime() - now.getTime() + 100);
+    };
+    updateDay();
+    return () => clearTimeout(timer);
+  }, []);
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width: viewportWidth } = useWindowDimensions();
@@ -455,7 +470,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
 
   const RECAP_MAX_POLLS = 20;
   const loadRecap = async (attempt = 0) => {
-    if (recapBusy && attempt === 0) return;
+    if (!canReliveTrip || (recapBusy && attempt === 0)) return;
     setRecapBusy(true);
     if (attempt === 0) setRecapNotice('Building your recap — this can take up to a minute…');
     let retryScheduled = false;
@@ -2110,7 +2125,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         ) : null}
         {/* Phase 0 reorder — the recap is the "Relive this trip" moment (redesign notes §1), kept
             prominent after the last day rather than buried above the story. */}
-        {capabilities.trip_blog_recap ? (
+        {capabilities.trip_blog_recap && canReliveTrip ? (
           <View style={themeStyle('tabs_tripBlog_129', {  }, (theme ?? _styleTheme))} onLayout={(e) => { recapY.current = e.nativeEvent.layout.y; }}>
             {recap ? (
               <TripRecapCards

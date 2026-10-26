@@ -3452,6 +3452,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   headers={headers}
                   activeTripId={activeTripId}
                   trips={trips}
+                  tripEndDate={(activeTripForHome ?? activeTrip)?.endDate ?? null}
                   styles={styles}
                   theme={theme}
                   readOnly={isFollowingMode || offlineReadOnly}
