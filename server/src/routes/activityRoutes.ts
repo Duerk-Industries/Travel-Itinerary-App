@@ -11,6 +11,7 @@ import {
   ensureUserInTrip,
   getItemVoteSummaries,
   getActivityById,
+  getLodgingById,
   insertActivity,
   listGroupMembers,
   listActivities,
@@ -136,6 +137,14 @@ router.get('/', async (req, res) => {
   res.json(merged.length ? merged : activities);
 });
 
+const nearLodgingIsValid = async (tripId: string, lodgingId?: string | null): Promise<boolean> => {
+  const id = lodgingId?.trim();
+  if (!id) return true;
+  if (!z.uuid().safeParse(id).success) return false;
+  const lodging = await getLodgingById(id);
+  return (lodging?.tripId ?? lodging?.trip_id) === tripId;
+};
+
 router.post('/', async (req, res) => {
   if (req.body?.publicSource !== undefined) {
     const data = z.object({ tripId: z.string().uuid(), date: z.iso.date(),
@@ -179,7 +188,7 @@ router.post('/', async (req, res) => {
   const relaxed = shouldRelaxRequiredFields(status);
   const dateVal = dto.date ?? '';
   const nameVal = dto.name ?? '';
-  if (!relaxed && (!dateVal || !nameVal)) {
+  if (!relaxed && !nameVal) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
@@ -188,12 +197,18 @@ router.post('/', async (req, res) => {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
+  const nearLodgingId = dto.nearLodgingId?.trim() || null;
+  if (!(await nearLodgingIsValid(dto.tripId, nearLodgingId))) {
+    res.status(400).json({ error: 'Choose a hotel from this trip.' });
+    return;
+  }
   const activity = await insertActivity({
     userId,
     tripId: dto.tripId,
     status,
     activityType,
-    date: dateVal || new Date().toISOString().slice(0, 10),
+    date: dateVal,
+    nearLodgingId,
     name: nameVal,
     startLocation: dto.startLocation ?? '',
     startTime: dto.startTime ?? '',
@@ -209,7 +224,7 @@ router.post('/', async (req, res) => {
   const members = await listGroupMembers(tripGroup.groupId, userId).catch(() => []);
   const defaultTravelers = members.map((m) => String((m as any).id));
   const forIds = dto.travelerIds.length ? dto.travelerIds : defaultTravelers;
-  await upsertExpenseForSource({
+  if (dateVal) await upsertExpenseForSource({
     userId,
     tripId: dto.tripId,
     groupId: tripGroup.groupId,
@@ -267,6 +282,7 @@ router.patch('/bulk', async (req, res) => {
       await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_ACTIVITY_ROW_WRITE' });
       const previous = await getActivityById(update.id);
       const fields = update.fields;
+      if (previous && !(await nearLodgingIsValid(previous.tripId, fields.nearLodgingId))) throw new Error('Choose a hotel from this trip.');
       const normalizedPaidBy = Array.isArray(fields.paidBy)
         ? (fields.paidBy.length ? fields.paidBy.map((p) => String(p)) : undefined)
         : undefined;
@@ -282,7 +298,8 @@ router.patch('/bulk', async (req, res) => {
       const updated = await updateActivity(update.id, userId, {
         activityType: finalActivityType,
         status: fields.status == null ? undefined : normalizeItineraryStatus(String(fields.status)),
-        date: fields.date ?? undefined,
+        date: fields.date === undefined ? undefined : fields.date ?? '',
+        nearLodgingId: fields.nearLodgingId === undefined ? undefined : fields.nearLodgingId?.trim() || null,
         name: fields.name ?? undefined,
         startLocation: fields.startLocation ?? undefined,
         startTime: fields.startTime ?? undefined,
@@ -301,7 +318,8 @@ router.patch('/bulk', async (req, res) => {
         const members = await listGroupMembers(membership.groupId, userId).catch(() => []);
         const defaultTravelers = members.map((m) => String((m as any).id));
         const forIds = normalizedTravelers && normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
-        await upsertExpenseForSource({
+        if (!updated.date) await deleteExpenseForSource('activity', updated.id, userId);
+        else await upsertExpenseForSource({
           userId,
           tripId: updated.tripId,
           groupId: membership.groupId,
@@ -394,13 +412,18 @@ router.put('/:id', async (req, res) => {
   }
   const finalStatus = dto.status == null ? undefined : normalizeItineraryStatus(String(dto.status));
   const previous = await getActivityById(id);
+  if (previous && !(await nearLodgingIsValid(previous.tripId, dto.nearLodgingId))) {
+    res.status(400).json({ error: 'Choose a hotel from this trip.' });
+    return;
+  }
   const normalizedTravelers = Array.isArray(dto.travelerIds)
     ? dto.travelerIds.map((id: any) => String(id)).filter(Boolean)
     : undefined;
   const updated = await updateActivity(id, userId, {
     activityType: finalActivityType,
     status: finalStatus,
-    date: dto.date ?? undefined,
+    date: dto.date === undefined ? undefined : dto.date ?? '',
+    nearLodgingId: dto.nearLodgingId === undefined ? undefined : dto.nearLodgingId?.trim() || null,
     name: dto.name ?? undefined,
     startLocation: dto.startLocation ?? undefined,
     startTime: dto.startTime ?? undefined,
@@ -422,7 +445,8 @@ router.put('/:id', async (req, res) => {
     const members = await listGroupMembers(membership.groupId, userId).catch(() => []);
     const defaultTravelers = members.map((m) => String((m as any).id));
     const forIds = normalizedTravelers && normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
-    await upsertExpenseForSource({
+    if (!updated.date) await deleteExpenseForSource('activity', updated.id, userId);
+    else await upsertExpenseForSource({
       userId,
       tripId: updated.tripId,
       groupId: membership.groupId,
@@ -462,13 +486,18 @@ router.patch('/:id', async (req, res) => {
   }
   const finalStatus = dto.status == null ? undefined : normalizeItineraryStatus(String(dto.status));
   const previous = await getActivityById(id);
+  if (previous && !(await nearLodgingIsValid(previous.tripId, dto.nearLodgingId))) {
+    res.status(400).json({ error: 'Choose a hotel from this trip.' });
+    return;
+  }
   const normalizedTravelers = Array.isArray(dto.travelerIds)
     ? dto.travelerIds.map((id: any) => String(id)).filter(Boolean)
     : undefined;
   const updated = await updateActivity(id, userId, {
     activityType: finalActivityType,
     status: finalStatus,
-    date: dto.date ?? undefined,
+    date: dto.date === undefined ? undefined : dto.date ?? '',
+    nearLodgingId: dto.nearLodgingId === undefined ? undefined : dto.nearLodgingId?.trim() || null,
     name: dto.name ?? undefined,
     startLocation: dto.startLocation ?? undefined,
     startTime: dto.startTime ?? undefined,
@@ -490,7 +519,8 @@ router.patch('/:id', async (req, res) => {
     const members = await listGroupMembers(membership.groupId, userId).catch(() => []);
     const defaultTravelers = members.map((m) => String((m as any).id));
     const forIds = normalizedTravelers && normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
-    await upsertExpenseForSource({
+    if (!updated.date) await deleteExpenseForSource('activity', updated.id, userId);
+    else await upsertExpenseForSource({
       userId,
       tripId: updated.tripId,
       groupId: membership.groupId,

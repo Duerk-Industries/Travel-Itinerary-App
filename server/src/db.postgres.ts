@@ -1057,6 +1057,8 @@ export const initDb = async (): Promise<void> => {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE tours ALTER COLUMN date DROP NOT NULL;`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS near_lodging_id UUID REFERENCES lodgings(id) ON DELETE SET NULL;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS booked_on TEXT;`);
@@ -4814,7 +4816,8 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
       tu.trip_id as "tripId",
       tu.status,
       COALESCE(NULLIF(tu.activity_type, ''), 'Tour') as "activityType",
-      to_char(tu.date, 'YYYY-MM-DD') as date,
+      COALESCE(to_char(tu.date, 'YYYY-MM-DD'), '') as date,
+      tu.near_lodging_id as "nearLodgingId",
       tu.name,
       tu.start_location as "startLocation",
       tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition", tu.day_order_pinned as "dayOrderPinned",
@@ -4860,7 +4863,8 @@ export const getActivityById = async (id: string): Promise<Activity | null> => {
       tu.trip_id as "tripId",
       tu.status,
       COALESCE(NULLIF(tu.activity_type, ''), 'Tour') as "activityType",
-      to_char(tu.date, 'YYYY-MM-DD') as date,
+      COALESCE(to_char(tu.date, 'YYYY-MM-DD'), '') as date,
+      tu.near_lodging_id as "nearLodgingId",
       tu.name,
       tu.start_location as "startLocation",
       tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition", tu.day_order_pinned as "dayOrderPinned",
@@ -4897,9 +4901,9 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
   const { rows } = await p.query<Activity>(
     `
     INSERT INTO tours (
-      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, notes, paid_by, traveler_ids
+      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, notes, paid_by, traveler_ids, near_lodging_id
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
     )
     RETURNING
       id,
@@ -4907,7 +4911,8 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       trip_id as "tripId",
       status,
       COALESCE(NULLIF(activity_type, ''), 'Tour') as "activityType",
-      to_char(date, 'YYYY-MM-DD') as date,
+      COALESCE(to_char(date, 'YYYY-MM-DD'), '') as date,
+      near_lodging_id as "nearLodgingId",
       name,
       start_location as "startLocation",
       lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition", day_order_pinned as "dayOrderPinned",
@@ -4928,7 +4933,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       activity.tripId,
       activity.status,
       activity.activityType ?? 'Tour',
-      activity.date,
+      activity.date || null,
       activity.name,
       activity.startLocation,
       activity.startTime,
@@ -4940,6 +4945,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       activity.notes ?? '',
       paidBy,
       travelerIds,
+      activity.nearLodgingId ?? null,
     ]
   );
   const row = rows[0];
@@ -5023,9 +5029,10 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
     SET
       status = COALESCE($3, status),
       activity_type = COALESCE($4, activity_type),
-      day_position = CASE WHEN $5 IS NOT NULL AND $5::date <> date THEN NULL ELSE day_position END,
-      day_order_pinned = CASE WHEN $5 IS NOT NULL AND $5::date <> date THEN FALSE ELSE day_order_pinned END,
-      date = COALESCE($5, date),
+      day_position = CASE WHEN $18 AND ($5::date <> date OR ($5 IS NULL AND date IS NOT NULL) OR ($5 IS NOT NULL AND date IS NULL)) THEN NULL ELSE day_position END,
+      day_order_pinned = CASE WHEN $18 AND ($5::date <> date OR ($5 IS NULL AND date IS NOT NULL) OR ($5 IS NOT NULL AND date IS NULL)) THEN FALSE ELSE day_order_pinned END,
+      date = CASE WHEN $18 THEN $5::date ELSE date END,
+      near_lodging_id = CASE WHEN $20 THEN $19::uuid ELSE near_lodging_id END,
       name = COALESCE($6, name),
       lat = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lat END,
       lng = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lng END,
@@ -5047,7 +5054,8 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       trip_id as "tripId",
       status,
       COALESCE(NULLIF(activity_type, ''), 'Tour') as "activityType",
-      to_char(date, 'YYYY-MM-DD') as date,
+      COALESCE(to_char(date, 'YYYY-MM-DD'), '') as date,
+      near_lodging_id as "nearLodgingId",
       name,
       start_location as "startLocation",
       lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition", day_order_pinned as "dayOrderPinned",
@@ -5067,7 +5075,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       current.tripId,
       activity.status ?? null,
       activity.activityType ?? null,
-      activity.date ?? null,
+      activity.date || null,
       activity.name ?? null,
       activity.startLocation ?? null,
       activity.startTime ?? null,
@@ -5080,6 +5088,9 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       paidBy ?? null,
       travelerIds ?? null,
       hasFreeCancelBy,
+      activity.date !== undefined,
+      activity.nearLodgingId ?? null,
+      activity.nearLodgingId !== undefined,
     ]
   );
   if (!rows.length) return null;

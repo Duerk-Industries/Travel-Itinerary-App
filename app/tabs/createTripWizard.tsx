@@ -997,6 +997,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (result.failures.length) {
       setWizardError(`Trip created, but ${result.failures.length} lodging entr${result.failures.length === 1 ? 'y' : 'ies'} failed to save.`);
     }
+    return result.lodgingIds ?? {};
   };
 
   const saveWizardCarRentalsForTrip = async (tripId: string, groupId: string) => {
@@ -1021,7 +1022,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   };
 
-  const saveWizardTours = async (tripId: string, groupId: string) => {
+  const saveWizardTours = async (tripId: string, groupId: string, lodgingIds: Record<string, string> = {}) => {
     if (!userToken || wizardTours.length === 0) return;
     try {
       const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
@@ -1056,6 +1057,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       const failures: string[] = [];
 
       for (const tour of wizardTours) {
+        if (tour.nearLodgingId && !lodgingIds[tour.nearLodgingId]) {
+          failures.push(`Hotel for ${tour.name || 'optional activity'} could not be saved.`);
+          continue;
+        }
         const rawPaidBy = Array.isArray(tour.paidBy) ? tour.paidBy : [];
         const resolvedPaidBy = rawPaidBy
           .map((id) => wizardMembersById.get(String(id)))
@@ -1072,6 +1077,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           status: (tour as any).status ?? 'Proposed',
           activityType: (tour as any).activityType ?? 'Tour',
           date: tour.date,
+          nearLodgingId: tour.nearLodgingId ? lodgingIds[tour.nearLodgingId] : null,
           name: tour.name,
           startLocation: tour.startLocation,
           startTime: tour.startTime,
@@ -1167,8 +1173,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       const groupId = data.groupId as string | undefined;
       if (groupId && !quickStartMode) {
         await saveWizardFlightsForTrip(tripId, groupId);
-        await saveWizardLodgingsForTrip(tripId, groupId);
-        await saveWizardTours(tripId, groupId);
+        const lodgingIds = await saveWizardLodgingsForTrip(tripId, groupId);
+        await saveWizardTours(tripId, groupId, lodgingIds);
         await saveWizardCarRentalsForTrip(tripId, groupId);
       }
 
@@ -2140,6 +2146,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               theme={theme}
               fetchTours={async () => undefined}
               mode="wizard"
+              lodgings={wizardLodgings}
               defaultActivityDate={dates.mode === 'range' ? dates.startDate : null}
             />
           </>

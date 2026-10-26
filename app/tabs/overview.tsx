@@ -93,8 +93,8 @@ import LodgingDialog from '../components/LodgingDialog';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
 import GetYourGuideCta from '../components/GetYourGuideCta';
+import { optionalActivitiesForDay } from '../utils/optionalActivities';
 import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
-import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
 import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
 import ItineraryDocumentImport, { canShowItineraryDocumentImport } from '../components/ItineraryDocumentImport';
@@ -156,6 +156,7 @@ type Lodging = {
 };
 
 type Tour = {
+  nearLodgingId?: import('../../server/src/types').Activity['nearLodgingId'];
   id: string;
   status?: string;
   date: string;
@@ -522,8 +523,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
+  const [schedulingOptionalActivity, setSchedulingOptionalActivity] = useState(false);
   const [activeAddDialog, setActiveAddDialog] = useState<AddItemKind | null>(null);
   const [addPopoverDay, setAddPopoverDay] = useState<number | null>(null);
+  const [addPopoverDate, setAddPopoverDate] = useState<string | null>(null);
   const [isEditingDayItems, setIsEditingDayItems] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [documentImportOpen, setDocumentImportOpen] = useState(false);
@@ -893,38 +896,45 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   const openCustomActivityDialog = useCallback(
-    (dayIndex?: number | null) => {
+    (date?: string | null) => {
       setEditingTourId(null);
-      setTourDraft(createInitialActivityState(getDateForDayIndex(dayIndex)));
+      setTourDraft(createInitialActivityState(date));
       setShowAddTour(true);
     },
-    [getDateForDayIndex]
+    []
   );
 
   const handlePopoverSelect = useCallback((kind: AddItemKind) => {
     if (kind === 'activity') {
       setAddPopoverOpen(false);
       setActiveAddDialog(null);
-      openCustomActivityDialog(addPopoverDay ?? 1);
+      openCustomActivityDialog(addPopoverDate ?? getDateForDayIndex(addPopoverDay));
       return;
     }
     setActiveAddDialog(kind);
     setAddPopoverOpen(false);
-  }, [addPopoverDay, openCustomActivityDialog]);
+  }, [addPopoverDay, addPopoverDate, getDateForDayIndex, openCustomActivityDialog]);
 
-  const handleAddPlace = useCallback(
-    async (input: PlacePickerSubmit) => {
-      const ok = await postNewDetail(input.day, {
-        day: input.day,
-        time: input.time ?? null,
-        activity: input.name,
-        kind: 'place',
-        noteBody: input.notes ?? null,
+  const availableOptionalActivities = optionalActivitiesForDay(tours, lodgings, addPopoverDate ?? getDateForDayIndex(addPopoverDay), trip ?? {});
+  const scheduleOptionalActivity = async (id: string) => {
+    if (readOnly || schedulingOptionalActivity) return;
+    const date = addPopoverDate ?? getDateForDayIndex(addPopoverDay);
+    if (!date || !availableOptionalActivities.some((activity) => activity.id === id)) return;
+    setSchedulingOptionalActivity(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/activities/${encodeURIComponent(id)}`, {
+        method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ date }),
       });
-      if (ok) closeAllAddDialogs();
-    },
-    [postNewDetail, closeAllAddDialogs]
-  );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Unable to schedule this activity.');
+      }
+      setAddPopoverOpen(false);
+      onTourDataChanged();
+    } catch (error) {
+      Alert.alert(error instanceof Error ? error.message : 'Unable to schedule this activity.');
+    } finally { setSchedulingOptionalActivity(false); }
+  };
 
   const handleAddNote = useCallback(
     async (input: NoteSubmit) => {
@@ -2001,7 +2011,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   // Day-details "+ Add X" buttons — same add flow/fields as each type's own dedicated
   // page, just pre-seeded with the day currently being viewed and reachable without
   // switching into the overview's "edit everything" (isEditing) mode.
-  const addFlightForDay = (dateIso: string) => {
+  const addFlightForDay = (dateIso: string, transferType: FlightEditDraft['transferType'] = 'Flight') => {
     if (readOnly) return;
     setSelectedFlight(null);
     setReturnToOverviewViewAfterItemEdit(true);
@@ -2017,6 +2027,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       draft.passengerIds = groupMembers.map((m) => m.id);
       draft.passengerName = buildPassengerName(draft.passengerIds) || draft.passengerName;
     }
+    draft.transferType = transferType;
     draft.departureDate = dateIso;
     draft.arrivalDate = dateIso;
     setEditingFlightDraft(draft);
@@ -2039,9 +2050,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (readOnly) return;
     setSelectedTour(null);
     setReturnToOverviewViewAfterItemEdit(true);
-    setEditingTourId(null);
-    setTourDraft(createInitialActivityState(dateIso));
-    setShowAddTour(true);
+    setAddPopoverDay(Math.max(1, dayCards.findIndex((day) => day.date === dateIso) + 1));
+    setAddPopoverDate(dateIso);
+    setAddPopoverOpen(true);
   };
 
   const addRentalForDay = (dateIso: string) => {
@@ -2748,6 +2759,97 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const flightsForDay = activeDayInfo.flights;
         // Same order the day map letters its pins in: an explicit saved position first, then start time.
         const toursForDay = orderDayActivities(activeDayInfo.tours);
+        const locationDetails = (activeDayInfo.details ?? []).filter((detail) => detail.kind !== 'note' && detail.kind !== 'checklist');
+        const noteDetails = (activeDayInfo.details ?? []).filter((detail) => detail.kind === 'note' || detail.kind === 'checklist');
+        const renderDayDetail = (d: ItineraryDetail) => {
+          const isActivity = !d.kind || d.kind === 'activity';
+          return (
+            <View key={d.id} style={[styles.dayInfoRow, themeStyle('tabs_overview_35', {  }, (theme ?? _styleTheme))]}>
+              <View style={themeStyle('tabs_overview_36', {  }, (theme ?? _styleTheme))}>
+                {d.kind === 'place' ? (
+                  <View>
+                    <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
+                    {d.noteBody ? (
+                      <Text style={[styles.helperText, themeStyle('tabs_overview_37', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
+                    ) : null}
+                  </View>
+                ) : d.kind === 'note' ? (
+                  <View>
+                    <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
+                    {d.noteBody ? (
+                      <Text style={[styles.helperText, themeStyle('tabs_overview_38', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
+                    ) : null}
+                  </View>
+                ) : d.kind === 'checklist' ? (
+                  <View style={themeStyle('tabs_overview_39', {  }, (theme ?? _styleTheme))}>
+                    <Text style={[styles.dayInfoRoute, themeStyle('tabs_overview_40', {  }, (theme ?? _styleTheme))]}>{`📋 ${d.activity}`}</Text>
+                    {(d.checklistItems ?? []).map((it) => {
+                      const checked = !!it.checkedBy;
+                      return (
+                        <TouchableOpacity
+                          key={it.id}
+                          testID={`overview-checklist-toggle-${it.id}`}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked, disabled: !featureItineraryItemKinds }}
+                          disabled={!featureItineraryItemKinds}
+                          onPress={() => toggleChecklistItem(d.id, it)}
+                          style={[
+                            themeStyle('tabs_overview_41', {  }, (theme ?? _styleTheme)),
+                            !featureItineraryItemKinds && themeStyle('tabs_overview_42', {  }, (theme ?? _styleTheme)),
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.checklistCheckbox,
+                              checked && styles.checklistCheckboxChecked,
+                            ]}
+                          >
+                            {checked ? <Text style={styles.checklistCheckboxMark}>✓</Text> : null}
+                          </View>
+                          <Text
+                            style={[
+                              styles.helperText,
+                              checked && themeStyle('tabs_overview_43', { theme: theme }, (theme ?? _styleTheme)),
+                            ]}
+                          >
+                            {it.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.dayInfoRoute}>{d.activity}</Text>
+                )}
+              </View>
+              {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
+              {isActivity ? (
+                <View style={themeStyle('tabs_overview_44', {  }, (theme ?? _styleTheme))}>
+                  <ReactionBar
+                    detailId={d.id}
+                    summary={d.reactions ?? emptyReactionSummary}
+                    canReact={featureItineraryReactions}
+                    onCast={castReactionForDetail}
+                    onClear={clearReactionForDetail}
+                    theme={theme}
+                  />
+                </View>
+              ) : null}
+              {isEditingDayItems ? (
+                <TouchableOpacity
+                  testID={`day-details-delete-${d.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete item"
+                  onPress={() => deleteDetail(d.id)}
+                  style={styles.detailDeleteButton}
+                  hitSlop={themeStyle('tabs_overview_45', {  }, (theme ?? _styleTheme))}
+                >
+                  <Text style={styles.detailDeleteButtonText}>×</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          );
+        };
         const lodgingsForDay = activeDayInfo.lodgings;
         const rentalsForDay = activeDayInfo.rentals;
 
@@ -2844,15 +2946,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </View>
                     );
                   })}
-                  <TouchableOpacity
-                    testID="day-details-add-transfer-button"
-                    accessibilityRole="button"
-                    accessibilityLabel="Add transfer to this day"
-                    style={[styles.dayInfoButton, themeStyle('tabs_overview_26', {  }, (theme ?? _styleTheme))]}
-                    onPress={() => addFlightForDay(activeDayCard.date)}
-                  >
-                    <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
-                  </TouchableOpacity>
+
                 </View>
               ) : null}
 
@@ -2883,21 +2977,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   >
                     <Text style={styles.dayInfoButtonText}>See rental car details →</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    testID="day-details-add-rental-button"
-                    accessibilityRole="button"
-                    accessibilityLabel="Add rental car to this day"
-                    style={[styles.dayInfoButton, themeStyle('tabs_overview_27', {  }, (theme ?? _styleTheme))]}
-                    onPress={() => addRentalForDay(activeDayCard.date)}
-                  >
-                    <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
-                  </TouchableOpacity>
+
                 </View>
               ) : null}
 
-              {toursForDay.length ? (
-                <View style={styles.dayInfoCard}>
-                  <Text style={styles.sectionTitle}>Activities</Text>
+              {toursForDay.length || locationDetails.length ? (
+                <View style={styles.dayInfoCard} testID="day-details-locations-activities">
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>Locations and Activities</Text>
+                    {locationDetails.length > 0 && !readOnly ? <TouchableOpacity testID="day-details-edit-locations-button" style={styles.dayInfoButton} onPress={() => setIsEditingDayItems((prev) => !prev)}>
+                      <Text style={styles.dayInfoButtonText}>{isEditingDayItems ? 'Save' : 'Edit'}</Text>
+                    </TouchableOpacity> : null}
+                  </View>
+                  {locationDetails.map(renderDayDetail)}
                   <DayActivitiesOrdering
                     tripId={trip.id}
                     date={activeDayCard.date}
@@ -3018,187 +3110,57 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </TouchableOpacity>
                     );
                   })}
-                  <TouchableOpacity
-                    testID="day-details-add-accommodation-button"
-                    accessibilityRole="button"
-                    accessibilityLabel="Add accommodation to this day"
-                    style={[styles.dayInfoButton, themeStyle('tabs_overview_31', {  }, (theme ?? _styleTheme))]}
-                    onPress={() => addLodgingForDay(activeDayCard.date)}
-                  >
-                    <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
-                  </TouchableOpacity>
+
                 </View>
               ) : null}
 
-              {/* Phase 3: per-day itinerary items (place / note / checklist / custom activity). */}
-              <View style={styles.dayInfoCard} testID="day-details-itinerary-items">
-                <View style={[styles.sectionHeaderRow, themeStyle('tabs_overview_32', {  }, (theme ?? _styleTheme))]}>
-                  <Text style={[styles.sectionTitle, themeStyle('tabs_overview_33', {  }, (theme ?? _styleTheme))]}>Locations, notes & checklists</Text>
-                  <TouchableOpacity
-                    testID={isEditingDayItems ? 'day-details-save-items-button' : 'day-details-edit-items-button'}
-                    accessibilityRole="button"
-                    accessibilityLabel={isEditingDayItems ? 'Save section edits' : 'Edit section'}
-                    style={[styles.dayInfoButton, themeStyle('tabs_overview_34', {  }, (theme ?? _styleTheme))]}
-                    onPress={() => setIsEditingDayItems((prev) => !prev)}
-                  >
-                    <Text style={styles.dayInfoButtonText}>{isEditingDayItems ? 'Save' : 'Edit'}</Text>
-                  </TouchableOpacity>
+              {noteDetails.length > 0 ? (
+                <View style={styles.dayInfoCard} testID="day-details-itinerary-items">
+                  <View style={[styles.sectionHeaderRow, themeStyle('tabs_overview_32', {}, (theme ?? _styleTheme))]}>
+                    <Text style={[styles.sectionTitle, themeStyle('tabs_overview_33', {}, (theme ?? _styleTheme))]}>Notes and Checklists</Text>
+                    {!readOnly ? <TouchableOpacity
+                      testID={isEditingDayItems ? 'day-details-save-items-button' : 'day-details-edit-items-button'}
+                      accessibilityRole="button" accessibilityLabel={isEditingDayItems ? 'Save section edits' : 'Edit section'}
+                      style={styles.dayInfoButton} onPress={() => setIsEditingDayItems((prev) => !prev)}>
+                      <Text style={styles.dayInfoButtonText}>{isEditingDayItems ? 'Save' : 'Edit'}</Text>
+                    </TouchableOpacity> : null}
+                  </View>
+                  {noteDetails.map(renderDayDetail)}
                 </View>
-                {(activeDayInfo.details ?? []).length === 0 ? (
-                  <Text style={styles.helperText}>
-                    {itineraryLoading ? 'Loading itinerary...' : 'No items yet for this day.'}
-                  </Text>
-                ) : (
-                  (activeDayInfo.details ?? []).map((d) => {
-                    const isActivity = !d.kind || d.kind === 'activity';
-                    return (
-                      <View key={d.id} style={[styles.dayInfoRow, themeStyle('tabs_overview_35', {  }, (theme ?? _styleTheme))]}>
-                        <View style={themeStyle('tabs_overview_36', {  }, (theme ?? _styleTheme))}>
-                          {d.kind === 'place' ? (
-                            <View>
-                              <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
-                              {d.noteBody ? (
-                                <Text style={[styles.helperText, themeStyle('tabs_overview_37', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
-                              ) : null}
-                            </View>
-                          ) : d.kind === 'note' ? (
-                            <View>
-                              <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
-                              {d.noteBody ? (
-                                <Text style={[styles.helperText, themeStyle('tabs_overview_38', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
-                              ) : null}
-                            </View>
-                          ) : d.kind === 'checklist' ? (
-                            <View style={themeStyle('tabs_overview_39', {  }, (theme ?? _styleTheme))}>
-                              <Text style={[styles.dayInfoRoute, themeStyle('tabs_overview_40', {  }, (theme ?? _styleTheme))]}>{`📋 ${d.activity}`}</Text>
-                              {(d.checklistItems ?? []).map((it) => {
-                                const checked = !!it.checkedBy;
-                                return (
-                                  <TouchableOpacity
-                                    key={it.id}
-                                    testID={`overview-checklist-toggle-${it.id}`}
-                                    accessibilityRole="checkbox"
-                                    accessibilityState={{ checked, disabled: !featureItineraryItemKinds }}
-                                    disabled={!featureItineraryItemKinds}
-                                    onPress={() => toggleChecklistItem(d.id, it)}
-                                    style={[
-                                      themeStyle('tabs_overview_41', {  }, (theme ?? _styleTheme)),
-                                      !featureItineraryItemKinds && themeStyle('tabs_overview_42', {  }, (theme ?? _styleTheme)),
-                                    ]}
-                                  >
-                                    <View
-                                      style={[
-                                        styles.checklistCheckbox,
-                                        checked && styles.checklistCheckboxChecked,
-                                      ]}
-                                    >
-                                      {checked ? <Text style={styles.checklistCheckboxMark}>✓</Text> : null}
-                                    </View>
-                                    <Text
-                                      style={[
-                                        styles.helperText,
-                                        checked && themeStyle('tabs_overview_43', { theme: theme }, (theme ?? _styleTheme)),
-                                      ]}
-                                    >
-                                      {it.label}
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
-                              })}
-                            </View>
-                          ) : (
-                            <Text style={styles.dayInfoRoute}>{d.activity}</Text>
-                          )}
-                        </View>
-                        {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
-                        {isActivity ? (
-                          <View style={themeStyle('tabs_overview_44', {  }, (theme ?? _styleTheme))}>
-                            <ReactionBar
-                              detailId={d.id}
-                              summary={d.reactions ?? emptyReactionSummary}
-                              canReact={featureItineraryReactions}
-                              onCast={castReactionForDetail}
-                              onClear={clearReactionForDetail}
-                              theme={theme}
-                            />
-                          </View>
-                        ) : null}
-                        {isEditingDayItems ? (
-                          <TouchableOpacity
-                            testID={`day-details-delete-${d.id}`}
-                            accessibilityRole="button"
-                            accessibilityLabel="Delete item"
-                            onPress={() => deleteDetail(d.id)}
-                            style={styles.detailDeleteButton}
-                            hitSlop={themeStyle('tabs_overview_45', {  }, (theme ?? _styleTheme))}
-                          >
-                            <Text style={styles.detailDeleteButtonText}>×</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                      </View>
-                    );
-                  })
-                )}
-                <TouchableOpacity
-                  testID="day-details-add-item-button"
-                  accessibilityRole="button"
-                  accessibilityLabel="Add item to this day"
-                  style={[styles.dayInfoButton, themeStyle('tabs_overview_46', {  }, (theme ?? _styleTheme))]}
-                  onPress={() => {
-                    setAddPopoverDay(activeDayInfo?.index ?? 1);
-                    setAddPopoverOpen(true);
-                  }}
-                >
-                  <Text style={styles.dayInfoButtonText}>+ Add item</Text>
-                </TouchableOpacity>
-              </View>
+              ) : null}
 
-              {!flightsForDay.length || !rentalsForDay.length || !toursForDay.length || !lodgingsForDay.length ? (
-                <View style={themeStyle('tabs_overview_47', {  }, (theme ?? _styleTheme))}>
-                  {!flightsForDay.length ? (
-                    <TouchableOpacity
-                      testID="day-details-add-transfer-button"
-                      accessibilityRole="button"
-                      accessibilityLabel="Add transfer to this day"
-                      style={styles.dayInfoButton}
-                      onPress={() => addFlightForDay(activeDayCard.date)}
-                    >
-                      <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
+              {!readOnly ? (
+                <View testID="day-details-add-actions" style={[themeStyle('tabs_overview_47', {}, (theme ?? _styleTheme)), { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }]}>
+                  <TouchableOpacity testID="day-details-add-flight-button" accessibilityRole="button" accessibilityLabel="Add flight to this day"
+                    style={styles.dayInfoButton} onPress={() => addFlightForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText}>+ Add flight</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="day-details-add-transfer-button" accessibilityRole="button" accessibilityLabel="Add ground transfer to this day"
+                    style={styles.dayInfoButton} onPress={() => addFlightForDay(activeDayCard.date, 'Public Transit')}>
+                    <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="day-details-add-accommodation-button" accessibilityRole="button" accessibilityLabel="Add accommodation to this day"
+                    style={styles.dayInfoButton} onPress={() => addLodgingForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="day-details-add-rental-button" accessibilityRole="button" accessibilityLabel="Add rental car to this day"
+                    style={styles.dayInfoButton} onPress={() => addRentalForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
+                  </TouchableOpacity>
+                  {!toursForDay.length && !locationDetails.length ? <TouchableOpacity testID="day-details-add-activity-button" accessibilityRole="button"
+                    accessibilityLabel="Add activity to this day" style={styles.dayInfoButton} onPress={() => addTourForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
+                  </TouchableOpacity> : null}
+                  {featureItineraryItemKinds ? <>
+                    <TouchableOpacity testID="day-details-add-note-button" accessibilityRole="button" accessibilityLabel="Add note to this day"
+                      style={styles.dayInfoButton} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('note'); }}>
+                      <Text style={styles.dayInfoButtonText}>+ Add note</Text>
                     </TouchableOpacity>
-                  ) : null}
-                  {!rentalsForDay.length ? (
-                    <TouchableOpacity
-                      testID="day-details-add-rental-button"
-                      accessibilityRole="button"
-                      accessibilityLabel="Add rental car to this day"
-                      style={styles.dayInfoButton}
-                      onPress={() => addRentalForDay(activeDayCard.date)}
-                    >
-                      <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
+                    <TouchableOpacity testID="day-details-add-checklist-button" accessibilityRole="button" accessibilityLabel="Add checklist to this day"
+                      style={styles.dayInfoButton} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('checklist'); }}>
+                      <Text style={styles.dayInfoButtonText}>+ Add checklist</Text>
                     </TouchableOpacity>
-                  ) : null}
-                  {!toursForDay.length ? (
-                    <TouchableOpacity
-                      testID="day-details-add-activity-button"
-                      accessibilityRole="button"
-                      accessibilityLabel="Add activity to this day"
-                      style={styles.dayInfoButton}
-                      onPress={() => addTourForDay(activeDayCard.date)}
-                    >
-                      <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  {!lodgingsForDay.length ? (
-                    <TouchableOpacity
-                      testID="day-details-add-accommodation-button"
-                      accessibilityRole="button"
-                      accessibilityLabel="Add accommodation to this day"
-                      style={styles.dayInfoButton}
-                      onPress={() => addLodgingForDay(activeDayCard.date)}
-                    >
-                      <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
-                    </TouchableOpacity>
-                  ) : null}
+                  </> : null}
                 </View>
               ) : null}
 
@@ -3860,6 +3822,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
       {showAddTour ? (
         <ActivityEditForm
+          lodgings={lodgings}
           draft={tourDraft}
           onChange={setTourDraft}
           onSave={saveTour}
@@ -3888,22 +3851,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <AddItemPopover
           visible
           onSelect={handlePopoverSelect}
+          mode="activities"
+          optionalActivities={availableOptionalActivities}
+          onSelectOptionalActivity={scheduleOptionalActivity}
+          busy={schedulingOptionalActivity}
           onClose={() => setAddPopoverOpen(false)}
           theme={theme}
-          hiddenKinds={featureItineraryItemKinds ? undefined : ['place', 'note', 'checklist']}
-        />
-      ) : null}
-      {activeAddDialog === 'place' ? (
-        <PlacePickerDialog
-          visible
-          defaultDay={addPopoverDay ?? 1}
-          backendUrl={backendUrl}
-          headers={headers}
-          selectedLocationIds={tripLocationOptions.map((o) => o.id)}
-          selectedLocationNames={locationNames}
-          onSubmit={handleAddPlace}
-          onCancel={closeAllAddDialogs}
-          theme={theme}
+          hiddenKinds={featureItineraryItemKinds ? undefined : ['note', 'checklist']}
         />
       ) : null}
       {activeAddDialog === 'note' ? (

@@ -4291,6 +4291,8 @@ const normalizeLodgingRecord = (data: any) => ({
 
 const normalizeActivityRecord = (data: any) => ({
   ...data,
+  date: data.date ?? '',
+  nearLodgingId: data.nearLodgingId ?? null,
   userId: data.userId ?? data.user_id,
   tripId: data.tripId ?? data.trip_id,
   startLocation: data.startLocation ?? data.start_location,
@@ -4906,6 +4908,8 @@ export const deleteLodging = async (lodgingId: string, userId: string): Promise<
   if (!tripId) return;
   const membership = await ensureUserInTrip(tripId, userId);
   if (!membership) return;
+  const linked = await db.collection('tours').where('tripId', '==', tripId).where('nearLodgingId', '==', lodgingId).get();
+  await Promise.all(linked.docs.map((activity) => activity.ref.update({ nearLodgingId: null })));
   await db.collection('lodgings').doc(lodgingId).delete();
 };
 
@@ -4970,6 +4974,8 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
   const id = randomUUID();
   const payload = {
     ...activity,
+    date: activity.date || '',
+    nearLodgingId: activity.nearLodgingId ?? null,
     activityType: (activity as any).activityType ?? 'Tour',
     status: normalizeItineraryStatus((activity as any).status),
     id,

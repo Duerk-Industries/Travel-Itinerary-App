@@ -4,7 +4,7 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import { singlePayerIds } from '../utils/payerSelection';
 import AddToCalendarButton from '../components/AddToCalendarButton';
 import { activityCalendarEvent } from '../utils/calendarEvents';
-import type { PlanningCoordinates } from '../../server/src/types';
+import type { Activity, PlanningCoordinates } from '../../server/src/types';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from '../components/KeyboardAwareModal';
@@ -20,7 +20,7 @@ import EditableDataGrid, { type GridCellError, type GridColumn } from '../compon
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CsvTransferControls from '../components/CsvTransferControls';
-import ActivityEditForm from '../components/ActivityEditForm';
+import ActivityEditForm, { type ActivityFormLodging } from '../components/ActivityEditForm';
 import { resolveMemberClipboardValue } from '../utils/clipboardGrid';
 import { fixedTableColumn } from '../utils/tableColumns';
 import {
@@ -47,7 +47,7 @@ const fixedColumnStyle = fixedTableColumn;
 import { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
 export { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
 
-export type Tour = PlanningCoordinates & {
+export type Tour = PlanningCoordinates & Pick<Activity, 'nearLodgingId'> & {
   dayPosition?: number | null;
   catalogId?: string | null;
   id: string;
@@ -71,7 +71,7 @@ export type Tour = PlanningCoordinates & {
   travelerIds?: string[];
 };
 
-export type TourDraft = {
+export type TourDraft = Pick<Activity, 'nearLodgingId'> & {
   status: ItineraryStatus;
   activityType: ActivityType;
   date: string;
@@ -105,12 +105,18 @@ const activitySortValue = (tour: Tour, key: string): string | number => {
   return String(value);
 };
 
-const sortActivityRows = (rows: Tour[], sort: ActivitySort): Tour[] => {
+const sortActivityRows = (rows: Tour[], sort: ActivitySort, lodgings: ActivityFormLodging[] = []): Tour[] => {
   const key = sort.key ?? 'date';
   const direction = sort.direction === 'asc' ? 1 : -1;
+  const hotelEndDates = new Map(lodgings.map((hotel) => [hotel.id, hotel.checkOutDate?.slice(0, 10) ?? '']));
+  const activityDate = (tour: Tour): string => {
+    if (tour.date) return tour.date;
+    const checkout = tour.nearLodgingId ? hotelEndDates.get(tour.nearLodgingId) : '';
+    return checkout && /^\d{4}-\d{2}-\d{2}$/.test(checkout) ? checkout : '';
+  };
   return [...rows].sort((left, right) => {
-    const leftValue = activitySortValue(left, key);
-    const rightValue = activitySortValue(right, key);
+    const leftValue = key === 'date' ? activityDate(left) : activitySortValue(left, key);
+    const rightValue = key === 'date' ? activityDate(right) : activitySortValue(right, key);
     const leftEmpty = leftValue === '';
     const rightEmpty = rightValue === '';
     if (leftEmpty !== rightEmpty) return leftEmpty ? 1 : -1;
@@ -120,6 +126,8 @@ const sortActivityRows = (rows: Tour[], sort: ActivitySort): Tour[] => {
       const comparison = String(leftValue).localeCompare(String(rightValue), undefined, { sensitivity: 'base', numeric: true });
       if (comparison !== 0) return comparison * direction;
     }
+    // Optional choices follow every scheduled activity on the hotel's checkout day.
+    if (key === 'date' && Boolean(left.date) !== Boolean(right.date)) return left.date ? -1 : 1;
     if (sort.key === null && key === 'date') {
       const timeComparison = String(left.startTime ?? '').localeCompare(String(right.startTime ?? ''), undefined, { numeric: true });
       if (timeComparison !== 0) return timeComparison;
@@ -268,6 +276,8 @@ export const fetchActivitiesForTrip = async ({
 
 export const normalizeActivityFromApi = (t: any): Tour => ({
     ...t,
+    date: t.date ?? '',
+    nearLodgingId: t.nearLodgingId ?? null,
     activityType: ACTIVITY_TYPES.includes(t.activityType) ? t.activityType : 'Tour',
     status: normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS),
     netVotes: Number(t.netVotes ?? 0) || 0,
@@ -302,6 +312,7 @@ type TourTabProps = {
   mode?: 'live' | 'wizard';
   readOnly?: boolean;
   defaultActivityDate?: string | null;
+  lodgings?: ActivityFormLodging[];
   tripEndDate?: string | null;
   destination?: string | null;
   featureGridEditing?: boolean;
@@ -339,6 +350,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   mode = 'live',
   readOnly = false,
   defaultActivityDate = null,
+  lodgings = [],
   tripEndDate = null,
   destination = null,
   featureGridEditing = false,
@@ -525,8 +537,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const payerTotalsList = useMemo(() => Object.entries(payerTotals), [payerTotals]);
-  const sortedTours = useMemo(() => sortActivityRows(tours, activitySort), [tours, activitySort]);
-  const sortedGridRows = useMemo(() => sortActivityRows(gridRows, activitySort), [gridRows, activitySort]);
+  const sortedTours = useMemo(() => sortActivityRows(tours, activitySort, lodgings), [tours, activitySort, lodgings]);
+  const sortedGridRows = useMemo(() => sortActivityRows(gridRows, activitySort, lodgings), [gridRows, activitySort, lodgings]);
   const sortActivityTable = (key: string) => {
     setActivitySort((current) => current.key === key
       ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
@@ -976,7 +988,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           {sortedTours.map((t) => (
             <TouchableOpacity key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openTourEditor(t); }} activeOpacity={0.8}>
               <View style={[styles.cell, fixedColumnStyle(140)]}>
-                <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
+                <Text style={styles.cellText}>{t.date ? formatDateLong(t.date) : 'Optional'}</Text>
               </View>
               <View style={[styles.cell, fixedColumnStyle(180)]}>
                 <Text style={styles.cellText}>{t.activityType || 'Tour'}</Text>
@@ -1046,7 +1058,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               </View>
               <ScrollView style={themeStyle('tabs_activities_18', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('tabs_activities_19', {  }, (theme ?? _styleTheme))}>
                 <AddToCalendarButton event={activityCalendarEvent(selectedTour)} styles={styles} />
-                {renderDetailRow('Date', formatDateLong(selectedTour.date))}
+                {renderDetailRow('Date', selectedTour.date ? formatDateLong(selectedTour.date) : 'Optional')}
                 {renderDetailRow('Type', selectedTour.activityType || 'Tour')}
                 {renderDetailRow('Activity', selectedTour.name || '-')}
                 {renderDetailRow('Start Location', selectedTour.startLocation || '-')}
@@ -1128,7 +1140,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           styles={styles}
           readOnly={readOnly}
           rows={[
-            { label: 'Date', value: formatDateLong(selectedTour.date) },
+            { label: 'Date', value: selectedTour.date ? formatDateLong(selectedTour.date) : 'Optional' },
             { label: 'Type', value: selectedTour.activityType || 'Tour' },
             { label: 'Start Location', value: selectedTour.startLocation || '-' },
             { label: 'Start Time', value: selectedTour.startTime || '-' },
@@ -1164,6 +1176,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       ) : null}
       {!readOnly && editingTour ? (
         <ActivityEditForm
+          lodgings={lodgings}
           draft={editingTour}
           onChange={(updater) => setEditingTour((prev) => (prev ? updater(prev) : prev))}
           onSave={saveTour}

@@ -658,6 +658,8 @@ export interface Lodging extends PlanningCoordinates {
 }
 
 export interface Activity extends PlanningCoordinates {
+  /** Nearby lodging for an undated optional activity. */
+  nearLodgingId?: string | null;
   catalogId?: string | null;
   dayPosition?: number | null;
   dayOrderPinned?: boolean;
@@ -670,6 +672,7 @@ export interface Activity extends PlanningCoordinates {
   userVote?: -1 | 1 | null;
   netRating?: number;
   userRating?: -1 | 1 | null;
+  /** Empty when this is an optional, unscheduled activity. */
   date: string;
   name: string;
   startLocation: string;

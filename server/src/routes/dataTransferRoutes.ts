@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'crypto';
 import { authenticate } from '../auth';
 import {
   ensureUserInTrip,
+  deleteExpenseForSource,
   getActivityById,
   getLodgingById,
   insertActivity,
@@ -107,8 +108,8 @@ router.post('/activities/import', authenticate, async (req, res) => {
     for (const row of dto.rows) {
       const fields = row.fields;
       if (row.action === 'update' && !row.existingId) invalid.push({ sourceRow: row.sourceRow, error: 'Update rows require existingId.' });
-      if (!text(fields.name) || !text(fields.date)) invalid.push({ sourceRow: row.sourceRow, error: 'Activity name and date are required.' });
-      if (!isIsoDate(fields.date)) invalid.push({ sourceRow: row.sourceRow, error: 'Activity date must be a valid ISO date.' });
+      if (!text(fields.name)) invalid.push({ sourceRow: row.sourceRow, error: 'Activity name is required.' });
+      if (text(fields.date) && !isIsoDate(fields.date)) invalid.push({ sourceRow: row.sourceRow, error: 'Activity date must be a valid ISO date.' });
       if (!isNonNegativeNumber(fields.cost)) invalid.push({ sourceRow: row.sourceRow, error: 'Activity cost must be a finite non-negative number.' });
       if (row.action === 'create' && row.existingId) invalid.push({ sourceRow: row.sourceRow, error: 'Create rows may not include an existingId.' });
       if (row.existingId) {
@@ -132,7 +133,8 @@ router.post('/activities/import', authenticate, async (req, res) => {
       };
       const record = row.action === 'update' ? await updateActivity(row.existingId!, userId, payload) : await insertActivity(payload);
       if (!record) throw new Error(`Activity row ${row.sourceRow} could not be saved.`);
-      await upsertExpenseForSource({ userId, tripId: dto.tripId, groupId: membership.groupId, expenseDate: record.date, category: 'Activities', amount: Number(record.cost) || 0, payerIds: record.paidBy ?? [], forIds: record.travelerIds ?? defaultTravelers, sourceType: 'activity', sourceId: record.id });
+      if (!record.date) await deleteExpenseForSource('activity', record.id, userId);
+      else await upsertExpenseForSource({ userId, tripId: dto.tripId, groupId: membership.groupId, expenseDate: record.date, category: 'Activities', amount: Number(record.cost) || 0, payerIds: record.paidBy ?? [], forIds: record.travelerIds ?? defaultTravelers, sourceType: 'activity', sourceId: record.id });
       records.push(record);
     }
     const response = { importId: dto.importId, created: dto.rows.filter((row) => row.action === 'create').length, updated: dto.rows.filter((row) => row.action === 'update').length, records };

@@ -3,7 +3,10 @@ import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme }
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import PayerSelect from './PayerSelect';
 import ActivityDescriptionGenerator from './ActivityDescriptionGenerator';
-import React from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import SelectField from './SelectField';
+import { localTodayDateOnly } from '../utils/dateOnly';
+import type { Lodging } from '../../server/src/types';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -30,8 +33,14 @@ export type ActivityFormMember = {
   removedAt?: string | null;
 };
 
+export type ActivityFormLodging = Pick<Lodging, 'id' | 'name'> & {
+  checkInDate?: Lodging['check_in_date'];
+  checkOutDate?: Lodging['check_out_date'];
+};
+
 export type ActivityEditFormProps = {
   draft: TourDraft;
+  lodgings?: ActivityFormLodging[];
   onChange: (updater: (prev: TourDraft) => TourDraft) => void;
   onSave: () => void | Promise<void>;
   onCancel: () => void;
@@ -43,6 +52,7 @@ export type ActivityEditFormProps = {
 
 const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
   draft,
+  lodgings = [],
   onChange,
   onSave,
   onCancel,
@@ -63,23 +73,49 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
 
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
   const activityType = draft.activityType || 'Tour';
+  const [schedulingMode, setSchedulingMode] = useState<'scheduled' | 'optional'>(() => draft.date ? 'scheduled' : 'optional');
+  const lastScheduledDate = useRef(draft.date || localTodayDateOnly());
+  const hotelOptions = useMemo(() => [
+    { value: '', label: 'No hotel — available every day' },
+    ...[...lodgings].sort((a, b) =>
+      (a.checkInDate || '9999').localeCompare(b.checkInDate || '9999') ||
+      (a.checkOutDate || '9999').localeCompare(b.checkOutDate || '9999') ||
+      a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
+    ).map((hotel) => ({ value: hotel.id, label: hotel.name || 'Hotel' })),
+  ], [lodgings]);
+  const changeSchedulingMode = (value: string) => {
+    const optional = value === 'optional';
+    if (draft.date) lastScheduledDate.current = draft.date;
+    setSchedulingMode(optional ? 'optional' : 'scheduled');
+    onChange((prev) => ({ ...prev, date: optional ? '' : lastScheduledDate.current }));
+  };
+
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onCancel}>
       <View style={styles.modalOverlay} testID="activity-form-modal">
         <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onCancel} />
         <View style={[styles.modalCard, themeStyle('components_ActivityEditForm_5', {  }, (theme ?? _styleTheme))]}>
-          <Text style={styles.sectionTitle}>{isNew ? 'Add Activity' : 'Edit Activity'}</Text>
+          <Text style={styles.sectionTitle}>{isNew ? (schedulingMode === 'scheduled' ? 'Add Activity' : 'Add Optional Activity') : 'Edit Activity'}</Text>
           <ScrollView style={themeStyle('components_ActivityEditForm_6', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('components_ActivityEditForm_7', {  }, (theme ?? _styleTheme))} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-            <Text style={styles.modalLabel}>Date</Text>
-            <DateField
-              value={draft.date}
-              onChange={(date) => onChange((prev) => ({ ...prev, date }))}
-              styles={styles}
-              theme={theme}
-              testID="activity-date"
-              accessibilityLabel="Activity date"
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }} testID="activity-scheduling-row">
+              <View style={{ width: 128 }}>
+                <Text style={styles.modalLabel}>Scheduling</Text>
+                <SelectField title="Activity scheduling" testID="activity-scheduling" value={schedulingMode === 'optional' ? 'optional' : ''}
+                  options={[{ value: '', label: 'Scheduled' }, { value: 'optional', label: 'Optional' }]}
+                  onChange={changeSchedulingMode} styles={styles} style={{ width: '100%', minWidth: 0 }} webStyle={{ width: '100%', minWidth: 0 }} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.modalLabel}>{schedulingMode === 'optional' ? 'Near hotel' : 'Date'}</Text>
+                {schedulingMode === 'optional' ? <SelectField title="Near hotel" testID="activity-near-hotel"
+                  value={draft.nearLodgingId ?? ''} options={hotelOptions} styles={styles}
+                  style={{ width: '100%', minWidth: 0 }} webStyle={{ width: '100%', minWidth: 0 }}
+                  onChange={(id) => onChange((prev) => ({ ...prev, nearLodgingId: id || null }))} /> : <DateField
+                  value={draft.date} onChange={(date) => { if (date) lastScheduledDate.current = date; onChange((prev) => ({ ...prev, date })); }}
+                  styles={styles} theme={theme} testID="activity-date" accessibilityLabel="Activity date" style={{ width: '100%', minWidth: 0 }}
+                />}
+              </View>
+            </View>
             <Text style={styles.modalLabel}>Status</Text>
             {Platform.OS === 'web' ? (
               <select
@@ -253,7 +289,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onCancel} testID="activity-cancel">
               <Text style={styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={onSave} testID="activity-save">
+            <TouchableOpacity style={styles.button} onPress={onSave} disabled={schedulingMode === 'scheduled' && !draft.date} testID="activity-save">
               <Text style={styles.buttonText}>Save</Text>
             </TouchableOpacity>
           </View>

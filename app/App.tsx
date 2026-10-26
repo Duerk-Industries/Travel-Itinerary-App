@@ -3492,6 +3492,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   theme={theme}
                   fetchTours={fetchTours}
                   readOnly={isFollowingMode || offlineReadOnly}
+                  lodgings={lodgings}
                   defaultActivityDate={activeTrip?.startDate ?? null}
                   tripEndDate={activeTrip?.endDate ?? null}
                   destination={activeTrip?.destination ?? null}
@@ -3529,6 +3530,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               externalEditTourId={externalActivityEditId}
               onExternalEditHandled={handleExternalActivityEditHandled}
               showList={false}
+              lodgings={lodgings}
               readOnly={isFollowingMode || offlineReadOnly}
               featureActivityRecap={featureActivityRecap}
               onOpenActivityRecap={setActivityRecapTarget}

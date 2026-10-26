@@ -1,69 +1,47 @@
-/**
- * @jest-environment jsdom
- */
-/// <reference types="jest" />
-/// <reference types="node" />
-
+/** @jest-environment jsdom */
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
+import AddItemPopover from '../components/AddItemPopover';
 
 describe('AddItemPopover', () => {
-  it('renders four options when visible', () => {
-    const { getByTestId, getByText, queryByText } = render(
-      <AddItemPopover visible onSelect={() => {}} onClose={() => {}} />
-    );
-    expect(getByTestId('add-item-popover')).toBeTruthy();
-    expect(getByTestId('add-item-option-place')).toBeTruthy();
-    expect(getByTestId('add-item-option-note')).toBeTruthy();
-    expect(getByTestId('add-item-option-checklist')).toBeTruthy();
-    expect(getByTestId('add-item-option-activity')).toBeTruthy();
-    expect(getByText('Time + activity + cost')).toBeTruthy();
-    expect(queryByText(/legacy form/i)).toBeNull();
-  });
-
-  it('fires onSelect with the chosen kind', () => {
-    const onSelect = jest.fn<void, [AddItemKind]>();
-    const { getByTestId } = render(
-      <AddItemPopover visible onSelect={onSelect} onClose={() => {}} />
-    );
-    fireEvent.press(getByTestId('add-item-option-place'));
-    expect(onSelect).toHaveBeenCalledWith('place');
-    fireEvent.press(getByTestId('add-item-option-note'));
+  it('offers only notes and checklists from Add item', () => {
+    const onSelect = jest.fn();
+    const screen = render(<AddItemPopover visible onSelect={onSelect} onClose={() => {}} />);
+    expect(screen.getAllByTestId(/^add-item-option-/).map((row) => row.props.testID)).toEqual([
+      'add-item-option-note', 'add-item-option-checklist', 'add-item-option-cancel',
+    ]);
+    fireEvent.press(screen.getByTestId('add-item-option-note'));
     expect(onSelect).toHaveBeenCalledWith('note');
-    fireEvent.press(getByTestId('add-item-option-checklist'));
+    fireEvent.press(screen.getByTestId('add-item-option-checklist'));
     expect(onSelect).toHaveBeenCalledWith('checklist');
-    fireEvent.press(getByTestId('add-item-option-activity'));
+  });
+
+  it('offers saved optional activities before Add a new activity', () => {
+    const onSelect = jest.fn();
+    const onSchedule = jest.fn();
+    const screen = render(<AddItemPopover visible mode="activities" onSelect={onSelect} onClose={() => {}}
+      optionalActivities={[{ id: 'option-1', name: 'Nearby museum' }]} onSelectOptionalActivity={onSchedule} />);
+    const order = screen.getAllByTestId(/^add-item-(?:optional-|option-)/).map((row) => row.props.testID);
+    expect(order).toEqual(['add-item-optional-option-1', 'add-item-option-activity', 'add-item-option-cancel']);
+    expect(screen.getByText('Add a new activity')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('add-item-optional-option-1'));
+    expect(onSchedule).toHaveBeenCalledWith('option-1');
+    fireEvent.press(screen.getByTestId('add-item-option-activity'));
     expect(onSelect).toHaveBeenCalledWith('activity');
+    expect(screen.queryByText('Add a place')).toBeNull();
+    expect(screen.queryByText('Add an optional activity')).toBeNull();
   });
 
-  it('fires onClose when the cancel button is pressed', () => {
+  it('still offers a new activity when no saved options exist', () => {
+    const screen = render(<AddItemPopover visible mode="activities" onSelect={() => {}} onClose={() => {}} hiddenKinds={['note', 'checklist']} />);
+    expect(screen.getByTestId('add-item-option-activity')).toBeTruthy();
+    expect(screen.queryByText('Optional activities for this day')).toBeNull();
+  });
+
+  it('closes on Cancel', () => {
     const onClose = jest.fn();
-    const { getByTestId } = render(
-      <AddItemPopover visible onSelect={() => {}} onClose={onClose} />
-    );
-    fireEvent.press(getByTestId('add-item-option-cancel'));
+    const screen = render(<AddItemPopover visible onSelect={() => {}} onClose={onClose} />);
+    fireEvent.press(screen.getByTestId('add-item-option-cancel'));
     expect(onClose).toHaveBeenCalled();
-  });
-
-  it('hides the given kinds via hiddenKinds (itinerary_item_kinds disabled: place/note/checklist all 403)', () => {
-    const { queryByTestId, getByTestId } = render(
-      <AddItemPopover visible onSelect={() => {}} onClose={() => {}} hiddenKinds={['place', 'note', 'checklist']} />
-    );
-    expect(queryByTestId('add-item-option-place')).toBeNull();
-    expect(queryByTestId('add-item-option-note')).toBeNull();
-    expect(queryByTestId('add-item-option-checklist')).toBeNull();
-    // 'activity' never sends a `kind` to the server, so it's unaffected by the flag and stays available.
-    expect(getByTestId('add-item-option-activity')).toBeTruthy();
-  });
-
-  it('shows all four options when hiddenKinds is omitted or empty', () => {
-    const { getByTestId } = render(
-      <AddItemPopover visible onSelect={() => {}} onClose={() => {}} hiddenKinds={[]} />
-    );
-    expect(getByTestId('add-item-option-place')).toBeTruthy();
-    expect(getByTestId('add-item-option-note')).toBeTruthy();
-    expect(getByTestId('add-item-option-checklist')).toBeTruthy();
-    expect(getByTestId('add-item-option-activity')).toBeTruthy();
   });
 });

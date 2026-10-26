@@ -181,8 +181,8 @@ export const parseMoney = (raw: string): number => {
 export const toActivityReviewRows = (rows: Array<Record<string, string>>, mapping: Record<string, string>, tripStart: string, tripEnd: string): ImportReviewRow<Record<string, unknown>>[] => rows.map((row, index) => {
   const warnings: ImportIssue[] = [];
   const errors: ImportIssue[] = [];
-  const date = parseImportDate(cell(row, mapping, 'date'), tripStart, tripEnd);
-  if (!date) errors.push({ row: index + 2, field: 'date', severity: 'error', message: 'Date is missing, invalid, or ambiguous.' });
+  const date = parseImportDate(cell(row, mapping, 'date'), tripStart, tripEnd) ?? '';
+  if (cell(row, mapping, 'date') && !date) errors.push({ row: index + 2, field: 'date', severity: 'error', message: 'Date is invalid or ambiguous.' });
   const name = cell(row, mapping, 'name');
   if (!name) errors.push({ row: index + 2, field: 'name', severity: 'error', message: 'Activity name is required.' });
   const type = mapActivityType(cell(row, mapping, 'activityType'));

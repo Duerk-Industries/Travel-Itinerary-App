@@ -15,7 +15,7 @@ import {
   buildRentalDraftFromRow,
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Image } from 'react-native';
 import { OverviewTab, buildDayWeatherLocation, makeWeatherLocationGeofriendly } from '../tabs/overview';
 import React from 'react';
@@ -630,23 +630,30 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('day-details-next')).toBeTruthy();
   });
 
-  test('day details renders the Notes & Checklists section with the +Add item button', async () => {
-    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+  test('hides empty Notes and Checklists and offers direct add buttons at the bottom', async () => {
+    const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
-    expect(await findByTestId('day-details-itinerary-items')).toBeTruthy();
-    expect(await findByTestId('day-details-add-item-button')).toBeTruthy();
+    expect(queryByTestId('day-details-itinerary-items')).toBeNull();
+    expect(queryByTestId('day-details-add-item-button')).toBeNull();
+    expect(await findByTestId('day-details-add-note-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-checklist-button')).toBeTruthy();
+    const actions = within(await findByTestId('day-details-add-actions'));
+    expect(actions.getAllByTestId(/^day-details-add-.*-button$/).map((button) => button.props.testID)).toEqual([
+      'day-details-add-flight-button', 'day-details-add-transfer-button', 'day-details-add-accommodation-button',
+      'day-details-add-rental-button', 'day-details-add-activity-button', 'day-details-add-note-button', 'day-details-add-checklist-button',
+    ]);
   });
 
-  test('day with no items shows all four "+ Add X" buttons grouped in one row', async () => {
+  test('day with no items shows all "+ Add X" buttons grouped in one row', async () => {
     const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
-    expect(await findByTestId('day-details-add-transfer-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-flight-button')).toBeTruthy();
     expect(await findByTestId('day-details-add-rental-button')).toBeTruthy();
     expect(await findByTestId('day-details-add-activity-button')).toBeTruthy();
     expect(await findByTestId('day-details-add-accommodation-button')).toBeTruthy();
   });
 
-  test('a section with items gets its own inline add button and drops out of the bottom row', async () => {
+  test('keeps a single bottom flight action when a day already has transfers', async () => {
     const flights = [
       {
         id: 'flight-1',
@@ -672,9 +679,8 @@ describe('Overview UI (nested itinerary)', () => {
     );
     fireEvent.press(await findByTestId('overview-day-card-1'));
 
-    // Exactly one "+ Add transfer" button — inline after the transfer section, never
-    // duplicated into the bottom row.
-    expect(await findAllByTestId('day-details-add-transfer-button')).toHaveLength(1);
+    // Flight creation stays in the bottom row without an inline duplicate.
+    expect(await findAllByTestId('day-details-add-flight-button')).toHaveLength(1);
 
     // The still-empty sections keep their buttons in the bottom row.
     expect(await findByTestId('day-details-add-rental-button')).toBeTruthy();
@@ -682,10 +688,10 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('day-details-add-accommodation-button')).toBeTruthy();
   });
 
-  test('+ Add transfer opens the same flight editor used on the Transfers tab, seeded with the viewed day', async () => {
+  test('+ Add flight opens the same flight editor used on the Transfers tab, seeded with the viewed day', async () => {
     const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
-    fireEvent.press(await findByTestId('day-details-add-transfer-button'));
+    fireEvent.press(await findByTestId('day-details-add-flight-button'));
     expect(await findByTestId('flight-modal-departure-location')).toBeTruthy();
   });
 
@@ -757,37 +763,75 @@ describe('Overview UI (nested itinerary)', () => {
     expect(queryByText('SECOND-REF')).toBeNull();
   });
 
-  test('+Add item button opens the four-option popover', async () => {
-    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+  test('keeps existing locations and activities separate from notes and checklists', async () => {
+    const { findByTestId, findAllByTestId } = await renderOverview(<OverviewTab {...baseProps}
+      cachedItinerary={{ id: 'itinerary', planMarkdown: null, details: [
+        { id: 'place', day: 1, kind: 'place', activity: 'Saved landmark', noteBody: 'Landmark details' },
+        { id: 'legacy', day: 1, kind: 'activity', activity: 'Legacy walking tour' },
+        { id: 'note', day: 1, kind: 'note', activity: 'Day reminder', noteBody: 'Bring water' },
+        { id: 'list', day: 1, kind: 'checklist', activity: 'Packing reminder', checklistItems: [] },
+      ] }} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
-    fireEvent.press(await findByTestId('day-details-add-item-button'));
-    expect(await findByTestId('add-item-popover')).toBeTruthy();
-    expect(await findByTestId('add-item-option-place')).toBeTruthy();
-    expect(await findByTestId('add-item-option-note')).toBeTruthy();
-    expect(await findByTestId('add-item-option-checklist')).toBeTruthy();
-    expect(await findByTestId('add-item-option-activity')).toBeTruthy();
+    const locations = within(await findByTestId('day-details-locations-activities'));
+    const notes = within(await findByTestId('day-details-itinerary-items'));
+    expect(locations.getByText('Locations and Activities')).toBeTruthy();
+    expect(locations.getByText('📍 Saved landmark')).toBeTruthy();
+    expect(locations.getByText('Legacy walking tour')).toBeTruthy();
+    expect(locations.queryByText('📝 Day reminder')).toBeNull();
+    expect(notes.getByText('Notes and Checklists')).toBeTruthy();
+    expect(notes.getByText('📝 Day reminder')).toBeTruthy();
+    expect(notes.queryByText('📍 Saved landmark')).toBeNull();
+    expect(await findAllByTestId('day-details-add-activity-button')).toHaveLength(1);
   });
 
-  test('with featureItineraryItemKinds disabled, the popover only offers "Add a custom activity" (the only kind that never 403s)', async () => {
-    const { findByTestId, queryByTestId } = await renderOverview(
-      <OverviewTab {...baseProps} featureItineraryItemKinds={false} />
-    );
+  test.each(['note', 'checklist'])('Add %s opens its dialog directly and saves on the viewed day', async (kind) => {
+    fetchMock.mockImplementation(async (input: unknown, init?: { method?: string }) => ({
+      ok: true, json: async () => init?.method === 'POST' ? { id: 'new-item' } : [],
+    }));
+    const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps}
+      cachedItinerary={{ id: 'itinerary-1', planMarkdown: null, details: [] }} />);
+    fireEvent.press(await findByTestId('overview-day-card-2'));
+    fireEvent.press(await findByTestId(`day-details-add-${kind}-button`));
+    expect(queryByTestId('add-item-popover')).toBeNull();
+    expect(await findByTestId(`${kind}-dialog`)).toBeTruthy();
+    fireEvent.changeText(await findByTestId(`${kind}-dialog-title`), 'Remember tickets');
+    fireEvent.changeText(await findByTestId(kind === 'note' ? 'note-dialog-body' : 'checklist-dialog-item-0'), 'Bring printed tickets');
+    fireEvent.press(await findByTestId(`${kind}-dialog-submit`));
+    await waitFor(() => expect(fetchMock.mock.calls.some((call: any[]) =>
+      call[0] === 'http://localhost:4000/api/itineraries/itinerary-1/details' && call[1]?.method === 'POST')).toBe(true));
+    const call = fetchMock.mock.calls.find((call: any[]) => call[0] === 'http://localhost:4000/api/itineraries/itinerary-1/details' && call[1]?.method === 'POST');
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ day: 2, kind, activity: 'Remember tickets' });
+  });
+
+  test('Add transfer opens the ground transfer editor seeded with the viewed day', async () => {
+    const { findByTestId, findByText, queryByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-2'));
+    fireEvent.press(await findByTestId('day-details-add-transfer-button'));
+    expect(await findByText('Ground Transfer Details')).toBeTruthy();
+    expect(await findByTestId('ground-departure-hotel')).toBeTruthy();
+    expect(queryByTestId('flight-modal-flight-number')).toBeNull();
+  });
+
+  test('Add activity still offers a new activity when itinerary item kinds are disabled', async () => {
+    const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps} featureItineraryItemKinds={false} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
-    fireEvent.press(await findByTestId('day-details-add-item-button'));
-    expect(await findByTestId('add-item-popover')).toBeTruthy();
+    expect(queryByTestId('day-details-add-item-button')).toBeNull();
+    expect(queryByTestId('day-details-add-note-button')).toBeNull();
+    expect(queryByTestId('day-details-add-checklist-button')).toBeNull();
+    fireEvent.press(await findByTestId('day-details-add-activity-button'));
     expect(await findByTestId('add-item-option-activity')).toBeTruthy();
     expect(queryByTestId('add-item-option-place')).toBeNull();
     expect(queryByTestId('add-item-option-note')).toBeNull();
     expect(queryByTestId('add-item-option-checklist')).toBeNull();
   });
 
-  test('custom activity add item opens the activity dialog and saves a real activity', async () => {
+  test.each([[1, '2026-01-29'], [2, '2026-01-30']])('defaults a new activity to viewed trip day %s', async (day, date) => {
     const onTourDataChanged = jest.fn();
     const { findByTestId, getByPlaceholderText } = await renderOverview(
       <OverviewTab {...baseProps} onTourDataChanged={onTourDataChanged} />
     );
-    fireEvent.press(await findByTestId('overview-day-card-1'));
-    fireEvent.press(await findByTestId('day-details-add-item-button'));
+    fireEvent.press(await findByTestId(`overview-day-card-${day}`));
+    fireEvent.press(await findByTestId('day-details-add-activity-button'));
     fireEvent.press(await findByTestId('add-item-option-activity'));
 
     expect(await findByTestId('activity-form-modal')).toBeTruthy();
@@ -800,8 +844,40 @@ describe('Overview UI (nested itinerary)', () => {
     expect(activityCall).toBeTruthy();
     const payload = JSON.parse(String(activityCall?.[1]?.body ?? '{}'));
     expect(payload.name).toBe('Custom walking tour');
-    expect(payload.date).toBe('2026-01-29');
+    expect(payload.date).toBe(date);
     expect(payload.notes).toBe('A relaxed orientation walk.');
+  });
+
+  test('creates an undated optional activity near a hotel from Add item', async () => {
+    const onTourDataChanged = jest.fn();
+    const { findByTestId, getByPlaceholderText } = await renderOverview(<OverviewTab {...baseProps}
+      lodgings={[{ id: 'hotel', name: 'Central Hotel', checkInDate: '2026-01-29', checkOutDate: '2026-01-30' }] as any}
+      onTourDataChanged={onTourDataChanged} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-activity-button'));
+    fireEvent.press(await findByTestId('add-item-option-activity'));
+    fireEvent.press(within(await findByTestId('activity-scheduling')).getByLabelText('Activity scheduling'));
+    fireEvent.press(await findByTestId('activity-scheduling-option-optional'));
+    fireEvent.changeText(getByPlaceholderText('Activity name'), 'Optional museum');
+    fireEvent.press(within(await findByTestId('activity-near-hotel')).getByLabelText('Near hotel'));
+    fireEvent.press(await findByTestId('activity-near-hotel-option-hotel'));
+    fireEvent.press(await findByTestId('activity-save'));
+    await waitFor(() => expect(onTourDataChanged).toHaveBeenCalled());
+    const call = fetchMock.mock.calls.find((call: any[]) => call[0] === 'http://localhost:4000/api/activities');
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ name: 'Optional museum', date: '', nearLodgingId: 'hotel' });
+  });
+
+  test('schedules an existing optional activity rather than creating a duplicate', async () => {
+    const onTourDataChanged = jest.fn();
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps}
+      tours={[{ id: 'option', name: 'Any-day museum', date: '', nearLodgingId: null, status: 'Proposed', cost: '0' }] as any}
+      onTourDataChanged={onTourDataChanged} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-activity-button'));
+    fireEvent.press(await findByTestId('add-item-optional-option'));
+    await waitFor(() => expect(onTourDataChanged).toHaveBeenCalled());
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:4000/api/activities/option', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ date: '2026-01-29' }) }));
+    expect(fetchMock.mock.calls.some((call: any[]) => call[0] === 'http://localhost:4000/api/activities' && call[1]?.method === 'POST')).toBe(false);
   });
 
   test('shows traveler names when flights differ', async () => {
