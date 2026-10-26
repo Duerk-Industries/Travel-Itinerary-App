@@ -15,7 +15,7 @@ import {
   buildRentalDraftFromRow,
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Image } from 'react-native';
 import { OverviewTab, buildDayWeatherLocation, makeWeatherLocationGeofriendly } from '../tabs/overview';
 import React from 'react';
@@ -398,7 +398,8 @@ describe('Overview UI (nested itinerary)', () => {
       />
     );
 
-    expect(await findByText('Test City - Cached museum visit')).toBeTruthy();
+    // Day titles are the day's plan; the location is no longer prefixed.
+    expect(await findByText('Cached museum visit')).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]: [unknown]) => String(url).includes('/api/itineraries'))).toBe(false);
     expect(onItineraryCacheChange).not.toHaveBeenCalled();
   });
@@ -559,8 +560,9 @@ describe('Overview UI (nested itinerary)', () => {
     );
 
     fireEvent.press(await findByTestId('overview-day-card-8'));
-    expect(await findByText('SFO → BOS')).toBeTruthy();
-    expect(await findByText('13:01 / 21:45')).toBeTruthy();
+    const returnRow = await findByTestId('day-details-transfer-row-flight-return');
+    expect(within(returnRow).getByText('✈ SFO → BOS')).toBeTruthy();
+    expect(within(returnRow).getByText(/^13:01 → 21:45/)).toBeTruthy();
   });
 
   test('opens flight details modal from day details', async () => {
@@ -635,6 +637,36 @@ describe('Overview UI (nested itinerary)', () => {
     fireEvent.press(await findByTestId('overview-day-card-1'));
     expect(await findByTestId('day-details-itinerary-items')).toBeTruthy();
     expect(await findByTestId('day-details-add-item-button')).toBeTruthy();
+  });
+
+  // Regression: on phones, Add to calendar + the vote bar used to sit beside the item name in one
+  // row, crushing the name to a column one or two letters wide. They now stack under the name.
+  test.each([
+    ['phone', 390, 'column'],
+    ['desktop', 1280, 'row'],
+  ])('day items lay out the name and actions for %s widths', async (_label, width, expectedDirection) => {
+    const RN = require('react-native');
+    const dims = jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({ width, height: 900, scale: 2, fontScale: 1 } as any);
+    fetchMock.mockImplementation(async (input: any) => {
+      const url = String(input);
+      if (url.endsWith('/api/itineraries')) {
+        return { ok: true, json: async () => [{ id: 'itin-1', tripId: baseProps.trip.id, createdAt: '2026-01-01T00:00:00Z' }] } as any;
+      }
+      if (url.endsWith('/api/itineraries/itin-1/details')) {
+        return { ok: true, json: async () => [{ id: 'd1', day: 1, time: '09:00', activity: 'Wander Alfama + Miradouro de Santa Luzia', kind: 'activity' }] } as any;
+      }
+      return { ok: true, json: async () => [] } as any;
+    });
+    try {
+      const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+      fireEvent.press(await findByTestId('overview-day-card-1'));
+      const row = await findByTestId('day-details-item-d1');
+      const flat = Array.isArray(row.props.style) ? Object.assign({}, ...row.props.style.filter(Boolean)) : row.props.style;
+      expect(flat.flexDirection ?? 'row').toBe(expectedDirection);
+      expect(await findByTestId('day-details-item-actions-d1')).toBeTruthy();
+    } finally {
+      dims.mockRestore();
+    }
   });
 
   test('day with no items shows all four "+ Add X" buttons grouped in one row', async () => {
@@ -993,6 +1025,31 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByText('☀ 22°C')).toBeTruthy();
   });
 
+  test('a train day gets a train icon and short station names in its subtitle', async () => {
+    const trainProps = {
+      ...baseProps,
+      trip: { ...baseProps.trip, startDate: '2026-09-01', endDate: '2026-09-02' },
+      flights: [
+        {
+          id: 'train-1',
+          transfer_type: 'Public Transit',
+          passenger_ids: [],
+          trip_id: baseProps.trip.id,
+          departure_date: '2026-09-01',
+          departure_location: 'Kawaguchiko Station (Fujikyu Railway)',
+          departure_airport_code: 'Kawaguchiko Station (Fujikyu Railway)',
+          departure_time: '09:00',
+          arrival_date: '2026-09-01',
+          arrival_location: 'Otsuki Station',
+          arrival_airport_code: 'Otsuki Station',
+          arrival_time: '10:00',
+        },
+      ] as any[],
+    };
+    const { findByTestId } = await renderOverview(<OverviewTab {...trainProps} />);
+    expect((await findByTestId('overview-day-card-1-subtitle')).props.children).toBe('🚆 Kawaguchiko Station → Otsuki Station');
+  });
+
   test('renders transfer rows for a followed-style trip payload', async () => {
     const followedTripProps = {
       ...baseProps,
@@ -1028,9 +1085,16 @@ describe('Overview UI (nested itinerary)', () => {
       ] as any[],
     };
 
-    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...followedTripProps} />);
-    expect(await findByText(/MXP - Travel day/i)).toBeTruthy();
+    const { findByTestId, findByText, findAllByText } = await renderOverview(<OverviewTab {...followedTripProps} />);
+    // Title is the day's plan; the route moves to a short subtitle under it.
+    expect(await findByText('Travel day')).toBeTruthy();
+    expect((await findByTestId('overview-day-card-1-subtitle')).props.children).toBe('✈ MXP → OTP');
     fireEvent.press(await findByTestId('overview-day-card-1'));
-    expect(await findByText(/MXP → OTP/i)).toBeTruthy();
+    expect((await findAllByText(/MXP → OTP/i)).length).toBeGreaterThan(0);
+    // Day view transfer entry: route on its own line, then times and the airline (stacked so long
+    // names can't push it off the card).
+    const transferRow = await findByTestId('day-details-transfer-row-flight-followed-1');
+    expect(within(transferRow).getByText('✈ MXP → OTP')).toBeTruthy();
+    expect(within(transferRow).getByText('08:00 → 11:00 · Ryanair FR259')).toBeTruthy();
   });
 });

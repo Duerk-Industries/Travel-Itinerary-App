@@ -5510,8 +5510,14 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     width: '100%',
     height: '100%',
   },
+  // Fills the whole day card like a photo would (dayHeroImage). As a plain flex child it only
+  // spanned part of the card, leaving grey strips at the sides on phones.
   dayHeroImageFallback: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#e5e7eb',
   },
   dayHeroOverlay: {

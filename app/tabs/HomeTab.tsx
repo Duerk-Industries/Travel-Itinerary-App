@@ -291,7 +291,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
           ) : heroLoading ? (
             <Skeleton style={styles.homeHeroImage} testID="home-hero-skeleton" />
           ) : featureCoverPhotoFallbackV2 ? (
-            <DestinationPlaceholderCard title={heroTitle} style={styles.homeHeroFallback} testID="home-hero-placeholder" />
+            <DestinationPlaceholderCard title={heroTitle} style={styles.homeHeroFallback} testID="home-hero-placeholder" showLabel={false} />
           ) : (
             <View style={styles.homeHeroFallback} testID="home-hero-fallback-legacy" />
           )}

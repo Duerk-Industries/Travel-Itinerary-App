@@ -63,6 +63,8 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import AvatarStack from '../components/AvatarStack';
+import { formatStayRange, stayDayNote } from '../utils/stayDates';
+import { linkTextColor } from '../theme/theme';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import ActivityEditForm from '../components/ActivityEditForm';
 import CarRentalEditForm from '../components/CarRentalEditForm';
@@ -300,6 +302,32 @@ type DetailModalState = {
   sections: DetailSection[];
   kind?: 'flight' | 'lodging' | 'activity';
   item?: Flight | Lodging | Tour;
+};
+
+// Short labels for a transfer's route, shared by the day card subtitle and the day view. Prefers a
+// real code (EWR, LIS); ground transfers keep station names in the code field, so those fall back
+// to the place name minus "(Fujikyu Railway)"-style detail. Icon follows the transfer type.
+export const describeTransferRoute = (flight: {
+  departure_airport_code?: string | null;
+  arrival_airport_code?: string | null;
+  departure_location?: string | null;
+  arrival_location?: string | null;
+  transfer_type?: string | null;
+  transferType?: string | null;
+}): { icon: string; from: string; to: string; fullFrom: string; fullTo: string } => {
+  const shortPlace = (code?: string | null, location?: string | null) => {
+    const c = String(code ?? '').trim();
+    if (/^[A-Z0-9]{3,4}$/.test(c)) return c;
+    return String(c || location || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  };
+  const type = normalizeTransferType(flight.transfer_type || flight.transferType);
+  return {
+    icon: type === 'Flight' ? '✈' : type === 'Public Transit' ? '🚆' : type === 'Private Transfer' ? '🚗' : '➜',
+    from: shortPlace(flight.departure_airport_code, flight.departure_location),
+    to: shortPlace(flight.arrival_airport_code, flight.arrival_location),
+    fullFrom: String(flight.departure_location || flight.departure_airport_code || '').trim(),
+    fullTo: String(flight.arrival_location || flight.arrival_airport_code || '').trim(),
+  };
 };
 
 export const dedupeAttendees = (
@@ -2371,32 +2399,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return parts.length > 1 ? parts[1] : trimmed;
   };
 
-  // Priority mirrors the day title rule: activities beat the transfer, which
-  // beats lodging, so a lodging stay no longer masks a day that has activities
-  // (or at least a transfer) happening on it. Empty when nothing is known, so
-  // titles read "Train to Sintra" rather than a placeholder "Trip Day - Train to Sintra".
-  const buildDayStartLocation = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[] }) => {
-    if (!info) return tripLocationLabel || '';
-    const tour = info.tours[0];
-    if (tour) return (tour.startLocation ? shortenLocationToCity(tour.startLocation) : '') || tour.name || tripLocationLabel || '';
+  // Day card titles are the day's plan (buildDaySummary). Travel logistics go in a short subtitle
+  // instead of a title prefix: repeating the hotel name, or an all-caps airport name, on every
+  // day made titles long and hard to scan on phones.
+  const buildDaySubtitle = (
+    info: { flights: Flight[]; lodgings: Lodging[] } | undefined,
+    date: string,
+  ): string | null => {
+    if (!info) return null;
     const flight = info.flights[0];
-    if (flight) return (flight.departure_location ? shortenLocationToCity(flight.departure_location) : '') || flight.departure_airport_code || tripLocationLabel || '';
-    const lodging = info.lodgings[0];
-    if (lodging) return lodging.name || tripLocationLabel || '';
-    const rental = info.rentals[0];
-    if (rental) return (rental.pickupLocation ? shortenLocationToCity(rental.pickupLocation) : '') || rental.vendor || tripLocationLabel || '';
-    return tripLocationLabel || '';
-  };
-
-  // startLocation and summary can end up describing the same activity (e.g. a
-  // day with only a tour and no flight/lodging) — collapse them instead of
-  // showing the same text twice, joined by " - ".
-  const buildHeroTitle = (startLocation: string, summary: string) => {
-    const parts = [startLocation, summary].filter(Boolean);
-    if (parts.length === 2 && parts[0].trim().toLowerCase() === parts[1].trim().toLowerCase()) {
-      return parts[0];
+    if (flight) {
+      const { icon, from, to } = describeTransferRoute(flight);
+      if (from && to) return `${icon} ${from} → ${to}`;
     }
-    return parts.join(' - ');
+    const day = normalizeDateString(date ?? '');
+    const checkIn = info.lodgings.find((lodging) => normalizeDateString(lodging.checkInDate) === day);
+    if (checkIn?.name) return `🏨 Check in: ${checkIn.name}`;
+    return null;
   };
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
@@ -2681,7 +2700,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         activeDayInfo?.index ?? (activeDayCard ? dayCards.findIndex((card) => card.date === activeDayCard.date) + 1 : null);
       const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
 
-      const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
+      const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string, subtitle?: string | null) => {
         const img = blogDayImages[card.date] ?? dayImages[card.date];
         const weather = dayWeather[card.date];
         const weatherLabel =
@@ -2701,7 +2720,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             {img ? (
               <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
             ) : featureCoverPhotoFallbackV2 ? (
-              <DestinationPlaceholderCard title={card.location || title} style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-placeholder`} />
+              <DestinationPlaceholderCard title={card.location || title} style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-placeholder`} showLabel={false} />
             ) : (
               <View style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-fallback-legacy`} />
             )}
@@ -2736,6 +2755,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               >
                 {title}
               </Text>
+              {subtitle ? (
+                <Text
+                  testID={`${testID || 'day-hero'}-subtitle`}
+                  style={[styles.dayHeroAction, { marginTop: 4, fontWeight: '600' }, isPhoneLayout ? { fontSize: 12 } : null]}
+                  numberOfLines={1}
+                >
+                  {subtitle}
+                </Text>
+              ) : null}
               {showAction ? (
                 <Text style={[styles.dayHeroAction, isPhoneLayout ? { fontSize: 11 } : null]}>View details</Text>
               ) : null}
@@ -2745,9 +2773,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       };
 
       if (selectedDay && activeDayCard && activeDayInfo) {
-        const startLocation = buildDayStartLocation(activeDayInfo);
-        const summary = buildDaySummary(activeDayInfo);
-        const heroTitle = buildHeroTitle(startLocation, summary);
+        const heroTitle = buildDaySummary(activeDayInfo);
+        const heroSubtitle = buildDaySubtitle(activeDayInfo, activeDayCard.date);
         const narrativeLines = buildDayNarrative(activeDayInfo, activeDayCard.date);
         const flightsForDay = activeDayInfo.flights;
         // Same order the day map letters its pins in: an explicit saved position first, then start time.
@@ -2809,7 +2836,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
               {renderDayBar(selectedDay)}
-              {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
+              {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero', heroSubtitle)}
               {dayMapPoints.length ? (
                 <TripDayMap key={activeDayCard.date} onOpenChange={open => setVisibleMapDate(open ? activeDayCard.date : null)} tripId={trip.id} dayDate={activeDayCard.date} points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
               ) : null}
@@ -2830,24 +2857,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <View style={styles.dayInfoCard}>
                   <Text style={styles.sectionTitle}>Your transfer</Text>
                   {flightsForDay.map((flight) => {
-                    const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
-                    const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
+                    const route = describeTransferRoute(flight);
+                    const showFullNames = (route.fullFrom && route.fullFrom !== route.from) || (route.fullTo && route.fullTo !== route.to);
+                    const carrierLine = [flight.carrier, flight.flight_number].filter(Boolean).join(' ');
                     const passengers =
                       Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
                         ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
                         : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
+                    // Stacked rather than side by side: long airport/station names used to push the
+                    // route off the card and hide the times on phones.
                     return (
-                      <View key={flight.id} style={styles.dayInfoRow}>
+                      <View key={flight.id} style={{ paddingVertical: 6, gap: 2 }} testID={`day-details-transfer-row-${flight.id}`}>
                         <TouchableOpacity
                           testID={`day-details-transfer-${flight.id}`}
                           accessibilityRole="link"
                           onPress={() => setSelectedFlight(flight)}
                         >
-                          <Text style={[styles.dayInfoRoute, styles.linkText, { textDecorationLine: 'underline' }]}>{`${dep} → ${arr}`}</Text>
+                          <Text style={[styles.dayInfoRoute, styles.linkText, { textDecorationLine: 'underline' }]}>
+                            {`${route.icon} ${route.from || 'Departure'} → ${route.to || 'Arrival'}`}
+                          </Text>
                         </TouchableOpacity>
-                        <Text style={styles.helperText}>{`${flight.departure_time || '--:--'} / ${
-                          flight.arrival_time || '--:--'
-                        }`}</Text>
+                        {showFullNames ? (
+                          <Text style={styles.helperText}>{`${route.fullFrom || route.from} → ${route.fullTo || route.to}`}</Text>
+                        ) : null}
+                        <Text style={styles.helperText}>
+                          {`${flight.departure_time || '--:--'} → ${flight.arrival_time || '--:--'}${carrierLine ? ` · ${carrierLine}` : ''}`}
+                        </Text>
                         {showFlightNames && passengers ? <Text style={styles.helperText}>Travelers: {passengers}</Text> : null}
                       </View>
                     );
@@ -3010,15 +3045,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           />
                         ) : (
                           <View
+                            testID={`day-details-lodging-placeholder-${lodging.id}`}
                             style={[
                               styles.lodgingImageFallback,
                               { width: lodgingThumbnailSize, height: lodgingThumbnailSize },
                             ]}
-                          />
+                          >
+                            <Text style={{ fontSize: Math.round(lodgingThumbnailSize * 0.42) }}>🏨</Text>
+                          </View>
                         )}
                         <View style={styles.dayInfoText}>
                           <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
-                          <Text style={styles.helperText}>{`${lodging.checkInDate} → ${lodging.checkOutDate}`}</Text>
+                          <Text style={styles.helperText}>{formatStayRange(lodging.checkInDate, lodging.checkOutDate)}</Text>
+                          {stayDayNote(lodging.checkInDate, lodging.checkOutDate, activeDayCard.date) ? (
+                            <Text style={[styles.helperText, { fontWeight: '700', color: theme ? linkTextColor(theme) : undefined }]}>
+                              {stayDayNote(lodging.checkInDate, lodging.checkOutDate, activeDayCard.date)}
+                            </Text>
+                          ) : null}
                           {showLodgingNames && participants ? (
                             <Text style={styles.helperText}>Travelers: {participants}</Text>
                           ) : null}
@@ -3059,9 +3102,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 ) : (
                   (activeDayInfo.details ?? []).map((d) => {
                     const isActivity = !d.kind || d.kind === 'activity';
+                    // On phones the calendar/vote/delete controls don't fit beside the name: stack them
+                    // under it in a wrapping row, instead of crushing the name to a few letters per line.
                     return (
-                      <View key={d.id} style={[styles.dayInfoRow, { alignItems: 'flex-start', gap: 8 }]}>
-                        <View style={{ flex: 1, gap: 4 }}>
+                      <View
+                        key={d.id}
+                        testID={`day-details-item-${d.id}`}
+                        style={[
+                          styles.dayInfoRow,
+                          isPhoneLayout
+                            ? { flexDirection: 'column', alignItems: 'stretch', gap: 8 }
+                            : { alignItems: 'flex-start', gap: 8 },
+                        ]}
+                      >
+                        <View style={isPhoneLayout ? { gap: 4 } : { flex: 1, gap: 4 }}>
                           {d.kind === 'place' ? (
                             <View>
                               <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
@@ -3118,31 +3172,36 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             <Text style={styles.dayInfoRoute}>{d.activity}</Text>
                           )}
                         </View>
-                        {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
-                        {isActivity ? (
-                          <View style={{ flexShrink: 0 }}>
-                            <ReactionBar
-                              detailId={d.id}
-                              summary={d.reactions ?? emptyReactionSummary}
-                              canReact={featureItineraryReactions}
-                              onCast={castReactionForDetail}
-                              onClear={clearReactionForDetail}
-                              theme={theme}
-                            />
-                          </View>
-                        ) : null}
-                        {isEditingDayItems ? (
-                          <TouchableOpacity
-                            testID={`day-details-delete-${d.id}`}
-                            accessibilityRole="button"
-                            accessibilityLabel="Delete item"
-                            onPress={() => deleteDetail(d.id)}
-                            style={styles.detailDeleteButton}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          >
-                            <Text style={styles.detailDeleteButtonText}>×</Text>
-                          </TouchableOpacity>
-                        ) : null}
+                        <View
+                          testID={`day-details-item-actions-${d.id}`}
+                          style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, ...(isPhoneLayout ? {} : { flexShrink: 0 }) }}
+                        >
+                          {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
+                          {isActivity ? (
+                            <View style={{ flexShrink: 0 }}>
+                              <ReactionBar
+                                detailId={d.id}
+                                summary={d.reactions ?? emptyReactionSummary}
+                                canReact={featureItineraryReactions}
+                                onCast={castReactionForDetail}
+                                onClear={clearReactionForDetail}
+                                theme={theme}
+                              />
+                            </View>
+                          ) : null}
+                          {isEditingDayItems ? (
+                            <TouchableOpacity
+                              testID={`day-details-delete-${d.id}`}
+                              accessibilityRole="button"
+                              accessibilityLabel="Delete item"
+                              onPress={() => deleteDetail(d.id)}
+                              style={styles.detailDeleteButton}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <Text style={styles.detailDeleteButtonText}>×</Text>
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
                       </View>
                     );
                   })
@@ -3287,12 +3346,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <View style={{ gap: 12 }}>
             {dayCards.map((card, idx) => {
               const info = dayDataByDate.get(card.date);
-              const startLocation = buildDayStartLocation(info);
-              const summary = buildDaySummary(info);
-              const heroTitle = buildHeroTitle(startLocation, summary);
+              const heroTitle = buildDaySummary(info);
+              const heroSubtitle = buildDaySubtitle(info, card.date);
               return (
                 <View key={card.date}>
-                  {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`)}
+                  {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`, heroSubtitle)}
                 </View>
               );
             })}
