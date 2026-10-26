@@ -116,6 +116,7 @@ import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itin
 import { useImageSourceGetter } from '../utils/imageSource';
 import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 import { printItinerary as openPrintableItinerary } from '../utils/printableItinerary';
+import CsvTransferControls from '../components/CsvTransferControls';
 import { startItemSaveTask } from '../utils/analytics/track';
 
 type Trip = {
@@ -273,6 +274,9 @@ type OverviewTabProps = {
   featureItineraryReactions?: boolean;
   featureItineraryItemKinds?: boolean;
   featureItineraryDocumentImport?: boolean;
+  // Day-plan (notes, checklists, places) CSV import/export.
+  featureDayPlanCsvImport?: boolean;
+  featureDayPlanCsvExport?: boolean;
   userTier?: string | null;
   /** Defined in offline mode (including null when this trip has no itinerary). */
   cachedItinerary?: {
@@ -492,6 +496,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   featureItineraryReactions = true,
   featureItineraryItemKinds = true,
   featureItineraryDocumentImport = false,
+  featureDayPlanCsvImport = false,
+  featureDayPlanCsvExport = false,
   userTier,
   cachedItinerary,
   onItineraryCacheChange,
@@ -521,6 +527,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryId, setItineraryId] = useState<string | null>(null);
+  // Bumped after a day-plan CSV import so the itinerary is read again, bypassing the cache.
+  const [itineraryReload, setItineraryReload] = useState(0);
   const [itineraryPlanMarkdown, setItineraryPlanMarkdown] = useState<string | null>(null);
   const [showItineraryPlanNotes, setShowItineraryPlanNotes] = useState(false);
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
@@ -684,7 +692,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   useEffect(() => {
     const loadItinerary = async () => {
-      if (cachedItinerary !== undefined) {
+      if (cachedItinerary !== undefined && itineraryReload === 0) {
         setItineraryDetails((cachedItinerary?.details ?? []) as ItineraryDetail[]);
         setItineraryId(cachedItinerary?.id ?? null);
         setItineraryPlanMarkdown(cachedItinerary?.planMarkdown ?? null);
@@ -738,10 +746,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       }
     };
     loadItinerary();
-  }, [backendUrl, cachedItinerary, headers, trip?.id]);
+  }, [backendUrl, cachedItinerary, headers, trip?.id, itineraryReload]);
 
   useEffect(() => {
-    if (cachedItinerary !== undefined || !onItineraryCacheChange || !trip?.id) return;
+    if ((cachedItinerary !== undefined && itineraryReload === 0) || !onItineraryCacheChange || !trip?.id) return;
     onItineraryCacheChange(trip.id, {
       id: itineraryId,
       planMarkdown: itineraryPlanMarkdown,
@@ -754,6 +762,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     cachedItinerary,
     onItineraryCacheChange,
     trip?.id,
+    itineraryReload,
   ]);
 
   const sortedItineraryDetails = useMemo(
@@ -2359,6 +2368,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       trip,
       travelers: normalizedAttendees,
       locationLabel: tripLocationLabel,
+      planMarkdown: itineraryPlanMarkdown,
+      unscheduled: tours.filter((tour) => !String(tour.date ?? '').trim()),
       days: dayCards.map((card, idx) => {
         const info = dayDataByDate.get(card.date);
         return {
@@ -3208,6 +3219,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={[styles.row, themeStyle('tabs_overview_51', {  }, (theme ?? _styleTheme)), isPhoneLayout ? themeStyle('tabs_overview_52', {  }, (theme ?? _styleTheme)) : null]}>
               {renderDocumentImportButton()}
+              <CsvTransferControls entity="day-plan" backendUrl={backendUrl} headers={jsonHeaders} tripId={trip?.id} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={itineraryDetails} styles={styles} theme={theme} enabledImport={featureDayPlanCsvImport} enabledExport={featureDayPlanCsvExport} readOnly={readOnly} onImported={() => setItineraryReload((count) => count + 1)} />
               <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={handlePrintItinerary}>
                 <Text style={styles.buttonText}>Print itinerary</Text>
               </TouchableOpacity>

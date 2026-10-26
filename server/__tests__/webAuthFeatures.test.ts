@@ -25,6 +25,30 @@ describe('GET /api/auth/features', () => {
     expect(enabled.body.featureAiItineraryGeneration).toBe(true);
   });
 
+  it('reports each extra CSV entity only when its own flag and the base import or export flag are on', async () => {
+    const pairs: Array<[string, string, string]> = [
+      ['ground_transfer_csv_import', 'featureGroundTransferCsvImport', 'activity_lodging_csv_import'],
+      ['car_rental_csv_import', 'featureCarRentalCsvImport', 'activity_lodging_csv_import'],
+      ['day_plan_csv_import', 'featureDayPlanCsvImport', 'activity_lodging_csv_import'],
+      ['ground_transfer_csv_export', 'featureGroundTransferCsvExport', 'csv_export'],
+      ['car_rental_csv_export', 'featureCarRentalCsvExport', 'csv_export'],
+      ['day_plan_csv_export', 'featureDayPlanCsvExport', 'csv_export'],
+    ];
+    const read = async () => (await request(app).get('/api/auth/features').expect(200)).body;
+    for (const [flag, key, base] of pairs) {
+      await setFeatureFlag(base, true, null);
+      await setFeatureFlag(flag, false, null);
+      clearFeatureFlagCacheForTesting();
+      expect((await read())[key]).toBe(false);
+      await setFeatureFlag(flag, true, null);
+      clearFeatureFlagCacheForTesting();
+      expect((await read())[key]).toBe(true);
+      await setFeatureFlag(base, false, null);
+      clearFeatureFlagCacheForTesting();
+      expect((await read())[key]).toBe(false);
+    }
+  });
+
   it('reports a disabled AI generation flag immediately after a cached enabled read', async () => {
     await setFeatureFlag('ai_itinerary_generation', true, null);
     clearFeatureFlagCacheForTesting();

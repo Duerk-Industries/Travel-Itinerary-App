@@ -19,6 +19,7 @@ import CarRentalEditForm from './CarRentalEditForm';
 import EditableDataGrid, { type GridCellError, type GridColumn } from './EditableDataGrid';
 
 import { fixedTableColumn } from '../utils/tableColumns';
+import CsvTransferControls from './CsvTransferControls';
 
 export type CarRentalsPanelProps = {
   /** Committed car-rental rows rendered in the table. */
@@ -51,6 +52,17 @@ export type CarRentalsPanelProps = {
   /** Kill switch for row-tap-to-edit + sticky identity/actions columns
    * (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`. */
   featureTapToEditTables?: boolean;
+  /** Car-rental CSV import/export. Omit (or leave both flags off) to hide the buttons. */
+  csvTransfer?: {
+    backendUrl: string;
+    headers: Record<string, string>;
+    tripId?: string | null;
+    tripStart?: string | null;
+    tripEnd?: string | null;
+    enabledImport: boolean;
+    enabledExport: boolean;
+    onImported?: () => void;
+  };
 };
 
 /**
@@ -81,6 +93,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   onExternalEditHandled,
   showList = true,
   featureTapToEditTables = true,
+  csvTransfer,
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
@@ -211,6 +224,9 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
         <>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Car Rentals</Text>
+        {csvTransfer && !tableEditing ? (
+          <CsvTransferControls entity="car-rentals" backendUrl={csvTransfer.backendUrl} headers={csvTransfer.headers} tripId={csvTransfer.tripId} tripStart={csvTransfer.tripStart} tripEnd={csvTransfer.tripEnd} rows={carRentals} styles={styles} theme={theme} enabledImport={csvTransfer.enabledImport} enabledExport={csvTransfer.enabledExport} readOnly={isFollowingMode} onImported={csvTransfer.onImported} />
+        ) : null}
         {!isFollowingMode ? (
           <View style={themeStyle('components_CarRentalsPanel_1', {  }, (theme ?? _styleTheme))}>
             {!tableEditing ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="car-rental-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}

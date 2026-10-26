@@ -59,6 +59,24 @@ flags:
   activity_lodging_csv_export:
     enabled: true
     description: "Enable canonical CSV exports for Activities and Lodging"
+  ground_transfer_csv_import:
+    enabled: false
+    description: "Enable reviewed CSV imports for ground transfers (train, bus, ferry, transit, private); also needs activity_lodging_csv_import. Off until released"
+  ground_transfer_csv_export:
+    enabled: false
+    description: "Enable CSV export of ground transfers; also needs csv_export. Off until released"
+  car_rental_csv_import:
+    enabled: false
+    description: "Enable reviewed CSV imports for car rentals; also needs activity_lodging_csv_import. Off until released"
+  car_rental_csv_export:
+    enabled: false
+    description: "Enable CSV export of car rentals; also needs csv_export. Off until released"
+  day_plan_csv_import:
+    enabled: false
+    description: "Enable reviewed CSV imports for day-plan items (notes, checklists, places); also needs activity_lodging_csv_import. Off until released"
+  day_plan_csv_export:
+    enabled: false
+    description: "Enable CSV export of day-plan items; also needs csv_export. Off until released"
   car_rentals:
     enabled: true
     description: "Enable car rental booking integration"

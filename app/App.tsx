@@ -704,6 +704,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureExpenseImportPlaid, setFeatureExpenseImportPlaid] = useState(false);
   const [featureActivityLodgingCsvImport, setFeatureActivityLodgingCsvImport] = useState(false);
   const [featureActivityLodgingCsvExport, setFeatureActivityLodgingCsvExport] = useState(false);
+  const [featureGroundTransferCsvImport, setFeatureGroundTransferCsvImport] = useState(false);
+  const [featureGroundTransferCsvExport, setFeatureGroundTransferCsvExport] = useState(false);
+  const [featureCarRentalCsvImport, setFeatureCarRentalCsvImport] = useState(false);
+  const [featureCarRentalCsvExport, setFeatureCarRentalCsvExport] = useState(false);
+  const [featureDayPlanCsvImport, setFeatureDayPlanCsvImport] = useState(false);
+  const [featureDayPlanCsvExport, setFeatureDayPlanCsvExport] = useState(false);
   const [featureAiItineraryGeneration, setFeatureAiItineraryGeneration] = useState(false);
   const [featureActivityRecap, setFeatureActivityRecap] = useState(false);
   useEffect(() => {
@@ -725,6 +731,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureExpenseImportPlaid(Boolean(data.featureExpenseImportPlaid));
           setFeatureActivityLodgingCsvImport(Boolean(data.featureActivityLodgingCsvImport));
           setFeatureActivityLodgingCsvExport(Boolean(data.featureActivityLodgingCsvExport));
+          setFeatureGroundTransferCsvImport(Boolean(data.featureGroundTransferCsvImport));
+          setFeatureGroundTransferCsvExport(Boolean(data.featureGroundTransferCsvExport));
+          setFeatureCarRentalCsvImport(Boolean(data.featureCarRentalCsvImport));
+          setFeatureCarRentalCsvExport(Boolean(data.featureCarRentalCsvExport));
+          setFeatureDayPlanCsvImport(Boolean(data.featureDayPlanCsvImport));
+          setFeatureDayPlanCsvExport(Boolean(data.featureDayPlanCsvExport));
           setFeatureActivityRecap(Boolean(data.featureActivityRecap));
           setFeatureAiItineraryGeneration(Boolean(data.featureAiItineraryGeneration));
         }
@@ -3822,6 +3834,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onRemoveCarRental={removeCarRental}
           onRateCarRental={rateOnCarRental}
           featureTapToEditTables={featureTapToEditTables}
+          csvTransfer={{
+            backendUrl,
+            headers: jsonHeaders,
+            tripId: activeTripId,
+            tripStart: activeTrip?.startDate ?? null,
+            tripEnd: activeTrip?.endDate ?? null,
+            enabledImport: featureCarRentalCsvImport,
+            enabledExport: featureCarRentalCsvExport,
+            onImported: () => { void fetchCarRentals(); },
+          }}
         />
       ) : null}
       {activePage !== 'car' && externalCarRentalEditId ? (
@@ -3878,6 +3900,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               showList={true}
               readOnly={isFollowingMode || offlineReadOnly}
               featureTapToEditTables={featureTapToEditTables}
+              featureGroundTransferCsvImport={featureGroundTransferCsvImport}
+              featureGroundTransferCsvExport={featureGroundTransferCsvExport}
             />
           )
         : null}
@@ -4035,6 +4059,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ? renderBoundedPage(
               <View style={{ flex: 1 }}>
                 <OverviewTab
+                  featureDayPlanCsvImport={featureDayPlanCsvImport}
+                  featureDayPlanCsvExport={featureDayPlanCsvExport}
                   onOpenShareTrip={activeTrip?.id && !isFollowingMode ? handleOpenShareTrip : undefined}
                   backendUrl={backendUrl}
                   headers={headers}

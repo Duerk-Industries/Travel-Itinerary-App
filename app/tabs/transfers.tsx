@@ -30,6 +30,7 @@ import EditableDataGrid, { type GridCellError, type GridColumn } from '../compon
 import DateField from '../components/DateField';
 
 import { fixedTableColumn } from '../utils/tableColumns';
+import CsvTransferControls from '../components/CsvTransferControls';
 import { startItemSaveTask } from '../utils/analytics/track';
 import {
   ITINERARY_STATUSES,
@@ -521,6 +522,9 @@ type FlightsTabProps = {
   // usage) keep today's behavior; App.tsx wires this to the
   // feature_tap_to_edit_tables flag for the live table view.
   featureTapToEditTables?: boolean;
+  // Ground-transfer CSV import/export (the Ground Transfers page only; flights are never imported from CSV).
+  featureGroundTransferCsvImport?: boolean;
+  featureGroundTransferCsvExport?: boolean;
 };
 
 type Airport = {
@@ -601,6 +605,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   modalCardStyle,
   theme: _providedTheme,
   featureTapToEditTables = true,
+  featureGroundTransferCsvImport = false,
+  featureGroundTransferCsvExport = false,
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
@@ -1566,6 +1572,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+        {transferScope === 'ground' && !tableEditing ? (
+          <CsvTransferControls entity="transfers" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={findActiveTrip()?.startDate} tripEnd={findActiveTrip()?.endDate} rows={allFlights} styles={styles} theme={theme} enabledImport={featureGroundTransferCsvImport} enabledExport={featureGroundTransferCsvExport} readOnly={readOnly} onImported={onDataChanged} />
+        ) : null}
         {!readOnly ? (
           <View style={themeStyle('tabs_transfers_10', {  }, (theme ?? _styleTheme))}>
             {!tableEditing ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="transfer-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}

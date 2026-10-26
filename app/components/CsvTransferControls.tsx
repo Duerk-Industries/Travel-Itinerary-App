@@ -4,13 +4,13 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Platform, Text, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
-import { mapColumns, ACTIVITY_HEADER_ALIASES, LODGING_HEADER_ALIASES, parseCsv, toActivityReviewRows, toCsv, toLodgingReviewRows, type ImportReviewRow } from '../utils/dataTransfer';
+import { mapColumns, HEADER_ALIASES, EXPORT_HEADERS, fieldsForCommit, matchExistingRecords, parseCsv, toCsv, toExportRows, toReviewRows, type ImportReviewRow, type TransferEntity } from '../utils/dataTransfer';
 import { pickCsvFile, shareCsvFile } from '../utils/dataTransferPlatform';
 import { taskFailure, track, type TaskFailure } from '../utils/analytics/track';
 
 
 type Props = {
-  entity: 'activities' | 'lodgings';
+  entity: TransferEntity;
   backendUrl: string;
   headers: Record<string, string>;
   tripId?: string | null;
@@ -25,7 +25,17 @@ type Props = {
   onImported?: () => void;
 };
 
-const fingerprint = (row: any, keys: string[]): string => JSON.stringify(keys.reduce<Record<string, unknown>>((out, key) => { out[key] = String(row[key] ?? '').trim().toLowerCase(); return out; }, {}));
+// What each entity is called in the UI, in analytics and in the API path.
+const ENTITY_API_PATH: Record<TransferEntity, string> = {
+  activities: '/api/activities/import',
+  lodgings: '/api/lodgings/import',
+  transfers: '/api/transfers/import',
+  'car-rentals': '/api/car-rentals/import',
+  'day-plan': '/api/itineraries/details/import',
+};
+const ENTITY_LABEL: Record<TransferEntity, string> = { activities: 'activities', lodgings: 'lodging', transfers: 'transfers', 'car-rentals': 'car rentals', 'day-plan': 'day plan' };
+const ENTITY_FILE: Record<TransferEntity, string> = { activities: 'activities', lodgings: 'lodgings', transfers: 'transfers', 'car-rentals': 'car-rentals', 'day-plan': 'day-plan' };
+const rowTitle = (row: ImportReviewRow<Record<string, unknown>>): string => String(row.fields.name ?? row.fields.title ?? row.fields.vendor ?? [row.fields.departureLocation, row.fields.arrivalLocation].filter(Boolean).join(' → '));
 const createImportId = (): string => {
   const cryptoApi = (globalThis as any).crypto;
   if (typeof cryptoApi?.randomUUID === 'function') return cryptoApi.randomUUID();
@@ -45,13 +55,14 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
   const [modalVisible, setModalVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const importIdRef = useRef<string | null>(null);
-  const definition = entity === 'activities' ? ACTIVITY_HEADER_ALIASES : LODGING_HEADER_ALIASES;
+  const definition = HEADER_ALIASES[entity];
+  const start0 = tripStart || null;
   const start = tripStart || new Date().toISOString().slice(0, 10);
   const end = tripEnd || start;
   const visibleRows = useMemo(() => reviewRows.filter((row) => !excluded.has(row.sourceRow)), [reviewRows, excluded]);
   const blockingRows = useMemo(() => visibleRows.filter((row) => row.errors.length > 0), [visibleRows]);
 
-  const importTask = { task: 'import', feature: entity === 'activities' ? 'activities' : 'lodging' } as const;
+  const importTask = { task: 'import', feature: entity === 'activities' ? 'activities' : entity === 'lodgings' ? 'lodging' : entity } as const;
   const trackImport = (eventName: 'task_started' | 'task_cancelled') => track(eventName, importTask, { tripId });
   const trackImportFailed = (failure: TaskFailure) => track('task_failed', { ...importTask, failure }, { tripId });
 
@@ -81,27 +92,9 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
   };
 
   const openReview = (rawRows: Array<Record<string, string>>, mapping: Record<string, string>) => {
-    const next = entity === 'activities' ? toActivityReviewRows(rawRows, mapping, start, end) : toLodgingReviewRows(rawRows, mapping, start, end);
-    const currentIndex = new Map<string, any[]>();
-    rows.forEach((row) => {
-      const key = entity === 'activities' ? `${String(row.name ?? '').trim().toLowerCase()}|${row.date}|${row.startTime ?? ''}|${row.startLocation ?? ''}` : `${String(row.name ?? '').trim().toLowerCase()}|${row.checkInDate}|${row.checkOutDate}|${row.address ?? ''}`;
-      const matches = currentIndex.get(key) ?? [];
-      matches.push(row);
-      currentIndex.set(key, matches);
-    });
-    next.forEach((review) => {
-      const fields = review.fields;
-      const key = entity === 'activities' ? `${String(fields.name ?? '').trim().toLowerCase()}|${fields.date}|${fields.startTime ?? ''}|${fields.startLocation ?? ''}` : `${String(fields.name ?? '').trim().toLowerCase()}|${fields.checkInDate}|${fields.checkOutDate}|${fields.address ?? ''}`;
-      const matches = currentIndex.get(key) ?? [];
-      const existing = matches.shift();
-      if (matches.length) currentIndex.set(key, matches); else currentIndex.delete(key);
-      if (existing) {
-        review.action = 'skip';
-        review.existingId = existing.id;
-        review.expectedFingerprint = fingerprint(existing, entity === 'activities' ? ['name', 'date', 'startTime', 'startLocation', 'notes'] : ['name', 'checkInDate', 'checkOutDate', 'address', 'notes']);
-        review.warnings.push({ severity: 'warning', message: 'Exact match found; row defaults to Skip.' });
-      }
-    });
+    // A Record ID from this trip links a row to its record (unchanged rows skip, edited rows are
+    // offered as an update); otherwise an exact key match defaults to Skip.
+    const next = matchExistingRecords(entity, toReviewRows(entity, rawRows, mapping, start, end), rows, { tripStart: start });
     setReviewRows(next);
     setExcluded(new Set(next.filter((row) => row.action === 'skip').map((row) => row.sourceRow)));
     importIdRef.current = null;
@@ -113,10 +106,10 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
     setBusy(true);
     let failureTracked = false;
     try {
-      const rowsToSend = visibleRows.map((row) => ({ sourceRow: row.sourceRow, action: row.action === 'update' || row.existingId ? 'update' : 'create', existingId: row.existingId, expectedFingerprint: row.expectedFingerprint, fields: row.fields }));
+      const rowsToSend = visibleRows.map((row) => ({ sourceRow: row.sourceRow, action: row.action === 'update' || row.existingId ? 'update' : 'create', existingId: row.existingId, expectedFingerprint: row.expectedFingerprint, fields: fieldsForCommit(row) }));
       const importId = importIdRef.current ?? createImportId();
       importIdRef.current = importId;
-      const response = await fetch(`${backendUrl}/api/${entity}/import`, { method: 'POST', headers, body: JSON.stringify({ tripId, importId, rows: rowsToSend }) });
+      const response = await fetch(`${backendUrl}${ENTITY_API_PATH[entity]}`, { method: 'POST', headers, body: JSON.stringify({ tripId, importId, rows: rowsToSend }) });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
         trackImportFailed(taskFailure(response.status));
@@ -135,10 +128,9 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
 
   const exportCsv = async () => {
     if (!rows.length) { Alert.alert('There is no data to export.'); return; }
-    const activityHeaders = ['WanderBunnies Record ID', 'WanderBunnies Record Fingerprint', 'Date', 'Activity Type', 'Start Time', 'Duration', 'Activity Name', 'Activity Notes', 'Activity Start Address', 'Status', 'Cost'];
-    const lodgingHeaders = ['WanderBunnies Record ID', 'WanderBunnies Record Fingerprint', 'Check In', 'Check Out', 'Hotel', 'Booked?', 'Cancel By', 'Cost', 'Address', 'Notes', 'Features', 'Rooms'];
-    const exportRows = entity === 'activities' ? rows.map((row) => ({ 'WanderBunnies Record ID': row.id, 'WanderBunnies Record Fingerprint': fingerprint(row, ['name', 'date', 'startTime', 'startLocation', 'notes']), Date: row.date, 'Activity Type': row.activityType, 'Start Time': row.startTime, Duration: row.duration, 'Activity Name': row.name, 'Activity Notes': row.notes, 'Activity Start Address': row.startLocation, Status: row.status, Cost: row.cost })) : rows.map((row) => ({ 'WanderBunnies Record ID': row.id, 'WanderBunnies Record Fingerprint': fingerprint(row, ['name', 'checkInDate', 'checkOutDate', 'address']), 'Check In': row.checkInDate, 'Check Out': row.checkOutDate, Hotel: row.name, 'Booked?': row.status === 'Booked' ? 'Yes' : 'No', 'Cancel By': row.refundBy, Cost: row.totalCost, Address: row.address, Notes: row.notes, Features: Array.isArray(row.features) ? row.features.join('; ') : '', Rooms: row.rooms }));
-    try { await shareCsvFile(`${entity}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(entity === 'activities' ? activityHeaders : lodgingHeaders, exportRows)); } catch (error) { Alert.alert('Export failed', (error as Error).message); }
+    const exportRows = toExportRows(entity, rows, { tripStart: start0 });
+    if (!exportRows.length) { Alert.alert('There is no data to export.'); return; }
+    try { await shareCsvFile(`${ENTITY_FILE[entity]}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(EXPORT_HEADERS[entity], exportRows)); } catch (error) { Alert.alert('Export failed', (error as Error).message); }
   };
 
   if ((!enabledImport || readOnly) && !enabledExport) return null;
@@ -149,7 +141,7 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
     </View>
     <Modal visible={modalVisible} animationType="slide" onRequestClose={cancelReview}>
       <View style={themeStyle('components_CsvTransferControls_2', { Platform: Platform, colors: colors }, (theme ?? _styleTheme))}>
-        <Text style={themeStyle('components_CsvTransferControls_3', { colors: colors }, (theme ?? _styleTheme))}>Review {entity}</Text>
+        <Text style={themeStyle('components_CsvTransferControls_3', { colors: colors }, (theme ?? _styleTheme))}>Review {ENTITY_LABEL[entity]}</Text>
         <Text style={themeStyle('components_CsvTransferControls_4', { colors: colors }, (theme ?? _styleTheme))}>{visibleRows.length} rows selected; {reviewRows.length - visibleRows.length} skipped.{blockingRows.length ? ` ${blockingRows.length} rows need correction or skipping.` : ''}</Text>
         <FlatList
           style={themeStyle('components_CsvTransferControls_5', {  }, (theme ?? _styleTheme))}
@@ -158,7 +150,7 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
           initialNumToRender={24}
           windowSize={8}
           removeClippedSubviews={Platform.OS !== 'web'}
-          renderItem={({ item: row }) => <View style={themeStyle('components_CsvTransferControls_6', { colors: colors, excluded: excluded, row: row }, (theme ?? _styleTheme))}><Text style={themeStyle('components_CsvTransferControls_7', { colors: colors }, (theme ?? _styleTheme))}>Source row {row.sourceRow}: {String(row.fields.name ?? '')}</Text><Text style={themeStyle('components_CsvTransferControls_8', { colors: colors }, (theme ?? _styleTheme))}>{row.errors.length ? row.errors.map((issue) => issue.message).join(' ') : row.warnings.map((issue) => issue.message).join(' ') || 'Ready to import'}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={`${excluded.has(row.sourceRow) ? 'Include' : 'Skip'} source row ${row.sourceRow}`} onPress={() => setExcluded((current) => { const next = new Set(current); if (next.has(row.sourceRow)) next.delete(row.sourceRow); else next.add(row.sourceRow); return next; })}><Text style={themeStyle('components_CsvTransferControls_9', { theme: theme, colors: colors }, (theme ?? _styleTheme))}>{excluded.has(row.sourceRow) ? 'Include row' : 'Skip row'}</Text></TouchableOpacity></View>}
+          renderItem={({ item: row }) => <View style={themeStyle('components_CsvTransferControls_6', { colors: colors, excluded: excluded, row: row }, (theme ?? _styleTheme))}><Text style={themeStyle('components_CsvTransferControls_7', { colors: colors }, (theme ?? _styleTheme))}>Source row {row.sourceRow}: {rowTitle(row)}</Text><Text style={themeStyle('components_CsvTransferControls_8', { colors: colors }, (theme ?? _styleTheme))}>{row.errors.length ? row.errors.map((issue) => issue.message).join(' ') : row.warnings.map((issue) => issue.message).join(' ') || 'Ready to import'}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={`${excluded.has(row.sourceRow) ? 'Include' : 'Skip'} source row ${row.sourceRow}`} onPress={() => setExcluded((current) => { const next = new Set(current); if (next.has(row.sourceRow)) next.delete(row.sourceRow); else next.add(row.sourceRow); return next; })}><Text style={themeStyle('components_CsvTransferControls_9', { theme: theme, colors: colors }, (theme ?? _styleTheme))}>{excluded.has(row.sourceRow) ? 'Include row' : 'Skip row'}</Text></TouchableOpacity></View>}
         />
         <View style={themeStyle('components_CsvTransferControls_10', {  }, (theme ?? _styleTheme))}><TouchableOpacity style={[styles.outlineButton ?? styles.button, themeStyle('components_CsvTransferControls_11', {  }, (theme ?? _styleTheme))]} onPress={cancelReview} disabled={busy}><Text style={[styles.buttonText, themeStyle('components_CsvTransferControls_12', { styles: styles, colors: colors }, (theme ?? _styleTheme))]}>Cancel</Text></TouchableOpacity><TouchableOpacity style={[styles.button, themeStyle('components_CsvTransferControls_13', {  }, (theme ?? _styleTheme))]} onPress={commit} disabled={busy || !visibleRows.length || blockingRows.length > 0}><Text style={styles.buttonText}>{busy ? 'Importing…' : 'Import selected'}</Text></TouchableOpacity></View>
       </View>
