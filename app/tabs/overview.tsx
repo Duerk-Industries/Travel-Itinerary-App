@@ -1,4 +1,5 @@
 // @ts-nocheck
+import BannerPicturePicker from '../components/BannerPicturePicker';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 
@@ -621,6 +622,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
   const [visibleMapDate, setVisibleMapDate] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [pictureDay, setPictureDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
   const [blogDayImages, setBlogDayImages] = useState<Record<string, string>>({});
   const [dayWeather, setDayWeather] = useState<Record<string, OverviewWeather>>({});
@@ -2712,8 +2714,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               styles.dayHeroCard,
               themeStyle('tabs_overview_16', { dayHeroHeight: dayHeroHeight }, (theme ?? _styleTheme)),
             ]}
-            onPress={onPress}
-            disabled={!onPress}
+            onPress={onPress ?? (!readOnly ? () => setPictureDay(card.date) : undefined)}
+            disabled={!onPress && readOnly}
           >
             {img ? (
               <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
@@ -2749,6 +2751,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <Text style={[styles.dayHeroAction, isPhoneLayout ? themeStyle('tabs_overview_21', {  }, (theme ?? _styleTheme)) : null]}>View details</Text>
               ) : null}
             </View>
+            {!showAction && !readOnly ? (
+              <View pointerEvents="none" style={styles.homeHeroChangeTripBadge}>
+                <Text style={styles.homeHeroChangeTripText}>Click to Change Picture</Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         );
       };
@@ -3859,6 +3866,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         />
       ) : null}
 
+      {trip?.id && pictureDay && !readOnly ? <BannerPicturePicker visible backendUrl={backendUrl} headers={headers} tripId={trip.id} dayDate={pictureDay} styles={styles} onClose={() => setPictureDay(null)} onSaved={(url) => setBlogDayImages((previous) => ({ ...previous, [pictureDay]: url }))} /> : null}
       {addPopoverOpen ? (
         <AddItemPopover
           visible

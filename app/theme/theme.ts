@@ -6090,7 +6090,7 @@ const styleFactories = {
   // tabs/HomeTab.tsx
   tabs_HomeTab_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ pointerEvents: 'none' }),
   // tabs/HomeTab.tsx
-  tabs_HomeTab_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ left: 14, right: 'auto', bottom: 12 }),
+  tabs_HomeTab_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ right: 14, bottom: 12 }),
   // tabs/HomeTab.tsx
   tabs_HomeTab_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ justifyContent: 'flex-end', marginTop: 16 }),
   // tabs/HomeTab.tsx

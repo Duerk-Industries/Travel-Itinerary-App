@@ -303,7 +303,7 @@ router.get('/:username/:tripSlug', async (req, res) => {
   if (getCurrentDbProvider() === 'firebase') {
     const blog = await getPublicBlogFirebase(String(req.params.username), String(req.params.tripSlug));
     if (!blog) return res.status(404).json({ error: 'Public blog not found' });
-    await attachPublicMediaUrls(blog.days);
+    await attachPublicMediaUrls([...blog.days, { items: blog.tripPhotos ?? [] }]);
     res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.setHeader('X-Robots-Tag', blog.indexingEnabled ? 'index,follow' : 'noindex');
     return res.json(blog);
@@ -334,8 +334,9 @@ router.get('/:username/:tripSlug', async (req, res) => {
     byDay.set(String(item.blog_day_id), list);
   }
   const responseDays = days.rows.map((d) => ({ localDate: new Date(d.local_date).toISOString().slice(0, 10), headline: d.headline, summary: d.summary, items: byDay.get(String(d.id)) ?? [] }));
-  await attachPublicMediaUrls(responseDays);
+  const tripPhotos = (byDay.get('null') ?? []).filter((item) => item.mediaKind === 'photo').reverse();
+  await attachPublicMediaUrls([...responseDays, { items: tripPhotos }]);
   res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300'); res.setHeader('X-Robots-Tag', alias.rows[0].indexing_enabled ? 'index,follow' : 'noindex');
-  res.json({ title: alias.rows[0].title, subtitle: alias.rows[0].subtitle, introduction: alias.rows[0].introduction, contentRevision: Number(alias.rows[0].content_revision ?? 0), visibilityEpoch: Number(alias.rows[0].visibility_epoch ?? 0), days: responseDays });
+  res.json({ tripPhotos, title: alias.rows[0].title, subtitle: alias.rows[0].subtitle, introduction: alias.rows[0].introduction, contentRevision: Number(alias.rows[0].content_revision ?? 0), visibilityEpoch: Number(alias.rows[0].visibility_epoch ?? 0), days: responseDays });
 });
 export default router;

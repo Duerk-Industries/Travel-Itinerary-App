@@ -48,6 +48,23 @@ describe('trip blog day cover selection', () => {
     return { assetId, itemId: item.id };
   };
 
+  it('keeps a trip picture above the blog without assigning it to a day', async () => {
+    const init = await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`)
+      .set('Authorization', `Bearer ${token}`).set('Idempotency-Key', 'trip-banner-picture')
+      .send({ tripCover: true, dayDate: '', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1024 }).expect(201);
+    const id = init.body.asset.id;
+    expect(init.body.asset.dayDate).toBe('');
+    await request(app).post(`/api/trips/${tripId}/blog/media/${id}/complete`)
+      .set('Authorization', `Bearer ${token}`).send({ physicalBytes: 1024 }).expect(200);
+    const blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(blog.body.tripCover.assetId).toBe(id);
+    expect(blog.body.tripCover.dayDate).toBe('');
+    expect(blog.body.days.flatMap((day: any) => day.items).some((item: any) => item.assetId === id)).toBe(false);
+    await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`)
+      .set('Authorization', `Bearer ${outsiderToken}`).set('Idempotency-Key', 'outsider-trip-banner-picture')
+      .send({ tripCover: true, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1024 }).expect(403);
+  });
+
   it('automatically sets the first uploaded photo as the cover without replacing it on later uploads', async () => {
     const first = await uploadReadyPhoto(DAY1, 'cover-fallback-1');
     const second = await uploadReadyPhoto(DAY1, 'cover-fallback-2');

@@ -49,6 +49,8 @@ export interface BlogMediaAsset {
 }
 
 export interface BlogUploadInitInput {
+  // A standalone trip photo has no blog day; it appears above the daily entries.
+  tripCover?: boolean;
   tripId: string;
   dayDate: string;
   mediaKind: BlogMediaKind;

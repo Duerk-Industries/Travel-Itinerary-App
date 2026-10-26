@@ -630,6 +630,14 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('day-details-next')).toBeTruthy();
   });
 
+  test('opens the picture chooser by pressing the day banner', async () => {
+    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    expect(await findByText('Click to Change Picture')).toBeTruthy();
+    fireEvent.press(await findByTestId('day-details-hero'));
+    expect(await findByTestId('banner-upload-picture')).toBeTruthy();
+  });
+
   test('hides empty Notes and Checklists and offers direct add buttons at the bottom', async () => {
     const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));

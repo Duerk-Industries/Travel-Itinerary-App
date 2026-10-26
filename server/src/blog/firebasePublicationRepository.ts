@@ -239,7 +239,8 @@ export const getPublicBlogFirebase = async (usernameSlug: string, tripSlug: stri
       .sort((a, b) => String(a.sortKey ?? '').localeCompare(String(b.sortKey ?? '')));
     return { localDate: String(day.localDate), headline: day.headline ?? null, summary: day.summary ?? null, items };
   }).sort((a, b) => a.localDate.localeCompare(b.localDate));
-  return { title: blogData.title ?? '', subtitle: blogData.subtitle ?? null, introduction: blogData.introduction ?? null, contentRevision: Number(blogData.contentRevision ?? 0), visibilityEpoch: Number(blogData.visibilityEpoch ?? 0), indexingEnabled: blogData.indexingEnabled !== false, days };
+  const tripPhotos = (itemsByDay.get('') ?? []).filter((item) => item.mediaKind === 'photo').sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)));
+  return { tripPhotos, title: blogData.title ?? '', subtitle: blogData.subtitle ?? null, introduction: blogData.introduction ?? null, contentRevision: Number(blogData.contentRevision ?? 0), visibilityEpoch: Number(blogData.visibilityEpoch ?? 0), indexingEnabled: blogData.indexingEnabled !== false, days };
 };
 
 export const listPublicBlogSitemapFirebase = async (): Promise<Array<{ username_slug: string; trip_slug: string; updated_at: string }>> => {

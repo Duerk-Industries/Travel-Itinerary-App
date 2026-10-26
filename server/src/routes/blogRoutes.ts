@@ -243,7 +243,8 @@ router.get('/:tripId/blog', async (req, res) => {
       res.status(304).end();
       return;
     }
-    res.json({ ...blog, publicPath });
+    const tripPhotos = mediaItems.filter((item) => !item.dayDate && item.mediaKind === 'photo' && item.state === 'ready').sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+    res.json({ ...blog, tripPhotos, tripCover: tripPhotos[0] ?? null, publicPath });
   } catch (err) {
     errorResponse(res, err);
   }
@@ -434,6 +435,7 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
     const result = await blogMediaRepository().initUpload(userIdOf(req), {
       tripId: req.params.tripId,
       dayDate: String(req.body?.dayDate ?? ''),
+      tripCover: req.body?.tripCover === true,
       mediaKind,
       mimeType: String(req.body?.mimeType ?? ''),
       byteSize: Number(req.body?.byteSize),
@@ -478,7 +480,7 @@ router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
     const asset = reallyUploaded && pending?.mediaKind !== 'audio'
       ? await processMediaUpload(userId, req.params.assetId)
       : await blogMediaRepository().completeUpload(userId, req.params.assetId, Number(req.body?.physicalBytes), req.body?.checksum);
-    if (asset.mediaKind === 'photo') {
+    if (asset.mediaKind === 'photo' && asset.dayDate) {
       await blogRepository().setDayCoverIfUnset(userId, asset.tripId, asset.dayDate, asset.id).catch((err) => {
         // The media is already committed at this point. Do not turn a cover-selection failure into
         // a failed upload response that encourages the client to retry an already-finalized asset.

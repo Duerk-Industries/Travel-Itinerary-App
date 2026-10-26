@@ -90,6 +90,7 @@ export const getStorageSummary = async (userId: string): Promise<BlogStorageSumm
 
 export const initUpload = async (userId: string, input: BlogUploadInitInput): Promise<BlogUploadInitResult> => {
   if (!(await ensureUserInTrip(input.tripId, userId))) throw new Error('Not authorized to edit this trip');
+  if (input.tripCover && (input.mediaKind !== 'photo' || input.galleryItemId)) throw new Error('Trip covers must be standalone photos');
   const allowed = input.mediaKind === 'photo'
     ? ['image/jpeg', 'image/png']
     : input.mediaKind === 'audio'
@@ -131,7 +132,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   }
   const assetId = randomUUID();
   const blogItemId = input.galleryItemId ?? randomUUID();
-  const dayDate = galleryDayDate ?? input.dayDate;
+  const dayDate = input.tripCover ? '' : galleryDayDate ?? input.dayDate;
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
   const audioUploadUrl = input.mediaKind === 'audio' ? await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase()) : null;
   if (input.mediaKind === 'audio' && !audioUploadUrl) throw new Error('VOICE_STORAGE_UNAVAILABLE');
@@ -144,7 +145,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   const data = { tripId: input.tripId, blogItemId, dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, capturedLat, capturedLng, caption: input.caption ?? null, tags: normalizeBlogTags(input.tags ?? []), altText: input.altText ?? null, objectKey, sourceRef: input.idempotencyKey, isHighlight: false, parentKindKey, position, createdAt: nowIso(), updatedAt: nowIso() };
   await db.collection('blog_media_assets').doc(assetId).set(data);
   if (!input.galleryItemId) {
-    await db.collection('blog_items').doc(blogItemId).set({ tripId: input.tripId, blogDayId: input.dayDate, localDate: input.dayDate, kindKey: parentKindKey, schemaVersion: 1, audience: 'public', sortKey: `${Date.now()}-${blogItemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, deletedAt: null, createdAt: nowIso(), updatedAt: nowIso() });
+    await db.collection('blog_items').doc(blogItemId).set({ tripId: input.tripId, blogDayId: dayDate || null, localDate: dayDate || null, kindKey: parentKindKey, schemaVersion: 1, audience: 'public', sortKey: `${Date.now()}-${blogItemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, deletedAt: null, createdAt: nowIso(), updatedAt: nowIso() });
   }
   const accountRef = db.collection('blog_storage_accounts').doc(userId);
   await db.runTransaction(async (tx) => { const current = (await tx.get(accountRef)).data() as any; const available = Number(current?.includedBytes ?? 0) + Number(current?.purchasedBytes ?? 0) - Number(current?.visibleCommittedBytes ?? 0) - Number(current?.reservedBytes ?? 0); if (available < input.byteSize) throw new Error('QUOTA_EXCEEDED'); tx.set(accountRef, { reservedBytes: Number(current?.reservedBytes ?? 0) + input.byteSize, updatedAt: nowIso() }, { merge: true }); });

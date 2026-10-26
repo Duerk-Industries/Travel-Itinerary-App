@@ -92,94 +92,29 @@ describe('HomeTab', () => {
     expect(onNavigate).toHaveBeenCalledWith('all-trips');
   });
 
-  test('renders hero and opens trip picker modal', async () => {
-    const { findByText, getByTestId, queryByTestId } = render(
-      <HomeTab
-        backendUrl="http://localhost"
-        headers={{}}
-        activeTripId="t2"
-        trips={trips}
-        followedTrips={followedTrips}
-        styles={styles}
-        onSelectTrip={jest.fn()}
-        onSelectFollowedTrip={jest.fn()}
-        onNavigate={jest.fn()}
-      />
+  test('opens the picture chooser from the hero and keeps trip changes in the menu', async () => {
+    const onNavigate = jest.fn();
+    const { getByTestId, findByText, queryByTestId } = render(
+      <HomeTab backendUrl="http://localhost" headers={{}} activeTripId="t2" trips={trips} followedTrips={followedTrips}
+        styles={styles} onSelectTrip={jest.fn()} onSelectFollowedTrip={jest.fn()} onNavigate={onNavigate} />
     );
-
-    expect(await findByText('Change or Create Trip')).toBeTruthy();
-    expect(await findByText('Cairo')).toBeTruthy();
-
+    expect(await findByText('Click to Change Picture')).toBeTruthy();
     fireEvent.press(getByTestId('home-hero-card'));
-    expect(getByTestId('home-trip-modal')).toBeTruthy();
-
-    fireEvent.press(getByTestId('home-trip-row-t1'));
-    await waitFor(() => expect(queryByTestId('home-trip-modal')).toBeNull());
+    expect(await findByText('Upload picture')).toBeTruthy();
+    expect(queryByTestId('home-trip-modal')).toBeNull();
+    fireEvent.press(await findByText('Cancel'));
+    fireEvent.press(getByTestId('home-all-trips'));
+    expect(onNavigate).toHaveBeenCalledWith('all-trips');
   });
 
-  test('delete button appears per trip row and calls onDeleteTrip without selecting the trip', async () => {
-    const onDeleteTrip = jest.fn();
-    const onSelectTrip = jest.fn();
-    const { getByTestId } = render(
-      <HomeTab
-        backendUrl="http://localhost"
-        headers={{}}
-        activeTripId="t2"
-        trips={trips}
-        followedTrips={followedTrips}
-        styles={styles}
-        onSelectTrip={onSelectTrip}
-        onSelectFollowedTrip={jest.fn()}
-        onNavigate={jest.fn()}
-        onDeleteTrip={onDeleteTrip}
-      />
+  test('does not allow followers to change the banner', () => {
+    const { queryByText, getByTestId } = render(
+      <HomeTab readOnly backendUrl="http://localhost" headers={{}} activeTripId="t2" trips={trips} followedTrips={followedTrips}
+        styles={styles} onSelectTrip={jest.fn()} onSelectFollowedTrip={jest.fn()} onNavigate={jest.fn()} />
     );
-
     fireEvent.press(getByTestId('home-hero-card'));
-    fireEvent.press(getByTestId('home-trip-row-delete-t1'));
-
-    expect(onDeleteTrip).toHaveBeenCalledWith({ id: 't1', name: 'Alpha Trip' });
-    expect(onSelectTrip).not.toHaveBeenCalled();
-  });
-
-  test('omits delete button when onDeleteTrip is not provided', async () => {
-    const { getByTestId, queryByTestId } = render(
-      <HomeTab
-        backendUrl="http://localhost"
-        headers={{}}
-        activeTripId="t2"
-        trips={trips}
-        followedTrips={followedTrips}
-        styles={styles}
-        onSelectTrip={jest.fn()}
-        onSelectFollowedTrip={jest.fn()}
-        onNavigate={jest.fn()}
-      />
-    );
-
-    fireEvent.press(getByTestId('home-hero-card'));
-    expect(queryByTestId('home-trip-row-delete-t1')).toBeNull();
-  });
-
-  test('orders trips with active first, then no start date, then by start date', async () => {
-    const { getByTestId, getAllByTestId } = render(
-      <HomeTab
-        backendUrl="http://localhost"
-        headers={{}}
-        activeTripId="t2"
-        trips={trips}
-        followedTrips={followedTrips}
-        styles={styles}
-        onSelectTrip={jest.fn()}
-        onSelectFollowedTrip={jest.fn()}
-        onNavigate={jest.fn()}
-      />
-    );
-
-    fireEvent.press(getByTestId('home-hero-card'));
-    const rows = getAllByTestId(/home-trip-row-/);
-    const order = rows.map((row) => row.props.testID.replace('home-trip-row-', ''));
-    expect(order).toEqual(['t2', 't1', 't3']);
+    expect(queryByText('Click to Change Picture')).toBeNull();
+    expect(queryByText('Upload picture')).toBeNull();
   });
 
   test('navigates when a home button is pressed', () => {
@@ -299,7 +234,7 @@ describe('HomeTab', () => {
     expect(queryByTestId('home-nav-create-trip')).toBeNull();
   });
 
-  test('shows the change-trip cue without a Share action', () => {
+  test('shows the change-picture cue without a Share action', () => {
     const onOpenShareTrip = jest.fn();
     const onNavigate = jest.fn();
     const { getByText, queryByTestId } = render(
@@ -316,56 +251,21 @@ describe('HomeTab', () => {
       />
     );
 
-    expect(getByText('Click to Change Trip')).toBeTruthy();
+    expect(getByText('Click to Change Picture')).toBeTruthy();
     expect(queryByTestId('home-share-trip-button')).toBeNull();
     expect(onOpenShareTrip).not.toHaveBeenCalled();
     expect(onNavigate).not.toHaveBeenCalled();
   });
 
-  test('shows a create-trip dialog when no trips are available', () => {
+  test('keeps trip creation available in the menu when no trip is selected', () => {
     const onNavigate = jest.fn();
-    const { getByTestId, getByText, queryByTestId } = render(
-      <HomeTab
-        backendUrl="http://localhost"
-        headers={{}}
-        activeTripId={null}
-        trips={[]}
-        followedTrips={[]}
-        styles={styles}
-        onSelectTrip={jest.fn()}
-        onSelectFollowedTrip={jest.fn()}
-        onNavigate={onNavigate}
-      />
+    const { getByTestId, queryByText } = render(
+      <HomeTab backendUrl="http://localhost" headers={{}} activeTripId={null} trips={[]} followedTrips={[]}
+        styles={styles} onSelectTrip={jest.fn()} onSelectFollowedTrip={jest.fn()} onNavigate={onNavigate} />
     );
-
-    fireEvent.press(getByTestId('home-hero-card'));
-    expect(getByTestId('home-no-trips-dialog')).toBeTruthy();
-    expect(getByText('A trip needs to be created before you can select one.')).toBeTruthy();
-
-    fireEvent.press(getByTestId('home-no-trips-ok'));
-    expect(queryByTestId('home-no-trips-dialog')).toBeNull();
-    expect(onNavigate).not.toHaveBeenCalled();
-  });
-
-  test('opens create trip wizard from the no-trips dialog', () => {
-    const onNavigate = jest.fn();
-    const { getByTestId } = render(
-      <HomeTab
-        backendUrl="http://localhost"
-        headers={{}}
-        activeTripId={null}
-        trips={[]}
-        followedTrips={[]}
-        styles={styles}
-        onSelectTrip={jest.fn()}
-        onSelectFollowedTrip={jest.fn()}
-        onNavigate={onNavigate}
-      />
-    );
-
-    fireEvent.press(getByTestId('home-hero-card'));
-    fireEvent.press(getByTestId('home-no-trips-create'));
-    expect(onNavigate).toHaveBeenCalledWith('create-trip');
+    fireEvent.press(getByTestId('home-all-trips'));
+    expect(onNavigate).toHaveBeenCalledWith('all-trips');
+    expect(queryByText('Click to Change Picture')).toBeNull();
   });
 
   test('opens the relocated follow dialog and submits a follow code', async () => {

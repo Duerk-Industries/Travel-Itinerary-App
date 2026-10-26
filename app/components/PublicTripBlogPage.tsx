@@ -396,6 +396,8 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
   // document endpoint) — the first available photo, in day order, is a reasonable stand-in for a
   // cover image without a second request.
   const coverPhoto = useMemo(() => {
+    const tripCover = state.blog?.tripPhotos?.find((photo) => photo.primaryUrl);
+    if (tripCover) return tripCover;
     for (const day of state.blog?.days ?? []) {
       const photo = day.items.find((item) => item.mediaKind === 'photo' && item.primaryUrl);
       if (photo) return photo;

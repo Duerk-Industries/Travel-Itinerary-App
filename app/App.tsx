@@ -3416,6 +3416,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'home'
             ? renderBoundedPage(
                 <HomeTab
+                  readOnly={isFollowingMode || offlineReadOnly}
                   backendUrl={backendUrl}
                   headers={headers}
                   activeTripId={activeTripId}

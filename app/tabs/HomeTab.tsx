@@ -8,6 +8,7 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
 import Skeleton from '../components/Skeleton';
 import { useImageSource } from '../utils/imageSource';
+import BannerPicturePicker from '../components/BannerPicturePicker';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 
 type Trip = {
@@ -22,6 +23,7 @@ type Trip = {
 };
 
 type HomeTabProps = {
+  readOnly?: boolean;
   backendUrl: string;
   headers: Record<string, string>;
   activeTripId: string | null;
@@ -54,6 +56,7 @@ const formatTripDuration = (trip?: Trip | null): string | null => {
 };
 
 const HomeTab: React.FC<HomeTabProps> = ({
+  readOnly = false,
   backendUrl,
   headers,
   activeTripId,
@@ -76,6 +79,18 @@ const HomeTab: React.FC<HomeTabProps> = ({
   const isPhoneLayout = viewportWidth < 680;
   const isCompactLayout = viewportWidth < 520;
   const heroHeight = Math.max(200, Math.min(320, viewportWidth * 0.42));
+  const [picturePickerOpen, setPicturePickerOpen] = useState(false);
+  const [customPicture, setCustomPicture] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    setCustomPicture(null);
+    if (activeTripId) fetch(`${backendUrl}/api/trips/${activeTripId}/blog?limit=1`, { headers }).then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      if (active) setCustomPicture(data.tripCover?.primaryUrl || data.tripCover?.thumbnailUrl || null);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [activeTripId, backendUrl, headers]);
   const [heroImage, setHeroImage] = useState<string | null>(null);
   const [heroLoading, setHeroLoading] = useState<boolean>(false);
   const [showTripPicker, setShowTripPicker] = useState(false);
@@ -148,7 +163,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heroFetchKey, backendUrl]);
 
-  const heroImageSource = useImageSource(heroImage);
+  const heroImageSource = useImageSource(customPicture || heroImage);
 
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
@@ -197,15 +212,12 @@ const HomeTab: React.FC<HomeTabProps> = ({
             themeStyle('tabs_HomeTab_7', { heroHeight: heroHeight }, _styleTheme),
             pressed && styles.homeHeroCardPressed,
           ]}
-          onPress={() => {
-            if (hasTripsToSelect) {
-              setShowTripPicker(true);
-              return;
-            }
-            setShowNoTripsDialog(true);
-          }}
+          accessibilityRole="button"
+          accessibilityLabel="Change trip picture"
+          disabled={readOnly || !activeTripId}
+          onPress={() => setPicturePickerOpen(true)}
         >
-          {heroImage ? (
+          {customPicture || heroImage ? (
             <Image style={styles.homeHeroImage} source={heroImageSource} resizeMode="cover" />
           ) : heroLoading ? (
             <Skeleton style={styles.homeHeroImage} testID="home-hero-skeleton" />
@@ -232,11 +244,11 @@ const HomeTab: React.FC<HomeTabProps> = ({
               {heroTitle}
             </Text>
           </View>
-          <View
+          {!readOnly && activeTripId ? <View
             style={[styles.homeHeroChangeTripBadge, themeStyle('tabs_HomeTab_11', {  }, _styleTheme), isCompactLayout && themeStyle('tabs_HomeTab_12', {  }, _styleTheme)]}
           >
-            <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>
-          </View>
+            <Text style={styles.homeHeroChangeTripText}>Click to Change Picture</Text>
+          </View> : null}
         </Pressable>
 
         <View style={styles.homeNavList}>
@@ -396,7 +408,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
         </Modal>
       ) : null}
 
-
+      {activeTripId && !readOnly ? <BannerPicturePicker visible={picturePickerOpen} backendUrl={backendUrl} headers={headers} tripId={activeTripId} styles={styles} onClose={() => setPicturePickerOpen(false)} onSaved={setCustomPicture} /> : null}
     </View>
   );
 };
