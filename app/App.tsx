@@ -4033,12 +4033,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'overview'
             ? renderBoundedPage(
               <View style={{ flex: 1 }}>
-                {activeTrip?.id && !isFollowingMode ? <View style={{ alignItems: 'flex-end', padding: 8 }}>
-                  <TouchableOpacity accessibilityRole="button" testID="itinerary-share-trip-button" style={[styles.button, styles.smallButton]} onPress={handleOpenShareTrip}>
-                    <Text style={styles.buttonText}>Share</Text>
-                  </TouchableOpacity>
-                </View> : null}
                 <OverviewTab
+                  onOpenShareTrip={activeTrip?.id && !isFollowingMode ? handleOpenShareTrip : undefined}
                   backendUrl={backendUrl}
                   headers={headers}
                   jsonHeaders={jsonHeaders}

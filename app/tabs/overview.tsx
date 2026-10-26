@@ -242,6 +242,7 @@ type OverviewTabProps = {
   editSignal?: number;
   goToDay1Signal?: number;
   onUpdateCurrency?: (tripId: string, currency: string) => void;
+  onOpenShareTrip?: () => void;
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
@@ -470,6 +471,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   editSignal,
   goToDay1Signal,
   onUpdateCurrency,
+  onOpenShareTrip,
   onOpenAddress,
   onRefreshTrips,
   onRefreshGroups,
@@ -3205,6 +3207,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
                 <Text style={styles.buttonText}>Edit</Text>
               </TouchableOpacity>
+              {onOpenShareTrip ? (
+                <TouchableOpacity accessibilityRole="button" testID="itinerary-share-trip-button" style={[styles.button, styles.smallButton]} onPress={onOpenShareTrip}>
+                  <Text style={styles.buttonText}>Share</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
           {renderDocumentImporter()}
@@ -3287,6 +3294,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
                 <Text style={styles.buttonText}>Edit</Text>
               </TouchableOpacity>
+              {onOpenShareTrip ? (
+                <TouchableOpacity accessibilityRole="button" testID="itinerary-share-trip-button" style={[styles.button, styles.smallButton]} onPress={onOpenShareTrip}>
+                  <Text style={styles.buttonText}>Share</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           )}
         </View>
