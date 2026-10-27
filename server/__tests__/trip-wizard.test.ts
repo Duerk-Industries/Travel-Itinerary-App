@@ -75,6 +75,25 @@ describe('Trip wizard flow', () => {
       .expect(400);
   });
 
+  it('creates and reloads an unscheduled trip with a duration and no invented dates', async () => {
+    const created = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Someday Trip', durationDays: 7, participants: [] }).expect(201);
+    const trip = created.body.trip;
+    expect(trip.durationDays).toBe(7);
+    expect(trip.startDate).toBeNull();
+    expect(trip.endDate).toBeNull();
+    expect(trip.startMonth).toBeNull();
+    expect(trip.startYear).toBeNull();
+    const loaded = await request(app).get(`/api/trips/${trip.id}`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(loaded.body.durationDays).toBe(7);
+    expect(loaded.body.startDate).toBeNull();
+  });
+
+  it.each([0, -2, 1.5, 'invalid'])('rejects an invalid unscheduled trip length: %s', async (durationDays) => {
+    await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Invalid length', durationDays }).expect(400);
+  });
+
   it('requires participant names', async () => {
     await request(app)
       .post('/api/trips/wizard')

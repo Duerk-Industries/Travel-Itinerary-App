@@ -275,7 +275,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     durationDays: '',
     mode: 'range',
   });
-  const [dateModeSelected, setDateModeSelected] = useState<'range' | 'month' | null>(initialDraft?.startDate ? 'range' : null);
+  const [dateModeSelected, setDateModeSelected] = useState<TripDates['mode'] | null>(initialDraft?.startDate ? 'range' : null);
   const [participants, setParticipants] = useState<ParticipantInput[]>([]);
   const [participantDraft, setParticipantDraft] = useState<ParticipantInput>({ firstName: '', lastName: '', email: '' });
   const [participantSearch, setParticipantSearch] = useState('');
@@ -347,7 +347,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       endDate: dates.mode === 'range' ? dates.endDate || null : null,
       startMonth: dates.mode === 'month' ? Number(dates.startMonth) || null : null,
       startYear: dates.mode === 'month' ? Number(dates.startYear) || null : null,
-      durationDays: dates.mode === 'month' ? Number(dates.durationDays) || null : null,
+      durationDays: dates.mode !== 'range' ? Number(dates.durationDays) || null : null,
       createdAt: new Date().toISOString(),
     }),
     [dates, details, itineraryDepartureAirport, selectedLocationLabel]
@@ -505,10 +505,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     [wizardTours, wizardMemberIds]
   );
   const tripDayCount = useMemo(() => {
-    const rangeDays = computedDays ?? null;
+    const rangeDays = dates.mode === 'range' ? computedDays : null;
     if (rangeDays) return rangeDays;
     const monthDays = Number(dates.durationDays);
-    if (dates.mode === 'month' && Number.isFinite(monthDays) && monthDays > 0) return monthDays;
+    if (dates.mode !== 'range' && Number.isFinite(monthDays) && monthDays > 0) return monthDays;
     const manualDays = Number(itineraryDays);
     if (Number.isFinite(manualDays) && manualDays > 0) return manualDays;
     return 1;
@@ -521,10 +521,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }, [wizardDefaultPayerId, wizardCarDraft.paidBy.length]);
 
   useEffect(() => {
-    if (dates.mode === 'range' && computedDays && !itineraryDaysTouched) {
+    if (dates.mode === 'duration') {
+      setItineraryDays(dates.durationDays);
+    } else if (dates.mode === 'range' && computedDays && !itineraryDaysTouched) {
       setItineraryDays(String(computedDays));
     }
-  }, [computedDays, dates.mode, itineraryDaysTouched]);
+  }, [computedDays, dates.mode, dates.durationDays, itineraryDaysTouched]);
 
   useEffect(() => {
     setWizardPromptTraits(normalizePromptTraits(defaultPromptTraits));
@@ -608,7 +610,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
     const monthNum = Number(dates.startMonth);
     const yearNum = Number(dates.startYear);
-    if (monthNum && yearNum) {
+    if (dates.mode === 'month' && monthNum && yearNum) {
       const date = new Date(yearNum, monthNum - 1, day);
       if (!Number.isNaN(date.valueOf())) {
         return date.toISOString().slice(0, 10);
@@ -624,7 +626,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const getItemDayIndex = useCallback((item: ItineraryItemInput): number => {
     const raw = item.date?.trim();
     if (raw) {
-      const match = /^Day\\s+(\\d+)/i.exec(raw);
+      const match = /^Day\s+(\d+)/i.exec(raw);
       if (match) {
         const parsedDay = Number(match[1]);
         return Number.isFinite(parsedDay) && parsedDay > 0 ? parsedDay : 1;
@@ -640,7 +642,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         }
         const monthNum = Number(dates.startMonth);
         const yearNum = Number(dates.startYear);
-        if (monthNum && yearNum) {
+        if (dates.mode === 'month' && monthNum && yearNum) {
           const start = new Date(yearNum, monthNum - 1, 1);
           if (!Number.isNaN(start.valueOf())) {
             const diff = Math.floor((parsed.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -797,7 +799,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       if (!dateModeSelected) return false;
       if (dateModeSelected === 'range') {
         if (!dates.startDate || !dates.endDate) return false;
-      } else {
+      } else if (dateModeSelected === 'month') {
         if (!dates.startMonth || !dates.startYear || !dates.durationDays) return false;
       }
       return !validateTripDates(dates);
@@ -807,7 +809,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     return true;
   }, [dateModeSelected, dates, details, itineraryMode, participants, stepIndex]);
 
-  const quickStartReady = Boolean(details.name.trim() && selectedLocations.length && dates.startDate && dates.endDate && !validateTripDates({ ...dates, mode: 'range' }));
+  const quickStartReady = Boolean(details.name.trim() && selectedLocations.length && (dates.mode === 'duration' ? !validateTripDates(dates) : dates.startDate && dates.endDate && !validateTripDates({ ...dates, mode: 'range' })));
 
   const goNext = useCallback(() => {
     let error: string | null = null;
@@ -820,7 +822,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         if (!dates.startDate || !dates.endDate) {
           error = 'Select both a start and end date.';
         }
-      } else if (!dates.startMonth || !dates.startYear || !dates.durationDays) {
+      } else if (dateModeSelected === 'month' && (!dates.startMonth || !dates.startYear || !dates.durationDays)) {
         error = 'Select a month, year, and number of days.';
       }
     }
@@ -1116,7 +1118,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const submitWizard = async () => {
     if (!userToken) return;
     const detailError = validateTripDetails(details);
-    const dateError = validateTripDates(quickStartMode ? { ...dates, mode: 'range' } : dates);
+    const dateError = validateTripDates(dates);
     const destinationError = quickStartMode && !selectedLocations.length ? 'Choose at least one destination.' : null;
     const participantError = quickStartMode ? null : validateParticipants(participants);
     if (detailError || dateError || participantError || destinationError) {
@@ -1145,7 +1147,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           endDate: dates.mode === 'range' ? dates.endDate || undefined : undefined,
           startMonth: dates.mode === 'month' ? Number(dates.startMonth) || undefined : undefined,
           startYear: dates.mode === 'month' ? Number(dates.startYear) || undefined : undefined,
-          durationDays: dates.mode === 'month' ? Number(dates.durationDays) || undefined : undefined,
+          durationDays: dates.mode !== 'range' ? Number(dates.durationDays) || undefined : undefined,
           participants: participantPayload,
         }),
       });
@@ -1173,10 +1175,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         await saveWizardCarRentalsForTrip(tripId, groupId);
       }
 
-      if (!quickStartMode && itineraryEnabled && (itineraryItems.length || generateItinerary)) {
+      if (!quickStartMode && itineraryEnabled && (itineraryItems.length || generateItinerary || dates.mode === 'duration')) {
         const rangeDays = computeDurationFromRange(dates.startDate, dates.endDate);
         const days =
-          (dates.mode === 'range' ? rangeDays : null) ??
+          (dates.mode === 'duration' ? Number(dates.durationDays) : dates.mode === 'range' ? rangeDays : null) ??
           (Number(itineraryDays) > 0 ? Number(itineraryDays) : Number(dates.durationDays) || 1);
         const locationNames = selectedLocations.map((location) => location.name).filter(Boolean);
         const destination = locationNames.length ? locationNames.join(', ') : details.name.trim() || 'Trip';
@@ -1314,6 +1316,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         showCitySearch={!destinationAttractionWizardEnabled}
       />
       <Text style={styles.modalLabel}>Dates</Text>
+      <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
+        <TouchableOpacity testID="quick-start-dates-scheduled" accessibilityRole="button" accessibilityState={{ selected: dates.mode === 'range' }} style={[styles.button, styles.smallButton]} onPress={() => setDates((prev) => ({ ...prev, mode: 'range' }))}><Text style={styles.buttonText}>Set dates</Text></TouchableOpacity>
+        <TouchableOpacity testID="quick-start-dates-unscheduled" accessibilityRole="button" accessibilityState={{ selected: dates.mode === 'duration' }} style={[styles.button, styles.smallButton]} onPress={() => setDates((prev) => ({ ...prev, mode: 'duration' }))}><Text style={styles.buttonText}>Dates not set</Text></TouchableOpacity>
+      </View>
+      {dates.mode === 'duration' ? <View>
+        <Text style={styles.modalLabel}>Trip length (days)</Text>
+        <TextInput testID="quick-start-trip-length" accessibilityLabel="Trip length in days" keyboardType="number-pad" style={styles.input} value={dates.durationDays} onChangeText={(durationDays) => setDates((prev) => ({ ...prev, durationDays }))} />
+      </View> : <>
+
       <View style={[styles.row, themeStyle('tabs_createTripWizard_11', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
         <View style={[styles.dateInputWrap, themeStyle('tabs_createTripWizard_12', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
           <DateField
@@ -1339,9 +1350,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         </View>
       </View>
       {computedDays ? <Text style={styles.helperText}>{computedDays} day(s)</Text> : null}
+      </>}
       <TouchableOpacity
         style={[styles.button, styles.outlineButton ?? styles.button, themeStyle('tabs_createTripWizard_14', {  }, (theme ?? _styleTheme))]}
-        onPress={() => { setQuickStartMode(false); setDateModeSelected(dates.startDate || dates.endDate ? 'range' : null); setDates((prev) => ({ ...prev, mode: 'range' })); }}
+        onPress={() => { setQuickStartMode(false); setDateModeSelected(dates.mode === 'duration' ? 'duration' : dates.startDate || dates.endDate ? 'range' : null); }}
         testID="quick-start-customize"
       >
         <Text style={styles.buttonText}>Customize before creating</Text>
@@ -1410,8 +1422,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         return (
           <>
             <Text style={styles.sectionTitle}>Dates</Text>
-            <Text style={styles.helperText}>Choose exact dates or a month and duration (optional).</Text>
-            <View style={styles.row}>
+            <Text style={styles.helperText}>Choose exact dates, a month and duration, or a trip length with dates to be decided.</Text>
+            <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
               <TouchableOpacity
                 style={[
                   themeStyle('tabs_createTripWizard_16', { dateModeSelected: dateModeSelected, theme: theme }, (theme ?? _styleTheme)),
@@ -1447,9 +1459,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   Flexible Timeline
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity testID="wizard-dates-unscheduled" accessibilityRole="button" accessibilityState={{ selected: dateModeSelected === 'duration' }} style={[styles.button, styles.smallButton, dateModeSelected === 'duration' && styles.toggleActive]} onPress={() => { setDateModeSelected('duration'); setDates((prev) => ({ ...prev, mode: 'duration' })); }}>
+                <Text style={styles.buttonText}>Dates not set</Text>
+              </TouchableOpacity>
             </View>
             {!dateModeSelected ? (
               <Text style={styles.helperText}>Select a date option to continue.</Text>
+            ) : dates.mode === 'duration' ? (
+              <View>
+                <Text style={styles.modalLabel}>Trip length (days)</Text>
+                <TextInput testID="wizard-trip-length" accessibilityLabel="Trip length in days" style={styles.input} keyboardType="number-pad" value={dates.durationDays} onChangeText={(durationDays) => setDates((prev) => ({ ...prev, durationDays }))} />
+                <Text style={styles.helperText}>Choose your dates later. Your itinerary will use numbered days.</Text>
+              </View>
             ) : dates.mode === 'range' ? (
               <>
                 <View style={[styles.row, themeStyle('tabs_createTripWizard_21', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
@@ -1680,7 +1701,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     setItineraryDaysTouched(true);
                     setItineraryDays(text);
                     }}
-                    editable={!(dates.mode === 'range' && computedDays)}
+                    editable={!(dates.mode === 'range' && computedDays) && dates.mode !== 'duration'}
                   />
                 <Text style={styles.modalLabel}>Planning Preferences</Text>
                 <Text style={styles.helperText}>Tell us how your group likes to travel and we'll shape the AI itinerary around it.</Text>
@@ -2402,6 +2423,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             {dates.mode === 'range' && (dates.startDate || dates.endDate) ? (
               <Text style={styles.bodyText}>Dates: {dates.startDate || 'TBD'} - {dates.endDate || 'TBD'}</Text>
             ) : null}
+            {dates.mode === 'duration' ? <Text style={styles.bodyText}>Dates not set · {dates.durationDays} day(s)</Text> : null}
             {dates.mode === 'month' && monthLabel && dates.durationDays ? (
               <Text style={styles.bodyText}>
                 Dates: {monthLabel} · {dates.durationDays} day(s)

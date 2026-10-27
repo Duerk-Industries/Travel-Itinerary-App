@@ -4,6 +4,26 @@ import AllTripsTab from '../tabs/allTrips';
 import type { Trip } from '../../server/src/types';
 
 describe('All trips page', () => {
+  it('places unscheduled trips after Upcoming with traveler and following subsections', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'follow', durationDays: 5 }) });
+    try {
+      const screen = render(<AllTripsTab backendUrl="http://localhost" headers={{}} trips={[
+        { id: 'future', groupId: 'g', name: 'Future', createdAt: '', startDate: '2099-01-01', endDate: '2099-01-02' },
+        { id: 'unscheduled', groupId: 'g', name: 'Someday', createdAt: '', durationDays: 7 },
+        { id: 'past', groupId: 'g', name: 'Past', createdAt: '', startDate: '2000-01-01', endDate: '2000-01-02' },
+      ]} followedTrips={[{ tripId: 'follow', tripName: 'Following someday', todayDetails: [] }]} activeTripId={null}
+        styles={{}} onSelectTrip={jest.fn()} onSelectFollowedTrip={jest.fn()} onBack={jest.fn()} />);
+      await waitFor(() => expect(screen.getByText('Dates not set · 5 day(s)')).toBeTruthy());
+      const unscheduled = within(screen.getByTestId('all-trips-unscheduled'));
+      expect(unscheduled.getByText('One the Trip')).toBeTruthy();
+      expect(unscheduled.getByText('Following')).toBeTruthy();
+      expect(unscheduled.getByText('Someday')).toBeTruthy();
+      expect(unscheduled.getByText('Dates not set · 7 day(s)')).toBeTruthy();
+      expect(screen.getAllByTestId(/^all-trips-(upcoming|unscheduled|past)$/).map((section) => section.props.testID))
+        .toEqual(['all-trips-upcoming', 'all-trips-unscheduled', 'all-trips-past']);
+    } finally { global.fetch = originalFetch; }
+  });
   it('groups trips, prioritizes traveler membership, and selects either relationship', async () => {
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'followed', startDate: '2000-01-01', endDate: '2000-01-02' }) });

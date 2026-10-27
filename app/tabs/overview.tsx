@@ -847,7 +847,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     async (defaultDay: number): Promise<string | null> => {
       if (itineraryId) return itineraryId;
       if (!trip?.id) return null;
-      const days = computeTripDays(trip.startDate ?? null, trip.endDate ?? null) ?? defaultDay ?? 1;
+      const days = computeTripDays(trip.startDate ?? null, trip.endDate ?? null) ?? Math.max(trip.durationDays ?? 1, defaultDay ?? 1);
       const res = await fetch(`${backendUrl}/api/itineraries`, {
         method: 'POST',
         headers: jsonHeaders,
@@ -867,7 +867,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       if (newId) setItineraryId(newId);
       return newId;
     },
-    [backendUrl, itineraryId, jsonHeaders, trip?.id, trip?.destination, trip?.name, trip?.startDate, trip?.endDate]
+    [backendUrl, itineraryId, jsonHeaders, trip?.id, trip?.destination, trip?.name, trip?.startDate, trip?.endDate, trip?.durationDays]
   );
 
   const postNewDetail = useCallback(
@@ -1170,6 +1170,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     _query: string
   ) => undefined;
 
+  const isUnscheduled = Boolean(trip?.durationDays && !trip?.startDate && !trip?.endDate && !trip?.startMonth && !trip?.startYear);
   const displayStartDate = trip?.startDate ?? null;
   const displayEndDate = trip?.endDate ?? null;
   const eventDateBounds = useMemo(() => {
@@ -1259,6 +1260,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       }
       return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
     };
+    if (isUnscheduled) return Array.from({ length: trip!.durationDays! }, (_, index) => `unscheduled-${index + 1}`);
     const dates: string[] = [];
     const start = overviewStartDate;
     const end = overviewEndDate;
@@ -1296,7 +1298,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       dates.push(new Date().toISOString().slice(0, 10));
     }
     return Array.from(new Set(dates));
-  }, [overviewStartDate, overviewEndDate, flights, lodgings, tours, carRentals]);
+  }, [overviewStartDate, overviewEndDate, flights, lodgings, tours, carRentals, isUnscheduled, trip?.durationDays]);
 
   useEffect(() => {
     const buildDayCards = () => {
@@ -1470,7 +1472,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   useEffect(() => {
     const todayIso = new Date().toISOString().slice(0, 10);
     const shouldFetchWeather = isWithinOverviewWeatherWindow(todayIso, overviewStartDate, overviewEndDate);
-    if (!shouldFetchWeather || !dayCards.length) {
+    if (isUnscheduled || !shouldFetchWeather || !dayCards.length) {
       weatherRequestKeyRef.current = '';
       setDayWeather({});
       return;
@@ -1536,13 +1538,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return () => {
       active = false;
     };
-  }, [backendUrl, headers, dayCards, overviewStartDate, overviewEndDate, trip?.destination, trip?.id, tripLocationLabel]);
+  }, [backendUrl, headers, dayCards, overviewStartDate, overviewEndDate, trip?.destination, trip?.id, tripLocationLabel, isUnscheduled]);
 
   useEffect(() => {
     let active = true;
     const fetchImages = async () => {
       if (!dayCards.length) return;
-      const missingCards = dayCards.filter((card) => !blogDayImages[card.date] && !dayImages[card.date]);
+      const missingCards = dayCards.filter((card) => /^\d{4}-\d{2}-\d{2}$/.test(card.date) && !blogDayImages[card.date] && !dayImages[card.date]);
       if (!missingCards.length) return;
       const days = missingCards.map((card) => ({
         date: card.date,
@@ -1598,7 +1600,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     const validationError = validateTripDates({
-      mode: dateDraft.mode,
+      mode: isUnscheduled && dateDraft.mode === 'month' && !dateDraft.startMonth && !dateDraft.startYear ? 'duration' : dateDraft.mode,
       startDate: dateDraft.startDate,
       endDate: dateDraft.endDate,
       startMonth: dateDraft.startMonth,
@@ -2062,8 +2064,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       draft.passengerName = buildPassengerName(draft.passengerIds) || draft.passengerName;
     }
     draft.transferType = transferType;
-    draft.departureDate = dateIso;
-    draft.arrivalDate = dateIso;
+    draft.departureDate = dateIso.startsWith('unscheduled-') ? '' : dateIso;
+    draft.arrivalDate = dateIso.startsWith('unscheduled-') ? '' : dateIso;
     setEditingFlightDraft(draft);
     setShowFlightEditor(true);
   };
@@ -2074,6 +2076,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setReturnToOverviewViewAfterItemEdit(true);
     setEditingLodgingId(null);
     const draft = buildOverviewLodgingDraft();
+    dateIso = dateIso.startsWith('unscheduled-') ? '' : dateIso;
     draft.checkInDate = dateIso;
     draft.checkOutDate = addDaysToIso(dateIso, 1) || dateIso;
     setLodgingDraft(draft);
@@ -2085,7 +2088,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setSelectedTour(null);
     setReturnToOverviewViewAfterItemEdit(true);
     setAddPopoverDay(Math.max(1, dayCards.findIndex((day) => day.date === dateIso) + 1));
-    setAddPopoverDate(dateIso);
+    setAddPopoverDate(dateIso.startsWith('unscheduled-') ? null : dateIso);
     setAddPopoverOpen(true);
   };
 
@@ -2093,6 +2096,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (readOnly) return;
     setEditingRentalId(null);
     const draft = createInitialCarRentalDraft();
+    dateIso = dateIso.startsWith('unscheduled-') ? '' : dateIso;
     draft.pickupDate = dateIso;
     draft.dropoffDate = dateIso;
     setRentalDraft(draft);
@@ -2340,6 +2344,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const formatShortDayLabel = (dateStr: string): string => {
+    if (dateStr.startsWith('unscheduled-')) return '';
     const parts = dateStr.split('-').map((v) => Number(v));
     const date = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(dateStr);
     if (Number.isNaN(date.valueOf())) return dateStr;
@@ -2351,6 +2356,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const formatLongDayLabel = (dateStr: string): string => {
+    if (dateStr.startsWith('unscheduled-')) return '';
     const parts = dateStr.split('-').map((v) => Number(v));
     const date = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(dateStr);
     if (Number.isNaN(date.valueOf())) return dateStr;
@@ -2360,7 +2366,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return `${weekday} ${monthLabel} ${date.getDate()}`;
   };
 
-  const formatDayCardLabel = (card: DayCard): string => `${card.label} - ${formatLongDayLabel(card.date)}`;
+  const formatDayCardLabel = (card: DayCard): string => card.date.startsWith('unscheduled-') ? card.label : `${card.label} - ${formatLongDayLabel(card.date)}`;
 
   const allMemberIds = useMemo(() => groupMembers.map((m) => m.id), [groupMembers]);
 
@@ -2812,8 +2818,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               styles.dayHeroCard,
               themeStyle('tabs_overview_16', { dayHeroHeight: dayHeroHeight }, (theme ?? _styleTheme)),
             ]}
-            onPress={onPress ?? (!readOnly ? () => setPictureDay(card.date) : undefined)}
-            disabled={!onPress && readOnly}
+            onPress={onPress ?? (!readOnly && !isUnscheduled ? () => setPictureDay(card.date) : undefined)}
+            disabled={!onPress && (readOnly || isUnscheduled)}
           >
             {img ? (
               <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
@@ -2849,7 +2855,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <Text style={[styles.dayHeroAction, isPhoneLayout ? themeStyle('tabs_overview_21', {  }, (theme ?? _styleTheme)) : null]}>View details</Text>
               ) : null}
             </View>
-            {!showAction && !readOnly ? (
+            {!showAction && !readOnly && !isUnscheduled ? (
               <View pointerEvents="none" style={styles.homeHeroChangeTripBadge}>
                 <Text style={styles.homeHeroChangeTripText}>Click to Change Picture</Text>
               </View>
@@ -2929,7 +2935,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.dayInfoRoute}>{d.activity}</Text>
                 )}
               </View>
-              {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
+              {d.time && !isUnscheduled ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
               {isActivity ? (
                 <View style={themeStyle('tabs_overview_44', {  }, (theme ?? _styleTheme))}>
                   <ReactionBar
@@ -3011,12 +3017,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.flightTitle}>{trip.name}</Text>
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
-              {dayMapPoints.length ? (
+              {dayMapPoints.length && !isUnscheduled ? (
                 <TripDayMap key={activeDayCard.date} onOpenChange={open => setVisibleMapDate(open ? activeDayCard.date : null)} tripId={trip.id} dayDate={activeDayCard.date} points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
               ) : null}
               {!readOnly && visibleMapDate === activeDayCard.date && dayMapPoints.length > 0 && <NearbyPlacesPanel tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} destination={trip.destination}
                 center={nearbyAnchor ? { lat: nearbyAnchor.lat!, lng: nearbyAnchor.lng! } : undefined} onAdded={onTourDataChanged} />}
-              {!readOnly && <TripsLikeThis tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} onAdded={onTourDataChanged} />}
+              {!readOnly && !isUnscheduled && <TripsLikeThis tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} onAdded={onTourDataChanged} />}
               {narrativeLines.length ? (
                 <View style={styles.dayNarrativeBox}>
                   {narrativeLines.map((line, idx) => (
@@ -3321,6 +3327,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </View>
           {renderDocumentImporter()}
           <Text style={styles.flightTitle}>{trip.name}</Text>
+          {isUnscheduled ? <Text style={styles.helperText}>Dates not set · {trip.durationDays} day(s)</Text> : null}
           {travelerAvatars.length ? (
             <View style={themeStyle('tabs_overview_53', {  }, (theme ?? _styleTheme))} testID="overview-travelers">
               <AvatarStack people={travelerAvatars} size={26} max={6} testID="overview-traveler-avatars" />

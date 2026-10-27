@@ -15,6 +15,7 @@ describe('trip date grouping', () => {
   });
   it('supports month-only trips and undated trips', () => {
     expect(getTripPeriod({ startYear: 2026, startMonth: 10 }, today)).toBe('Current');
-    expect(getTripPeriod({}, today)).toBe('Upcoming');
+    expect(getTripPeriod({}, today)).toBe('Unscheduled');
+    expect(getTripPeriod({ durationDays: 7 }, today)).toBe('Unscheduled');
   });
 });

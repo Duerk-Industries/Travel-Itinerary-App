@@ -68,7 +68,7 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
         <Text style={styles.homeModalRowMeta}>Select a trip to make it your active trip.</Text>
         {loading ? <Text accessibilityLiveRegion="polite" style={styles.homeModalRowMeta}>Loading followed trips…</Text> : null}
         {error ? <Pressable accessibilityRole="button" onPress={() => setRetry((value) => value + 1)}><Text style={styles.homeModalRowMeta}>Unable to load followed trip dates. Tap to retry.</Text></Pressable> : null}
-        {(['Current', 'Upcoming', 'Past'] as TripPeriod[]).filter((period) => entries.some((trip) => getTripPeriod(trip) === period)).map((period) => (
+        {(['Current', 'Upcoming', 'Unscheduled', 'Past'] as TripPeriod[]).filter((period) => entries.some((trip) => getTripPeriod(trip) === period)).map((period) => (
           <View key={period} testID={`all-trips-${period.toLowerCase()}`} style={{ marginTop: 24 }}>
             <Text accessibilityRole="header" style={styles.sectionTitle}>{period}</Text>
             {[false, true].map((following) => {
@@ -84,7 +84,7 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
                     <View style={styles.homeModalRowText}>
                       <Text style={styles.homeModalRowTitle}>{trip.name}</Text>
                       {trip.destination ? <Text style={styles.homeModalRowMeta}>{trip.destination}</Text> : null}
-                      <Text style={styles.homeModalRowMeta}>{trip.startDate ? `${formatDateLong(trip.startDate)}${trip.endDate ? ` – ${formatDateLong(trip.endDate)}` : ''}` : following && !details[trip.id] ? 'Dates unavailable' : 'Dates not set'}</Text>
+                      <Text style={styles.homeModalRowMeta}>{trip.startDate ? `${formatDateLong(trip.startDate)}${trip.endDate ? ` – ${formatDateLong(trip.endDate)}` : ''}` : following && !details[trip.id] ? 'Dates unavailable' : trip.durationDays ? `Dates not set · ${trip.durationDays} day(s)` : 'Dates not set'}</Text>
                     </View>
                     {trip.id === activeTripId ? <Text style={styles.homeModalActiveBadge}>Active</Text> : null}
                   </Pressable>

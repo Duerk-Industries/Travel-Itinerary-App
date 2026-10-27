@@ -725,6 +725,15 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('day-details-next')).toBeTruthy();
   });
 
+  test('uses trip length for unscheduled days without displaying invented calendar dates', async () => {
+    const { findAllByTestId, findByTestId, findByText } = await renderOverview(<OverviewTab {...baseProps}
+      trip={{ ...baseProps.trip, startDate: null, endDate: null, startMonth: null, startYear: null, durationDays: 4 }} />);
+    expect(await findAllByTestId(/^overview-day-card-\d+$/)).toHaveLength(4);
+    fireEvent.press(await findByTestId('overview-day-card-4'));
+    expect(await findByText('Day 4')).toBeTruthy();
+    expect(await findByTestId('day-details-add-note-button')).toBeTruthy();
+  });
+
   test('opens the picture chooser by pressing the day banner', async () => {
     const { findByTestId, findByText } = await renderOverview(<OverviewTab {...baseProps} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));

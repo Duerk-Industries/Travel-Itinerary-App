@@ -807,6 +807,11 @@ router.post('/wizard', async (req, res) => {
     res.status(400).json({ error: 'Trip name is required' });
     return;
   }
+  if (!startDate && !endDate && !startMonth && !startYear && durationDays != null &&
+      (!Number.isSafeInteger(Number(durationDays)) || Number(durationDays) <= 0)) {
+    res.status(400).json({ error: 'Trip length must be a positive whole number of days' });
+    return;
+  }
   const memberInputs = Array.isArray(participants) ? participants : [];
   for (const p of memberInputs) {
     if (!p?.firstName || !p?.lastName) {

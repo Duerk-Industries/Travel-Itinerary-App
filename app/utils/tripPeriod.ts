@@ -1,6 +1,6 @@
 import type { Trip } from '../../server/src/types';
 
-export type TripPeriod = 'Current' | 'Upcoming' | 'Past';
+export type TripPeriod = 'Current' | 'Upcoming' | 'Unscheduled' | 'Past';
 export type TripSchedule = Pick<Trip, 'startDate' | 'endDate' | 'durationDays' | 'startMonth' | 'startYear'>;
 
 const dayKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -18,6 +18,7 @@ export function getTripPeriod(trip: TripSchedule, now = new Date()): TripPeriod 
     date.setDate(date.getDate() + trip.durationDays - 1);
     if (!Number.isNaN(date.getTime())) end = dayKey(date);
   }
+  if (!start && !end) return 'Unscheduled';
   end ??= start;
   if (end && today > end) return 'Past';
   if (start && today >= start) return 'Current';
