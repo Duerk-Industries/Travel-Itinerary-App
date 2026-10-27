@@ -248,9 +248,21 @@ export const getPublicBlogFirebase = async (usernameSlug: string, tripSlug: stri
   if (aliasData.redirectUntil && new Date(aliasData.redirectUntil).getTime() <= Date.now()) return null;
   const epoch = await findEpoch(String(aliasData.tripId));
   if (!epoch || epoch.data.state !== 'public') return null;
-  const blog = await db.collection('trip_blogs').doc(String(aliasData.tripId)).get();
-  if (!blog.exists) return null;
-  const blogData = blog.data() as any;
+  return loadPublicBlogDocumentFirebase(String(aliasData.tripId));
+};
+
+/**
+ * The public projection of a trip's blog (audience 'public' only), without checking that it has been
+ * published. getPublicBlogFirebase calls it after confirming publication; the traveler-only preview
+ * calls it directly so a blog can be seen exactly as the public would before it goes live.
+ */
+export const loadPublicBlogDocumentFirebase = async (tripId: string): Promise<any | null> => {
+  const db = getDb();
+  const blog = await db.collection('trip_blogs').doc(tripId).get();
+  const tripDoc = blog.exists ? null : await db.collection('trips').doc(tripId).get();
+  if (!blog.exists && !tripDoc?.exists) return null;
+  const blogData = (blog.exists ? blog.data() : { title: (tripDoc?.data() as any)?.name ?? 'Trip Blog' }) as any;
+  const aliasData = { tripId };
   const [daysSnap, itemsSnap, mediaSnap] = await Promise.all([
     db.collection('blog_days').where('tripId', '==', String(aliasData.tripId)).get(),
     db.collection('blog_items').where('tripId', '==', String(aliasData.tripId)).get(),

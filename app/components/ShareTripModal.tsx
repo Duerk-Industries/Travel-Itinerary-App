@@ -50,7 +50,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
   const [followCode, setFollowCode] = useState('');
   const [copyFeedback, setCopyFeedback] = useState('');
   const [inviteInput, setInviteInput] = useState('');
-  const [inviteRole, setInviteRole] = useState<'member' | 'follower'>('follower');
+  const [inviteRole, setInviteRole] = useState<'member' | 'follower'>('member');
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState('');
 
@@ -271,6 +271,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
               <Text style={styles.buttonText}>{inviteSubmitting ? 'Sending...' : 'Send Invite'}</Text>
             </TouchableOpacity>
           </View>
+          <Text style={styles.helperText}>{inviteRole === 'member' ? 'Members are travelers: they can edit the trip.' : 'Followers can only view the trip.'}</Text>
           {inviteFeedback ? <Text style={styles.helperText}>{inviteFeedback}</Text> : null}
 
           <View style={styles.divider} />

@@ -278,7 +278,7 @@ describe('Overview edit controls', () => {
     });
 
     act(() => {
-      const addTravelerNode = findByText(root, '+ Add');
+      const addTravelerNode = findByText(root, '+ Add traveler');
       if (!addTravelerNode?.parent?.props.onPress) {
         throw new Error('Add Traveler button not found.');
       }

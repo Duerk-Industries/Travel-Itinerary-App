@@ -8,6 +8,7 @@ import { autoPublishFirebase, consentPublicationFirebase, getPublicationReadines
 import { blogMediaRepository } from '../blog/repository';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { hasTripStarted, tripGoLiveDate } from '../utils/blogGoLive';
+import { loadPublicBlogDocument } from './publicBlogRoutes';
 
 const router = Router();
 const slug = (v: string) => v.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'trip';
@@ -189,6 +190,23 @@ router.get('/:tripId/blog/publication/readiness', authenticate, async (req: any,
       altTextIssueCount: altTextIssues.length,
       ready: !optedOut && missingBirthDate === 0 && underAge === 0 && privateDefaultCount === 0 && altTextIssues.length === 0 && accountMembers > 0,
     });
+  } catch (err) { res.status(err instanceof ApiLimitExceededError ? 429 : 400).json({ error: (err as Error).message }); }
+});
+
+// Preview as public: the same document the public page renders (public-audience items only), for
+// travelers on this trip. Always available -- before the trip starts, while private, or after an
+// opt-out -- and never cached or indexed, because it can show a blog that is not published.
+router.get('/:tripId/blog/preview', authenticate, async (req: any, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog'))) return res.status(404).json({ error: 'Trip blog is not enabled' });
+    if (!(await ensureUserInTrip(req.params.tripId, String(req.user.userId)))) return res.status(403).json({ error: 'Not authorized' });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_DOCUMENT_READ', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', units: 8, requireConfiguredLimit: true });
+    const document = await loadPublicBlogDocument(String(req.params.tripId));
+    if (!document) return res.status(404).json({ error: 'Trip blog not found' });
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Robots-Tag', 'noindex');
+    res.json(document);
   } catch (err) { res.status(err instanceof ApiLimitExceededError ? 429 : 400).json({ error: (err as Error).message }); }
 });
 

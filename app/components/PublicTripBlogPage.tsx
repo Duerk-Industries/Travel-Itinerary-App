@@ -48,9 +48,18 @@ type PublicBlogPayload = {
   days: PublicBlogDay[];
 };
 
+/**
+ * Traveler-only preview: renders the same document the public sees, loaded from the signed-in
+ * trip endpoint instead of the public one, so it works before the blog is published. Public
+ * engagement and maps are skipped -- they only exist for a published blog, and a preview must
+ * never record a reaction.
+ */
+export type PublicBlogPreview = { tripId: string; headers: Record<string, string> };
+
 type Props = {
   username: string;
   tripSlug: string;
+  preview?: PublicBlogPreview;
 };
 
 // Mirrors server/src/blog/engagementTypes.ts BLOG_REACTION_EMOJIS / BlogReactionBar's EMOJI_GLYPH.
@@ -227,7 +236,7 @@ const DayEngagementFooter: React.FC<{
   );
 };
 
-const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
+const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug, preview }) => {
   const _styleTheme = useStyleTheme();
   const [fontsLoaded] = useFonts({ Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic });
   const [state, setState] = useState<{ status: 'loading' | 'ready' | 'not-found' | 'error'; blog: PublicBlogPayload | null; message: string | null }>({
@@ -249,7 +258,9 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}`, { cache: 'no-store' });
+        const response = preview
+          ? await fetch(`${backendUrl}/api/trips/${encodeURIComponent(preview.tripId)}/blog/preview`, { cache: 'no-store', headers: preview.headers })
+          : await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}`, { cache: 'no-store' });
         if (cancelled) return;
         if (response.status === 404) {
           setState({ status: 'not-found', blog: null, message: null });
@@ -267,11 +278,12 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
       }
     })();
     return () => { cancelled = true; };
-  }, [backendUrl, username, tripSlug, documentRefreshVersion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backendUrl, username, tripSlug, documentRefreshVersion, preview?.tripId]);
 
   useEffect(() => {
     let cancelled = false;
-    if (typeof document === 'undefined') return;
+    if (preview || typeof document === 'undefined') return;
     const controller = new AbortController();
     const refresh = async () => {
       setMapDays([]);
@@ -359,7 +371,7 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
     }
   };
   useEffect(() => {
-    if (state.status !== 'ready') return;
+    if (preview || state.status !== 'ready') return;
     let cancelled = false;
     (async () => {
       try {

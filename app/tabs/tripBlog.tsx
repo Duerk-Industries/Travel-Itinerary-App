@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ImageBackground, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import Modal from '../components/KeyboardAwareModal';
 import BlogPublicationChecklist from '../components/BlogPublicationChecklist';
+import BlogPublicPreview from '../components/BlogPublicPreview';
 import { useBlogMediaUrlRefresh } from '../hooks/useBlogMediaUrlRefresh';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
@@ -150,6 +151,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
   const [deleting, setDeleting] = useState(false);
   const [publication, setPublication] = useState(null);
   const [publicationBusy, setPublicationBusy] = useState(false);
+  const [showPublicPreview, setShowPublicPreview] = useState(false);
   const [publicationNotice, setPublicationNotice] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [settingCoverForDay, setSettingCoverForDay] = useState(null);
@@ -2176,6 +2178,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
           </TouchableOpacity>
           {showBlogTools ? (
             <View testID="blog-tools-panel" style={themeStyle('tabs_tripBlog_135', { surfaceColor: surfaceColor }, (theme ?? _styleTheme))}>
+              {canEdit && activeTripId ? (
+                <>
+                  <TouchableOpacity testID="blog-public-preview-open" accessibilityRole="button" style={styles.button} onPress={() => setShowPublicPreview(true)}>
+                    <Text style={styles.buttonText}>Preview as public</Text>
+                  </TouchableOpacity>
+                  <BlogPublicPreview visible={showPublicPreview} tripId={activeTripId} headers={headers} onClose={() => setShowPublicPreview(false)} styles={styles} />
+                </>
+              ) : null}
               {canEdit ? (
                 <View style={themeStyle('tabs_tripBlog_136', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
                   <View style={themeStyle('tabs_tripBlog_137', {  }, (theme ?? _styleTheme))}>

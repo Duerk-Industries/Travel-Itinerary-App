@@ -20,6 +20,7 @@ import { Image } from 'react-native';
 import { OverviewTab, buildDayWeatherLocation, makeWeatherLocationGeofriendly } from '../tabs/overview';
 import React from 'react';
 import NearbyPlacesPanel from '../components/NearbyPlacesPanel';
+import { localIsoDate } from '../utils/tripDayFocus';
 
 describe('Overview helpers', () => {
   test('chooses the first lodging location for day weather', () => {
@@ -334,6 +335,44 @@ describe('Overview UI (nested itinerary)', () => {
     if (!originalFetch) {
       delete (global as any).fetch;
     }
+  });
+
+  describe('opening day, whole-trip view and adding travelers', () => {
+    const isoOffset = (days: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      return localIsoDate(d);
+    };
+    const underway = { ...baseProps, trip: { ...baseProps.trip, startDate: isoOffset(-1), endDate: isoOffset(1) } };
+
+    test('opens on the overview when the trip is not under way', async () => {
+      const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+      expect(await findByTestId('overview-day-card-1')).toBeTruthy();
+      expect(queryByTestId('day-details-back')).toBeNull();
+    });
+
+    test('opens on today during the trip', async () => {
+      const { findByTestId } = await renderOverview(<OverviewTab {...underway} />);
+      expect(await findByTestId('day-details-back')).toBeTruthy();
+    });
+
+    test('the Whole trip pill lists every day, and a day opens its details', async () => {
+      const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+      fireEvent.press(await findByTestId('overview-day-pill-whole-trip'));
+      expect(await findByTestId('overview-whole-trip')).toBeTruthy();
+      expect(queryByTestId('overview-day-card-1')).toBeNull();
+      fireEvent.press(await findByTestId('overview-whole-trip-day-2'));
+      expect(await findByTestId('day-details-back')).toBeTruthy();
+    });
+
+    test('Add traveler is available without entering Edit mode, and hidden when read-only', async () => {
+      const { findByTestId, findAllByPlaceholderText, queryByTestId, unmount } = await renderOverview(<OverviewTab {...baseProps} />);
+      fireEvent.press(await findByTestId('overview-add-traveler'));
+      expect((await findAllByPlaceholderText('First name')).length).toBeGreaterThan(0);
+      unmount();
+      const readOnly = await renderOverview(<OverviewTab {...baseProps} readOnly />);
+      expect(readOnly.queryByTestId('overview-add-traveler')).toBeNull();
+    });
   });
 
   test('hides What to book now when there are no Needs Booking entries', async () => {

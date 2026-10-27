@@ -39,6 +39,7 @@ import {
 } from '../utils/tripDates';
 import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeDateString } from '../utils/normalizeDateString';
+import { dayToOpen, localIsoDate } from '../utils/tripDayFocus';
 import {
   buildFlightPayload,
   createFlightDraftForTrip,
@@ -630,6 +631,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
   const [visibleMapDate, setVisibleMapDate] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // One scrollable list of every day's plan, in place of the day cards (the 'Whole trip' pill).
+  const [wholeTripView, setWholeTripView] = useState(false);
   const [pictureDay, setPictureDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
   const [blogDayImages, setBlogDayImages] = useState<Record<string, string>>({});
@@ -1407,6 +1410,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       setPendingGoToDay1(false);
     }
   }, [pendingGoToDay1, dayCards]);
+
+  // During the trip the Itinerary opens on today instead of the overview, once per trip, so the
+  // traveler is not hunting for the date. It waits until the day cards match the trip's own date
+  // range, so a previous trip's cards cannot be mistaken for this one's.
+  const openedTodayForTrip = useRef<string | null>(null);
+  useEffect(() => {
+    if (!trip?.id || openedTodayForTrip.current === trip.id || !dayCards.length) return;
+    const matchesRange = dayCards.length === allDates.length && dayCards.every((card, idx) => card.date === allDates[idx]);
+    if (!matchesRange) return;
+    openedTodayForTrip.current = trip.id;
+    const today = dayToOpen(dayCards.map((card) => card.date), localIsoDate());
+    if (today) setSelectedDay(today);
+  }, [trip?.id, dayCards, allDates]);
 
   useEffect(() => {
     const cache = async () => {
@@ -2463,6 +2479,64 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
 
+  // Shared by the Edit layout's Travelers section and the Add traveler button on the normal view.
+  const renderAddTravelerForm = () => (
+          <View style={styles.addTravelerForm}>
+            <View style={[styles.row, themeStyle('tabs_overview_75', {  }, (theme ?? _styleTheme))]}>
+              <TextInput
+                style={[styles.input, themeStyle('tabs_overview_76', {  }, (theme ?? _styleTheme))]}
+                placeholder="First name"
+                autoComplete="given-name"
+                textContentType="givenName"
+                value={travelerDraft.firstName}
+                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, firstName: text }))}
+              />
+              <TextInput
+                style={[styles.input, themeStyle('tabs_overview_77', {  }, (theme ?? _styleTheme))]}
+                placeholder="Last name"
+                autoComplete="family-name"
+                textContentType="familyName"
+                value={travelerDraft.lastName}
+                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, lastName: text }))}
+              />
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Email (optional)"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              keyboardType="email-address"
+              value={travelerDraft.email}
+              onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, email: text }))}
+            />
+            <View style={[styles.row, themeStyle('tabs_overview_78', {  }, (theme ?? _styleTheme))]}>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, styles.dangerButton]}
+                onPress={() => setShowAddTraveler(false)}
+              >
+                <Text style={styles.dangerButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addTraveler}>
+                <Text style={styles.buttonText}>Save Traveler</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+  );
+
+  // One line per thing happening on a day, for the whole-trip list.
+  const buildWholeTripLines = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }): string[] => {
+    if (!info) return [];
+    const withTime = (time: string | null | undefined, text: string) => (time ? `${time} · ${text}` : text);
+    return [
+      ...info.flights.map((f) => withTime(f.departure_time, `${f.departure_location || f.departure_airport_code || 'Departure'} → ${(f as any).arrival_location || f.arrival_airport_code || 'Arrival'}`)),
+      ...info.tours.map((t) => withTime(t.startTime, t.name)),
+      ...info.details.filter((d) => !d.kind || d.kind === 'activity').map((d) => withTime(d.time, d.activity)),
+      ...info.lodgings.map((l) => `Stay: ${l.name}`),
+      ...info.rentals.map((r) => `Rental car: ${r.vendor || r.pickupLocation}`),
+    ].filter(Boolean);
+  };
+
   const OverviewTransferEditor = editingFlightDraft && !isFlightTransfer(editingFlightDraft) ? GroundTransferEditingForm : FlightEditingForm;
   const renderOverviewFlightEditor = () => (
     <OverviewTransferEditor
@@ -2672,10 +2746,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     >
       <TouchableOpacity
         testID="overview-day-pill-overview"
-        style={[styles.dayPill, !activeDate && styles.dayPillActive]}
-        onPress={() => setSelectedDay(null)}
+        style={[styles.dayPill, !activeDate && !wholeTripView && styles.dayPillActive]}
+        onPress={() => { setWholeTripView(false); setSelectedDay(null); }}
       >
-        <Text style={[styles.dayPillText, !activeDate && styles.dayPillActiveText]}>Overview</Text>
+        <Text style={[styles.dayPillText, !activeDate && !wholeTripView && styles.dayPillActiveText]}>Overview</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        testID="overview-day-pill-whole-trip"
+        accessibilityRole="button"
+        style={[styles.dayPill, !activeDate && wholeTripView && styles.dayPillActive]}
+        onPress={() => { setWholeTripView(true); setSelectedDay(null); }}
+      >
+        <Text style={[styles.dayPillText, !activeDate && wholeTripView && styles.dayPillActiveText]}>Whole trip</Text>
       </TouchableOpacity>
       {dayCards.map((card, idx) => {
         const isActive = activeDate === card.date;
@@ -3243,6 +3325,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </Text>
             </View>
           ) : null}
+          {!readOnly ? (
+            <TouchableOpacity testID="overview-add-traveler" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => setShowAddTraveler((prev) => !prev)}>
+              <Text style={styles.buttonText}>+ Add traveler</Text>
+            </TouchableOpacity>
+          ) : null}
+          {!readOnly && showAddTraveler ? renderAddTravelerForm() : null}
+
 
           {trip.description ? (
             <View>
@@ -3264,8 +3353,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
           {renderDayBar(null)}
 
-          <View style={themeStyle('tabs_overview_54', {  }, (theme ?? _styleTheme))}>
-            {dayCards.map((card, idx) => {
+          {wholeTripView ? (
+            <View testID="overview-whole-trip" style={themeStyle('tabs_overview_54', {  }, (theme ?? _styleTheme))}>
+              {dayCards.map((card, idx) => {
+                const lines = buildWholeTripLines(dayDataByDate.get(card.date));
+                return (
+                  <TouchableOpacity key={card.date} testID={`overview-whole-trip-day-${idx + 1}`} accessibilityRole="button" onPress={() => setSelectedDay(card.date)}>
+                    <Text style={styles.headerText}>{formatDayCardLabel(card)}</Text>
+                    {lines.length ? lines.map((line, lineIdx) => <Text key={lineIdx} style={styles.bodyText}>{line}</Text>) : <Text style={styles.helperText}>Nothing planned yet.</Text>}
+                    <View style={styles.divider} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
+
+          <View style={wholeTripView ? undefined : themeStyle('tabs_overview_54', {  }, (theme ?? _styleTheme))}>
+            {(wholeTripView ? [] : dayCards).map((card, idx) => {
               const info = dayDataByDate.get(card.date);
               const startLocation = buildDayStartLocation(info);
               const summary = buildDaySummary(info);
@@ -3524,58 +3628,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         <View style={styles.row}>
           <Text style={styles.headerText}>Travelers</Text>
-          {isEditing && (
+          {!readOnly && (
             <TouchableOpacity
+              testID="overview-add-traveler"
               style={[styles.button, styles.smallButton, themeStyle('tabs_overview_74', {  }, (theme ?? _styleTheme))]}
               onPress={() => setShowAddTraveler((prev) => !prev)}
             >
-              <Text style={styles.buttonText}>+ Add</Text>
+              <Text style={styles.buttonText}>+ Add traveler</Text>
             </TouchableOpacity>
           )}
         </View>
-        {isEditing && showAddTraveler ? (
-          <View style={styles.addTravelerForm}>
-            <View style={[styles.row, themeStyle('tabs_overview_75', {  }, (theme ?? _styleTheme))]}>
-              <TextInput
-                style={[styles.input, themeStyle('tabs_overview_76', {  }, (theme ?? _styleTheme))]}
-                placeholder="First name"
-                autoComplete="given-name"
-                textContentType="givenName"
-                value={travelerDraft.firstName}
-                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, firstName: text }))}
-              />
-              <TextInput
-                style={[styles.input, themeStyle('tabs_overview_77', {  }, (theme ?? _styleTheme))]}
-                placeholder="Last name"
-                autoComplete="family-name"
-                textContentType="familyName"
-                value={travelerDraft.lastName}
-                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, lastName: text }))}
-              />
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Email (optional)"
-              autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
-              keyboardType="email-address"
-              value={travelerDraft.email}
-              onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, email: text }))}
-            />
-            <View style={[styles.row, themeStyle('tabs_overview_78', {  }, (theme ?? _styleTheme))]}>
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton, styles.dangerButton]}
-                onPress={() => setShowAddTraveler(false)}
-              >
-                <Text style={styles.dangerButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addTraveler}>
-                <Text style={styles.buttonText}>Save Traveler</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : null}
+        {!readOnly && showAddTraveler ? renderAddTravelerForm() : null}
         <View style={styles.attendeeList}>
           {attendees.map((member) => (
             <View

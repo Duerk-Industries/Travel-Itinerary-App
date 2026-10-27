@@ -97,6 +97,22 @@ describe('trip blog is public by default (opt-out)', () => {
     await cleanupTestUsersByEmail([mkUser('Worker').email]);
   });
 
+  it('previews the public view for travelers only, even before the trip starts and while private', async () => {
+    const owner = await signUp(mkUser('Previewer'), '1990-01-01');
+    const tripId = await createTrip(owner.token, 'Preview Trip', [], 0, futureDateString(30));
+    const auth = { Authorization: `Bearer ${owner.token}` };
+    await request(app).patch(`/api/trips/${tripId}/blog`).set(auth).send({ title: 'Preview Title' }).expect(200);
+    expect(await visibility(tripId)).not.toBe('public');
+    const preview = await request(app).get(`/api/trips/${tripId}/blog/preview`).set(auth).expect(200);
+    expect(preview.body).toMatchObject({ title: 'Preview Title', days: expect.any(Array) });
+    expect(preview.headers['cache-control']).toContain('no-store');
+    expect(preview.headers['x-robots-tag']).toBe('noindex');
+    await request(app).get(`/api/trips/${tripId}/blog/preview`).expect(401);
+    const stranger = await signUp(mkUser('Peeker'), '1990-01-01');
+    await request(app).get(`/api/trips/${tripId}/blog/preview`).set('Authorization', `Bearer ${stranger.token}`).expect(403);
+    await cleanupTestUsersByEmail([mkUser('Previewer').email, mkUser('Peeker').email]);
+  });
+
   it('readiness lists what blocks publishing without naming anyone', async () => {
     const owner = await signUp(mkUser('Blocked'), '1990-01-01');
     await setDateOfBirth(owner.id, null);

@@ -2,7 +2,7 @@ import { readBlogMaps } from '../services/blogMapService';
 import { Router } from 'express';
 import { queryBlog } from '../db.postgres';
 import { getCurrentDbProvider } from '../db';
-import { getPublicBlogFirebase, resolvePublicTripIdFirebase } from '../blog/firebasePublicationRepository';
+import { getPublicBlogFirebase, loadPublicBlogDocumentFirebase, resolvePublicTripIdFirebase } from '../blog/firebasePublicationRepository';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { HttpRateLimitExceededError, reserveHttpRateLimitOrThrow } from '../services/httpRateLimitService';
 import { getApiCacheSetting } from '../config/apiLimits';
@@ -282,6 +282,57 @@ router.get('/:username/:tripSlug/maps', async (req, res) => {
   }
 });
 
+type PublicBlogMeta = { title: string | null; subtitle: string | null; introduction: string | null; contentRevision?: unknown; visibilityEpoch?: unknown };
+
+// The public projection of a trip's blog (audience 'public' only). The public page calls it after
+// resolving a published alias; the traveler-only preview calls it for a blog that may not be published.
+const loadPostgresPublicDocument = async (tripId: string, meta: PublicBlogMeta): Promise<any> => {
+  const days = await queryBlog<any>('SELECT id, local_date, headline, summary FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [tripId]);
+  const items = await queryBlog<any>(
+    `SELECT i.id, i.blog_day_id, i.kind_key, i.schema_version, i.audience, i.sort_key, t.body, t.language_tag,
+            a.id AS asset_id, a.media_kind_key, a.caption, a.alt_text, a.object_key, a.uploader_user_id
+     FROM blog_items i
+     LEFT JOIN blog_text_contents t ON t.item_id = i.id
+     LEFT JOIN blog_item_assets ia ON ia.item_id = i.id
+     LEFT JOIN blog_media_assets a ON a.id = ia.asset_id AND a.state = 'ready' AND a.moderation_state <> 'blocked'
+     WHERE i.trip_id = $1 AND i.deleted_at IS NULL AND i.audience = 'public'
+     ORDER BY i.sort_key`,
+    [tripId]
+  );
+  const byDay = new Map<string, any[]>();
+  for (const item of items.rows) {
+    const list = byDay.get(String(item.blog_day_id)) ?? [];
+    const base = { id: item.id, kindKey: item.kind_key, schemaVersion: item.schema_version, audience: item.audience, sortKey: item.sort_key };
+    if (item.kind_key === 'core.text') {
+      list.push({ ...base, body: item.body ?? '', languageTag: item.language_tag ?? null });
+    } else if (item.kind_key.startsWith('media.') && item.asset_id) {
+      list.push({ ...base, assetId: item.asset_id, mediaKind: item.media_kind_key, caption: item.caption, altText: item.alt_text, objectKey: item.object_key, uploaderUserId: item.uploader_user_id });
+    }
+    byDay.set(String(item.blog_day_id), list);
+  }
+  const responseDays = days.rows.map((d) => ({ localDate: new Date(d.local_date).toISOString().slice(0, 10), headline: d.headline, summary: d.summary, items: byDay.get(String(d.id)) ?? [] }));
+  const tripPhotos = (byDay.get('null') ?? []).filter((item) => item.mediaKind === 'photo').reverse();
+  await attachPublicMediaUrls([...responseDays, { items: tripPhotos }]);
+  return { tripPhotos, title: meta.title, subtitle: meta.subtitle, introduction: meta.introduction, contentRevision: Number(meta.contentRevision ?? 0), visibilityEpoch: Number(meta.visibilityEpoch ?? 0), days: responseDays };
+};
+
+/** The document the public would see, for a traveler previewing before (or after) publication. */
+export const loadPublicBlogDocument = async (tripId: string): Promise<any | null> => {
+  if (getCurrentDbProvider() === 'firebase') {
+    const blog = await loadPublicBlogDocumentFirebase(tripId);
+    if (!blog) return null;
+    await attachPublicMediaUrls([...blog.days, { items: blog.tripPhotos ?? [] }]);
+    return blog;
+  }
+  const [blog, trip] = await Promise.all([
+    queryBlog<any>('SELECT title, subtitle, introduction, content_revision, visibility_epoch FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]),
+    queryBlog<{ name: string | null }>('SELECT name FROM trips WHERE id = $1', [tripId]),
+  ]);
+  if (!blog.rows[0] && !trip.rows[0]) return null;
+  const row = blog.rows[0];
+  return loadPostgresPublicDocument(tripId, { title: row?.title ?? trip.rows[0]?.name ?? 'Trip Blog', subtitle: row?.subtitle ?? null, introduction: row?.introduction ?? null, contentRevision: row?.content_revision, visibilityEpoch: row?.visibility_epoch });
+};
+
 router.get('/:username/:tripSlug', async (req, res) => {
   // The public-reader page (unlike everything else in this router) is a full document fetch, not
   // a lightweight counts poll — same rate-limit pattern as the engagement route above, own budget.
@@ -310,33 +361,9 @@ router.get('/:username/:tripSlug', async (req, res) => {
   }
   const alias = await queryBlog<any>(`SELECT a.trip_id, a.username_slug, a.trip_slug, b.title, b.subtitle, b.introduction, b.content_revision, b.visibility_epoch, b.indexing_enabled FROM blog_public_aliases a JOIN trip_blogs b ON b.trip_id = a.trip_id JOIN blog_publication_epochs e ON e.trip_id = a.trip_id AND e.state = 'public' WHERE a.username_slug = $1 AND a.trip_slug = $2 AND (a.redirect_until IS NULL OR a.redirect_until > NOW()::timestamp) ORDER BY a.canonical DESC LIMIT 1`, [String(req.params.username).toLowerCase(), String(req.params.tripSlug).toLowerCase()]);
   if (!alias.rows[0]) return res.status(404).json({ error: 'Public blog not found' });
-  const days = await queryBlog<any>('SELECT id, local_date, headline, summary FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [alias.rows[0].trip_id]);
-  const items = await queryBlog<any>(
-    `SELECT i.id, i.blog_day_id, i.kind_key, i.schema_version, i.audience, i.sort_key, t.body, t.language_tag,
-            a.id AS asset_id, a.media_kind_key, a.caption, a.alt_text, a.object_key, a.uploader_user_id
-     FROM blog_items i
-     LEFT JOIN blog_text_contents t ON t.item_id = i.id
-     LEFT JOIN blog_item_assets ia ON ia.item_id = i.id
-     LEFT JOIN blog_media_assets a ON a.id = ia.asset_id AND a.state = 'ready' AND a.moderation_state <> 'blocked'
-     WHERE i.trip_id = $1 AND i.deleted_at IS NULL AND i.audience = 'public'
-     ORDER BY i.sort_key`,
-    [alias.rows[0].trip_id]
-  );
-  const byDay = new Map<string, any[]>();
-  for (const item of items.rows) {
-    const list = byDay.get(String(item.blog_day_id)) ?? [];
-    const base = { id: item.id, kindKey: item.kind_key, schemaVersion: item.schema_version, audience: item.audience, sortKey: item.sort_key };
-    if (item.kind_key === 'core.text') {
-      list.push({ ...base, body: item.body ?? '', languageTag: item.language_tag ?? null });
-    } else if (item.kind_key.startsWith('media.') && item.asset_id) {
-      list.push({ ...base, assetId: item.asset_id, mediaKind: item.media_kind_key, caption: item.caption, altText: item.alt_text, objectKey: item.object_key, uploaderUserId: item.uploader_user_id });
-    }
-    byDay.set(String(item.blog_day_id), list);
-  }
-  const responseDays = days.rows.map((d) => ({ localDate: new Date(d.local_date).toISOString().slice(0, 10), headline: d.headline, summary: d.summary, items: byDay.get(String(d.id)) ?? [] }));
-  const tripPhotos = (byDay.get('null') ?? []).filter((item) => item.mediaKind === 'photo').reverse();
-  await attachPublicMediaUrls([...responseDays, { items: tripPhotos }]);
-  res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300'); res.setHeader('X-Robots-Tag', alias.rows[0].indexing_enabled ? 'index,follow' : 'noindex');
-  res.json({ tripPhotos, title: alias.rows[0].title, subtitle: alias.rows[0].subtitle, introduction: alias.rows[0].introduction, contentRevision: Number(alias.rows[0].content_revision ?? 0), visibilityEpoch: Number(alias.rows[0].visibility_epoch ?? 0), days: responseDays });
+  const row = alias.rows[0];
+  const document = await loadPostgresPublicDocument(row.trip_id, { title: row.title, subtitle: row.subtitle, introduction: row.introduction, contentRevision: row.content_revision, visibilityEpoch: row.visibility_epoch });
+  res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300'); res.setHeader('X-Robots-Tag', row.indexing_enabled ? 'index,follow' : 'noindex');
+  res.json(document);
 });
 export default router;
