@@ -1,4 +1,5 @@
 // @ts-nocheck
+import ActionDropdown from '../components/ActionDropdown';
 import BannerPicturePicker from '../components/BannerPicturePicker';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
@@ -567,7 +568,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     name: string;
   } | null>(null);
   const [showAddTraveler, setShowAddTraveler] = useState(false);
-  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
   const [showAddLodging, setShowAddLodging] = useState(false);
@@ -3302,39 +3302,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           nestedScrollEnabled
           contentInsetAdjustmentBehavior="automatic"
         >
-          <View style={[styles.row, isPhoneLayout ? themeStyle('tabs_overview_50', {  }, (theme ?? _styleTheme)) : null]}>
+          <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center', width: '100%' }]}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            <TouchableOpacity testID="overview-actions-menu" accessibilityRole="button" accessibilityState={{ expanded: actionsMenuOpen }} style={[styles.button, styles.smallButton]} onPress={() => setActionsMenuOpen((open) => !open)}>
-              <Text style={styles.buttonText}>{actionsMenuOpen ? 'Menu ▲' : 'Menu ▼'}</Text>
-            </TouchableOpacity>
-          </View>
-          {actionsMenuOpen ? (
-            <View testID="overview-actions-menu-panel" style={themeStyle('tabs_overview_actions_menu', {  }, (theme ?? _styleTheme))}>
-              {renderDocumentImportButton()}
-              <CsvTransferControls entity="day-plan" backendUrl={backendUrl} headers={jsonHeaders} tripId={trip?.id} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={itineraryDetails} styles={styles} theme={theme} enabledImport={featureDayPlanCsvImport} enabledExport={featureDayPlanCsvExport} readOnly={readOnly} onImported={() => setItineraryReload((count) => count + 1)} />
-              {onGenerateAiItinerary && aiItineraryGenerationAllowed && !readOnly && !aiItineraryPending ? (
-                <TouchableOpacity testID="overview-generate-itinerary" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); setConfirmGenerate(true); }}>
-                  <Text style={styles.buttonText}>Generate itinerary</Text>
-                </TouchableOpacity>
-              ) : null}
-              <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); handlePrintItinerary(); }}>
-                <Text style={styles.buttonText}>Print itinerary</Text>
-              </TouchableOpacity>
-              <TouchableOpacity testID="overview-edit" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); setIsEditing(true); }}>
-                <Text style={styles.buttonText}>Edit</Text>
-              </TouchableOpacity>
-              {!readOnly ? (
-                <TouchableOpacity testID="overview-add-traveler" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); setShowAddTraveler((prev) => !prev); }}>
-                  <Text style={styles.buttonText}>+ Add traveler</Text>
-                </TouchableOpacity>
-              ) : null}
-              {onOpenShareTrip ? (
-                <TouchableOpacity accessibilityRole="button" testID="itinerary-share-trip-button" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); onOpenShareTrip(); }}>
-                  <Text style={styles.buttonText}>Share</Text>
-                </TouchableOpacity>
-              ) : null}
+            <View style={{ marginLeft: 'auto' }}>
+              <CsvTransferControls entity="day-plan" backendUrl={backendUrl} headers={jsonHeaders} tripId={trip?.id} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={itineraryDetails} styles={styles} theme={theme} enabledImport={featureDayPlanCsvImport} enabledExport={featureDayPlanCsvExport} readOnly={readOnly} onImported={() => setItineraryReload((count) => count + 1)}
+                renderActions={({ importCsv, exportCsv }) => <ActionDropdown testID="overview-actions-menu" styles={styles} actions={[
+                  ...(!readOnly ? [{ id: 'overview-add-traveler', label: 'Add Traveler', onSelect: () => setShowAddTraveler(true) }] : []),
+                  { id: 'overview-edit', label: 'Edit', onSelect: () => setIsEditing(true) },
+                  ...(onOpenShareTrip ? [{ id: 'itinerary-share-trip-button', label: 'Share', onSelect: onOpenShareTrip }] : []),
+                  ...(showDocumentImport ? [{ id: 'overview-import-itinerary', label: 'Import Itinerary', onSelect: () => setDocumentImportOpen(true) }] : []),
+                  ...(featureDayPlanCsvImport && !readOnly ? [{ id: 'day-plan-import', label: 'Import CSV', onSelect: importCsv }] : []),
+                  ...(featureDayPlanCsvExport ? [{ id: 'day-plan-export', label: 'Export CSV', onSelect: exportCsv }] : []),
+                  ...(onGenerateAiItinerary && aiItineraryGenerationAllowed && !readOnly && !aiItineraryPending ? [{ id: 'overview-generate-itinerary', label: 'Generate itinerary', onSelect: () => setConfirmGenerate(true) }] : []),
+                  { id: 'overview-print-itinerary', label: 'Print itinerary', onSelect: handlePrintItinerary },
+                ]} />}
+              />
             </View>
-          ) : null}
+          </View>
           {renderDocumentImporter()}
           <Text style={styles.flightTitle}>{trip.name}</Text>
           {travelerAvatars.length ? (

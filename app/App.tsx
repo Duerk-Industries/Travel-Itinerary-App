@@ -763,7 +763,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   } = useAccountProfile();
   const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
   const receiptScanningAllowed = accountProfile.entitlements?.receiptScanning === true;
-  const aiItineraryGenerationAllowed = accountProfile.entitlements?.aiItineraryGeneration === true;
+  const aiItineraryGenerationAllowed = featureAiItineraryGeneration && accountProfile.entitlements?.aiItineraryGeneration === true;
   const aiAssistantGuideAllowed = accountProfile.entitlements?.aiAssistantGuide === true;
   const aiAssistantActionsAllowed = accountProfile.entitlements?.aiAssistantActions === true;
   const logoutRef = useRef<() => void>(() => undefined);

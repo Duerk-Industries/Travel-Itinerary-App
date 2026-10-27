@@ -365,6 +365,34 @@ describe('Overview UI (nested itinerary)', () => {
       expect(await findByTestId('day-details-back')).toBeTruthy();
     });
 
+    test('the menu contains selectable actions, closes after selection, and dismisses outside', async () => {
+      const onOpenShareTrip = jest.fn();
+      const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps} onOpenShareTrip={onOpenShareTrip} />);
+      expect(queryByTestId('overview-actions-menu-panel')).toBeNull();
+      expect(queryByTestId('itinerary-share-trip-button')).toBeNull();
+      fireEvent.press(await findByTestId('overview-actions-menu'));
+      const panel = await findByTestId('overview-actions-menu-panel');
+      expect(panel.props.accessibilityRole).toBe('menu');
+      const share = within(panel).getByTestId('itinerary-share-trip-button');
+      expect(share.props.accessibilityRole).toBe('menuitem');
+      fireEvent.press(share);
+      expect(onOpenShareTrip).toHaveBeenCalledTimes(1);
+      expect(queryByTestId('overview-actions-menu-panel')).toBeNull();
+      fireEvent.press(await findByTestId('overview-actions-menu'));
+      fireEvent.press(await findByTestId('overview-actions-menu-dismiss'));
+      expect(queryByTestId('overview-actions-menu-panel')).toBeNull();
+    });
+
+    test('orders the trip menu actions with traveler actions first and print last', async () => {
+      const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} onOpenShareTrip={jest.fn()} onGenerateAiItinerary={jest.fn()} />);
+      fireEvent.press(await findByTestId('overview-actions-menu'));
+      const menu = within(await findByTestId('overview-actions-menu-panel'));
+      expect(menu.getAllByTestId(/^(overview-add-traveler|overview-edit|itinerary-share-trip-button|overview-generate-itinerary|overview-print-itinerary)$/).map((item) => item.props.testID)).toEqual([
+        'overview-add-traveler', 'overview-edit', 'itinerary-share-trip-button',
+        'overview-generate-itinerary', 'overview-print-itinerary',
+      ]);
+    });
+
     test('Generate itinerary asks first, then starts generation for the trip', async () => {
       const onGenerateAiItinerary = jest.fn();
       const { findByTestId, queryByTestId, getByText } = await renderOverview(<OverviewTab {...baseProps} onGenerateAiItinerary={onGenerateAiItinerary} />);

@@ -23,6 +23,7 @@ type Props = {
   enabledExport?: boolean;
   readOnly?: boolean;
   onImported?: () => void;
+  renderActions?: (actions: { importCsv: () => void; exportCsv: () => void }) => React.ReactNode;
 };
 
 // What each entity is called in the UI, in analytics and in the API path.
@@ -46,7 +47,7 @@ const createImportId = (): string => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
-const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tripId, tripStart, tripEnd, rows, styles, theme: _providedTheme, enabledImport = false, enabledExport = false, readOnly = false, onImported }) => {
+const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tripId, tripStart, tripEnd, rows, styles, theme: _providedTheme, enabledImport = false, enabledExport = false, readOnly = false, onImported, renderActions }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const colors = (theme ?? getAppTheme('light', 'light')).colors;
@@ -133,12 +134,12 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
     try { await shareCsvFile(`${ENTITY_FILE[entity]}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(EXPORT_HEADERS[entity], exportRows)); } catch (error) { Alert.alert('Export failed', (error as Error).message); }
   };
 
-  if ((!enabledImport || readOnly) && !enabledExport) return null;
+  if (!renderActions && (!enabledImport || readOnly) && !enabledExport) return null;
   return <>
-    <View style={themeStyle('components_CsvTransferControls_1', {  }, (theme ?? _styleTheme))}>
+    {renderActions ? renderActions({ importCsv, exportCsv }) : <View style={themeStyle('components_CsvTransferControls_1', {  }, (theme ?? _styleTheme))}>
       {enabledImport && !readOnly ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Import ${entity} CSV`} style={styles.button} onPress={importCsv} testID={`${entity}-import`}><Text style={styles.buttonText}>Import CSV</Text></TouchableOpacity> : null}
       {enabledExport ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Export ${entity} CSV`} style={styles.outlineButton ?? styles.button} onPress={exportCsv} testID={`${entity}-export`}><Text style={styles.buttonText}>Export CSV</Text></TouchableOpacity> : null}
-    </View>
+    </View>}
     <Modal visible={modalVisible} animationType="slide" onRequestClose={cancelReview}>
       <View style={themeStyle('components_CsvTransferControls_2', { Platform: Platform, colors: colors }, (theme ?? _styleTheme))}>
         <Text style={themeStyle('components_CsvTransferControls_3', { colors: colors }, (theme ?? _styleTheme))}>Review {ENTITY_LABEL[entity]}</Text>
