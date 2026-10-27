@@ -517,6 +517,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
+  const tripDateCellStyle = isPhoneLayout ? { gap: 4 } : { gap: 4, flex: 1, maxWidth: 220 };
   const isTabletLayout = viewportWidth >= 700 && viewportWidth < 1100;
   const dayHeroHeight = Math.max(190, Math.min(300, viewportWidth * (isPhoneLayout ? 0.52 : 0.3)));
   const lodgingThumbnailSize = isPhoneLayout ? 64 : isTabletLayout ? 72 : 80;
@@ -2699,6 +2700,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       const activeDayIndex =
         activeDayInfo?.index ?? (activeDayCard ? dayCards.findIndex((card) => card.date === activeDayCard.date) + 1 : null);
       const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
+      // Outlined chips for the item types this day has no section for yet, so they read as
+      // buttons and never break mid-label at phone width.
+      const addMoreChipStyle = {
+        borderWidth: 1,
+        borderColor: theme?.colors.border ?? '#E6ECEF',
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+      };
 
       const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string, subtitle?: string | null) => {
         const img = blogDayImages[card.date] ?? dayImages[card.date];
@@ -3221,16 +3231,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </View>
 
               {!flightsForDay.length || !rentalsForDay.length || !toursForDay.length || !lodgingsForDay.length ? (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <View testID="day-details-add-more" style={{ gap: 6 }}>
+                  <Text style={styles.helperText}>Add to this day</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {!flightsForDay.length ? (
                     <TouchableOpacity
                       testID="day-details-add-transfer-button"
                       accessibilityRole="button"
                       accessibilityLabel="Add transfer to this day"
-                      style={styles.dayInfoButton}
+                      style={addMoreChipStyle}
                       onPress={() => addFlightForDay(activeDayCard.date)}
                     >
-                      <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
+                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add transfer</Text>
                     </TouchableOpacity>
                   ) : null}
                   {!rentalsForDay.length ? (
@@ -3238,10 +3250,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       testID="day-details-add-rental-button"
                       accessibilityRole="button"
                       accessibilityLabel="Add rental car to this day"
-                      style={styles.dayInfoButton}
+                      style={addMoreChipStyle}
                       onPress={() => addRentalForDay(activeDayCard.date)}
                     >
-                      <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
+                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add rental car</Text>
                     </TouchableOpacity>
                   ) : null}
                   {!toursForDay.length ? (
@@ -3249,10 +3261,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       testID="day-details-add-activity-button"
                       accessibilityRole="button"
                       accessibilityLabel="Add activity to this day"
-                      style={styles.dayInfoButton}
+                      style={addMoreChipStyle}
                       onPress={() => addTourForDay(activeDayCard.date)}
                     >
-                      <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
+                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add activity</Text>
                     </TouchableOpacity>
                   ) : null}
                   {!lodgingsForDay.length ? (
@@ -3260,12 +3272,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       testID="day-details-add-accommodation-button"
                       accessibilityRole="button"
                       accessibilityLabel="Add accommodation to this day"
-                      style={styles.dayInfoButton}
+                      style={addMoreChipStyle}
                       onPress={() => addLodgingForDay(activeDayCard.date)}
                     >
-                      <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
+                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add accommodation</Text>
                     </TouchableOpacity>
                   ) : null}
+                  </View>
                 </View>
               ) : null}
 
@@ -3464,27 +3477,30 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
             {dateDraft.mode === 'range' ? (
               <>
-                <View style={[styles.row, { gap: 8 }]}>
-                  <DateField
-                    value={dateDraft.startDate}
-                    onChange={(startDate) => setDateDraft((prev) => ({ ...prev, startDate }))}
-                    styles={styles}
-                    theme={theme}
-                    style={{ maxWidth: 200 }}
-                    testID="overview-trip-start-date"
-                    accessibilityLabel="Start date"
-                  />
-                </View>
-                <View style={[styles.row, { gap: 8 }]}>
-                  <DateField
-                    value={dateDraft.endDate}
-                    onChange={(endDate) => setDateDraft((prev) => ({ ...prev, endDate }))}
-                    styles={styles}
-                    theme={theme}
-                    style={{ maxWidth: 200 }}
-                    testID="overview-trip-end-date"
-                    accessibilityLabel="End date"
-                  />
+                {/* Labeled Start / End fields: stacked full width on phones, side by side otherwise. */}
+                <View testID="overview-trip-date-range" style={{ flexDirection: isPhoneLayout ? 'column' : 'row', gap: 12, marginTop: 4 }}>
+                  <View style={tripDateCellStyle}>
+                    <Text style={styles.helperText}>Start</Text>
+                    <DateField
+                      value={dateDraft.startDate}
+                      onChange={(startDate) => setDateDraft((prev) => ({ ...prev, startDate }))}
+                      styles={styles}
+                      theme={theme}
+                      testID="overview-trip-start-date"
+                      accessibilityLabel="Start date"
+                    />
+                  </View>
+                  <View style={tripDateCellStyle}>
+                    <Text style={styles.helperText}>End</Text>
+                    <DateField
+                      value={dateDraft.endDate}
+                      onChange={(endDate) => setDateDraft((prev) => ({ ...prev, endDate }))}
+                      styles={styles}
+                      theme={theme}
+                      testID="overview-trip-end-date"
+                      accessibilityLabel="End date"
+                    />
+                  </View>
                 </View>
               </>
             ) : (
