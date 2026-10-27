@@ -14,6 +14,7 @@ import {
   formatCents,
   fromCents,
   toCents,
+  rollUpPayments,
   type PaymentRecord,
 } from '../utils/settlement';
 
@@ -373,16 +374,28 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
       return cell;
     };
 
-    const header = ['Person', 'Paid', 'Used'].map(escapeCsvCell);
+    const header = ['Person', 'Paid', 'Used', 'Paid to Other Travelers', 'Received from Other Travelers', 'Owed'].map(escapeCsvCell);
+    const paidToOthers: Record<string, number> = {};
+    const receivedFromOthers: Record<string, number> = {};
+    for (const payment of rollUpPayments(paymentRecords, coveredBy)) {
+      paidToOthers[payment.payerId] = (paidToOthers[payment.payerId] ?? 0) + payment.amountCents;
+      receivedFromOthers[payment.receiverId] = (receivedFromOthers[payment.receiverId] ?? 0) + payment.amountCents;
+    }
+    const totals = [0, 0, 0, 0, 0];
+    const decimal = (cents: number) => fromCents(cents).toFixed(2);
 
     const rows = memberIds.map((memberId) => {
       const person = memberNameMap.get(memberId) ?? 'Traveler';
-      const paid = paidTotals[memberId] ?? 0;
-      const used = usedTotals[memberId] ?? 0;
-      return [person, paid.toFixed(2), used.toFixed(2)].map(escapeCsvCell);
+      const paid = paidTotalsCents[memberId] ?? 0;
+      const used = usedTotalsCents[memberId] ?? 0;
+      const sent = paidToOthers[memberId] ?? 0;
+      const received = receivedFromOthers[memberId] ?? 0;
+      const values = [paid, used, sent, received, paid + sent - used - received];
+      values.forEach((value, index) => { totals[index] += value; });
+      return [person, ...values.map(decimal)].map(escapeCsvCell);
     });
 
-    const overallRow = ['Overall', overallPaid.toFixed(2), overallUsed.toFixed(2)].map(escapeCsvCell);
+    const overallRow = ['Overall', ...totals.map(decimal)].map(escapeCsvCell);
 
     return [header, ...rows, overallRow].map((row) => row.join(',')).join('\n');
   };
@@ -599,7 +612,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
             style={[styles.button, styles.smallButton, themeStyle('tabs_ledger_30', {  }, (theme ?? _styleTheme))]}
             onPress={handleExportCsv}
           >
-            <Text style={styles.buttonText}>Export CSV</Text>
+            <Text style={styles.buttonText}>Export Details</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.helperText}>Paid vs. used costs across all trip expenses.</Text>

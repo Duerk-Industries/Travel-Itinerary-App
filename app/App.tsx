@@ -1234,7 +1234,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (isFollowingMode || offlineReadOnly) return;
     switch (sourceType) {
       case 'flight':
-        openFlightInFlightsTab(sourceId);
+        setExternalFlightEditId(sourceId);
         break;
       case 'activity':
         setExternalActivityEditId(sourceId);
@@ -1248,7 +1248,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       default:
         break;
     }
-  }, [isFollowingMode, offlineReadOnly, openFlightInFlightsTab]);
+  }, [isFollowingMode, offlineReadOnly]);
 
   const saveCarRentalDraft = useCallback(async (rentalId?: string | null, draftOverride?: CarRentalDraft) => {
     if (isFollowingMode) return false;
