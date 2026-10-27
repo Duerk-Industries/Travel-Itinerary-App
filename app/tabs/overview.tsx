@@ -3176,7 +3176,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           testID={`day-details-item-actions-${d.id}`}
                           style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, ...(isPhoneLayout ? {} : { flexShrink: 0 }) }}
                         >
-                          {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
+                          {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} compact /> : null}
                           {isActivity ? (
                             <View style={{ flexShrink: 0 }}>
                               <ReactionBar
