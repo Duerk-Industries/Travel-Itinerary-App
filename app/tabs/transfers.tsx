@@ -1638,9 +1638,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     >
                       {!item.passengerInGroup ? <Text style={styles.warningText}>Passenger not in trip group</Text> : null}
                       <View style={styles.actionCell}>
-                        <TouchableOpacity style={[styles.tableActionButton, COMPACT_ACTION_BUTTON]}
+                        <TouchableOpacity accessibilityRole="button" style={[styles.tableActionButton, styles.tableActionButtonPrimary, COMPACT_ACTION_BUTTON]}
                           onPress={() => setSelectedTransfer(item)} testID={`transfer-details-${item.id}`}>
-                          <Text style={[styles.buttonText, themeStyle('tabs_transfers_17', { theme: theme }, (theme ?? _styleTheme))]}>Details</Text>
+                          <Text style={styles.buttonText}>Details</Text>
                         </TouchableOpacity>
                         {!readOnly ? (
                           <>
