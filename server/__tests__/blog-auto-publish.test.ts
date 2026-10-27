@@ -3,9 +3,12 @@ import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { addTripGuests, addTripMember, setDateOfBirth, storedBlog } from './providerRows';
+import { runBlogBackgroundJobs } from '../src/services/blogBackgroundWorker';
 import { confirmWebUser, loginWebUser, cleanupTestUsersByEmail, futureDateString } from './helpers';
 
 const TRIP_DAY = futureDateString();
+// The blog goes live at trip start, so fixtures that expect publication begin today.
+const TRIP_START = futureDateString(0);
 
 const mkUser = (tag: string) => ({ firstName: tag, lastName: 'Auto', email: `blog-auto-${tag.toLowerCase()}@example.com`, password: 'Password123!' });
 const adult = mkUser('Adult');
@@ -36,11 +39,11 @@ describe('trip blog is public by default (opt-out)', () => {
     await cleanupTestUsersByEmail([adult, other, minorish, noDob, optedOut, adult2].map((user) => user.email));
   });
 
-  const createTrip = async (token: string, name: string, memberIds: string[] = [], guests = 0) => {
+  const createTrip = async (token: string, name: string, memberIds: string[] = [], guests = 0, startDate = TRIP_START) => {
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name, startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] })
+      .send({ name, startDate, endDate: TRIP_DAY, participants: [] })
       .expect(201);
     const tripId = trip.body.trip?.id ?? trip.body.id;
     for (const userId of memberIds) await addTripMember(tripId, userId);
@@ -72,6 +75,37 @@ describe('trip blog is public by default (opt-out)', () => {
     const back = await request(app).patch(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${solo.token}`).send({ publicOptOut: false }).expect(200);
     expect(back.body.visibilityState).toBe('public');
     expect(await visibility(tripId)).toBe('public');
+  });
+
+  it('holds the blog private until the trip starts, and reports why', async () => {
+    const owner = await signUp(mkUser('Early'), '1990-01-01');
+    const tripId = await createTrip(owner.token, 'Future Trip', [], 0, futureDateString(30));
+    await openBlog(tripId, owner.token);
+    expect(await visibility(tripId)).not.toBe('public');
+    const readiness = await request(app).get(`/api/trips/${tripId}/blog/publication/readiness`).set('Authorization', `Bearer ${owner.token}`).expect(200);
+    expect(readiness.body).toMatchObject({ tripStarted: false, goLiveDate: futureDateString(30), missingBirthDate: 0, ready: true });
+    await cleanupTestUsersByEmail([mkUser('Early').email]);
+  });
+
+  it('goes live from the background job when the trip starts, without anyone opening the blog', async () => {
+    const owner = await signUp(mkUser('Worker'), '1990-01-01');
+    const started = await createTrip(owner.token, 'Started Trip');
+    const upcoming = await createTrip(owner.token, 'Upcoming Trip', [], 0, futureDateString(30));
+    await runBlogBackgroundJobs();
+    expect(await visibility(started)).toBe('public');
+    expect(await visibility(upcoming)).not.toBe('public');
+    await cleanupTestUsersByEmail([mkUser('Worker').email]);
+  });
+
+  it('readiness lists what blocks publishing without naming anyone', async () => {
+    const owner = await signUp(mkUser('Blocked'), '1990-01-01');
+    await setDateOfBirth(owner.id, null);
+    const tripId = await createTrip(owner.token, 'Blocked Trip');
+    const readiness = await request(app).get(`/api/trips/${tripId}/blog/publication/readiness`).set('Authorization', `Bearer ${owner.token}`).expect(200);
+    expect(readiness.body).toMatchObject({ tripStarted: true, missingBirthDate: 1, selfMissingBirthDate: true, ready: false });
+    const stranger = await signUp(mkUser('Stranger'), '1990-01-01');
+    await request(app).get(`/api/trips/${tripId}/blog/publication/readiness`).set('Authorization', `Bearer ${stranger.token}`).expect(403);
+    await cleanupTestUsersByEmail([mkUser('Blocked').email, mkUser('Stranger').email]);
   });
 
   it('does not publish when an account traveler is under 16', async () => {

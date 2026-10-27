@@ -9,6 +9,7 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ImageBackground, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import Modal from '../components/KeyboardAwareModal';
+import BlogPublicationChecklist from '../components/BlogPublicationChecklist';
 import { useBlogMediaUrlRefresh } from '../hooks/useBlogMediaUrlRefresh';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
@@ -2206,6 +2207,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                       </TouchableOpacity>
                     )}
                   </View>
+                  {publicationState !== 'public' && activeTripId ? <BlogPublicationChecklist tripId={activeTripId} backendUrl={backendUrl} headers={headers} refreshKey={`${publicationState}:${blog?.publicOptOut ? 1 : 0}:${missingAccessibilityCount}`} styles={styles} /> : null}
                   {publicationNotice ? <Text style={themeStyle('tabs_tripBlog_148', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{publicationNotice}</Text> : null}
                   {publicationState === 'public' && capabilities.trip_blog_alt_text && missingAccessibilityCount > 0 ? (
                     <Text testID="blog-accessibility-remediation" style={themeStyle('tabs_tripBlog_149', {  }, (theme ?? _styleTheme))}>
@@ -2217,7 +2219,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                       ? 'Anyone can view this blog on the web. Any traveler can make it private.'
                       : blog?.publicOptOut
                         ? 'A traveler made this blog private for public viewing.'
-                        : 'Blogs go public automatically when every traveler is 16+ with a date of birth in their profile and none has chosen private. Otherwise, public viewing needs consent from all adult account travelers.'}
+                        : 'The blog goes public automatically when the trip starts, if every traveler is 16+ with a date of birth in their profile, public photos have alt text, and no one has chosen private. Otherwise, public viewing needs consent from all adult account travelers.'}
                     {' '}Travelers and followers can always see this blog.
                   </Text>
                 </View>
