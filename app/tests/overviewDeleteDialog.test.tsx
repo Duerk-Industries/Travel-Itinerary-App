@@ -120,6 +120,13 @@ const baseProps = {
   featureStandardizedItemDialogs: true,
 };
 
+const mountedTrees: ReturnType<typeof renderer.create>[] = [];
+const createOverview = (element: React.ReactElement) => {
+  const tree = renderer.create(element);
+  mountedTrees.push(tree);
+  return tree;
+};
+
 describe('Overview standardized item-details dialog: delete flow', () => {
   let resolveDelete: (() => void) | null = null;
 
@@ -139,14 +146,15 @@ describe('Overview standardized item-details dialog: delete flow', () => {
     });
   });
 
-  afterEach(() => {
-    jest.resetAllMocks();
+  afterEach(async () => {
+    await act(async () => { mountedTrees.splice(0).forEach((tree) => tree.unmount()); });
+    jest.clearAllMocks();
   });
 
   test('closes the details and confirmation dialogs immediately on Delete, before the DELETE request resolves', async () => {
     let tree: any;
     await act(async () => {
-      tree = renderer.create(<OverviewTab {...(baseProps as any)} />);
+      tree = createOverview(<OverviewTab {...(baseProps as any)} />);
     });
     const root = tree!.root;
 
@@ -198,7 +206,7 @@ describe('Overview standardized item-details dialog: delete flow', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderer.create(<OverviewTab {...(baseProps as any)} />);
+      tree = createOverview(<OverviewTab {...(baseProps as any)} />);
     });
     const root = tree!.root;
 

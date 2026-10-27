@@ -356,6 +356,14 @@ describe('Overview UI (nested itinerary)', () => {
       expect(await findByTestId('day-details-back')).toBeTruthy();
     });
 
+    test('does not open a made-up today for a trip whose dates are not set', async () => {
+      const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps}
+        trip={{ ...baseProps.trip, startDate: null, endDate: null, durationDays: null }}
+        flights={[]} lodgings={[]} tours={[]} carRentals={[]} />);
+      expect(await findByTestId('overview-actions-menu')).toBeTruthy();
+      expect(queryByTestId('day-details-back')).toBeNull();
+    });
+
     test('the Whole trip pill lists every day, and a day opens its details', async () => {
       const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
       fireEvent.press(await findByTestId('overview-day-pill-whole-trip'));

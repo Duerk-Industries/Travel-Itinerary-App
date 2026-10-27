@@ -1423,13 +1423,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   // range, so a previous trip's cards cannot be mistaken for this one's.
   const openedTodayForTrip = useRef<string | null>(null);
   useEffect(() => {
-    if (!trip?.id || openedTodayForTrip.current === trip.id || !dayCards.length) return;
+    if (!trip?.id || !trip.startDate || !trip.endDate || openedTodayForTrip.current === trip.id || !dayCards.length) return;
     const matchesRange = dayCards.length === allDates.length && dayCards.every((card, idx) => card.date === allDates[idx]);
     if (!matchesRange) return;
     openedTodayForTrip.current = trip.id;
     const today = dayToOpen(dayCards.map((card) => card.date), localIsoDate());
     if (today) setSelectedDay(today);
-  }, [trip?.id, dayCards, allDates]);
+  }, [trip?.id, trip?.startDate, trip?.endDate, dayCards, allDates]);
 
   useEffect(() => {
     const cache = async () => {
@@ -3243,7 +3243,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               ) : null}
 
               {!readOnly ? (
-                <View testID="day-details-add-actions" style={[themeStyle('tabs_overview_47', {}, (theme ?? _styleTheme)), { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }]}>
+                <View testID="day-details-add-actions" style={[themeStyle('tabs_overview_47', {}, (theme ?? _styleTheme)), themeStyle('tabs_overview_layout1', {  }, (theme ?? _styleTheme))]}>
                   <TouchableOpacity testID="day-details-add-flight-button" accessibilityRole="button" accessibilityLabel="Add flight to this day"
                     style={styles.dayInfoButton} onPress={() => addFlightForDay(activeDayCard.date)}>
                     <Text style={styles.dayInfoButtonText}>+ Add flight</Text>
@@ -3308,9 +3308,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           nestedScrollEnabled
           contentInsetAdjustmentBehavior="automatic"
         >
-          <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center', width: '100%' }]}>
+          <View style={[styles.row, themeStyle('tabs_overview_layout2', {  }, (theme ?? _styleTheme))]}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            <View style={{ marginLeft: 'auto' }}>
+            <View style={themeStyle('tabs_overview_layout3', {  }, (theme ?? _styleTheme))}>
               <CsvTransferControls entity="day-plan" backendUrl={backendUrl} headers={jsonHeaders} tripId={trip?.id} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={itineraryDetails} styles={styles} theme={theme} enabledImport={featureDayPlanCsvImport} enabledExport={featureDayPlanCsvExport} readOnly={readOnly} onImported={() => setItineraryReload((count) => count + 1)}
                 renderActions={({ importCsv, exportCsv }) => <ActionDropdown testID="overview-actions-menu" styles={styles} actions={[
                   ...(!readOnly ? [{ id: 'overview-add-traveler', label: 'Add Traveler', onSelect: () => setShowAddTraveler(true) }] : []),

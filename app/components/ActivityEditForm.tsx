@@ -98,21 +98,21 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
         <View style={[styles.modalCard, themeStyle('components_ActivityEditForm_5', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.sectionTitle}>{isNew ? (schedulingMode === 'scheduled' ? 'Add Activity' : 'Add Optional Activity') : 'Edit Activity'}</Text>
           <ScrollView style={themeStyle('components_ActivityEditForm_6', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('components_ActivityEditForm_7', {  }, (theme ?? _styleTheme))} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }} testID="activity-scheduling-row">
-              <View style={{ width: 128 }}>
+            <View style={themeStyle('components_ActivityEditForm_layout1', {  }, (theme ?? _styleTheme))} testID="activity-scheduling-row">
+              <View style={themeStyle('components_ActivityEditForm_layout2', {  }, (theme ?? _styleTheme))}>
                 <Text style={styles.modalLabel}>Scheduling</Text>
                 <SelectField title="Activity scheduling" testID="activity-scheduling" value={schedulingMode === 'optional' ? 'optional' : ''}
                   options={[{ value: '', label: 'Scheduled' }, { value: 'optional', label: 'Optional' }]}
-                  onChange={changeSchedulingMode} styles={styles} style={{ width: '100%', minWidth: 0 }} webStyle={{ width: '100%', minWidth: 0 }} />
+                  onChange={changeSchedulingMode} styles={styles} style={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))} webStyle={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))} />
               </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={themeStyle('components_ActivityEditForm_layout4', {  }, (theme ?? _styleTheme))}>
                 <Text style={styles.modalLabel}>{schedulingMode === 'optional' ? 'Near hotel' : 'Date'}</Text>
                 {schedulingMode === 'optional' ? <SelectField title="Near hotel" testID="activity-near-hotel"
                   value={draft.nearLodgingId ?? ''} options={hotelOptions} styles={styles}
-                  style={{ width: '100%', minWidth: 0 }} webStyle={{ width: '100%', minWidth: 0 }}
+                  style={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))} webStyle={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))}
                   onChange={(id) => onChange((prev) => ({ ...prev, nearLodgingId: id || null }))} /> : <DateField
                   value={draft.date} onChange={(date) => { if (date) lastScheduledDate.current = date; onChange((prev) => ({ ...prev, date })); }}
-                  styles={styles} theme={theme} testID="activity-date" accessibilityLabel="Activity date" style={{ width: '100%', minWidth: 0 }}
+                  styles={styles} theme={theme} testID="activity-date" accessibilityLabel="Activity date" style={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))}
                 />}
               </View>
             </View>

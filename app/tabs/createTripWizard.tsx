@@ -1316,7 +1316,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         showCitySearch={!destinationAttractionWizardEnabled}
       />
       <Text style={styles.modalLabel}>Dates</Text>
-      <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
+      <View style={[styles.row, themeStyle('tabs_createTripWizard_layout1', {  }, (theme ?? _styleTheme))]}>
         <TouchableOpacity testID="quick-start-dates-scheduled" accessibilityRole="button" accessibilityState={{ selected: dates.mode === 'range' }} style={[styles.button, styles.smallButton]} onPress={() => setDates((prev) => ({ ...prev, mode: 'range' }))}><Text style={styles.buttonText}>Set dates</Text></TouchableOpacity>
         <TouchableOpacity testID="quick-start-dates-unscheduled" accessibilityRole="button" accessibilityState={{ selected: dates.mode === 'duration' }} style={[styles.button, styles.smallButton]} onPress={() => setDates((prev) => ({ ...prev, mode: 'duration' }))}><Text style={styles.buttonText}>Dates not set</Text></TouchableOpacity>
       </View>
@@ -1423,7 +1423,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <>
             <Text style={styles.sectionTitle}>Dates</Text>
             <Text style={styles.helperText}>Choose exact dates, a month and duration, or a trip length with dates to be decided.</Text>
-            <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
+            <View style={[styles.row, themeStyle('tabs_createTripWizard_layout1', {  }, (theme ?? _styleTheme))]}>
               <TouchableOpacity
                 style={[
                   themeStyle('tabs_createTripWizard_16', { dateModeSelected: dateModeSelected, theme: theme }, (theme ?? _styleTheme)),

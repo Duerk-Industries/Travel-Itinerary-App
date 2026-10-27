@@ -1,3 +1,4 @@
+import { themeStyle } from '../theme/theme';
 import React, { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -28,12 +29,12 @@ export default function ActionDropdown({ actions, styles, testID }: {
       </TouchableOpacity>
     </View>
     {open ? <Modal visible transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-      <View style={{ flex: 1 }} onAccessibilityEscape={() => setOpen(false)}>
-        <Pressable testID={`${testID}-dismiss`} accessibilityRole="button" accessibilityLabel="Close menu" style={{ position: 'absolute', inset: 0 }} onPress={() => setOpen(false)} />
-        <View testID={`${testID}-panel`} accessibilityRole="menu" style={{ position: 'absolute', top: position.top, right: position.right, width: menuWidth, maxHeight: Math.max(120, height - position.top - 12), backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 10, paddingVertical: 6, elevation: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
+      <View style={themeStyle('components_ActionDropdown_layout1', {  }, theme)} onAccessibilityEscape={() => setOpen(false)}>
+        <Pressable testID={`${testID}-dismiss`} accessibilityRole="button" accessibilityLabel="Close menu" style={themeStyle('components_ActionDropdown_layout2', {  }, theme)} onPress={() => setOpen(false)} />
+        <View testID={`${testID}-panel`} accessibilityRole="menu" style={themeStyle('components_ActionDropdown_layout3', { theme, position, menuWidth, height }, theme)}>
           <ScrollView keyboardShouldPersistTaps="handled">
-            {actions.map((action) => <TouchableOpacity key={action.id} testID={action.id} accessibilityRole="menuitem" style={{ paddingHorizontal: 18, paddingVertical: 13 }} onPress={() => { setOpen(false); action.onSelect(); }}>
-              <Text style={{ color: theme.colors.text, fontSize: 15 }}>{action.label}</Text>
+            {actions.map((action) => <TouchableOpacity key={action.id} testID={action.id} accessibilityRole="menuitem" style={themeStyle('components_ActionDropdown_layout4', {  }, theme)} onPress={() => { setOpen(false); action.onSelect(); }}>
+              <Text style={themeStyle('components_ActionDropdown_layout5', { theme }, theme)}>{action.label}</Text>
             </TouchableOpacity>)}
           </ScrollView>
         </View>

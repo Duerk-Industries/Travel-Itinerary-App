@@ -1593,7 +1593,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
           </View>
         ) : null}
         {blog?.tripPhotos?.map((photo) => (
-          <Image key={photo.assetId || photo.id} accessibilityLabel={photo.altText || 'Trip picture'} source={{ uri: photo.primaryUrl || photo.thumbnailUrl }} style={{ width: '100%', height: 280, borderRadius: 16, marginBottom: 16 }} resizeMode="cover" />
+          <Image key={photo.assetId || photo.id} accessibilityLabel={photo.altText || 'Trip picture'} source={{ uri: photo.primaryUrl || photo.thumbnailUrl }} style={themeStyle('tabs_tripBlog_layout1', {  }, (theme ?? _styleTheme))} resizeMode="cover" />
         ))}
         {visibleDays.map((day) => {
           const dayMetaDraft = dayMetaDrafts[day.localDate];

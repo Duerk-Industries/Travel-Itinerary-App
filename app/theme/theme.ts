@@ -240,6 +240,27 @@ export const resolveComponentTheme = (
 // React Native, native animated values and browser CSS share this integration boundary.
 type ThemeStyleValues = Record<string, any>;
 const styleFactories = {
+  App_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1 }),
+  components_ActionDropdown_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1 }),
+  components_ActionDropdown_layout2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ position: 'absolute', inset: 0 }),
+  components_ActionDropdown_layout3: (_theme: AppTheme, { theme, position, menuWidth, height }: ThemeStyleValues): any => ({ position: 'absolute', top: position.top, right: position.right, width: menuWidth, maxHeight: Math.max(120, height - position.top - 12), backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 10, paddingVertical: 6, elevation: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }),
+  components_ActionDropdown_layout4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingHorizontal: 18, paddingVertical: 13 }),
+  components_ActionDropdown_layout5: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text, fontSize: 15 }),
+  components_ActivityEditForm_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }),
+  components_ActivityEditForm_layout2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 128 }),
+  components_ActivityEditForm_layout3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', minWidth: 0 }),
+  components_ActivityEditForm_layout4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, minWidth: 0 }),
+  components_BannerPicturePicker_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '90%', maxWidth: 480, padding: 20, gap: 12 }),
+  tabs_allTrips_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1 }),
+  tabs_allTrips_layout2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 }),
+  tabs_allTrips_layout3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexWrap: 'wrap', gap: 8 }),
+  tabs_allTrips_layout4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 24 }),
+  tabs_allTrips_layout5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 12 }),
+  tabs_createTripWizard_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexWrap: 'wrap', gap: 8 }),
+  tabs_overview_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }),
+  tabs_overview_layout2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ justifyContent: 'space-between', alignItems: 'center', width: '100%' }),
+  tabs_overview_layout3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginLeft: 'auto' }),
+  tabs_tripBlog_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', height: 280, borderRadius: 16, marginBottom: 16 }),
   richTextRun1: (_theme: AppTheme, { run, linkColor }: ThemeStyleValues): any => ({
         ...(run.bold ? themeStyle('components_BlogRichTextView_1', {  }, _theme) : {}),
         ...(run.italic ? themeStyle('components_BlogRichTextView_2', {  }, _theme) : {}),

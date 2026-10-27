@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState } from 'react';
 import { ActivityIndicator, Platform, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -17,6 +19,7 @@ type Props = {
 };
 
 export default function BannerPicturePicker({ visible, backendUrl, headers, tripId, dayDate, styles, onClose, onSaved }: Props) {
+  const _styleTheme = useStyleTheme();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const pick = async (camera: boolean) => {
@@ -57,7 +60,7 @@ export default function BannerPicturePicker({ visible, backendUrl, headers, trip
   };
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={() => { if (!busy) onClose(); }}>
     <View style={styles.modalOverlay}>
-      <View style={[styles.card, { width: '90%', maxWidth: 480, padding: 20, gap: 12 }]}>
+      <View style={[styles.card, themeStyle('components_BannerPicturePicker_layout1', {  }, _styleTheme)]}>
         <Text style={styles.sectionTitle}>Change picture</Text>
         <Text style={styles.helperText}>This picture will also appear in the trip blog.</Text>
         {error ? <Text accessibilityRole="alert" style={styles.helperText}>{error}</Text> : null}

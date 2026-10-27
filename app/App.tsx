@@ -4106,7 +4106,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
           {activePage === 'overview'
             ? renderBoundedPage(
-              <View style={{ flex: 1 }}>
+              <View style={themeStyle('App_layout1', {  }, _styleTheme)}>
                 <OverviewTab
                   featureDayPlanCsvImport={featureDayPlanCsvImport}
                   featureDayPlanCsvExport={featureDayPlanCsvExport}
