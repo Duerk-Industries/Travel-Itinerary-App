@@ -98,7 +98,7 @@ describe('image-service', () => {
 
   it('uses a stable destination variant query for detailed itinerary cards', async () => {
     (axios.get as jest.Mock).mockResolvedValueOnce({
-      data: { results: [{ urls: { regular: 'https://images.example.com/osaka.jpg' } }] },
+      data: { results: [{ urls: { regular: 'https://images.example.com/osaka.jpg' }, alt_description: 'Dotonbori street food, Osaka' }] },
     });
 
     const result = await getItineraryImage({

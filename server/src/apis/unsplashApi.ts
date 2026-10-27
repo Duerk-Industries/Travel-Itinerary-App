@@ -2,12 +2,18 @@ import axios, { type AxiosResponse } from 'axios';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 import { recordProviderRequestCost } from './providerBudgeting';
 
+export type UnsplashSearchResult = {
+  urls?: {
+    regular?: string;
+  };
+  description?: string | null;
+  alt_description?: string | null;
+  location?: { name?: string | null; city?: string | null; country?: string | null } | null;
+  tags?: Array<{ title?: string | null }>;
+};
+
 type UnsplashSearchResponse = {
-  results?: Array<{
-    urls?: {
-      regular?: string;
-    };
-  }>;
+  results?: UnsplashSearchResult[];
 };
 
 type UnsplashRandomResponse = {

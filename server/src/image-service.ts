@@ -291,7 +291,9 @@ export async function getItineraryImage(params: {
     // to a variant rather than to an unbounded activity query, so multi-day
     // trips get visual variety without multiplying cache/API keys forever.
     const cacheSuffix = `${sanitizeFilename(params.locationName || 'unknown')}-${variant}`;
-    const unsplashPath = `unsplash/${cacheSuffix}.jpg`;
+    // v2: photos are now checked against the destination; the versioned path keeps
+    // previously cached wrong-city photos (cached under the old path) from being served.
+    const unsplashPath = `unsplash/itinerary-v2/${cacheSuffix}.jpg`;
     const accessKey = getUnsplashAccessKeyOrThrow();
     const unsplash = await fetchAndCache(unsplashPath, async () => {
       const destinationQuery = String(params.locationName ?? '').trim();
