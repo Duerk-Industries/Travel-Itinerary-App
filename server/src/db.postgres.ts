@@ -5575,6 +5575,7 @@ export const listExpenses = async (userId: string, tripId?: string | null): Prom
              to_char(e.exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
              COALESCE(e.payer_ids, '[]'::jsonb) as "payerIds",
              COALESCE(e.for_ids, '[]'::jsonb) as "forIds",
+             e.for_shares as "forShares",
              e.source_type as "sourceType",
              e.source_id as "sourceId",
              e.vendor,
@@ -5630,6 +5631,7 @@ export const insertExpense = async (expense: {
   exchangeRateDate?: string | null;
   payerIds?: string[];
   forIds?: string[];
+  forShares?: Record<string, number> | null;
   sourceType?: string | null;
   sourceId?: string | null;
   vendor?: string | null;
@@ -5650,9 +5652,9 @@ export const insertExpense = async (expense: {
     `
       INSERT INTO expenses (
         id, trip_id, group_id, user_id, expense_date, category, amount, currency, amount_in_trip_currency, exchange_rate_to_trip_currency, exchange_rate_date,
-        payer_ids, for_ids, source_type, source_id, vendor, notes, client_operation_id
+        payer_ids, for_ids, source_type, source_id, vendor, notes, client_operation_id, for_shares
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18, $19::jsonb
       )
       RETURNING
         id,
@@ -5668,6 +5670,7 @@ export const insertExpense = async (expense: {
         to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
         COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
         COALESCE(for_ids, '[]'::jsonb) as "forIds",
+        for_shares as "forShares",
         source_type as "sourceType",
         source_id as "sourceId",
         vendor,
@@ -5693,6 +5696,7 @@ export const insertExpense = async (expense: {
       expense.vendor ?? null,
       expense.notes ?? null,
       expense.clientOperationId ?? null,
+      expense.forShares ? JSON.stringify(expense.forShares) : null,
     ]
   );
   const row = rows[0] as any;
@@ -5720,6 +5724,7 @@ const getExpenseByClientOperation = async (clientOperationId: string): Promise<a
              to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
              COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
              COALESCE(for_ids, '[]'::jsonb) as "forIds",
+             for_shares as "forShares",
              source_type as "sourceType",
              source_id as "sourceId",
              vendor,
@@ -5772,6 +5777,7 @@ export const updateExpense = async (
     exchangeRateDate?: string | null;
     payerIds?: string[];
     forIds?: string[];
+    forShares?: Record<string, number> | null;
     vendor?: string | null;
     notes?: string | null;
   }
@@ -5790,7 +5796,8 @@ export const updateExpense = async (
           payer_ids = $11::jsonb,
           for_ids = $12::jsonb,
           vendor = $13,
-          notes = $14
+          notes = $14,
+          for_shares = $15::jsonb
       WHERE id = $1
         AND trip_id = $2
         AND source_type IS NULL
@@ -5808,6 +5815,7 @@ export const updateExpense = async (
                 to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
                 COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
                 COALESCE(for_ids, '[]'::jsonb) as "forIds",
+                for_shares as "forShares",
                 source_type as "sourceType",
                 source_id as "sourceId",
                 vendor,
@@ -5829,6 +5837,7 @@ export const updateExpense = async (
       JSON.stringify(expense.forIds ?? []),
       expense.vendor ?? null,
       expense.notes ?? null,
+      expense.forShares ? JSON.stringify(expense.forShares) : null,
     ]
   );
   const row = rows[0] as any;
@@ -5905,6 +5914,7 @@ export const upsertExpenseForSource = async (expense: {
         to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
         COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
         COALESCE(for_ids, '[]'::jsonb) as "forIds",
+        for_shares as "forShares",
         source_type as "sourceType",
         source_id as "sourceId",
         vendor,
@@ -14011,4 +14021,56 @@ export const listLegacyBlogMapArtifacts = async (afterPath='',limit=100): Promis
 export const deleteLegacyBlogMapArtifact = async (row:import('./types').LegacyBlogMapArtifact): Promise<boolean> => {
   const result = await getPool().query('DELETE FROM blog_day_map_artifacts WHERE trip_id=$1 AND day_date=$2 AND points_hash=$3 AND gcs_path=$4 RETURNING trip_id',[row.tripId,row.dayDate,row.pointsHash,row.path]);
   return result.rows.length === 1;
+};
+
+// --- Expense receipt images ------------------------------------------------------------------
+// The image bytes are in object storage; expense_receipts records where. Every read is scoped to
+// the caller's trip membership, the same rule listExpenses uses.
+export type ExpenseReceiptRecord = { expenseId: string; tripId: string; objectKey: string; contentType: string };
+
+/** The trip an expense belongs to, or null when it does not exist or the user is not in that trip's group. */
+export const getExpenseTripForUser = async (expenseId: string, userId: string): Promise<{ tripId: string } | null> => {
+  const { rows } = await getPool().query<{ tripId: string }>(
+    `SELECT e.trip_id::text AS "tripId" FROM expenses e JOIN trips t ON t.id = e.trip_id
+     WHERE e.id = $1 AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $2)`,
+    [expenseId, userId]
+  );
+  return rows[0] ? { tripId: String(rows[0].tripId) } : null;
+};
+
+export const getExpenseReceipt = async (expenseId: string, userId: string): Promise<ExpenseReceiptRecord | null> => {
+  if (!(await getExpenseTripForUser(expenseId, userId))) return null;
+  const { rows } = await getPool().query(
+    `SELECT expense_id::text AS "expenseId", trip_id::text AS "tripId", object_key AS "objectKey", content_type AS "contentType"
+     FROM expense_receipts WHERE expense_id = $1`,
+    [expenseId]
+  );
+  return rows[0] ?? null;
+};
+
+export const setExpenseReceipt = async (receipt: ExpenseReceiptRecord & { uploadedBy: string }): Promise<void> => {
+  const p = getPool();
+  const updated = await p.query(
+    `UPDATE expense_receipts SET object_key = $2, content_type = $3, uploaded_by = $4, created_at = NOW() WHERE expense_id = $1`,
+    [receipt.expenseId, receipt.objectKey, receipt.contentType, receipt.uploadedBy]
+  );
+  if (updated.rowCount) return;
+  await p.query(
+    `INSERT INTO expense_receipts (expense_id, trip_id, object_key, content_type, uploaded_by) VALUES ($1, $2, $3, $4, $5)`,
+    [receipt.expenseId, receipt.tripId, receipt.objectKey, receipt.contentType, receipt.uploadedBy]
+  );
+};
+
+export const deleteExpenseReceipt = async (expenseId: string): Promise<void> => {
+  await getPool().query(`DELETE FROM expense_receipts WHERE expense_id = $1`, [expenseId]);
+};
+
+/** Ids of the trip's expenses that have a receipt image, for the list indicator. */
+export const listExpenseIdsWithReceipt = async (userId: string, tripId: string): Promise<string[]> => {
+  const { rows } = await getPool().query<{ expenseId: string }>(
+    `SELECT r.expense_id::text AS "expenseId" FROM expense_receipts r JOIN trips t ON t.id = r.trip_id
+     WHERE r.trip_id = $1 AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $2)`,
+    [tripId, userId]
+  );
+  return rows.map((row) => String(row.expenseId));
 };

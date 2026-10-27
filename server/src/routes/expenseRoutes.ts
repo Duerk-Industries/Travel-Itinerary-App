@@ -2,7 +2,9 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import multer from 'multer';
 import { authenticate } from '../auth';
-import { deleteExpense, ensureUserInTrip, getTripById, insertExpense, insertExpenseIdempotent, listExpenses, listGroupMembers, updateExpense } from '../db';
+import { randomUUID } from 'crypto';
+import { deleteExpense, deleteExpenseReceipt, ensureUserInTrip, getExpenseReceipt, getExpenseTripForUser, getTripById, insertExpense, insertExpenseIdempotent, listExpenseIdsWithReceipt, listExpenses, listGroupMembers, setExpenseReceipt, updateExpense } from '../db';
+import { createReceiptReadUrl, deleteReceiptObject, putReceiptObject, receiptObjectKey } from '../services/expenseReceiptStorage';
 import { assertCanUseFeature } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
@@ -35,6 +37,13 @@ const allowedCategories = new Set([
 
 const allowedReceiptMimeTypes = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
+// The declared type is client-supplied, so the first bytes must agree with it before anything is stored.
+const looksLikeImage = (bytes: Buffer, mimeType: string): boolean => {
+  if (mimeType === 'image/png') return bytes.length > 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mimeType === 'image/webp') return bytes.length > 12 && bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP';
+  return bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+};
+
 // Offline clients send a random per-operation id so a retry after a timeout returns the original
 // expense instead of creating a second one. The id is scoped to the authenticated user.
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
@@ -53,6 +62,7 @@ const expenseRequestSignature = (e: any): string =>
     String(e.currency ?? '').toUpperCase(),
     sortedIds(Array.isArray(e.payerIds) ? e.payerIds : []),
     sortedIds(Array.isArray(e.forIds) ? e.forIds : []),
+    JSON.stringify(Object.entries(e.forShares ?? {}).sort(([a], [b]) => a.localeCompare(b))),
     e.vendor ?? null,
     e.notes ?? null,
   ]);
@@ -127,6 +137,7 @@ router.post('/', async (req, res) => {
     exchangeRateDate: dto.exchangeRateDate,
     payerIds: dto.payerIds,
     forIds: dto.forIds,
+    forShares: dto.forShares,
     vendor: dto.vendor,
     notes: dto.notes,
   };
@@ -254,12 +265,121 @@ router.post('/receipt/parse', receiptUpload.single('image'), async (req, res) =>
   }
 });
 
+// --- Stored receipt image (one per expense) -----------------------------------------------------
+// Distinct from /receipt/parse above, which reads a photo to pre-fill the form and keeps nothing.
+// Every route needs cost tracking and membership in the expense's trip.
+const receiptAccess = async (req: any, res: any): Promise<{ userId: string; tripId: string } | null> => {
+  const userId = req.user.userId as string;
+  try {
+    await assertCanUseFeature(userId, 'cost_tracking', (req.user as TokenPayload).role);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return null;
+    }
+    throw err;
+  }
+  const expense = await getExpenseTripForUser(req.params.id, userId);
+  if (!expense) {
+    res.status(404).json({ error: 'Expense not found' });
+    return null;
+  }
+  return { userId, tripId: expense.tripId };
+};
+
+router.get('/receipts', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const tripId = String(req.query.tripId ?? '').trim();
+  if (!tripId) {
+    res.status(400).json({ error: 'tripId is required' });
+    return;
+  }
+  try {
+    await assertCanUseFeature(userId, 'cost_tracking', ((req as any).user as TokenPayload).role);
+    res.json({ expenseIds: await listExpenseIdsWithReceipt(userId, tripId) });
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    res.status(500).json({ error: 'Failed to load receipts' });
+  }
+});
+
+router.get('/:id/receipt', async (req, res) => {
+  const access = await receiptAccess(req, res);
+  if (!access) return;
+  const receipt = await getExpenseReceipt(req.params.id, access.userId);
+  if (!receipt) {
+    res.status(404).json({ error: 'No receipt stored for this expense' });
+    return;
+  }
+  try {
+    const url = await createReceiptReadUrl(receipt.objectKey);
+    if (!url) {
+      res.status(404).json({ error: 'Receipt image is unavailable' });
+      return;
+    }
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ url, contentType: receipt.contentType });
+  } catch (err) {
+    logError('Failed to sign receipt URL', err);
+    res.status(503).json({ error: 'Receipt image is unavailable' });
+  }
+});
+
+router.put('/:id/receipt', receiptUpload.single('image'), async (req, res) => {
+  const access = await receiptAccess(req, res);
+  if (!access) return;
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: 'Receipt image is required' });
+    return;
+  }
+  if (!allowedReceiptMimeTypes.has(file.mimetype) || !looksLikeImage(file.buffer, file.mimetype)) {
+    res.status(400).json({ error: 'Unsupported receipt image type' });
+    return;
+  }
+  try {
+    const previous = await getExpenseReceipt(req.params.id, access.userId);
+    const objectKey = receiptObjectKey(access.tripId, req.params.id, file.mimetype, randomUUID());
+    await putReceiptObject(objectKey, file.buffer, file.mimetype);
+    await setExpenseReceipt({ expenseId: req.params.id, tripId: access.tripId, objectKey, contentType: file.mimetype, uploadedBy: access.userId });
+    if (previous && previous.objectKey !== objectKey) await deleteReceiptObject(previous.objectKey).catch((err) => logError('Failed to remove replaced receipt image', err));
+    res.json({ hasReceipt: true });
+  } catch (err) {
+    logError('Failed to store receipt image', err);
+    res.status(503).json({ error: 'Unable to store the receipt image' });
+  }
+});
+
+router.delete('/:id/receipt', async (req, res) => {
+  const access = await receiptAccess(req, res);
+  if (!access) return;
+  try {
+    const receipt = await getExpenseReceipt(req.params.id, access.userId);
+    if (receipt) {
+      await deleteExpenseReceipt(req.params.id);
+      await deleteReceiptObject(receipt.objectKey).catch((err) => logError('Failed to remove receipt image', err));
+    }
+    res.status(204).send();
+  } catch (err) {
+    logError('Failed to delete receipt image', err);
+    res.status(500).json({ error: 'Unable to remove the receipt image' });
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
   try {
     await assertCanUseFeature(userId, 'cost_tracking', role);
+    const receipt = await getExpenseReceipt(req.params.id, userId).catch(() => null);
     await deleteExpense(req.params.id, userId);
+    if (receipt) {
+      await deleteExpenseReceipt(req.params.id).catch(() => undefined);
+      await deleteReceiptObject(receipt.objectKey).catch((err) => logError('Failed to remove receipt image', err));
+    }
     res.status(204).send();
   } catch (err) {
     if (err instanceof EntitlementError) {

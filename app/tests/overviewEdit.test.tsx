@@ -51,7 +51,14 @@ const baseProps = {
 const findByText = (root: any, label: string) =>
   root.findAll((node: any) => node.type === 'Text' && node.props.children === label).slice(-1)[0];
 
+// The header actions live in a dropdown; open it when the label is not on screen yet.
+const openActionsMenu = (root: any) => {
+  const toggle = root.findAll((node: any) => node.props?.testID === 'overview-actions-menu' && node.props?.onPress)[0];
+  if (toggle && !root.findAll((node: any) => node.props?.testID === 'overview-actions-menu-panel').length) toggle.props.onPress();
+};
+
 const pressByText = (root: any, label: string) => {
+  if (!findByText(root, label)) openActionsMenu(root);
   const textNode = findByText(root, label);
   if (!textNode || !textNode.parent?.props.onPress) {
     throw new Error(`Button with label "${label}" not found.`);
@@ -270,6 +277,9 @@ describe('Overview edit controls', () => {
     const root = tree!.root;
 
     act(() => {
+      openActionsMenu(root);
+    });
+    act(() => {
       const editNode = findByText(root, 'Edit');
       if (!editNode?.parent?.props.onPress) {
         throw new Error('Edit button not found.');
@@ -487,6 +497,7 @@ describe('Overview edit controls', () => {
     expect(root.findAllByType(LodgingDialog)).toHaveLength(1);
     // Item editing is modal; the overview's normal view controls remain visible
     // underneath instead of switching the whole page into edit mode.
+    act(() => { openActionsMenu(root); });
     expect(findByText(root, 'Edit')).toBeTruthy();
 
     await act(async () => {

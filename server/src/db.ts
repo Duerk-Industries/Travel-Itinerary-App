@@ -411,6 +411,16 @@ export const deleteExpense = async (...args: Parameters<ReturnType<typeof adapte
   adapter().deleteExpense(...args);
 export const deleteExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpenseForSource']>) =>
   adapter().deleteExpenseForSource(...args);
+export const getExpenseTripForUser = async (...args: Parameters<ReturnType<typeof adapter>['getExpenseTripForUser']>) =>
+  adapter().getExpenseTripForUser(...args);
+export const getExpenseReceipt = async (...args: Parameters<ReturnType<typeof adapter>['getExpenseReceipt']>) =>
+  adapter().getExpenseReceipt(...args);
+export const setExpenseReceipt = async (...args: Parameters<ReturnType<typeof adapter>['setExpenseReceipt']>) =>
+  adapter().setExpenseReceipt(...args);
+export const deleteExpenseReceipt = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpenseReceipt']>) =>
+  adapter().deleteExpenseReceipt(...args);
+export const listExpenseIdsWithReceipt = async (...args: Parameters<ReturnType<typeof adapter>['listExpenseIdsWithReceipt']>) =>
+  adapter().listExpenseIdsWithReceipt(...args);
 export const listTripPayments = async (...args: Parameters<ReturnType<typeof adapter>['listTripPayments']>) =>
   adapter().listTripPayments(...args);
 export const insertTripPayment = async (...args: Parameters<ReturnType<typeof adapter>['insertTripPayment']>) =>

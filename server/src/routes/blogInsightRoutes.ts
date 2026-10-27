@@ -15,7 +15,7 @@ import { blogEngagementRepository } from '../blog/engagementRepository';
 import { blogMediaRepository } from '../blog/repository';
 import { logError } from '../logger';
 import { getApiCacheSetting } from '../config/apiLimits';
-import { listBlogPlaces } from '../services/blogPlacesService';
+import { listBlogPlaces, ratePlace } from '../services/blogPlacesService';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (C1, C2, C3, C5) — architecture §5.2.
 // A request entirely separate from GET /:tripId/blog: facts draw on five more table reads
@@ -138,6 +138,30 @@ router.get('/:tripId/blog/places', async (req, res) => {
     const message = String((err as Error).message || 'Unable to load trip places');
     const status = err instanceof ApiLimitExceededError ? 429 : /not authorized/i.test(message) ? 403 : 500;
     if (status === 500) logError('[blog-places] request failed', err);
+    res.status(status).json({ error: message });
+  }
+});
+
+// The thumb half of "Rate this place" (the written note is an ordinary blog entry, posted by the
+// client through POST /blog/items so it passes through that route's limits and audience rules).
+router.post('/:tripId/blog/places/rating', async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog_places'))) {
+      res.status(404).json({ error: 'Trip places are not enabled' });
+      return;
+    }
+    const place = String(req.body?.place ?? '').trim();
+    const value = Number(req.body?.value);
+    if (!place || place.length > 300 || (value !== 1 && value !== -1)) {
+      res.status(400).json({ error: 'A place and a thumb (1 or -1) are required' });
+      return;
+    }
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_AUTHORING_WRITE', requireConfiguredLimit: true });
+    res.json(await ratePlace(req.params.tripId, userIdOf(req), place, value as 1 | -1));
+  } catch (err) {
+    const message = String((err as Error).message || 'Unable to rate this place');
+    const status = err instanceof ApiLimitExceededError ? 429 : /not authorized/i.test(message) ? 403 : /required/i.test(message) ? 400 : 500;
+    if (status === 500) logError('[blog-places] rating failed', err);
     res.status(status).json({ error: message });
   }
 });

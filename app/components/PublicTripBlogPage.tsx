@@ -14,13 +14,15 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import BlogMap from './BlogMap';
 import type { BlogMapDay } from '../../server/src/services/blogMapService';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Constants from 'expo-constants';
 import { useFonts, Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import { resolveBackendUrl } from '../utils/backendUrl';
 import { formatDateLong } from '../utils/formatDateLong';
 import { buildDaySegments, formatGapLabel } from '../utils/blogDaySegments';
 import { useBlogMediaUrlRefresh } from '../hooks/useBlogMediaUrlRefresh';
+import { loadSession } from '../utils/session';
+import { createIdempotencyKey } from '../utils/idempotencyKey';
 
 type PublicBlogItem = {
   id: string;
@@ -55,6 +57,22 @@ type PublicBlogPayload = {
  * never record a reaction.
  */
 export type PublicBlogPreview = { tripId: string; headers: Record<string, string> };
+
+/**
+ * Who is looking, from GET /public/blog/:username/:tripSlug/viewer. Only a traveler or follower of the
+ * trip gets a trip id and day ids; everyone else is just "signed in or not".
+ */
+type PublicViewer = {
+  signedIn: boolean;
+  role: 'traveler' | 'follower' | null;
+  tripId?: string;
+  canComment?: boolean;
+  canModerate?: boolean;
+  days?: Array<{ localDate: string; id: string }>;
+};
+
+/** What the footer needs to let a signed-in follower comment, or a traveler hide a comment. */
+type CommentAccess = { tripId: string; dayId: string; token: string; canComment: boolean; canModerate: boolean };
 
 type Props = {
   username: string;
@@ -138,13 +156,60 @@ const DayEngagementFooter: React.FC<{
   reacting: boolean;
   reactionError: string | null;
   reactionsEnabled: boolean;
-}> = ({ data, bodyFont, backendUrl, username, tripSlug, localDate, selectedReaction, onReact, reacting, reactionError, reactionsEnabled }) => {
+  access?: CommentAccess | null;
+}> = ({ data, bodyFont, backendUrl, username, tripSlug, localDate, selectedReaction, onReact, reacting, reactionError, reactionsEnabled, access }) => {
   const _styleTheme = useStyleTheme();
   const [expanded, setExpanded] = useState(false);
   const [comments, setComments] = useState<PublicComment[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+  // Comments added or hidden from this page since the counts were loaded.
+  const [delta, setDelta] = useState(0);
+
+  const authHeaders = access ? { Authorization: `Bearer ${access.token}` } : {};
+  const postComment = async () => {
+    if (!access || !draft.trim() || posting) return;
+    setPosting(true);
+    setPostError(null);
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/${encodeURIComponent(access.tripId)}/blog/day/${encodeURIComponent(access.dayId)}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': createIdempotencyKey('public-comment'), ...authHeaders },
+        body: JSON.stringify({ body: draft.trim() }),
+      });
+      const created = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPostError(created.error || 'Your comment could not be posted.');
+        return;
+      }
+      setDraft('');
+      setDelta((current) => current + 1);
+      setExpanded(true);
+      await loadPage();
+    } catch {
+      setPostError('Your comment could not be posted.');
+    } finally {
+      setPosting(false);
+    }
+  };
+  const hideComment = async (commentId: string) => {
+    if (!access) return;
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/${encodeURIComponent(access.tripId)}/blog/comments/${encodeURIComponent(commentId)}/hide`, { method: 'POST', headers: authHeaders });
+      if (!res.ok) {
+        setPostError('That comment could not be hidden.');
+        return;
+      }
+      setComments((current) => (current ? current.filter((comment) => comment.id !== commentId) : current));
+      setDelta((current) => current - 1);
+    } catch {
+      setPostError('That comment could not be hidden.');
+    }
+  };
 
   const loadPage = async (cursor?: string) => {
     setLoading(true);
@@ -165,7 +230,7 @@ const DayEngagementFooter: React.FC<{
     }
   };
 
-  const commentCount = data?.commentCount ?? 0;
+  const commentCount = Math.max(0, (data?.commentCount ?? 0) + delta);
   if (!data) return null;
 
   const toggle = () => {
@@ -178,7 +243,7 @@ const DayEngagementFooter: React.FC<{
     <View style={themeStyle('components_PublicTripBlogPage_6', {  }, _styleTheme)}>
       <View style={themeStyle('components_PublicTripBlogPage_7', {  }, _styleTheme)}>
         {reactionsEnabled ? <PublicReactionChoices data={data} selectedReaction={selectedReaction} onReact={onReact} reacting={reacting} bodyFont={bodyFont} /> : null}
-        {commentCount ? (
+        {commentCount || access?.canComment ? (
           <Pressable
             onPress={toggle}
             accessibilityRole="button"
@@ -186,14 +251,14 @@ const DayEngagementFooter: React.FC<{
             style={themeStyle('components_PublicTripBlogPage_8', {  }, _styleTheme)}
           >
             <Text style={themeStyle('components_PublicTripBlogPage_9', { bodyFont: bodyFont }, _styleTheme)}>
-              💬 {commentCount} {commentCount === 1 ? 'comment' : 'comments'} {expanded ? '▲' : '▼'}
+              💬 {commentCount ? `${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}` : 'Comment'} {expanded ? '▲' : '▼'}
             </Text>
           </Pressable>
         ) : null}
       </View>
       {reactionError ? <Text style={themeStyle('components_PublicTripBlogPage_10', { bodyFont: bodyFont }, _styleTheme)}>{reactionError}</Text> : null}
 
-      {expanded && commentCount ? (
+      {expanded && (commentCount || access?.canComment) ? (
         <View style={themeStyle('components_PublicTripBlogPage_11', {  }, _styleTheme)}>
           {loading && !comments ? (
             <ActivityIndicator size="small" color={themeStyle('components_PublicTripBlogPage_55', {  }, _styleTheme)} />
@@ -209,6 +274,11 @@ const DayEngagementFooter: React.FC<{
                   <Text style={themeStyle('components_PublicTripBlogPage_15', { bodyFont: bodyFont, comment: comment }, _styleTheme)}>
                     {comment.deletedAt || comment.body == null ? 'This comment was removed.' : comment.body}
                   </Text>
+                  {access?.canModerate && comment.deletedAt == null ? (
+                    <Pressable onPress={() => hideComment(comment.id)} accessibilityRole="button" accessibilityLabel="Hide this comment" testID={`public-comment-hide-${comment.id}`}>
+                      <Text style={themeStyle('components_PublicTripBlogPage_60', { bodyFont: bodyFont }, _styleTheme)}>Hide</Text>
+                    </Pressable>
+                  ) : null}
                   {comment.replyCount > 0 ? (
                     <Text style={themeStyle('components_PublicTripBlogPage_16', { bodyFont: bodyFont }, _styleTheme)}>
                       {comment.replyCount} {comment.replyCount === 1 ? 'reply' : 'replies'}
@@ -230,6 +300,24 @@ const DayEngagementFooter: React.FC<{
           ) : (
             <Text style={themeStyle('components_PublicTripBlogPage_19', { bodyFont: bodyFont }, _styleTheme)}>No public comments on this day.</Text>
           )}
+          {access?.canComment ? (
+            <View testID={`public-comment-composer-${localDate}`}>
+              <TextInput
+                value={draft}
+                onChangeText={setDraft}
+                multiline
+                maxLength={2000}
+                placeholder="Add a comment"
+                accessibilityLabel="Add a comment"
+                testID={`public-comment-input-${localDate}`}
+                style={themeStyle('components_PublicTripBlogPage_57', { bodyFont: bodyFont }, _styleTheme)}
+              />
+              <Pressable onPress={postComment} disabled={posting || !draft.trim()} accessibilityRole="button" testID={`public-comment-post-${localDate}`} style={themeStyle('components_PublicTripBlogPage_58', {  }, _styleTheme)}>
+                <Text style={themeStyle('components_PublicTripBlogPage_59', { bodyFont: bodyFont }, _styleTheme)}>{posting ? 'Posting…' : 'Post'}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {postError ? <Text style={themeStyle('components_PublicTripBlogPage_18', { bodyFont: bodyFont }, _styleTheme)}>{postError}</Text> : null}
         </View>
       ) : null}
     </View>
@@ -243,6 +331,7 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug, preview }) =>
     status: 'loading', blog: null, message: null,
   });
   const [mapDays, setMapDays] = useState<BlogMapDay[]>([]);
+  const [viewer, setViewer] = useState<PublicViewer | null>(null);
   const [documentRefreshVersion, setDocumentRefreshVersion] = useState(0);
   useBlogMediaUrlRefresh(state.blog, () => setDocumentRefreshVersion((version) => version + 1));
 
@@ -299,6 +388,30 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug, preview }) =>
     document.addEventListener('visibilitychange', refresh);
     return () => { cancelled = true; controller.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', refresh); };
   }, [backendUrl, username, tripSlug, documentRefreshVersion]);
+
+  // Who is looking. A signed-in follower or traveler gets a comment box under each day; anyone else
+  // sees the page exactly as before. A separate, uncached request from the document, like engagement.
+  const sessionToken = useMemo(() => (preview ? null : loadSession()?.token ?? null), [preview]);
+  useEffect(() => {
+    if (preview || !sessionToken || state.status !== 'ready') return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}/viewer`, { headers: { Authorization: `Bearer ${sessionToken}` }, cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setViewer(data);
+      } catch {
+        // Without it the page is simply the read-only page.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [backendUrl, username, tripSlug, sessionToken, state.status, preview]);
+  const commentAccessFor = (localDate: string): CommentAccess | null => {
+    const dayId = viewer?.days?.find((day) => day.localDate === localDate)?.id;
+    if (!viewer?.tripId || !dayId || !sessionToken || (!viewer.canComment && !viewer.canModerate)) return null;
+    return { tripId: viewer.tripId, dayId, token: sessionToken, canComment: Boolean(viewer.canComment), canModerate: Boolean(viewer.canModerate) };
+  };
 
   // Read-only public engagement — public-audience reaction counts and comment counts per day, on
   // its own endpoint/flag/cache (architecture §5.1/§14.7). A separate request from the document
@@ -537,6 +650,7 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug, preview }) =>
         reacting={reactingTarget === day.localDate}
         reactionError={reactionError[day.localDate] ?? null}
         reactionsEnabled={reactionsEnabled}
+        access={commentAccessFor(day.localDate)}
       />
     </View>
   );

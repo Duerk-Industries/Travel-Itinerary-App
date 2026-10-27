@@ -1535,6 +1535,9 @@ const styleFactories = {
   // components/BlogDiscoveryPanel.tsx
   components_BlogDiscoveryPanel_24: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.accentAction),
   // components/BlogDiscoveryPanel.tsx
+  components_BlogDiscoveryPanel_26: (_theme: AppTheme, { borderColor }: ThemeStyleValues): any => ({ minHeight: 44, minWidth: 64, borderRadius: 8, borderWidth: 1, borderColor, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }),
+  components_BlogDiscoveryPanel_27: (_theme: AppTheme, { accentColor }: ThemeStyleValues): any => ({ minHeight: 44, minWidth: 64, borderRadius: 8, borderWidth: 1, borderColor: accentColor, backgroundColor: accentColor, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }),
+  components_BlogDiscoveryPanel_28: (_theme: AppTheme, { borderColor, textColor }: ThemeStyleValues): any => ({ minHeight: 88, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, color: textColor, textAlignVertical: 'top' }),
   components_BlogDiscoveryPanel_25: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onAccent),
   // components/BlogKeepsakeButton.tsx
   components_BlogKeepsakeButton_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }),
@@ -4054,6 +4057,18 @@ const styleFactories = {
   components_PublicTripBlogPage_54: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.textMuted, fontSize: 12 }),
   // components/PublicTripBlogPage.tsx
   components_PublicTripBlogPage_55: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
+  // components/ExpenseReceiptPanel.tsx
+  components_ExpenseReceiptPanel_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ display: 'none' }),
+  // components/ExpenseReceiptPanel.tsx
+  components_ExpenseReceiptPanel_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', height: 320, backgroundColor: _theme.colors.surfaceMuted }),
+  // components/PublicTripBlogPage.tsx
+  components_PublicTripBlogPage_57: (_theme: AppTheme, { bodyFont }: ThemeStyleValues): any => ({ minHeight: 72, borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8, fontFamily: bodyFont, fontSize: 15, color: _theme.colors.text, textAlignVertical: 'top' }),
+  // components/PublicTripBlogPage.tsx
+  components_PublicTripBlogPage_58: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 44, minWidth: 80, borderRadius: 8, backgroundColor: _theme.colors.link, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, alignSelf: 'flex-start' }),
+  // components/PublicTripBlogPage.tsx
+  components_PublicTripBlogPage_59: (_theme: AppTheme, { bodyFont }: ThemeStyleValues): any => ({ fontFamily: bodyFont, fontSize: 14, fontWeight: '700', color: _theme.colors.onAccent }),
+  // components/PublicTripBlogPage.tsx
+  components_PublicTripBlogPage_60: (_theme: AppTheme, { bodyFont }: ThemeStyleValues): any => ({ fontFamily: bodyFont, fontSize: 12, color: _theme.colors.linkText, marginTop: 2 }),
   // components/PublicTripBlogPage.tsx
   components_PublicTripBlogPage_56: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
   // components/ReactionBar.tsx
@@ -6391,6 +6406,8 @@ const styleFactories = {
   tabs_overview_52: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginLeft: 0, width: '100%' }),
   // tabs/overview.tsx
   tabs_overview_53: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }),
+  // tabs/overview.tsx — header actions dropdown panel
+  tabs_overview_actions_menu: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }),
   // tabs/overview.tsx
   tabs_overview_54: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ gap: 12 }),
   // tabs/overview.tsx

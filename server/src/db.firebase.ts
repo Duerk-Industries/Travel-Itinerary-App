@@ -2747,6 +2747,7 @@ const deleteAllTripArtifacts = async (tripId: string): Promise<void> => {
   await deleteQueryBatch(db.collection('trip_payments').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_removals').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('expenses').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('expense_receipts').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('flights').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('lodgings').where('trip_id', '==', tripId));
   await deleteQueryBatch(db.collection('tours').where('tripId', '==', tripId));
@@ -5362,6 +5363,7 @@ export const insertExpense = async (expense: {
   exchangeRateDate?: string | null;
   payerIds?: string[];
   forIds?: string[];
+  forShares?: Record<string, number> | null;
   sourceType?: string | null;
   sourceId?: string | null;
   vendor?: string | null;
@@ -5392,6 +5394,7 @@ export const insertExpense = async (expense: {
     exchangeRateDate: expense.exchangeRateDate ?? null,
     payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    forShares: expense.forShares ?? null,
     sourceType: expense.sourceType ?? null,
     sourceId: expense.sourceId ?? null,
     vendor: expense.vendor ?? null,
@@ -5430,6 +5433,7 @@ export const insertExpenseIdempotent = async (
     exchangeRateDate: expense.exchangeRateDate ?? null,
     payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    forShares: expense.forShares ?? null,
     sourceType: null,
     sourceId: null,
     vendor: expense.vendor ?? null,
@@ -5461,6 +5465,7 @@ export const updateExpense = async (
     exchangeRateDate?: string | null;
     payerIds?: string[];
     forIds?: string[];
+    forShares?: Record<string, number> | null;
     vendor?: string | null;
     notes?: string | null;
   }
@@ -5482,6 +5487,7 @@ export const updateExpense = async (
     exchangeRateDate: expense.exchangeRateDate ?? null,
     payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    forShares: expense.forShares ?? null,
     vendor: expense.vendor ?? null,
     notes: expense.notes ?? null,
   };
@@ -9874,4 +9880,45 @@ export const listLegacyBlogMapArtifacts = async (afterPath='',limit=100): Promis
 export const deleteLegacyBlogMapArtifact = async (row:import('./types').LegacyBlogMapArtifact): Promise<boolean> => {
   const db=getDb(), ref=db.collection('blog_day_map_artifacts').doc(`${row.tripId}:${row.dayDate}:${row.pointsHash}`);
   return db.runTransaction(async tx => {const doc=await tx.get(ref);if(!doc.exists || doc.data()?.gcsPath !== row.path) return false;tx.delete(ref);return true;});
+};
+
+// --- Expense receipt images ------------------------------------------------------------------
+// Mirrors the Postgres expense_receipts table: one document per expense, keyed by the expense id.
+export type ExpenseReceiptRecord = { expenseId: string; tripId: string; objectKey: string; contentType: string };
+
+export const getExpenseTripForUser = async (expenseId: string, userId: string): Promise<{ tripId: string } | null> => {
+  const doc = await getDb().collection('expenses').doc(expenseId).get();
+  if (!doc.exists) return null;
+  const tripId = String((doc.data() as any)?.tripId ?? '');
+  if (!tripId || !(await ensureUserInTrip(tripId, userId))) return null;
+  return { tripId };
+};
+
+export const getExpenseReceipt = async (expenseId: string, userId: string): Promise<ExpenseReceiptRecord | null> => {
+  if (!(await getExpenseTripForUser(expenseId, userId))) return null;
+  const doc = await getDb().collection('expense_receipts').doc(expenseId).get();
+  if (!doc.exists) return null;
+  const data = doc.data() as any;
+  return { expenseId, tripId: String(data.tripId), objectKey: String(data.objectKey), contentType: String(data.contentType) };
+};
+
+export const setExpenseReceipt = async (receipt: ExpenseReceiptRecord & { uploadedBy: string }): Promise<void> => {
+  await getDb().collection('expense_receipts').doc(receipt.expenseId).set({
+    expenseId: receipt.expenseId,
+    tripId: receipt.tripId,
+    objectKey: receipt.objectKey,
+    contentType: receipt.contentType,
+    uploadedBy: receipt.uploadedBy,
+    createdAt: nowIso(),
+  });
+};
+
+export const deleteExpenseReceipt = async (expenseId: string): Promise<void> => {
+  await getDb().collection('expense_receipts').doc(expenseId).delete();
+};
+
+export const listExpenseIdsWithReceipt = async (userId: string, tripId: string): Promise<string[]> => {
+  if (!(await ensureUserInTrip(tripId, userId))) return [];
+  const snap = await getDb().collection('expense_receipts').where('tripId', '==', tripId).get();
+  return snap.docs.map((doc) => doc.id);
 };

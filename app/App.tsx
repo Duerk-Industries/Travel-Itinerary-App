@@ -46,6 +46,7 @@ import {
 } from './navigationConfig';
 import { formatDateLong } from './utils/formatDateLong';
 import { createIdempotencyKey } from './utils/idempotencyKey';
+import { buildExistingTripAiRequest } from './utils/aiItineraryRequest';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { defaultTemperatureUnitForRegion, normalizeTemperatureUnit, type TemperatureUnit } from './utils/temperatureUnit';
 import { sanitizeCostInput } from './utils/sanitizeCost';
@@ -2960,6 +2961,54 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [asyncItineraryByTrip, backendUrl, headers]
   );
 
+  // Starts AI generation for a trip that already exists (the wizard only offers it at creation).
+  // The job adds Proposed items next to what is already there and skips duplicates, so nothing the
+  // group has planned is replaced. It reuses the trip's itinerary record when there is one.
+  const generateAiItinerary = useCallback(
+    async (tripId: string) => {
+      const trip = trips.find((candidate) => candidate.id === tripId);
+      const request = trip ? buildExistingTripAiRequest(trip as any, traits as any) : null;
+      if (!trip || !request) {
+        Alert.alert('Unable to generate', 'Add a destination and trip dates first, then try again.');
+        return;
+      }
+      try {
+        const listRes = await fetch(`${backendUrl}/api/itineraries`, { headers });
+        const records = listRes.ok ? await listRes.json().catch(() => []) : [];
+        let itineraryId: string | null = (Array.isArray(records) ? records : []).find((record: any) => record?.tripId === tripId)?.id ?? null;
+        if (!itineraryId) {
+          const createRes = await fetch(`${backendUrl}/api/itineraries`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body: JSON.stringify({ tripId, destination: request.country, days: request.days, budget: request.budgetMax }),
+          });
+          const created = await createRes.json().catch(() => ({}));
+          if (!createRes.ok || !created?.id) {
+            Alert.alert('Unable to generate', created?.error || 'The itinerary could not be set up.');
+            return;
+          }
+          itineraryId = String(created.id);
+        }
+        const body = { ...request, itineraryId };
+        const idempotencyKey = createIdempotencyKey(`generate-${tripId}`);
+        const res = await fetch(`${backendUrl}/api/itinerary/async`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey, ...headers },
+          body: JSON.stringify({ ...body, idempotencyKey }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.jobId) {
+          Alert.alert('Unable to generate', data?.error || `Generation could not be started (status ${res.status}).`);
+          return;
+        }
+        onAiItineraryQueued(tripId, String(data.jobId), body);
+      } catch (err) {
+        Alert.alert('Unable to generate', (err as Error).message || 'Generation could not be started.');
+      }
+    },
+    [trips, traits, backendUrl, headers, onAiItineraryQueued]
+  );
+
   const dismissAiItineraryError = useCallback((tripId: string) => {
     setAsyncItineraryByTrip((prev) => {
       if (!(tripId in prev)) return prev;
@@ -4086,6 +4135,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       : null
                   }
                   onRetryAiItinerary={retryAiItinerary}
+                  onGenerateAiItinerary={featureAiItineraryGeneration ? generateAiItinerary : undefined}
                   onDismissAiItineraryError={dismissAiItineraryError}
                   aiItineraryGenerationAllowed={aiItineraryGenerationAllowed}
                   editSignal={overviewEditSignal}

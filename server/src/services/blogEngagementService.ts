@@ -125,7 +125,7 @@ export const resolveComment = async (
   };
 };
 
-const isFollowerCommentingEnabled = async (tripId: string): Promise<boolean> => {
+export const isFollowerCommentingEnabled = async (tripId: string): Promise<boolean> => {
   if (getCurrentDbProvider() === 'firebase') return getFollowerCommentsEnabled(tripId);
   const result = await queryBlog<{ follower_comments_enabled: boolean }>(
     'SELECT follower_comments_enabled FROM trip_blogs WHERE trip_id = $1',

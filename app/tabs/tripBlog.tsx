@@ -1984,7 +1984,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                     onReactionError={handleEngagementError}
                     theme={theme}
                     currentUserId={currentUserId}
-                    canModerate={isTripOwnerOrAdmin}
+                    canModerate={isTripOwnerOrAdmin || !readOnly}
                     getComments={(assetId) => comments.getCommentsForTarget(day.localDate, 'asset', assetId)}
                     onPostComment={(assetId, body, parentCommentId) => comments.postComment(day.localDate, 'asset', assetId, body, parentCommentId)}
                     onEditComment={(commentId, body) => comments.editComment(day.localDate, commentId, body)}
@@ -2018,7 +2018,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                   targetKind="day"
                   targetId={day.id}
                   currentUserId={currentUserId}
-                  canModerate={isTripOwnerOrAdmin}
+                  canModerate={isTripOwnerOrAdmin || !readOnly}
                   canEngage={canEngage}
                   onPostTopLevel={(body) => comments.postComment(day.localDate, 'day', day.id, body)}
                   onReply={(parentCommentId, body) => comments.postComment(day.localDate, 'day', day.id, body, parentCommentId)}
@@ -2310,6 +2310,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                 borderColor={borderColor}
                 backgroundColor={inputColor}
                 theme={theme}
+                onRated={() => { void load(); }}
               />
               {capabilities.trip_blog_spend_summary && !readOnly ? (
                 <View testID="trip-blog-spend-summary" style={themeStyle('tabs_tripBlog_172', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>

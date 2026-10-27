@@ -17,13 +17,41 @@ const splitAmountIntoCents = (amount: number, parts: number): number[] => {
   });
 };
 
+/**
+ * Splits an amount among people in proportion to their weights, to the cent. Whole cents are
+ * handed out by largest remainder, so the parts always add back up to the amount. Equal weights
+ * give the same split as splitAmountIntoCents.
+ */
+export const splitAmountByWeights = (amount: number, weights: number[]): number[] => {
+  if (!weights.length) return [];
+  const cents = Math.round(amount * 100);
+  const safe = weights.map((weight) => (Number.isFinite(weight) && weight > 0 ? weight : 1));
+  const total = safe.reduce((sum, weight) => sum + weight, 0);
+  const exact = safe.map((weight) => (cents * weight) / total);
+  const parts = exact.map((value) => Math.trunc(value));
+  let remaining = cents - parts.reduce((sum, part) => sum + part, 0);
+  const direction = remaining >= 0 ? 1 : -1;
+  const order = exact
+    .map((value, index) => ({ index, fraction: Math.abs(value - Math.trunc(value)) }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  for (let i = 0; remaining !== 0; i = (i + 1) % order.length) {
+    parts[order[i].index] += direction;
+    remaining -= direction;
+  }
+  return parts.map((part) => part / 100);
+};
+
 // (This would be moved from app/tabs/costReport.ts)
 export const computePayerTotals = <T>(
   items: T[],
   getAmount: (item: T) => number,
   getPayers: (item: T) => string[],
   memberIds: string[] | undefined,
-  options: { fallbackOnEmpty?: boolean } = {}
+  options: {
+    fallbackOnEmpty?: boolean;
+    /** Per-person weights for an uneven split of an item; ignored when the people fall back to everyone. */
+    getWeights?: (item: T) => Record<string, number> | null | undefined;
+  } = {}
 ): Record<string, number> => {
   const safeMemberIds = Array.isArray(memberIds) ? memberIds : [];
   const totals: Record<string, number> = {};
@@ -36,12 +64,14 @@ export const computePayerTotals = <T>(
     if (!amount) return;
 
     let payers = (getPayers(item) ?? []).filter(Boolean);
+    let weights = options.getWeights?.(item) ?? null;
     if (!payers.length && options.fallbackOnEmpty) {
       payers = safeMemberIds;
+      weights = null;
     }
     if (!payers.length) return;
 
-    const shares = splitAmountIntoCents(amount, payers.length);
+    const shares = weights ? splitAmountByWeights(amount, payers.map((id) => weights![id] ?? 1)) : splitAmountIntoCents(amount, payers.length);
     payers.forEach((payerId, index) => {
       if (totals[payerId] !== undefined) {
         totals[payerId] += shares[index] ?? 0;
@@ -69,6 +99,8 @@ export interface UnifiedExpense {
   currency: string;
   payerIds: string[];
   forIds: string[];
+  /** Weight per person in forIds for an uneven split; absent means an equal split. */
+  forShares?: Record<string, number> | null;
 }
 
 // New function to build the single data structure
@@ -189,6 +221,7 @@ export const buildAllExpenses = (
         currency: tripCurrency,
         payerIds: resolvePayers(Array.isArray(e.payerIds) ? e.payerIds : Array.isArray(e.payer_ids) ? e.payer_ids : []),
         forIds: Array.isArray(e.forIds) && e.forIds.length > 0 ? e.forIds : allMemberIds,
+        forShares: e.forShares ?? null,
       })
     );
 
@@ -203,7 +236,7 @@ export const calculateAllTotals = (
   coveredBy: Record<string, string>
 ) => {
   const rawPaidTotals = computePayerTotals(allExpenses, e => e.amount, e => e.payerIds, allMemberIds, { fallbackOnEmpty: true });
-  const rawUsedTotals = computePayerTotals(allExpenses, e => e.amount, e => e.forIds, allMemberIds, { fallbackOnEmpty: true });
+  const rawUsedTotals = computePayerTotals(allExpenses, e => e.amount, e => e.forIds, allMemberIds, { fallbackOnEmpty: true, getWeights: e => e.forShares });
 
   const ledgerPaidTotals = rollUpTotals(rawPaidTotals, coveredBy);
   const ledgerUsedTotals = rollUpTotals(rawUsedTotals, coveredBy);

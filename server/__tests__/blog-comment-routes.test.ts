@@ -252,7 +252,7 @@ describe('blog comment routes', () => {
       .expect(204);
   });
 
-  it('hide/unhide is owner-or-admin only, is idempotent, and adjusts the author\'s strike count', async () => {
+  it('hide/unhide is for travelers on the trip (not followers), is idempotent, and adjusts the author\'s strike count', async () => {
     const created = await request(app)
       .post(`/api/trips/${tripId}/blog/item/${itemId}/comments`)
       .set('Authorization', `Bearer ${followerToken}`)
@@ -260,10 +260,10 @@ describe('blog comment routes', () => {
       .send({ body: 'Comment to be hidden' })
       .expect(201);
 
-    // Not the owner and not admin — 403.
+    // A follower is not a traveler and not an admin — 403, even for their own comment.
     await request(app)
       .post(`/api/trips/${tripId}/blog/comments/${created.body.id}/hide`)
-      .set('Authorization', `Bearer ${travelerToken}`)
+      .set('Authorization', `Bearer ${followerToken}`)
       .expect(403);
 
     const hidden = await request(app)
@@ -289,6 +289,24 @@ describe('blog comment routes', () => {
     await request(app)
       .delete(`/api/trips/${tripId}/blog/comments/${created.body.id}/hide`)
       .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+  });
+
+  it('a traveler who is not the trip owner can hide and unhide too', async () => {
+    const created = await request(app)
+      .post(`/api/trips/${tripId}/blog/item/${itemId}/comments`)
+      .set('Authorization', `Bearer ${followerToken}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ body: 'Comment a fellow traveler hides' })
+      .expect(201);
+    const hidden = await request(app)
+      .post(`/api/trips/${tripId}/blog/comments/${created.body.id}/hide`)
+      .set('Authorization', `Bearer ${travelerToken}`)
+      .expect(200);
+    expect(hidden.body.hiddenAt).toBeTruthy();
+    await request(app)
+      .delete(`/api/trips/${tripId}/blog/comments/${created.body.id}/hide`)
+      .set('Authorization', `Bearer ${travelerToken}`)
       .expect(200);
   });
 

@@ -967,6 +967,8 @@ export interface Expense {
   exchangeRateDate?: string | null;
   payerIds: string[];
   forIds: string[];
+  /** Weight per traveler in forIds for an uneven split (2 = double portion); absent or null means an equal split. */
+  forShares?: Record<string, number> | null;
   sourceType?: string | null;
   sourceId?: string | null;
   notes?: string | null;

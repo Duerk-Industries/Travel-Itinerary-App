@@ -10,6 +10,8 @@ import { blogEngagementRepository } from '../blog/engagementRepository';
 import { BlogComment, BlogEngagementTargetKind, BLOG_REACTION_EMOJIS, BlogReactionEmoji } from '../blog/engagementTypes';
 import { clearPublicReaction, getPublicVisitorReactions, setPublicReaction } from '../blog/publicReactionRepository';
 import { createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
+import { verifyToken } from '../auth';
+import { isFollowerCommentingEnabled, resolveActorMembership } from '../services/blogEngagementService';
 
 const router = Router();
 
@@ -260,6 +262,47 @@ const resolvePublicTripIdPostgres = async (
   );
   return { tripId, days: days.rows.map((d) => ({ id: String(d.id), localDate: new Date(d.local_date).toISOString().slice(0, 10) })) };
 };
+
+// Who is looking, for the public page to offer comments to signed-in followers and moderation to
+// travelers. Separate from the cached document and never cached itself. Anyone who is not a
+// traveler or follower of this trip gets nothing but the fact that they are not one: the trip id and
+// day ids are only handed to people who already have access to the trip.
+router.get('/:username/:tripSlug/viewer', async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  const anonymous = { signedIn: false, role: null };
+  const header = req.headers.authorization;
+  if (!header) return res.json(anonymous);
+  let userId: string;
+  try {
+    userId = String(verifyToken(String(header).split(' ')[1] ?? '').userId);
+  } catch {
+    return res.json(anonymous);
+  }
+  try {
+    const resolved = getCurrentDbProvider() === 'firebase'
+      ? await resolvePublicTripIdFirebase(String(req.params.username), String(req.params.tripSlug))
+      : await resolvePublicTripIdPostgres(String(req.params.username), String(req.params.tripSlug));
+    if (!resolved) return res.status(404).json({ error: 'Public blog not found' });
+    let role: 'traveler' | 'follower';
+    try {
+      role = await resolveActorMembership(resolved.tripId, userId);
+    } catch {
+      return res.json({ signedIn: true, role: null });
+    }
+    const commentsOn = (await isFeatureEnabled('trip_blog_social_layer')) && (await isFeatureEnabled('trip_blog_comments'));
+    const canComment = commentsOn && (role === 'traveler' || (await isFollowerCommentingEnabled(resolved.tripId)));
+    return res.json({
+      signedIn: true,
+      role,
+      tripId: resolved.tripId,
+      canComment,
+      canModerate: commentsOn && role === 'traveler',
+      days: resolved.days.map((day) => ({ localDate: day.localDate, id: day.id })),
+    });
+  } catch {
+    return res.json({ signedIn: true, role: null });
+  }
+});
 
 // Locations have a separate uncached response so withdrawing consent never leaves
 // coordinates in the public document cache. Resolve publication again after reads.

@@ -279,7 +279,8 @@ describe('DailyExpensesTab', () => {
         'http://example.test/api/expenses/e1',
         expect.objectContaining({ method: 'PUT' }),
       ));
-      const body = JSON.parse((fetchMock.mock.calls[0] as any[])[1].body);
+      // (opening the day also looks up which expenses have a stored receipt; only the PUT carries a body)
+      const body = JSON.parse(((fetchMock.mock.calls as any[][]).find((call) => call[1]?.method === 'PUT') as any[])[1].body);
       expect(body).toEqual(expect.objectContaining({ amount: 18.75, vendor: 'Flour Bakery' }));
       expect(body.notes).toBeUndefined();
       expect(setExpenses).toHaveBeenCalled();
@@ -315,7 +316,8 @@ describe('DailyExpensesTab', () => {
       fireEvent.press(screen.getAllByText('$12.00')[0]);
       fireEvent.press(screen.getByTestId('expense-delete-e1'));
       fireEvent.press(screen.getByTestId('expense-detail-delete-confirm-yes'));
-      expect(fetchMock).not.toHaveBeenCalled();
+      // Reading which expenses have a receipt is fine; nothing may be changed.
+      expect((fetchMock.mock.calls as any[][]).filter((call) => call[1]?.method && call[1].method !== 'GET')).toEqual([]);
     } finally {
       global.fetch = originalFetch;
     }

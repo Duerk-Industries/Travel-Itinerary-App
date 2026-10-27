@@ -365,12 +365,40 @@ describe('Overview UI (nested itinerary)', () => {
       expect(await findByTestId('day-details-back')).toBeTruthy();
     });
 
+    test('Generate itinerary asks first, then starts generation for the trip', async () => {
+      const onGenerateAiItinerary = jest.fn();
+      const { findByTestId, queryByTestId, getByText } = await renderOverview(<OverviewTab {...baseProps} onGenerateAiItinerary={onGenerateAiItinerary} />);
+      fireEvent.press(await findByTestId('overview-actions-menu'));
+      fireEvent.press(await findByTestId('overview-generate-itinerary'));
+      expect(onGenerateAiItinerary).not.toHaveBeenCalled();
+      fireEvent.press(getByText('Generate'));
+      expect(onGenerateAiItinerary).toHaveBeenCalledWith('trip1');
+      expect(queryByTestId('overview-generate-itinerary')).toBeNull(); // the menu closes once an action is chosen
+    });
+
+    test('Generate itinerary is hidden when unavailable, not allowed, read-only or already running', async () => {
+      const fn = jest.fn();
+      for (const props of [{}, { onGenerateAiItinerary: fn, aiItineraryGenerationAllowed: false }, { onGenerateAiItinerary: fn, readOnly: true }, { onGenerateAiItinerary: fn, aiItineraryPending: true }]) {
+        const view = await renderOverview(<OverviewTab {...baseProps} {...(props as any)} />);
+        fireEvent.press(await view.findByTestId('overview-actions-menu'));
+        expect(view.queryByTestId('overview-generate-itinerary')).toBeNull();
+        view.unmount();
+      }
+    });
+
+    test('Notes are hidden when the trip has none', async () => {
+      const { queryByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+      expect(queryByTestId('overview-trip-notes')).toBeNull();
+    });
+
     test('Add traveler is available without entering Edit mode, and hidden when read-only', async () => {
       const { findByTestId, findAllByPlaceholderText, queryByTestId, unmount } = await renderOverview(<OverviewTab {...baseProps} />);
+      fireEvent.press(await findByTestId('overview-actions-menu'));
       fireEvent.press(await findByTestId('overview-add-traveler'));
       expect((await findAllByPlaceholderText('First name')).length).toBeGreaterThan(0);
       unmount();
       const readOnly = await renderOverview(<OverviewTab {...baseProps} readOnly />);
+      fireEvent.press(await readOnly.findByTestId('overview-actions-menu'));
       expect(readOnly.queryByTestId('overview-add-traveler')).toBeNull();
     });
   });

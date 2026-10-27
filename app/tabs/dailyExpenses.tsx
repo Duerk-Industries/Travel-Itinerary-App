@@ -3,12 +3,14 @@ import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import PayerSelect from '../components/PayerSelect';
 import { singlePayerIds } from '../utils/payerSelection';
+import { splitAmountByWeights } from '../utils/costs';
 import { exportCsv } from '../utils/csvExport';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ExpenseReceiptPanel from '../components/ExpenseReceiptPanel';
 import DialogShell from '../components/DialogShell';
 import PlaidImportQueue from '../components/PlaidImportQueue';
 import DraftTextInput from '../components/DraftTextInput';
@@ -61,6 +63,8 @@ type Expense = {
   notes?: string | null;
   payerIds: string[];
   forIds: string[];
+  /** Weight per traveler in forIds for an uneven split; absent or null means equal. */
+  forShares?: Record<string, number> | null;
   createdAt: string;
   sourceType?: string | null;
   sourceId?: string | null;
@@ -127,6 +131,8 @@ type DailyExpenseDraft = {
   amount: string;
   vendor: string;
   forIds: string[];
+  /** Weight per selected traveler when splitting unevenly; null splits equally. */
+  forShares?: Record<string, number> | null;
   payerIds: string[];
 };
 
@@ -214,19 +220,21 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const tripDates = useMemo(() => buildDateRange(trip), [trip]);
   const expenseDraftStorageKey = `stp.daily-expense-draft.${trip?.id ?? 'none'}`;
+  // The category used last starts the next expense, so a run of similar expenses (rides, souvenirs) needs no re-picking.
+  const [lastCategory, setLastCategory] = usePersistedState<CategoryOption>('stp.daily-expense-last-category', 'Breakfast');
   const defaultExpenseDraft = useMemo<DailyExpenseDraft>(() => {
     const todayIso = localTodayDateOnly();
     return {
       isOpen: false,
       date: tripDates.includes(todayIso) ? todayIso : tripDates[0] ?? todayIso,
-      category: 'Breakfast',
+      category: categoryOptions.includes(lastCategory) ? lastCategory : 'Breakfast',
       currency: trip?.currency ?? 'USD',
       amount: '',
       vendor: '',
       forIds: activeMembers.map((member) => member.id),
       payerIds: defaultPayerId ? [defaultPayerId] : [],
     };
-  }, [activeMembers, defaultPayerId, trip?.currency, tripDates]);
+  }, [activeMembers, defaultPayerId, trip?.currency, tripDates, lastCategory]);
   const [storedExpenseDraft, setExpenseDraft] = usePersistedState<DailyExpenseDraft | null>(
     expenseDraftStorageKey,
     null,
@@ -239,6 +247,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     amount: draftAmount,
     vendor: draftVendor,
     forIds: draftForIds,
+    forShares: draftForShares = null,
     payerIds: draftPayerIds,
   } = expenseDraft;
   const updateExpenseDraft = (update: Partial<DailyExpenseDraft>) => {
@@ -252,11 +261,20 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const setDraftForIds = (next: React.SetStateAction<string[]>) => {
     setExpenseDraft((current) => {
       const draft = current ?? defaultExpenseDraft;
-      return {
-        ...draft,
-        forIds: typeof next === 'function' ? next(draft.forIds) : next,
-      };
+      const forIds = typeof next === 'function' ? next(draft.forIds) : next;
+      // Weights follow the selection: a deselected traveler loses theirs, a newly selected one starts at one share.
+      const forShares = draft.forShares
+        ? forIds.reduce<Record<string, number>>((all, id) => ({ ...all, [id]: draft.forShares?.[id] ?? 1 }), {})
+        : null;
+      return { ...draft, forIds, forShares };
     });
+  };
+  const setDraftShare = (memberId: string, weight: number) => {
+    const next = Math.min(20, Math.max(1, Math.round(weight)));
+    updateExpenseDraft({ forShares: { ...(draftForShares ?? {}), [memberId]: next } });
+  };
+  const setSplitUneven = (uneven: boolean) => {
+    updateExpenseDraft({ forShares: uneven ? draftForIds.reduce<Record<string, number>>((all, id) => ({ ...all, [id]: 1 }), {}) : null });
   };
   const setDraftPayerIds = (next: React.SetStateAction<string[]>) => {
     setExpenseDraft((current) => {
@@ -279,6 +297,27 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const receiptFileInputRef = useRef<any>(null);
+  // Stored receipt images: which of this trip's expenses have one, and the one being viewed.
+  const [receiptExpenseIds, setReceiptExpenseIds] = useState<Set<string>>(new Set());
+  const [receiptViewer, setReceiptViewer] = useState<{ id: string; title: string } | null>(null);
+  useEffect(() => {
+    // Looked up when a day's details are opened, the only place receipts are shown.
+    if (!trip?.id || !costTrackingAllowed || !detailTarget) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/expenses/receipts?tripId=${encodeURIComponent(trip.id)}`, { headers });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled) setReceiptExpenseIds(new Set(Array.isArray(data.expenseIds) ? data.expenseIds.map(String) : []));
+      } catch {
+        // The receipt indicator is supplementary; expenses work without it.
+      }
+    })();
+    return () => { cancelled = true; };
+    // headers is rebuilt by the caller on every render; the trip decides when to reload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backendUrl, trip?.id, costTrackingAllowed, detailTarget?.date, detailTarget?.category]);
 
   // Keep zero-cost itinerary records intact so a later cost update can surface
   // them again, without requiring users to repeatedly delete mirrored $0 rows.
@@ -352,6 +391,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       amount: String(expense.amount ?? ''),
       vendor: expense.vendor || expense.notes || '',
       forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+      forShares: expense.forShares ?? null,
       payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     });
   };
@@ -499,6 +539,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       exchangeRateDate: exchangeRateDate ?? undefined,
       payerIds: singlePayerIds(draftPayerIds, defaultPayerId),
       forIds: draftForIds,
+      // Sent only for a genuinely uneven split; the server treats all-equal weights as an equal split too.
+      forShares: draftForShares && draftForIds.some((id) => (draftForShares[id] ?? 1) !== (draftForShares[draftForIds[0]] ?? 1))
+        ? draftForIds.reduce<Record<string, number>>((all, id) => ({ ...all, [id]: draftForShares[id] ?? 1 }), {})
+        : undefined,
       vendor: draftVendor || undefined,
     };
     // A new expense carries one stable operation key for its whole life. Whether the first attempt
@@ -546,6 +590,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       setExpenses((prev) => editingExpenseId
         ? prev.map((expense) => expense.id === data.id ? data as Expense : expense)
         : [data as Expense, ...prev.filter((expense) => expense.id !== data.id)]);
+      setLastCategory(draftCategory);
       cancelAddExpenseModal();
     } catch (err) {
       // The request never got an answer (lost connection mid-save). For a new expense the answer is
@@ -851,12 +896,36 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 </View>
 
                 <Text style={styles.headerText}>For</Text>
+                <View style={styles.row}>
+                  <TouchableOpacity
+                    testID="expense-for-everyone"
+                    accessibilityRole="button"
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => setDraftForIds(activeMembers.map((member) => member.id))}
+                  >
+                    <Text style={styles.buttonText}>Everyone</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="expense-for-only"
+                    accessibilityRole="button"
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => setDraftForIds([])}
+                  >
+                    <Text style={styles.buttonText}>Only these travelers</Text>
+                  </TouchableOpacity>
+                </View>
+                {draftForIds.length < activeMembers.length ? (
+                  <Text style={styles.helperText} testID="expense-for-hint">
+                    {draftForIds.length ? `Shared by ${draftForIds.length} of ${activeMembers.length} travelers.` : 'Tap the travelers who share this expense.'}
+                  </Text>
+                ) : null}
                 <View style={styles.toggleGroup}>
                   {activeMembers.map((member) => {
                     const selected = draftForIds.includes(member.id);
                     return (
                       <TouchableOpacity
                         key={`for-toggle-${member.id}`}
+                        testID={`expense-for-${member.id}`}
                         style={[
                           styles.expenseToggleButton,
                           selected ? styles.expenseToggleSelected : styles.expenseToggleUnselected,
@@ -870,6 +939,40 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     );
                   })}
                 </View>
+
+                {draftForIds.length > 1 ? (
+                  <TouchableOpacity
+                    testID="expense-split-uneven"
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: Boolean(draftForShares) }}
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => setSplitUneven(!draftForShares)}
+                  >
+                    <Text style={styles.buttonText}>{draftForShares ? 'Split equally' : 'Split unevenly'}</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {draftForShares && draftForIds.length > 1 ? (
+                  <View testID="expense-shares">
+                    <Text style={styles.helperText}>Shares: a double portion counts as 2.</Text>
+                    {(() => {
+                      const weights = draftForIds.map((id) => draftForShares[id] ?? 1);
+                      const amounts = splitAmountByWeights(Number(draftAmount) || 0, weights);
+                      return draftForIds.map((id, index) => (
+                        <View key={`share-${id}`} style={styles.row}>
+                          <Text style={styles.cellText}>{memberNameMap.get(id) ?? 'Traveler'}</Text>
+                          <TouchableOpacity testID={`expense-share-dec-${id}`} accessibilityRole="button" accessibilityLabel={`Fewer shares for ${memberNameMap.get(id) ?? 'traveler'}`} style={[styles.button, styles.smallButton]} onPress={() => setDraftShare(id, weights[index] - 1)}>
+                            <Text style={styles.buttonText}>−</Text>
+                          </TouchableOpacity>
+                          <Text style={styles.cellText} testID={`expense-share-weight-${id}`}>{weights[index]}</Text>
+                          <TouchableOpacity testID={`expense-share-inc-${id}`} accessibilityRole="button" accessibilityLabel={`More shares for ${memberNameMap.get(id) ?? 'traveler'}`} style={[styles.button, styles.smallButton]} onPress={() => setDraftShare(id, weights[index] + 1)}>
+                            <Text style={styles.buttonText}>+</Text>
+                          </TouchableOpacity>
+                          <Text style={styles.helperText} testID={`expense-share-amount-${id}`}>{(amounts[index] ?? 0).toFixed(2)}</Text>
+                        </View>
+                      ));
+                    })()}
+                  </View>
+                ) : null}
 
                 <Text style={styles.headerText}>Payer</Text>
                 <PayerSelect members={activeMembers} value={draftPayerIds} onChange={setDraftPayerIds} styles={styles} testID="expense-payer" />
@@ -1040,6 +1143,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                         </View>
                         <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>
                           <View style={[styles.actionCell, themeStyle('tabs_dailyExpenses_25', {  }, (theme ?? _styleTheme))]}>
+                            {receiptExpenseIds.has(expense.id) || (!readOnly && Platform.OS === 'web') ? (
+                              <TouchableOpacity
+                                style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
+                                onPress={() => setReceiptViewer({ id: expense.id, title: expense.vendor || expense.notes || 'expense' })}
+                                accessibilityLabel={receiptExpenseIds.has(expense.id) ? 'View receipt' : 'Attach receipt'}
+                                testID={`expense-receipt-${expense.id}`}
+                              >
+                                <Text style={styles.buttonText}>{receiptExpenseIds.has(expense.id) ? 'Receipt' : '+ Receipt'}</Text>
+                              </TouchableOpacity>
+                            ) : null}
                             <TouchableOpacity
                               style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
                               onPress={() => openEditExpenseModal(expense)}
@@ -1058,6 +1171,23 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                         </View>
                       </View>
                     ))}
+                    {receiptViewer && detailItems.some((e) => e.id === receiptViewer.id) ? (
+                      <ExpenseReceiptPanel
+                        backendUrl={backendUrl}
+                        headers={headers}
+                        expenseId={receiptViewer.id}
+                        title={receiptViewer.title}
+                        hasReceipt={receiptExpenseIds.has(receiptViewer.id)}
+                        canEdit={!readOnly}
+                        onChanged={(has) => setReceiptExpenseIds((current) => {
+                          const next = new Set(current);
+                          if (has) next.add(receiptViewer.id); else next.delete(receiptViewer.id);
+                          return next;
+                        })}
+                        onClose={() => setReceiptViewer(null)}
+                        styles={styles}
+                      />
+                    ) : null}
                     {!detailItems.length ? (
                       <View style={[styles.tableRow, styles.lastRow]}>
                         <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>

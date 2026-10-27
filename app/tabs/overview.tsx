@@ -237,6 +237,8 @@ type OverviewTabProps = {
   aiItineraryEtaSeconds?: number | null;
   aiItineraryFailedMessage?: string | null;
   onRetryAiItinerary?: (tripId: string) => void;
+  /** Present only when AI itinerary generation is available; starts generation for the open trip. */
+  onGenerateAiItinerary?: (tripId: string) => void;
   onDismissAiItineraryError?: (tripId: string) => void;
   // Reflects the `ai_itinerary_generation` feature flag (+ tier entitlement)
   // for the current user. When false, the Retry button is hidden since a
@@ -472,6 +474,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   aiItineraryEtaSeconds,
   aiItineraryFailedMessage,
   onRetryAiItinerary,
+  onGenerateAiItinerary,
   onDismissAiItineraryError,
   aiItineraryGenerationAllowed = true,
   editSignal,
@@ -564,6 +567,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     name: string;
   } | null>(null);
   const [showAddTraveler, setShowAddTraveler] = useState(false);
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
   const [showAddLodging, setShowAddLodging] = useState(false);
@@ -633,6 +637,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   // One scrollable list of every day's plan, in place of the day cards (the 'Whole trip' pill).
   const [wholeTripView, setWholeTripView] = useState(false);
+  const [confirmGenerate, setConfirmGenerate] = useState(false);
   const [pictureDay, setPictureDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
   const [blogDayImages, setBlogDayImages] = useState<Record<string, string>>({});
@@ -2622,7 +2627,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     );
   };
 
-  const renderTripNotes = () => (
+  const renderTripNotes = () => (!isEditing && !trip?.notes ? null : (
     <View style={themeStyle('tabs_overview_11', {  }, (theme ?? _styleTheme))} testID="overview-trip-notes">
       <Text style={styles.headerText}>Notes</Text>
       {isEditing ? (
@@ -2650,7 +2655,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <Text style={styles.helperText}>No notes yet.</Text>
       )}
     </View>
-  );
+  ));
 
   const renderDocumentImporter = () => trip?.id ? (
     <ItineraryDocumentImport
@@ -3299,22 +3304,37 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         >
           <View style={[styles.row, isPhoneLayout ? themeStyle('tabs_overview_50', {  }, (theme ?? _styleTheme)) : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            <View style={[styles.row, themeStyle('tabs_overview_51', {  }, (theme ?? _styleTheme)), isPhoneLayout ? themeStyle('tabs_overview_52', {  }, (theme ?? _styleTheme)) : null]}>
+            <TouchableOpacity testID="overview-actions-menu" accessibilityRole="button" accessibilityState={{ expanded: actionsMenuOpen }} style={[styles.button, styles.smallButton]} onPress={() => setActionsMenuOpen((open) => !open)}>
+              <Text style={styles.buttonText}>{actionsMenuOpen ? 'Menu ▲' : 'Menu ▼'}</Text>
+            </TouchableOpacity>
+          </View>
+          {actionsMenuOpen ? (
+            <View testID="overview-actions-menu-panel" style={themeStyle('tabs_overview_actions_menu', {  }, (theme ?? _styleTheme))}>
               {renderDocumentImportButton()}
               <CsvTransferControls entity="day-plan" backendUrl={backendUrl} headers={jsonHeaders} tripId={trip?.id} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={itineraryDetails} styles={styles} theme={theme} enabledImport={featureDayPlanCsvImport} enabledExport={featureDayPlanCsvExport} readOnly={readOnly} onImported={() => setItineraryReload((count) => count + 1)} />
-              <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={handlePrintItinerary}>
+              {onGenerateAiItinerary && aiItineraryGenerationAllowed && !readOnly && !aiItineraryPending ? (
+                <TouchableOpacity testID="overview-generate-itinerary" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); setConfirmGenerate(true); }}>
+                  <Text style={styles.buttonText}>Generate itinerary</Text>
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); handlePrintItinerary(); }}>
                 <Text style={styles.buttonText}>Print itinerary</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
+              <TouchableOpacity testID="overview-edit" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); setIsEditing(true); }}>
                 <Text style={styles.buttonText}>Edit</Text>
               </TouchableOpacity>
+              {!readOnly ? (
+                <TouchableOpacity testID="overview-add-traveler" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); setShowAddTraveler((prev) => !prev); }}>
+                  <Text style={styles.buttonText}>+ Add traveler</Text>
+                </TouchableOpacity>
+              ) : null}
               {onOpenShareTrip ? (
-                <TouchableOpacity accessibilityRole="button" testID="itinerary-share-trip-button" style={[styles.button, styles.smallButton]} onPress={onOpenShareTrip}>
+                <TouchableOpacity accessibilityRole="button" testID="itinerary-share-trip-button" style={[styles.button, styles.smallButton]} onPress={() => { setActionsMenuOpen(false); onOpenShareTrip(); }}>
                   <Text style={styles.buttonText}>Share</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
-          </View>
+          ) : null}
           {renderDocumentImporter()}
           <Text style={styles.flightTitle}>{trip.name}</Text>
           {travelerAvatars.length ? (
@@ -3325,13 +3345,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </Text>
             </View>
           ) : null}
-          {!readOnly ? (
-            <TouchableOpacity testID="overview-add-traveler" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => setShowAddTraveler((prev) => !prev)}>
-              <Text style={styles.buttonText}>+ Add traveler</Text>
-            </TouchableOpacity>
-          ) : null}
           {!readOnly && showAddTraveler ? renderAddTravelerForm() : null}
-
 
           {trip.description ? (
             <View>
@@ -3356,13 +3370,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           {wholeTripView ? (
             <View testID="overview-whole-trip" style={themeStyle('tabs_overview_54', {  }, (theme ?? _styleTheme))}>
               {dayCards.map((card, idx) => {
-                const lines = buildWholeTripLines(dayDataByDate.get(card.date));
+                const info = dayDataByDate.get(card.date);
+                const lines = buildWholeTripLines(info);
+                const mapPoints = info ? selectPlanningDayPoints({
+                  date: card.date,
+                  flights: info.flights.map((f) => ({ ...f, departureDate: f.departure_date, arrivalDate: f.arrival_date, departureLocation: f.departure_location, arrivalLocation: f.arrival_location, departureAirportCode: f.departure_airport_code, arrivalAirportCode: f.arrival_airport_code })),
+                  lodgings: info.lodgings.map((l) => ({ ...l, check_in_date: l.checkInDate, check_out_date: l.checkOutDate })),
+                  activities: info.tours.map((t) => ({ ...t, cost: Number(t.cost) || 0 })),
+                  carRentals: info.rentals,
+                }) : [];
+                // Each day: its plan and its map. Costs and expenses are deliberately left out here.
                 return (
-                  <TouchableOpacity key={card.date} testID={`overview-whole-trip-day-${idx + 1}`} accessibilityRole="button" onPress={() => setSelectedDay(card.date)}>
-                    <Text style={styles.headerText}>{formatDayCardLabel(card)}</Text>
-                    {lines.length ? lines.map((line, lineIdx) => <Text key={lineIdx} style={styles.bodyText}>{line}</Text>) : <Text style={styles.helperText}>Nothing planned yet.</Text>}
+                  <View key={card.date}>
+                    <TouchableOpacity testID={`overview-whole-trip-day-${idx + 1}`} accessibilityRole="button" onPress={() => setSelectedDay(card.date)}>
+                      <Text style={styles.headerText}>{formatDayCardLabel(card)}</Text>
+                      {lines.length ? lines.map((line, lineIdx) => <Text key={lineIdx} style={styles.bodyText}>{line}</Text>) : <Text style={styles.helperText}>Nothing planned yet.</Text>}
+                    </TouchableOpacity>
+                    {mapPoints.length ? <TripDayMap tripId={trip.id} dayDate={card.date} points={mapPoints} backendUrl={backendUrl} requestHeaders={headers} testID={`overview-whole-trip-map-${idx + 1}`} /> : null}
                     <View style={styles.divider} />
-                  </TouchableOpacity>
+                  </View>
                 );
               })}
             </View>
@@ -3911,6 +3937,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </View>
       ) : null}
       {renderContent()}
+      <ConfirmDialog
+        visible={confirmGenerate}
+        title="Generate itinerary"
+        message="This suggests activities, stays and transfers for the trip and adds them as Proposed. Everything already planned stays as it is. It counts toward your monthly generations."
+        confirmLabel="Generate"
+        onConfirm={() => {
+          setConfirmGenerate(false);
+          if (trip) onGenerateAiItinerary?.(trip.id);
+        }}
+        onCancel={() => setConfirmGenerate(false)}
+        styles={styles}
+        testID="overview-generate-itinerary-confirm"
+      />
       {!isEditing && showFlightEditor ? renderOverviewFlightEditor() : null}
       {!isEditing && showAddLodging ? renderOverviewLodgingEditor() : null}
 

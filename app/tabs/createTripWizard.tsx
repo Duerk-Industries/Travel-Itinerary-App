@@ -24,6 +24,7 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { ActivityTab, type Tour, buildActivityPayload } from './activities';
 import { type CarRental, type CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './carRentals';
 import { computeDurationFromRange, formatMonthYear } from '../utils/tripDates';
+import { budgetRangeFromComfort } from '../utils/aiItineraryRequest';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { saveWizardCarRentals, saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
@@ -214,12 +215,6 @@ const INTEREST_WEIGHT_FIELDS: Array<{
     highDescriptor: 'All the classics',
   },
 ];
-
-const budgetRangeFromComfort = (comfort: 'B' | 'M' | 'L'): { min: number; max: number } => {
-  if (comfort === 'B') return { min: 500, max: 1500 };
-  if (comfort === 'L') return { min: 4000, max: 8000 };
-  return { min: 1500, max: 4000 };
-};
 
 const descriptorForValue = (
   value: number,
