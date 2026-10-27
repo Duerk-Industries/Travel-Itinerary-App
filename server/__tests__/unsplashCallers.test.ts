@@ -102,14 +102,72 @@ describe('unsplashCallers (dedupe + TTL cache)', () => {
   });
 
   it('adds the bounded itinerary variant to the Unsplash query', async () => {
-    mockedSearch.mockResolvedValueOnce(photoResponse('https://images.example/tokyo-food.jpg'));
+    mockedSearch.mockResolvedValueOnce({
+      results: [{ urls: { regular: 'https://images.example/tokyo-food.jpg' }, alt_description: 'ramen stall in Tokyo' }],
+    });
 
     await expect(fetchUnsplashImageForItinerary('key', 'Tokyo', 'food')).resolves.toBe(
       'https://images.example/tokyo-food.jpg'
     );
+    expect(mockedSearch).toHaveBeenCalledTimes(1);
     expect(mockedSearch).toHaveBeenCalledWith(
-      expect.objectContaining({ query: 'Tokyo local food', perPage: 1 })
+      expect.objectContaining({ query: 'Tokyo local food', perPage: 10 })
     );
+  });
+
+  // Regression: "Lisbon culture landmarks" returned the Louvre as its top hit.
+  it('skips themed results that name another city and keeps the first one naming the destination', async () => {
+    mockedSearch.mockResolvedValueOnce({
+      results: [
+        { urls: { regular: 'https://images.example/louvre.jpg' }, alt_description: 'Louvre pyramid at dusk', location: { city: 'Paris', country: 'France' } },
+        { urls: { regular: 'https://images.example/porto.jpg' }, description: 'Ribeira at night', location: { city: 'Porto', country: 'Portugal' } },
+        { urls: { regular: 'https://images.example/belem.jpg' }, alt_description: 'Belém Tower', tags: [{ title: 'lisbon' }] },
+      ],
+    });
+
+    await expect(fetchUnsplashImageForItinerary('key', 'Lisbon, Portugal', 'culture')).resolves.toBe(
+      'https://images.example/belem.jpg'
+    );
+    expect(mockedSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it('matches the destination ignoring accents and case', async () => {
+    mockedSearch.mockResolvedValueOnce({
+      results: [{ urls: { regular: 'https://images.example/sao-paulo.jpg' }, location: { city: 'São Paulo' } }],
+    });
+
+    await expect(fetchUnsplashImageForItinerary('key', 'sao paulo', 'outdoors')).resolves.toBe(
+      'https://images.example/sao-paulo.jpg'
+    );
+  });
+
+  it('falls back to a plain destination search when no themed result names the destination', async () => {
+    mockedSearch
+      .mockResolvedValueOnce({
+        results: [{ urls: { regular: 'https://images.example/louvre.jpg' }, location: { city: 'Paris' } }],
+      })
+      .mockResolvedValueOnce({
+        results: [{ urls: { regular: 'https://images.example/lisboa.jpg' }, alt_description: 'tram on a hill in Lisboa' }],
+      });
+
+    await expect(fetchUnsplashImageForItinerary('key', 'Lisbon', 'culture')).resolves.toBe(
+      'https://images.example/lisboa.jpg'
+    );
+    expect(mockedSearch).toHaveBeenNthCalledWith(1, expect.objectContaining({ query: 'Lisbon culture landmarks' }));
+    expect(mockedSearch).toHaveBeenNthCalledWith(2, expect.objectContaining({ query: 'Lisbon' }));
+  });
+
+  it('gives each day theme a different photo when they all fall back to the plain destination search', async () => {
+    const plain = {
+      results: ['a', 'b', 'c'].map((id) => ({ urls: { regular: `https://images.example/lisbon-${id}.jpg` }, description: `Lisbon ${id}` })),
+    };
+    mockedSearch.mockImplementation(async ({ query }: any) => (query === 'Lisbon' ? plain : { results: [] }) as any);
+
+    const picks = await Promise.all(
+      (['culture', 'food', 'outdoors'] as const).map((variant) => fetchUnsplashImageForItinerary('key', 'Lisbon', variant))
+    );
+
+    expect(new Set(picks).size).toBe(3);
   });
 
   it('returns null without caching for empty queries', async () => {
