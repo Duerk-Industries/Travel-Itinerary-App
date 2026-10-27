@@ -29,3 +29,12 @@ it('opens the preferred calendar and reports failures without claiming an event 
   await waitFor(() => expect(view.getByRole('alert')).toBeTruthy());
   expect(open).toHaveBeenCalledWith(event, 'apple');
 });
+
+it('compact mode shows only the calendar icon but keeps the accessible label and action', () => {
+  open.mockResolvedValueOnce(undefined as any);
+  const view = render(<AddToCalendarButton event={event} styles={{}} compact />);
+  expect(view.queryByText('Add to calendar')).toBeNull();
+  expect(view.getByText('📅')).toBeTruthy();
+  fireEvent.press(view.getByLabelText('Add to calendar'));
+  expect(open).toHaveBeenCalledWith(event, expect.anything());
+});

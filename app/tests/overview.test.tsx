@@ -678,6 +678,37 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('day-details-add-accommodation-button')).toBeTruthy();
   });
 
+  // The leftover add links used to float as bare text below the last card and wrap mid-label
+  // on phones; they're now a labeled row of single-line chips.
+  test('leftover "+ Add X" links sit under an "Add to this day" label and never wrap mid-label', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    const group = await findByTestId('day-details-add-more');
+    expect(within(group).getByText('Add to this day')).toBeTruthy();
+    expect(within(group).getByText('+ Add accommodation').props.numberOfLines).toBe(1);
+    expect(within(group).getByTestId('day-details-add-transfer-button')).toBeTruthy();
+  });
+
+  // Edit mode's trip dates used to be two unlabeled ~200px fields; they're now labeled and
+  // stack full width on phones.
+  test.each([
+    ['phone', 390, 'column'],
+    ['desktop', 1280, 'row'],
+  ])('edit-mode trip dates are labeled and laid out for %s widths', async (_label, width, expectedDirection) => {
+    const RN = require('react-native');
+    const dims = jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({ width, height: 900, scale: 2, fontScale: 1 } as any);
+    try {
+      const { findByText, findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+      fireEvent.press(await findByText('Edit'));
+      const range = await findByTestId('overview-trip-date-range');
+      expect(range.props.style.flexDirection).toBe(expectedDirection);
+      expect(within(range).getByText('Start')).toBeTruthy();
+      expect(within(range).getByText('End')).toBeTruthy();
+    } finally {
+      dims.mockRestore();
+    }
+  });
+
   test('a section with items gets its own inline add button and drops out of the bottom row', async () => {
     const flights = [
       {
