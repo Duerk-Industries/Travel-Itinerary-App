@@ -120,9 +120,12 @@ export const resolveSelectedDestinations = async (input: { locationIds?: string[
 };
 
 /** A template is offered only for a destination it covers: a chosen country it is in, or a city it visits. */
-export const templatesForDestinations = (templates: TripTemplateRecord[], selected: SelectedDestinations): Array<TripTemplateRecord & { matchedCities: string[] }> => {
+export const templatesForDestinations = (templates: TripTemplateRecord[], selected: SelectedDestinations, maxDays?: number | null): Array<TripTemplateRecord & { matchedCities: string[] }> => {
   if (!selected.countries.length && !selected.cities.length) return [];
+  // A template longer than the trip would not fit it; with no known trip length, length is not a filter.
+  const fits = (template: TripTemplateRecord) => !(maxDays && maxDays > 0) || template.days <= maxDays;
   const result = templates
+    .filter(fits)
     .map((template) => {
       const countryMatch = template.countries.some((country) => selected.countries.includes(normalize(country)));
       const matchedCities = template.cities.filter((city) => selected.cities.includes(normalize(city)));
@@ -134,11 +137,11 @@ export const templatesForDestinations = (templates: TripTemplateRecord[], select
   return result.map((entry) => ({ ...entry.template, matchedCities: entry.matchedCities }));
 };
 
-export const listOfferedTemplates = async (selected: SelectedDestinations) => {
+export const listOfferedTemplates = async (selected: SelectedDestinations, maxDays?: number | null) => {
   const records = await listTripTemplates({ enabledOnly: true });
   const known = new Set(loadSeedTemplates().map((template) => template.id));
   // A catalogue row whose seed file is gone cannot be created, so it is never offered.
-  return templatesForDestinations(records.filter((record) => known.has(record.id)), selected);
+  return templatesForDestinations(records.filter((record) => known.has(record.id)), selected, maxDays);
 };
 
 // ------------------------------------------------------------------------ preview
@@ -258,4 +261,38 @@ export const populateTripFromTemplate = async (params: { userId: string; tripId:
     notes += 1;
   }
   return { lodgings: template.stays.length, activities: template.activities.length, transfers: template.legs.length, notes };
+};
+
+/**
+ * A trip with a length but no dates cannot hold dated bookings, so the plan goes in as day-plan items
+ * (Day 1, Day 2, ...): stays and transfers as notes, activities as day activities. Setting dates later
+ * leaves them in place on the same days.
+ */
+export const populateUndatedTripFromTemplate = async (params: { userId: string; tripId: string; template: SeedTemplate; tripDays: number }): Promise<{ lodgings: number; activities: number; transfers: number; notes: number }> => {
+  const { userId, tripId, template, tripDays } = params;
+  const trip: any = await getTripById(tripId);
+  const itinerary = await createItineraryRecord(userId, tripId, trip?.destination?.trim() || template.cities.join(', ') || template.title, Math.max(tripDays, template.days), null);
+  const positions = new Map<number, number>();
+  const next = (day: number) => { const position = (positions.get(day) ?? 0) + 1; positions.set(day, position); return position; };
+  let notes = 0;
+  const add = async (offset: number, input: { time: string; title: string; kind: 'note' | 'activity'; body: string }) => {
+    await addItineraryDetail(userId, itinerary.id, {
+      day: offset + 1, time: clock(input.time) || null, activity: input.title, cost: null, kind: input.kind, noteBody: input.body || null, position: next(offset + 1), checklistItems: [],
+    } as any);
+  };
+  for (const stay of template.stays) {
+    await add(stay.start, { time: '', kind: 'note', title: `Stay: ${stay.hotel}`, body: [`${stay.nights} night${stay.nights === 1 ? '' : 's'}.`, stay.area ? `Suggested location: ${stay.area}.` : '', 'Choose your hotel.'].filter(Boolean).join(' ') });
+    notes += 1;
+  }
+  for (const activity of template.activities) {
+    await add(activity.day, { time: activity.time, kind: 'activity', title: activity.name, body: [activity.duration ? `Duration: ${activity.duration}.` : '', activity.where ? `Address: ${activity.where}` : '', activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n') });
+  }
+  for (const leg of template.legs) {
+    const parts = [`${leg.from} to ${leg.to}${leg.carrier ? ` by ${leg.carrier}` : ''}. Travel time about ${durationText(leg.minutes)}.`];
+    if (leg.notes) parts.push(leg.notes);
+    if (leg.book) parts.push(bookAheadNote(leg.book));
+    await add(leg.day, { time: leg.time, kind: 'note', title: `Getting there: ${leg.from} to ${leg.to}`, body: parts.join(' ') });
+    notes += 1;
+  }
+  return { lodgings: 0, activities: template.activities.length, transfers: 0, notes };
 };

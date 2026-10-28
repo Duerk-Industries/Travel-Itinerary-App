@@ -33,6 +33,15 @@ describe('templatesForDestinations', () => {
     expect(templatesForDestinations(rows, { countries: ['italy'], cities: [] })).toEqual([]);
   });
 
+  it('offers only templates no longer than the trip, and all of them when the length is unknown', () => {
+    const lengths = [{ ...rows[0], id: 'short', days: 7 }, { ...rows[0], id: 'long', days: 14 }];
+    const japan = { countries: ['japan'], cities: [] };
+    expect(templatesForDestinations(lengths, japan, 10).map((t) => t.id)).toEqual(['short']);
+    expect(templatesForDestinations(lengths, japan, 14).map((t) => t.id).sort()).toEqual(['long', 'short']);
+    expect(templatesForDestinations(lengths, japan, null)).toHaveLength(2);
+    expect(templatesForDestinations(lengths, japan, 5)).toEqual([]);
+  });
+
   it('puts templates that visit a chosen city first', () => {
     const more = [...rows, record('jp2', ['Japan'], ['Osaka'])];
     expect(templatesForDestinations(more, { countries: ['japan'], cities: ['osaka'] }).map((t) => t.id)).toEqual(['jp2', 'jp']);
@@ -115,7 +124,41 @@ describe('trip templates API', () => {
     expect(transfers.every((t) => t.transferType === 'Public Transit' || t.transfer_type === 'Public Transit')).toBe(true);
   });
 
-  it('refuses a missing or invalid start date, and an unknown template', async () => {
+  it('lists only templates that fit maxDays', async () => {
+    const all = (await request(app).get('/api/trip-templates?countries=Japan').set(auth()).expect(200)).body.templates as any[];
+    const fitting = (await request(app).get('/api/trip-templates?countries=Japan&maxDays=10').set(auth()).expect(200)).body.templates as any[];
+    expect(fitting.length).toBeGreaterThan(0);
+    expect(fitting.length).toBeLessThan(all.length);
+    expect(fitting.every((t) => t.days <= 10)).toBe(true);
+    expect((await request(app).get('/api/trip-templates?countries=Japan&maxDays=3').set(auth()).expect(200)).body.templates).toEqual([]);
+  });
+
+  it('creates an undated trip from a template when only a trip length is known', async () => {
+    const template = (await request(app).get('/api/trip-templates?countries=Japan&maxDays=10').set(auth()).expect(200)).body.templates.find((t: any) => t.days === 7);
+    const created = await request(app).post(`/api/trip-templates/${template.id}/trip`).set(auth()).send({ durationDays: 10, locationIds: ['country:japan'] }).expect(201);
+    const tripId = created.body.trip.id as string;
+    expect(created.body.trip.startDate ?? null).toBeNull();
+    expect(created.body.trip.durationDays).toBe(10);
+    // No dated bookings: the plan lives in the day plan, by day number.
+    expect((await request(app).get(`/api/activities?tripId=${tripId}`).set(auth()).expect(200)).body).toEqual([]);
+    expect((await request(app).get(`/api/lodgings?tripId=${tripId}`).set(auth()).expect(200)).body).toEqual([]);
+    expect(created.body.counts.activities).toBeGreaterThan(0);
+    const itineraries = (await request(app).get('/api/itineraries').set(auth()).expect(200)).body as any[];
+    const itinerary = itineraries.find((i) => (i.tripId ?? i.trip_id) === tripId);
+    expect(itinerary).toBeTruthy();
+    const details = (await request(app).get(`/api/itineraries/${itinerary.id}/details`).set(auth()).expect(200)).body as any[];
+    expect(details.length).toBeGreaterThan(created.body.counts.activities);
+    expect(details.some((d) => d.day === 1 && /Stay:/.test(d.activity))).toBe(true);
+  });
+
+  it('keeps a trip end date later than the template, and refuses a trip shorter than it', async () => {
+    const template = (await request(app).get('/api/trip-templates?countries=Japan&maxDays=10').set(auth()).expect(200)).body.templates.find((t: any) => t.days === 7);
+    const longer = await request(app).post(`/api/trip-templates/${template.id}/trip`).set(auth()).send({ startDate: '2027-04-05', endDate: '2027-04-15' }).expect(201);
+    expect(String(longer.body.trip.endDate)).toContain('2027-04-15');
+    await request(app).post(`/api/trip-templates/${template.id}/trip`).set(auth()).send({ durationDays: 3 }).expect(400);
+  });
+
+  it('refuses a request with neither a valid start date nor a trip length, and an unknown template', async () => {
     const id = (await request(app).get('/api/trip-templates?countries=Japan').set(auth()).expect(200)).body.templates[0].id;
     await request(app).post(`/api/trip-templates/${id}/trip`).set(auth()).send({}).expect(400);
     await request(app).post(`/api/trip-templates/${id}/trip`).set(auth()).send({ startDate: '2027-13-40' }).expect(400);

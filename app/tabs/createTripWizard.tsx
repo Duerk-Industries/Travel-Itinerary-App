@@ -1357,6 +1357,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         headers={wizardJsonHeaders}
         selectedLocations={selectedLocations}
         startDate={dates.mode === 'range' ? dates.startDate : ''}
+        endDate={dates.mode === 'range' ? dates.endDate : ''}
+        tripDays={dates.mode === 'range' ? computedDays : Number(dates.durationDays) || null}
         tripName={details.name}
         styles={styles}
         onCreated={(tripId) => { setCreatedTripId(tripId); handleTripCreated(tripId); }}

@@ -11,6 +11,7 @@ import {
   isIsoDate,
   listOfferedTemplates,
   populateTripFromTemplate,
+  populateUndatedTripFromTemplate,
   resolveSelectedDestinations,
   templateEndDate,
 } from '../services/tripTemplateService';
@@ -40,7 +41,8 @@ router.use(async (req, res, next) => {
 router.get('/', async (req, res) => {
   try {
     const selected = await resolveSelectedDestinations({ locationIds: csv(req.query.locationIds), countries: csv(req.query.countries), cities: csv(req.query.cities) });
-    const offered = await listOfferedTemplates(selected);
+    const maxDays = Number(req.query.maxDays);
+    const offered = await listOfferedTemplates(selected, Number.isSafeInteger(maxDays) && maxDays > 0 ? maxDays : null);
     res.json({
       templates: offered.map((template) => ({
         id: template.id, title: template.title, summary: template.summary, days: template.days, route: template.route,
@@ -78,22 +80,38 @@ router.post('/:id/trip', async (req, res) => {
     res.status(404).json({ error: 'Template not found.' });
     return;
   }
-  const startDate = req.body?.startDate;
-  if (!isIsoDate(startDate)) {
-    res.status(400).json({ error: 'Choose a start date for this template.' });
+  // With a start date the plan is dated; with only a trip length it goes in by day number.
+  const startDate = isIsoDate(req.body?.startDate) ? (req.body.startDate as string) : null;
+  const durationDays = Number(req.body?.durationDays);
+  if (req.body?.startDate && !startDate) {
+    res.status(400).json({ error: 'The start date is not a valid date.' });
     return;
   }
+  if (!startDate && !(Number.isSafeInteger(durationDays) && durationDays > 0)) {
+    res.status(400).json({ error: 'Choose a start date or a trip length for this template.' });
+    return;
+  }
+  if (!startDate && durationDays < seed.days) {
+    res.status(400).json({ error: `This template is ${seed.days} days; the trip is only ${durationDays}.` });
+    return;
+  }
+  // The trip keeps the traveler's own end date when it is later than the template's.
+  const templateEnd = startDate ? templateEndDate(seed, startDate) : null;
+  const requestedEnd = isIsoDate(req.body?.endDate) ? (req.body.endDate as string) : null;
+  const endDate = templateEnd && requestedEnd && requestedEnd > templateEnd ? requestedEnd : templateEnd;
   let createdTripId: string | null = null;
   try {
     const created = await createWizardTrip(user, {
       ...req.body,
       name: typeof req.body?.name === 'string' && req.body.name.trim() ? req.body.name : seed.title,
       startDate,
-      endDate: templateEndDate(seed, startDate),
-      durationDays: null,
+      endDate,
+      durationDays: startDate ? null : durationDays,
     }, 'template');
     createdTripId = created.trip.id;
-    const counts = await populateTripFromTemplate({ userId: user.userId, tripId: created.trip.id, groupId: created.groupId, template: seed, startDate });
+    const counts = startDate
+      ? await populateTripFromTemplate({ userId: user.userId, tripId: created.trip.id, groupId: created.groupId, template: seed, startDate })
+      : await populateUndatedTripFromTemplate({ userId: user.userId, tripId: created.trip.id, template: seed, tripDays: durationDays });
     logInfo(`[trip-templates] created trip from ${seed.id} (${counts.lodgings} stays, ${counts.activities} activities, ${counts.transfers} transfers)`);
     res.status(201).json({ trip: created.trip, groupId: created.groupId, invites: created.invites, templateId: seed.id, counts });
   } catch (err) {

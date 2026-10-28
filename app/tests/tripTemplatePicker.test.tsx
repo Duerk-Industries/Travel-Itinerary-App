@@ -52,6 +52,8 @@ describe('destinationQuery', () => {
     expect(query.get('locationIds')).toBe('country:japan,dest:kyoto');
     expect(query.get('countries')).toBe('Japan');
     expect(query.get('cities')).toBe('Kyoto');
+    expect(query.get('maxDays')).toBeNull();
+    expect(new URLSearchParams(destinationQuery([{ id: 'country:japan', name: 'Japan', sourceType: 'country' }], 7)).get('maxDays')).toBe('7');
   });
 });
 
@@ -109,13 +111,42 @@ describe('TripTemplatePicker', () => {
     expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({ name: 'Spring in Japan', startDate: '2027-04-05', locationIds: ['country:japan'], participants: [] });
   });
 
-  it('asks for a start date first instead of creating without one', async () => {
+  it('asks for a start date or a long enough trip when neither is known', async () => {
     const fn = installFetch();
-    const { findByTestId } = renderPicker({ startDate: '' });
+    const { findByTestId } = renderPicker({ startDate: '', tripDays: 5 });
     fireEvent.press(await findByTestId('trip-template-card-japan-t01'));
     expect(await findByTestId('trip-template-needs-date')).toBeTruthy();
     fireEvent.press(await findByTestId('trip-template-use-japan-t01'));
     expect(fn.mock.calls.some(([, init]) => (init as RequestInit)?.method === 'POST')).toBe(false);
+  });
+
+  it('asks the server only for templates that fit the trip length', async () => {
+    const fn = installFetch();
+    const { findByTestId } = renderPicker({ startDate: '', tripDays: 10 });
+    await findByTestId('trip-template-card-japan-t01');
+    expect(String(fn.mock.calls[0][0])).toContain('maxDays=10');
+  });
+
+  it('uses a template with only a trip length, and says the days are not dated', async () => {
+    const onCreated = jest.fn();
+    const fn = installFetch();
+    const { findByTestId } = renderPicker({ startDate: '', tripDays: 10, onCreated });
+    fireEvent.press(await findByTestId('trip-template-card-japan-t01'));
+    expect(await findByTestId('trip-template-undated')).toBeTruthy();
+    await act(async () => { fireEvent.press(await findByTestId('trip-template-use-japan-t01')); });
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith('trip-9'));
+    const post = fn.mock.calls.find(([, init]) => (init as RequestInit)?.method === 'POST')!;
+    expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({ name: 'Spring in Japan', durationDays: 10, locationIds: ['country:japan'], participants: [] });
+  });
+
+  it("keeps the trip's own later end date when it is longer than the template", async () => {
+    const fn = installFetch();
+    const { findByTestId, findByText } = renderPicker({ startDate: '2027-04-05', endDate: '2027-04-15', tripDays: 11 });
+    fireEvent.press(await findByTestId('trip-template-card-japan-t01'));
+    expect(await findByText('2027-04-05 to 2027-04-15')).toBeTruthy();
+    await act(async () => { fireEvent.press(await findByTestId('trip-template-use-japan-t01')); });
+    const post = fn.mock.calls.find(([, init]) => (init as RequestInit)?.method === 'POST')!;
+    expect(JSON.parse(String((post[1] as RequestInit).body))).toMatchObject({ startDate: '2027-04-05', endDate: '2027-04-15' });
   });
 
   it('shows the server message and keeps the preview open when creation is refused', async () => {

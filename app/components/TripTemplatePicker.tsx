@@ -25,8 +25,11 @@ type Props = {
   backendUrl: string;
   headers: Record<string, string>;
   selectedLocations: PickerLocation[];
-  /** The start date the traveler already entered, YYYY-MM-DD; a template needs one. */
+  /** The dates the traveler already entered, YYYY-MM-DD, or empty. With a start date the plan is dated. */
   startDate: string;
+  endDate?: string;
+  /** The trip's length in days, from its dates or from "Dates not set"; templates longer than this are not offered. */
+  tripDays?: number | null;
   tripName: string;
   styles: Record<string, any>;
   onCreated: (tripId: string) => void;
@@ -40,7 +43,7 @@ const endDateFor = (startDate: string, days: number): string => {
 };
 
 /** Names the destination search results carry, which is how the server matches templates to what was chosen. */
-export const destinationQuery = (locations: PickerLocation[]): string => {
+export const destinationQuery = (locations: PickerLocation[], maxDays?: number | null): string => {
   const countries = new Set<string>();
   const cities = new Set<string>();
   for (const location of locations) {
@@ -52,6 +55,7 @@ export const destinationQuery = (locations: PickerLocation[]): string => {
   params.set('locationIds', locations.map((location) => location.id).join(','));
   if (countries.size) params.set('countries', [...countries].join(','));
   if (cities.size) params.set('cities', [...cities].join(','));
+  if (maxDays && maxDays > 0) params.set('maxDays', String(Math.floor(maxDays)));
   return params.toString();
 };
 
@@ -60,7 +64,7 @@ export const destinationQuery = (locations: PickerLocation[]): string => {
  * is aligned with that destination. Choosing one opens a day-by-day preview; "Use this template"
  * creates the trip, which then opens like any other and can be edited freely.
  */
-const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLocations, startDate, tripName, styles, onCreated, onUnauthorized }) => {
+const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLocations, startDate, endDate, tripDays, tripName, styles, onCreated, onUnauthorized }) => {
   const _styleTheme = useStyleTheme();
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [images, setImages] = useState<Record<string, string>>({});
@@ -68,7 +72,9 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
-  const query = useMemo(() => (selectedLocations.length ? destinationQuery(selectedLocations) : ''), [selectedLocations]);
+  const query = useMemo(() => (selectedLocations.length ? destinationQuery(selectedLocations, tripDays) : ''), [selectedLocations, tripDays]);
+  // A template can be used with a start date, or, without one, when the trip's length can hold it.
+  const canUse = Boolean(detail && (startDate || (tripDays && tripDays >= detail.days)));
 
   useEffect(() => {
     let cancelled = false;
@@ -124,7 +130,7 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
   };
 
   const useTemplate = async () => {
-    if (!detail || !startDate || creating) return;
+    if (!detail || !canUse || creating) return;
     setCreating(true);
     setError('');
     try {
@@ -133,7 +139,7 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
           name: tripName.trim() || undefined,
-          startDate,
+          ...(startDate ? { startDate, endDate: endDate || undefined } : { durationDays: tripDays }),
           locationIds: selectedLocations.map((location) => location.id),
           participants: [],
         }),
@@ -223,16 +229,18 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
           <View style={themeStyle('components_TripTemplatePicker_13', {}, theme)}>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {startDate && detail ? (
-              <Text style={styles.helperText}>{startDate} to {endDateFor(startDate, detail.days)}</Text>
+              <Text style={styles.helperText}>{startDate} to {endDate && endDate > endDateFor(startDate, detail.days) ? endDate : endDateFor(startDate, detail.days)}</Text>
+            ) : canUse ? (
+              <Text style={styles.helperText} testID="trip-template-undated">No dates yet: this fills Day 1 to Day {detail?.days} of your {tripDays}-day trip. Set dates later and the days stay as they are.</Text>
             ) : (
-              <Text style={styles.helperText} testID="trip-template-needs-date">Set a start date first; the template sets the length.</Text>
+              <Text style={styles.helperText} testID="trip-template-needs-date">Set a start date or a trip length of at least {detail?.days} days to use this template.</Text>
             )}
             <TouchableOpacity
               testID={detail ? `trip-template-use-${detail.id}` : 'trip-template-use'}
               accessibilityRole="button"
-              accessibilityState={{ disabled: !startDate || creating || loadingDetail }}
-              disabled={!startDate || creating || loadingDetail}
-              style={[styles.button, !startDate || creating || loadingDetail ? themeStyle('components_TripTemplatePicker_14', {}, theme) : null]}
+              accessibilityState={{ disabled: !canUse || creating || loadingDetail }}
+              disabled={!canUse || creating || loadingDetail}
+              style={[styles.button, !canUse || creating || loadingDetail ? themeStyle('components_TripTemplatePicker_14', {}, theme) : null]}
               onPress={() => { void useTemplate(); }}
             >
               <Text style={styles.buttonText}>{creating ? 'Creating…' : 'Use this template'}</Text>
