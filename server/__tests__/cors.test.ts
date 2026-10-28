@@ -34,4 +34,28 @@ describe('CORS configuration', () => {
     expect(res.status).toBeLessThan(300);
     expect(res.headers['access-control-allow-origin']).toBe('https://wander-bunnies.com');
   });
+
+  // Regression: logging in on a PR preview link returned "Internal server error." because the
+  // browser sends the preview's Origin on POST and it wasn't allowed.
+  it('allows this project's Firebase preview channel origins', async () => {
+    const origin = 'https://travel-itinerary-app-483623--pr-128-e7ue3knb.web.app';
+    const res = await request(app)
+      .options('/api/web-auth/login')
+      .set('Origin', origin)
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'Content-Type');
+
+    expect(res.status).toBeLessThan(300);
+    expect(res.headers['access-control-allow-origin']).toBe(origin);
+  });
+
+  it.each([
+    'https://evil--pr-1-abc.web.app',
+    'https://travel-itinerary-app-483623--pr-1.web.app.evil.com',
+    'http://travel-itinerary-app-483623--pr-1-abc.web.app',
+  ])('rejects look-alike origin %s with 403, not a 500', async (origin) => {
+    const res = await request(app).post('/api/web-auth/login').set('Origin', origin).send({});
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/CORS policy/);
+  });
 });
