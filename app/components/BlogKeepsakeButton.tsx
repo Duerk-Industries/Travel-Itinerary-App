@@ -177,8 +177,8 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, nati
               <TouchableOpacity testID="keepsake-theme-cancel" onPress={() => setChoosing(false)} style={{ paddingVertical: 10, paddingHorizontal: 14 }}>
                 <Text style={{ color: '#374151', fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity testID="keepsake-create" onPress={createKeepsake} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#F59E0B' }}>
-                <Text style={{ color: '#111827', fontWeight: '700' }}>{Platform.OS === 'web' ? 'Create & print' : 'Create PDF'}</Text>
+              <TouchableOpacity testID="keepsake-create" onPress={createKeepsake} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#141414' }}>
+                <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{Platform.OS === 'web' ? 'Create & print' : 'Create PDF'}</Text>
               </TouchableOpacity>
             </View>
           </View>

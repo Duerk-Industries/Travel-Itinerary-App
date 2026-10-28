@@ -149,12 +149,12 @@ const styles = StyleSheet.create({
   removeBtnText: { fontSize: 18, fontWeight: '700', color: '#dc2626', lineHeight: 18 },
   addBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 6, alignSelf: 'flex-start' },
   addBtnPressed: { backgroundColor: 'rgba(0,0,0,0.06)' },
-  addBtnText: { color: '#2563eb', fontWeight: '600' },
+  addBtnText: { color: '#0A0A0A', fontWeight: '600' },
   error: { color: '#dc2626', fontSize: 12, marginTop: 4 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
   btnGhost: { paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnGhostText: { color: '#374151', fontWeight: '600' },
-  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
+  btnPrimary: { backgroundColor: '#141414', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
 });
 

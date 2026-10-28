@@ -538,7 +538,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                 <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Cancel</Text>
               </Pressable>
               <Pressable style={[localStyles.button, { backgroundColor: theme.colors.cta }]} onPress={() => void save()} disabled={saving}>
-                <Text style={[localStyles.buttonText, { color: '#0B1726' }]}>{saving ? 'Saving...' : 'Save'}</Text>
+                <Text style={[localStyles.buttonText, { color: theme.colors.onCta }]}>{saving ? 'Saving...' : 'Save'}</Text>
               </Pressable>
             </>
           ) : (
@@ -579,7 +579,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           contentContainerStyle={localStyles.presetActions}
           testID={`${variant}-packing-preset-scroll`}
         >
-          {isTrip ? availableTripSources.map((source) => <Pressable key={source.key} style={[localStyles.presetButton, { borderColor: theme.colors.border, backgroundColor: source.active ? theme.colors.cta : theme.colors.surfaceMuted }]} onPress={() => void toggleTripSource(source)}><Text style={{ color: theme.colors.text }}>{source.active ? '✓ ' : '+ '}{source.label}</Text></Pressable>) : presets.map((preset) => <Pressable key={preset.key} style={[localStyles.presetButton, { borderColor: theme.colors.border, backgroundColor: selectedPresetKeys.includes(preset.key) ? theme.colors.cta : theme.colors.surfaceMuted }]} onPress={() => void addPreset(preset.key)}><Text style={{ color: theme.colors.text }}>{selectedPresetKeys.includes(preset.key) ? '✓ ' : ''}{preset.label}</Text></Pressable>)}
+          {isTrip ? availableTripSources.map((source) => <Pressable key={source.key} style={[localStyles.presetButton, { borderColor: theme.colors.border, backgroundColor: source.active ? theme.colors.cta : theme.colors.surfaceMuted }]} onPress={() => void toggleTripSource(source)}><Text style={{ color: source.active ? theme.colors.onCta : theme.colors.text }}>{source.active ? '✓ ' : '+ '}{source.label}</Text></Pressable>) : presets.map((preset) => <Pressable key={preset.key} style={[localStyles.presetButton, { borderColor: theme.colors.border, backgroundColor: selectedPresetKeys.includes(preset.key) ? theme.colors.cta : theme.colors.surfaceMuted }]} onPress={() => void addPreset(preset.key)}><Text style={{ color: selectedPresetKeys.includes(preset.key) ? theme.colors.onCta : theme.colors.text }}>{selectedPresetKeys.includes(preset.key) ? '✓ ' : ''}{preset.label}</Text></Pressable>)}
         </ScrollView>
       ) : null}
       {!(!editMode && isTrip) ? <HorizontalTableScroll>

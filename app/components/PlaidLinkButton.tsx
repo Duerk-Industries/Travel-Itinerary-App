@@ -127,9 +127,9 @@ const PlaidLinkButton: React.FC<PlaidLinkButtonProps> = ({
       ]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color="#0B1726" />
+        <ActivityIndicator size="small" color={colors.onCta} />
       ) : (
-        <Text style={{ color: '#0B1726', fontWeight: 'bold', fontSize: typography.body }}>
+        <Text style={{ color: colors.onCta, fontWeight: 'bold', fontSize: typography.body }}>
           Connect Bank Account
         </Text>
       )}

@@ -1452,7 +1452,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 onPress={toggleEditMode}
                 style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : (theme?.colors?.cta ?? '#F59E0B') }]}
               >
-                <Text style={[styles.buttonText, { color: editMode ? textColor : '#0B1726' }]}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
+                <Text style={[styles.buttonText, { color: editMode ? textColor : (theme?.colors?.onCta ?? '#FFFFFF') }]}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
               </TouchableOpacity>
             ) : null}
             {!readOnly && !editMode ? (
@@ -1522,7 +1522,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     onPress={() => { if (!selected) onChangeTemperatureUnit(unit); }}
                     style={{ paddingHorizontal: 9, paddingVertical: 2, backgroundColor: selected ? (theme?.colors?.link ?? '#0ea5e9') : 'transparent' }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: selected ? '#fff' : mutedColor }}>{unit === 'fahrenheit' ? '°F' : '°C'}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: selected ? (theme?.colors?.onCta ?? '#FFFFFF') : mutedColor }}>{unit === 'fahrenheit' ? '°F' : '°C'}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -1589,7 +1589,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
             <TouchableOpacity
               testID="blog-add-photos"
               accessibilityRole="button"
-              style={[styles.button, { backgroundColor: '#0ea5e9', alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12 }]}
+              style={[styles.button, { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12 }]}
               onPress={() => openPhotoComposer(localDateString())}
               disabled={uploading}
             >
@@ -1737,7 +1737,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 ) : null}
                 {canEdit && (
                   <TouchableOpacity
-                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#0ea5e9' }]}
+                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8 }]}
                     onPress={() => (capabilities.trip_blog_photo_composer ? openPhotoComposer(day.localDate) : handleUpload(day.localDate))}
                     disabled={uploading}
                   >
@@ -2399,10 +2399,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
             {storagePlans.map(plan => (
               <TouchableOpacity
                 key={plan.planKey}
-                style={[styles.button, { marginBottom: 10, backgroundColor: '#0284c7' }]}
+                style={[styles.button, { marginBottom: 10 }]}
                 onPress={() => purchaseStorage(plan.planKey)}
               >
-                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Add {plan.planKey.split('_')[1].toUpperCase()} Storage</Text>
+                <Text style={styles.buttonText}>Add {plan.planKey.split('_')[1].toUpperCase()} Storage</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity

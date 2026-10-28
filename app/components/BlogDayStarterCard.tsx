@@ -30,7 +30,7 @@ type Props = {
 const BlogDayStarterCard: React.FC<Props> = ({
   draft, onUse, onDismiss, busy = false,
   displayFont, textColor = '#111827', mutedColor = '#6b7280',
-  borderColor = '#ccd4df', backgroundColor = '#ffffff', accentColor = '#2E96A6',
+  borderColor = '#ccd4df', backgroundColor = '#ffffff', accentColor = '#0A0A0A',
   styles, testID,
 }) => (
   <View

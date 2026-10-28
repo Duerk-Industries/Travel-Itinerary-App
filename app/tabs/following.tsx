@@ -300,7 +300,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
               key={trip.tripId}
               style={[
                 styles.followTripItem,
-                selectedTripId === trip.tripId ? { borderColor: '#2563eb', borderWidth: 1 } : null,
+                selectedTripId === trip.tripId ? { borderColor: '#8A8A8A', borderWidth: 1 } : null,
               ]}
               activeOpacity={0.85}
               onPress={() => onSelectTrip(trip.tripId)}

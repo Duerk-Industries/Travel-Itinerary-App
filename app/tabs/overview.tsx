@@ -3917,7 +3917,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           testID="ai-itinerary-pending-banner"
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ActivityIndicator size="small" color="#2563eb" testID="ai-itinerary-pending-spinner" />
+            <ActivityIndicator size="small" color={theme ? theme.colors.textMuted : '#6B6B6B'} testID="ai-itinerary-pending-spinner" />
             <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
           </View>
           <Text style={styles.helperText} testID="ai-itinerary-stage-label">

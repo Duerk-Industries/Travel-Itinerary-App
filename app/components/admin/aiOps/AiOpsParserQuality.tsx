@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../../../theme/theme';
 import { aiOpsStyles, cardStyle } from './shared';
 import type { AiAnalyticsMetric } from './types';
+import { whiteLabelButtonColor } from '../../../theme/theme';
 
 export const AiOpsParserQuality: React.FC<{
   theme: AppTheme;
@@ -24,7 +25,7 @@ export const AiOpsParserQuality: React.FC<{
         {metric.dimensions.featureKey ?? metric.dimensions.provider ?? metric.table}: {metric.metricKey} = {metric.metricValue}
       </Text>
     ))}
-    <TouchableOpacity style={[aiOpsStyles.button, { backgroundColor: theme.colors.cta }, saving === 'analytics-refresh' && aiOpsStyles.disabled]} disabled={saving === 'analytics-refresh'} onPress={onRefresh}>
+    <TouchableOpacity style={[aiOpsStyles.button, { backgroundColor: whiteLabelButtonColor(theme) }, saving === 'analytics-refresh' && aiOpsStyles.disabled]} disabled={saving === 'analytics-refresh'} onPress={onRefresh}>
       <Text style={aiOpsStyles.buttonText}>{saving === 'analytics-refresh' ? 'Refreshing...' : 'Refresh analytics'}</Text>
     </TouchableOpacity>
   </View>

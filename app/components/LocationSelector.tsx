@@ -343,7 +343,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
           )}
         </View>
         {countryStateLoading && (
-          <ActivityIndicator size="small" color="#0d6efd" style={{ marginLeft: 8, marginTop: 10 }} testID="country-state-loading" />
+          <ActivityIndicator size="small" color="#6B6B6B" style={{ marginLeft: 8, marginTop: 10 }} testID="country-state-loading" />
         )}
         <TouchableOpacity 
             style={[styles.button, styles.smallButton, { marginLeft: 8 }]} 
@@ -401,7 +401,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
               )}
             </View>
             {cityLoading && (
-              <ActivityIndicator size="small" color="#0d6efd" style={{ marginLeft: 8, marginTop: 10 }} testID="city-loading" />
+              <ActivityIndicator size="small" color="#6B6B6B" style={{ marginLeft: 8, marginTop: 10 }} testID="city-loading" />
             )}
             <TouchableOpacity
               style={[styles.button, styles.smallButton, { marginLeft: 8 }]}

@@ -177,7 +177,7 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({
                 autoFocus
               />
               {loading ? (
-                <ActivityIndicator size="small" color="#2563eb" style={styles.loadingIndicator} testID="place-dialog-loading" />
+                <ActivityIndicator size="small" color="#6B6B6B" style={styles.loadingIndicator} testID="place-dialog-loading" />
               ) : null}
             </View>
             {showDropdown ? (
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
   btnGhost: { paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnGhostText: { color: '#374151', fontWeight: '600' },
-  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
+  btnPrimary: { backgroundColor: '#141414', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
   autocompleteWrap: { position: 'relative', zIndex: 20 },
   autocompleteInputRow: { flexDirection: 'row', alignItems: 'center' },

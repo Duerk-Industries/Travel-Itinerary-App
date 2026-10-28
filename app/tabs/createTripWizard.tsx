@@ -1418,8 +1418,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TouchableOpacity
                 style={[
                   {
-                    backgroundColor: dateModeSelected === 'range' ? '#0d6efd' : (theme?.colors.surface ?? '#fff'),
-                    borderColor: '#0d6efd',
+                    backgroundColor: dateModeSelected === 'range' ? (theme?.colors.text ?? '#0A0A0A') : (theme?.colors.surface ?? '#fff'),
+                    borderColor: theme?.colors.text ?? '#0A0A0A',
                     borderWidth: 1,
                     paddingVertical: 8,
                     paddingHorizontal: 12,
@@ -1435,7 +1435,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               >
                 <Text
                   style={[
-                    { color: dateModeSelected === 'range' ? '#fff' : '#0d6efd', fontWeight: '600' },
+                    { color: dateModeSelected === 'range' ? (theme?.colors.surface ?? '#FFFFFF') : (theme?.colors.text ?? '#0A0A0A'), fontWeight: '600' },
                   ]}
                 >
                   I know which dates I'm going
@@ -1444,8 +1444,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TouchableOpacity
                 style={[
                   {
-                    backgroundColor: dateModeSelected === 'month' ? '#0d6efd' : (theme?.colors.surface ?? '#fff'),
-                    borderColor: '#0d6efd',
+                    backgroundColor: dateModeSelected === 'month' ? (theme?.colors.text ?? '#0A0A0A') : (theme?.colors.surface ?? '#fff'),
+                    borderColor: theme?.colors.text ?? '#0A0A0A',
                     borderWidth: 1,
                     paddingVertical: 8,
                     paddingHorizontal: 12,
@@ -1460,7 +1460,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               >
                 <Text
                   style={[
-                    { color: dateModeSelected === 'month' ? '#fff' : '#0d6efd', fontWeight: '600' },
+                    { color: dateModeSelected === 'month' ? (theme?.colors.surface ?? '#FFFFFF') : (theme?.colors.text ?? '#0A0A0A'), fontWeight: '600' },
                   ]}
                 >
                   Flexible Timeline
@@ -2589,7 +2589,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   paddingVertical: 4,
                   borderRadius: 999,
                   borderWidth: 1,
-                  borderColor: theme?.colors.border ?? '#385266',
+                  borderColor: theme?.colors.border ?? '#2A2A2A',
                   backgroundColor: theme?.mode === 'dark' ? '#35516A' : '#E8F0F6',
                 }}
               >
@@ -2627,7 +2627,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   paddingVertical: 4,
                   borderRadius: 999,
                   borderWidth: 1,
-                  borderColor: theme?.colors.border ?? '#385266',
+                  borderColor: theme?.colors.border ?? '#2A2A2A',
                   backgroundColor: theme?.mode === 'dark' ? '#35516A' : '#E8F0F6',
                 }}
               >

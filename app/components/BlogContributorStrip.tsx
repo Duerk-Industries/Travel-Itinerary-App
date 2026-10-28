@@ -65,7 +65,7 @@ const BlogContributorStrip: React.FC<Props> = ({ contributors, reactionTotal = 0
       <View style={{ flexShrink: 1 }}>
         <Text style={{ color: mutedColor, fontSize: 12 }}>{summaryParts.join(' · ')}</Text>
         {spotlightUserId ? (
-          <Text testID={testID ? `${testID}-spotlight` : undefined} style={{ color: '#7c3aed', fontSize: 11, fontWeight: '700' }}>
+          <Text testID={testID ? `${testID}-spotlight` : undefined} style={{ color: '#3A3A3A', fontSize: 11, fontWeight: '700' }}>
             ✨ Traveler spotlight: {contributors.find((c) => c.userId === spotlightUserId)?.displayName || 'top contributor'}
           </Text>
         ) : null}

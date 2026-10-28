@@ -171,6 +171,12 @@ export const gradientFill = ([top, bottom]: [string, string]): Record<string, st
   return Platform.OS === 'web' ? { backgroundImage: css } : { experimental_backgroundImage: css };
 };
 
+/**
+ * Background for buttons whose label is fixed white (admin tools): the main button color in
+ * light mode, and graphite in dark mode, where the main button color is near-white.
+ */
+export const whiteLabelButtonColor = (theme: AppTheme): string => (theme.mode === 'dark' ? '#333333' : theme.colors.cta);
+
 export const getAppTheme = (
   appearancePreference: AppearancePreference,
   systemScheme: 'light' | 'dark' | null | undefined

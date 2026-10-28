@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../../../theme/theme';
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
 import type { AiAbTestMetric, AiExperiment } from './types';
+import { whiteLabelButtonColor } from '../../../theme/theme';
 
 const latestMetricsByVariant = (metrics: AiAbTestMetric[], experimentId: string) => {
   const latest = new Map<string, AiAbTestMetric>();
@@ -35,7 +36,7 @@ export const AiOpsExperiments: React.FC<{
       placeholderTextColor={theme.colors.textMuted}
     />
     <TouchableOpacity
-      style={[aiOpsStyles.button, { backgroundColor: theme.colors.cta }, saving === 'experiment-create' && aiOpsStyles.disabled]}
+      style={[aiOpsStyles.button, { backgroundColor: whiteLabelButtonColor(theme) }, saving === 'experiment-create' && aiOpsStyles.disabled]}
       disabled={saving === 'experiment-create'}
       onPress={onCreate}
     >
@@ -96,7 +97,7 @@ export const AiOpsExperiments: React.FC<{
             {experiment.variants.filter((variant) => variant.variantId !== controlVariantId).map((variant) => (
               <TouchableOpacity
                 key={variant.variantId}
-                style={[aiOpsStyles.button, { backgroundColor: theme.colors.cta }, saving === `experiment-${experiment.experimentId}` && aiOpsStyles.disabled]}
+                style={[aiOpsStyles.button, { backgroundColor: whiteLabelButtonColor(theme) }, saving === `experiment-${experiment.experimentId}` && aiOpsStyles.disabled]}
                 disabled={saving === `experiment-${experiment.experimentId}`}
                 onPress={() => onUpdateStatus(experiment, 'completed', variant.variantId)}
               >
