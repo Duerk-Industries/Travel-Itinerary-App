@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate, type TokenPayload } from '../auth';
-import { deleteTrip } from '../db';
+import { deleteTrip, dismissActivitySuggestion, ensureUserInTrip, restoreDismissedActivitySuggestions } from '../db';
+import { suggestActivitiesForTrip } from '../services/tripActivitySuggestionService';
 import { EntitlementError } from '../errors';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { createWizardTrip, WizardTripError } from './tripRoutes';
@@ -57,6 +58,48 @@ router.get('/', async (req, res) => {
     logError('[trip-templates] list failed', err);
     res.json({ templates: [] });
   }
+});
+
+// Template activities for the days a trip's lodgings put the traveler in the activity's city, minus
+// anything the trip already has. Shown on the Activities page; an empty list is a normal answer.
+router.get('/trips/:tripId/activity-suggestions', async (req, res) => {
+  const user = (req as any).user as TokenPayload;
+  try {
+    if (!(await ensureUserInTrip(req.params.tripId, user.userId))) {
+      res.status(403).json({ error: 'Trip unavailable.' });
+      return;
+    }
+    res.json(await suggestActivitiesForTrip(user.userId, req.params.tripId));
+  } catch (err) {
+    logError('[trip-templates] activity suggestions failed', err);
+    res.json({ suggestions: [], dismissedCount: 0 });
+  }
+});
+
+// A dismissal is the traveler's own: it stays dismissed for them on every device, and others still see it.
+router.post('/trips/:tripId/activity-suggestions/dismissals', async (req, res) => {
+  const user = (req as any).user as TokenPayload;
+  const key = typeof req.body?.key === 'string' ? req.body.key.trim() : '';
+  if (!key || key.length > 200) {
+    res.status(400).json({ error: 'Choose a suggestion to dismiss.' });
+    return;
+  }
+  if (!(await ensureUserInTrip(req.params.tripId, user.userId))) {
+    res.status(403).json({ error: 'Trip unavailable.' });
+    return;
+  }
+  await dismissActivitySuggestion(req.params.tripId, user.userId, key);
+  res.status(204).end();
+});
+
+router.delete('/trips/:tripId/activity-suggestions/dismissals', async (req, res) => {
+  const user = (req as any).user as TokenPayload;
+  if (!(await ensureUserInTrip(req.params.tripId, user.userId))) {
+    res.status(403).json({ error: 'Trip unavailable.' });
+    return;
+  }
+  await restoreDismissedActivitySuggestions(req.params.tripId, user.userId);
+  res.status(204).end();
 });
 
 // One template in full, day by day, for the preview before it is chosen.

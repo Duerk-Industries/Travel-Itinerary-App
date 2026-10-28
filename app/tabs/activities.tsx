@@ -6,7 +6,7 @@ import AddToCalendarButton from '../components/AddToCalendarButton';
 import { activityCalendarEvent } from '../utils/calendarEvents';
 import type { Activity, PlanningCoordinates } from '../../server/src/types';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from '../components/KeyboardAwareModal';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { startItemSaveTask } from '../utils/analytics/track';
@@ -274,6 +274,61 @@ export const fetchActivitiesForTrip = async ({
   return (data as any[]).map(normalizeActivityFromApi);
 };
 
+/** A template activity that fits a city and day of this trip, offered until the traveler adds it. */
+export type ActivitySuggestion = {
+  key: string;
+  name: string;
+  city: string;
+  activityType: string;
+  startTime: string;
+  duration: string;
+  startLocation: string;
+  description: string;
+  image: { url: string; credit: string } | null;
+  bookAhead: boolean;
+  dates: string[];
+};
+
+// Suggestions are a nicety: any failure, or the templates switched off, just means none are shown.
+export const fetchActivitySuggestions = async ({
+  backendUrl,
+  activeTripId,
+  token,
+}: {
+  backendUrl: string;
+  activeTripId: string | null;
+  token?: string | null;
+}): Promise<{ suggestions: ActivitySuggestion[]; dismissedCount: number }> => {
+  const none = { suggestions: [], dismissedCount: 0 };
+  if (!activeTripId || !token) return none;
+  try {
+    const res = await fetch(`${backendUrl}/api/trip-templates/trips/${activeTripId}/activity-suggestions`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return none;
+    const data = await res.json();
+    return Array.isArray(data?.suggestions) ? { suggestions: data.suggestions, dismissedCount: Number(data.dismissedCount) || 0 } : none;
+  } catch {
+    return none;
+  }
+};
+
+// A dismissal is saved for this traveler on the trip; restoring brings back everything they dismissed.
+const sendSuggestionDismissal = async (backendUrl: string, token: string | null, tripId: string, key?: string): Promise<boolean> => {
+  try {
+    const res = await fetch(`${backendUrl}/api/trip-templates/trips/${tripId}/activity-suggestions/dismissals`, {
+      method: key ? 'POST' : 'DELETE',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      ...(key ? { body: JSON.stringify({ key }) } : {}),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
+const SUGGESTIONS_COLLAPSED = 4;
+
 export const normalizeActivityFromApi = (t: any): Tour => ({
     ...t,
     date: t.date ?? '',
@@ -328,6 +383,8 @@ type TourTabProps = {
   featureTapToEditTables?: boolean;
   featureActivityRecap?: boolean;
   onOpenActivityRecap?: (activity: Tour) => void;
+  /** Offer template activities that fit the days and cities of this trip. Off unless the page asks for it. */
+  showSuggestions?: boolean;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -364,6 +421,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   featureTapToEditTables = true,
   featureActivityRecap = false,
   onOpenActivityRecap,
+  showSuggestions = false,
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
@@ -419,6 +477,64 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     }
     setEditingTour(base);
     setEditingTourId(tour?.id ?? null);
+  };
+
+  // `lodgings` defaults to a fresh array each render, so the effect watches a signature of it instead.
+  const lodgingSignature = lodgings.map((l) => `${l.id}:${l.checkInDate ?? ''}:${l.checkOutDate ?? ''}`).join('|');
+  const tourSignature = tours.map((t) => `${t.id}:${t.name}:${t.date}`).join('|');
+  const [suggestions, setSuggestions] = useState<ActivitySuggestion[]>([]);
+  const [dismissedCount, setDismissedCount] = useState(0);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+  useEffect(() => {
+    if (!showSuggestions || mode === 'wizard' || readOnly || !showList) {
+      setSuggestions([]);
+      setDismissedCount(0);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchActivitySuggestions({ backendUrl, activeTripId, token: userToken }).then((found) => {
+      if (cancelled) return;
+      setSuggestions(found.suggestions);
+      setDismissedCount(found.dismissedCount);
+    });
+    // Lodgings place the traveler and activities take suggestions off the list, so refresh when either changes.
+    return () => { cancelled = true; };
+  }, [backendUrl, activeTripId, userToken, mode, readOnly, showList, showSuggestions, tourSignature, lodgingSignature]);
+  const visibleSuggestions = suggestions;
+  const dismissSuggestion = async (key: string) => {
+    if (!activeTripId) return;
+    if (!(await sendSuggestionDismissal(backendUrl, userToken, activeTripId, key))) {
+      Alert.alert('Unable to dismiss this suggestion. Please try again.');
+      return;
+    }
+    setSuggestions((current) => current.filter((s) => s.key !== key));
+    setDismissedCount((count) => count + 1);
+  };
+  const restoreSuggestions = async () => {
+    if (!activeTripId || !(await sendSuggestionDismissal(backendUrl, userToken, activeTripId))) return;
+    const found = await fetchActivitySuggestions({ backendUrl, activeTripId, token: userToken });
+    setSuggestions(found.suggestions);
+    setDismissedCount(found.dismissedCount);
+  };
+
+  // Adding a suggestion goes through the normal editor, so the traveler confirms the details before it is saved.
+  const openSuggestionEditor = (suggestion: ActivitySuggestion, date: string) => {
+    if (readOnly || !activeTripId) return;
+    const base: TourDraft = {
+      ...createInitialActivityState(date || defaultActivityDate),
+      date,
+      status: suggestion.bookAhead ? 'Needs Booking' : 'Proposed',
+      activityType: ACTIVITY_TYPES.includes(suggestion.activityType as ActivityType) ? (suggestion.activityType as ActivityType) : 'Tour',
+      name: suggestion.name,
+      startLocation: suggestion.startLocation,
+      startTime: suggestion.startTime,
+      duration: suggestion.duration,
+      notes: suggestion.description,
+      travelerIds: activeMembers.map((m) => m.id),
+    };
+    if (defaultPayerId) base.paidBy = [defaultPayerId];
+    setEditingTour(base);
+    setEditingTourId(null);
   };
 
   const closeTourEditor = () => {
@@ -1034,6 +1150,46 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         </View>
         </HorizontalTableScroll>
       </> : null}
+      {mode !== 'wizard' && !readOnly && (visibleSuggestions.length || dismissedCount) ? (
+        <View testID="activity-suggestions" style={themeStyle('tabs_activities_20', {  }, (theme ?? _styleTheme))}>
+          <Text style={styles.sectionTitle}>Suggestions</Text>
+          <Text style={styles.helperText}>Ideas for the places you will be, from the example itineraries. Add one to keep it, or dismiss it.</Text>
+          {dismissedCount ? (
+            <TouchableOpacity onPress={restoreSuggestions} testID="activity-suggestions-restore">
+              <Text style={styles.linkText}>{`Bring back ${dismissedCount} dismissed`}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {(showAllSuggestions ? visibleSuggestions : visibleSuggestions.slice(0, SUGGESTIONS_COLLAPSED)).map((s) => (
+            <View key={s.key} testID={`activity-suggestion-${s.key}`} style={themeStyle('tabs_activities_21', {  }, (theme ?? _styleTheme))}>
+              {s.image ? <Image source={{ uri: s.image.url }} accessibilityIgnoresInvertColors accessibilityLabel={s.name} style={themeStyle('components_TripTemplatePicker_16', {  }, (theme ?? _styleTheme))} /> : null}
+              <View style={themeStyle('tabs_activities_22', {  }, (theme ?? _styleTheme))}>
+                <Text style={styles.cellText}>{s.name}</Text>
+                <Text style={styles.helperText}>
+                  {[s.city, s.dates.slice(0, 3).map((d) => formatDateLong(d)).join(', ') + (s.dates.length > 3 ? ` +${s.dates.length - 3} more` : ''), s.duration, s.bookAhead ? 'Book ahead' : ''].filter(Boolean).join(' · ')}
+                </Text>
+                {s.description ? <Text numberOfLines={3} style={styles.helperText}>{s.description}</Text> : null}
+                {s.image ? <Text style={[styles.helperText, themeStyle('components_TripTemplatePicker_15', {  }, (theme ?? _styleTheme))]}>Photo: {s.image.credit}</Text> : null}
+                <View style={themeStyle('tabs_activities_23', {  }, (theme ?? _styleTheme))}>
+                  <TouchableOpacity style={styles.button} onPress={() => openSuggestionEditor(s, s.dates[0])} testID={`activity-suggestion-add-${s.key}`}>
+                    <Text style={styles.buttonText}>{`Add to ${formatDateLong(s.dates[0])}`}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.button} onPress={() => openSuggestionEditor(s, '')} testID={`activity-suggestion-optional-${s.key}`}>
+                    <Text style={styles.buttonText}>Add as optional</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => dismissSuggestion(s.key)} testID={`activity-suggestion-dismiss-${s.key}`}>
+                    <Text style={styles.dangerButtonText}>Dismiss</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ))}
+          {visibleSuggestions.length > SUGGESTIONS_COLLAPSED ? (
+            <TouchableOpacity onPress={() => setShowAllSuggestions((current) => !current)} testID="activity-suggestions-toggle">
+              <Text style={styles.linkText}>{showAllSuggestions ? 'Show fewer' : `Show all ${visibleSuggestions.length}`}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
       <View style={themeStyle('tabs_activities_15', {  }, (theme ?? _styleTheme))}>
             <Text style={styles.flightTitle}>Total activity cost: ${toursTotal.toFixed(2)}</Text>
         {payerTotalsList.length ? (

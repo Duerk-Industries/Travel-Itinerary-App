@@ -163,7 +163,7 @@ const durationText = (minutes: number): string => {
   const m = minutes % 60;
   return h ? `${h}h${String(m).padStart(2, '0')}m` : `${m}m`;
 };
-const baseForDay = (template: SeedTemplate, offset: number): string => template.stays.find((stay) => offset >= stay.start && offset < stay.start + stay.nights)?.base
+export const baseForDay = (template: SeedTemplate, offset: number): string => template.stays.find((stay) => offset >= stay.start && offset < stay.start + stay.nights)?.base
   ?? template.stays[template.stays.length - 1]?.base ?? '';
 
 /** The plan day by day, for the preview a traveler reads before choosing it. Day numbers start at 1. */

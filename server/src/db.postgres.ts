@@ -14146,6 +14146,24 @@ export const clearTripEstimatedItems = async (tripId: string): Promise<void> => 
   await getPool().query('DELETE FROM trip_estimated_items WHERE trip_id = $1', [tripId]);
 };
 
+export const dismissActivitySuggestion = async (tripId: string, userId: string, key: string): Promise<void> => {
+  // pg-mem cannot ON CONFLICT with INSERT...SELECT, and a repeat is harmless, so a duplicate key is ignored.
+  try {
+    await getPool().query('INSERT INTO trip_dismissed_suggestions (trip_id, user_id, suggestion_key) VALUES ($1, $2, $3)', [tripId, userId, key]);
+  } catch {
+    /* already dismissed */
+  }
+};
+
+export const listDismissedActivitySuggestions = async (tripId: string, userId: string): Promise<string[]> => {
+  const { rows } = await getPool().query('SELECT suggestion_key FROM trip_dismissed_suggestions WHERE trip_id = $1 AND user_id = $2', [tripId, userId]);
+  return rows.map((row: any) => String(row.suggestion_key));
+};
+
+export const restoreDismissedActivitySuggestions = async (tripId: string, userId: string): Promise<void> => {
+  await getPool().query('DELETE FROM trip_dismissed_suggestions WHERE trip_id = $1 AND user_id = $2', [tripId, userId]);
+};
+
 export const listTripTemplates = async (options: { enabledOnly?: boolean } = {}): Promise<TripTemplateRecord[]> => {
   const { rows } = await getPool().query(`${TRIP_TEMPLATE_SELECT}${options.enabledOnly ? ' WHERE enabled = TRUE' : ''} ORDER BY sort_order, id`);
   return rows.map((row: any) => ({ ...row, days: Number(row.days), sortOrder: Number(row.sortOrder) }));

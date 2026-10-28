@@ -9979,6 +9979,23 @@ export const clearTripEstimatedItems = async (tripId: string): Promise<void> => 
   await batch.commit();
 };
 
+// Mirrors the Postgres trip_dismissed_suggestions table. Keys contain "/", which a document id cannot, so they are URI-encoded.
+export const dismissActivitySuggestion = async (tripId: string, userId: string, key: string): Promise<void> => {
+  await getDb().collection('trip_dismissed_suggestions').doc(`${tripId}_${userId}_${encodeURIComponent(key)}`).set({ tripId, userId, suggestionKey: key, createdAt: nowIso() });
+};
+
+export const listDismissedActivitySuggestions = async (tripId: string, userId: string): Promise<string[]> => {
+  const snap = await getDb().collection('trip_dismissed_suggestions').where('tripId', '==', tripId).where('userId', '==', userId).get();
+  return snap.docs.map((doc) => String((doc.data() as any).suggestionKey));
+};
+
+export const restoreDismissedActivitySuggestions = async (tripId: string, userId: string): Promise<void> => {
+  const snap = await getDb().collection('trip_dismissed_suggestions').where('tripId', '==', tripId).where('userId', '==', userId).get();
+  const batch = getDb().batch();
+  snap.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+};
+
 export const listTripTemplates = async (options: { enabledOnly?: boolean } = {}): Promise<TripTemplateRecord[]> => {
   const snap = await getDb().collection('trip_templates').get();
   return snap.docs

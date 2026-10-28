@@ -3570,6 +3570,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   featureTapToEditTables={featureTapToEditTables}
                   featureActivityRecap={featureActivityRecap}
                   onOpenActivityRecap={setActivityRecapTarget}
+                  showSuggestions
                 />
               )
             : null}

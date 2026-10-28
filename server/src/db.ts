@@ -869,3 +869,9 @@ export const removeTripEstimatedItem = async (...args: Parameters<ReturnType<typ
   adapter().removeTripEstimatedItem(...args);
 export const clearTripEstimatedItems = async (...args: Parameters<ReturnType<typeof adapter>['clearTripEstimatedItems']>) =>
   adapter().clearTripEstimatedItems(...args);
+export const dismissActivitySuggestion = async (...args: Parameters<ReturnType<typeof adapter>['dismissActivitySuggestion']>) =>
+  adapter().dismissActivitySuggestion(...args);
+export const listDismissedActivitySuggestions = async (...args: Parameters<ReturnType<typeof adapter>['listDismissedActivitySuggestions']>) =>
+  adapter().listDismissedActivitySuggestions(...args);
+export const restoreDismissedActivitySuggestions = async (...args: Parameters<ReturnType<typeof adapter>['restoreDismissedActivitySuggestions']>) =>
+  adapter().restoreDismissedActivitySuggestions(...args);

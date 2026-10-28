@@ -17,7 +17,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // The Postgres adapter hands lodging and transfer dates back as Date objects (local midnight from node-pg,
 // UTC midnight from pg-mem), Firestore as strings.
-const isoDay = (value: unknown): string => {
+export const isoDay = (value: unknown): string => {
   if (value instanceof Date) {
     if (Number.isNaN(value.valueOf())) return '';
     if (value.getUTCHours() === 0 && value.getUTCMinutes() === 0) return value.toISOString().slice(0, 10);

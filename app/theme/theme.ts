@@ -4829,6 +4829,10 @@ const styleFactories = {
   tabs_activities_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ maxHeight: 420 }),
   // tabs/activities.tsx
   tabs_activities_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingRight: 12 }),
+  tabs_activities_20: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 16, gap: 10 }),
+  tabs_activities_21: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', gap: 12, padding: 10, borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 10, backgroundColor: _theme.colors.surface }),
+  tabs_activities_22: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, gap: 4 }),
+  tabs_activities_23: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 }),
   // tabs/AdminTab.tsx
   tabs_AdminTab_1: (_theme: AppTheme, { theme, shadowStyle, opacity, y, radius }: ThemeStyleValues): any => ({
   backgroundColor: theme.colors.surface,

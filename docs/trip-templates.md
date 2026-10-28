@@ -22,6 +22,12 @@ Every activity has a short description and, where one exists, a picture; every d
 
 Refreshing the pictures: `fetch_media.py search` collects candidates, `sheets` writes contact sheets to review by eye, and `build` writes the catalogue using a `choices.json` of your picks (see the script's header). Review the picks: a license tag on Commons is the uploader's declaration, so check the file page for anything you intend to rely on.
 
+## Suggestions on the Activities page
+
+Every template activity is also a suggestion for any trip, not just trips made from a template. `GET /api/trip-templates/trips/:tripId/activity-suggestions` (trip members only, same flag) returns the activities whose city matches a lodging on that trip, with the trip days spent there. A lodging's city is read from its address and name, so a placeholder ("Kyoto, Japan") and a real hotel address both work. An activity the trip already has, scheduled or optional, is left out when the names match (one contains the other). The same stop in several templates is offered once.
+
+The Activities page lists them with **Add to {first day}**, **Add as optional** and **Dismiss**; adding opens the usual editor with the details filled in, so nothing is saved until the traveler confirms. A dismissal is saved per traveler and trip (`trip_dismissed_suggestions`, `POST`/`DELETE …/activity-suggestions/dismissals`), so it holds across visits and devices and other members still see the suggestion; **Bring back N dismissed** restores them. Trips with no dated lodging get no suggestions.
+
 ## Where the data lives
 
 | What | Where |
