@@ -128,7 +128,7 @@ const ExpenseReceiptPanel: React.FC<Props> = ({ backendUrl, headers, expenseId, 
         ) : null}
         {canEdit && hasReceipt ? (
           <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton, busy && styles.buttonDisabled]} disabled={busy} onPress={remove} testID="expense-receipt-remove">
-            <Text style={styles.buttonText}>Remove</Text>
+            <Text style={styles.dangerButtonText}>Remove</Text>
           </TouchableOpacity>
         ) : null}
         <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={onClose} testID="expense-receipt-close">

@@ -708,7 +708,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
               accessibilityRole="button"
               accessibilityLabel={`Delete ${selectedIds.size} selected item${selectedIds.size === 1 ? '' : 's'}`}
             >
-              <Text style={styles.dangerButtonText}>Delete Selected</Text>
+              <Text style={styles.buttonText}>Delete Selected</Text>
             </TouchableOpacity>
             <TextInput
               style={[styles.input, themeStyle('tabs_ingestion_7', {  }, (theme ?? _styleTheme))]}
@@ -861,7 +861,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                   <Text style={styles.buttonText}>{assignTripId ? `Add to ${trips.find(trip => trip.id === assignTripId)?.name || 'selected trip'}` : 'Choose a trip'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, styles.tableActionButtonDanger]} onPress={() => deleteItem(selectedItem.id)}>
-                  <Text style={styles.dangerButtonText}>Delete</Text>
+                  <Text style={styles.buttonText}>Delete</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.button}

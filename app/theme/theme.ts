@@ -221,6 +221,15 @@ const darkTheme: AppTheme = {
 /** Semantic link foreground, readable on standard surfaces in either appearance. */
 export const linkTextColor = (theme: AppTheme): string => theme.colors.linkText;
 
+/** A surface override must also remove a gradient from an earlier style in an array. */
+const solidBackground = <T,>(style: T): T => {
+  if (!style || typeof style !== 'object' || !('backgroundColor' in style)) return style;
+  const key = Platform.OS === 'web' ? 'backgroundImage' : 'experimental_backgroundImage';
+  return key in style ? style : { ...style, [key]: Platform.OS === 'web' ? 'none' : [] };
+};
+const solidBackgrounds = <T extends Record<string, any>>(styles: T): T =>
+  Object.fromEntries(Object.entries(styles).map(([key, value]) => [key, solidBackground(value)])) as T;
+
 /** Shared gradient with a solid CTA fallback; visual definitions stay in this file. */
 const ctaGradientStyle = (theme: AppTheme) => ({
   backgroundColor: theme.colors.cta,
@@ -415,7 +424,7 @@ const styleFactories = {
   // components/ActivityRecapDialog.tsx
   components_ActivityRecapDialog_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', gap: 8, marginTop: 14 }),
   // components/ActivityRecapDialog.tsx
-  components_ActivityRecapDialog_6: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme?.colors?.link ?? _theme.colors.accentSurface }),
+  components_ActivityRecapDialog_6: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.selectedSurface }),
   // components/ActivityRecapDialog.tsx
   components_ActivityRecapDialog_7: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.dangerAction }),
   // components/ActivityRecapDialog.tsx
@@ -435,7 +444,7 @@ const styleFactories = {
   // components/ActivityRecapDialog.tsx
   components_ActivityRecapDialog_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ opacity: 0.6 }),
   // components/ActivityRecapDialog.tsx
-  components_ActivityRecapDialog_16: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme?.colors?.link ?? _theme.colors.accentSurface }),
+  components_ActivityRecapDialog_16: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.selectedSurface }),
   // components/ActivityRecapDialog.tsx
   components_ActivityRecapDialog_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ opacity: 0.6 }),
   // components/ActivityRecapDialog.tsx
@@ -566,7 +575,7 @@ const styleFactories = {
   // components/admin/aiOps/AiOperationsSection.tsx
   components_admin_aiOps_AiOperationsSection_3: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.dangerText }),
   // components/admin/aiOps/AiOperationsSection.tsx
-  components_admin_aiOps_AiOperationsSection_4: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.successText }),
+  components_admin_aiOps_AiOperationsSection_4: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.successActionText }),
   // components/admin/aiOps/AiOpsAiAuditLog.tsx
   components_admin_aiOps_AiOpsAiAuditLog_1: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text }),
   // components/admin/aiOps/AiOpsAiAuditLog.tsx
@@ -604,11 +613,11 @@ const styleFactories = {
   // components/admin/aiOps/AiOpsExperiments.tsx
   components_admin_aiOps_AiOpsExperiments_6: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.textMuted }),
   // components/admin/aiOps/AiOpsExperiments.tsx
-  components_admin_aiOps_AiOpsExperiments_7: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.success }),
+  components_admin_aiOps_AiOpsExperiments_7: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.successAction }),
   // components/admin/aiOps/AiOpsExperiments.tsx
-  components_admin_aiOps_AiOpsExperiments_8: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.alert }),
+  components_admin_aiOps_AiOpsExperiments_8: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.dangerAction }),
   // components/admin/aiOps/AiOpsExperiments.tsx
-  components_admin_aiOps_AiOpsExperiments_9: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.alert }),
+  components_admin_aiOps_AiOpsExperiments_9: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.dangerAction }),
   // components/admin/aiOps/AiOpsExperiments.tsx
   components_admin_aiOps_AiOpsExperiments_10: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta }),
   // components/admin/aiOps/AiOpsItineraryInstructions.tsx
@@ -646,7 +655,7 @@ const styleFactories = {
   // components/admin/aiOps/AiOpsProviders.tsx
   components_admin_aiOps_AiOpsProviders_4: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta }),
   // components/admin/aiOps/AiOpsProviders.tsx
-  components_admin_aiOps_AiOpsProviders_5: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.alert }),
+  components_admin_aiOps_AiOpsProviders_5: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.dangerAction }),
   // components/admin/aiOps/AiOpsProviders.tsx
   components_admin_aiOps_AiOpsProviders_6: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text }),
   // components/admin/aiOps/AiOpsProviders.tsx
@@ -664,7 +673,7 @@ const styleFactories = {
   // components/admin/aiOps/AiOpsProviders.tsx
   components_admin_aiOps_AiOpsProviders_13: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text }),
   // components/admin/aiOps/AiOpsProviders.tsx
-  components_admin_aiOps_AiOpsProviders_14: (_theme: AppTheme, { draft, theme }: ThemeStyleValues): any => ({ backgroundColor: draft.enabled ? theme.colors.success : theme.colors.alert }),
+  components_admin_aiOps_AiOpsProviders_14: (_theme: AppTheme, { draft, theme }: ThemeStyleValues): any => ({ backgroundColor: draft.enabled ? theme.colors.successAction : theme.colors.dangerAction }),
   // components/admin/aiOps/AiOpsProviders.tsx
   components_admin_aiOps_AiOpsProviders_15: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta }),
   // components/admin/aiOps/AiOpsRecommendations.tsx
@@ -678,9 +687,9 @@ const styleFactories = {
   // components/admin/aiOps/AiOpsRecommendations.tsx
   components_admin_aiOps_AiOpsRecommendations_5: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.textMuted }),
   // components/admin/aiOps/AiOpsRecommendations.tsx
-  components_admin_aiOps_AiOpsRecommendations_6: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.success }),
+  components_admin_aiOps_AiOpsRecommendations_6: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.successAction }),
   // components/admin/aiOps/AiOpsRecommendations.tsx
-  components_admin_aiOps_AiOpsRecommendations_7: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.alert }),
+  components_admin_aiOps_AiOpsRecommendations_7: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.dangerAction }),
   // components/admin/aiOps/AiOpsRuntimeSettings.tsx
   components_admin_aiOps_AiOpsRuntimeSettings_1: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text }),
   // components/admin/aiOps/AiOpsRuntimeSettings.tsx
@@ -1260,7 +1269,7 @@ const styleFactories = {
     paddingVertical: 10,
   },
   sendBtnDisabled: {
-    backgroundColor: theme?.mode === 'dark' ? theme.colors.surfaceMuted : _theme.colors.accentSurface,
+    opacity: 0.6,
   },
   sendBtnText: {
     color: _theme.colors.onAccent,
@@ -1362,7 +1371,7 @@ const styleFactories = {
   // components/BlogCommentComposer.tsx
   components_BlogCommentComposer_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surface),
   // components/BlogCommentComposer.tsx
-  components_BlogCommentComposer_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onAccent),
+  components_BlogCommentComposer_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onCta),
   // components/BlogCommentThread.tsx
   components_BlogCommentThread_1: (_theme: AppTheme, { isReply, borderColor }: ThemeStyleValues): any => ({ marginLeft: isReply ? 20 : 0, borderLeftWidth: isReply ? 2 : 0, borderLeftColor: borderColor, paddingLeft: isReply ? 8 : 0, marginTop: isReply ? 8 : 12 }),
   // components/BlogCommentThread.tsx
@@ -1519,7 +1528,7 @@ const styleFactories = {
   // components/BlogDayStarterCard.tsx
   components_BlogDayStarterCard_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.accentSurface),
   // components/BlogDayStarterCard.tsx
-  components_BlogDayStarterCard_16: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onAccent),
+  components_BlogDayStarterCard_16: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onCta),
   // components/BlogDiscoveryPanel.tsx
   components_BlogDiscoveryPanel_1: (_theme: AppTheme, { borderColor, backgroundColor }: ThemeStyleValues): any => ({ borderWidth: 1, borderColor, borderRadius: 10, padding: 12, marginBottom: 16, backgroundColor }),
   // components/BlogDiscoveryPanel.tsx
@@ -1580,7 +1589,7 @@ const styleFactories = {
   // components/BlogKeepsakeButton.tsx
   components_BlogKeepsakeButton_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, backgroundColor: _theme.colors.overlay, justifyContent: 'center', padding: 20 }),
   // components/BlogKeepsakeButton.tsx
-  components_BlogKeepsakeButton_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.surface, borderRadius: 16, padding: 20, maxWidth: 440, width: '100%', alignSelf: 'center' }),
+  components_BlogKeepsakeButton_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.surface, borderRadius: 16, padding: 20, maxWidth: 440, width: '100%', alignSelf: 'center', maxHeight: '100%' }),
   // components/BlogKeepsakeButton.tsx
   components_BlogKeepsakeButton_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 20, fontWeight: '700', color: _theme.colors.text, marginBottom: 4 }),
   // components/BlogKeepsakeButton.tsx
@@ -1608,7 +1617,7 @@ const styleFactories = {
   // components/BlogKeepsakeButton.tsx
   components_BlogKeepsakeButton_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: _theme.colors.dangerAction }),
   // components/BlogKeepsakeButton.tsx
-  components_BlogKeepsakeButton_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.text, fontWeight: '700' }),
+  components_BlogKeepsakeButton_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onAccent, fontWeight: '700' }),
   // components/BlogKeepsakeButton.tsx
   components_BlogKeepsakeButton_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.primary),
   // components/BlogMediaMetadataEditor.tsx
@@ -1901,7 +1910,7 @@ const styleFactories = {
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: _theme.colors.accentSurface,
+    backgroundColor: _theme.colors.accentAction, // Previously accentSurface
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -2018,7 +2027,7 @@ const styleFactories = {
     paddingVertical: 8,
   },
   ownBubble: {
-    backgroundColor: _theme.colors.accentSurface,
+    backgroundColor: _theme.colors.accentAction, // Previously accentSurface
     borderBottomRightRadius: 4,
   },
   otherBubble: {
@@ -2067,13 +2076,13 @@ const styleFactories = {
   },
   sendBtn: {
     marginLeft: 8,
-    backgroundColor: _theme.colors.accentSurface,
+    backgroundColor: _theme.colors.accentAction, // Previously accentSurface
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   sendBtnDisabled: {
-    backgroundColor: theme?.mode === 'dark' ? theme.colors.surfaceMuted : _theme.colors.surfaceMuted,
+    opacity: 0.6,
   },
   sendBtnText: {
     color: _theme.colors.onAccent,
@@ -2354,7 +2363,11 @@ const styleFactories = {
   // components/DialogShell.tsx
   components_DialogShell_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-start', alignItems: 'center', padding: 16, paddingTop: 24 }),
   // components/DialogShell.tsx
-  components_DialogShell_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 0, maxHeight: '100%' }),
+  components_DialogShell_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 0, maxHeight: '100%', minHeight: 0, flexShrink: 1 }),
+  ctaLabel: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ color: _theme.colors.onCta }),
+  selectionLabel: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ color: _theme.colors.onSelected }),
+  dialogScroll: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ minHeight: 0, flexShrink: 1 }),
+  dialogScrollContent: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ flexGrow: 1 }),
   // components/EditableDataGrid.tsx
   components_EditableDataGrid_1: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme?.colors?.surface ?? _theme.colors.surfaceMuted }),
   // components/EditableDataGrid.tsx
@@ -2669,7 +2682,7 @@ const styleFactories = {
                 alignItems: 'center',
               }),
   // components/LandingPage.tsx
-  components_LandingPage_13: (_theme: AppTheme, { typography }: ThemeStyleValues): any => ({ color: _theme.colors.text, fontWeight: typography.weightBold, fontSize: typography.body }),
+  components_LandingPage_13: (_theme: AppTheme, { typography }: ThemeStyleValues): any => ({ color: _theme.colors.onCta, fontWeight: typography.weightBold, fontSize: typography.body }),
   // components/LandingPage.tsx
   components_LandingPage_14: (_theme: AppTheme, { colors, spacing }: ThemeStyleValues): any => ({
                 flex: 1,
@@ -3367,7 +3380,7 @@ const styleFactories = {
   // components/PackingListTable.tsx
   components_PackingListTable_17: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta }),
   // components/PackingListTable.tsx
-  components_PackingListTable_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.text }),
+  components_PackingListTable_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onCta }),
   // components/PackingListTable.tsx
   components_PackingListTable_19: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.surfaceMuted }),
   // components/PackingListTable.tsx
@@ -3387,11 +3400,11 @@ const styleFactories = {
   // components/PackingListTable.tsx
   components_PackingListTable_27: (_theme: AppTheme, { theme, source }: ThemeStyleValues): any => ({ borderColor: theme.colors.border, backgroundColor: source.active ? theme.colors.cta : theme.colors.surfaceMuted }),
   // components/PackingListTable.tsx
-  components_PackingListTable_28: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text }),
+  components_PackingListTable_28: (_theme: AppTheme, { theme, source }: ThemeStyleValues): any => ({ color: source.active ? theme.colors.onCta : theme.colors.text }),
   // components/PackingListTable.tsx
   components_PackingListTable_29: (_theme: AppTheme, { theme, selectedPresetKeys, preset }: ThemeStyleValues): any => ({ borderColor: theme.colors.border, backgroundColor: selectedPresetKeys.includes(preset.key) ? theme.colors.cta : theme.colors.surfaceMuted }),
   // components/PackingListTable.tsx
-  components_PackingListTable_30: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text }),
+  components_PackingListTable_30: (_theme: AppTheme, { theme, selectedPresetKeys, preset }: ThemeStyleValues): any => ({ color: selectedPresetKeys.includes(preset.key) ? theme.colors.onCta : theme.colors.text }),
   // components/PackingListTable.tsx
   components_PackingListTable_31: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ borderColor: theme.colors.border }),
   // components/PackingListTable.tsx
@@ -3517,7 +3530,7 @@ const styleFactories = {
   // components/PendingExpenseLogoutDialog.tsx
   components_PendingExpenseLogoutDialog_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, backgroundColor: _theme.colors.overlay, justifyContent: 'center', padding: 20 }),
   // components/PendingExpenseLogoutDialog.tsx
-  components_PendingExpenseLogoutDialog_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ padding: 20, backgroundColor: _theme.colors.surface, borderRadius: 12 }),
+  components_PendingExpenseLogoutDialog_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ padding: 20, backgroundColor: _theme.colors.surface, borderRadius: 12, maxHeight: '100%' }),
   // components/PendingExpenseRecovery.tsx
   components_PendingExpenseRecovery_1: (_theme: AppTheme, { disabled, busy }: ThemeStyleValues): any => ({ minHeight: 44, padding: 8, justifyContent: 'center', opacity: disabled || busy ? 0.5 : 1 }),
   // components/PendingExpenseRecovery.tsx
@@ -3651,7 +3664,7 @@ const styleFactories = {
   // components/PlacePickerDialog.tsx
   components_PlacePickerDialog_18: (_theme: AppTheme, { StyleSheet, shadowStyle }: ThemeStyleValues): any => (StyleSheet.create({
   overlay: { flex: 1, backgroundColor: _theme.colors.scrim, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  dialog: { width: '100%', maxWidth: 420, backgroundColor: _theme.colors.surface, borderRadius: 12, padding: 16, gap: 8 },
+  dialog: { width: '100%', maxWidth: 420, maxHeight: '100%', minHeight: 0, flexShrink: 1, backgroundColor: _theme.colors.surface, borderRadius: 12, padding: 16, gap: 8 },
   title: { fontSize: 18, fontWeight: '700', color: _theme.colors.text, marginBottom: 4 },
   label: { fontSize: 12, fontWeight: '600', color: _theme.colors.text, marginBottom: 4 },
   input: {
@@ -3734,9 +3747,9 @@ const styleFactories = {
                     marginTop: spacing.xs,
                   }),
   // components/PlaidImportQueue.tsx
-  components_PlaidImportQueue_12: (_theme: AppTheme, { typography }: ThemeStyleValues): any => ({ color: _theme.colors.text, fontWeight: 'bold', fontSize: typography.small }),
+  components_PlaidImportQueue_12: (_theme: AppTheme, { typography }: ThemeStyleValues): any => ({ color: _theme.colors.onCta, fontWeight: 'bold', fontSize: typography.small }),
   // components/PlaidImportQueue.tsx
-  components_PlaidImportQueue_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
+  components_PlaidImportQueue_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onCta),
   // components/PlaidLinkButton.tsx
   components_PlaidLinkButton_1: (_theme: AppTheme, { colors, spacing }: ThemeStyleValues): any => ({
           backgroundColor: colors.cta,
@@ -3747,9 +3760,9 @@ const styleFactories = {
           flexDirection: 'row',
         }),
   // components/PlaidLinkButton.tsx
-  components_PlaidLinkButton_2: (_theme: AppTheme, { typography }: ThemeStyleValues): any => ({ color: _theme.colors.text, fontWeight: 'bold', fontSize: typography.body }),
+  components_PlaidLinkButton_2: (_theme: AppTheme, { typography }: ThemeStyleValues): any => ({ color: _theme.colors.onCta, fontWeight: 'bold', fontSize: typography.body }),
   // components/PlaidLinkButton.tsx
-  components_PlaidLinkButton_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
+  components_PlaidLinkButton_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onCta),
   // components/PremiumPlanComparisonDialog.tsx
   components_PremiumPlanComparisonDialog_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', maxHeight: '92%' }),
   // components/PremiumPlanComparisonDialog.tsx
@@ -3757,7 +3770,7 @@ const styleFactories = {
   // components/PremiumPlanComparisonDialog.tsx
   components_PremiumPlanComparisonDialog_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingBottom: 8 }),
   // components/PremiumPlanComparisonDialog.tsx
-  components_PremiumPlanComparisonDialog_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onAccent),
+  components_PremiumPlanComparisonDialog_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onCta),
   // components/PremiumSubscriptionPanel.tsx
   components_PremiumSubscriptionPanel_1: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({
     container: {
@@ -3787,7 +3800,7 @@ const styleFactories = {
       borderRadius: 12,
     },
     badgeActive: {
-      backgroundColor: theme.colors.premium,
+      backgroundColor: theme.colors.premiumAction, // Previously premium
     },
     badgeText: {
       color: _theme.colors.onAccent,
@@ -3885,7 +3898,7 @@ const styleFactories = {
       marginTop: 2,
     },
     ctaButton: {
-      backgroundColor: theme.colors.premium,
+      backgroundColor: theme.colors.premiumAction, // Previously premium
       borderRadius: 8,
       paddingVertical: 13,
       alignItems: 'center',
@@ -4234,7 +4247,7 @@ const styleFactories = {
 }),
   // components/RetryableErrorBanner.tsx
   components_RetryableErrorBanner_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({
-  color: _theme.colors.onAccent,
+  color: _theme.colors.text,
   fontSize: 13,
   fontWeight: '700',
 }),
@@ -5097,7 +5110,7 @@ const styleFactories = {
   // tabs/AdminTab.tsx
   tabs_AdminTab_108: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta }),
   // tabs/AdminTab.tsx
-  tabs_AdminTab_109: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.text }),
+  tabs_AdminTab_109: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onCta }),
   // tabs/AdminTab.tsx
   tabs_AdminTab_110: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.scrim }),
   // tabs/AdminTab.tsx
@@ -5119,7 +5132,7 @@ const styleFactories = {
   // tabs/AdminTab.tsx
   tabs_AdminTab_117: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta }),
   // tabs/AdminTab.tsx
-  tabs_AdminTab_118: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.text }),
+  tabs_AdminTab_118: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onCta }),
   // tabs/AdminTab.tsx
   tabs_AdminTab_119: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text }),
   // tabs/AdminTab.tsx
@@ -5457,7 +5470,7 @@ const styleFactories = {
   // tabs/AdminTab.tsx
   tabs_AdminTab_283: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text }),
   // tabs/AdminTab.tsx
-  tabs_AdminTab_284: (_theme: AppTheme, { active, theme }: ThemeStyleValues): any => ({ backgroundColor: active ? theme.colors.success : theme.colors.alert }),
+  tabs_AdminTab_284: (_theme: AppTheme, { active, theme }: ThemeStyleValues): any => ({ backgroundColor: active ? theme.colors.successAction : theme.colors.dangerAction }),
   // tabs/AdminTab.tsx
   tabs_AdminTab_285: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta }),
   // tabs/AdminTab.tsx
@@ -5499,7 +5512,7 @@ const styleFactories = {
   // tabs/AdminTab.tsx
   tabs_AdminTab_304: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ ...ctaGradientStyle(theme), padding: 10, borderRadius: 6, alignSelf: 'flex-start' }),
   // tabs/AdminTab.tsx
-  tabs_AdminTab_305: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.text, fontWeight: '700' }),
+  tabs_AdminTab_305: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onCta, fontWeight: '700' }),
   // tabs/AdminTab.tsx
   tabs_AdminTab_306: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ gap: 24 }),
   // tabs/AdminTab.tsx
@@ -5576,7 +5589,7 @@ const styleFactories = {
   // Tags
   tagRow: { flexDirection: 'row', gap: 4 },
   tagAdmin: { backgroundColor: _theme.colors.premiumAction, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
-  tagTier: { backgroundColor: _theme.colors.accentSurface, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
+  tagTier: { backgroundColor: _theme.colors.accentAction, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
   tagText: { color: _theme.colors.onAccent, fontSize: 11, fontWeight: '600' },
   // Forms
   input: {
@@ -5824,7 +5837,7 @@ const styleFactories = {
   tabs_createTripWizard_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 120 }),
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_16: (_theme: AppTheme, { dateModeSelected, theme }: ThemeStyleValues): any => ({
-                    backgroundColor: dateModeSelected === 'range' ? _theme.colors.accentSurface : (theme?.colors.surface ?? _theme.colors.surface),
+                    backgroundColor: dateModeSelected === 'range' ? _theme.colors.selectedSurface : (theme?.colors.surface ?? _theme.colors.surface),
                     borderColor: _theme.colors.accentBorder,
                     borderWidth: 1,
                     paddingVertical: 8,
@@ -5835,10 +5848,10 @@ const styleFactories = {
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginRight: 8 }),
   // tabs/createTripWizard.tsx
-  tabs_createTripWizard_18: (_theme: AppTheme, { dateModeSelected }: ThemeStyleValues): any => ({ color: dateModeSelected === 'range' ? _theme.colors.onAccent : _theme.colors.linkText, fontWeight: '600' }),
+  tabs_createTripWizard_18: (_theme: AppTheme, { dateModeSelected }: ThemeStyleValues): any => ({ color: dateModeSelected === 'range' ? _theme.colors.onSelected : _theme.colors.linkText, fontWeight: '600' }),
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_19: (_theme: AppTheme, { dateModeSelected, theme }: ThemeStyleValues): any => ({
-                    backgroundColor: dateModeSelected === 'month' ? _theme.colors.accentSurface : (theme?.colors.surface ?? _theme.colors.surface),
+                    backgroundColor: dateModeSelected === 'month' ? _theme.colors.selectedSurface : (theme?.colors.surface ?? _theme.colors.surface),
                     borderColor: _theme.colors.accentBorder,
                     borderWidth: 1,
                     paddingVertical: 8,
@@ -5847,7 +5860,7 @@ const styleFactories = {
                     alignItems: 'center',
                   }),
   // tabs/createTripWizard.tsx
-  tabs_createTripWizard_20: (_theme: AppTheme, { dateModeSelected }: ThemeStyleValues): any => ({ color: dateModeSelected === 'month' ? _theme.colors.onAccent : _theme.colors.linkText, fontWeight: '600' }),
+  tabs_createTripWizard_20: (_theme: AppTheme, { dateModeSelected }: ThemeStyleValues): any => ({ color: dateModeSelected === 'month' ? _theme.colors.onSelected : _theme.colors.linkText, fontWeight: '600' }),
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_21: (_theme: AppTheme, { isNarrowLayout }: ThemeStyleValues): any => ({ flexWrap: isNarrowLayout ? 'wrap' : 'nowrap' }),
   // tabs/createTripWizard.tsx
@@ -6746,9 +6759,9 @@ const styleFactories = {
   // tabs/tripBlog.tsx
   tabs_tripBlog_38: (_theme: AppTheme, { borderColor }: ThemeStyleValues): any => ({ flexDirection: 'row', borderWidth: 1, borderColor, borderRadius: 10, overflow: 'hidden', marginLeft: 'auto' }),
   // tabs/tripBlog.tsx
-  tabs_tripBlog_39: (_theme: AppTheme, { selected, theme }: ThemeStyleValues): any => ({ paddingHorizontal: 9, paddingVertical: 2, backgroundColor: selected ? (theme?.colors?.link ?? _theme.colors.accentSurface) : _theme.colors.transparent }),
+  tabs_tripBlog_39: (_theme: AppTheme, { selected, theme }: ThemeStyleValues): any => ({ paddingHorizontal: 9, paddingVertical: 2, backgroundColor: selected ? _theme.colors.selectedSurface : _theme.colors.transparent }),
   // tabs/tripBlog.tsx
-  tabs_tripBlog_40: (_theme: AppTheme, { selected, mutedColor }: ThemeStyleValues): any => ({ fontSize: 12, fontWeight: '700', color: selected ? _theme.colors.onAccent : mutedColor }),
+  tabs_tripBlog_40: (_theme: AppTheme, { selected, mutedColor }: ThemeStyleValues): any => ({ fontSize: 12, fontWeight: '700', color: selected ? _theme.colors.onSelected : mutedColor }),
   // tabs/tripBlog.tsx
   tabs_tripBlog_41: (_theme: AppTheme, { mutedColor }: ThemeStyleValues): any => ({ color: mutedColor, marginBottom: 12 }),
   // tabs/tripBlog.tsx
@@ -7051,7 +7064,7 @@ const styleFactories = {
   // tabs/tripBlog.tsx
   tabs_tripBlog_184: (_theme: AppTheme, { mutedColor }: ThemeStyleValues): any => ({ color: mutedColor, marginBottom: 20 }),
   // tabs/tripBlog.tsx
-  tabs_tripBlog_185: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10, backgroundColor: _theme.colors.accentSurface }),
+  tabs_tripBlog_185: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10, backgroundColor: _theme.colors.accentAction }),
   // tabs/tripBlog.tsx
   tabs_tripBlog_186: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onAccent }),
   // tabs/tripBlog.tsx
@@ -7106,7 +7119,10 @@ export const themeStyle = (name: ThemeStyleName, values: ThemeStyleValues, theme
   if (previous && keys.length === Object.keys(previous.values).length && keys.every(key => Object.is(values[key], previous.values[key]))) {
     return previous.style;
   }
-  const style: unknown = styleFactories[name](theme, values);
+  const definition = styleFactories[name](theme, values);
+  const style: unknown = definition && typeof definition === 'object' && !Array.isArray(definition)
+    ? ('backgroundColor' in definition ? solidBackground(definition) : solidBackgrounds(definition))
+    : definition;
   cache.set(name, { values: { ...values }, style });
   return style;
 };
@@ -7199,7 +7215,7 @@ const stripAndroidFontWeights = <T extends Record<string, any>>(styles: T): T =>
   ) as T;
 };
 
-export const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeights({
+export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgrounds(stripAndroidFontWeights({
   container: ({
     flex: 1,
     backgroundColor: theme.colors.backgroundAlt,
@@ -7295,6 +7311,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFo
     marginLeft: 'auto',
   }),
   contentScroll: ({
+    minHeight: 0,
     flex: 1,
     width: '100%',
   }),
@@ -7698,7 +7715,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFo
     paddingVertical: theme.spacing.sm,
   }),
   dangerButton: ({
-    backgroundColor: theme.colors.error,
+    backgroundColor: theme.colors.dangerAction, // Previously error
   }),
   dangerButtonText: ({
     color: (theme ?? getAppTheme('light', 'light')).colors.onAccent,
@@ -8120,7 +8137,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFo
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.error,
+    backgroundColor: theme.colors.dangerAction,
   }),
   detailDeleteButtonText: ({
     color: (theme ?? getAppTheme('light', 'light')).colors.onAccent,
@@ -8761,7 +8778,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFo
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: theme.colors.premium,
+    backgroundColor: theme.colors.premiumAction, // Previously premium
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 84,
@@ -8835,7 +8852,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFo
     flexWrap: 'wrap',
     gap: 4,
   }),
-}));
+})));
 
 
 /** Export/print presentation, kept separate from the screen appearance. */

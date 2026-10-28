@@ -1687,7 +1687,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                             style={[styles.button, styles.smallButton, styles.dangerButton, COMPACT_ICON_BUTTON]}
                             onPress={() => rateFlight(item.id, -1)}
                           >
-                            <Text style={styles.buttonText}>👎</Text>
+                            <Text style={styles.dangerButtonText}>👎</Text>
                           </TouchableOpacity>
                         </View>
                       ) : normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
@@ -2097,7 +2097,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               />
               <View style={styles.row}>
                 <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => { setShowPasteModal(false); setPasteText(''); }} disabled={isParsing}>
-                  <Text style={styles.buttonText}>Cancel</Text>
+                  <Text style={styles.dangerButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, isParsing && themeStyle('tabs_transfers_33', {  }, (theme ?? _styleTheme))]} onPress={handlePasteAndParse} disabled={isParsing}>
                   <Text style={styles.buttonText}>{isParsing ? 'Parsing...' : 'Parse & Add'}</Text>

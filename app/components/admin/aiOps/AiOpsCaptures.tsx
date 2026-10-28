@@ -24,7 +24,7 @@ export const AiOpsCaptures: React.FC<{
       <TextInput style={[aiOpsStyles((theme ?? _styleTheme)).input, inputStyle(theme), themeStyle('components_admin_aiOps_AiOpsCaptures_2', {  }, (theme ?? _styleTheme))]} value={captureQuery} onChangeText={setCaptureQuery} placeholder="Capture ID" placeholderTextColor={theme.colors.textMuted} />
       <TextInput style={[aiOpsStyles((theme ?? _styleTheme)).input, inputStyle(theme), themeStyle('components_admin_aiOps_AiOpsCaptures_3', {  }, (theme ?? _styleTheme))]} value={anonymousUserIdQuery} onChangeText={setAnonymousUserIdQuery} placeholder="Anonymous user ID" placeholderTextColor={theme.colors.textMuted} />
       <TouchableOpacity style={[aiOpsStyles((theme ?? _styleTheme)).button, themeStyle('components_admin_aiOps_AiOpsCaptures_4', { theme: theme }, (theme ?? _styleTheme)), saving === 'capture-search' && aiOpsStyles((theme ?? _styleTheme)).disabled]} disabled={saving === 'capture-search'} onPress={onSearch}>
-        <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>Search</Text>
+        <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Search</Text>
       </TouchableOpacity>
     </View>
     {captures.map((capture) => (

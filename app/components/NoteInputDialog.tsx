@@ -63,7 +63,7 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
           accessibilityLabel="Add a note"
           testID="note-dialog"
         >
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={themeStyle('components_NoteInputDialog_2', {  }, (theme ?? _styleTheme))} showsVerticalScrollIndicator>
+          <ScrollView style={themeStyle('dialogScroll', {}, (theme ?? _styleTheme))} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={themeStyle('components_NoteInputDialog_2', {  }, (theme ?? _styleTheme))} showsVerticalScrollIndicator>
           <Text style={[styles((theme ?? _styleTheme)).title, colors && themeStyle('components_NoteInputDialog_3', { colors: colors }, (theme ?? _styleTheme))]}>Add a note</Text>
           <Text style={[styles((theme ?? _styleTheme)).label, colors && themeStyle('components_NoteInputDialog_4', { colors: colors }, (theme ?? _styleTheme))]}>Title</Text>
           <TextInput

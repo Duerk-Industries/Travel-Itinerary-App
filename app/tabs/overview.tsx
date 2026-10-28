@@ -3922,7 +3922,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               onPress={() => onDismissAiItineraryError?.(trip.id)}
               testID="ai-itinerary-dismiss-button"
             >
-              <Text style={styles.buttonText}>Dismiss</Text>
+              <Text style={styles.dangerButtonText}>Dismiss</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -35,7 +35,7 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
   cardStyle,
   accessibilityRole = 'none',
   showTitle = true,
-  scrollable = false,
+  scrollable = true,
 }) => {
   const _styleTheme = useStyleTheme();
   useEscapeToClose(visible, onClose);
@@ -59,7 +59,7 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
         ) : null}
         {message ? <Text style={styles.helperText}>{message}</Text> : null}
         {scrollable ? (
-          <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator>
+          <ScrollView style={themeStyle('dialogScroll', {}, _styleTheme)} keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator>
             {children}
           </ScrollView>
         ) : children}

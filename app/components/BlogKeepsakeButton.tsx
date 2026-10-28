@@ -7,7 +7,7 @@ import { keepsakeMapFallback } from '../utils/keepsakeMapData';
 import { captureKeepsakeMap, type KeepsakeMapCapture } from '../utils/keepsakeMapCapture';
 import type { BlogMapDay } from '../../server/src/services/blogMapService';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
 import {
   KEEPSAKE_THEMES,
@@ -154,6 +154,7 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, nati
       <Modal visible={choosing} transparent animationType="fade" onRequestClose={() => setChoosing(false)}>
         <View style={themeStyle('components_BlogKeepsakeButton_3', {  }, _styleTheme)}>
           <View testID="keepsake-theme-picker" style={themeStyle('components_BlogKeepsakeButton_4', {  }, _styleTheme)}>
+            <ScrollView style={themeStyle('dialogScroll', {}, _styleTheme)} nestedScrollEnabled showsVerticalScrollIndicator>
             <Text style={themeStyle('components_BlogKeepsakeButton_5', {  }, _styleTheme)}>Choose a keepsake style</Text>
             <Text style={themeStyle('components_BlogKeepsakeButton_6', {  }, _styleTheme)}>Your trip's notes and photos, laid out for printing or saving as a PDF.</Text>
             {KEEPSAKE_THEMES.map((theme) => {
@@ -187,6 +188,7 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, nati
                 <Text style={themeStyle('components_BlogKeepsakeButton_18', {  }, _styleTheme)}>{Platform.OS === 'web' ? 'Create & print' : 'Create PDF'}</Text>
               </TouchableOpacity>
             </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>

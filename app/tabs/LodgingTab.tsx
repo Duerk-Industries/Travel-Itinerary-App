@@ -441,7 +441,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                       <Text style={styles.buttonText}>👍</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnLodging(lodging.id, -1)}>
-                      <Text style={styles.buttonText}>👎</Text>
+                      <Text style={styles.dangerButtonText}>👎</Text>
                     </TouchableOpacity>
                   </View>
                 ) : normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (

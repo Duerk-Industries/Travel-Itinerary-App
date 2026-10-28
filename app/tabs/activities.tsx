@@ -1230,7 +1230,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                         <Text style={styles.buttonText}>👍</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateTour(selectedTour.id, -1)}>
-                        <Text style={styles.buttonText}>👎</Text>
+                        <Text style={styles.dangerButtonText}>👎</Text>
                       </TouchableOpacity>
                     </View>
                   ) : normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (

@@ -46,7 +46,7 @@ export const AiOpsRuntimeSettings: React.FC<{
       disabled={saving === 'runtime-settings'}
       onPress={onSave}
     >
-      <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>{saving === 'runtime-settings' ? 'Saving...' : 'Save settings'}</Text>
+      <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{saving === 'runtime-settings' ? 'Saving...' : 'Save settings'}</Text>
     </TouchableOpacity>
   </View>
 )); };

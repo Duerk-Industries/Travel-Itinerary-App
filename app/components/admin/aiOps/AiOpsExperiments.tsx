@@ -43,7 +43,7 @@ export const AiOpsExperiments: React.FC<{
       disabled={saving === 'experiment-create'}
       onPress={onCreate}
     >
-      <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>{saving === 'experiment-create' ? 'Creating...' : 'Create shadow compare'}</Text>
+      <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{saving === 'experiment-create' ? 'Creating...' : 'Create shadow compare'}</Text>
     </TouchableOpacity>
     {experiments.length === 0 ? <Text style={[aiOpsStyles((theme ?? _styleTheme)).empty, themeStyle('components_admin_aiOps_AiOpsExperiments_3', { theme: theme }, (theme ?? _styleTheme))]}>No experiments running.</Text> : null}
     {experiments.map((experiment) => {
@@ -104,7 +104,7 @@ export const AiOpsExperiments: React.FC<{
                 disabled={saving === `experiment-${experiment.experimentId}`}
                 onPress={() => onUpdateStatus(experiment, 'completed', variant.variantId)}
               >
-                <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>Promote {variant.variantId}</Text>
+                <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Promote {variant.variantId}</Text>
               </TouchableOpacity>
             ))}
           </View>

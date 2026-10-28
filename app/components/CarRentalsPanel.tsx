@@ -314,7 +314,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                       <Text style={styles.buttonText}>⭐</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => onRateCarRental(car.id, -1)}>
-                      <Text style={styles.buttonText}>✖</Text>
+                      <Text style={styles.dangerButtonText}>✖</Text>
                     </TouchableOpacity>
                   </>
                 ) : null}

@@ -169,6 +169,13 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({
           accessibilityLabel="Add a place"
           testID="place-dialog"
         >
+          <ScrollView
+            testID="place-dialog-scroll"
+            style={themeStyle('dialogScroll', {}, (theme ?? _styleTheme))}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+          >
           <Text style={[styles((theme ?? _styleTheme)).title, colors && themeStyle('components_PlacePickerDialog_2', { colors: colors }, (theme ?? _styleTheme))]}>Add a place</Text>
           <Text style={[styles((theme ?? _styleTheme)).label, colors && themeStyle('components_PlacePickerDialog_3', { colors: colors }, (theme ?? _styleTheme))]}>Place name</Text>
           <View style={styles((theme ?? _styleTheme)).autocompleteWrap}>
@@ -243,6 +250,7 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({
               <Text style={styles((theme ?? _styleTheme)).btnPrimaryText}>Add place</Text>
             </Pressable>
           </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>

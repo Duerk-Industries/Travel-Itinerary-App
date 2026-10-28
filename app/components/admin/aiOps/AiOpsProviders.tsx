@@ -58,7 +58,7 @@ export const AiOpsProviders: React.FC<{
                 disabled={saving === `certify-${provider.id}` || unavailable}
                 onPress={() => onCertify(provider.id)}
               >
-                <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>{certification ? 'Re-certify' : 'Certify'}</Text>
+                <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{certification ? 'Re-certify' : 'Certify'}</Text>
               </TouchableOpacity>
               {certification ? (
                 <TouchableOpacity
@@ -170,7 +170,7 @@ export const AiOpsProviders: React.FC<{
             disabled={saving === feature.featureKey || selectableProviders.length === 0}
             onPress={() => onSave(feature.featureKey)}
           >
-            <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>{saving === feature.featureKey ? 'Saving...' : 'Save config'}</Text>
+            <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{saving === feature.featureKey ? 'Saving...' : 'Save config'}</Text>
           </TouchableOpacity>
         </View>
       );

@@ -81,7 +81,7 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
           {activity?.userRating == null ? (
             <View style={themeStyle('components_ActivityRecapDialog_5', {  }, (theme ?? _styleTheme))}>
               <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: rating === 1 }} onPress={() => setRating(1)} style={[styles.button, rating === 1 && themeStyle('components_ActivityRecapDialog_6', { theme: theme }, (theme ?? _styleTheme))]}>
-                <Text style={styles.buttonText}>👍 Loved it</Text>
+                <Text style={[styles.buttonText, rating === 1 && themeStyle('selectionLabel', {}, (theme ?? _styleTheme))]}>👍 Loved it</Text>
               </TouchableOpacity>
               <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: rating === -1 }} onPress={() => setRating(-1)} style={[styles.button, rating === -1 && themeStyle('components_ActivityRecapDialog_7', {  }, (theme ?? _styleTheme))]}>
                 <Text style={[styles.buttonText, rating === -1 && themeStyle('components_ActivityRecapDialog_8', {  }, (theme ?? _styleTheme))]}>👎 Not for me</Text>
@@ -113,7 +113,7 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
               <Text style={styles.buttonText}>{busy ? 'Saving…' : 'Save recap'}</Text>
             </TouchableOpacity>
             <TouchableOpacity testID="activity-recap-add-media" disabled={busy} onPress={() => save(true)} style={[styles.button, themeStyle('components_ActivityRecapDialog_16', { theme: theme }, (theme ?? _styleTheme)), busy && themeStyle('components_ActivityRecapDialog_17', {  }, (theme ?? _styleTheme))]}>
-              <Text style={styles.buttonText}>Add photos/videos</Text>
+              <Text style={[styles.buttonText, themeStyle('selectionLabel', {}, (theme ?? _styleTheme))]}>Add photos/videos</Text>
             </TouchableOpacity>
             <TouchableOpacity disabled={busy} onPress={onClose} style={[styles.button, themeStyle('components_ActivityRecapDialog_18', { theme: theme }, (theme ?? _styleTheme))]}>
               <Text style={themeStyle('components_ActivityRecapDialog_19', { textColor: textColor }, (theme ?? _styleTheme))}>Cancel</Text>

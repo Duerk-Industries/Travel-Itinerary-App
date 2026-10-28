@@ -80,6 +80,13 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
           accessibilityLabel="Add a checklist"
           testID="checklist-dialog"
         >
+          <ScrollView
+            testID="checklist-dialog-scroll"
+            style={themeStyle('dialogScroll', {}, (theme ?? _styleTheme))}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+          >
           <Text style={[styles((theme ?? _styleTheme)).title, colors && themeStyle('components_ChecklistInputDialog_2', { colors: colors }, (theme ?? _styleTheme))]}>Add a checklist</Text>
           <Text style={[styles((theme ?? _styleTheme)).label, colors && themeStyle('components_ChecklistInputDialog_3', { colors: colors }, (theme ?? _styleTheme))]}>Title</Text>
           <TextInput
@@ -92,7 +99,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
             autoFocus
           />
           <Text style={[styles((theme ?? _styleTheme)).label, themeStyle('components_ChecklistInputDialog_5', {  }, (theme ?? _styleTheme)), colors && themeStyle('components_ChecklistInputDialog_6', { colors: colors }, (theme ?? _styleTheme))]}>Items</Text>
-          <ScrollView style={styles((theme ?? _styleTheme)).itemsScroll} keyboardShouldPersistTaps="handled">
+          <ScrollView style={styles((theme ?? _styleTheme)).itemsScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             {items.map((value, idx) => (
               <View key={idx} style={styles((theme ?? _styleTheme)).itemRow}>
                 <TextInput
@@ -131,6 +138,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
               <Text style={styles((theme ?? _styleTheme)).btnPrimaryText}>Add checklist</Text>
             </Pressable>
           </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>

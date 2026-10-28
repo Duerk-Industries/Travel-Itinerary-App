@@ -390,7 +390,7 @@ const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, st
                 disabled={pendingKey === flag.key}
                 onPress={() => toggle(flag)}
               >
-                <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>{flag.enabled ? 'Disable' : 'Enable'}</Text>
+                <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{flag.enabled ? 'Disable' : 'Enable'}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -919,7 +919,7 @@ const UserDetailSection: React.FC<{
               disabled={saving}
               onPress={saveTier}
             >
-              <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Save Tier</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save Tier</Text>
             </TouchableOpacity>
           </>
         )}
@@ -956,7 +956,7 @@ const UserDetailSection: React.FC<{
           disabled={saving}
           onPress={saveRole}
         >
-          <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Save Role</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save Role</Text>
         </TouchableOpacity>
       </View>
 
@@ -1405,7 +1405,7 @@ const TiersSection: React.FC<{
                   disabled={saving}
                   onPress={() => saveLimit(editingLimit.tierKey, editingLimit.limitKey)}
                 >
-                  <Text style={[localStyles((theme ?? _styleTheme)).modalPrimaryButtonText, themeStyle('tabs_AdminTab_109', {  }, (theme ?? _styleTheme))]}>Save</Text>
+                  <Text style={[[localStyles((theme ?? _styleTheme)).modalPrimaryButtonText, themeStyle('tabs_AdminTab_109', {  }, (theme ?? _styleTheme))], themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1472,7 +1472,7 @@ const TiersSection: React.FC<{
                     saveEntitlement(editingEntitlement.tierKey, editingEntitlement.featureKey, !currentValue);
                   }}
                 >
-                  <Text style={[localStyles((theme ?? _styleTheme)).modalPrimaryButtonText, themeStyle('tabs_AdminTab_118', {  }, (theme ?? _styleTheme))]}>Save</Text>
+                  <Text style={[[localStyles((theme ?? _styleTheme)).modalPrimaryButtonText, themeStyle('tabs_AdminTab_118', {  }, (theme ?? _styleTheme))], themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2106,7 +2106,7 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
           placeholderTextColor={theme.colors.textMuted}
         />
         <TouchableOpacity style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_211', { theme: theme }, (theme ?? _styleTheme))]} onPress={saveRetryConfig}>
-          <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Save Retry Policy</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save Retry Policy</Text>
         </TouchableOpacity>
       </View>
 
@@ -2615,7 +2615,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             disabled={savingProvider === provider.provider}
             onPress={() => saveProvider(provider)}
           >
-            <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Save {provider.provider}</Text>
+            <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save {provider.provider}</Text>
           </TouchableOpacity>
         </View>
       ))}
@@ -2653,12 +2653,12 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             disabled={savingCachingGroup === group}
             onPress={() => saveCachingGroup(group)}
           >
-            <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Save {group}</Text>
+            <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save {group}</Text>
           </TouchableOpacity>
         </View>
       ))}
       <TouchableOpacity style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_242', { theme: theme }, (theme ?? _styleTheme))]} onPress={load}>
-        <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Refresh</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Refresh</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -3005,7 +3005,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           disabled={savingAssumptions}
           onPress={saveAssumptions}
         >
-          <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Save assumptions</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save assumptions</Text>
         </TouchableOpacity>
       </View>
 
@@ -3055,7 +3055,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           disabled={savingHosting}
           onPress={saveHosting}
         >
-          <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Save hosting line items</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save hosting line items</Text>
         </TouchableOpacity>
       </View>
 
@@ -3088,7 +3088,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           disabled={savingPricing}
           onPress={savePricing}
         >
-          <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Save pricing</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save pricing</Text>
         </TouchableOpacity>
       </View>
 
@@ -3119,7 +3119,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
       ))}
 
       <TouchableOpacity style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_274', { theme: theme }, (theme ?? _styleTheme))]} onPress={load}>
-        <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>Refresh</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Refresh</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -3263,7 +3263,7 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
               onPress={() => saveConfig(plan)}
               testID={`admin-billing-save-${plan.planKey}`}
             >
-              <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>{saving === plan.planKey ? 'Saving...' : 'Save'}</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{saving === plan.planKey ? 'Saving...' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
         );
@@ -3392,7 +3392,7 @@ const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<
     </View>)}
     <TextInput value={filename} onChangeText={setFilename} placeholder="new_list.md" placeholderTextColor={theme.colors.textMuted} style={themeStyle('tabs_AdminTab_302', { theme: theme }, (theme ?? _styleTheme))} />
     <TextInput value={markdown} onChangeText={setMarkdown} multiline numberOfLines={8} placeholder="Paste preset markdown" placeholderTextColor={theme.colors.textMuted} style={themeStyle('tabs_AdminTab_303', { theme: theme }, (theme ?? _styleTheme))} />
-    <Pressable onPress={() => void upload()} style={themeStyle('tabs_AdminTab_304', { theme: theme }, (theme ?? _styleTheme))}><Text style={themeStyle('tabs_AdminTab_305', {  }, (theme ?? _styleTheme))}>Upload preset</Text></Pressable>
+    <Pressable onPress={() => void upload()} style={themeStyle('tabs_AdminTab_304', { theme: theme }, (theme ?? _styleTheme))}><Text style={[themeStyle('tabs_AdminTab_305', {  }, (theme ?? _styleTheme)), themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Upload preset</Text></Pressable>
   </View>;
 };
 

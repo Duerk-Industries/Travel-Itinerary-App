@@ -29,7 +29,7 @@ export const AiOpsParserQuality: React.FC<{
       </Text>
     ))}
     <TouchableOpacity style={[aiOpsStyles((theme ?? _styleTheme)).button, themeStyle('components_admin_aiOps_AiOpsParserQuality_5', { theme: theme }, (theme ?? _styleTheme)), saving === 'analytics-refresh' && aiOpsStyles((theme ?? _styleTheme)).disabled]} disabled={saving === 'analytics-refresh'} onPress={onRefresh}>
-      <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>{saving === 'analytics-refresh' ? 'Refreshing...' : 'Refresh analytics'}</Text>
+      <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{saving === 'analytics-refresh' ? 'Refreshing...' : 'Refresh analytics'}</Text>
     </TouchableOpacity>
   </View>
 )); };
