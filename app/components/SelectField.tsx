@@ -62,7 +62,7 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
       color: webStyle?.color ?? styles.cellText?.color ?? styles.input?.color,
       backgroundColor: webStyle?.backgroundColor ?? styles.input?.backgroundColor,
       borderColor: webStyle?.borderColor ?? styles.input?.borderColor,
-      colorScheme: styles.input?.backgroundColor === '#243647' ? 'dark' : undefined,
+      colorScheme: styles.input?.backgroundColor === '#161616' ? 'dark' : undefined,
     };
     return (
       <select

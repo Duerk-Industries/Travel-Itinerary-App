@@ -11,7 +11,7 @@ const LazyTabFallback: React.FC<LazyTabFallbackProps> = ({
   testID = 'lazy-tab-fallback',
 }) => (
   <View style={styles.container} testID={testID}>
-    <ActivityIndicator size="large" color="#45B7C6" />
+    <ActivityIndicator size="large" color="#6B6B6B" />
     <Text style={styles.label}>{label}</Text>
   </View>
 );

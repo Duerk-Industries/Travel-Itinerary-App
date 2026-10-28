@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { resolveAppearance, type AppearancePreference, type ResolvedAppearance } from '../utils/appearancePreference';
 
 export type AppTheme = {
@@ -22,6 +23,16 @@ export type AppTheme = {
     info: string;
     onPrimary: string;
     onSurface: string;
+    /** Text and icons on `cta` buttons. */
+    onCta: string;
+  };
+  /**
+   * Soft two-stop gradients for the monochrome look: `cta` for primary buttons, `hero` for
+   * banners and photo-less cards. Each is [top, bottom]; `cta`'s average is close to `colors.cta`.
+   */
+  gradients: {
+    cta: [string, string];
+    hero: [string, string];
   };
   typography: {
     display: number;
@@ -68,26 +79,33 @@ export const hitSlop = {
 
 const lightTheme: AppTheme = {
   mode: 'light',
+  // Monochrome: white surfaces, near-black ink, and soft graphite gradients for emphasis.
+  // Semantic colors (success / warning / error / info) keep their hues.
   colors: {
-    background: '#FAFCFD',
-    backgroundAlt: '#F2F5F7',
+    background: '#FFFFFF',
+    backgroundAlt: '#F5F5F5',
     surface: '#FFFFFF',
-    surfaceMuted: '#F2F5F7',
-    text: '#111827',
-    textMuted: '#6B7280',
-    border: '#E6ECEF',
-    primary: '#152944',
-    link: '#45B7C6',
-    nature: '#5E6B3F',
-    cta: '#F59E0B',
+    surfaceMuted: '#F4F4F4',
+    text: '#0A0A0A',
+    textMuted: '#6B6B6B',
+    border: '#E8E8E8',
+    primary: '#0A0A0A',
+    link: '#0A0A0A',
+    nature: '#3F3F3F',
+    cta: '#141414',
     alert: '#E76F51',
-    premium: '#D97706',
+    premium: '#8A6D2B',
     success: '#2E7D32',
     warning: '#ED6C02',
     error: '#C62828',
     info: '#0288D1',
-    onPrimary: '#E6ECEF',
-    onSurface: '#111827',
+    onPrimary: '#FFFFFF',
+    onSurface: '#0A0A0A',
+    onCta: '#FFFFFF',
+  },
+  gradients: {
+    cta: ['#2B2B2B', '#050505'],
+    hero: ['#3A3A3A', '#0A0A0A'],
   },
   typography: {
     display: 44,
@@ -107,36 +125,51 @@ const lightTheme: AppTheme = {
 
 const darkTheme: AppTheme = {
   mode: 'dark',
+  // Monochrome dark: true-black ground, graphite surfaces, and white for emphasis.
   colors: {
-    background: '#0B1726',
-    backgroundAlt: '#1C2B3A',
-    surface: '#243647',
-    surfaceMuted: '#1C2B3A',
-    text: '#E6ECEF',
-    textMuted: '#B8C2CC',
-    border: '#385266',
-    primary: '#152944',
-    link: '#5FD2E0',
-    nature: '#7E8D5A',
-    cta: '#F59E0B',
+    background: '#000000',
+    backgroundAlt: '#111111',
+    surface: '#161616',
+    surfaceMuted: '#111111',
+    text: '#F5F5F5',
+    textMuted: '#A3A3A3',
+    border: '#2A2A2A',
+    primary: '#1F1F1F',
+    link: '#F5F5F5',
+    nature: '#BDBDBD',
+    cta: '#F2F2F2',
     alert: '#E76F51',
-    premium: '#D97706',
-    success: '#2E7D32',
-    warning: '#ED6C02',
-    error: '#C62828',
-    info: '#0288D1',
-    onPrimary: '#E6ECEF',
-    onSurface: '#E6ECEF',
+    premium: '#D4B26A',
+    success: '#4CAF50',
+    warning: '#FF9800',
+    error: '#EF5350',
+    info: '#4FC3F7',
+    onPrimary: '#F5F5F5',
+    onSurface: '#F5F5F5',
+    onCta: '#0A0A0A',
+  },
+  gradients: {
+    cta: ['#FFFFFF', '#D9D9D9'],
+    hero: ['#2E2E2E', '#0A0A0A'],
   },
   typography: lightTheme.typography,
   spacing: lightTheme.spacing,
 };
 
 /**
- * Color for text that acts as a link or button label. The teal `link` color reads well on dark surfaces but is only
- * about 2.4:1 on white, so light mode uses the navy `primary`, as the rest of the app does.
+ * Color for text that acts as a link or button label: near-black on light surfaces, near-white on dark ones.
  */
 export const linkTextColor = (theme: AppTheme): string => (theme.mode === 'dark' ? theme.colors.link : theme.colors.primary);
+
+/**
+ * Style that paints a vertical two-stop gradient behind a view, on top of its solid
+ * `backgroundColor` (which stays the fallback where gradients aren't supported). Web uses CSS;
+ * native uses React Native's `experimental_backgroundImage` (new architecture).
+ */
+export const gradientFill = ([top, bottom]: [string, string]): Record<string, string> => {
+  const css = `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)`;
+  return Platform.OS === 'web' ? { backgroundImage: css } : { experimental_backgroundImage: css };
+};
 
 export const getAppTheme = (
   appearancePreference: AppearancePreference,

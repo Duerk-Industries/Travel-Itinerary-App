@@ -12,6 +12,7 @@ import { shadowStyle } from '../utils/shadowStyle';
  */
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { gradientFill } from '../theme/theme';
 
 interface Props {
   onPress: () => void;
@@ -37,7 +38,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#7C3AED',
+    // Graphite with a soft gradient and a hairline edge, so it reads on white and on black.
+    backgroundColor: '#141414',
+    ...gradientFill(['#2B2B2B', '#050505']),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,

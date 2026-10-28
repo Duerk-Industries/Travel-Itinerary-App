@@ -80,7 +80,7 @@ import {
   loadStoredAppearancePreference,
   persistAppearancePreference,
 } from './utils/appearancePreference';
-import { getAppTheme, hitSlop, type AppTheme } from './theme/theme';
+import { getAppTheme, gradientFill, hitSlop, type AppTheme } from './theme/theme';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -4908,7 +4908,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     position: 'absolute',
     right: 14,
     bottom: 14,
-    backgroundColor: 'rgba(15, 23, 42, 0.78)',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -5137,12 +5139,13 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   },
   button: {
     backgroundColor: theme.colors.cta,
+    ...gradientFill(theme.gradients.cta),
     padding: 10,
-    borderRadius: 6,
+    borderRadius: 8,
     alignItems: 'center',
   },
   buttonText: {
-    color: '#0B1726',
+    color: theme.colors.onCta,
     fontWeight: theme.typography.weightBold,
   },
   secondaryButton: {
@@ -5791,7 +5794,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     left: 0,
     right: 0,
     marginTop: 8,
-    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
@@ -5807,7 +5810,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     paddingVertical: 11,
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
-    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
+    backgroundColor: theme.colors.surface,
   },
   dropdownOptionHover: {
     backgroundColor: theme.mode === 'dark' ? '#2C4356' : '#F4F8FB',
@@ -5890,7 +5893,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   },
   passengerOverlayList: {
     position: 'absolute',
-    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
@@ -6010,7 +6013,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
@@ -6074,7 +6077,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     top: 80,
     left: 16,
     right: 16,
-    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 12,

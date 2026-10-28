@@ -10,9 +10,11 @@ type DestinationPlaceholderCardProps = {
   showLabel?: boolean;
 };
 
+// Monochrome graphite pairs (base, highlight): each title still gets a stable, slightly
+// different shade so neighboring cards don't look identical.
 const palettes = [
-  ['#12344d', '#3a7d8c'], ['#3f2b63', '#b06ab3'], ['#7b341e', '#d97706'],
-  ['#164e63', '#0f766e'], ['#334155', '#64748b'], ['#365314', '#65a30d'],
+  ['#0A0A0A', '#3A3A3A'], ['#141414', '#4A4A4A'], ['#1C1C1C', '#525252'],
+  ['#0F0F0F', '#2E2E2E'], ['#181818', '#5C5C5C'], ['#111111', '#424242'],
 ];
 
 const hashText = (value: string): number => Array.from(value).reduce((hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0, 7);
