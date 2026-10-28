@@ -74,6 +74,9 @@ type ParsedReceiptExpenseDraft = {
 };
 
 type DailyExpensesTabProps = {
+  /** One-shot request from the phone Add menu: open the add-expense form, then call onAutoOpenAddHandled. */
+  autoOpenAdd?: boolean;
+  onAutoOpenAddHandled?: () => void;
   theme: AppTheme;
   backendUrl: string;
   headers: Record<string, string>;
@@ -179,6 +182,8 @@ const buildDateRange = (trip: Trip | null): string[] => {
 };
 
 const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
+  autoOpenAdd = false,
+  onAutoOpenAddHandled,
   theme,
   backendUrl,
   headers,
@@ -344,6 +349,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     setEditingExpenseId(null);
     updateExpenseDraft({ isOpen: true });
   };
+
+  const canOpenAdd = !readOnly || Boolean(allowOfflineAdd && pendingExpenses);
+  useEffect(() => {
+    if (!autoOpenAdd) return;
+    onAutoOpenAddHandled?.();
+    if (canOpenAdd) openAddExpenseModal();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenAdd]);
 
   const cancelAddExpenseModal = () => {
     setExpenseDraft(null);

@@ -4,7 +4,8 @@ import Icon, { type IconName } from './Icon';
 import { gradientFill, type AppTheme } from '../theme/theme';
 
 export type BottomTab = { page: string; label: string; icon: IconName };
-export type AddOption = { page: string; label: string; icon: IconName };
+export type AddOptionKey = 'expense' | 'blog' | 'activity' | 'flight' | 'lodging' | 'import';
+export type AddOption = { key: AddOptionKey; label: string; icon: IconName };
 
 /** Height of the bar above the bottom safe-area inset; floating buttons sit above it. */
 export const BOTTOM_TAB_BAR_HEIGHT = 64;
@@ -18,6 +19,8 @@ type Props = {
   addOptions: AddOption[];
   addTitle: string;
   onNavigate: (page: string) => void;
+  /** An Add menu option was chosen; open that item's add form. */
+  onChooseAdd: (key: AddOptionKey) => void;
   bottomInset?: number;
 };
 
@@ -25,7 +28,7 @@ type Props = {
  * Phone navigation: four tabs with a raised Add button in the middle that opens a sheet of
  * things to add to the current trip. Account pages all count as the Profile tab.
  */
-const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs, addOptions, addTitle, onNavigate, bottomInset = 0 }) => {
+const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs, addOptions, addTitle, onNavigate, onChooseAdd, bottomInset = 0 }) => {
   const [addOpen, setAddOpen] = useState(false);
   const { colors } = theme;
   const dark = theme.mode === 'dark';
@@ -53,9 +56,9 @@ const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs,
     );
   };
 
-  const choose = (page: string) => {
+  const choose = (key: AddOptionKey) => {
     setAddOpen(false);
-    onNavigate(page);
+    onChooseAdd(key);
   };
 
   return (
@@ -96,12 +99,12 @@ const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs,
           <View style={styles.grid}>
             {addOptions.map((option) => (
               <TouchableOpacity
-                key={option.page}
+                key={option.key}
                 style={[styles.option, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
-                onPress={() => choose(option.page)}
+                onPress={() => choose(option.key)}
                 accessibilityRole="button"
                 accessibilityLabel={`Add ${option.label.toLowerCase()}`}
-                testID={`add-option-${option.page}`}
+                testID={`add-option-${option.key}`}
               >
                 <Icon name={option.icon} color={colors.text} size={26} />
                 <Text style={[styles.optionLabel, { color: colors.text }]} numberOfLines={1}>{option.label}</Text>

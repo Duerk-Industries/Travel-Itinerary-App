@@ -252,6 +252,9 @@ type OverviewTabProps = {
   openLodgingDetails: (lodging: Lodging) => void;
   theme?: AppTheme;
   readOnly?: boolean;
+  /** One-shot request from the phone Add menu: open this item type's add form, then call onAutoOpenAddHandled. */
+  autoOpenAdd?: 'flight' | 'lodging' | 'activity' | null;
+  onAutoOpenAddHandled?: () => void;
   featureStandardizedItemDialogs?: boolean;
   // Kill switch for the designed gradient placeholder shown in place of a
   // missing day/trip cover photo (implementation-plan-ux-remediation.md,
@@ -466,6 +469,11 @@ export const isWithinOverviewWeatherWindow = (
   return currentTime >= startTime - 7 * msPerDay && currentTime <= endTime + msPerDay;
 };
 
+const localTodayIso = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   backendUrl,
   headers,
@@ -506,6 +514,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   openLodgingDetails,
   theme,
   readOnly = false,
+  autoOpenAdd = null,
+  onAutoOpenAddHandled,
   featureStandardizedItemDialogs = false,
   featureCoverPhotoFallbackV2 = true,
   featureItineraryReactions = true,
@@ -2068,6 +2078,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setTourDraft(createInitialActivityState(dateIso));
     setShowAddTour(true);
   };
+
+  // The phone Add menu opens the same add form as a day's "+ Add X" chip, for today when
+  // the trip is under way and otherwise for its first day.
+  useEffect(() => {
+    if (!autoOpenAdd) return;
+    if (readOnly) { onAutoOpenAddHandled?.(); return; }
+    if (!trip) return;
+    const today = localTodayIso();
+    const inTrip = overviewStartDate && overviewEndDate && today >= overviewStartDate && today <= overviewEndDate;
+    const dateIso = inTrip ? today : (overviewStartDate ?? today);
+    onAutoOpenAddHandled?.();
+    if (autoOpenAdd === 'flight') addFlightForDay(dateIso);
+    else if (autoOpenAdd === 'lodging') addLodgingForDay(dateIso);
+    else addTourForDay(dateIso);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenAdd, readOnly, trip?.id, overviewStartDate, overviewEndDate]);
 
   const addRentalForDay = (dateIso: string) => {
     if (readOnly) return;

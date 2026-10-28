@@ -5,12 +5,13 @@ import { getAppTheme } from '../theme/theme';
 
 const theme = getAppTheme('light', 'light');
 const addOptions: AddOption[] = [
-  { page: 'expenses', label: 'Expense', icon: 'expense' },
-  { page: 'flights', label: 'Flight', icon: 'flight' },
+  { key: 'expense', label: 'Expense', icon: 'expense' },
+  { key: 'flight', label: 'Flight', icon: 'flight' },
 ];
 
 const renderBar = (props: Partial<React.ComponentProps<typeof BottomTabBar>> = {}) => {
   const onNavigate = jest.fn();
+  const onChooseAdd = jest.fn();
   const view = render(
     <BottomTabBar
       theme={theme}
@@ -20,10 +21,11 @@ const renderBar = (props: Partial<React.ComponentProps<typeof BottomTabBar>> = {
       addOptions={addOptions}
       addTitle="Add to Lisbon Long Weekend"
       onNavigate={onNavigate}
+      onChooseAdd={onChooseAdd}
       {...props}
     />
   );
-  return { ...view, onNavigate };
+  return { ...view, onNavigate, onChooseAdd };
 };
 
 describe('BottomTabBar', () => {
@@ -39,21 +41,23 @@ describe('BottomTabBar', () => {
     expect(getByTestId('bottom-tab-home').props.accessibilityState).toEqual({ selected: false });
   });
 
-  it('opens the Add menu and goes to the chosen page, closing the menu', () => {
-    const { getByTestId, queryByTestId, onNavigate } = renderBar();
+  it('opens the Add menu and reports the chosen option, closing the menu', () => {
+    const { getByTestId, queryByTestId, onNavigate, onChooseAdd } = renderBar();
     expect(queryByTestId('add-sheet')).toBeNull();
     fireEvent.press(getByTestId('bottom-tab-add'));
     const sheet = getByTestId('add-sheet');
     expect(within(sheet).getByText('Add to Lisbon Long Weekend')).toBeTruthy();
-    fireEvent.press(within(sheet).getByTestId('add-option-expenses'));
-    expect(onNavigate).toHaveBeenCalledWith('expenses');
+    fireEvent.press(within(sheet).getByTestId('add-option-expense'));
+    expect(onChooseAdd).toHaveBeenCalledWith('expense');
+    expect(onNavigate).not.toHaveBeenCalled();
     expect(queryByTestId('add-sheet')).toBeNull();
   });
 
   it('closes the Add menu from Cancel without navigating', () => {
-    const { getByTestId, queryByTestId, onNavigate } = renderBar();
+    const { getByTestId, queryByTestId, onNavigate, onChooseAdd } = renderBar();
     fireEvent.press(getByTestId('bottom-tab-add'));
     fireEvent.press(getByTestId('add-sheet-cancel'));
+    expect(onChooseAdd).not.toHaveBeenCalled();
     expect(queryByTestId('add-sheet')).toBeNull();
     expect(onNavigate).not.toHaveBeenCalled();
   });

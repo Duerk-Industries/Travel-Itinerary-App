@@ -81,7 +81,16 @@ import {
   persistAppearancePreference,
 } from './utils/appearancePreference';
 import { getAppTheme, gradientFill, hitSlop, type AppTheme } from './theme/theme';
-import BottomTabBar, { BOTTOM_TAB_BAR_HEIGHT, type AddOption } from './components/BottomTabBar';
+import BottomTabBar, { BOTTOM_TAB_BAR_HEIGHT, type AddOption, type AddOptionKey } from './components/BottomTabBar';
+
+const ADD_OPTION_PAGE: Record<AddOptionKey, Page> = {
+  expense: 'expenses',
+  blog: 'blog',
+  activity: 'overview',
+  flight: 'overview',
+  lodging: 'overview',
+  import: 'ingest',
+};
 import { FloatingInsetContext } from './contexts/FloatingInsetContext';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
@@ -644,6 +653,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // Set when the traveler taps the evening trip reminder notification — tells TripBlogTab to open
   // the add-photos flow once it's mounted and ready. See tripReminderNotifications.ts.
   const [autoOpenAddPhotos, setAutoOpenAddPhotos] = useState(false);
+  // One-shot requests from the phone Add menu, cleared by the tab once it opens the form.
+  const [pendingExpenseAdd, setPendingExpenseAdd] = useState(false);
+  const [pendingItineraryAdd, setPendingItineraryAdd] = useState<'flight' | 'lodging' | 'activity' | null>(null);
   const [autoOpenActivityCapture, setAutoOpenActivityCapture] = useState<{ date: string; tags: string[] } | null>(null);
   const [activityRecapTarget, setActivityRecapTarget] = useState<ActivityRecapTarget | null>(null);
   const [pendingActivityRecap, setPendingActivityRecap] = useState<{ tripId: string; activityId: string } | null>(null);
@@ -3348,14 +3360,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const canImportConfirmations = userRole === 'admin' || accountProfile.tierKey === 'premium' || accountProfile.tierKey === 'pro';
   const bottomTabAddOptions: AddOption[] = canAddToTrip
     ? ([
-        { page: 'expenses', label: 'Expense', icon: 'expense' },
-        { page: 'blog', label: 'Blog post', icon: 'blog' },
-        { page: 'tours', label: 'Activity', icon: 'activity' },
-        { page: 'flights', label: 'Flight', icon: 'flight' },
-        { page: 'lodging', label: 'Lodging', icon: 'lodging' },
-        ...(canImportConfirmations ? [{ page: 'ingest', label: 'Import email', icon: 'import' }] : []),
-      ] as AddOption[]).filter((option) => !hiddenPages.has(option.page))
+        { key: 'expense', label: 'Expense', icon: 'expense' },
+        { key: 'blog', label: 'Blog post', icon: 'blog' },
+        { key: 'activity', label: 'Activity', icon: 'activity' },
+        { key: 'flight', label: 'Flight', icon: 'flight' },
+        { key: 'lodging', label: 'Lodging', icon: 'lodging' },
+        ...(canImportConfirmations ? [{ key: 'import', label: 'Import email', icon: 'import' }] : []),
+      ] as AddOption[]).filter((option) => !hiddenPages.has(ADD_OPTION_PAGE[option.key]))
     : [];
+  // Each option opens its add form directly: flights, lodging and activities use the
+  // itinerary's add forms (the same ones as a day's "+ Add" chips).
+  const handleChooseAdd = (key: AddOptionKey) => {
+    if (key === 'expense') setPendingExpenseAdd(true);
+    else if (key === 'blog') setAutoOpenAddPhotos(true);
+    else if (key === 'flight' || key === 'lodging' || key === 'activity') setPendingItineraryAdd(key);
+    requestPageChange(ADD_OPTION_PAGE[key]);
+  };
 
   const mainWorkspace = (
     <FloatingInsetContext.Provider value={showBottomTabs ? BOTTOM_TAB_BAR_HEIGHT : 0}>
@@ -3607,6 +3627,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'expenses'
             ? renderSharedPageScroll(
                 <DailyExpensesTab
+                  autoOpenAdd={pendingExpenseAdd}
+                  onAutoOpenAddHandled={() => setPendingExpenseAdd(false)}
                   theme={theme}
                   backendUrl={backendUrl}
                   headers={headers}
@@ -4099,6 +4121,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'overview'
             ? renderBoundedPage(
                 <OverviewTab
+                  autoOpenAdd={pendingItineraryAdd}
+                  onAutoOpenAddHandled={() => setPendingItineraryAdd(null)}
                   backendUrl={backendUrl}
                   headers={headers}
                   jsonHeaders={jsonHeaders}
@@ -4483,6 +4507,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           addOptions={bottomTabAddOptions}
           addTitle={activeTrip?.name ? `Add to ${activeTrip.name}` : 'Add to trip'}
           onNavigate={(page) => requestPageChange(page as Page)}
+          onChooseAdd={handleChooseAdd}
         />
       ) : null}
       <ChatOverlay
