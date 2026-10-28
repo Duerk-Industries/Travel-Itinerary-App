@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from model import Act, Leg, L, SEAT, Stay, Template
+import japan_media
 
 COUNTRY = "Japan"
 
@@ -566,4 +567,9 @@ def build_with_meta() -> list[Template]:
         t.highlights = list(meta.get("highlights", []))
         t.countries = [COUNTRY]
         t.cities = list(dict.fromkeys(s.base for s in t.stays))
+        t.place_keys = dict(japan_media.ACTIVITY_PLACE)
+        city_keys = [f"{japan_media.PREFIX}/{c.lower()}" for c in t.cities if c.lower() in japan_media.DESTINATIONS]
+        t.destination_keys = [japan_media.PREFIX] + city_keys
+        hero = japan_media.HERO.get(t.id, "")
+        t.hero = hero if hero == japan_media.PREFIX else f"{japan_media.PREFIX}/{hero}" if hero else ""
     return out

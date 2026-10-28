@@ -4081,6 +4081,12 @@ const styleFactories = {
   // tabs/LodgingTab.tsx — nudge on a template placeholder hotel
   tabs_LodgingTab_nudge: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 12, fontWeight: '700', color: _theme.colors.warningText, marginTop: 2 }),
   // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 10 }),
+  // components/TripTemplatePicker.tsx
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 240, height: 160, borderRadius: 10, backgroundColor: _theme.colors.surfaceMuted }),
+  components_TripTemplatePicker_16: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 128, height: 96, borderRadius: 8, backgroundColor: _theme.colors.surfaceMuted }),
+  // components/TripTemplatePicker.tsx
   components_TripTemplatePicker_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 12, overflow: 'hidden', backgroundColor: _theme.colors.surface, marginTop: 10 }),
   // components/TripTemplatePicker.tsx
   components_TripTemplatePicker_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', height: 140, backgroundColor: _theme.colors.surfaceMuted }),

@@ -23,6 +23,13 @@
     "Shibuya Crossing",
     "Ropeway over volcanic valley"
   ],
+  "destinationKeys": [
+    "japan",
+    "japan/tokyo",
+    "japan/hakone",
+    "japan/kyoto"
+  ],
+  "hero": "japan/hakone",
   "sources": [
     "JW Web Magazine 1 week",
     "Two Wandering Soles 1 week",
@@ -67,7 +74,8 @@
       "name": "Free city-view observation deck",
       "notes": "Tokyo Metropolitan Government Building observatory is free; good jet-lag-day orientation.",
       "where": "Shinjuku, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/tokyo-free-observation-deck"
     },
     {
       "day": 0,
@@ -77,7 +85,8 @@
       "name": "Izakaya alley dinner",
       "notes": "Omoide Yokocho / Golden Gai-style yakitori and small bars.",
       "where": "Shinjuku, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/omoide-yokocho"
     },
     {
       "day": 1,
@@ -87,7 +96,8 @@
       "name": "Senso-ji Temple & Nakamise street",
       "notes": "Tokyo's oldest temple and its shopping lane.",
       "where": "Asakusa, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/senso-ji"
     },
     {
       "day": 1,
@@ -97,7 +107,8 @@
       "name": "Akihabara electronics & anime district",
       "notes": "Retro game shops, arcades, figure stores.",
       "where": "Akihabara, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/akihabara"
     },
     {
       "day": 1,
@@ -107,7 +118,8 @@
       "name": "Meiji Jingu Shrine",
       "notes": "Forest shrine; go early.",
       "where": "Harajuku, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/meiji-jingu"
     },
     {
       "day": 1,
@@ -117,7 +129,8 @@
       "name": "Shibuya Crossing",
       "notes": "Scramble crossing; view from above at a station-side cafe or deck.",
       "where": "Shibuya, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/shibuya-crossing"
     },
     {
       "day": 2,
@@ -127,7 +140,8 @@
       "name": "Open-air sculpture museum",
       "notes": "Worthwhile even when Fuji is hidden.",
       "where": "Hakone, Kanagawa",
-      "book": ""
+      "book": "",
+      "place": "japan/hakone-open-air-museum"
     },
     {
       "day": 2,
@@ -137,7 +151,8 @@
       "name": "Ropeway over volcanic valley",
       "notes": "Owakudani sulfur vents; Fuji views on clear days.",
       "where": "Owakudani, Hakone",
-      "book": ""
+      "book": "",
+      "place": "japan/owakudani"
     },
     {
       "day": 2,
@@ -147,7 +162,8 @@
       "name": "Lake Ashi cruise",
       "notes": "Pirate-ship ferry toward the lakeside torii.",
       "where": "Lake Ashi, Hakone",
-      "book": ""
+      "book": "",
+      "place": "japan/lake-ashi"
     },
     {
       "day": 2,
@@ -157,7 +173,8 @@
       "name": "Ryokan onsen & kaiseki dinner",
       "notes": "Check tattoo policy; private baths are an option.",
       "where": "Hakone, Kanagawa",
-      "book": ""
+      "book": "",
+      "place": "japan/ryokan-kaiseki"
     },
     {
       "day": 3,
@@ -167,7 +184,8 @@
       "name": "Fushimi Inari torii gate hike",
       "notes": "Open 24h; walk past the crowds toward the summit. Late afternoon light or early morning.",
       "where": "Fushimi, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/fushimi-inari"
     },
     {
       "day": 3,
@@ -177,7 +195,8 @@
       "name": "Gion evening walk",
       "notes": "Hanamikoji and Shirakawa lanes; do not photograph or follow geiko/maiko.",
       "where": "Gion, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/gion"
     },
     {
       "day": 4,
@@ -187,7 +206,8 @@
       "name": "Arashiyama Bamboo Grove",
       "notes": "Before 8:00 or it is shoulder to shoulder.",
       "where": "Arashiyama, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/arashiyama-bamboo"
     },
     {
       "day": 4,
@@ -197,7 +217,8 @@
       "name": "Tenryu-ji Temple garden",
       "notes": "Zen garden next to the grove.",
       "where": "Arashiyama, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/tenryu-ji"
     },
     {
       "day": 4,
@@ -207,7 +228,8 @@
       "name": "Kinkaku-ji (Golden Pavilion)",
       "notes": "",
       "where": "Kita, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/kinkaku-ji"
     },
     {
       "day": 4,
@@ -217,7 +239,8 @@
       "name": "Ryoan-ji rock garden",
       "notes": "Short bus/walk from Kinkaku-ji.",
       "where": "Ukyo, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/ryoan-ji"
     },
     {
       "day": 5,
@@ -227,7 +250,8 @@
       "name": "Kiyomizu-dera Temple",
       "notes": "Go at opening to beat crowds.",
       "where": "Higashiyama, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/kiyomizu-dera"
     },
     {
       "day": 5,
@@ -237,7 +261,8 @@
       "name": "Sannenzaka & Ninenzaka lanes to Yasaka Shrine",
       "notes": "Preserved slopes, tea shops; ends near Maruyama Park.",
       "where": "Higashiyama, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/sannenzaka"
     },
     {
       "day": 5,
@@ -247,7 +272,8 @@
       "name": "Nishiki Market tasting walk",
       "notes": "Covered food market; graze rather than sit.",
       "where": "Downtown Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/nishiki-market"
     },
     {
       "day": 5,
@@ -257,7 +283,8 @@
       "name": "Dotonbori street food evening",
       "notes": "Takoyaki, okonomiyaki, kushikatsu under the neon signs.",
       "where": "Namba, Osaka",
-      "book": ""
+      "book": "",
+      "place": "japan/dotonbori"
     }
   ],
   "legs": [

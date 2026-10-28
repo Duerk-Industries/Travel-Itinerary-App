@@ -73,3 +73,7 @@ class Template:
     cities: list[str] = field(default_factory=list)
     image_query: str = ""
     highlights: list[str] = field(default_factory=list)
+    # Shared media: where each activity's description and picture live, and the card's destination picture.
+    place_keys: dict[str, str] = field(default_factory=dict)   # activity name -> place key
+    destination_keys: list[str] = field(default_factory=list)  # country, then cities
+    hero: str = ""

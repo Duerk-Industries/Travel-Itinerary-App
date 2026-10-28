@@ -161,6 +161,46 @@ describe('TripTemplatePicker', () => {
   });
 });
 
+describe('TripTemplatePicker stored pictures', () => {
+  afterEach(() => { (global as any).fetch = undefined; });
+
+  const HERO = { url: 'https://upload.wikimedia.org/kyoto.jpg', width: 960, height: 640, credit: 'A. Photographer, CC0', pageUrl: 'https://commons.wikimedia.org/wiki/File:Kyoto.jpg' };
+
+  it('uses the stored public-domain picture, with its credit, instead of searching for one', async () => {
+    const fn = installFetch({ templates: [{ ...TEMPLATE, heroImage: HERO }] });
+    const { findByTestId, findByText, UNSAFE_getAllByType } = renderPicker();
+    expect(await findByTestId('trip-template-card-japan-t01')).toBeTruthy();
+    expect(await findByText('Photo: A. Photographer, CC0')).toBeTruthy();
+    const { Image } = require('react-native');
+    expect(UNSAFE_getAllByType(Image)[0].props.source).toEqual({ uri: HERO.url });
+    await act(async () => { await Promise.resolve(); });
+    expect(fn.mock.calls.some(([url]) => String(url).includes('/api/itinerary/images'))).toBe(false);
+  });
+
+  it('shows each stop\'s description and picture, and the destinations, in the preview', async () => {
+    const fn = installFetch();
+    fn.mockImplementation((url: string, init?: RequestInit) => {
+      if (/\/api\/trip-templates\/japan-t01$/.test(url)) {
+        return json({
+          ...DETAIL,
+          destinations: [{ key: 'japan/kyoto', name: 'Kyoto', description: 'Japan\'s former capital.', images: [HERO] }],
+          preview: [{ day: 1, base: 'Kyoto', items: [{ kind: 'activity', time: '09:00', title: 'Fushimi Inari torii gate hike', detail: '2h', needsBooking: false, description: 'Thousands of vermilion gates.', image: HERO }] }],
+        });
+      }
+      if (init?.method === 'POST') return json({ trip: { id: 'trip-9' } }, true, 201);
+      if (String(url).includes('/api/trip-templates?')) return json({ templates: [TEMPLATE] });
+      return json({ url: 'x', provider: 'placeholder' });
+    });
+    const { findByTestId, findByText, UNSAFE_getAllByType } = renderPicker();
+    fireEvent.press(await findByTestId('trip-template-card-japan-t01'));
+    expect(await findByText('Thousands of vermilion gates.')).toBeTruthy();
+    expect(await findByTestId('trip-template-destination-japan/kyoto')).toBeTruthy();
+    expect(await findByText('Japan\'s former capital.')).toBeTruthy();
+    const { Image } = require('react-native');
+    expect(UNSAFE_getAllByType(Image).filter((image: any) => image.props.source?.uri === HERO.url).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('hotel placeholder', () => {
   it('is recognised by its feature tag', () => {
     expect(needsHotelChoice({ features: ['Breakfast', CHOOSE_HOTEL_FEATURE] })).toBe(true);

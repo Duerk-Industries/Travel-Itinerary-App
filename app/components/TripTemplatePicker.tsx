@@ -6,6 +6,8 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 
 type PickerLocation = { id: string; name: string; sourceType?: string; countryName?: string };
 
+type TemplateImage = { url: string; width: number; height: number; credit: string; pageUrl: string };
+
 type TemplateSummary = {
   id: string;
   title: string;
@@ -16,10 +18,13 @@ type TemplateSummary = {
   highlights: string[];
   imageQuery: string;
   matchedCities?: string[];
+  /** Our stored public-domain picture; when absent the card falls back to an image search on imageQuery. */
+  heroImage?: TemplateImage | null;
 };
 
-type PreviewItem = { kind: 'stay' | 'activity' | 'transfer'; time: string; title: string; detail: string; needsBooking: boolean };
-type TemplateDetail = TemplateSummary & { preview: Array<{ day: number; base: string; items: PreviewItem[] }> };
+type PreviewItem = { kind: 'stay' | 'activity' | 'transfer'; time: string; title: string; detail: string; needsBooking: boolean; description?: string; image?: TemplateImage | null };
+type TemplateDestinationInfo = { key: string; name: string; description: string; images: TemplateImage[] };
+type TemplateDetail = TemplateSummary & { preview: Array<{ day: number; base: string; items: PreviewItem[] }>; destinations?: TemplateDestinationInfo[] };
 
 type Props = {
   backendUrl: string;
@@ -74,6 +79,17 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
   const [error, setError] = useState('');
   const query = useMemo(() => (selectedLocations.length ? destinationQuery(selectedLocations, tripDays) : ''), [selectedLocations, tripDays]);
   // A template can be used with a start date, or, without one, when the trip's length can hold it.
+  // Each destination is introduced once, on the first day the traveler is there; the country (no "/" in its key) opens Day 1.
+  const destinationsByDay: Record<number, TemplateDestinationInfo[]> = {};
+  (detail?.destinations ?? []).forEach((destination) => {
+    const name = destination.name.toLowerCase();
+    const day = destination.key.includes('/')
+      ? detail?.preview.find((d) => d.base?.toLowerCase() === name)
+        ?? detail?.preview.find((d) => d.items.some((item) => `${item.title} ${item.detail}`.toLowerCase().includes(name)))
+      : undefined;
+    const dayNumber = day?.day ?? detail?.preview[0]?.day;
+    if (dayNumber !== undefined) (destinationsByDay[dayNumber] ??= []).push(destination);
+  });
   const canUse = Boolean(detail && (startDate || (tripDays && tripDays >= detail.days)));
 
   useEffect(() => {
@@ -97,7 +113,7 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
   useEffect(() => {
     let cancelled = false;
     templates.forEach((template) => {
-      if (!template.imageQuery || images[template.id]) return;
+      if (template.heroImage || !template.imageQuery || images[template.id]) return;
       (async () => {
         try {
           const res = await fetch(`${backendUrl}/api/itinerary/images?location=${encodeURIComponent(template.imageQuery)}`, { headers });
@@ -178,7 +194,8 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
           style={themeStyle('components_TripTemplatePicker_1', {}, theme)}
           onPress={() => { void openPreview(template); }}
         >
-          {images[template.id] ? <Image source={{ uri: images[template.id] }} accessibilityIgnoresInvertColors style={themeStyle('components_TripTemplatePicker_2', {}, theme)} /> : null}
+          {template.heroImage || images[template.id] ? <Image source={{ uri: template.heroImage?.url ?? images[template.id] }} accessibilityIgnoresInvertColors accessibilityLabel={template.title} style={themeStyle('components_TripTemplatePicker_2', {}, theme)} /> : null}
+          {template.heroImage ? <Text testID={`trip-template-credit-${template.id}`} style={[styles.helperText, themeStyle('components_TripTemplatePicker_15', {}, theme)]}>Photo: {template.heroImage.credit}</Text> : null}
           <View style={themeStyle('components_TripTemplatePicker_3', {}, theme)}>
             <Text style={styles.headerText}>{template.title}</Text>
             <Text style={styles.helperText}>{template.route}</Text>
@@ -213,12 +230,25 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
                 <View style={themeStyle('components_TripTemplatePicker_8', {}, theme)}>
                   <Text style={styles.headerText}>Day {day.day}{day.base ? ` · ${day.base}` : ''}</Text>
                 </View>
+                {(destinationsByDay[day.day] ?? []).map((destination) => (
+                  <View key={destination.key} style={themeStyle('components_TripTemplatePicker_9', {}, theme)} testID={`trip-template-destination-${destination.key}`}>
+                    {destination.images[0] ? <Image source={{ uri: destination.images[0].url }} accessibilityIgnoresInvertColors accessibilityLabel={destination.name} style={themeStyle('components_TripTemplatePicker_17', {}, theme)} /> : null}
+                    <View style={themeStyle('components_TripTemplatePicker_11', {}, theme)}>
+                      <Text style={styles.headerText}>{destination.name}</Text>
+                      {destination.description ? <Text style={styles.helperText}>{destination.description}</Text> : null}
+                      {destination.images[0] ? <Text style={[styles.helperText, themeStyle('components_TripTemplatePicker_15', {}, theme)]}>Photo: {destination.images[0].credit}</Text> : null}
+                    </View>
+                  </View>
+                ))}
                 {day.items.map((item, index) => (
                   <View key={`${day.day}-${index}`} style={themeStyle('components_TripTemplatePicker_9', {}, theme)}>
                     <Text style={[styles.helperText, themeStyle('components_TripTemplatePicker_10', {}, theme)]}>{item.time}</Text>
+                    {item.image ? <Image source={{ uri: item.image.url }} accessibilityIgnoresInvertColors accessibilityLabel={item.title} style={themeStyle('components_TripTemplatePicker_16', {}, theme)} /> : null}
                     <View style={themeStyle('components_TripTemplatePicker_11', {}, theme)}>
                       <Text style={styles.bodyText}>{item.title}</Text>
                       {item.detail ? <Text style={styles.helperText}>{item.detail}</Text> : null}
+                      {item.description ? <Text style={styles.helperText}>{item.description}</Text> : null}
+                      {item.image ? <Text style={[styles.helperText, themeStyle('components_TripTemplatePicker_15', {}, theme)]}>Photo: {item.image.credit}</Text> : null}
                       {item.needsBooking ? <Text style={themeStyle('components_TripTemplatePicker_12', {}, theme)}>Book ahead</Text> : null}
                     </View>
                   </View>

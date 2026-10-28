@@ -13,7 +13,9 @@ import {
   populateTripFromTemplate,
   populateUndatedTripFromTemplate,
   resolveSelectedDestinations,
+  templateDestinations,
   templateEndDate,
+  templateHeroImage,
 } from '../services/tripTemplateService';
 import { listTripTemplates } from '../db';
 import { logError, logInfo } from '../logger';
@@ -47,6 +49,8 @@ router.get('/', async (req, res) => {
       templates: offered.map((template) => ({
         id: template.id, title: template.title, summary: template.summary, days: template.days, route: template.route,
         cities: template.cities, highlights: template.highlights, imageQuery: template.imageQuery, matchedCities: template.matchedCities,
+        // Our own public-domain picture when the catalogue has one; the app falls back to imageQuery otherwise.
+        heroImage: (() => { const seed = getSeedTemplate(template.id); return seed ? templateHeroImage(seed) : null; })(),
       })),
     });
   } catch (err) {
@@ -65,7 +69,8 @@ router.get('/:id', async (req, res) => {
   }
   res.json({
     id: seed.id, title: seed.title, summary: seed.summary, days: seed.days, route: seed.route, arrive: seed.arrive, depart: seed.depart,
-    cities: seed.cities, highlights: seed.highlights, imageQuery: seed.imageQuery,
+    cities: seed.cities, highlights: seed.highlights, imageQuery: seed.imageQuery, heroImage: templateHeroImage(seed),
+    destinations: templateDestinations(seed),
     stays: seed.stays.map((stay) => ({ base: stay.base, hotel: stay.hotel, nights: stay.nights, area: stay.area })),
     preview: buildTemplatePreview(seed),
   });

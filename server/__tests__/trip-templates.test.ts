@@ -121,6 +121,8 @@ describe('trip templates API', () => {
     expect(activities.every((a) => ['Proposed', 'Needs Booking'].includes(a.status))).toBe(true);
     expect(activities.some((a) => a.status === 'Needs Booking')).toBe(true);
     expect(lodgings.every((l) => (l.features ?? []).includes(CHOOSE_HOTEL_FEATURE))).toBe(true);
+    // The day-by-day location is read from the lodging, so each placeholder carries its city.
+    expect(lodgings.every((l) => /^[A-Z][A-Za-z -]+, Japan$/.test(l.address))).toBe(true);
     expect(transfers.every((t) => t.transferType === 'Public Transit' || t.transfer_type === 'Public Transit')).toBe(true);
   });
 

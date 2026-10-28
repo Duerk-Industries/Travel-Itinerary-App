@@ -26,6 +26,16 @@
     "Mt Misen hike or ropeway",
     "Meiji Jingu Shrine"
   ],
+  "destinationKeys": [
+    "japan",
+    "japan/tokyo",
+    "japan/hakone",
+    "japan/kyoto",
+    "japan/hiroshima",
+    "japan/miyajima",
+    "japan/osaka"
+  ],
+  "hero": "japan",
   "sources": [
     "InsideKyoto #4 Grand Tour",
     "Japan Experience Classic Japan 14 days",
@@ -98,7 +108,8 @@
       "name": "Free city-view observation deck",
       "notes": "Tokyo Metropolitan Government Building observatory is free; good jet-lag-day orientation.",
       "where": "Shinjuku, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/tokyo-free-observation-deck"
     },
     {
       "day": 0,
@@ -108,7 +119,8 @@
       "name": "Izakaya alley dinner",
       "notes": "Omoide Yokocho / Golden Gai-style yakitori and small bars.",
       "where": "Shinjuku, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/omoide-yokocho"
     },
     {
       "day": 1,
@@ -118,7 +130,8 @@
       "name": "Meiji Jingu Shrine",
       "notes": "Forest shrine; go early.",
       "where": "Harajuku, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/meiji-jingu"
     },
     {
       "day": 1,
@@ -128,7 +141,8 @@
       "name": "Harajuku & Omotesando",
       "notes": "Takeshita Street street fashion, then Omotesando boulevard.",
       "where": "Harajuku, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/harajuku-omotesando"
     },
     {
       "day": 1,
@@ -138,7 +152,8 @@
       "name": "Shibuya Crossing",
       "notes": "Scramble crossing; view from above at a station-side cafe or deck.",
       "where": "Shibuya, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/shibuya-crossing"
     },
     {
       "day": 1,
@@ -148,7 +163,8 @@
       "name": "Sunset rooftop observation deck",
       "notes": "Shibuya Sky or similar; sunset slots sell out.",
       "where": "Shibuya, Tokyo",
-      "book": "Yes - timed tickets, sunset sells out"
+      "book": "Yes - timed tickets, sunset sells out",
+      "place": "japan/tokyo-sunset-deck"
     },
     {
       "day": 2,
@@ -158,7 +174,8 @@
       "name": "Fish market breakfast",
       "notes": "Tsukiji Outer Market stalls: sushi, tamagoyaki, grilled seafood.",
       "where": "Tsukiji, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/tsukiji-outer-market"
     },
     {
       "day": 2,
@@ -168,7 +185,8 @@
       "name": "Senso-ji Temple & Nakamise street",
       "notes": "Tokyo's oldest temple and its shopping lane.",
       "where": "Asakusa, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/senso-ji"
     },
     {
       "day": 2,
@@ -178,7 +196,8 @@
       "name": "Imperial Palace East Gardens",
       "notes": "Free; closed Mondays and Fridays - swap with Ueno Park/museums those days.",
       "where": "Chiyoda, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/imperial-palace-east-gardens"
     },
     {
       "day": 2,
@@ -188,7 +207,8 @@
       "name": "Ginza department stores & depachika",
       "notes": "Basement food halls are the highlight.",
       "where": "Ginza, Tokyo",
-      "book": ""
+      "book": "",
+      "place": "japan/ginza-depachika"
     },
     {
       "day": 3,
@@ -198,7 +218,8 @@
       "name": "Nikko day trip",
       "notes": "Toshogu Shrine complex, Shinkyo Bridge, Kanmangafuchi abyss walk. ~2h each way by train.",
       "where": "Nikko, Tochigi",
-      "book": ""
+      "book": "",
+      "place": "japan/nikko"
     },
     {
       "day": 4,
@@ -208,7 +229,8 @@
       "name": "Open-air sculpture museum",
       "notes": "Worthwhile even when Fuji is hidden.",
       "where": "Hakone, Kanagawa",
-      "book": ""
+      "book": "",
+      "place": "japan/hakone-open-air-museum"
     },
     {
       "day": 4,
@@ -218,7 +240,8 @@
       "name": "Ropeway over volcanic valley",
       "notes": "Owakudani sulfur vents; Fuji views on clear days.",
       "where": "Owakudani, Hakone",
-      "book": ""
+      "book": "",
+      "place": "japan/owakudani"
     },
     {
       "day": 4,
@@ -228,7 +251,8 @@
       "name": "Lake Ashi cruise",
       "notes": "Pirate-ship ferry toward the lakeside torii.",
       "where": "Lake Ashi, Hakone",
-      "book": ""
+      "book": "",
+      "place": "japan/lake-ashi"
     },
     {
       "day": 4,
@@ -238,7 +262,8 @@
       "name": "Ryokan onsen & kaiseki dinner",
       "notes": "Check tattoo policy; private baths are an option.",
       "where": "Hakone, Kanagawa",
-      "book": ""
+      "book": "",
+      "place": "japan/ryokan-kaiseki"
     },
     {
       "day": 5,
@@ -248,7 +273,8 @@
       "name": "Fushimi Inari torii gate hike",
       "notes": "Open 24h; walk past the crowds toward the summit. Late afternoon light or early morning.",
       "where": "Fushimi, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/fushimi-inari"
     },
     {
       "day": 5,
@@ -258,7 +284,8 @@
       "name": "Gion evening walk",
       "notes": "Hanamikoji and Shirakawa lanes; do not photograph or follow geiko/maiko.",
       "where": "Gion, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/gion"
     },
     {
       "day": 6,
@@ -268,7 +295,8 @@
       "name": "Kiyomizu-dera Temple",
       "notes": "Go at opening to beat crowds.",
       "where": "Higashiyama, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/kiyomizu-dera"
     },
     {
       "day": 6,
@@ -278,7 +306,8 @@
       "name": "Sannenzaka & Ninenzaka lanes to Yasaka Shrine",
       "notes": "Preserved slopes, tea shops; ends near Maruyama Park.",
       "where": "Higashiyama, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/sannenzaka"
     },
     {
       "day": 6,
@@ -288,7 +317,8 @@
       "name": "Tea ceremony experience",
       "notes": "Small-group matcha ceremony; kimono rental optional.",
       "where": "Higashiyama, Kyoto",
-      "book": "Yes - book a session"
+      "book": "Yes - book a session",
+      "place": "japan/tea-ceremony"
     },
     {
       "day": 6,
@@ -298,7 +328,8 @@
       "name": "Nishiki Market tasting walk",
       "notes": "Covered food market; graze rather than sit.",
       "where": "Downtown Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/nishiki-market"
     },
     {
       "day": 7,
@@ -308,7 +339,8 @@
       "name": "Nara day trip",
       "notes": "Todai-ji Great Buddha, Nara Park deer, Kasuga Taisha lanterns. ~45 min by train.",
       "where": "Nara Park, Nara",
-      "book": ""
+      "book": "",
+      "place": "japan/nara"
     },
     {
       "day": 8,
@@ -318,7 +350,8 @@
       "name": "Arashiyama Bamboo Grove",
       "notes": "Before 8:00 or it is shoulder to shoulder.",
       "where": "Arashiyama, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/arashiyama-bamboo"
     },
     {
       "day": 8,
@@ -328,7 +361,8 @@
       "name": "Tenryu-ji Temple garden",
       "notes": "Zen garden next to the grove.",
       "where": "Arashiyama, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/tenryu-ji"
     },
     {
       "day": 8,
@@ -338,7 +372,8 @@
       "name": "Kinkaku-ji (Golden Pavilion)",
       "notes": "",
       "where": "Kita, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/kinkaku-ji"
     },
     {
       "day": 8,
@@ -348,7 +383,8 @@
       "name": "Ryoan-ji rock garden",
       "notes": "Short bus/walk from Kinkaku-ji.",
       "where": "Ukyo, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/ryoan-ji"
     },
     {
       "day": 8,
@@ -358,7 +394,8 @@
       "name": "Nijo Castle",
       "notes": "Nightingale floors; closed some Tuesdays in winter.",
       "where": "Nakagyo, Kyoto",
-      "book": ""
+      "book": "",
+      "place": "japan/nijo-castle"
     },
     {
       "day": 9,
@@ -368,7 +405,8 @@
       "name": "Peace Memorial Park & Museum",
       "notes": "Allow at least 2 hours for the museum.",
       "where": "Naka, Hiroshima",
-      "book": ""
+      "book": "",
+      "place": "japan/hiroshima-peace-park"
     },
     {
       "day": 9,
@@ -378,7 +416,8 @@
       "name": "Shukkeien Garden",
       "notes": "",
       "where": "Naka, Hiroshima",
-      "book": ""
+      "book": "",
+      "place": "japan/shukkeien"
     },
     {
       "day": 9,
@@ -388,7 +427,8 @@
       "name": "Hiroshima-style okonomiyaki dinner",
       "notes": "Layered noodle okonomiyaki at a griddle counter.",
       "where": "Naka, Hiroshima",
-      "book": ""
+      "book": "",
+      "place": "japan/hiroshima-okonomiyaki"
     },
     {
       "day": 10,
@@ -398,7 +438,8 @@
       "name": "Itsukushima Shrine & floating torii",
       "notes": "Check the tide table: torii 'floats' at high tide, walkable at low tide.",
       "where": "Miyajima, Hiroshima",
-      "book": ""
+      "book": "",
+      "place": "japan/itsukushima"
     },
     {
       "day": 10,
@@ -408,7 +449,8 @@
       "name": "Mt Misen hike or ropeway",
       "notes": "Summit views over the Seto Inland Sea.",
       "where": "Miyajima, Hiroshima",
-      "book": ""
+      "book": "",
+      "place": "japan/mt-misen"
     },
     {
       "day": 10,
@@ -418,7 +460,8 @@
       "name": "Illuminated torii after day-trippers leave",
       "notes": "The payoff for staying on the island.",
       "where": "Miyajima, Hiroshima",
-      "book": ""
+      "book": "",
+      "place": "japan/itsukushima-night"
     },
     {
       "day": 11,
@@ -428,7 +471,8 @@
       "name": "Osaka Castle & park",
       "notes": "",
       "where": "Chuo, Osaka",
-      "book": ""
+      "book": "",
+      "place": "japan/osaka-castle"
     },
     {
       "day": 11,
@@ -438,7 +482,8 @@
       "name": "Dotonbori street food evening",
       "notes": "Takoyaki, okonomiyaki, kushikatsu under the neon signs.",
       "where": "Namba, Osaka",
-      "book": ""
+      "book": "",
+      "place": "japan/dotonbori"
     },
     {
       "day": 12,
@@ -448,7 +493,8 @@
       "name": "Kuromon Market lunch",
       "notes": "Seafood stalls.",
       "where": "Nipponbashi, Osaka",
-      "book": ""
+      "book": "",
+      "place": "japan/kuromon-market"
     },
     {
       "day": 12,
@@ -458,7 +504,8 @@
       "name": "Shinsekai retro district",
       "notes": "Tsutenkaku tower and kushikatsu counters.",
       "where": "Shinsekai, Osaka",
-      "book": ""
+      "book": "",
+      "place": "japan/shinsekai"
     },
     {
       "day": 12,
@@ -468,7 +515,8 @@
       "name": "Sunset skyscraper observatory",
       "notes": "Umeda Sky Building floating garden or similar.",
       "where": "Umeda, Osaka",
-      "book": ""
+      "book": "",
+      "place": "japan/osaka-sunset-observatory"
     },
     {
       "day": 12,
@@ -478,7 +526,8 @@
       "name": "Optional: Himeji Castle day trip",
       "notes": "Japan's finest original castle, ~1h by shinkansen. Swap for any Osaka day.",
       "where": "Himeji, Hyogo",
-      "book": ""
+      "book": "",
+      "place": "japan/himeji-castle"
     }
   ],
   "legs": [

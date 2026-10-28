@@ -3061,10 +3061,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     // activeTripId (flights/lodgings/expenses/etc.) would otherwise keep
     // fetching against a trip the user no longer has access to and surface a
     // spurious "not authorized" permission-denied modal. Exit the trip first
-    // and land on the trip list ("account") page instead.
+    // and land on the trip list ("account") page instead; the All Trips page is itself a trip list, so
+    // a delete made there stays put.
     if (activeTripId === tripId) {
       setActiveTripId(null);
-      setActivePage('account');
+      if (activePage !== 'all-trips') setActivePage('account');
     }
     fetchTrips();
     return null;
@@ -3503,7 +3504,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               activeTripId={activeTripId} styles={styles}
               onSelectTrip={(id) => { handleSelectOwnedTrip(id); requestPageChange('home'); }}
               onSelectFollowedTrip={handleSelectFollowedTrip}
-              onNavigate={handleHomeNavigate} onFollowTrip={handleFollowTripByCode} hiddenPages={hiddenPages}
+              onNavigate={handleHomeNavigate} onFollowTrip={handleFollowTripByCode} onDeleteTrip={confirmDeleteTrip} hiddenPages={hiddenPages}
               onBack={() => requestPageChange('home')} />
           ) : null}
 

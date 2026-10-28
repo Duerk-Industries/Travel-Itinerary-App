@@ -17,6 +17,7 @@ import {
 import { logError, logInfo } from '../logger';
 import { resolveRuntimeDataPath } from '../utils/runtimeDataPath';
 import { getLocationOptionsByIds } from './locationServices';
+import { getTemplateDestination, getTemplatePlace, toPublicImage, type PublicTemplateImage } from './tripTemplateMedia';
 
 // A template is seed data in the repo (server/data/trip-templates/*.json, written by
 // server/tools/trip-templates/generate.py): a day-offset plan with day 0 as the arrival day. The
@@ -36,6 +37,10 @@ const seedSchema = z.object({
   cities: z.array(z.string()).default([]),
   imageQuery: z.string().default(''),
   highlights: z.array(z.string()).default([]),
+  /** Destination keys (country, then cities) whose shared description and pictures belong with this template. */
+  destinationKeys: z.array(z.string()).default([]),
+  /** The destination whose first picture is the card's. */
+  hero: z.string().default(''),
   stays: z.array(z.object({
     base: z.string(), hotel: z.string(), start: z.number().int().min(0), nights: z.number().int().min(1), area: z.string().default(''),
     breakfast: z.boolean().default(false), dinner: z.boolean().default(false),
@@ -43,6 +48,8 @@ const seedSchema = z.object({
   activities: z.array(z.object({
     day: z.number().int().min(0), type: z.string(), time: z.string().default(''), duration: z.string().default(''), name: z.string().min(1),
     notes: z.string().default(''), where: z.string().default(''), book: z.string().default(''),
+    /** Key into the shared media catalogue, for this stop's description and picture. */
+    place: z.string().default(''),
   })),
   legs: z.array(z.object({
     day: z.number().int().min(0), transferType: z.string(), from: z.string().min(1), to: z.string().min(1), time: z.string().default(''),
@@ -146,7 +153,7 @@ export const listOfferedTemplates = async (selected: SelectedDestinations, maxDa
 
 // ------------------------------------------------------------------------ preview
 
-export type TemplatePreviewItem = { kind: 'stay' | 'activity' | 'transfer'; time: string; title: string; detail: string; needsBooking: boolean };
+export type TemplatePreviewItem = { kind: 'stay' | 'activity' | 'transfer'; time: string; title: string; detail: string; needsBooking: boolean; description?: string; image?: PublicTemplateImage | null };
 export type TemplatePreviewDay = { day: number; base: string; items: TemplatePreviewItem[] };
 
 const clock = (value: string): string => (/^\d{1,2}:\d{2}$/.test(value) ? value.padStart(5, '0') : '');
@@ -166,7 +173,8 @@ export const buildTemplatePreview = (template: SeedTemplate): TemplatePreviewDay
     put(stay.start, { kind: 'stay', time: '', title: `Check in: ${stay.hotel}`, detail: `${stay.nights} night${stay.nights === 1 ? '' : 's'}${stay.area ? ` · ${stay.area}` : ''}`, needsBooking: false });
   }
   for (const activity of template.activities) {
-    put(activity.day, { kind: 'activity', time: clock(activity.time), title: activity.name, detail: [activity.duration, activity.where].filter(Boolean).join(' · '), needsBooking: Boolean(activity.book) });
+    const place = getTemplatePlace(activity.place);
+    put(activity.day, { kind: 'activity', time: clock(activity.time), title: activity.name, detail: [activity.duration, activity.where].filter(Boolean).join(' · '), needsBooking: Boolean(activity.book), description: place?.description || undefined, image: toPublicImage(place?.image) });
   }
   for (const leg of template.legs) {
     put(leg.day, { kind: 'transfer', time: clock(leg.time), title: `${leg.from} to ${leg.to}`, detail: [leg.carrier, durationText(leg.minutes)].filter(Boolean).join(' · '), needsBooking: Boolean(leg.book) });
@@ -212,7 +220,7 @@ export const populateTripFromTemplate = async (params: { userId: string; tripId:
     const features = [stay.breakfast ? 'Breakfast' : '', stay.dinner ? 'Dinner' : '', CHOOSE_HOTEL_FEATURE].filter(Boolean);
     await insertLodging({
       userId, tripId, status: 'Proposed', name: stay.hotel, checkInDate: dateOf(stay.start), checkOutDate: dateOf(stay.start + stay.nights),
-      rooms: 1, refundBy: null, totalCost: 0, costPerNight: 0, address: '', notes: stay.area ? `Suggested location: ${stay.area}` : null, features,
+      rooms: 1, refundBy: null, totalCost: 0, costPerNight: 0, address: [stay.base, template.countries[0]].filter(Boolean).join(', '), notes: stay.area ? `Suggested location: ${stay.area}` : null, features,
       paid_by: [], traveler_ids: travelerIds, imageUrl: null,
     } as any);
   }
@@ -220,7 +228,7 @@ export const populateTripFromTemplate = async (params: { userId: string; tripId:
     await insertActivity({
       userId, tripId, status: activity.book ? NEEDS_BOOKING : 'Proposed', activityType: (activity.type || 'Other') as any, date: dateOf(activity.day), name: activity.name,
       startLocation: activity.where, startTime: clock(activity.time), duration: activity.duration, cost: 0, freeCancelBy: null, bookedOn: '', reference: '',
-      notes: [activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n'), paidBy: [], travelerIds,
+      notes: [getTemplatePlace(activity.place)?.description, activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n'), paidBy: [], travelerIds,
     } as any);
   }
   const passengerName = members.map((member) => member.name).join(', ') || 'Passenger';
@@ -285,7 +293,7 @@ export const populateUndatedTripFromTemplate = async (params: { userId: string; 
     notes += 1;
   }
   for (const activity of template.activities) {
-    await add(activity.day, { time: activity.time, kind: 'activity', title: activity.name, body: [activity.duration ? `Duration: ${activity.duration}.` : '', activity.where ? `Address: ${activity.where}` : '', activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n') });
+    await add(activity.day, { time: activity.time, kind: 'activity', title: activity.name, body: [getTemplatePlace(activity.place)?.description ?? '', activity.duration ? `Duration: ${activity.duration}.` : '', activity.where ? `Address: ${activity.where}` : '', activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n') });
   }
   for (const leg of template.legs) {
     const parts = [`${leg.from} to ${leg.to}${leg.carrier ? ` by ${leg.carrier}` : ''}. Travel time about ${durationText(leg.minutes)}.`];
@@ -296,3 +304,14 @@ export const populateUndatedTripFromTemplate = async (params: { userId: string; 
   }
   return { lodgings: 0, activities: template.activities.length, transfers: 0, notes };
 };
+
+/** The card picture: the first picture of the template's hero destination, if the catalogue has one. */
+export const templateHeroImage = (template: Pick<SeedTemplate, 'hero'>): PublicTemplateImage | null =>
+  toPublicImage(getTemplateDestination(template.hero)?.images[0]);
+
+/** The country and city descriptions and pictures that go with a template's preview. */
+export const templateDestinations = (template: Pick<SeedTemplate, 'destinationKeys'>) =>
+  template.destinationKeys.flatMap((key) => {
+    const destination = getTemplateDestination(key);
+    return destination ? [{ key, name: destination.name, description: destination.description, images: destination.images.map((image) => toPublicImage(image)!) }] : [];
+  });

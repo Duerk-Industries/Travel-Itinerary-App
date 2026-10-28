@@ -1,0 +1,859 @@
+{
+ "schemaVersion": 1,
+ "places": {
+  "japan/tokyo-free-observation-deck": {
+   "name": "Free city-view observation deck",
+   "description": "Twin towers in Shinjuku with free observation decks about 200 m up, looking across Tokyo and, on clear days, to Mount Fuji.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Westward_view_from_Tokyo_Metropolitan_Government_Building_2024-09-05.jpg/960px-Westward_view_from_Tokyo_Metropolitan_Government_Building_2024-09-05.jpg",
+    "width": 960,
+    "height": 720,
+    "title": "File:Westward view from Tokyo Metropolitan Government Building 2024-09-05.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Westward_view_from_Tokyo_Metropolitan_Government_Building_2024-09-05.jpg",
+    "license": "CC0",
+    "author": "Asanagi"
+   }
+  },
+  "japan/omoide-yokocho": {
+   "name": "Izakaya alley dinner",
+   "description": "Tiny smoky lanes of yakitori stalls and standing bars, where you graze on skewers and share small plates.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Yakitori_shop_lanterns_in_Omoide-Yokoch%C5%8D%2C_Shinjuku%2C_Tokyo%2C_Japan_2011_2_%287024865381%29.jpg/960px-Yakitori_shop_lanterns_in_Omoide-Yokoch%C5%8D%2C_Shinjuku%2C_Tokyo%2C_Japan_2011_2_%287024865381%29.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Yakitori shop lanterns in Omoide-Yokochō, Shinjuku, Tokyo, Japan 2011 2 (7024865381).jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Yakitori_shop_lanterns_in_Omoide-Yokoch%C5%8D,_Shinjuku,_Tokyo,_Japan_2011_2_(7024865381).jpg",
+    "license": "CC0",
+    "author": "Yiannis Theologos Michellis"
+   }
+  },
+  "japan/meiji-jingu": {
+   "name": "Meiji Jingu Shrine",
+   "description": "A forested shrine for Emperor Meiji, reached by a long gravel path under giant torii gates: a quiet counterpoint to Harajuku next door.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/Torii_gate_for_the_Meiji_Shrine_%2814628328081%29.jpg/960px-Torii_gate_for_the_Meiji_Shrine_%2814628328081%29.jpg",
+    "width": 960,
+    "height": 538,
+    "title": "File:Torii gate for the Meiji Shrine (14628328081).jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Torii_gate_for_the_Meiji_Shrine_(14628328081).jpg",
+    "license": "CC0",
+    "author": "Mustang Joe"
+   }
+  },
+  "japan/harajuku-omotesando": {
+   "name": "Harajuku & Omotesando",
+   "description": "Teen fashion and crepe stands on Takeshita Street, then the tree-lined boutique avenue of Omotesando.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Marion_Cr%C3%AApes_in_Harajuku_Takeshita.jpg/960px-Marion_Cr%C3%AApes_in_Harajuku_Takeshita.jpg",
+    "width": 960,
+    "height": 720,
+    "title": "File:Marion Crêpes in Harajuku Takeshita.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Marion_Cr%C3%AApes_in_Harajuku_Takeshita.jpg",
+    "license": "CC0",
+    "author": "Syced"
+   }
+  },
+  "japan/shibuya-crossing": {
+   "name": "Shibuya Crossing",
+   "description": "The scramble crossing where hundreds of people cross in every direction at once; best seen from above.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/Shibuya_scramble_crossing_during_Halloween_2023%2C_actually_less_crowded_than_usual%2C_high_police_presence_2.jpg/960px-Shibuya_scramble_crossing_during_Halloween_2023%2C_actually_less_crowded_than_usual%2C_high_police_presence_2.jpg",
+    "width": 960,
+    "height": 595,
+    "title": "File:Shibuya scramble crossing during Halloween 2023, actually less crowded than usual, high police presence 2.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Shibuya_scramble_crossing_during_Halloween_2023,_actually_less_crowded_than_usual,_high_police_presence_2.jpg",
+    "license": "CC0",
+    "author": "Syced"
+   }
+  },
+  "japan/tokyo-sunset-deck": {
+   "name": "Sunset rooftop observation deck",
+   "description": "Time the visit for golden hour and watch the city turn from daylight into a sea of lights.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/2015-01-17_Skyline_in_Tokyo.jpg/960px-2015-01-17_Skyline_in_Tokyo.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:2015-01-17 Skyline in Tokyo.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:2015-01-17_Skyline_in_Tokyo.jpg",
+    "license": "CC0",
+    "author": "╬ಠ益ಠ)"
+   }
+  },
+  "japan/tsukiji-outer-market": {
+   "name": "Fish market breakfast",
+   "description": "Sushi counters and street snacks around the old fish market: rolled omelette, grilled seafood and fresh sashimi.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/Sashimi_at_the_Tsukiji_Markets_-_Tokyo_Japan_%28Unsplash%29.jpg/960px-Sashimi_at_the_Tsukiji_Markets_-_Tokyo_Japan_%28Unsplash%29.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Sashimi at the Tsukiji Markets - Tokyo Japan (Unsplash).jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Sashimi_at_the_Tsukiji_Markets_-_Tokyo_Japan_(Unsplash).jpg",
+    "license": "CC0",
+    "author": "Jonathan Forage jonathanforage"
+   }
+  },
+  "japan/senso-ji": {
+   "name": "Senso-ji Temple & Nakamise street",
+   "description": "Tokyo's oldest temple, entered through the Thunder Gate and a lively shopping street of snacks and souvenirs.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Kaminarimon_%28outer_gate%29%2C_Sensoji_Temple%2C_Akakusa%2C_Tokyo.jpg/960px-Kaminarimon_%28outer_gate%29%2C_Sensoji_Temple%2C_Akakusa%2C_Tokyo.jpg",
+    "width": 960,
+    "height": 720,
+    "title": "File:Kaminarimon (outer gate), Sensoji Temple, Akakusa, Tokyo.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Kaminarimon_(outer_gate),_Sensoji_Temple,_Akakusa,_Tokyo.jpg",
+    "license": "Public domain",
+    "author": "Daderot"
+   }
+  },
+  "japan/imperial-palace-east-gardens": {
+   "name": "Imperial Palace East Gardens",
+   "description": "The old Edo Castle grounds, with stone walls, moats and wide lawns. Free to enter and calm in the middle of the business district.",
+   "image": null
+  },
+  "japan/ginza-depachika": {
+   "name": "Ginza department stores & depachika",
+   "description": "An upscale shopping district whose department-store basements sell beautifully packaged food: a good place for gifts and a picnic.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Buildings_around_Ginza_%2866652%29.jpg/960px-Buildings_around_Ginza_%2866652%29.jpg",
+    "width": 960,
+    "height": 720,
+    "title": "File:Buildings around Ginza (66652).jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Buildings_around_Ginza_(66652).jpg",
+    "license": "CC0",
+    "author": "Syced"
+   }
+  },
+  "japan/fushimi-inari": {
+   "name": "Fushimi Inari torii gate hike",
+   "description": "Thousands of vermilion torii gates winding up a forested mountain. Walk as far as you like; it is quieter the higher you go.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/Fushimi_Inari_Taisha-_Part_II_-_FushimiInari246.jpg/960px-Fushimi_Inari_Taisha-_Part_II_-_FushimiInari246.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Fushimi Inari Taisha- Part II - FushimiInari246.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Fushimi_Inari_Taisha-_Part_II_-_FushimiInari246.jpg",
+    "license": "CC0",
+    "author": "lumoplank"
+   }
+  },
+  "japan/gion": {
+   "name": "Gion evening walk",
+   "description": "Wooden teahouses along Hanamikoji lane. With luck you will see a geiko or maiko on the way to an appointment.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/JP_%E6%97%A5%E6%9C%AC_Japan_%E4%BA%AC%E9%83%BD_Kyoto_Higashiyama-ku_Gion_%E8%8A%B1%E8%A6%8B%E5%B0%8F%E8%B7%AF%E9%80%9A_Hanamikoji_Dori_10am_morning_June_2026_N13P_21.jpg/960px-JP_%E6%97%A5%E6%9C%AC_Japan_%E4%BA%AC%E9%83%BD_Kyoto_Higashiyama-ku_Gion_%E8%8A%B1%E8%A6%8B%E5%B0%8F%E8%B7%AF%E9%80%9A_Hanamikoji_Dori_10am_morning_June_2026_N13P_21.jpg",
+    "width": 960,
+    "height": 720,
+    "title": "File:JP 日本 Japan 京都 Kyoto Higashiyama-ku Gion 花見小路通 Hanamikoji Dori 10am morning June 2026 N13P 21.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:JP_%E6%97%A5%E6%9C%AC_Japan_%E4%BA%AC%E9%83%BD_Kyoto_Higashiyama-ku_Gion_%E8%8A%B1%E8%A6%8B%E5%B0%8F%E8%B7%AF%E9%80%9A_Hanamikoji_Dori_10am_morning_June_2026_N13P_21.jpg",
+    "license": "CC0",
+    "author": "HAGAT hOMSZE"
+   }
+  },
+  "japan/arashiyama-bamboo": {
+   "name": "Arashiyama Bamboo Grove",
+   "description": "A path through towering bamboo that creaks and filters the light. Go early to beat the crowds.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Japan_The_Bamboo_Forest_%2813914447656%29.jpg/960px-Japan_The_Bamboo_Forest_%2813914447656%29.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Japan The Bamboo Forest (13914447656).jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Japan_The_Bamboo_Forest_(13914447656).jpg",
+    "license": "CC0",
+    "author": "Yiannis Theologos Michellis"
+   }
+  },
+  "japan/tenryu-ji": {
+   "name": "Tenryu-ji Temple garden",
+   "description": "A UNESCO-listed Zen temple with a 14th-century pond garden framed by the Arashiyama hills.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Arashiyama%2C_Part_II_-_Arashiyama7538.jpg/960px-Arashiyama%2C_Part_II_-_Arashiyama7538.jpg",
+    "width": 960,
+    "height": 650,
+    "title": "File:Arashiyama, Part II - Arashiyama7538.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Arashiyama,_Part_II_-_Arashiyama7538.jpg",
+    "license": "CC0",
+    "author": "lumoplank"
+   }
+  },
+  "japan/kinkaku-ji": {
+   "name": "Kinkaku-ji (Golden Pavilion)",
+   "description": "A Zen temple whose upper floors are covered in gold leaf, reflected in a mirror pond.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/Kinkaku-ji%2C_Ginkaku-ji_and_Daitoku-ji_-_KyotoTemples400.jpg/960px-Kinkaku-ji%2C_Ginkaku-ji_and_Daitoku-ji_-_KyotoTemples400.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Kinkaku-ji, Ginkaku-ji and Daitoku-ji - KyotoTemples400.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Kinkaku-ji,_Ginkaku-ji_and_Daitoku-ji_-_KyotoTemples400.jpg",
+    "license": "CC0",
+    "author": "lumoplank"
+   }
+  },
+  "japan/ryoan-ji": {
+   "name": "Ryoan-ji rock garden",
+   "description": "The famous dry garden of fifteen stones on raked gravel, made for quiet contemplation.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Ninna-ji_and_Ryoan-ji%2C_Kyoto_-_Ryoanji7753.jpg/960px-Ninna-ji_and_Ryoan-ji%2C_Kyoto_-_Ryoanji7753.jpg",
+    "width": 960,
+    "height": 695,
+    "title": "File:Ninna-ji and Ryoan-ji, Kyoto - Ryoanji7753.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Ninna-ji_and_Ryoan-ji,_Kyoto_-_Ryoanji7753.jpg",
+    "license": "CC0",
+    "author": "lumoplank"
+   }
+  },
+  "japan/nara": {
+   "name": "Nara day trip",
+   "description": "Half an hour from Kyoto: free-roaming deer in Nara Park, the giant bronze Buddha at Todai-ji, and the lantern-lined paths of Kasuga Taisha.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6a/Temple_building%2C_shrine%2C_R%C5%8Dben_Sugi_and_deer_below_Nigatsu-d%C5%8D%2C_T%C5%8Ddai-ji%2C_Nara%2C_2016.jpg/960px-Temple_building%2C_shrine%2C_R%C5%8Dben_Sugi_and_deer_below_Nigatsu-d%C5%8D%2C_T%C5%8Ddai-ji%2C_Nara%2C_2016.jpg",
+    "width": 960,
+    "height": 638,
+    "title": "File:Temple building, shrine, Rōben Sugi and deer below Nigatsu-dō, Tōdai-ji, Nara, 2016.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Temple_building,_shrine,_R%C5%8Dben_Sugi_and_deer_below_Nigatsu-d%C5%8D,_T%C5%8Ddai-ji,_Nara,_2016.jpg",
+    "license": "CC0",
+    "author": "DimiTalen"
+   }
+  },
+  "japan/kiyomizu-dera": {
+   "name": "Kiyomizu-dera Temple",
+   "description": "A hillside temple with a wooden stage jutting out over the trees, with views across Kyoto.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c5/Kiyomizu-dera_in_Kyoto%2C_Japan_1909.jpg/960px-Kiyomizu-dera_in_Kyoto%2C_Japan_1909.jpg",
+    "width": 960,
+    "height": 694,
+    "title": "File:Kiyomizu-dera in Kyoto, Japan 1909.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Kiyomizu-dera_in_Kyoto,_Japan_1909.jpg",
+    "license": "Public domain",
+    "author": "Wolcott, Katherine"
+   }
+  },
+  "japan/sannenzaka": {
+   "name": "Sannenzaka & Ninenzaka lanes to Yasaka Shrine",
+   "description": "Stone-paved lanes of traditional shops and tea houses, leading to Yasaka Shrine.",
+   "image": null
+  },
+  "japan/nishiki-market": {
+   "name": "Nishiki Market tasting walk",
+   "description": "A covered lane of about a hundred stalls selling pickles, tofu doughnuts, skewers and sweets.",
+   "image": null
+  },
+  "japan/akihabara": {
+   "name": "Akihabara electronics & anime district",
+   "description": "Multi-storey arcades, anime shops, retro game stores and themed cafes.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Sotokanda%2C_Akihabara_Electric_Town_at_night_20231114.png/960px-Sotokanda%2C_Akihabara_Electric_Town_at_night_20231114.png",
+    "width": 960,
+    "height": 720,
+    "title": "File:Sotokanda, Akihabara Electric Town at night 20231114.png",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Sotokanda,_Akihabara_Electric_Town_at_night_20231114.png",
+    "license": "CC0",
+    "author": "Phineyes"
+   }
+  },
+  "japan/hakone-open-air-museum": {
+   "name": "Open-air sculpture museum",
+   "description": "Sculpture by Henry Moore, Picasso and others, set in a mountain landscape.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d6/Aristide_Maillol_-_Action_Enchained_-_Hakone_Open-air_Museum.jpg/960px-Aristide_Maillol_-_Action_Enchained_-_Hakone_Open-air_Museum.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Aristide Maillol - Action Enchained - Hakone Open-air Museum.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Aristide_Maillol_-_Action_Enchained_-_Hakone_Open-air_Museum.jpg",
+    "license": "Public domain",
+    "author": "Jean-Pierre Dalbéra"
+   }
+  },
+  "japan/owakudani": {
+   "name": "Ropeway over volcanic valley",
+   "description": "A gondola over the steaming sulfur vents of Owakudani, with Mount Fuji views on clear days. Try the black eggs.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Owakudani%2C_Hakone_July_2018.jpg/960px-Owakudani%2C_Hakone_July_2018.jpg",
+    "width": 960,
+    "height": 540,
+    "title": "File:Owakudani, Hakone July 2018.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Owakudani,_Hakone_July_2018.jpg",
+    "license": "CC0",
+    "author": "Alvinz"
+   }
+  },
+  "japan/lake-ashi": {
+   "name": "Lake Ashi cruise",
+   "description": "Sightseeing ships across a crater lake, with the red torii of Hakone Shrine on the shore.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Hakone_Sightseeing_Cruise_Queen_Ashinoko.jpg/960px-Hakone_Sightseeing_Cruise_Queen_Ashinoko.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Hakone Sightseeing Cruise Queen Ashinoko.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Hakone_Sightseeing_Cruise_Queen_Ashinoko.jpg",
+    "license": "CC0",
+    "author": "T. Hanami"
+   }
+  },
+  "japan/ryokan-kaiseki": {
+   "name": "Ryokan onsen & kaiseki dinner",
+   "description": "Soak in the inn's hot spring bath, then eat a multi-course seasonal dinner in your yukata.",
+   "image": null
+  },
+  "japan/dotonbori": {
+   "name": "Dotonbori street food evening",
+   "description": "Neon signs and canal-side food stalls: takoyaki, okonomiyaki and kushikatsu.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Osaka_Dotonbori_yoru_02.jpg/960px-Osaka_Dotonbori_yoru_02.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Osaka Dotonbori yoru 02.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Osaka_Dotonbori_yoru_02.jpg",
+    "license": "CC0",
+    "author": "Sakai Yayoi"
+   }
+  },
+  "japan/pontocho": {
+   "name": "Riverside alley dinner",
+   "description": "Narrow Pontocho lane and, in summer, the Kamo River terraces, lined with small restaurants.",
+   "image": null
+  },
+  "japan/tea-ceremony": {
+   "name": "Tea ceremony experience",
+   "description": "A guided tea ceremony: whisk the matcha yourself and learn the etiquette behind it.",
+   "image": null
+  },
+  "japan/nijo-castle": {
+   "name": "Nijo Castle",
+   "description": "The shogun's Kyoto residence, known for the 'nightingale floors' that chirp underfoot and for its painted sliding doors.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Tonan_Sumi-Yagura%2C_Nijo_Castle_%2853648037727%29.jpg/960px-Tonan_Sumi-Yagura%2C_Nijo_Castle_%2853648037727%29.jpg",
+    "width": 960,
+    "height": 540,
+    "title": "File:Tonan Sumi-Yagura, Nijo Castle (53648037727).jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Tonan_Sumi-Yagura,_Nijo_Castle_(53648037727).jpg",
+    "license": "CC0",
+    "author": "Mustang Joe"
+   }
+  },
+  "japan/osaka-castle": {
+   "name": "Osaka Castle & park",
+   "description": "A reconstructed 16th-century castle keep in a large park of moats and stone walls, with a museum inside and a view from the top.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/Osaka_Castle_Nishinomaru_Garden_April_2005.JPG/960px-Osaka_Castle_Nishinomaru_Garden_April_2005.JPG",
+    "width": 960,
+    "height": 720,
+    "title": "File:Osaka Castle Nishinomaru Garden April 2005.JPG",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Osaka_Castle_Nishinomaru_Garden_April_2005.JPG",
+    "license": "Public domain",
+    "author": "Unknown"
+   }
+  },
+  "japan/kuromon-market": {
+   "name": "Kuromon Market lunch",
+   "description": "Osaka's kitchen: grilled scallops, sashimi and street snacks, eaten on the spot.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/%E9%BB%92%E9%96%80%E5%B8%82%E5%A0%B4_2024%281%29.jpg/960px-%E9%BB%92%E9%96%80%E5%B8%82%E5%A0%B4_2024%281%29.jpg",
+    "width": 960,
+    "height": 720,
+    "title": "File:黒門市場 2024(1).jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:%E9%BB%92%E9%96%80%E5%B8%82%E5%A0%B4_2024(1).jpg",
+    "license": "CC0",
+    "author": "ほっきー"
+   }
+  },
+  "japan/shinsekai": {
+   "name": "Shinsekai retro district",
+   "description": "A retro district around Tsutenkaku Tower with kushikatsu restaurants and old arcade signs.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Shinsekai_and_Tsutenkaku_Tower.jpg/960px-Shinsekai_and_Tsutenkaku_Tower.jpg",
+    "width": 960,
+    "height": 720,
+    "title": "File:Shinsekai and Tsutenkaku Tower.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Shinsekai_and_Tsutenkaku_Tower.jpg",
+    "license": "CC0",
+    "author": "Sakai Yayoi"
+   }
+  },
+  "japan/osaka-sunset-observatory": {
+   "name": "Sunset skyscraper observatory",
+   "description": "Observation floors high above Osaka, best at dusk.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Umeda_Sky_Buildng.jpg/960px-Umeda_Sky_Buildng.jpg",
+    "width": 960,
+    "height": 720,
+    "title": "File:Umeda Sky Buildng.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Umeda_Sky_Buildng.jpg",
+    "license": "CC0",
+    "author": "Syced"
+   }
+  },
+  "japan/himeji-castle": {
+   "name": "Optional: Himeji Castle day trip",
+   "description": "Japan's best-preserved original castle: a white, multi-tiered keep nicknamed the White Heron.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/Himeji_Castle_0804_1.jpg/960px-Himeji_Castle_0804_1.jpg",
+    "width": 960,
+    "height": 717,
+    "title": "File:Himeji Castle 0804 1.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Himeji_Castle_0804_1.jpg",
+    "license": "Public domain",
+    "author": "Gorgo"
+   }
+  },
+  "japan/mt-fuji-five-lakes": {
+   "name": "Mt Fuji Five Lakes day trip",
+   "description": "Lakeside views of Mount Fuji from Kawaguchiko and the Five Lakes area, clearest on early mornings.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Fuji_Kawaguchi_475.JPG/960px-Fuji_Kawaguchi_475.JPG",
+    "width": 960,
+    "height": 640,
+    "title": "File:Fuji Kawaguchi 475.JPG",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Fuji_Kawaguchi_475.JPG",
+    "license": "CC0",
+    "author": "Marion & Christoph Aistleitner"
+   }
+  },
+  "japan/hiroshima-peace-park": {
+   "name": "Peace Memorial Park & Museum",
+   "description": "The A-Bomb Dome, memorials and a museum that tell Hiroshima's story and its call for peace.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/20181111_Atomic_Bomb_Dome-5.jpg/960px-20181111_Atomic_Bomb_Dome-5.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:20181111 Atomic Bomb Dome-5.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:20181111_Atomic_Bomb_Dome-5.jpg",
+    "license": "CC0",
+    "author": "Balon Greyjoy"
+   }
+  },
+  "japan/shukkeien": {
+   "name": "Shukkeien Garden",
+   "description": "A compact landscape garden of miniature mountains and a pond: a quiet half hour near the castle.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/Hiroshima_Shukkei-en_Pond.jpg/960px-Hiroshima_Shukkei-en_Pond.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Hiroshima Shukkei-en Pond.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Hiroshima_Shukkei-en_Pond.jpg",
+    "license": "Public domain",
+    "author": "No machine-readable author provided. Fg2 assumed (based on copyright claims)."
+   }
+  },
+  "japan/hiroshima-okonomiyaki": {
+   "name": "Hiroshima-style okonomiyaki dinner",
+   "description": "Hiroshima's layered style: cabbage, noodles and egg built up on the griddle, unlike Osaka's mixed batter.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Okonomiyaki_-_Food_in_Miyajima_-_DSC01886.JPG/960px-Okonomiyaki_-_Food_in_Miyajima_-_DSC01886.JPG",
+    "width": 960,
+    "height": 720,
+    "title": "File:Okonomiyaki - Food in Miyajima - DSC01886.JPG",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Okonomiyaki_-_Food_in_Miyajima_-_DSC01886.JPG",
+    "license": "Public domain",
+    "author": "Daderot"
+   }
+  },
+  "japan/itsukushima": {
+   "name": "Itsukushima Shrine & floating torii",
+   "description": "The shrine and its great torii gate, which seems to float at high tide.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6a/20181111_Itsukushima_Shrine_torii-3.jpg/960px-20181111_Itsukushima_Shrine_torii-3.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:20181111 Itsukushima Shrine torii-3.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:20181111_Itsukushima_Shrine_torii-3.jpg",
+    "license": "CC0",
+    "author": "Balon Greyjoy"
+   }
+  },
+  "japan/mt-misen": {
+   "name": "Mt Misen hike or ropeway",
+   "description": "Ropeway or hiking trails up to the summit, with views over the Seto Inland Sea and its islands.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Miyajima-_Part_III_-_Mount_Misen_-_Miyajima512.jpg/960px-Miyajima-_Part_III_-_Mount_Misen_-_Miyajima512.jpg",
+    "width": 960,
+    "height": 720,
+    "title": "File:Miyajima- Part III - Mount Misen - Miyajima512.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Miyajima-_Part_III_-_Mount_Misen_-_Miyajima512.jpg",
+    "license": "CC0",
+    "author": "lumoplank"
+   }
+  },
+  "japan/kenroku-en": {
+   "name": "Kenroku-en Garden",
+   "description": "One of Japan's three great gardens, with ponds, stone lanterns and rope-supported pines.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Kenrokuen-Kanazawa-garden-01-2006-03-05.JPG/960px-Kenrokuen-Kanazawa-garden-01-2006-03-05.JPG",
+    "width": 960,
+    "height": 642,
+    "title": "File:Kenrokuen-Kanazawa-garden-01-2006-03-05.JPG",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Kenrokuen-Kanazawa-garden-01-2006-03-05.JPG",
+    "license": "Public domain",
+    "author": "No machine-readable author provided. Jovandavid~commonswiki assumed (based on copyright claims)."
+   }
+  },
+  "japan/kanazawa-castle": {
+   "name": "Kanazawa Castle Park",
+   "description": "Reconstructed turrets and gates with white-walled storehouses, next to Kenroku-en.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7e/Kanazawa-M-5932.jpg/960px-Kanazawa-M-5932.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Kanazawa-M-5932.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Kanazawa-M-5932.jpg",
+    "license": "Public domain",
+    "author": "Fg2"
+   }
+  },
+  "japan/higashi-chaya": {
+   "name": "Higashi Chaya teahouse district",
+   "description": "Wooden teahouses on lattice-fronted streets; some serve tea and sweets topped with gold leaf.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Higashiyamahigashi_-_Kanazawa%2C_Japan_-_DSC00117.jpg/960px-Higashiyamahigashi_-_Kanazawa%2C_Japan_-_DSC00117.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Higashiyamahigashi - Kanazawa, Japan - DSC00117.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Higashiyamahigashi_-_Kanazawa,_Japan_-_DSC00117.jpg",
+    "license": "CC0",
+    "author": "Daderot"
+   }
+  },
+  "japan/omicho-market": {
+   "name": "Omicho Market seafood breakfast",
+   "description": "The city's fresh seafood market, where breakfast is kaisendon, rice bowls piled with sashimi.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Omicho_covered_market_western_entrance%2C_Kanazawa%2C_2016.jpg/960px-Omicho_covered_market_western_entrance%2C_Kanazawa%2C_2016.jpg",
+    "width": 960,
+    "height": 638,
+    "title": "File:Omicho covered market western entrance, Kanazawa, 2016.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Omicho_covered_market_western_entrance,_Kanazawa,_2016.jpg",
+    "license": "CC0",
+    "author": "DimiTalen"
+   }
+  },
+  "japan/kanazawa-21c-museum": {
+   "name": "Contemporary art museum",
+   "description": "A round glass museum with free public spaces and permanent works, including a pool you can look into from below.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9a/21st_Century_Museum_260123.jpg/960px-21st_Century_Museum_260123.jpg",
+    "width": 960,
+    "height": 540,
+    "title": "File:21st Century Museum 260123.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:21st_Century_Museum_260123.jpg",
+    "license": "CC0",
+    "author": "Aspere"
+   }
+  },
+  "japan/nagamachi": {
+   "name": "Nagamachi samurai district",
+   "description": "Earthen walls and narrow lanes of old samurai houses, a few open to visitors.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Tree_-_Nomura_Samurai_Family_Residence_-_Nagamachi_-_Kanazawa%2C_Japan_-_DSC00423.jpg/960px-Tree_-_Nomura_Samurai_Family_Residence_-_Nagamachi_-_Kanazawa%2C_Japan_-_DSC00423.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Tree - Nomura Samurai Family Residence - Nagamachi - Kanazawa, Japan - DSC00423.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Tree_-_Nomura_Samurai_Family_Residence_-_Nagamachi_-_Kanazawa,_Japan_-_DSC00423.jpg",
+    "license": "CC0",
+    "author": "Daderot"
+   }
+  },
+  "japan/gold-leaf": {
+   "name": "Gold-leaf or craft workshop",
+   "description": "Kanazawa produces nearly all of Japan's gold leaf. Try applying it to chopsticks or a small lacquer piece.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/Kishi_Ganku_-_Fusuma-_Tigers_and_Dragon_-_Google_Art_Project.jpg/960px-Kishi_Ganku_-_Fusuma-_Tigers_and_Dragon_-_Google_Art_Project.jpg",
+    "width": 960,
+    "height": 572,
+    "title": "File:Kishi Ganku - Fusuma- Tigers and Dragon - Google Art Project.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Kishi_Ganku_-_Fusuma-_Tigers_and_Dragon_-_Google_Art_Project.jpg",
+    "license": "Public domain",
+    "author": "Kishi Ganku"
+   }
+  },
+  "japan/shirakawa-go": {
+   "name": "Shirakawa-go thatched-roof village",
+   "description": "UNESCO-listed farmhouses with steep thatched roofs. Walk the village, then climb to the viewpoint.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Shirakawa-go_-_Shirakawa161.jpg/960px-Shirakawa-go_-_Shirakawa161.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Shirakawa-go - Shirakawa161.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Shirakawa-go_-_Shirakawa161.jpg",
+    "license": "CC0",
+    "author": "lumoplank"
+   }
+  },
+  "japan/takayama-old-town": {
+   "name": "Takayama old town stroll",
+   "description": "Preserved merchant streets of dark wooden houses, sake breweries and shops.",
+   "image": null
+  },
+  "japan/hida-beef-ryokan": {
+   "name": "Ryokan onsen & Hida beef dinner",
+   "description": "Soak in the ryokan's bath, then dine on Hida beef, the region's marbled local wagyu.",
+   "image": null
+  },
+  "japan/takayama-morning-market": {
+   "name": "Riverside morning market",
+   "description": "Stalls along the Miyagawa river selling pickles, fruit and crafts from early morning.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Takayama%2C_Part_III_-_Takayama6369.jpg/960px-Takayama%2C_Part_III_-_Takayama6369.jpg",
+    "width": 960,
+    "height": 576,
+    "title": "File:Takayama, Part III - Takayama6369.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Takayama,_Part_III_-_Takayama6369.jpg",
+    "license": "CC0",
+    "author": "lumoplank"
+   }
+  },
+  "japan/takayama-jinya": {
+   "name": "Old town (Sanmachi Suji) & former government house",
+   "description": "An Edo-era regional government building you can walk through, a short stroll from the old town's sake breweries.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Takayama%2C_Part_I_-_Takayama6379.jpg/960px-Takayama%2C_Part_I_-_Takayama6379.jpg",
+    "width": 960,
+    "height": 610,
+    "title": "File:Takayama, Part I - Takayama6379.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Takayama,_Part_I_-_Takayama6379.jpg",
+    "license": "CC0",
+    "author": "lumoplank"
+   }
+  },
+  "japan/nikko": {
+   "name": "Nikko day trip",
+   "description": "The ornate Toshogu Shrine and a forested temple complex, about two hours from Tokyo.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/Toshogu_Shrine%2C_Nikko_-_ToshoguShrine7869.jpg/960px-Toshogu_Shrine%2C_Nikko_-_ToshoguShrine7869.jpg",
+    "width": 960,
+    "height": 639,
+    "title": "File:Toshogu Shrine, Nikko - ToshoguShrine7869.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Toshogu_Shrine,_Nikko_-_ToshoguShrine7869.jpg",
+    "license": "CC0",
+    "author": "lumoplank"
+   }
+  },
+  "japan/itsukushima-night": {
+   "name": "Illuminated torii after day-trippers leave",
+   "description": "After the day-trippers leave, the torii is lit and the island goes quiet.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9e/Itsukushima-jinja_torii_%28Miyajima%29_-_DSC01965.JPG/960px-Itsukushima-jinja_torii_%28Miyajima%29_-_DSC01965.JPG",
+    "width": 960,
+    "height": 720,
+    "title": "File:Itsukushima-jinja torii (Miyajima) - DSC01965.JPG",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Itsukushima-jinja_torii_(Miyajima)_-_DSC01965.JPG",
+    "license": "CC0",
+    "author": "Daderot"
+   }
+  },
+  "japan/hida-folk-village": {
+   "name": "Hida open-air folk village",
+   "description": "A hillside village of relocated thatched farmhouses, with craft demonstrations.",
+   "image": null
+  },
+  "japan/hida-cycling": {
+   "name": "Countryside cycling tour",
+   "description": "Rent bikes and ride between rice paddies and farm villages outside Takayama.",
+   "image": null
+  },
+  "japan/kurama-kibune": {
+   "name": "Kurama to Kibune mountain hike",
+   "description": "A forest hike from Kurama temple over the mountain to Kibune, ending at riverside restaurants.",
+   "image": null
+  },
+  "japan/philosophers-path": {
+   "name": "Philosopher's Path & Ginkaku-ji",
+   "description": "A canal-side path lined with cherry trees, ending at the silver pavilion of Ginkaku-ji.",
+   "image": {
+    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Japan_Spring_Down_the_Philosopher%27s_Path_%2814164491752%29.jpg/960px-Japan_Spring_Down_the_Philosopher%27s_Path_%2814164491752%29.jpg",
+    "width": 960,
+    "height": 640,
+    "title": "File:Japan Spring Down the Philosopher's Path (14164491752).jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Japan_Spring_Down_the_Philosopher%27s_Path_(14164491752).jpg",
+    "license": "CC0",
+    "author": "Yiannis Theologos Michellis"
+   }
+  }
+ },
+ "destinations": {
+  "japan": {
+   "name": "Japan",
+   "description": "An island country where ancient temples, mountain villages and neon cities sit within a short, superb train ride of each other.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Mount_Fuji_at_sunset%2C_March_2025.jpg/960px-Mount_Fuji_at_sunset%2C_March_2025.jpg",
+     "width": 960,
+     "height": 640,
+     "title": "File:Mount Fuji at sunset, March 2025.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Mount_Fuji_at_sunset,_March_2025.jpg",
+     "license": "CC0",
+     "author": "Romain Guy from San Francisco, USA"
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/960px-Tsunami_by_hokusai_19th_century.jpg",
+     "width": 960,
+     "height": 645,
+     "title": "File:Tsunami by hokusai 19th century.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Tsunami_by_hokusai_19th_century.jpg",
+     "license": "Public domain",
+     "author": "Katsushika Hokusai"
+    }
+   ]
+  },
+  "japan/tokyo": {
+   "name": "Tokyo",
+   "description": "The capital: quiet shrines, enormous food scenes and distinct neighbourhoods from old Asakusa to Shibuya's neon.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Tokyo_skyline_2.jpg/960px-Tokyo_skyline_2.jpg",
+     "width": 960,
+     "height": 720,
+     "title": "File:Tokyo skyline 2.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Tokyo_skyline_2.jpg",
+     "license": "Public domain",
+     "author": "No machine-readable author provided. Ningyou assumed (based on copyright claims)."
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/2015-01-17_Skyline_in_Tokyo.jpg/960px-2015-01-17_Skyline_in_Tokyo.jpg",
+     "width": 960,
+     "height": 640,
+     "title": "File:2015-01-17 Skyline in Tokyo.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:2015-01-17_Skyline_in_Tokyo.jpg",
+     "license": "CC0",
+     "author": "╬ಠ益ಠ)"
+    }
+   ]
+  },
+  "japan/kyoto": {
+   "name": "Kyoto",
+   "description": "Japan's former capital, with more than a thousand temples, wooden machiya lanes and Gion's teahouses.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/JP_%E6%97%A5%E6%9C%AC_Japan_%E4%BA%AC%E9%83%BD_Kyoto_%E6%9D%B1%E5%B1%B1%E5%8D%80_Higashiyama-ku_%E6%B8%85%E6%B0%B4%E5%AF%BA_Kiyomizu-dera_Temple_red_house_n_outdoor_stairs_June_2026_N13P_12.jpg/960px-JP_%E6%97%A5%E6%9C%AC_Japan_%E4%BA%AC%E9%83%BD_Kyoto_%E6%9D%B1%E5%B1%B1%E5%8D%80_Higashiyama-ku_%E6%B8%85%E6%B0%B4%E5%AF%BA_Kiyomizu-dera_Temple_red_house_n_outdoor_stairs_June_2026_N13P_12.jpg",
+     "width": 960,
+     "height": 721,
+     "title": "File:JP 日本 Japan 京都 Kyoto 東山區 Higashiyama-ku 清水寺 Kiyomizu-dera Temple red house n outdoor stairs June 2026 N13P 12.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:JP_%E6%97%A5%E6%9C%AC_Japan_%E4%BA%AC%E9%83%BD_Kyoto_%E6%9D%B1%E5%B1%B1%E5%8D%80_Higashiyama-ku_%E6%B8%85%E6%B0%B4%E5%AF%BA_Kiyomizu-dera_Temple_red_house_n_outdoor_stairs_June_2026_N13P_12.jpg",
+     "license": "CC0",
+     "author": "HAGAT hOMSZE"
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/JP_%E6%97%A5%E6%9C%AC_Japan_%E4%BA%AC%E9%83%BD_Kyoto_%E6%9D%B1%E5%B1%B1%E5%8D%80_Higashiyama-ku_%E6%B8%85%E6%B0%B4%E5%AF%BA_Kiyomizu-dera_Temple_red_house_n_outdoor_stairs_June_2026_N13P_08.jpg/960px-JP_%E6%97%A5%E6%9C%AC_Japan_%E4%BA%AC%E9%83%BD_Kyoto_%E6%9D%B1%E5%B1%B1%E5%8D%80_Higashiyama-ku_%E6%B8%85%E6%B0%B4%E5%AF%BA_Kiyomizu-dera_Temple_red_house_n_outdoor_stairs_June_2026_N13P_08.jpg",
+     "width": 960,
+     "height": 721,
+     "title": "File:JP 日本 Japan 京都 Kyoto 東山區 Higashiyama-ku 清水寺 Kiyomizu-dera Temple red house n outdoor stairs June 2026 N13P 08.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:JP_%E6%97%A5%E6%9C%AC_Japan_%E4%BA%AC%E9%83%BD_Kyoto_%E6%9D%B1%E5%B1%B1%E5%8D%80_Higashiyama-ku_%E6%B8%85%E6%B0%B4%E5%AF%BA_Kiyomizu-dera_Temple_red_house_n_outdoor_stairs_June_2026_N13P_08.jpg",
+     "license": "CC0",
+     "author": "HAGAT hOMSZE"
+    }
+   ]
+  },
+  "japan/osaka": {
+   "name": "Osaka",
+   "description": "Japan's kitchen: loud, friendly and built around street food, with a castle and a bright canal district.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/Dotonbori_ao_02.jpg/960px-Dotonbori_ao_02.jpg",
+     "width": 960,
+     "height": 720,
+     "title": "File:Dotonbori ao 02.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Dotonbori_ao_02.jpg",
+     "license": "CC0",
+     "author": "Sakai Yayoi"
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Osaka_Dotonbori_yoru_02.jpg/960px-Osaka_Dotonbori_yoru_02.jpg",
+     "width": 960,
+     "height": 640,
+     "title": "File:Osaka Dotonbori yoru 02.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Osaka_Dotonbori_yoru_02.jpg",
+     "license": "CC0",
+     "author": "Sakai Yayoi"
+    }
+   ]
+  },
+  "japan/hakone": {
+   "name": "Hakone",
+   "description": "A mountain resort of hot springs, art museums and lake views, an easy overnight from Tokyo.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/View_of_Mount_Fuji_from_Onshi_Hakone_Park.jpg/960px-View_of_Mount_Fuji_from_Onshi_Hakone_Park.jpg",
+     "width": 960,
+     "height": 640,
+     "title": "File:View of Mount Fuji from Onshi Hakone Park.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:View_of_Mount_Fuji_from_Onshi_Hakone_Park.jpg",
+     "license": "CC0",
+     "author": "Quercus acuta"
+    }
+   ]
+  },
+  "japan/hiroshima": {
+   "name": "Hiroshima",
+   "description": "A city of peace memorials, a garden, and its own style of okonomiyaki, with Miyajima close by.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Hiroshima_Peace_Memorial_Park_-_HiroshimaPeace128.jpg/960px-Hiroshima_Peace_Memorial_Park_-_HiroshimaPeace128.jpg",
+     "width": 960,
+     "height": 640,
+     "title": "File:Hiroshima Peace Memorial Park - HiroshimaPeace128.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Hiroshima_Peace_Memorial_Park_-_HiroshimaPeace128.jpg",
+     "license": "CC0",
+     "author": "lumoplank"
+    }
+   ]
+  },
+  "japan/miyajima": {
+   "name": "Miyajima",
+   "description": "A sacred island with the torii that seems to float, friendly deer and a forested mountain.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/20181111_Itsukushima_Shrine_torii-2.jpg/960px-20181111_Itsukushima_Shrine_torii-2.jpg",
+     "width": 960,
+     "height": 640,
+     "title": "File:20181111 Itsukushima Shrine torii-2.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:20181111_Itsukushima_Shrine_torii-2.jpg",
+     "license": "CC0",
+     "author": "Balon Greyjoy"
+    }
+   ]
+  },
+  "japan/kanazawa": {
+   "name": "Kanazawa",
+   "description": "A well-kept castle town on the Sea of Japan, with a great garden, samurai lanes and gold-leaf craft.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Higashiyamahigashi_-_Kanazawa%2C_Japan_-_DSC00117.jpg/960px-Higashiyamahigashi_-_Kanazawa%2C_Japan_-_DSC00117.jpg",
+     "width": 960,
+     "height": 640,
+     "title": "File:Higashiyamahigashi - Kanazawa, Japan - DSC00117.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Higashiyamahigashi_-_Kanazawa,_Japan_-_DSC00117.jpg",
+     "license": "CC0",
+     "author": "Daderot"
+    }
+   ]
+  },
+  "japan/takayama": {
+   "name": "Takayama",
+   "description": "A mountain town of old merchant streets, morning markets and sake, in the Japanese Alps.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Takayama%2C_Part_III_-_Takayama6369.jpg/960px-Takayama%2C_Part_III_-_Takayama6369.jpg",
+     "width": 960,
+     "height": 576,
+     "title": "File:Takayama, Part III - Takayama6369.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Takayama,_Part_III_-_Takayama6369.jpg",
+     "license": "CC0",
+     "author": "lumoplank"
+    }
+   ]
+  },
+  "japan/shirakawa-go": {
+   "name": "Shirakawa-go",
+   "description": "A UNESCO village of steep thatched farmhouses in a deep mountain valley.",
+   "images": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Shirakawa-go_-_Shirakawa161.jpg/960px-Shirakawa-go_-_Shirakawa161.jpg",
+     "width": 960,
+     "height": 640,
+     "title": "File:Shirakawa-go - Shirakawa161.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Shirakawa-go_-_Shirakawa161.jpg",
+     "license": "CC0",
+     "author": "lumoplank"
+    }
+   ]
+  }
+ }
+}

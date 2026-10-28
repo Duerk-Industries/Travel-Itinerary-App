@@ -20,10 +20,11 @@ type Props = {
   onBack: () => void;
   onNavigate?: (page: string) => void;
   onFollowTrip?: (code: string) => Promise<string | null>;
+  onDeleteTrip?: (trip: { id: string; name: string }) => void;
   hiddenPages?: Set<string>;
 };
 
-export default function AllTripsTab({ backendUrl, headers, trips, followedTrips, activeTripId, styles, onSelectTrip, onSelectFollowedTrip, onBack, onNavigate, onFollowTrip, hiddenPages }: Props) {
+export default function AllTripsTab({ backendUrl, headers, trips, followedTrips, activeTripId, styles, onSelectTrip, onSelectFollowedTrip, onBack, onNavigate, onFollowTrip, onDeleteTrip, hiddenPages }: Props) {
   const _styleTheme = useStyleTheme();
   const [details, setDetails] = useState<Record<string, Trip>>({});
   const [loading, setLoading] = useState(false);
@@ -90,6 +91,18 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
                       <Text style={styles.homeModalRowMeta}>{trip.startDate ? `${formatDateLong(trip.startDate)}${trip.endDate ? ` – ${formatDateLong(trip.endDate)}` : ''}` : following && !details[trip.id] ? 'Dates unavailable' : trip.durationDays ? `Dates not set · ${trip.durationDays} day(s)` : 'Dates not set'}</Text>
                     </View>
                     {trip.id === activeTripId ? <Text style={styles.homeModalActiveBadge}>Active</Text> : null}
+                    {!following && onDeleteTrip ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete ${trip.name}`}
+                        testID={`all-trips-row-delete-${trip.id}`}
+                        hitSlop={8}
+                        style={({ pressed }: { pressed: boolean }) => [styles.homeModalRowDelete, pressed && styles.homeModalRowDeletePressed]}
+                        onPress={(e: any) => { e?.stopPropagation?.(); onDeleteTrip({ id: trip.id, name: trip.name }); }}
+                      >
+                        <Text style={styles.homeModalRowDeleteText}>🗑 Delete</Text>
+                      </Pressable>
+                    ) : null}
                   </Pressable>
                 ))}
               </View>;

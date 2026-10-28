@@ -52,4 +52,20 @@ describe('All trips page', () => {
       expect(onSelectFollowedTrip).toHaveBeenCalledWith('followed');
     } finally { global.fetch = originalFetch; }
   });
+  it('offers Delete on trips the traveler is on, not on followed trips, without selecting the trip', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'followed', startDate: '2000-01-01', endDate: '2000-01-02' }) });
+    const onDeleteTrip = jest.fn();
+    const onSelectTrip = jest.fn();
+    try {
+      const screen = render(<AllTripsTab backendUrl="http://localhost" headers={{}} trips={[{ id: 'mine', groupId: 'g', name: 'Mine', createdAt: '', startDate: '2099-01-01', endDate: '2099-01-02' }]}
+        followedTrips={[{ tripId: 'followed', tripName: 'Theirs', todayDetails: [] }]} activeTripId={null} styles={{}} onSelectTrip={onSelectTrip}
+        onSelectFollowedTrip={jest.fn()} onDeleteTrip={onDeleteTrip} onBack={jest.fn()} />);
+      await waitFor(() => expect(screen.getByText('Theirs')).toBeTruthy());
+      expect(screen.queryByTestId('all-trips-row-delete-followed')).toBeNull();
+      fireEvent.press(screen.getByTestId('all-trips-row-delete-mine'));
+      expect(onDeleteTrip).toHaveBeenCalledWith({ id: 'mine', name: 'Mine' });
+      expect(onSelectTrip).not.toHaveBeenCalled();
+    } finally { global.fetch = originalFetch; }
+  });
 });

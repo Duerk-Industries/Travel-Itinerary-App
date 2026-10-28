@@ -131,6 +131,8 @@ def emit_seed(t: Template, pack: str, outdir: str) -> str:
         "cities": t.cities,
         "imageQuery": t.image_query,
         "highlights": headlines(t),
+        "destinationKeys": t.destination_keys,
+        "hero": t.hero,
         "sources": t.sources,
         "stays": [
             {"base": s.base, "hotel": s.hotel, "start": s.start, "nights": s.nights, "area": s.area,
@@ -139,7 +141,7 @@ def emit_seed(t: Template, pack: str, outdir: str) -> str:
         ],
         "activities": [
             {"day": a.day, "type": a.type, "time": a.time, "duration": a.dur, "name": a.name, "notes": a.notes,
-             "where": a.where, "book": a.book}
+             "where": a.where, "book": a.book, "place": t.place_keys.get(a.name, "")}
             for a in sorted((x for x in t.acts if isinstance(x, Act)), key=lambda x: (x.day, x.time or "99:99"))
         ],
         "legs": [
