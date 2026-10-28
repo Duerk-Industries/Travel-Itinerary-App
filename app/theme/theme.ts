@@ -16,6 +16,9 @@ export type AppTheme = {
     link: string;
     nature: string;
     cta: string;
+    ctaGradientStart: string;
+    ctaGradientEnd: string;
+    changeTripSurface: string;
     alert: string;
     premium: string;
     success: string;
@@ -96,32 +99,35 @@ export const hitSlop = {
 const lightTheme: AppTheme = {
   mode: 'light',
   colors: {
-    background: '#FAFCFD',
-    backgroundAlt: '#F2F5F7',
+    background: '#FFFFFF', // Previously #FAFCFD
+    backgroundAlt: '#F5F5F5', // Previously #F2F5F7
     surface: '#FFFFFF',
-    surfaceMuted: '#F2F5F7',
-    text: '#111827',
-    textMuted: '#626C79',
-    border: '#E6ECEF',
-    primary: '#152944',
-    link: '#45B7C6',
-    nature: '#5E6B3F',
-    cta: '#F59E0B',
+    surfaceMuted: '#F4F4F4', // Previously #F2F5F7
+    text: '#0A0A0A', // Previously #111827
+    textMuted: '#6B6B6B', // Previously #626C79
+    border: '#E8E8E8', // Previously #E6ECEF
+    primary: '#0A0A0A', // Previously #152944
+    link: '#0A0A0A', // Previously #45B7C6
+    nature: '#3F3F3F', // Previously #5E6B3F
+    ctaGradientStart: '#2B2B2B',
+    ctaGradientEnd: '#050505',
+    changeTripSurface: 'rgba(255,255,255,0.85)', // Previously translucent navy via overlay
+    cta: '#141414', // Previously #F59E0B
     alert: '#E76F51',
-    premium: '#D97706',
+    premium: '#8A6D2B', // Previously #D97706
     success: '#2E7D32',
     warning: '#ED6C02',
     error: '#C62828',
     info: '#0288D1',
-    onPrimary: '#E6ECEF',
+    onPrimary: '#FFFFFF', // Previously #E6ECEF
     transparent: 'transparent',
     scrim: 'rgba(0,0,0,0.5)',
     overlay: 'rgba(21,41,68,0.45)',
     onAccent: '#FFFFFF',
-    linkText: '#152944',
-    accentSurface: '#EFFAFB',
-    accentBorder: '#9DCFD6',
-    accentAction: '#152944',
+    linkText: '#0A0A0A', // Previously #152944
+    accentSurface: '#F4F4F4', // Previously #EFFAFB
+    accentBorder: '#E8E8E8', // Previously #9DCFD6
+    accentAction: '#0A0A0A', // Previously #152944
     dangerText: '#B91C1C',
     dangerSurface: '#FFF1F2',
     dangerBorder: '#BE123C',
@@ -132,14 +138,14 @@ const lightTheme: AppTheme = {
     warningText: '#854D0E',
     warningSurface: '#FFFBEB',
     warningAction: '#854D0E',
-    premiumText: '#6D28D9',
-    premiumSurface: '#F5F3FF',
-    premiumBorder: '#7C3AED',
-    premiumAction: '#6D28D9',
-    onCta: '#0B1726',
-    selectedSurface: '#152944',
+    premiumText: '#705820', // Previously #6D28D9
+    premiumSurface: '#FAF7EF', // Previously #F5F3FF
+    premiumBorder: '#8A6D2B', // Previously #7C3AED
+    premiumAction: '#705820', // Previously #6D28D9
+    onCta: '#FFFFFF', // Previously #0B1726
+    selectedSurface: '#0A0A0A', // Previously #152944
     onSelected: '#FFFFFF',
-    onSurface: '#111827',
+    onSurface: '#0A0A0A', // Previously #111827
   },
   typography: {
     display: 44,
@@ -160,32 +166,35 @@ const lightTheme: AppTheme = {
 const darkTheme: AppTheme = {
   mode: 'dark',
   colors: {
-    background: '#0B1726',
-    backgroundAlt: '#1C2B3A',
-    surface: '#243647',
-    surfaceMuted: '#1C2B3A',
-    text: '#E6ECEF',
-    textMuted: '#B8C2CC',
-    border: '#385266',
-    primary: '#152944',
-    link: '#5FD2E0',
-    nature: '#7E8D5A',
-    cta: '#F59E0B',
+    background: '#000000', // Previously #0B1726
+    backgroundAlt: '#111111', // Previously #1C2B3A
+    surface: '#161616', // Previously #243647
+    surfaceMuted: '#111111', // Previously #1C2B3A
+    text: '#F5F5F5', // Previously #E6ECEF
+    textMuted: '#A3A3A3', // Previously #B8C2CC
+    border: '#2A2A2A', // Previously #385266
+    primary: '#1F1F1F', // Previously #152944
+    link: '#F5F5F5', // Previously #5FD2E0
+    nature: '#BDBDBD', // Previously #7E8D5A
+    ctaGradientStart: '#FFFFFF',
+    ctaGradientEnd: '#D9D9D9',
+    changeTripSurface: 'rgba(255,255,255,0.85)', // Previously translucent black via overlay
+    cta: '#F2F2F2', // Previously #F59E0B
     alert: '#E76F51',
-    premium: '#D97706',
-    success: '#2E7D32',
-    warning: '#ED6C02',
-    error: '#C62828',
-    info: '#0288D1',
-    onPrimary: '#E6ECEF',
+    premium: '#D4B26A', // Previously #D97706
+    success: '#4CAF50', // Previously #2E7D32
+    warning: '#FF9800', // Previously #ED6C02
+    error: '#EF5350', // Previously #C62828
+    info: '#4FC3F7', // Previously #0288D1
+    onPrimary: '#FFFFFF', // Previously #E6ECEF
     transparent: 'transparent',
     scrim: 'rgba(0,0,0,0.65)',
     overlay: 'rgba(0,0,0,0.65)',
     onAccent: '#FFFFFF',
-    linkText: '#5FD2E0',
-    accentSurface: '#163D46',
-    accentBorder: '#397783',
-    accentAction: '#152944',
+    linkText: '#F5F5F5', // Previously #5FD2E0
+    accentSurface: '#111111', // Previously #163D46
+    accentBorder: '#2A2A2A', // Previously #397783
+    accentAction: '#1F1F1F', // Previously #152944
     dangerText: '#FDA4AF',
     dangerSurface: '#471F2B',
     dangerBorder: '#FB7185',
@@ -196,24 +205,28 @@ const darkTheme: AppTheme = {
     warningText: '#FDE68A',
     warningSurface: '#423619',
     warningAction: '#854D0E',
-    premiumText: '#D8B4FE',
-    premiumSurface: '#382453',
-    premiumBorder: '#C4B5FD',
-    premiumAction: '#6D28D9',
-    onCta: '#0B1726',
-    selectedSurface: '#5FD2E0',
-    onSelected: '#0B1726',
-    onSurface: '#E6ECEF',
+    premiumText: '#D4B26A', // Previously #D8B4FE
+    premiumSurface: '#30291B', // Previously #382453
+    premiumBorder: '#D4B26A', // Previously #C4B5FD
+    premiumAction: '#705820', // Previously #6D28D9
+    onCta: '#0A0A0A', // Previously #0B1726
+    selectedSurface: '#F5F5F5', // Previously #5FD2E0
+    onSelected: '#0A0A0A', // Previously #0B1726
+    onSurface: '#F5F5F5', // Previously #E6ECEF
   },
   typography: lightTheme.typography,
   spacing: lightTheme.spacing,
 };
 
-/**
- * Color for text that acts as a link or button label. The teal `link` color reads well on dark surfaces but is only
- * about 2.4:1 on white, so light mode uses the navy `primary`, as the rest of the app does.
- */
-export const linkTextColor = (theme: AppTheme): string => (theme.mode === 'dark' ? theme.colors.link : theme.colors.primary);
+/** Semantic link foreground, readable on standard surfaces in either appearance. */
+export const linkTextColor = (theme: AppTheme): string => theme.colors.linkText;
+
+/** Shared gradient with a solid CTA fallback; visual definitions stay in this file. */
+const ctaGradientStyle = (theme: AppTheme) => ({
+  backgroundColor: theme.colors.cta,
+  [Platform.OS === 'web' ? 'backgroundImage' : 'experimental_backgroundImage']:
+    `linear-gradient(180deg, ${theme.colors.ctaGradientStart}, ${theme.colors.ctaGradientEnd})`,
+});
 
 export const getAppTheme = (
   appearancePreference: AppearancePreference,
@@ -1049,7 +1062,7 @@ const styleFactories = {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: _theme.colors.premiumAction,
+    ...ctaGradientStyle(_theme), // Previously premiumAction
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
@@ -1821,7 +1834,7 @@ const styleFactories = {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: _theme.colors.accentSurface,
+    ...ctaGradientStyle(_theme), // Previously accentSurface
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
@@ -2328,10 +2341,12 @@ const styleFactories = {
   // components/DestinationPlaceholderCard.tsx
   components_DestinationPlaceholderCard_5: (_theme: AppTheme, { labelShadow }: ThemeStyleValues): any => ({ color: _theme.colors.onAccent, fontSize: 22, fontWeight: '800', ...labelShadow }),
   // components/DestinationPlaceholderCard.tsx
+  // Previous placeholder pairs: accentSurface/accentSurface, premiumAction/premiumAction,
+  // dangerAction/dangerAction, accentSurface/accentSurface, surfaceMuted/surfaceMuted, successAction/successAction.
   components_DestinationPlaceholderCard_6: (_theme: AppTheme, {  }: ThemeStyleValues): any => ([
-  [_theme.colors.accentSurface, _theme.colors.accentSurface], [_theme.colors.premiumAction, _theme.colors.premiumAction], [_theme.colors.dangerAction, _theme.colors.dangerAction],
-  [_theme.colors.accentSurface, _theme.colors.accentSurface], [_theme.colors.surfaceMuted, _theme.colors.surfaceMuted], [_theme.colors.successAction, _theme.colors.successAction],
-]),
+    ['#0A0A0A', '#3A3A3A'], ['#141414', '#4A4A4A'], ['#1C1C1C', '#525252'],
+    ['#242424', '#5A5A5A'], ['#2C2C2C', '#626262'], ['#343434', '#6A6A6A'],
+  ]),
   // components/DestinationPlaceholderCard.tsx
   components_DestinationPlaceholderCard_7: (_theme: AppTheme, { Platform }: ThemeStyleValues): any => (Platform.OS === 'web'
   ? { textShadow: '0px 1px 3px rgba(0,0,0,0.3)' }
@@ -5358,7 +5373,7 @@ const styleFactories = {
   // tabs/AdminTab.tsx
   tabs_AdminTab_241: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta }),
   // tabs/AdminTab.tsx
-  tabs_AdminTab_242: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta, marginTop: 8 }),
+  tabs_AdminTab_242: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ ...ctaGradientStyle(theme), marginTop: 8 }),
   // tabs/AdminTab.tsx
   tabs_AdminTab_243: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.textMuted }),
   // tabs/AdminTab.tsx
@@ -5422,7 +5437,7 @@ const styleFactories = {
   // tabs/AdminTab.tsx
   tabs_AdminTab_273: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.textMuted }),
   // tabs/AdminTab.tsx
-  tabs_AdminTab_274: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta, marginTop: 8 }),
+  tabs_AdminTab_274: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ ...ctaGradientStyle(theme), marginTop: 8 }),
   // tabs/AdminTab.tsx
   tabs_AdminTab_275: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.text }),
   // tabs/AdminTab.tsx
@@ -5482,7 +5497,7 @@ const styleFactories = {
   // tabs/AdminTab.tsx
   tabs_AdminTab_303: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 8, borderRadius: 6, minHeight: 140, textAlignVertical: 'top' }),
   // tabs/AdminTab.tsx
-  tabs_AdminTab_304: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme.colors.cta, padding: 10, borderRadius: 6, alignSelf: 'flex-start' }),
+  tabs_AdminTab_304: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ ...ctaGradientStyle(theme), padding: 10, borderRadius: 6, alignSelf: 'flex-start' }),
   // tabs/AdminTab.tsx
   tabs_AdminTab_305: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.text, fontWeight: '700' }),
   // tabs/AdminTab.tsx
@@ -6554,7 +6569,7 @@ const styleFactories = {
   // tabs/overview.tsx
   tabs_overview_95: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', gap: 8, marginTop: 8 }),
   // tabs/overview.tsx
-  tabs_overview_96: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
+  tabs_overview_96: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted), // Previously linkText
   // tabs/traits.tsx
   tabs_traits_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10 }),
   // tabs/traits.tsx
@@ -7410,14 +7425,14 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFo
     position: 'absolute',
     right: 14,
     bottom: 14,
-    backgroundColor: (theme ?? getAppTheme('light', 'light')).colors.overlay,
+    backgroundColor: (theme ?? getAppTheme('light', 'light')).colors.changeTripSurface,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
     maxWidth: '90%',
   }),
   homeHeroChangeTripText: ({
-    color: (theme ?? getAppTheme('light', 'light')).colors.onAccent,
+    color: lightTheme.colors.text,
     fontSize: 12,
     fontWeight: '700',
   }),
@@ -7638,7 +7653,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFo
     backgroundColor: theme.colors.surface,
   }),
   button: ({
-    backgroundColor: theme.colors.cta,
+    ...ctaGradientStyle(theme),
     padding: 10,
     borderRadius: 6,
     alignItems: 'center',

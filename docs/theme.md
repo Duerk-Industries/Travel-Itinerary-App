@@ -25,7 +25,7 @@ Use semantic color pairs:
 | Status message | `dangerSurface`, `successSurface`, `warningSurface`, `premiumSurface` | Matching `*Text` token |
 | Solid status action | Matching `*Action` token | `onAccent` |
 
-Do not use the decorative `link` accent as small text on light backgrounds. Exported documents have their own centralized paper palettes, so printing does not inherit a dark screen background. Brand logo colors are also defined centrally and retain their required colors.
+The screen palettes use neutral graphite colors with mode-specific CTA gradients (`ctaGradientStart` / `ctaGradientEnd`), matching `onCta` text, and muted gold premium accents. Previous color values are preserved beside the tokens in comments. Placeholder card pairs and the translucent white Change Trip pill also live in `theme.ts`. Use `linkText` for link labels. Exported documents have their own centralized paper palettes, so printing does not inherit a dark screen background. Brand logo colors are also defined centrally and retain their required colors.
 
 ## Checks
 

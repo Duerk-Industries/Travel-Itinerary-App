@@ -34,8 +34,8 @@ describe.each(['light', 'dark'] as const)('%s theme text contrast', (mode) => {
   });
 });
 
-it('the teal accent alone would fail in light mode, which is why links use the navy there', () => {
+it('uses a readable neutral link color in light mode', () => {
   const light = getAppTheme('light', 'light');
-  expect(ratio(light.colors.link, light.colors.surface)).toBeLessThan(AA);
+  expect(light.colors.link).toBe(light.colors.text);
   expect(ratio(linkTextColor(light), light.colors.surface)).toBeGreaterThanOrEqual(AA);
 });
