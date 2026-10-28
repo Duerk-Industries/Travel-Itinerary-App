@@ -37,7 +37,7 @@ describe('CORS configuration', () => {
 
   // Regression: logging in on a PR preview link returned "Internal server error." because the
   // browser sends the preview's Origin on POST and it wasn't allowed.
-  it('allows this project's Firebase preview channel origins', async () => {
+  it("allows this project's Firebase preview channel origins", async () => {
     const origin = 'https://travel-itinerary-app-483623--pr-128-e7ue3knb.web.app';
     const res = await request(app)
       .options('/api/web-auth/login')
