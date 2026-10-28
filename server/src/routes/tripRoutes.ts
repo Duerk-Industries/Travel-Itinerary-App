@@ -1,6 +1,8 @@
 import { ensureUserInTrip, getFeatureFlag } from '../db';
 import { getPlanningDayPoints } from '../services/planningPointsService';
 import { locateTripItem } from '../services/locateItemService';
+import { daysBetween, shiftEstimatedItems } from '../services/tripDateShiftService';
+import { logError } from '../logger';
 import { geocoderConfigured, getGeocoder } from '../services/geocoder';
 import { z } from 'zod';
 import { getEnvFlag } from '../env';
@@ -1055,6 +1057,8 @@ router.patch('/:id', async (req, res) => {
       res.status(403).json({ error: 'Non-admin users cannot update a trip to end in the past.' });
       return;
     }
+    // A placeholder start (a trip created with only a month) is replaced by real dates: suggested items follow it.
+    const before: any = dateMode === 'range' && typeof startDate === 'string' ? await getTripById(req.params.id).catch(() => null) : null;
     const updated = await updateTripDetails(userId, req.params.id, {
       ...(hasDescription ? { description: typeof description === 'string' ? description : null } : {}),
       ...(hasNotes ? { notes: typeof notes === 'string' ? notes : null } : {}),
@@ -1069,6 +1073,11 @@ router.patch('/:id', async (req, res) => {
       dateMode: dateMode === 'month' || dateMode === 'range' ? dateMode : undefined,
       currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : null,
     });
+    if (before && Number(before.startMonth) > 0 && before.startDate) {
+      const previous = before.startDate instanceof Date ? before.startDate.toISOString() : String(before.startDate);
+      await shiftEstimatedItems(userId, req.params.id, daysBetween(previous, startDate))
+        .catch((err) => logError('[trip-dates] suggested items not moved', err));
+    }
     res.json(updated);
   } catch (err) {
     const message = (err as Error).message;

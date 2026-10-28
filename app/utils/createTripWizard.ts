@@ -125,7 +125,7 @@ export const validateTripDates = (dates: TripDates): string | null => {
   const { startMonth, startYear, durationDays } = dates;
   if (!startMonth && !startYear && !durationDays) return null;
   if (!startMonth || !startYear || !durationDays) {
-    return 'Enter month, year, and number of days.';
+    return 'Enter a month and number of days.';
   }
   const monthNum = Number(startMonth);
   const yearNum = Number(startYear);

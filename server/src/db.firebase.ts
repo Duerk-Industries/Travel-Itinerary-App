@@ -9948,6 +9948,37 @@ export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<
   await ref.set({ ...template, enabled, updatedAt: nowIso() });
 };
 
+export type EstimatedItemType = 'activity' | 'lodging' | 'transfer';
+export type EstimatedItem = { type: EstimatedItemType; id: string };
+
+// Mirrors the Postgres trip_estimated_items table: one document per marked item.
+export const addTripEstimatedItems = async (tripId: string, items: EstimatedItem[]): Promise<void> => {
+  const batch = getDb().batch();
+  for (const item of items) {
+    batch.set(getDb().collection('trip_estimated_items').doc(`${item.type}_${item.id}`), { tripId, itemType: item.type, itemId: item.id, createdAt: nowIso() });
+  }
+  await batch.commit();
+};
+
+export const listTripEstimatedItems = async (tripId: string): Promise<EstimatedItem[]> => {
+  const snap = await getDb().collection('trip_estimated_items').where('tripId', '==', tripId).get();
+  return snap.docs.map((doc) => {
+    const data = doc.data() as any;
+    return { type: data.itemType as EstimatedItemType, id: String(data.itemId) };
+  });
+};
+
+export const removeTripEstimatedItem = async (type: EstimatedItemType, itemId: string): Promise<void> => {
+  await getDb().collection('trip_estimated_items').doc(`${type}_${itemId}`).delete();
+};
+
+export const clearTripEstimatedItems = async (tripId: string): Promise<void> => {
+  const snap = await getDb().collection('trip_estimated_items').where('tripId', '==', tripId).get();
+  const batch = getDb().batch();
+  snap.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+};
+
 export const listTripTemplates = async (options: { enabledOnly?: boolean } = {}): Promise<TripTemplateRecord[]> => {
   const snap = await getDb().collection('trip_templates').get();
   return snap.docs

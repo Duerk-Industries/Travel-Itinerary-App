@@ -126,6 +126,45 @@ describe('trip templates API', () => {
     expect(transfers.every((t) => t.transferType === 'Public Transit' || t.transfer_type === 'Public Transit')).toBe(true);
   });
 
+  it('moves suggested items when a placeholder start becomes real dates, but not ones the traveler saved', async () => {
+    const template = (await request(app).get('/api/trip-templates?countries=Japan&maxDays=10').set(auth()).expect(200)).body.templates.find((t: any) => t.days === 7);
+    const created = await request(app).post(`/api/trip-templates/${template.id}/trip`).set(auth())
+      .send({ startDate: '2027-04-01', endDate: '2027-04-07', startMonth: 4, startYear: 2027, locationIds: ['country:japan'] }).expect(201);
+    const tripId = created.body.trip.id as string;
+    const read = async (kind: string) => (await request(app).get(`/api/${kind}?tripId=${tripId}`).set(auth()).expect(200)).body as any[];
+    const before = { activities: await read('activities'), lodgings: await read('lodgings'), transfers: await read('transfers') };
+    const day = (value: string) => String(value).slice(0, 10);
+
+    // The traveler confirms one activity by saving it with a date of their own.
+    const confirmed = before.activities[0];
+    await request(app).put(`/api/activities/${confirmed.id}`).set(auth()).send({ date: day(confirmed.date) }).expect(200);
+
+    await request(app).patch(`/api/trips/${tripId}`).set(auth())
+      .send({ dateMode: 'range', startDate: '2027-04-11', endDate: '2027-04-17' }).expect(200);
+
+    const after = { activities: await read('activities'), lodgings: await read('lodgings'), transfers: await read('transfers') };
+    const byId = (rows: any[]) => new Map(rows.map((row) => [row.id, row]));
+    const activitiesAfter = byId(after.activities);
+    for (const old of before.activities) {
+      const expected = old.id === confirmed.id ? day(old.date) : new Date(Date.parse(`${day(old.date)}T00:00:00Z`) + 10 * 86400000).toISOString().slice(0, 10);
+      expect(day(activitiesAfter.get(old.id).date)).toBe(expected);
+    }
+    const lodgingsAfter = byId(after.lodgings);
+    for (const old of before.lodgings) {
+      expect(day(lodgingsAfter.get(old.id).checkInDate)).toBe(new Date(Date.parse(`${day(old.checkInDate)}T00:00:00Z`) + 10 * 86400000).toISOString().slice(0, 10));
+    }
+    const transfersAfter = byId(after.transfers);
+    for (const old of before.transfers) {
+      expect(day(transfersAfter.get(old.id).departureDate)).toBe(new Date(Date.parse(`${day(old.departureDate)}T00:00:00Z`) + 10 * 86400000).toISOString().slice(0, 10));
+    }
+
+    // The dates are real now, so a further change to the trip's dates leaves the items alone.
+    await request(app).patch(`/api/trips/${tripId}`).set(auth()).send({ dateMode: 'range', startDate: '2027-04-21', endDate: '2027-04-27' }).expect(200);
+    expect(day((await read('lodgings')).find((l) => l.id === before.lodgings[0].id).checkInDate)).toBe(day(lodgingsAfter.get(before.lodgings[0].id).checkInDate));
+    // Free-tier trips are limited, so leave room for the tests that follow.
+    await request(app).delete(`/api/trips/${tripId}`).set(auth()).expect(204);
+  });
+
   it('lists only templates that fit maxDays', async () => {
     const all = (await request(app).get('/api/trip-templates?countries=Japan').set(auth()).expect(200)).body.templates as any[];
     const fitting = (await request(app).get('/api/trip-templates?countries=Japan&maxDays=10').set(auth()).expect(200)).body.templates as any[];

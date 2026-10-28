@@ -5,7 +5,7 @@ import PayerSelect from '../components/PayerSelect';
 import { singlePayerIds } from '../utils/payerSelection';
 import type { ImportTripDraft } from '../../server/src/types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import type { Trait } from './traits';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from './transfers';
@@ -23,7 +23,7 @@ import { renderRichTextBlocks } from '../utils/richText';
 import { formatDateLong } from '../utils/formatDateLong';
 import { ActivityTab, type Tour, buildActivityPayload } from './activities';
 import { type CarRental, type CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './carRentals';
-import { computeDurationFromRange, formatMonthYear } from '../utils/tripDates';
+import { computeDurationFromRange, computeEndDateFromDuration, formatMonthYear, nextMonthStart } from '../utils/tripDates';
 import { budgetRangeFromComfort } from '../utils/aiItineraryRequest';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -335,6 +335,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (!selectedLocations.length) return null;
     return selectedLocations.map((loc) => loc.name).join(', ');
   }, [selectedLocations]);
+  // A trip that only knows its month gets a placeholder start on the 1st of that month's next occurrence.
+  const monthPlaceholder = useMemo(() => {
+    if (dates.mode === 'range') return null;
+    const startDate = nextMonthStart(Number(dates.startMonth));
+    if (!startDate) return null;
+    return { startDate, endDate: computeEndDateFromDuration(startDate, Number(dates.durationDays)) ?? '' };
+  }, [dates.mode, dates.startMonth, dates.durationDays]);
+  // "Dates not set" asks for a month in a popup, so the trip still gets a placeholder start.
+  const [monthPromptOpen, setMonthPromptOpen] = useState(false);
+  const chooseUndatedMonth = useCallback((value: string) => {
+    setDates((prev) => ({ ...prev, startMonth: value, startYear: value ? (nextMonthStart(Number(value))?.slice(0, 4) ?? '') : '' }));
+    setMonthPromptOpen(false);
+  }, []);
   const wizardTripDefaults = useMemo<Trip>(
     () => ({
       id: 'wizard',
@@ -344,14 +357,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       description: details.description || null,
       destination: selectedLocationLabel || null,
       departureLocation: itineraryDepartureAirport.trim() || null,
-      startDate: dates.mode === 'range' ? dates.startDate || null : null,
-      endDate: dates.mode === 'range' ? dates.endDate || null : null,
-      startMonth: dates.mode === 'month' ? Number(dates.startMonth) || null : null,
-      startYear: dates.mode === 'month' ? Number(dates.startYear) || null : null,
+      startDate: dates.mode === 'range' ? dates.startDate || null : monthPlaceholder?.startDate ?? null,
+      endDate: dates.mode === 'range' ? dates.endDate || null : monthPlaceholder?.endDate ?? null,
+      startMonth: dates.mode !== 'range' ? Number(dates.startMonth) || null : null,
+      startYear: dates.mode !== 'range' ? Number(dates.startYear) || null : null,
       durationDays: dates.mode !== 'range' ? Number(dates.durationDays) || null : null,
       createdAt: new Date().toISOString(),
     }),
-    [dates, details, itineraryDepartureAirport, selectedLocationLabel]
+    [dates, details, itineraryDepartureAirport, monthPlaceholder, selectedLocationLabel]
   );
   const computedDays = useMemo(() => computeTripDays(dates.startDate, dates.endDate), [dates.startDate, dates.endDate]);
   const monthLabel = useMemo(
@@ -375,13 +388,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     ],
     []
   );
-  const yearOptions = useMemo<SelectFieldOption[]>(() => {
-    const start = new Date().getFullYear();
-    return Array.from({ length: 11 }, (_, i) => {
-      const year = String(start + i);
-      return { label: year, value: year };
-    });
-  }, []);
+  const monthLabelShort = useMemo(() => monthOptions.find((option) => option.value === dates.startMonth)?.label ?? '', [monthOptions, dates.startMonth]);
   const dayOptions = useMemo<SelectFieldOption[]>(
     () => Array.from({ length: 90 }, (_, i) => {
       const day = String(i + 1);
@@ -824,7 +831,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           error = 'Select both a start and end date.';
         }
       } else if (dateModeSelected === 'month' && (!dates.startMonth || !dates.startYear || !dates.durationDays)) {
-        error = 'Select a month, year, and number of days.';
+        error = 'Select a month and number of days.';
       }
     }
     if (stepIndex === 1 && !error) error = validateTripDates(dates);
@@ -1144,10 +1151,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           description: description.trim() || undefined,
           locationIds: selectedLocations.map((location) => location.id),
           mustSeeAttractions: selectedMustSeeAttractions.map((item) => item.name).filter(Boolean),
-          startDate: dates.mode === 'range' ? dates.startDate || undefined : undefined,
-          endDate: dates.mode === 'range' ? dates.endDate || undefined : undefined,
-          startMonth: dates.mode === 'month' ? Number(dates.startMonth) || undefined : undefined,
-          startYear: dates.mode === 'month' ? Number(dates.startYear) || undefined : undefined,
+          startDate: dates.mode === 'range' ? dates.startDate || undefined : monthPlaceholder?.startDate,
+          endDate: dates.mode === 'range' ? dates.endDate || undefined : monthPlaceholder?.endDate,
+          startMonth: dates.mode !== 'range' ? Number(dates.startMonth) || undefined : undefined,
+          startYear: dates.mode !== 'range' ? Number(dates.startYear) || undefined : undefined,
           durationDays: dates.mode !== 'range' ? Number(dates.durationDays) || undefined : undefined,
           participants: participantPayload,
         }),
@@ -1319,11 +1326,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       <Text style={styles.modalLabel}>Dates</Text>
       <View style={[styles.row, themeStyle('tabs_createTripWizard_layout1', {  }, (theme ?? _styleTheme))]}>
         <TouchableOpacity testID="quick-start-dates-scheduled" accessibilityRole="button" accessibilityState={{ selected: dates.mode === 'range' }} style={[styles.button, styles.smallButton]} onPress={() => setDates((prev) => ({ ...prev, mode: 'range' }))}><Text style={styles.buttonText}>Set dates</Text></TouchableOpacity>
-        <TouchableOpacity testID="quick-start-dates-unscheduled" accessibilityRole="button" accessibilityState={{ selected: dates.mode === 'duration' }} style={[styles.button, styles.smallButton]} onPress={() => setDates((prev) => ({ ...prev, mode: 'duration' }))}><Text style={styles.buttonText}>Dates not set</Text></TouchableOpacity>
+        <TouchableOpacity testID="quick-start-dates-unscheduled" accessibilityRole="button" accessibilityState={{ selected: dates.mode === 'duration' }} style={[styles.button, styles.smallButton]} onPress={() => { setDates((prev) => ({ ...prev, mode: 'duration' })); setMonthPromptOpen(true); }}><Text style={styles.buttonText}>Dates not set</Text></TouchableOpacity>
       </View>
       {dates.mode === 'duration' ? <View>
         <Text style={styles.modalLabel}>Trip length (days)</Text>
         <TextInput testID="quick-start-trip-length" accessibilityLabel="Trip length in days" keyboardType="number-pad" style={styles.input} value={dates.durationDays} onChangeText={(durationDays) => setDates((prev) => ({ ...prev, durationDays }))} />
+        <TouchableOpacity testID="wizard-month-change" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => setMonthPromptOpen(true)}><Text style={styles.buttonText}>{monthLabelShort ? `Around ${monthLabelShort}: change` : 'Choose a month'}</Text></TouchableOpacity>
       </View> : <>
 
       <View style={[styles.row, themeStyle('tabs_createTripWizard_11', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
@@ -1356,8 +1364,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         backendUrl={backendUrl}
         headers={wizardJsonHeaders}
         selectedLocations={selectedLocations}
-        startDate={dates.mode === 'range' ? dates.startDate : ''}
-        endDate={dates.mode === 'range' ? dates.endDate : ''}
+        startDate={dates.mode === 'range' ? dates.startDate : monthPlaceholder?.startDate ?? ''}
+        endDate={dates.mode === 'range' ? dates.endDate : monthPlaceholder?.endDate ?? ''}
+        startMonth={monthPlaceholder ? Number(dates.startMonth) : null}
         tripDays={dates.mode === 'range' ? computedDays : Number(dates.durationDays) || null}
         tripName={details.name}
         styles={styles}
@@ -1472,7 +1481,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   Flexible Timeline
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity testID="wizard-dates-unscheduled" accessibilityRole="button" accessibilityState={{ selected: dateModeSelected === 'duration' }} style={[styles.button, styles.smallButton, dateModeSelected === 'duration' && styles.toggleActive]} onPress={() => { setDateModeSelected('duration'); setDates((prev) => ({ ...prev, mode: 'duration' })); }}>
+              <TouchableOpacity testID="wizard-dates-unscheduled" accessibilityRole="button" accessibilityState={{ selected: dateModeSelected === 'duration' }} style={[styles.button, styles.smallButton, dateModeSelected === 'duration' && styles.toggleActive]} onPress={() => { setDateModeSelected('duration'); setDates((prev) => ({ ...prev, mode: 'duration' })); setMonthPromptOpen(true); }}>
                 <Text style={styles.buttonText}>Dates not set</Text>
               </TouchableOpacity>
             </View>
@@ -1482,7 +1491,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <View>
                 <Text style={styles.modalLabel}>Trip length (days)</Text>
                 <TextInput testID="wizard-trip-length" accessibilityLabel="Trip length in days" style={styles.input} keyboardType="number-pad" value={dates.durationDays} onChangeText={(durationDays) => setDates((prev) => ({ ...prev, durationDays }))} />
-                <Text style={styles.helperText}>Choose your dates later. Your itinerary will use numbered days.</Text>
+                <TouchableOpacity testID="wizard-month-change" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => setMonthPromptOpen(true)}><Text style={styles.buttonText}>{monthLabelShort ? `Around ${monthLabelShort}: change` : 'Choose a month'}</Text></TouchableOpacity>
+                <Text style={styles.helperText}>{monthPlaceholder ? `We'll use ${monthPlaceholder.startDate} as a placeholder start; set exact dates any time.` : 'Choose your dates later. Your itinerary will use numbered days.'}</Text>
               </View>
             ) : dates.mode === 'range' ? (
               <>
@@ -1523,31 +1533,22 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     title="Select month"
                     style={themeStyle('tabs_createTripWizard_24', {  }, (theme ?? _styleTheme))}
                     webStyle={webDateInputStyleFlex}
-                    onChange={(value) => setDates((prev) => ({ ...prev, startMonth: value }))}
+                    onChange={(value) => setDates((prev) => ({ ...prev, startMonth: value, startYear: value ? (nextMonthStart(Number(value))?.slice(0, 4) ?? '') : '' }))}
                   />
                   <SelectField
                     styles={styles}
-                    options={yearOptions}
-                    value={dates.startYear}
-                    placeholder="Year"
-                    title="Select year"
+                    options={dayOptions}
+                    value={dates.durationDays}
+                    placeholder="Days"
+                    title="Select number of days"
                     style={themeStyle('tabs_createTripWizard_25', {  }, (theme ?? _styleTheme))}
                     webStyle={webDateInputStyleFlex}
-                    onChange={(value) => setDates((prev) => ({ ...prev, startYear: value }))}
+                    onChange={(value) => setDates((prev) => ({ ...prev, durationDays: value }))}
                   />
                 </View>
-                <SelectField
-                  styles={styles}
-                  options={dayOptions}
-                  value={dates.durationDays}
-                  placeholder="Days"
-                  title="Select number of days"
-                  webStyle={webDateInputStyle}
-                  onChange={(value) => setDates((prev) => ({ ...prev, durationDays: value }))}
-                />
-                {monthLabel && dates.durationDays ? (
-                  <Text style={styles.helperText}>
-                    {monthLabel} · {dates.durationDays} day(s)
+                {monthPlaceholder && dates.durationDays ? (
+                  <Text style={styles.helperText} testID="wizard-month-placeholder">
+                    {monthLabel} · {dates.durationDays} day(s). We'll use {monthPlaceholder.startDate} as a placeholder start; set exact dates any time.
                   </Text>
                 ) : null}
               </>
@@ -2546,6 +2547,25 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </TouchableOpacity>
         </View>
         {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
+        <Modal transparent visible={monthPromptOpen} animationType="fade" onRequestClose={() => setMonthPromptOpen(false)}>
+          <View style={styles.modalOverlay} testID="wizard-month-prompt">
+            <TouchableOpacity accessibilityLabel="Close month choice" style={styles.passengerOverlayBackdrop} onPress={() => setMonthPromptOpen(false)} />
+            <View style={styles.modalCard}>
+              <Text style={styles.sectionTitle}>Which month are you thinking of?</Text>
+              <Text style={styles.helperText}>We'll hold the 1st of the next one as a placeholder start. You can set exact dates any time.</Text>
+              <View style={[styles.row, themeStyle('tabs_createTripWizard_layout1', {  }, (theme ?? _styleTheme))]}>
+                {monthOptions.map((option) => (
+                  <TouchableOpacity key={option.value} testID={`wizard-month-prompt-${option.value}`} accessibilityRole="button" accessibilityLabel={`Choose ${option.label}`} accessibilityState={{ selected: dates.startMonth === option.value }} style={[styles.button, styles.smallButton, dates.startMonth === option.value && styles.toggleActive]} onPress={() => chooseUndatedMonth(option.value)}>
+                    <Text style={styles.buttonText}>{option.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity testID="wizard-month-prompt-skip" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => chooseUndatedMonth('')}>
+                <Text style={styles.buttonText}>Not sure yet</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
         {/* Step content scrolls; nav buttons stay anchored below */}
         <ScrollView
           style={themeStyle('tabs_createTripWizard_56', {  }, (theme ?? _styleTheme))}

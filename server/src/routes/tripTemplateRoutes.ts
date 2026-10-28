@@ -115,7 +115,7 @@ router.post('/:id/trip', async (req, res) => {
     }, 'template');
     createdTripId = created.trip.id;
     const counts = startDate
-      ? await populateTripFromTemplate({ userId: user.userId, tripId: created.trip.id, groupId: created.groupId, template: seed, startDate })
+      ? await populateTripFromTemplate({ userId: user.userId, tripId: created.trip.id, groupId: created.groupId, template: seed, startDate, estimated: Number(req.body?.startMonth) > 0 })
       : await populateUndatedTripFromTemplate({ userId: user.userId, tripId: created.trip.id, template: seed, tripDays: durationDays });
     logInfo(`[trip-templates] created trip from ${seed.id} (${counts.lodgings} stays, ${counts.activities} activities, ${counts.transfers} transfers)`);
     res.status(201).json({ trip: created.trip, groupId: created.groupId, invites: created.invites, templateId: seed.id, counts });

@@ -50,6 +50,37 @@ describe('unscheduled trip creation', () => {
     expect(body.startYear).toBeUndefined();
   });
 
+  it('asks for a month when Dates not set is chosen, and holds the 1st of its next occurrence as the start', async () => {
+    const screen = render(<CreateTripWizard {...props} />);
+    fireEvent.changeText(screen.getByTestId('quick-start-trip-name'), 'Someday Japan');
+    fireEvent.press(screen.getByTestId('choose-destination'));
+    fireEvent.press(screen.getByTestId('quick-start-dates-unscheduled'));
+    fireEvent.press(screen.getByTestId('wizard-month-prompt-11'));
+    expect(screen.getByTestId('wizard-month-change')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('quick-start-trip-length'), '7');
+    fireEvent.press(screen.getByTestId('quick-start-create'));
+    await waitFor(() => expect(props.onTripCreated).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls.find(([url]) => url.endsWith('/api/trips/wizard'))![1].body);
+    expect(body.startMonth).toBe(11);
+    expect(body.startDate).toMatch(/^\d{4}-11-01$/);
+    expect(body.endDate).toMatch(/^\d{4}-11-07$/);
+    expect(body.durationDays).toBe(7);
+  });
+
+  it('keeps the trip undated when the month prompt is skipped', async () => {
+    const screen = render(<CreateTripWizard {...props} />);
+    fireEvent.changeText(screen.getByTestId('quick-start-trip-name'), 'Someday Japan');
+    fireEvent.press(screen.getByTestId('choose-destination'));
+    fireEvent.press(screen.getByTestId('quick-start-dates-unscheduled'));
+    fireEvent.press(screen.getByTestId('wizard-month-prompt-skip'));
+    fireEvent.changeText(screen.getByTestId('quick-start-trip-length'), '7');
+    fireEvent.press(screen.getByTestId('quick-start-create'));
+    await waitFor(() => expect(props.onTripCreated).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls.find(([url]) => url.endsWith('/api/trips/wizard'))![1].body);
+    expect(body.startDate).toBeUndefined();
+    expect(body.startMonth).toBeUndefined();
+  });
+
   it('offers the same option in the full wizard and saves the chosen number of days and item day numbers', async () => {
     const screen = render(<CreateTripWizard {...props} featureQuickStartTripWizard={false} aiItineraryGenerationAllowed={false} />);
     fireEvent.changeText(screen.getByLabelText('Trip name'), 'Someday Japan');

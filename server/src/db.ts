@@ -860,3 +860,12 @@ export const upsertTripTemplate = async (...args: Parameters<ReturnType<typeof a
   adapter().upsertTripTemplate(...args);
 export const listTripTemplates = async (...args: Parameters<ReturnType<typeof adapter>['listTripTemplates']>) =>
   adapter().listTripTemplates(...args);
+export type { EstimatedItem, EstimatedItemType } from './db.postgres';
+export const addTripEstimatedItems = async (...args: Parameters<ReturnType<typeof adapter>['addTripEstimatedItems']>) =>
+  adapter().addTripEstimatedItems(...args);
+export const listTripEstimatedItems = async (...args: Parameters<ReturnType<typeof adapter>['listTripEstimatedItems']>) =>
+  adapter().listTripEstimatedItems(...args);
+export const removeTripEstimatedItem = async (...args: Parameters<ReturnType<typeof adapter>['removeTripEstimatedItem']>) =>
+  adapter().removeTripEstimatedItem(...args);
+export const clearTripEstimatedItems = async (...args: Parameters<ReturnType<typeof adapter>['clearTripEstimatedItems']>) =>
+  adapter().clearTripEstimatedItems(...args);

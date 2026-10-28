@@ -46,8 +46,6 @@ const advanceToItineraryStep = ({ getByLabelText, getByText }: ReturnType<typeof
   fireEvent.press(getByText('Flexible Timeline'));
   fireEvent.press(getByLabelText('Select month'));
   fireEvent.press(getByLabelText('Select January'));
-  fireEvent.press(getByLabelText('Select year'));
-  fireEvent.press(getByLabelText(`Select ${new Date().getFullYear()}`));
   fireEvent.press(getByLabelText('Select number of days'));
   fireEvent.press(getByLabelText('Select 1'));
   fireEvent.press(getByText('Next')); // Dates -> Participants

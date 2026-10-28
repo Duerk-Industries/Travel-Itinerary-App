@@ -32,6 +32,8 @@ type Props = {
   selectedLocations: PickerLocation[];
   /** The dates the traveler already entered, YYYY-MM-DD, or empty. With a start date the plan is dated. */
   startDate: string;
+  /** Set when startDate is only a placeholder (the 1st of a chosen month): the plan's dates then follow real dates later. */
+  startMonth?: number | null;
   endDate?: string;
   /** The trip's length in days, from its dates or from "Dates not set"; templates longer than this are not offered. */
   tripDays?: number | null;
@@ -69,7 +71,7 @@ export const destinationQuery = (locations: PickerLocation[], maxDays?: number |
  * is aligned with that destination. Choosing one opens a day-by-day preview; "Use this template"
  * creates the trip, which then opens like any other and can be edited freely.
  */
-const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLocations, startDate, endDate, tripDays, tripName, styles, onCreated, onUnauthorized }) => {
+const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLocations, startDate, startMonth, endDate, tripDays, tripName, styles, onCreated, onUnauthorized }) => {
   const _styleTheme = useStyleTheme();
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [images, setImages] = useState<Record<string, string>>({});
@@ -155,7 +157,7 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
           name: tripName.trim() || undefined,
-          ...(startDate ? { startDate, endDate: endDate || undefined } : { durationDays: tripDays }),
+          ...(startDate ? { startDate, endDate: endDate || undefined, ...(startMonth ? { startMonth, startYear: Number(startDate.slice(0, 4)) } : {}) } : { durationDays: tripDays }),
           locationIds: selectedLocations.map((location) => location.id),
           participants: [],
         }),

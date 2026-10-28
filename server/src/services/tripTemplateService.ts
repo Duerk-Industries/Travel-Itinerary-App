@@ -13,6 +13,7 @@ import {
   listTripTemplates,
   upsertTripTemplate,
   type TripTemplateRecord,
+  addTripEstimatedItems,
 } from '../db';
 import { logError, logInfo } from '../logger';
 import { resolveRuntimeDataPath } from '../utils/runtimeDataPath';
@@ -205,8 +206,9 @@ const bookAheadNote = (reason: string): string => `Book ahead: ${reason.replace(
  * Fills an empty, just-created trip from a template. Everything arrives as Proposed, or Needs Booking
  * where the plan says to book ahead, and lodging is a placeholder the traveler is nudged to replace.
  */
-export const populateTripFromTemplate = async (params: { userId: string; tripId: string; groupId: string; template: SeedTemplate; startDate: string }): Promise<{ lodgings: number; activities: number; transfers: number; notes: number }> => {
-  const { userId, tripId, groupId, template, startDate } = params;
+export const populateTripFromTemplate = async (params: { userId: string; tripId: string; groupId: string; template: SeedTemplate; startDate: string; estimated?: boolean }): Promise<{ lodgings: number; activities: number; transfers: number; notes: number }> => {
+  const { userId, tripId, groupId, template, startDate, estimated } = params;
+  const suggested: Array<{ type: 'activity' | 'lodging' | 'transfer'; id: string }> = [];
   const trip: any = await getTripById(tripId);
   const memberRows: any[] = await listGroupMembers(groupId, userId).catch(() => []);
   const members = memberRows.map((member: any) => ({
@@ -218,18 +220,20 @@ export const populateTripFromTemplate = async (params: { userId: string; tripId:
 
   for (const stay of template.stays) {
     const features = [stay.breakfast ? 'Breakfast' : '', stay.dinner ? 'Dinner' : '', CHOOSE_HOTEL_FEATURE].filter(Boolean);
-    await insertLodging({
+    const lodging: any = await insertLodging({
       userId, tripId, status: 'Proposed', name: stay.hotel, checkInDate: dateOf(stay.start), checkOutDate: dateOf(stay.start + stay.nights),
       rooms: 1, refundBy: null, totalCost: 0, costPerNight: 0, address: [stay.base, template.countries[0]].filter(Boolean).join(', '), notes: stay.area ? `Suggested location: ${stay.area}` : null, features,
       paid_by: [], traveler_ids: travelerIds, imageUrl: null,
     } as any);
+    suggested.push({ type: 'lodging', id: String(lodging.id) });
   }
   for (const activity of template.activities) {
-    await insertActivity({
+    const created: any = await insertActivity({
       userId, tripId, status: activity.book ? NEEDS_BOOKING : 'Proposed', activityType: (activity.type || 'Other') as any, date: dateOf(activity.day), name: activity.name,
       startLocation: activity.where, startTime: clock(activity.time), duration: activity.duration, cost: 0, freeCancelBy: null, bookedOn: '', reference: '',
       notes: [getTemplatePlace(activity.place)?.description, activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n'), paidBy: [], travelerIds,
     } as any);
+    suggested.push({ type: 'activity', id: String(created.id) });
   }
   const passengerName = members.map((member) => member.name).join(', ') || 'Passenger';
   for (const leg of template.legs) {
@@ -243,12 +247,15 @@ export const populateTripFromTemplate = async (params: { userId: string; tripId:
       arrivalDate = arrival.toISOString().slice(0, 10);
       arrivalTime = arrival.toISOString().slice(11, 16);
     }
-    await insertFlight({
+    const flight: any = await insertFlight({
       userId, tripId, status: leg.book ? NEEDS_BOOKING : 'Proposed', transferType: leg.transferType as any, passengerName, passengerIds: travelerIds,
       departureDate, departureLocation: leg.from, departureTime: departureTime || '00:00', arrivalLocation: leg.to, arrivalDate, arrivalTime,
       cost: 0, carrier: leg.carrier, flightNumber: '', bookingReference: '', paidBy: [],
     } as any);
+    suggested.push({ type: 'transfer', id: String(flight.id) });
   }
+  // Against a placeholder start these dates are guesses: they move when real dates are set, unless saved first.
+  if (estimated) await addTripEstimatedItems(tripId, suggested);
 
   // A transfer row has nowhere to keep tips, travel time or booking advice, so they become a note on that day.
   const itinerary = await createItineraryRecord(userId, tripId, trip?.destination?.trim() || template.cities.join(', ') || template.title, template.days, null);
