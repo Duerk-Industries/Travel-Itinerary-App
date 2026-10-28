@@ -9922,3 +9922,52 @@ export const listExpenseIdsWithReceipt = async (userId: string, tripId: string):
   const snap = await getDb().collection('expense_receipts').where('tripId', '==', tripId).get();
   return snap.docs.map((doc) => doc.id);
 };
+
+// --- Itinerary templates ---------------------------------------------------------------------
+// Mirrors the Postgres trip_templates table: one document per template, keyed by the template id.
+export type TripTemplateRecord = {
+  id: string;
+  title: string;
+  summary: string;
+  days: number;
+  route: string;
+  imageQuery: string;
+  countries: string[];
+  cities: string[];
+  highlights: string[];
+  contentHash: string;
+  enabled: boolean;
+  sortOrder: number;
+};
+
+export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {
+  const ref = getDb().collection('trip_templates').doc(template.id);
+  const existing = await ref.get();
+  // `enabled` belongs to the admin once the document exists; seeding never re-enables a template.
+  const enabled = existing.exists ? (existing.data() as any).enabled !== false : template.enabled;
+  await ref.set({ ...template, enabled, updatedAt: nowIso() });
+};
+
+export const listTripTemplates = async (options: { enabledOnly?: boolean } = {}): Promise<TripTemplateRecord[]> => {
+  const snap = await getDb().collection('trip_templates').get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data() as any;
+      return {
+        id: doc.id,
+        title: String(data.title ?? ''),
+        summary: String(data.summary ?? ''),
+        days: Number(data.days) || 0,
+        route: String(data.route ?? ''),
+        imageQuery: String(data.imageQuery ?? ''),
+        countries: Array.isArray(data.countries) ? data.countries.map(String) : [],
+        cities: Array.isArray(data.cities) ? data.cities.map(String) : [],
+        highlights: Array.isArray(data.highlights) ? data.highlights.map(String) : [],
+        contentHash: String(data.contentHash ?? ''),
+        enabled: data.enabled !== false,
+        sortOrder: Number(data.sortOrder) || 0,
+      } as TripTemplateRecord;
+    })
+    .filter((template) => !options.enabledOnly || template.enabled)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
+};

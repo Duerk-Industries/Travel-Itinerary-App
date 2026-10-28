@@ -1,3 +1,4 @@
+import { withoutHotelPlaceholder } from '../utils/lodgingPlaceholder';
 import { singlePayerIds } from '../utils/payerSelection';
 import type { PlanningCoordinates } from '../../server/src/types';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -211,6 +212,7 @@ export const saveLodgingApi = async (
   payload: any,
   lodgingId?: string | null
 ): Promise<{ ok: boolean; error?: string }> => {
+  if (lodgingId) payload = withoutHotelPlaceholder(payload);
   const url = lodgingId ? `${backendUrl}/api/lodgings/${lodgingId}` : `${backendUrl}/api/lodgings`;
   const method = lodgingId ? 'PUT' : 'POST';
   // Shared by the lodging form, the grid's inline edits and the overview, so tracked once here.

@@ -14074,3 +14074,51 @@ export const listExpenseIdsWithReceipt = async (userId: string, tripId: string):
   );
   return rows.map((row) => String(row.expenseId));
 };
+
+// --- Itinerary templates ---------------------------------------------------------------------
+// The catalogue row for a seeded template: which destinations it is offered for. The itinerary
+// itself stays in the seed file (see services/tripTemplateService.ts). `enabled` is the switch an
+// admin can flip; seeding never re-enables a template that was switched off.
+export type TripTemplateRecord = {
+  id: string;
+  title: string;
+  summary: string;
+  days: number;
+  route: string;
+  imageQuery: string;
+  countries: string[];
+  cities: string[];
+  highlights: string[];
+  contentHash: string;
+  enabled: boolean;
+  sortOrder: number;
+};
+
+const TRIP_TEMPLATE_SELECT = `SELECT id, title, summary, days, route, image_query AS "imageQuery",
+  COALESCE(countries, '[]'::jsonb) AS countries, COALESCE(cities, '[]'::jsonb) AS cities,
+  COALESCE(highlights, '[]'::jsonb) AS highlights, content_hash AS "contentHash", enabled, sort_order AS "sortOrder"
+  FROM trip_templates`;
+
+export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {
+  const p = getPool();
+  // `enabled` is deliberately not updated: it belongs to the admin once the row exists.
+  const updated = await p.query(
+    `UPDATE trip_templates SET title = $2, summary = $3, days = $4, route = $5, image_query = $6,
+       countries = $7::jsonb, cities = $8::jsonb, highlights = $9::jsonb, content_hash = $10, sort_order = $11, updated_at = NOW()
+     WHERE id = $1`,
+    [template.id, template.title, template.summary, template.days, template.route, template.imageQuery,
+      JSON.stringify(template.countries), JSON.stringify(template.cities), JSON.stringify(template.highlights), template.contentHash, template.sortOrder]
+  );
+  if (updated.rowCount) return;
+  await p.query(
+    `INSERT INTO trip_templates (id, title, summary, days, route, image_query, countries, cities, highlights, content_hash, enabled, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11, $12)`,
+    [template.id, template.title, template.summary, template.days, template.route, template.imageQuery,
+      JSON.stringify(template.countries), JSON.stringify(template.cities), JSON.stringify(template.highlights), template.contentHash, template.enabled, template.sortOrder]
+  );
+};
+
+export const listTripTemplates = async (options: { enabledOnly?: boolean } = {}): Promise<TripTemplateRecord[]> => {
+  const { rows } = await getPool().query(`${TRIP_TEMPLATE_SELECT}${options.enabledOnly ? ' WHERE enabled = TRUE' : ''} ORDER BY sort_order, id`);
+  return rows.map((row: any) => ({ ...row, days: Number(row.days), sortOrder: Number(row.sortOrder) }));
+};

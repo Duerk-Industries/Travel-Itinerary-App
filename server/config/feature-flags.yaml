@@ -233,6 +233,9 @@ flags:
   trip_blog_search:
     enabled: true
     description: "C8 — visibility-aware, bounded private blog search UI and API"
+  trip_templates:
+    enabled: true
+    description: "Offer seeded itinerary templates for the destination a traveler chose in the Create Trip wizard; free for every tier"
   trip_blog_places:
     enabled: true
     description: "C6 — traveler-only places index derived from existing trip records without reverse geocoding"

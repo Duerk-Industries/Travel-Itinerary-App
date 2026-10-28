@@ -4078,6 +4078,36 @@ const styleFactories = {
   components_PublicTripBlogPage_54: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.textMuted, fontSize: 12 }),
   // components/PublicTripBlogPage.tsx
   components_PublicTripBlogPage_55: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
+  // tabs/LodgingTab.tsx — nudge on a template placeholder hotel
+  tabs_LodgingTab_nudge: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 12, fontWeight: '700', color: _theme.colors.warningText, marginTop: 2 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 12, overflow: 'hidden', backgroundColor: _theme.colors.surface, marginTop: 10 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', height: 140, backgroundColor: _theme.colors.surfaceMuted }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ padding: 12, gap: 6 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ borderRadius: 999, borderWidth: 1, borderColor: _theme.colors.border, paddingHorizontal: 10, paddingVertical: 4 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_6: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, backgroundColor: _theme.colors.background, padding: 16 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_7: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 14, paddingBottom: 4, borderBottomWidth: 1, borderBottomColor: _theme.colors.border }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', gap: 8, paddingVertical: 4 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 48 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1 }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 12, fontWeight: '700', color: _theme.colors.warningText }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingTop: 12, gap: 8, borderTopWidth: 1, borderTopColor: _theme.colors.border }),
+  // components/TripTemplatePicker.tsx
+  components_TripTemplatePicker_14: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ opacity: 0.5 }),
   // components/ExpenseReceiptPanel.tsx
   components_ExpenseReceiptPanel_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ display: 'none' }),
   // components/ExpenseReceiptPanel.tsx

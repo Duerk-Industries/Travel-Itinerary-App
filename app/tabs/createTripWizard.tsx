@@ -71,6 +71,7 @@ import {
 } from '../utils/promptTraits';
 import LodgingDialog from '../components/LodgingDialog';
 import { LocationSelector, type LocationOption } from '../components/LocationSelector';
+import TripTemplatePicker from '../components/TripTemplatePicker';
 import { MustSeeAttractionSelector, type AttractionOption } from '../components/MustSeeAttractionSelector';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -1351,6 +1352,16 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       </View>
       {computedDays ? <Text style={styles.helperText}>{computedDays} day(s)</Text> : null}
       </>}
+      <TripTemplatePicker
+        backendUrl={backendUrl}
+        headers={wizardJsonHeaders}
+        selectedLocations={selectedLocations}
+        startDate={dates.mode === 'range' ? dates.startDate : ''}
+        tripName={details.name}
+        styles={styles}
+        onCreated={(tripId) => { setCreatedTripId(tripId); handleTripCreated(tripId); }}
+        onUnauthorized={onUnauthorized}
+      />
       <TouchableOpacity
         style={[styles.button, styles.outlineButton ?? styles.button, themeStyle('tabs_createTripWizard_14', {  }, (theme ?? _styleTheme))]}
         onPress={() => { setQuickStartMode(false); setDateModeSelected(dates.mode === 'duration' ? 'duration' : dates.startDate || dates.endDate ? 'range' : null); }}

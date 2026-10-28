@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "id": "japan-t02",
+  "title": "Golden Route with Hakone - 7 days",
+  "summary": "Tokyo, a night in a Hakone ryokan with an onsen, then Kyoto, with an evening in Osaka.",
+  "days": 7,
+  "route": "Tokyo > Hakone > Kyoto (Osaka evening)",
+  "arrive": "Tokyo (NRT/HND)",
+  "depart": "Osaka (KIX)",
+  "countries": [
+    "Japan"
+  ],
+  "cities": [
+    "Tokyo",
+    "Hakone",
+    "Kyoto"
+  ],
+  "imageQuery": "Hakone Japan Mount Fuji",
+  "highlights": [
+    "Fushimi Inari torii gate hike",
+    "Senso-ji Temple & Nakamise street",
+    "Meiji Jingu Shrine",
+    "Shibuya Crossing",
+    "Ropeway over volcanic valley"
+  ],
+  "sources": [
+    "JW Web Magazine 1 week",
+    "Two Wandering Soles 1 week",
+    "Japan Experience Japan in a Week",
+    "kimkim Tokyo, Hakone & Kyoto 7 days"
+  ],
+  "stays": [
+    {
+      "base": "Tokyo",
+      "hotel": "Hotel in Tokyo",
+      "start": 0,
+      "nights": 2,
+      "area": "Shinjuku (easiest for the Hakone train)",
+      "breakfast": false,
+      "dinner": false
+    },
+    {
+      "base": "Hakone",
+      "hotel": "Ryokan with onsen in Hakone",
+      "start": 2,
+      "nights": 1,
+      "area": "Hakone-Yumoto, Gora, or Lake Ashi",
+      "breakfast": true,
+      "dinner": true
+    },
+    {
+      "base": "Kyoto",
+      "hotel": "Hotel in Kyoto",
+      "start": 3,
+      "nights": 3,
+      "area": "Kyoto Station or Downtown",
+      "breakfast": false,
+      "dinner": false
+    }
+  ],
+  "activities": [
+    {
+      "day": 0,
+      "type": "Sights & Landmarks",
+      "time": "17:00",
+      "duration": "1h",
+      "name": "Free city-view observation deck",
+      "notes": "Tokyo Metropolitan Government Building observatory is free; good jet-lag-day orientation.",
+      "where": "Shinjuku, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 0,
+      "type": "Food & Drink",
+      "time": "19:00",
+      "duration": "2h",
+      "name": "Izakaya alley dinner",
+      "notes": "Omoide Yokocho / Golden Gai-style yakitori and small bars.",
+      "where": "Shinjuku, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "08:30",
+      "duration": "2h",
+      "name": "Senso-ji Temple & Nakamise street",
+      "notes": "Tokyo's oldest temple and its shopping lane.",
+      "where": "Asakusa, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 1,
+      "type": "Shopping",
+      "time": "11:00",
+      "duration": "2.5h",
+      "name": "Akihabara electronics & anime district",
+      "notes": "Retro game shops, arcades, figure stores.",
+      "where": "Akihabara, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "14:00",
+      "duration": "1.5h",
+      "name": "Meiji Jingu Shrine",
+      "notes": "Forest shrine; go early.",
+      "where": "Harajuku, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "17:00",
+      "duration": "1h",
+      "name": "Shibuya Crossing",
+      "notes": "Scramble crossing; view from above at a station-side cafe or deck.",
+      "where": "Shibuya, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 2,
+      "type": "Ticketed Attraction",
+      "time": "11:00",
+      "duration": "1.5h",
+      "name": "Open-air sculpture museum",
+      "notes": "Worthwhile even when Fuji is hidden.",
+      "where": "Hakone, Kanagawa",
+      "book": ""
+    },
+    {
+      "day": 2,
+      "type": "Sights & Landmarks",
+      "time": "13:30",
+      "duration": "1.5h",
+      "name": "Ropeway over volcanic valley",
+      "notes": "Owakudani sulfur vents; Fuji views on clear days.",
+      "where": "Owakudani, Hakone",
+      "book": ""
+    },
+    {
+      "day": 2,
+      "type": "Sights & Landmarks",
+      "time": "15:00",
+      "duration": "1h",
+      "name": "Lake Ashi cruise",
+      "notes": "Pirate-ship ferry toward the lakeside torii.",
+      "where": "Lake Ashi, Hakone",
+      "book": ""
+    },
+    {
+      "day": 2,
+      "type": "Spa/Wellness",
+      "time": "18:00",
+      "duration": "3h",
+      "name": "Ryokan onsen & kaiseki dinner",
+      "notes": "Check tattoo policy; private baths are an option.",
+      "where": "Hakone, Kanagawa",
+      "book": ""
+    },
+    {
+      "day": 3,
+      "type": "Hike",
+      "time": "15:00",
+      "duration": "2.5h",
+      "name": "Fushimi Inari torii gate hike",
+      "notes": "Open 24h; walk past the crowds toward the summit. Late afternoon light or early morning.",
+      "where": "Fushimi, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 3,
+      "type": "Sights & Landmarks",
+      "time": "19:00",
+      "duration": "1.5h",
+      "name": "Gion evening walk",
+      "notes": "Hanamikoji and Shirakawa lanes; do not photograph or follow geiko/maiko.",
+      "where": "Gion, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "07:30",
+      "duration": "1h",
+      "name": "Arashiyama Bamboo Grove",
+      "notes": "Before 8:00 or it is shoulder to shoulder.",
+      "where": "Arashiyama, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "08:30",
+      "duration": "1h",
+      "name": "Tenryu-ji Temple garden",
+      "notes": "Zen garden next to the grove.",
+      "where": "Arashiyama, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "11:00",
+      "duration": "1h",
+      "name": "Kinkaku-ji (Golden Pavilion)",
+      "notes": "",
+      "where": "Kita, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "12:15",
+      "duration": "1h",
+      "name": "Ryoan-ji rock garden",
+      "notes": "Short bus/walk from Kinkaku-ji.",
+      "where": "Ukyo, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 5,
+      "type": "Sights & Landmarks",
+      "time": "08:00",
+      "duration": "1.5h",
+      "name": "Kiyomizu-dera Temple",
+      "notes": "Go at opening to beat crowds.",
+      "where": "Higashiyama, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 5,
+      "type": "Sights & Landmarks",
+      "time": "09:45",
+      "duration": "2h",
+      "name": "Sannenzaka & Ninenzaka lanes to Yasaka Shrine",
+      "notes": "Preserved slopes, tea shops; ends near Maruyama Park.",
+      "where": "Higashiyama, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 5,
+      "type": "Food & Drink",
+      "time": "12:00",
+      "duration": "1.5h",
+      "name": "Nishiki Market tasting walk",
+      "notes": "Covered food market; graze rather than sit.",
+      "where": "Downtown Kyoto",
+      "book": ""
+    },
+    {
+      "day": 5,
+      "type": "Food & Drink",
+      "time": "17:00",
+      "duration": "3h",
+      "name": "Dotonbori street food evening",
+      "notes": "Takoyaki, okonomiyaki, kushikatsu under the neon signs.",
+      "where": "Namba, Osaka",
+      "book": ""
+    }
+  ],
+  "legs": [
+    {
+      "day": 0,
+      "transferType": "Public Transit",
+      "from": "Narita (NRT) or Haneda (HND) Airport",
+      "to": "Tokyo hotel area",
+      "time": "",
+      "minutes": 90,
+      "carrier": "Narita Express, Keikyu, or Tokyo Monorail",
+      "notes": "Airport limousine bus is the door-to-door alternative. Set up an IC card (Suica/PASMO; Apple Wallet works).",
+      "book": ""
+    },
+    {
+      "day": 2,
+      "transferType": "Public Transit",
+      "from": "Shinjuku Station",
+      "to": "Hakone-Yumoto Station",
+      "time": "09:00",
+      "minutes": 85,
+      "carrier": "Odakyu Romancecar (limited express)",
+      "notes": "A Hakone Free Pass covers this and the Hakone loop.",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 3,
+      "transferType": "Public Transit",
+      "from": "Hakone (Gora or Lake Ashi)",
+      "to": "Odawara Station",
+      "time": "09:30",
+      "minutes": 50,
+      "carrier": "Hakone Tozan Bus",
+      "notes": "Covered by the Hakone Free Pass.",
+      "book": ""
+    },
+    {
+      "day": 3,
+      "transferType": "Public Transit",
+      "from": "Odawara Station",
+      "to": "Kyoto Station",
+      "time": "10:40",
+      "minutes": 135,
+      "carrier": "JR Tokaido Shinkansen (Hikari)",
+      "notes": "Hikari stops at Odawara; Nozomi does not.",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 6,
+      "transferType": "Public Transit",
+      "from": "Kyoto Station",
+      "to": "Kansai International Airport (KIX)",
+      "time": "",
+      "minutes": 80,
+      "carrier": "JR Haruka (limited express)",
+      "notes": "Open-jaw ticket. If flying home from Tokyo instead, take the Tokaido Shinkansen back (~2h15).",
+      "book": ""
+    }
+  ]
+}

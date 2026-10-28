@@ -1,0 +1,647 @@
+{
+  "schemaVersion": 1,
+  "id": "japan-t07",
+  "title": "Grand Tour with the Japanese Alps - 14 days",
+  "summary": "Two weeks combining the golden route with the Japanese Alps, Takayama and Kanazawa.",
+  "days": 14,
+  "route": "Tokyo > Hakone > Takayama > Shirakawa-go > Kanazawa > Kyoto (Nara) > Osaka",
+  "arrive": "Tokyo (NRT/HND)",
+  "depart": "Osaka (KIX)",
+  "countries": [
+    "Japan"
+  ],
+  "cities": [
+    "Tokyo",
+    "Hakone",
+    "Takayama",
+    "Kanazawa",
+    "Kyoto",
+    "Osaka"
+  ],
+  "imageQuery": "Takayama Japan old town",
+  "highlights": [
+    "Shirakawa-go thatched-roof village",
+    "Kenroku-en Garden",
+    "Takayama old town",
+    "Fushimi Inari torii gate hike",
+    "Nara day trip"
+  ],
+  "sources": [
+    "InsideJapan Tours Classic Japan",
+    "Japan Activity 2-week Grand Tour",
+    "kimkim Traditions of Japan 14 days",
+    "Intrepid Japan: Land of the Rising Sun"
+  ],
+  "stays": [
+    {
+      "base": "Tokyo",
+      "hotel": "Hotel in Tokyo",
+      "start": 0,
+      "nights": 3,
+      "area": "Shinjuku (easiest for the Hakone train)",
+      "breakfast": false,
+      "dinner": false
+    },
+    {
+      "base": "Hakone",
+      "hotel": "Ryokan with onsen in Hakone",
+      "start": 3,
+      "nights": 1,
+      "area": "Hakone-Yumoto, Gora, or Lake Ashi",
+      "breakfast": true,
+      "dinner": true
+    },
+    {
+      "base": "Takayama",
+      "hotel": "Ryokan in Takayama",
+      "start": 4,
+      "nights": 2,
+      "area": "Old town, walkable to Sanmachi Suji",
+      "breakfast": true,
+      "dinner": true
+    },
+    {
+      "base": "Kanazawa",
+      "hotel": "Hotel in Kanazawa",
+      "start": 6,
+      "nights": 2,
+      "area": "Kanazawa Station or Korinbo",
+      "breakfast": false,
+      "dinner": false
+    },
+    {
+      "base": "Kyoto",
+      "hotel": "Hotel in Kyoto",
+      "start": 8,
+      "nights": 3,
+      "area": "Kyoto Station or Downtown",
+      "breakfast": false,
+      "dinner": false
+    },
+    {
+      "base": "Osaka",
+      "hotel": "Hotel in Osaka",
+      "start": 11,
+      "nights": 2,
+      "area": "Namba or Umeda",
+      "breakfast": false,
+      "dinner": false
+    }
+  ],
+  "activities": [
+    {
+      "day": 0,
+      "type": "Sights & Landmarks",
+      "time": "17:00",
+      "duration": "1h",
+      "name": "Free city-view observation deck",
+      "notes": "Tokyo Metropolitan Government Building observatory is free; good jet-lag-day orientation.",
+      "where": "Shinjuku, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 0,
+      "type": "Food & Drink",
+      "time": "19:00",
+      "duration": "2h",
+      "name": "Izakaya alley dinner",
+      "notes": "Omoide Yokocho / Golden Gai-style yakitori and small bars.",
+      "where": "Shinjuku, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "09:00",
+      "duration": "1.5h",
+      "name": "Meiji Jingu Shrine",
+      "notes": "Forest shrine; go early.",
+      "where": "Harajuku, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 1,
+      "type": "Shopping",
+      "time": "11:00",
+      "duration": "2h",
+      "name": "Harajuku & Omotesando",
+      "notes": "Takeshita Street street fashion, then Omotesando boulevard.",
+      "where": "Harajuku, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "15:00",
+      "duration": "1h",
+      "name": "Shibuya Crossing",
+      "notes": "Scramble crossing; view from above at a station-side cafe or deck.",
+      "where": "Shibuya, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 1,
+      "type": "Ticketed Attraction",
+      "time": "17:00",
+      "duration": "1.5h",
+      "name": "Sunset rooftop observation deck",
+      "notes": "Shibuya Sky or similar; sunset slots sell out.",
+      "where": "Shibuya, Tokyo",
+      "book": "Yes - timed tickets, sunset sells out"
+    },
+    {
+      "day": 2,
+      "type": "Food & Drink",
+      "time": "08:00",
+      "duration": "1.5h",
+      "name": "Fish market breakfast",
+      "notes": "Tsukiji Outer Market stalls: sushi, tamagoyaki, grilled seafood.",
+      "where": "Tsukiji, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 2,
+      "type": "Sights & Landmarks",
+      "time": "10:30",
+      "duration": "2h",
+      "name": "Senso-ji Temple & Nakamise street",
+      "notes": "Tokyo's oldest temple and its shopping lane.",
+      "where": "Asakusa, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 2,
+      "type": "Sights & Landmarks",
+      "time": "14:00",
+      "duration": "1.5h",
+      "name": "Imperial Palace East Gardens",
+      "notes": "Free; closed Mondays and Fridays - swap with Ueno Park/museums those days.",
+      "where": "Chiyoda, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 2,
+      "type": "Shopping",
+      "time": "16:30",
+      "duration": "2h",
+      "name": "Ginza department stores & depachika",
+      "notes": "Basement food halls are the highlight.",
+      "where": "Ginza, Tokyo",
+      "book": ""
+    },
+    {
+      "day": 3,
+      "type": "Ticketed Attraction",
+      "time": "11:00",
+      "duration": "1.5h",
+      "name": "Open-air sculpture museum",
+      "notes": "Worthwhile even when Fuji is hidden.",
+      "where": "Hakone, Kanagawa",
+      "book": ""
+    },
+    {
+      "day": 3,
+      "type": "Sights & Landmarks",
+      "time": "13:30",
+      "duration": "1.5h",
+      "name": "Ropeway over volcanic valley",
+      "notes": "Owakudani sulfur vents; Fuji views on clear days.",
+      "where": "Owakudani, Hakone",
+      "book": ""
+    },
+    {
+      "day": 3,
+      "type": "Sights & Landmarks",
+      "time": "15:00",
+      "duration": "1h",
+      "name": "Lake Ashi cruise",
+      "notes": "Pirate-ship ferry toward the lakeside torii.",
+      "where": "Lake Ashi, Hakone",
+      "book": ""
+    },
+    {
+      "day": 3,
+      "type": "Spa/Wellness",
+      "time": "18:00",
+      "duration": "3h",
+      "name": "Ryokan onsen & kaiseki dinner",
+      "notes": "Check tattoo policy; private baths are an option.",
+      "where": "Hakone, Kanagawa",
+      "book": ""
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "15:00",
+      "duration": "2h",
+      "name": "Takayama old town stroll",
+      "notes": "Sake brewery tastings close around 17:00.",
+      "where": "Takayama, Gifu",
+      "book": ""
+    },
+    {
+      "day": 5,
+      "type": "Food & Drink",
+      "time": "07:30",
+      "duration": "1.5h",
+      "name": "Riverside morning market",
+      "notes": "Miyagawa market; Hida beef snacks.",
+      "where": "Takayama, Gifu",
+      "book": ""
+    },
+    {
+      "day": 5,
+      "type": "Sights & Landmarks",
+      "time": "09:30",
+      "duration": "2h",
+      "name": "Old town (Sanmachi Suji) & former government house",
+      "notes": "Edo-era merchant streets and sake breweries.",
+      "where": "Takayama, Gifu",
+      "book": ""
+    },
+    {
+      "day": 5,
+      "type": "Sights & Landmarks",
+      "time": "13:00",
+      "duration": "2h",
+      "name": "Hida open-air folk village",
+      "notes": "",
+      "where": "Takayama, Gifu",
+      "book": ""
+    },
+    {
+      "day": 5,
+      "type": "Outdoor Activity",
+      "time": "15:30",
+      "duration": "2h",
+      "name": "Countryside cycling tour",
+      "notes": "Rice fields and villages outside town.",
+      "where": "Takayama, Gifu",
+      "book": "Yes - book a guided ride"
+    },
+    {
+      "day": 6,
+      "type": "Sights & Landmarks",
+      "time": "10:00",
+      "duration": "3h",
+      "name": "Shirakawa-go thatched-roof village",
+      "notes": "Gassho-zukuri farmhouses and the Shiroyama viewpoint.",
+      "where": "Shirakawa-go, Gifu",
+      "book": ""
+    },
+    {
+      "day": 6,
+      "type": "Sights & Landmarks",
+      "time": "17:00",
+      "duration": "1.5h",
+      "name": "Higashi Chaya teahouse district",
+      "notes": "",
+      "where": "Higashiyama, Kanazawa",
+      "book": ""
+    },
+    {
+      "day": 7,
+      "type": "Sights & Landmarks",
+      "time": "07:00",
+      "duration": "1.25h",
+      "name": "Kenroku-en Garden",
+      "notes": "Open from early morning; pair with Omicho.",
+      "where": "Kanazawa, Ishikawa",
+      "book": ""
+    },
+    {
+      "day": 7,
+      "type": "Food & Drink",
+      "time": "08:30",
+      "duration": "1.5h",
+      "name": "Omicho Market seafood breakfast",
+      "notes": "",
+      "where": "Kanazawa, Ishikawa",
+      "book": ""
+    },
+    {
+      "day": 7,
+      "type": "Ticketed Attraction",
+      "time": "10:30",
+      "duration": "1.5h",
+      "name": "Contemporary art museum",
+      "notes": "21st Century Museum; closed Mondays.",
+      "where": "Kanazawa, Ishikawa",
+      "book": ""
+    },
+    {
+      "day": 7,
+      "type": "Sights & Landmarks",
+      "time": "13:30",
+      "duration": "2h",
+      "name": "Nagamachi samurai district",
+      "notes": "",
+      "where": "Nagamachi, Kanazawa",
+      "book": ""
+    },
+    {
+      "day": 7,
+      "type": "Class",
+      "time": "16:00",
+      "duration": "1.5h",
+      "name": "Gold-leaf or craft workshop",
+      "notes": "",
+      "where": "Kanazawa, Ishikawa",
+      "book": "Yes - book a workshop"
+    },
+    {
+      "day": 8,
+      "type": "Hike",
+      "time": "14:00",
+      "duration": "2.5h",
+      "name": "Fushimi Inari torii gate hike",
+      "notes": "Open 24h; walk past the crowds toward the summit. Late afternoon light or early morning.",
+      "where": "Fushimi, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 8,
+      "type": "Sights & Landmarks",
+      "time": "19:00",
+      "duration": "1.5h",
+      "name": "Gion evening walk",
+      "notes": "Hanamikoji and Shirakawa lanes; do not photograph or follow geiko/maiko.",
+      "where": "Gion, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 9,
+      "type": "Sights & Landmarks",
+      "time": "08:00",
+      "duration": "1.5h",
+      "name": "Kiyomizu-dera Temple",
+      "notes": "Go at opening to beat crowds.",
+      "where": "Higashiyama, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 9,
+      "type": "Sights & Landmarks",
+      "time": "09:45",
+      "duration": "2h",
+      "name": "Sannenzaka & Ninenzaka lanes to Yasaka Shrine",
+      "notes": "Preserved slopes, tea shops; ends near Maruyama Park.",
+      "where": "Higashiyama, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 9,
+      "type": "Class",
+      "time": "14:00",
+      "duration": "1.5h",
+      "name": "Tea ceremony experience",
+      "notes": "Small-group matcha ceremony; kimono rental optional.",
+      "where": "Higashiyama, Kyoto",
+      "book": "Yes - book a session"
+    },
+    {
+      "day": 9,
+      "type": "Food & Drink",
+      "time": "16:00",
+      "duration": "1.5h",
+      "name": "Nishiki Market tasting walk",
+      "notes": "Covered food market; graze rather than sit.",
+      "where": "Downtown Kyoto",
+      "book": ""
+    },
+    {
+      "day": 10,
+      "type": "Sights & Landmarks",
+      "time": "07:30",
+      "duration": "1h",
+      "name": "Arashiyama Bamboo Grove",
+      "notes": "Before 8:00 or it is shoulder to shoulder.",
+      "where": "Arashiyama, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 10,
+      "type": "Sights & Landmarks",
+      "time": "08:30",
+      "duration": "1h",
+      "name": "Tenryu-ji Temple garden",
+      "notes": "Zen garden next to the grove.",
+      "where": "Arashiyama, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 10,
+      "type": "Sights & Landmarks",
+      "time": "11:00",
+      "duration": "1h",
+      "name": "Kinkaku-ji (Golden Pavilion)",
+      "notes": "",
+      "where": "Kita, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 10,
+      "type": "Sights & Landmarks",
+      "time": "12:15",
+      "duration": "1h",
+      "name": "Ryoan-ji rock garden",
+      "notes": "Short bus/walk from Kinkaku-ji.",
+      "where": "Ukyo, Kyoto",
+      "book": ""
+    },
+    {
+      "day": 11,
+      "type": "Day Trip",
+      "time": "09:00",
+      "duration": "5.5h",
+      "name": "Nara day trip",
+      "notes": "Todai-ji Great Buddha, Nara Park deer, Kasuga Taisha lanterns. ~45 min by train.",
+      "where": "Nara Park, Nara",
+      "book": ""
+    },
+    {
+      "day": 11,
+      "type": "Food & Drink",
+      "time": "18:00",
+      "duration": "3h",
+      "name": "Dotonbori street food evening",
+      "notes": "Takoyaki, okonomiyaki, kushikatsu under the neon signs.",
+      "where": "Namba, Osaka",
+      "book": ""
+    },
+    {
+      "day": 12,
+      "type": "Sights & Landmarks",
+      "time": "09:30",
+      "duration": "2h",
+      "name": "Osaka Castle & park",
+      "notes": "",
+      "where": "Chuo, Osaka",
+      "book": ""
+    },
+    {
+      "day": 12,
+      "type": "Food & Drink",
+      "time": "12:00",
+      "duration": "1.5h",
+      "name": "Kuromon Market lunch",
+      "notes": "Seafood stalls.",
+      "where": "Nipponbashi, Osaka",
+      "book": ""
+    },
+    {
+      "day": 12,
+      "type": "Sights & Landmarks",
+      "time": "14:30",
+      "duration": "2h",
+      "name": "Shinsekai retro district",
+      "notes": "Tsutenkaku tower and kushikatsu counters.",
+      "where": "Shinsekai, Osaka",
+      "book": ""
+    },
+    {
+      "day": 12,
+      "type": "Ticketed Attraction",
+      "time": "17:30",
+      "duration": "1.5h",
+      "name": "Sunset skyscraper observatory",
+      "notes": "Umeda Sky Building floating garden or similar.",
+      "where": "Umeda, Osaka",
+      "book": ""
+    }
+  ],
+  "legs": [
+    {
+      "day": 0,
+      "transferType": "Public Transit",
+      "from": "Narita (NRT) or Haneda (HND) Airport",
+      "to": "Tokyo hotel area",
+      "time": "",
+      "minutes": 90,
+      "carrier": "Narita Express, Keikyu, or Tokyo Monorail",
+      "notes": "Airport limousine bus is the door-to-door alternative. Set up an IC card (Suica/PASMO; Apple Wallet works).",
+      "book": ""
+    },
+    {
+      "day": 3,
+      "transferType": "Public Transit",
+      "from": "Shinjuku Station",
+      "to": "Hakone-Yumoto Station",
+      "time": "09:00",
+      "minutes": 85,
+      "carrier": "Odakyu Romancecar (limited express)",
+      "notes": "A Hakone Free Pass covers this and the Hakone loop.",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 4,
+      "transferType": "Public Transit",
+      "from": "Hakone (Gora or Lake Ashi)",
+      "to": "Odawara Station",
+      "time": "09:00",
+      "minutes": 50,
+      "carrier": "Hakone Tozan Bus",
+      "notes": "Covered by the Hakone Free Pass.",
+      "book": ""
+    },
+    {
+      "day": 4,
+      "transferType": "Public Transit",
+      "from": "Odawara Station",
+      "to": "Nagoya Station",
+      "time": "10:10",
+      "minutes": 75,
+      "carrier": "JR Tokaido Shinkansen (Hikari)",
+      "notes": "",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 4,
+      "transferType": "Public Transit",
+      "from": "Nagoya Station",
+      "to": "Takayama Station",
+      "time": "11:48",
+      "minutes": 150,
+      "carrier": "JR Hida (limited express)",
+      "notes": "Forward big luggage ahead; the Alps leg has little rack space.",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 6,
+      "transferType": "Public Transit",
+      "from": "Takayama bus terminal",
+      "to": "Shirakawa-go bus terminal",
+      "time": "08:30",
+      "minutes": 50,
+      "carrier": "Nohi Bus / Hokutetsu highway bus",
+      "notes": "Seats sell out in foliage and snow seasons. Coin lockers at the terminal.",
+      "book": "Yes - reserve highway bus"
+    },
+    {
+      "day": 6,
+      "transferType": "Public Transit",
+      "from": "Shirakawa-go bus terminal",
+      "to": "Kanazawa bus terminal",
+      "time": "14:00",
+      "minutes": 75,
+      "carrier": "Nohi Bus / Hokutetsu highway bus",
+      "notes": "",
+      "book": "Yes - reserve highway bus"
+    },
+    {
+      "day": 8,
+      "transferType": "Public Transit",
+      "from": "Kanazawa Station",
+      "to": "Tsuruga Station",
+      "time": "08:30",
+      "minutes": 50,
+      "carrier": "JR Hokuriku Shinkansen",
+      "notes": "",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 8,
+      "transferType": "Public Transit",
+      "from": "Tsuruga Station",
+      "to": "Kyoto Station",
+      "time": "09:30",
+      "minutes": 55,
+      "carrier": "JR Thunderbird (limited express)",
+      "notes": "Same-station transfer at Tsuruga, ~10 min.",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 11,
+      "transferType": "Public Transit",
+      "from": "Kyoto Station",
+      "to": "Kintetsu Nara Station",
+      "time": "08:00",
+      "minutes": 45,
+      "carrier": "Kintetsu Kyoto Line (limited express)",
+      "notes": "Moving day: send big bags ahead to the Osaka hotel (takkyubin).",
+      "book": ""
+    },
+    {
+      "day": 11,
+      "transferType": "Public Transit",
+      "from": "Kintetsu Nara Station",
+      "to": "Osaka Namba Station",
+      "time": "15:00",
+      "minutes": 40,
+      "carrier": "Kintetsu Nara Line (rapid express)",
+      "notes": "",
+      "book": ""
+    },
+    {
+      "day": 13,
+      "transferType": "Public Transit",
+      "from": "Namba Station (Osaka)",
+      "to": "Kansai International Airport (KIX)",
+      "time": "",
+      "minutes": 40,
+      "carrier": "Nankai Rapi:t (limited express)",
+      "notes": "Or JR Haruka from Shin-Osaka/Tennoji. Time to the flight; KIX check-in closes ~60 min before departure.",
+      "book": ""
+    }
+  ]
+}

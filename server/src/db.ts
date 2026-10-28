@@ -854,3 +854,9 @@ export const claimApiSpendReservation = async (...args: Parameters<ReturnType<ty
 
 export const listLegacyBlogMapArtifacts = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyBlogMapArtifacts']>) => adapter().listLegacyBlogMapArtifacts(...args);
 export const deleteLegacyBlogMapArtifact = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyBlogMapArtifact']>) => adapter().deleteLegacyBlogMapArtifact(...args);
+
+export type { TripTemplateRecord } from './db.postgres';
+export const upsertTripTemplate = async (...args: Parameters<ReturnType<typeof adapter>['upsertTripTemplate']>) =>
+  adapter().upsertTripTemplate(...args);
+export const listTripTemplates = async (...args: Parameters<ReturnType<typeof adapter>['listTripTemplates']>) =>
+  adapter().listTripTemplates(...args);

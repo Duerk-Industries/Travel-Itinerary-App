@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { needsHotelChoice } from '../utils/lodgingPlaceholder';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 
@@ -228,6 +229,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                 {formatShortDate(lodging.checkInDate)} → {formatShortDate(lodging.checkOutDate)}
                 {cost > 0 ? ` · $${cost.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : ''}
               </Text>
+              {needsHotelChoice(lodging) ? <Text testID={`lodging-choose-hotel-${lodging.id}`} style={themeStyle('tabs_LodgingTab_nudge', {  }, (theme ?? _styleTheme))}>Choose your hotel: tap to add yours</Text> : null}
 
             </View>
           );
@@ -419,6 +421,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   onPress={(event: any) => { event?.stopPropagation?.(); openDetailsDialog(lodging); }}
                 >
                   <Text style={[styles.cellText, styles.cellTextWrap]}>{lodging.name}</Text>
+                  {needsHotelChoice(lodging) ? <Text testID={`lodging-choose-hotel-${lodging.id}`} style={themeStyle('tabs_LodgingTab_nudge', {  }, (theme ?? _styleTheme))}>Choose your hotel</Text> : null}
                 </TouchableOpacity>
               </View>
               <View style={[styles.tableCell, fixedTableColumn(110)]}>
