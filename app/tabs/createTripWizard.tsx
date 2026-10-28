@@ -77,6 +77,7 @@ import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import DateField from '../components/DateField';
+import CarRentalEditForm from '../components/CarRentalEditForm';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { fixedTableColumn } from '../utils/tableColumns';
 
@@ -102,7 +103,7 @@ const WIZARD_CAR_COLUMNS = [
   { label: 'Notes', width: 220 },
   { label: 'For', width: 180 },
   { label: 'Paid By', width: 180 },
-  { label: 'Actions', width: 160 },
+  { label: 'Actions', width: 200 },
 ] as const;
 
 type CreateTripWizardProps = {
@@ -142,6 +143,7 @@ const steps = [
   'Accommodation Details',
   'Activities',
   'Rental Cars',
+  'Ground Transfers',
   'Review & Confirm',
 ];
 
@@ -287,6 +289,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [wizardTours, setWizardTours] = useState<Tour[]>([]);
   const [wizardCarRentals, setWizardCarRentals] = useState<CarRental[]>([]);
   const [wizardCarDraft, setWizardCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
+  const [wizardCarDialogOpen, setWizardCarDialogOpen] = useState(false);
+  const [editingWizardCarId, setEditingWizardCarId] = useState<string | null>(null);
+  const [wizardCarDialogError, setWizardCarDialogError] = useState('');
   const [editingWizardLodgingId, setEditingWizardLodgingId] = useState<string | null>(null);
   const [editingWizardLodging, setEditingWizardLodging] = useState<LodgingDraft | null>(null);
   const [itineraryEnabled, setItineraryEnabled] = useState(false);
@@ -396,13 +401,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }),
     []
   );
-  const prepaidOptions = useMemo<SelectFieldOption[]>(
-    () => [
-      { label: 'Yes', value: 'Yes' },
-      { label: 'No', value: 'No' },
-    ],
-    []
-  );
   const webInputStyle = useMemo(() => toWebStyle(styles.input), [styles]);
   const webInputStyleFlex = useMemo(() => (themeStyle('tabs_createTripWizard_1', { webInputStyle: webInputStyle }, (theme ?? _styleTheme))), [webInputStyle, _styleTheme]);
   const webDateInputStyle = useMemo(
@@ -411,17 +409,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     [styles, theme?.mode, _styleTheme]
   );
   const webDateInputStyleFlex = useMemo(() => (themeStyle('tabs_createTripWizard_3', { webDateInputStyle: webDateInputStyle }, (theme ?? _styleTheme))), [webDateInputStyle, _styleTheme]);
-  const wizardCarInputStyle = useMemo(() => [styles.input, themeStyle('tabs_createTripWizard_4', {  }, (theme ?? _styleTheme))], [styles, _styleTheme]);
-  const wizardCarDateInputStyle = useMemo(() => (themeStyle('tabs_createTripWizard_5', {  }, (theme ?? _styleTheme))), [_styleTheme]);
-  const wizardCarWebInputStyle = useMemo(
-    () => (themeStyle('tabs_createTripWizard_6', { webDateInputStyle: webDateInputStyle }, (theme ?? _styleTheme))),
-    [webDateInputStyle, _styleTheme]
-  );
-  const wizardCarDateWrapStyle = useMemo(
-    () => [styles.dateInputWrap, themeStyle('tabs_createTripWizard_7', {  }, (theme ?? _styleTheme))],
-    [styles, _styleTheme]
-  );
-  const wizardCarInputCellStyle = useMemo(() => [styles.cell, themeStyle('tabs_createTripWizard_8', {  }, (theme ?? _styleTheme))], [styles, _styleTheme]);
   const hasKnownInfo = useMemo(
     () => [knownInfo.flights, knownInfo.lodging, knownInfo.tours, knownInfo.cars].some((val) => val.trim().length > 0),
     [knownInfo]
@@ -485,6 +472,29 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const wizardLodgingBreakdownSum = useMemo(
     () => Object.values(wizardLodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
     [wizardLodgingTotalsBalanced]
+  );
+  const wizardCarTotal = useMemo(
+    () => wizardCarRentals.reduce((sum, c) => sum + (Number(c.cost) || 0), 0),
+    [wizardCarRentals]
+  );
+  const wizardCarPayerTotals = useMemo(
+    () =>
+      computePayerTotals(
+        wizardCarRentals,
+        (c) => Number(c.cost) || 0,
+        (c) => (Array.isArray(c.paidBy) ? c.paidBy : []),
+        wizardMemberIds,
+        { fallbackOnEmpty: false }
+      ),
+    [wizardCarRentals, wizardMemberIds]
+  );
+  const wizardCarTotalsBalanced = useMemo(
+    () => balanceCategoryTotals(wizardCarTotal, wizardCarPayerTotals, wizardMemberIds),
+    [wizardCarPayerTotals, wizardCarTotal, wizardMemberIds]
+  );
+  const wizardCarBreakdownSum = useMemo(
+    () => Object.values(wizardCarTotalsBalanced).reduce((sum, v) => sum + v, 0),
+    [wizardCarTotalsBalanced]
   );
   const buildWizardLodgingDraft = useCallback(
     () =>
@@ -905,15 +915,57 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   };
 
 
-  const addWizardCarRental = () => {
+  const openWizardCarDialog = (car: CarRental | null = null) => {
+    setWizardCarDraft(
+      car
+        ? {
+            status: normalizeItineraryStatus(car.status, DEFAULT_NEW_ITINERARY_STATUS),
+            pickupLocation: car.pickupLocation ?? '',
+            pickupDate: car.pickupDate ?? '',
+            dropoffLocation: car.dropoffLocation ?? '',
+            dropoffDate: car.dropoffDate ?? '',
+            reference: car.reference ?? '',
+            vendor: car.vendor ?? '',
+            prepaid: car.prepaid ?? '',
+            cost: String(car.cost ?? ''),
+            model: car.model ?? '',
+            notes: car.notes ?? '',
+            paidBy: Array.isArray(car.paidBy) ? car.paidBy : [],
+            travelerIds: Array.isArray(car.travelerIds) ? car.travelerIds : [],
+          }
+        : createInitialCarRentalDraft()
+    );
+    setEditingWizardCarId(car ? car.id : null);
+    setWizardCarDialogError('');
+    setWizardCarDialogOpen(true);
+  };
+
+  const closeWizardCarDialog = () => {
+    setWizardCarDialogOpen(false);
+    setEditingWizardCarId(null);
+    setWizardCarDialogError('');
+    setWizardCarDraft(createInitialCarRentalDraft());
+  };
+
+  const saveWizardCarDialog = (opts?: { addAnother?: boolean }) => {
     const result = buildCarRentalFromDraft(wizardCarDraft, wizardDefaultPayerId, wizardMemberIds);
     if (result.error || !result.rental) {
-      setWizardError(result.error || 'Unable to add car rental.');
+      setWizardCarDialogError(result.error || 'Unable to save car rental.');
       return;
     }
-    setWizardCarRentals((prev) => [...prev, result.rental as CarRental]);
-    setWizardCarDraft(createInitialCarRentalDraft());
+    const rental = result.rental as CarRental;
+    setWizardCarRentals((prev) =>
+      editingWizardCarId
+        ? prev.map((c) => (c.id === editingWizardCarId ? { ...rental, id: editingWizardCarId } : c))
+        : [...prev, rental]
+    );
     setWizardError('');
+    if (opts?.addAnother && !editingWizardCarId) {
+      setWizardCarDraft(createInitialCarRentalDraft());
+      setWizardCarDialogError('');
+      return;
+    }
+    closeWizardCarDialog();
   };
 
   const removeWizardCarRental = (id: string) => {
@@ -2003,6 +2055,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               modalCardStyle={themeStyle('tabs_createTripWizard_43', {  }, (theme ?? _styleTheme))}
               showList
               mode="wizard"
+              transferScope="flights"
             />
           </>
         );
@@ -2186,6 +2239,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <>
             <Text style={styles.sectionTitle}>Rental Cars</Text>
             <Text style={styles.helperText}>Optional. Add rental cars using the full car rentals interface.</Text>
+            <View style={styles.row}>
+              <Text style={styles.sectionTitle}>Car Rentals</Text>
+              <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openWizardCarDialog(null)} testID="wizard-car-add" accessibilityRole="button" accessibilityLabel="Add car rental">
+                <Text style={styles.buttonText}>+</Text>
+              </TouchableOpacity>
+            </View>
             <HorizontalTableScroll
               style={styles.tableScroll}
               contentContainerStyle={styles.tableScrollContent}
@@ -2244,181 +2303,76 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <View style={[styles.cell, fixedTableColumn(180)]}>
                       <Text style={styles.cellText}>{car.paidBy.length ? car.paidBy.map(wizardPayerName).join(', ') : '-'}</Text>
                     </View>
-                    <View style={[styles.cell, styles.actionCell, fixedTableColumn(160), styles.lastCell]}>
-                      <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeWizardCarRental(car.id)}>
+                    <View style={[styles.cell, styles.actionCell, fixedTableColumn(200), styles.lastCell, themeStyle('tabs_createTripWizard_44', {  }, (theme ?? _styleTheme))]}>
+                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openWizardCarDialog(car)} testID={`wizard-car-edit-${car.id}`}>
+                        <Text style={styles.buttonText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeWizardCarRental(car.id)} testID={`wizard-car-delete-${car.id}`}>
                         <Text style={styles.dangerButtonText}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
                 ))}
-                <View style={[styles.tableRow, styles.inputRow, styles.lastRow, themeStyle('tabs_createTripWizard_47', {  }, (theme ?? _styleTheme))]}>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Pick up location"
-                      accessibilityLabel="Pick up location"
-                      value={wizardCarDraft.pickupLocation}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, pickupLocation: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <View style={wizardCarDateWrapStyle}>
-                      <DateField
-                        value={wizardCarDraft.pickupDate}
-                        onChange={(pickupDate) => setWizardCarDraft((p) => ({ ...p, pickupDate }))}
-                        styles={styles}
-                        theme={theme}
-                        style={wizardCarDateInputStyle}
-                        testID="wizard-car-pickup-date"
-                        accessibilityLabel="Pick up date"
-                      />
-                    </View>
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Drop off location"
-                      accessibilityLabel="Drop off location"
-                      value={wizardCarDraft.dropoffLocation}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, dropoffLocation: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <View style={wizardCarDateWrapStyle}>
-                      <DateField
-                        value={wizardCarDraft.dropoffDate}
-                        onChange={(dropoffDate) => setWizardCarDraft((p) => ({ ...p, dropoffDate }))}
-                        styles={styles}
-                        theme={theme}
-                        style={wizardCarDateInputStyle}
-                        testID="wizard-car-dropoff-date"
-                        accessibilityLabel="Drop off date"
-                      />
-                    </View>
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(130)]}>
-                    {Platform.OS === 'web' ? (
-                      <select
-                        value={normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
-                        onChange={(e) =>
-                          setWizardCarDraft((p) => ({
-                            ...p,
-                            status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS),
-                          }))
-                        }
-                        style={themeStyle('tabs_createTripWizard_48', { wizardCarWebInputStyle: wizardCarWebInputStyle }, (theme ?? _styleTheme))}
-                      >
-                        {ITINERARY_STATUSES.map((opt) => (
-                          <option key={`wizard-car-status-${opt}`} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <Text style={styles.cellText}>{normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
-                    )}
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Reference"
-                      accessibilityLabel="Reference"
-                      value={wizardCarDraft.reference}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, reference: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Vendor"
-                      accessibilityLabel="Vendor"
-                      value={wizardCarDraft.vendor}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, vendor: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <SelectField
-                      styles={styles}
-                      options={prepaidOptions}
-                      value={wizardCarDraft.prepaid}
-                      placeholder="Select Yes/No"
-                      title="Prepaid status"
-                      style={themeStyle('tabs_createTripWizard_49', {  }, (theme ?? _styleTheme))}
-                      webStyle={wizardCarWebInputStyle}
-                      listStyle={themeStyle('tabs_createTripWizard_50', {  }, (theme ?? _styleTheme))}
-                      onChange={(value) => setWizardCarDraft((p) => ({ ...p, prepaid: value }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(120)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Cost"
-                      accessibilityLabel="Cost"
-                      keyboardType="numeric"
-                      value={wizardCarDraft.cost}
-                      onChangeText={(text: string) =>
-                        setWizardCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))
-                      }
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Car model"
-                      accessibilityLabel="Car model"
-                      value={wizardCarDraft.model}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, model: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(220)]}>
-                    <TextInput
-                      style={[wizardCarInputStyle, styles.cellTextWrap]}
-                      placeholder="Notes"
-                      accessibilityLabel="Notes"
-                      value={wizardCarDraft.notes}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, notes: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
-                    <View style={styles.payerChips}>
-                      {wizardCarDraft.travelerIds.map((id) => (
-                        <View key={`wizard-car-traveler-${id}`} style={styles.payerChip}>
-                          <Text style={styles.cellText}>{wizardPayerName(id)}</Text>
-                          <TouchableOpacity onPress={() => setWizardCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
-                            <Text style={styles.removeText}>x</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                    <View style={styles.payerOptions}>
-                      {wizardGroupMembers
-                        .filter((m) => !wizardCarDraft.travelerIds.includes(m.id))
-                        .map((m) => (
-                          <TouchableOpacity
-                            key={`wizard-car-traveler-add-${m.id}`}
-                            style={styles.smallButton}
-                            onPress={() => setWizardCarDraft((prev) => ({ ...prev, travelerIds: [...prev.travelerIds, m.id] }))}
-                          >
-                            <Text style={styles.buttonText}>Add {formatWizardMemberName(m)}</Text>
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
-                    <PayerSelect members={wizardGroupMembers} value={wizardCarDraft.paidBy} formatName={formatWizardMemberName} onChange={ids => setWizardCarDraft(prev => ({ ...prev, paidBy: ids }))} styles={styles} testID="wizard-car-payer" />
-
-                  </View>
-                  <View style={[styles.cell, styles.actionCell, fixedTableColumn(160), styles.lastCell]}>
-                    <TouchableOpacity style={styles.button} onPress={addWizardCarRental}>
-                      <Text style={styles.buttonText}>Add</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
               </View>
             </HorizontalTableScroll>
+            {wizardCarDialogOpen ? (
+              <CarRentalEditForm
+                draft={wizardCarDraft}
+                onChange={setWizardCarDraft}
+                onSave={() => saveWizardCarDialog()}
+                onSaveAndAddAnother={!editingWizardCarId ? () => saveWizardCarDialog({ addAnother: true }) : undefined}
+                onCancel={closeWizardCarDialog}
+                isNew={!editingWizardCarId}
+                members={wizardGroupMembers}
+                styles={styles}
+                theme={theme}
+                error={wizardCarDialogError}
+              />
+            ) : null}
+            <View style={themeStyle('tabs_createTripWizard_45', {  }, (theme ?? _styleTheme))}>
+              <Text style={styles.flightTitle}>Total car rental cost: ${wizardCarTotal.toFixed(2)}</Text>
+              <Text style={styles.helperText}>Breakdown (aligned with total even when no payers are set):</Text>
+              {wizardGroupMembers.map((m) => (
+                <Text key={m.id} style={styles.helperText}>
+                  {formatWizardMemberName(m)}: ${Number(wizardCarTotalsBalanced[m.id] ?? 0).toFixed(2)}
+                </Text>
+              ))}
+              <Text style={[styles.helperText, themeStyle('tabs_createTripWizard_46', {  }, (theme ?? _styleTheme))]}>Subtotal across payers: ${wizardCarBreakdownSum.toFixed(2)}</Text>
+            </View>
           </>
         );
       case 8:
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Ground Transfers</Text>
+            <Text style={styles.helperText}>Optional. Add trains, buses, ferries, private transfers and other ground transportation.</Text>
+            <FlightsTab
+              backendUrl={backendUrl}
+              userToken={userToken}
+              activeTripId={null}
+              flights={wizardFlights}
+              setFlights={setWizardFlights}
+              groupMembers={wizardGroupMembers}
+              defaultPayerId={wizardDefaultPayerId}
+              formatMemberName={formatWizardMemberName}
+              payerName={wizardPayerName}
+              headers={headers}
+              jsonHeaders={wizardJsonHeaders}
+              findActiveTrip={() => wizardTripDefaults}
+              fetchGroupMembersForActiveTrip={async () => undefined}
+              styles={styles}
+              theme={theme}
+              airportOptions={airportOptions}
+              onSearchAirports={onSearchAirports}
+              modalOverlayStyle={themeStyle('tabs_createTripWizard_42', { Platform: Platform }, (theme ?? _styleTheme))}
+              modalCardStyle={themeStyle('tabs_createTripWizard_43', {  }, (theme ?? _styleTheme))}
+              showList
+              mode="wizard"
+              transferScope="ground"
+            />
+          </>
+        );
+      case 9:
       default:
         return (
           <>

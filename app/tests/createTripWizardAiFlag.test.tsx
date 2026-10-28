@@ -71,7 +71,7 @@ describe('CreateTripWizard AI itinerary generation flag', () => {
     const utils = render(<CreateTripWizard {...baseProps} aiItineraryGenerationAllowed />);
     advanceToItineraryStep(utils);
 
-    expect(utils.getByText('Step 4 of 9: Itinerary')).toBeTruthy();
+    expect(utils.getByText('Step 4 of 10: Itinerary')).toBeTruthy();
     expect(utils.getByText('Would you like to create a base itinerary using the help of AI?')).toBeTruthy();
     expect(utils.getByText('Yes')).toBeTruthy();
   });
@@ -80,7 +80,7 @@ describe('CreateTripWizard AI itinerary generation flag', () => {
     const utils = render(<CreateTripWizard {...baseProps} aiItineraryGenerationAllowed={false} />);
     advanceToItineraryStep(utils);
 
-    expect(utils.getByText('Step 4 of 9: Itinerary')).toBeTruthy();
+    expect(utils.getByText('Step 4 of 10: Itinerary')).toBeTruthy();
     expect(utils.queryByText('Would you like to create a base itinerary using the help of AI?')).toBeNull();
     expect(utils.queryByText('Yes')).toBeNull();
     expect(

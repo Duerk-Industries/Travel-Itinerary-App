@@ -953,9 +953,9 @@ const styleFactories = {
           fontWeight: '500',
         }),
   // components/AppleSignInButton.tsx
-  components_AppleSignInButton_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surface),
+  components_AppleSignInButton_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onAccent),
   // components/AppleSignInButton.tsx
-  components_AppleSignInButton_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.primary),
+  components_AppleSignInButton_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/AssistantActionConfirmDialog.tsx
   components_AssistantActionConfirmDialog_1: (_theme: AppTheme, { theme, Platform }: ThemeStyleValues): any => ({
     modalOverlay: {
@@ -1363,11 +1363,11 @@ const styleFactories = {
   // components/BlogCommentComposer.tsx
   components_BlogCommentComposer_7: (_theme: AppTheme, { canSubmit }: ThemeStyleValues): any => ({ opacity: canSubmit ? 1 : 0.5, paddingVertical: 6, paddingHorizontal: 12 }),
   // components/BlogCommentComposer.tsx
-  components_BlogCommentComposer_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogCommentComposer_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogCommentComposer.tsx
-  components_BlogCommentComposer_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogCommentComposer_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/BlogCommentComposer.tsx
-  components_BlogCommentComposer_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogCommentComposer_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.border),
   // components/BlogCommentComposer.tsx
   components_BlogCommentComposer_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surface),
   // components/BlogCommentComposer.tsx
@@ -1464,9 +1464,9 @@ const styleFactories = {
   // components/BlogConflictBanner.tsx
   components_BlogConflictBanner_9: (_theme: AppTheme, { textColor }: ThemeStyleValues): any => ({ color: textColor }),
   // components/BlogConflictBanner.tsx
-  components_BlogConflictBanner_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogConflictBanner_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogConflictBanner.tsx
-  components_BlogConflictBanner_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogConflictBanner_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/BlogConflictBanner.tsx
   components_BlogConflictBanner_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.dangerAction),
   // components/BlogConflictBanner.tsx
@@ -1496,7 +1496,7 @@ const styleFactories = {
   // components/BlogContributorStrip.tsx
   components_BlogContributorStrip_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.premiumText, fontSize: 11, fontWeight: '700' }),
   // components/BlogContributorStrip.tsx
-  components_BlogContributorStrip_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogContributorStrip_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/BlogDayStarterCard.tsx
   components_BlogDayStarterCard_1: (_theme: AppTheme, { borderColor, backgroundColor }: ThemeStyleValues): any => ({ borderWidth: 1, borderColor, borderRadius: 12, backgroundColor, padding: 14, marginBottom: 12 }),
   // components/BlogDayStarterCard.tsx
@@ -1518,15 +1518,15 @@ const styleFactories = {
   // components/BlogDayStarterCard.tsx
   components_BlogDayStarterCard_10: (_theme: AppTheme, { textColor }: ThemeStyleValues): any => ({ color: textColor }),
   // components/BlogDayStarterCard.tsx
-  components_BlogDayStarterCard_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogDayStarterCard_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogDayStarterCard.tsx
-  components_BlogDayStarterCard_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogDayStarterCard_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/BlogDayStarterCard.tsx
-  components_BlogDayStarterCard_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogDayStarterCard_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.border),
   // components/BlogDayStarterCard.tsx
   components_BlogDayStarterCard_14: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surface),
   // components/BlogDayStarterCard.tsx
-  components_BlogDayStarterCard_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.accentSurface),
+  components_BlogDayStarterCard_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
   // components/BlogDayStarterCard.tsx
   components_BlogDayStarterCard_16: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onCta),
   // components/BlogDiscoveryPanel.tsx
@@ -1568,11 +1568,11 @@ const styleFactories = {
   // components/BlogDiscoveryPanel.tsx
   components_BlogDiscoveryPanel_19: (_theme: AppTheme, { mutedColor }: ThemeStyleValues): any => ({ color: mutedColor, marginTop: 8 }),
   // components/BlogDiscoveryPanel.tsx
-  components_BlogDiscoveryPanel_20: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogDiscoveryPanel_20: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogDiscoveryPanel.tsx
-  components_BlogDiscoveryPanel_21: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogDiscoveryPanel_21: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/BlogDiscoveryPanel.tsx
-  components_BlogDiscoveryPanel_22: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogDiscoveryPanel_22: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.border),
   // components/BlogDiscoveryPanel.tsx
   components_BlogDiscoveryPanel_23: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surface),
   // components/BlogDiscoveryPanel.tsx
@@ -1619,7 +1619,7 @@ const styleFactories = {
   // components/BlogKeepsakeButton.tsx
   components_BlogKeepsakeButton_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onAccent, fontWeight: '700' }),
   // components/BlogKeepsakeButton.tsx
-  components_BlogKeepsakeButton_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.primary),
+  components_BlogKeepsakeButton_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogMediaMetadataEditor.tsx
   components_BlogMediaMetadataEditor_1: (_theme: AppTheme, { borderColor, backgroundColor }: ThemeStyleValues): any => ({ marginTop: 10, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor }),
   // components/BlogMediaMetadataEditor.tsx
@@ -1649,11 +1649,11 @@ const styleFactories = {
   // components/BlogMediaMetadataEditor.tsx
   components_BlogMediaMetadataEditor_14: (_theme: AppTheme, { mutedColor }: ThemeStyleValues): any => ({ color: mutedColor, fontSize: 12, marginTop: 6 }),
   // components/BlogMediaMetadataEditor.tsx
-  components_BlogMediaMetadataEditor_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogMediaMetadataEditor_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogMediaMetadataEditor.tsx
-  components_BlogMediaMetadataEditor_16: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogMediaMetadataEditor_16: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/BlogMediaMetadataEditor.tsx
-  components_BlogMediaMetadataEditor_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogMediaMetadataEditor_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.border),
   // components/BlogMediaMetadataEditor.tsx
   components_BlogMediaMetadataEditor_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surface),
   // components/BlogMediaMetadataEditor.tsx
@@ -1732,9 +1732,9 @@ const styleFactories = {
   // components/BlogReactionBar.tsx
   components_BlogReactionBar_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 16 }),
   // components/BlogReactionBar.tsx
-  components_BlogReactionBar_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogReactionBar_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogReactionBar.tsx
-  components_BlogReactionBar_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogReactionBar_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/BlogReactionBar.tsx
   components_BlogReactionBar_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
   // components/BlogRichTextEditor.tsx
@@ -1751,11 +1751,11 @@ const styleFactories = {
         overflow: 'hidden',
       }),
   // components/BlogRichTextEditor.tsx
-  components_BlogRichTextEditor_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogRichTextEditor_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.border),
   // components/BlogRichTextEditor.tsx
   components_BlogRichTextEditor_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surface),
   // components/BlogRichTextEditor.tsx
-  components_BlogRichTextEditor_6: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogRichTextEditor_6: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogRichTextView.tsx
   components_BlogRichTextView_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontWeight: '700' as const }),
   // components/BlogRichTextView.tsx
@@ -1787,9 +1787,9 @@ const styleFactories = {
   // components/BlogRichTextView.tsx
   components_BlogRichTextView_15: (_theme: AppTheme, { base, spacing }: ThemeStyleValues): any => ({ ...base, marginBottom: spacing }),
   // components/BlogRichTextView.tsx
-  components_BlogRichTextView_16: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_BlogRichTextView_16: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogRichTextView.tsx
-  components_BlogRichTextView_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.accentSurface),
+  components_BlogRichTextView_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
   // components/CarRentalEditForm.tsx
   components_CarRentalEditForm_1: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({
     paddingHorizontal: 10,
@@ -2332,7 +2332,7 @@ const styleFactories = {
   // components/DayMediaLightbox.tsx
   components_DayMediaLightbox_31: (_theme: AppTheme, { textColor, styles }: ThemeStyleValues): any => ({ color: textColor ?? styles?.buttonText?.color }),
   // components/DayMediaLightbox.tsx
-  components_DayMediaLightbox_32: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_DayMediaLightbox_32: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.border),
   // components/DayOrderRow.tsx
   components_DayOrderRow_1: (_theme: AppTheme, { offset }: ThemeStyleValues): any => ({ transform: [{ translateY: offset }], zIndex: 1, opacity: 0.85 }),
   // components/DayOrderRow.tsx
@@ -2811,9 +2811,9 @@ const styleFactories = {
   components_LandingPage_53: (_theme: AppTheme, { typography, colors, spacing }: ThemeStyleValues): any => ({ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.lg, textAlign: 'center' }),
   // components/LandingPage.tsx
   components_LandingPage_54: (_theme: AppTheme, {  }: ThemeStyleValues): any => ([
-  { label: 'Day 1', title: 'Arrive in Seattle', subtitle: 'Pike Place Market · check in to hotel', color: _theme.colors.linkText },
-  { label: 'Day 2', title: 'Olympic National Park', subtitle: 'Hurricane Ridge · Sol Duc Falls Trail', color: _theme.colors.successText },
-  { label: 'Day 3', title: 'Hoh Rainforest', subtitle: 'Ruby Beach · sunset drive back', color: _theme.colors.warningText },
+  { label: 'Day 1', title: 'Arrive in Seattle', subtitle: 'Pike Place Market · check in to hotel', color: _theme.colors.accentAction },
+  { label: 'Day 2', title: 'Olympic National Park', subtitle: 'Hurricane Ridge · Sol Duc Falls Trail', color: _theme.colors.successAction },
+  { label: 'Day 3', title: 'Hoh Rainforest', subtitle: 'Ruby Beach · sunset drive back', color: _theme.colors.warningAction },
 ]),
   // components/LazyTabFallback.tsx
   components_LazyTabFallback_1: (_theme: AppTheme, { StyleSheet }: ThemeStyleValues): any => (StyleSheet.create({
@@ -3618,11 +3618,11 @@ const styleFactories = {
   // components/PhotoFirstComposer.tsx
   components_PhotoFirstComposer_35: (_theme: AppTheme, { textColor }: ThemeStyleValues): any => ({ color: textColor }),
   // components/PhotoFirstComposer.tsx
-  components_PhotoFirstComposer_36: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_PhotoFirstComposer_36: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/PhotoFirstComposer.tsx
-  components_PhotoFirstComposer_37: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_PhotoFirstComposer_37: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/PhotoFirstComposer.tsx
-  components_PhotoFirstComposer_38: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_PhotoFirstComposer_38: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.border),
   // components/PhotoFirstComposer.tsx
   components_PhotoFirstComposer_39: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surface),
   // components/PhotoFirstComposer.tsx
@@ -4655,11 +4655,11 @@ const styleFactories = {
   // components/TripRecapCards.tsx
   components_TripRecapCards_33: (_theme: AppTheme, { mutedColor }: ThemeStyleValues): any => ({ color: mutedColor, fontSize: 11, marginTop: 10 }),
   // components/TripRecapCards.tsx
-  components_TripRecapCards_34: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_TripRecapCards_34: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/TripRecapCards.tsx
-  components_TripRecapCards_35: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_TripRecapCards_35: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/TripRecapCards.tsx
-  components_TripRecapCards_36: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surfaceMuted),
+  components_TripRecapCards_36: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.border),
   // components/TripRecapCards.tsx
   components_TripRecapCards_37: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.surface),
   // components/TripRecapCards.tsx
@@ -7579,7 +7579,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: theme.colors.error,
+    backgroundColor: theme.colors.dangerAction,
   }),
   homeModalRowDeletePressed: ({
     opacity: 0.8,
@@ -7784,7 +7784,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
   }),
   authErrorBanner: ({
     width: '100%',
-    backgroundColor: theme.colors.error,
+    backgroundColor: theme.colors.dangerAction,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,

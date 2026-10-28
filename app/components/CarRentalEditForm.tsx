@@ -34,23 +34,29 @@ export type CarRentalEditFormProps = {
   draft: CarRentalDraft;
   onChange: (updater: (prev: CarRentalDraft) => CarRentalDraft) => void;
   onSave: () => void | Promise<void>;
+  /** When provided, shows a "Save & Add Another" button (used for new items in the trip wizard). */
+  onSaveAndAddAnother?: () => void | Promise<void>;
   onCancel: () => void;
   isNew: boolean;
   /** Group members eligible to be assigned a rental. Removed members are filtered locally. */
   members: CarRentalFormMember[];
   styles: Record<string, any>;
   theme?: AppTheme;
+  /** Validation message shown above the footer, inside the dialog. */
+  error?: string | null;
 };
 
 const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
   draft,
   onChange,
   onSave,
+  onSaveAndAddAnother,
   onCancel,
   isNew,
   members,
   styles,
   theme: _providedTheme,
+  error,
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
@@ -210,10 +216,16 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
             <Text style={styles.modalLabel}>Paid by</Text>
             <PayerSelect members={activeMembers} value={draft.paidBy} formatName={formatMemberDisplayName} onChange={ids => onChange((prev) => ({ ...prev, paidBy: ids }))} styles={styles} testID="car-rental-payer" />
           </ScrollView>
+          {error ? <Text style={styles.errorText} accessibilityRole="alert" testID="car-rental-form-error">{error}</Text> : null}
           <View style={[styles.tableFooter, themeStyle('components_CarRentalEditForm_10', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onCancel} testID="car-rental-cancel">
               <Text style={styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>
+            {onSaveAndAddAnother ? (
+              <TouchableOpacity style={styles.button} onPress={onSaveAndAddAnother} accessibilityRole="button" accessibilityLabel="Save and add another" testID="car-rental-save-add-another">
+                <Text style={styles.buttonText}>Save &amp; Add Another</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity style={styles.button} onPress={onSave} testID="car-rental-save">
               <Text style={styles.buttonText}>Save</Text>
             </TouchableOpacity>

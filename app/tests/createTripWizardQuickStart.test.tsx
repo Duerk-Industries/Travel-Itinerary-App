@@ -61,21 +61,21 @@ describe('CreateTripWizard Quick Start', () => {
     expect(getByTestId('quick-start-trip-name')).toBeTruthy();
     expect(getByTestId('quick-start-create')).toBeTruthy();
     // The full wizard's step-by-step heading is not shown in Quick Start mode.
-    expect(queryByText('Step 1 of 9: Trip Details')).toBeNull();
+    expect(queryByText('Step 1 of 10: Trip Details')).toBeNull();
   });
 
   it('opens directly on the full step wizard when featureQuickStartTripWizard is disabled', () => {
     const { getByText, queryByText } = render(
       <CreateTripWizard {...baseProps} featureQuickStartTripWizard={false} />
     );
-    expect(getByText('Step 1 of 9: Trip Details')).toBeTruthy();
+    expect(getByText('Step 1 of 10: Trip Details')).toBeTruthy();
     expect(queryByText('Start planning in seconds')).toBeNull();
   });
 
   it('lets a traveler switch from Quick Start into the full wizard via "Customize before creating"', () => {
     const { getByTestId, getByText, queryByText } = render(<CreateTripWizard {...baseProps} />);
     fireEvent.press(getByTestId('quick-start-customize'));
-    expect(getByText('Step 1 of 9: Trip Details')).toBeTruthy();
+    expect(getByText('Step 1 of 10: Trip Details')).toBeTruthy();
     expect(queryByText('Start planning in seconds')).toBeNull();
   });
 
