@@ -62,6 +62,8 @@ router.get('/', async (req, res) => {
 
 // Template activities for the days a trip's lodgings put the traveler in the activity's city, minus
 // anything the trip already has. Shown on the Activities page; an empty list is a normal answer.
+// `?date=YYYY-MM-DD` narrows it to that day (the itinerary's "Add activity" menu) and `activityMedia` carries the
+// picture and sentence for the trip's optional activities.
 router.get('/trips/:tripId/activity-suggestions', async (req, res) => {
   const user = (req as any).user as TokenPayload;
   try {
@@ -69,10 +71,11 @@ router.get('/trips/:tripId/activity-suggestions', async (req, res) => {
       res.status(403).json({ error: 'Trip unavailable.' });
       return;
     }
-    res.json(await suggestActivitiesForTrip(user.userId, req.params.tripId));
+    const date = typeof req.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date) ? req.query.date : undefined;
+    res.json(await suggestActivitiesForTrip(user.userId, req.params.tripId, { date }));
   } catch (err) {
     logError('[trip-templates] activity suggestions failed', err);
-    res.json({ suggestions: [], dismissedCount: 0 });
+    res.json({ suggestions: [], dismissedCount: 0, activityMedia: {} });
   }
 });
 

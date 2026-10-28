@@ -267,6 +267,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const isNarrowLayout = viewportWidth < 720;
   const [stepIndex, setStepIndex] = useState(0);
   const [quickStartMode, setQuickStartMode] = useState(featureQuickStartTripWizard);
+  // Quick start already collected the dates (exact, or a flexible length), so the full wizard skips its Dates step.
+  const [skipDatesStep, setSkipDatesStep] = useState(false);
   const [details, setDetails] = useState<TripDetails>({ name: initialDraft?.name ?? '', description: '' });
   const [selectedLocations, setSelectedLocations] = useState<LocationOption[]>([]);
   const [selectedMustSeeAttractions, setSelectedMustSeeAttractions] = useState<AttractionOption[]>([]);
@@ -827,8 +829,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     return true;
   }, [dateModeSelected, dates, details, itineraryMode, participants, stepIndex]);
 
-  const quickStartReady = Boolean(details.name.trim() && selectedLocations.length && (dates.mode === 'duration' ? !validateTripDates(dates) : dates.startDate && dates.endDate && !validateTripDates({ ...dates, mode: 'range' })));
+  const quickStartDatesReady = Boolean(dates.mode === 'duration' ? !validateTripDates(dates) : dates.startDate && dates.endDate && !validateTripDates({ ...dates, mode: 'range' }));
+  const quickStartReady = Boolean(details.name.trim() && selectedLocations.length && quickStartDatesReady);
 
+  const DATES_STEP = 1;
   const goNext = useCallback(() => {
     let error: string | null = null;
     if (stepIndex === 0) error = validateTripDetails(details);
@@ -852,13 +856,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       return;
     }
     setWizardError('');
-    setStepIndex((prev) => Math.min(prev + 1, totalSteps - 1));
-  }, [dateModeSelected, dates, details, itineraryMode, participants, stepIndex, totalSteps]);
+    setStepIndex((prev) => {
+      const next = Math.min(prev + 1, totalSteps - 1);
+      return skipDatesStep && next === DATES_STEP ? next + 1 : next;
+    });
+  }, [dateModeSelected, dates, details, itineraryMode, participants, skipDatesStep, stepIndex, totalSteps]);
 
   const goBack = useCallback(() => {
     setWizardError('');
-    setStepIndex((prev) => Math.max(prev - 1, 0));
-  }, []);
+    setStepIndex((prev) => {
+      const back = Math.max(prev - 1, 0);
+      return skipDatesStep && back === DATES_STEP ? back - 1 : back;
+    });
+  }, [skipDatesStep]);
 
   const insertDescriptionSnippet = (snippet: string) => {
     setDetails((prev) => ({
@@ -1427,7 +1437,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       />
       <TouchableOpacity
         style={[styles.button, styles.outlineButton ?? styles.button, themeStyle('tabs_createTripWizard_14', {  }, (theme ?? _styleTheme))]}
-        onPress={() => { setQuickStartMode(false); setDateModeSelected(dates.mode === 'duration' ? 'duration' : dates.startDate || dates.endDate ? 'range' : null); }}
+        onPress={() => { setQuickStartMode(false); setSkipDatesStep(quickStartDatesReady); setDateModeSelected(dates.mode === 'duration' ? 'duration' : dates.startDate || dates.endDate ? 'range' : null); }}
         testID="quick-start-customize"
       >
         <Text style={styles.buttonText}>Customize before creating</Text>
@@ -1490,6 +1500,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               value={details.description}
               onChangeText={(text: string) => setDetails((prev) => ({ ...prev, description: text }))}
             />
+            {skipDatesStep ? (
+              <View style={styles.row}>
+                <Text style={styles.helperText} testID="wizard-dates-summary">
+                  {dates.mode === 'duration'
+                    ? `Trip length: ${dates.durationDays} day(s), dates to be decided.`
+                    : `Dates: ${formatDateLong(dates.startDate)} - ${formatDateLong(dates.endDate)}.`}
+                </Text>
+                <TouchableOpacity testID="wizard-dates-change" accessibilityRole="button" onPress={() => setSkipDatesStep(false)}>
+                  <Text style={styles.linkText}>Change dates</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </>
         );
       case 1:
@@ -2490,7 +2512,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <View>
             <Text style={styles.sectionTitle}>{quickStartMode ? 'Create a trip' : 'Create Trip Wizard'}</Text>
             <Text style={styles.helperText}>
-              {quickStartMode ? 'Quick start' : `Step ${stepIndex + 1} of ${totalSteps}: ${steps[stepIndex]}`}
+              {quickStartMode ? 'Quick start' : `Step ${stepIndex + 1 - (skipDatesStep && stepIndex > DATES_STEP ? 1 : 0)} of ${totalSteps - (skipDatesStep ? 1 : 0)}: ${steps[stepIndex]}`}
             </Text>
           </View>
           <TouchableOpacity

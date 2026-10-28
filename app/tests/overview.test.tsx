@@ -1000,6 +1000,59 @@ describe('Overview UI (nested itinerary)', () => {
     expect(fetchMock.mock.calls.some((call: any[]) => call[0] === 'http://localhost:4000/api/activities' && call[1]?.method === 'POST')).toBe(false);
   });
 
+  describe('Add activity suggestions', () => {
+    const suggestion = (key: string, name: string) => ({
+      key, name, city: 'Test City', activityType: 'Sights & Landmarks', startTime: '09:30', duration: '2h', startLocation: 'Old Town',
+      description: `${name} is worth a visit.`, image: { url: `https://upload.wikimedia.org/${key}.jpg`, credit: 'Someone, CC0' }, bookAhead: false, dates: ['2026-01-29'],
+    });
+    const mockSuggestions = (suggestions: unknown[], activityMedia: Record<string, unknown> = {}) => {
+      fetchMock.mockImplementation(async (input: unknown) => ({
+        ok: true,
+        json: async () => (String(input).includes('/activity-suggestions') ? { suggestions, dismissedCount: 0, activityMedia } : []),
+      }));
+    };
+    const withAuth = { ...baseProps, headers: { Authorization: 'Bearer token-1' } };
+
+    test('asks for the viewed day, and keeps optional plus suggested activities to four', async () => {
+      mockSuggestions(['a', 'b', 'c'].map((key) => suggestion(key, `Place ${key}`)), { opt1: { description: 'Youth fashion and shopping.', image: null } });
+      const tours = ['opt1', 'opt2', 'opt3'].map((id) => ({ id, name: `Optional ${id}`, date: '', nearLodgingId: null, status: 'Proposed', cost: '0', notes: `About ${id}.
+More detail.` }));
+      const { findByTestId, findByText, queryByTestId, getByText } = await renderOverview(<OverviewTab {...withAuth} tours={tours as any} />);
+      fireEvent.press(await findByTestId('overview-day-card-1'));
+      fireEvent.press(await findByTestId('day-details-add-activity-button'));
+      expect(await findByTestId('add-item-suggested-a')).toBeTruthy();
+      expect(queryByTestId('add-item-suggested-b')).toBeNull();
+      expect(['opt1', 'opt2', 'opt3'].every((id) => queryByTestId(`add-item-optional-${id}`))).toBe(true);
+      // The sentence comes from the matching template activity, or else the activity's own first note line.
+      expect(getByText('Youth fashion and shopping.')).toBeTruthy();
+      expect(await findByText('About opt2.')).toBeTruthy();
+      const asked = fetchMock.mock.calls.map((call: any[]) => String(call[0])).find((url: string) => url.includes('/activity-suggestions'));
+      expect(asked).toBe('http://localhost:4000/api/trip-templates/trips/trip1/activity-suggestions?date=2026-01-29');
+    });
+
+    test('four optional activities leave no room for suggestions', async () => {
+      mockSuggestions([suggestion('a', 'Place a')]);
+      const tours = ['o1', 'o2', 'o3', 'o4', 'o5'].map((id) => ({ id, name: `Optional ${id}`, date: '', nearLodgingId: null, status: 'Proposed', cost: '0' }));
+      const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...withAuth} tours={tours as any} />);
+      fireEvent.press(await findByTestId('overview-day-card-1'));
+      fireEvent.press(await findByTestId('day-details-add-activity-button'));
+      expect(await findByTestId('add-item-optional-o4')).toBeTruthy();
+      expect(queryByTestId('add-item-optional-o5')).toBeNull();
+      expect(queryByTestId('add-item-suggested-a')).toBeNull();
+    });
+
+    test('choosing a suggestion opens the activity editor filled in for that day', async () => {
+      mockSuggestions([suggestion('a', 'Old Town walk')]);
+      const { findByTestId, getByPlaceholderText } = await renderOverview(<OverviewTab {...withAuth} />);
+      fireEvent.press(await findByTestId('overview-day-card-2'));
+      fireEvent.press(await findByTestId('day-details-add-activity-button'));
+      fireEvent.press(await findByTestId('add-item-suggested-a'));
+      expect(await findByTestId('activity-form-modal')).toBeTruthy();
+      expect(getByPlaceholderText('Activity name').props.value).toBe('Old Town walk');
+      expect(getByPlaceholderText('Description').props.value).toBe('Old Town walk is worth a visit.');
+    });
+  });
+
   test('shows traveler names when flights differ', async () => {
     const flights = [
       {

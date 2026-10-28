@@ -192,6 +192,35 @@ describe('trip templates API', () => {
     }
   });
 
+  it('narrows suggestions to one day from the lodging for that day, and pictures optional activities', async () => {
+    const template = (await request(app).get('/api/trip-templates?countries=Japan&maxDays=10').set(auth()).expect(200)).body.templates.find((t: any) => t.days === 7);
+    const created = await request(app).post(`/api/trip-templates/${template.id}/trip`).set(auth())
+      .send({ startDate: '2027-05-03', locationIds: ['country:japan'] }).expect(201);
+    const tripId = created.body.trip.id as string;
+    const base = `/api/trip-templates/trips/${tripId}/activity-suggestions`;
+    try {
+      const everything = (await request(app).get(base).set(auth()).expect(200)).body.suggestions as any[];
+      const day = everything[0].dates[0] as string;
+      const forDay = (await request(app).get(`${base}?date=${day}`).set(auth()).expect(200)).body.suggestions as any[];
+      expect(forDay.length).toBeGreaterThan(0);
+      for (const s of forDay) expect(s.dates).toContain(day);
+      expect(forDay.map((s) => s.startTime)).toEqual([...forDay.map((s) => s.startTime)].sort());
+      // A date that no lodging covers has nothing to suggest, and a malformed one is ignored.
+      expect((await request(app).get(`${base}?date=2031-01-01`).set(auth()).expect(200)).body.suggestions).toEqual([]);
+      expect((await request(app).get(`${base}?date=not-a-date`).set(auth()).expect(200)).body.suggestions.length).toBe(everything.length);
+
+      // An optional (undated) activity that matches a template activity gets its picture and sentence.
+      const pick = everything.find((s) => s.description && s.image) ?? everything[0];
+      const optional = await request(app).post('/api/activities').set(auth())
+        .send({ tripId, name: pick.name, activityType: 'Tour', date: '', status: 'Proposed', startLocation: '', startTime: '', duration: '', cost: 0 }).expect(201);
+      const media = (await request(app).get(base).set(auth()).expect(200)).body.activityMedia;
+      expect(media[optional.body.id].description).toBe(pick.description);
+      expect(media[optional.body.id].image?.url).toBe(pick.image?.url);
+    } finally {
+      await request(app).delete(`/api/trips/${tripId}`).set(auth()).expect(204);
+    }
+  });
+
   it('remembers a dismissed suggestion for that traveler only, until they bring it back', async () => {
     const template = (await request(app).get('/api/trip-templates?countries=Japan&maxDays=10').set(auth()).expect(200)).body.templates.find((t: any) => t.days === 7);
     const tripId = (await request(app).post(`/api/trip-templates/${template.id}/trip`).set(auth())
@@ -226,7 +255,7 @@ describe('trip templates API', () => {
     const tripId = created.body.trip.id as string;
     expect(tripId).toBeTruthy();
     try {
-      expect((await request(app).get(`/api/trip-templates/trips/${tripId}/activity-suggestions`).set(auth()).expect(200)).body).toEqual({ suggestions: [], dismissedCount: 0 });
+      expect((await request(app).get(`/api/trip-templates/trips/${tripId}/activity-suggestions`).set(auth()).expect(200)).body).toEqual({ suggestions: [], dismissedCount: 0, activityMedia: {} });
       const other = (await registerAndLoginWebUser({ email: `templates-other+${uniq}@example.com`, firstName: 'Olly', lastName: 'Else', password: 'testtest' })).token;
       await request(app).get(`/api/trip-templates/trips/${tripId}/activity-suggestions`).set({ Authorization: `Bearer ${other}` }).expect(403);
     } finally {

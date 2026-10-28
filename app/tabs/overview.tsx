@@ -59,9 +59,13 @@ import {
   type LodgingDraft,
 } from '../tabs/lodging';
 import {
+  ACTIVITY_TYPES,
   buildActivityPayload,
   createInitialActivityState,
   createActivityForTrip,
+  fetchActivitySuggestions,
+  type ActivityMedia,
+  type ActivitySuggestion,
   type TourDraft,
 } from '../tabs/activities';
 import {
@@ -97,7 +101,7 @@ import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
 import GetYourGuideCta from '../components/GetYourGuideCta';
 import { optionalActivitiesForDay } from '../utils/optionalActivities';
-import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
+import AddItemPopover, { type AddItemActivityOption, type AddItemKind } from '../components/AddItemPopover';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
 import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
 import ItineraryDocumentImport, { canShowItineraryDocumentImport } from '../components/ItineraryDocumentImport';
@@ -453,6 +457,9 @@ export const isWithinOverviewWeatherWindow = (
   const msPerDay = 24 * 60 * 60 * 1000;
   return currentTime >= startTime - 7 * msPerDay && currentTime <= endTime + msPerDay;
 };
+
+/** The day's optional activities plus template suggestions offered in the "Add activity" menu, in all. */
+const MAX_POPOVER_ACTIVITIES = 4;
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   backendUrl,
@@ -937,6 +944,58 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, [addPopoverDay, addPopoverDate, getDateForDayIndex, openCustomActivityDialog]);
 
   const availableOptionalActivities = optionalActivitiesForDay(tours, lodgings, addPopoverDate ?? getDateForDayIndex(addPopoverDay), trip ?? {});
+  // The "Add activity" menu offers the day's optional activities first, then template suggestions for the city the
+  // day's lodging puts the traveler in, and never more than this many in all.
+  const popoverDate = addPopoverDate ?? getDateForDayIndex(addPopoverDay);
+  const popoverToken = (headers.Authorization ?? '').replace(/^Bearer\s+/i, '');
+  const [popoverSuggestions, setPopoverSuggestions] = useState<ActivitySuggestion[]>([]);
+  const [popoverMedia, setPopoverMedia] = useState<Record<string, ActivityMedia>>({});
+  useEffect(() => {
+    if (!addPopoverOpen || readOnly || !trip?.id || !popoverDate || !popoverToken) {
+      setPopoverSuggestions([]);
+      setPopoverMedia({});
+      return undefined;
+    }
+    let cancelled = false;
+    fetchActivitySuggestions({ backendUrl, activeTripId: trip.id, token: popoverToken, date: popoverDate }).then((found) => {
+      if (cancelled) return;
+      setPopoverSuggestions(found.suggestions);
+      setPopoverMedia(found.activityMedia);
+    });
+    return () => { cancelled = true; };
+  }, [addPopoverOpen, readOnly, trip?.id, popoverDate, popoverToken, backendUrl]);
+  const popoverOptionalOptions: AddItemActivityOption[] = availableOptionalActivities.slice(0, MAX_POPOVER_ACTIVITIES).map((activity) => ({
+    id: activity.id,
+    name: activity.name,
+    description: popoverMedia[activity.id]?.description || String(activity.notes ?? '').split('\n')[0].trim() || undefined,
+    image: popoverMedia[activity.id]?.image ?? null,
+  }));
+  const popoverSuggestedOptions: AddItemActivityOption[] = popoverSuggestions
+    .slice(0, Math.max(0, MAX_POPOVER_ACTIVITIES - popoverOptionalOptions.length))
+    .map((suggestion) => ({ id: suggestion.key, name: suggestion.name, description: suggestion.description || undefined, image: suggestion.image }));
+  // A suggestion goes through the normal editor, filled in for this day, so the traveler confirms it before it is saved.
+  const selectSuggestedActivity = (key: string) => {
+    const suggestion = popoverSuggestions.find((item) => item.key === key);
+    if (!suggestion || readOnly) return;
+    const draft: TourDraft = {
+      ...createInitialActivityState(popoverDate),
+      date: popoverDate ?? '',
+      status: suggestion.bookAhead ? 'Needs Booking' : 'Proposed',
+      activityType: ACTIVITY_TYPES.includes(suggestion.activityType as any) ? (suggestion.activityType as TourDraft['activityType']) : 'Tour',
+      name: suggestion.name,
+      startLocation: suggestion.startLocation,
+      startTime: suggestion.startTime,
+      duration: suggestion.duration,
+      notes: suggestion.description,
+      travelerIds: overviewTravelerIds,
+      paidBy: defaultPayerId ? [defaultPayerId] : [],
+    };
+    setAddPopoverOpen(false);
+    setActiveAddDialog(null);
+    setEditingTourId(null);
+    setTourDraft(draft);
+    setShowAddTour(true);
+  };
   const scheduleOptionalActivity = async (id: string) => {
     if (readOnly || schedulingOptionalActivity) return;
     const date = addPopoverDate ?? getDateForDayIndex(addPopoverDay);
@@ -3977,8 +4036,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           visible
           onSelect={handlePopoverSelect}
           mode="activities"
-          optionalActivities={availableOptionalActivities}
+          optionalActivities={popoverOptionalOptions}
           onSelectOptionalActivity={scheduleOptionalActivity}
+          suggestedActivities={popoverSuggestedOptions}
+          onSelectSuggestedActivity={selectSuggestedActivity}
           busy={schedulingOptionalActivity}
           onClose={() => setAddPopoverOpen(false)}
           theme={theme}

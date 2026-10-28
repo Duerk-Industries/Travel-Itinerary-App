@@ -2,7 +2,7 @@
 /// <reference types="node" />
 
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { ActivityTab, fetchActivitySuggestions, type ActivitySuggestion } from '../tabs/activities';
 
 const styles = {
@@ -49,10 +49,19 @@ describe('activity suggestions', () => {
 
   test('fetchActivitySuggestions returns nothing on a failed or missing response', async () => {
     (global as any).fetch = jest.fn().mockResolvedValue({ ok: false });
-    expect(await fetchActivitySuggestions({ backendUrl: 'http://x', activeTripId: 't', token: 'k' })).toEqual({ suggestions: [], dismissedCount: 0 });
+    expect(await fetchActivitySuggestions({ backendUrl: 'http://x', activeTripId: 't', token: 'k' })).toEqual({ suggestions: [], dismissedCount: 0, activityMedia: {} });
     (global as any).fetch = jest.fn().mockRejectedValue(new Error('offline'));
-    expect(await fetchActivitySuggestions({ backendUrl: 'http://x', activeTripId: 't', token: 'k' })).toEqual({ suggestions: [], dismissedCount: 0 });
-    expect(await fetchActivitySuggestions({ backendUrl: 'http://x', activeTripId: null, token: 'k' })).toEqual({ suggestions: [], dismissedCount: 0 });
+    expect(await fetchActivitySuggestions({ backendUrl: 'http://x', activeTripId: 't', token: 'k' })).toEqual({ suggestions: [], dismissedCount: 0, activityMedia: {} });
+    expect(await fetchActivitySuggestions({ backendUrl: 'http://x', activeTripId: null, token: 'k' })).toEqual({ suggestions: [], dismissedCount: 0, activityMedia: {} });
+  });
+
+  test('asks for one day when given a date, and passes along the optional-activity pictures', async () => {
+    (global as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ suggestions: [], dismissedCount: 0, activityMedia: { 'act-1': { description: 'A shrine.', image: null } } }) });
+    const found = await fetchActivitySuggestions({ backendUrl: 'http://x', activeTripId: 't', token: 'k', date: '2027-05-04' });
+    expect(((global as any).fetch as jest.Mock).mock.calls[0][0]).toBe('http://x/api/trip-templates/trips/t/activity-suggestions?date=2027-05-04');
+    expect(found.activityMedia['act-1'].description).toBe('A shrine.');
+    await fetchActivitySuggestions({ backendUrl: 'http://x', activeTripId: 't', token: 'k', date: 'unscheduled-1' });
+    expect(((global as any).fetch as jest.Mock).mock.calls[1][0]).toBe('http://x/api/trip-templates/trips/t/activity-suggestions');
   });
 
   test('lists suggestions, and Add as optional opens the editor with no date', async () => {
@@ -73,6 +82,7 @@ describe('activity suggestions', () => {
     await findByTestId('activity-suggestion-a');
     fireEvent.press(getByTestId('activity-suggestion-dismiss-a'));
     await waitFor(() => expect(queryByTestId('activity-suggestion-a')).toBeNull());
+    expect(within(getByTestId('activity-suggestion-add-b')).getByText('Add to specific day')).toBeTruthy();
     fireEvent.press(getByTestId('activity-suggestion-add-b'));
     expect(getByTestId('activity-form-modal')).toBeTruthy();
   });

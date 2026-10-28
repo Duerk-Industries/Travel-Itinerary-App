@@ -535,6 +535,17 @@ const styleFactories = {
     width: 28,
     textAlign: 'center',
   },
+  optionImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: _theme.colors.surfaceMuted,
+  },
+  optionCredit: {
+    fontSize: 10,
+    color: _theme.colors.textMuted,
+    marginTop: 2,
+  },
   optionTextWrap: {
     flex: 1,
   },

@@ -48,19 +48,47 @@ const stayDays = (checkIn: string, checkOut: string): string[] => {
   return days;
 };
 
-export type ActivitySuggestionResult = { suggestions: ActivitySuggestion[]; dismissedCount: number };
+/** The picture and sentence for an activity the trip already has, when it matches a template activity. */
+export type ActivityMedia = { description: string; image: PublicTemplateImage | null };
 
-/** Suggestions this traveler has not dismissed, and how many they have. */
-export const suggestActivitiesForTrip = async (userId: string, tripId: string): Promise<ActivitySuggestionResult> => {
-  const all = await allSuggestionsForTrip(userId, tripId);
-  const dismissed = new Set(await listDismissedActivitySuggestions(tripId, userId));
-  return { suggestions: all.filter((s) => !dismissed.has(s.key)).slice(0, MAX_SUGGESTIONS), dismissedCount: all.filter((s) => dismissed.has(s.key)).length };
+export type ActivitySuggestionResult = {
+  suggestions: ActivitySuggestion[];
+  dismissedCount: number;
+  /** By activity id, for the trip's undated (optional) activities that match a template activity. */
+  activityMedia: Record<string, ActivityMedia>;
 };
 
-const allSuggestionsForTrip = async (userId: string, tripId: string): Promise<ActivitySuggestion[]> => {
+/**
+ * Suggestions this traveler has not dismissed, and how many they have. With a `date`, only the activities
+ * for the city the traveler's lodging puts them in that day, in the order they would do them.
+ */
+export const suggestActivitiesForTrip = async (userId: string, tripId: string, options: { date?: string } = {}): Promise<ActivitySuggestionResult> => {
   const [lodgings, activities] = await Promise.all([listLodgings(userId, tripId), listActivities(userId, tripId)]);
+  const all = suggestionsFor(lodgings as any[], activities as any[]);
+  const dismissed = new Set(await listDismissedActivitySuggestions(tripId, userId));
+  let offered = all.filter((s) => !dismissed.has(s.key));
+  if (options.date) offered = offered.filter((s) => s.dates.includes(options.date!)).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  return { suggestions: offered.slice(0, MAX_SUGGESTIONS), dismissedCount: all.filter((s) => dismissed.has(s.key)).length, activityMedia: mediaForOptionalActivities(activities as any[]) };
+};
+
+const mediaForOptionalActivities = (activities: any[]): Record<string, ActivityMedia> => {
+  const optional = activities.filter((activity) => !activity.date && activity.name && activity.status !== 'Cancelled');
+  const media: Record<string, ActivityMedia> = {};
+  if (!optional.length) return media;
+  const templateActivities = loadSeedTemplates().flatMap((template) => template.activities);
+  for (const activity of optional) {
+    const name = normalize(String(activity.name));
+    const match = templateActivities.find((candidate) => sameActivity(name, normalize(candidate.name)));
+    const place = match ? getTemplatePlace(match.place) : null;
+    const image = toPublicImage(place?.image) ?? null;
+    if (place?.description || image) media[String(activity.id)] = { description: place?.description ?? '', image };
+  }
+  return media;
+};
+
+const suggestionsFor = (lodgings: any[], activities: any[]): ActivitySuggestion[] => {
   const staysByDay = new Map<string, string>();
-  for (const lodging of lodgings as any[]) {
+  for (const lodging of lodgings) {
     const checkIn = isoDay(lodging.check_in_date ?? lodging.checkInDate);
     const checkOut = isoDay(lodging.check_out_date ?? lodging.checkOutDate);
     const text = normalize(`${lodging.address ?? ''} ${lodging.name ?? ''}`);
@@ -72,7 +100,7 @@ const allSuggestionsForTrip = async (userId: string, tripId: string): Promise<Ac
   }
   if (!staysByDay.size) return [];
 
-  const have = (activities as any[]).map((activity) => normalize(String(activity.name ?? ''))).filter(Boolean);
+  const have = activities.map((activity) => normalize(String(activity.name ?? ''))).filter(Boolean);
   const seen = new Set<string>();
   const suggestions: ActivitySuggestion[] = [];
   for (const template of loadSeedTemplates()) {

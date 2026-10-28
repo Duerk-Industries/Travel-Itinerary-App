@@ -289,25 +289,34 @@ export type ActivitySuggestion = {
   dates: string[];
 };
 
+/** The picture and sentence for one of the trip's optional activities, when it matches a template activity. */
+export type ActivityMedia = { description: string; image: { url: string; credit: string } | null };
+
 // Suggestions are a nicety: any failure, or the templates switched off, just means none are shown.
+// With a `date`, only the suggestions for the city that day's lodging puts the traveler in.
 export const fetchActivitySuggestions = async ({
   backendUrl,
   activeTripId,
   token,
+  date,
 }: {
   backendUrl: string;
   activeTripId: string | null;
   token?: string | null;
-}): Promise<{ suggestions: ActivitySuggestion[]; dismissedCount: number }> => {
-  const none = { suggestions: [], dismissedCount: 0 };
+  date?: string | null;
+}): Promise<{ suggestions: ActivitySuggestion[]; dismissedCount: number; activityMedia: Record<string, ActivityMedia> }> => {
+  const none = { suggestions: [], dismissedCount: 0, activityMedia: {} };
   if (!activeTripId || !token) return none;
   try {
-    const res = await fetch(`${backendUrl}/api/trip-templates/trips/${activeTripId}/activity-suggestions`, {
+    const query = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? `?date=${date}` : '';
+    const res = await fetch(`${backendUrl}/api/trip-templates/trips/${activeTripId}/activity-suggestions${query}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return none;
     const data = await res.json();
-    return Array.isArray(data?.suggestions) ? { suggestions: data.suggestions, dismissedCount: Number(data.dismissedCount) || 0 } : none;
+    return Array.isArray(data?.suggestions)
+      ? { suggestions: data.suggestions, dismissedCount: Number(data.dismissedCount) || 0, activityMedia: data.activityMedia && typeof data.activityMedia === 'object' ? data.activityMedia : {} }
+      : none;
   } catch {
     return none;
   }
@@ -1171,7 +1180,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 {s.image ? <Text style={[styles.helperText, themeStyle('components_TripTemplatePicker_15', {  }, (theme ?? _styleTheme))]}>Photo: {s.image.credit}</Text> : null}
                 <View style={themeStyle('tabs_activities_23', {  }, (theme ?? _styleTheme))}>
                   <TouchableOpacity style={styles.button} onPress={() => openSuggestionEditor(s, s.dates[0])} testID={`activity-suggestion-add-${s.key}`}>
-                    <Text style={styles.buttonText}>{`Add to ${formatDateLong(s.dates[0])}`}</Text>
+                    <Text style={styles.buttonText}>Add to specific day</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.button} onPress={() => openSuggestionEditor(s, '')} testID={`activity-suggestion-optional-${s.key}`}>
                     <Text style={styles.buttonText}>Add as optional</Text>
