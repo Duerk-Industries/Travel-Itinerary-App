@@ -81,6 +81,8 @@ import {
   persistAppearancePreference,
 } from './utils/appearancePreference';
 import { getAppTheme, gradientFill, hitSlop, type AppTheme } from './theme/theme';
+import BottomTabBar, { BOTTOM_TAB_BAR_HEIGHT, type AddOption } from './components/BottomTabBar';
+import { FloatingInsetContext } from './contexts/FloatingInsetContext';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -3340,7 +3342,23 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     </View>
   );
 
+  // Phone navigation: Home · Itinerary · (+ Add) · Blog · Profile at the bottom of the screen.
+  const showBottomTabs = Boolean(userToken) && isPhoneLayout && activePage !== 'create-trip';
+  const canAddToTrip = Boolean(activeTripId) && !isFollowingMode && !offlineReadOnly;
+  const canImportConfirmations = userRole === 'admin' || accountProfile.tierKey === 'premium' || accountProfile.tierKey === 'pro';
+  const bottomTabAddOptions: AddOption[] = canAddToTrip
+    ? ([
+        { page: 'expenses', label: 'Expense', icon: 'expense' },
+        { page: 'blog', label: 'Blog post', icon: 'blog' },
+        { page: 'tours', label: 'Activity', icon: 'activity' },
+        { page: 'flights', label: 'Flight', icon: 'flight' },
+        { page: 'lodging', label: 'Lodging', icon: 'lodging' },
+        ...(canImportConfirmations ? [{ page: 'ingest', label: 'Import email', icon: 'import' }] : []),
+      ] as AddOption[]).filter((option) => !hiddenPages.has(option.page))
+    : [];
+
   const mainWorkspace = (
+    <FloatingInsetContext.Provider value={showBottomTabs ? BOTTOM_TAB_BAR_HEIGHT : 0}>
     <PresenceProvider activeTripId={activeTripId} userToken={userToken}>
       <ChatProvider activeTripId={activeTripId} userToken={userToken}>
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
@@ -3355,9 +3373,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           if (!discarded) { setPendingLogoutError("Couldn't remove the saved expenses. You're still signed in; try again or keep them on this device."); return; }
           setPendingLogoutVisible(false); logout();
         }} />
-      <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
-        <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
-          {userToken && activePage !== 'home' ? (
+      <View style={[styles.topBar, isNarrowLayout && !showBottomTabs && styles.topBarStacked]}>
+        <View style={[styles.topBarLeft, isNarrowLayout && !showBottomTabs && styles.topBarLeftNarrow, showBottomTabs && { flexShrink: 1, minWidth: 0 }]}>
+          {userToken && activePage !== 'home' && !showBottomTabs ? (
             <TouchableOpacity
               style={styles.homeButton}
               onPress={() => requestPageChange('home')}
@@ -3399,8 +3417,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </Text>
         </View>
         {userToken ? (
-          <View style={[styles.topRightWrapper, isNarrowLayout && styles.topRightWrapperNarrow]}>
-            <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
+          <View style={[styles.topRightWrapper, isNarrowLayout && !showBottomTabs && styles.topRightWrapperNarrow]}>
+            <View style={[styles.topRight, isNarrowLayout && !showBottomTabs && styles.topRightNarrow]}>
               <OfflineSaveButton controller={offlineSave} theme={theme} />
               {!offlineReadOnly && <NotificationInbox backendUrl={backendUrl} token={userToken} openNotificationId={pendingNotificationId} onOpenHandled={() => setPendingNotificationId(null)} onOpen={target => {
                 if (target.tripId) setActiveTripId(target.tripId);
@@ -3422,7 +3440,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
                   </TouchableOpacity>
                 </View>
-              ) : (
+              ) : showBottomTabs ? null : (
                 // Phone layout drops the full name pill (and presence avatars) to
                 // save top-bar width, but previously dropped the *only* way to
                 // reach Account settings with it — 'account' is deliberately left
@@ -3446,13 +3464,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   <Text style={styles.buttonText}>Admin</Text>
                 </TouchableOpacity>
               ) : null}
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                onPress={requestLogout}
-                testID="topbar-logout"
-              >
-                <Text style={styles.buttonText}>Logout</Text>
-              </TouchableOpacity>
+              {/* On phones, Log out lives on the Profile tab's Account page. */}
+              {!showBottomTabs ? (
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, styles.topBarActionButton]}
+                  onPress={requestLogout}
+                  testID="topbar-logout"
+                >
+                  <Text style={styles.buttonText}>Logout</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
         ) : null}
@@ -3738,6 +3759,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ? renderSharedPageScroll(
                 <AccountTab
                   backendUrl={backendUrl}
+                  onLogout={showBottomTabs ? requestLogout : undefined}
                   privacy={privacy}
                   userToken={userToken}
                   activePage={activePage}
@@ -4452,6 +4474,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onOpenMap={openMaps}
         />
       ) : null}
+      {showBottomTabs ? (
+        <BottomTabBar
+          theme={theme}
+          activePage={activePage}
+          leftTabs={[{ page: 'home', label: 'Home', icon: 'home' }, { page: 'overview', label: 'Itinerary', icon: 'itinerary' }]}
+          rightTabs={[{ page: 'blog', label: 'Blog', icon: 'blog' }, { page: 'account', label: 'Profile', icon: 'profile' }]}
+          addOptions={bottomTabAddOptions}
+          addTitle={activeTrip?.name ? `Add to ${activeTrip.name}` : 'Add to trip'}
+          onNavigate={(page) => requestPageChange(page as Page)}
+        />
+      ) : null}
       <ChatOverlay
         userToken={userToken}
         activeTripId={activeTripId}
@@ -4475,6 +4508,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     </SafeAreaView>
       </ChatProvider>
     </PresenceProvider>
+    </FloatingInsetContext.Provider>
   );
 
   const renderAdminScreen = (section: AdminSectionRoute) => (
@@ -4945,8 +4979,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   },
   homeNavIcon: {
     width: 24,
-    textAlign: 'center',
-    fontSize: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   homeNavLabel: {
     flex: 1,

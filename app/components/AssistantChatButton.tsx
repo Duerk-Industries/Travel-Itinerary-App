@@ -11,24 +11,29 @@ import { shadowStyle } from '../utils/shadowStyle';
  * doesn't collide with the trip group-chat FAB.
  */
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import { gradientFill } from '../theme/theme';
+import { useFloatingInset } from '../contexts/FloatingInsetContext';
+import Icon from './Icon';
 
 interface Props {
   onPress: () => void;
 }
 
-const AssistantChatButton: React.FC<Props> = ({ onPress }) => (
+const AssistantChatButton: React.FC<Props> = ({ onPress }) => {
+  const floatingInset = useFloatingInset();
+  return (
   <TouchableOpacity
     onPress={onPress}
-    style={styles.fab}
+    style={[styles.fab, floatingInset ? { bottom: 24 + floatingInset } : null]}
     testID="assistant-chat-fab"
     accessibilityRole="button"
     accessibilityLabel="Open the app guide assistant"
   >
-    <Text style={styles.icon} accessibilityElementsHidden importantForAccessibility="no">✨</Text>
+    <Icon name="sparkle" color="#FFFFFF" size={24} />
   </TouchableOpacity>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   fab: {
