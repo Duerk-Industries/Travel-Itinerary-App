@@ -93,6 +93,7 @@
     "e2e:maestro:all": "maestro test .maestro"
   },
   "overrides": {
+    "expo-asset": "~12.0.14",
     "@grpc/grpc-js": "^1.14.6",
     "glob": "13.0.5",
     "minimatch": "10.2.4",
@@ -157,6 +158,7 @@
     "docling-sdk": "^2.0.4",
     "dotenv": "^16.6.1",
     "expo": "~54.0.37",
+    "expo-asset": "~12.0.14",
     "expo-web-browser": "~15.0.11",
     "firebase": "^12.13.0",
     "firebase-admin": "^13.10.0",

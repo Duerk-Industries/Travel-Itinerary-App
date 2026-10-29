@@ -98,7 +98,7 @@ for (const width of [390, 1280]) {
       await page.getByTestId('cost-settle-up').click();
       const settlement = page.getByTestId('ledger-settlement');
       await expect(settlement).toBeVisible();
-      await expect(settlement).toHaveCSS('background-color', mode === 'dark' ? 'rgb(22, 61, 70)' : 'rgb(239, 250, 251)');
+      await expect(settlement).toHaveCSS('background-color', mode === 'dark' ? 'rgb(17, 17, 17)' : 'rgb(244, 244, 244)');
       await expectReadable(settlement.getByText('Settlement', { exact: true }));
       await expectReadable(width < 700
         ? settlement.getByText('Everyone is settled up.', { exact: true })
@@ -243,7 +243,7 @@ for (const width of [390, 1280]) {
     await aboveKeyboard(page, page.getByTestId('expense-save'), 480, 80);
     await keyboard(page, 844);
     await page.getByTestId('expense-cancel').click();
-    const account = width < 700 ? page.getByLabel('Account', { exact: true }) : page.getByText('Input Tester', { exact: true }).first();
+    const account = width < 700 ? page.getByRole('tab', { name: 'Profile', exact: true }) : page.getByText('Input Tester', { exact: true }).first();
     await account.click();
     await keyboard(page, 360);
     await aboveKeyboard(page, page.getByText('Save Profile', { exact: true }), 360);
