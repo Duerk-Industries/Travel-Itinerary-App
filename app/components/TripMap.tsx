@@ -41,7 +41,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, nativeEn
       {lib && active && !failed && resolved.length > 0 && <lib.MapView testID="native-trip-map" style={{ height: 360 }} mapStyle="https://tiles.openfreemap.org/styles/liberty" attributionEnabled logoEnabled={false} onDidFinishLoadingMap={() => setLoaded(true)} onDidFailLoadingMap={() => setFailed(true)}>
         <lib.Camera animationDuration={0} {...(selected ? { centerCoordinate: [selected.lng!, selected.lat!], zoomLevel: 13 } : resolved.length > 1 ? { bounds: { ...bounds!, paddingTop: 45, paddingBottom: 45, paddingLeft: 45, paddingRight: 45 } } : { centerCoordinate: [resolved[0].lng!, resolved[0].lat!], zoomLevel: 12 })} />
         <lib.ShapeSource id="stops" shape={shape} onPress={event => { const id = event.features[0]?.properties?.id; if (typeof id === 'string') choose(id); }}>
-          <lib.CircleLayer id="stop-pins" style={{ circleRadius: 16, circleColor: '#2563eb', circleStrokeColor: '#ffffff', circleStrokeWidth: 2 }} />
+          <lib.CircleLayer id="stop-pins" style={{ circleRadius: 16, circleColor: '#0A0A0A', circleStrokeColor: '#ffffff', circleStrokeWidth: 2 }} />
           <lib.SymbolLayer id="stop-labels" style={{ textField: ['get', 'label'], textSize: 13, textFont: ['Noto Sans Regular'], textColor: '#ffffff' }} />
         </lib.ShapeSource>
         {resolved.length > 1 && <lib.ShapeSource id="visit-order" shape={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: resolved.map(p => [p.lng!, p.lat!]) } }}><lib.LineLayer id="visit-line" belowLayerID="stop-pins" style={{ lineColor: '#475569', lineWidth: 3, lineDasharray: [2, 2] }} /></lib.ShapeSource>}

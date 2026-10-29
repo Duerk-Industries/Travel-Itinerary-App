@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
   btnGhost: { paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnGhostText: { color: '#374151', fontWeight: '600' },
-  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
+  btnPrimary: { backgroundColor: '#141414', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
 });
 

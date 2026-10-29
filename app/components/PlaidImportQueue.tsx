@@ -146,9 +146,9 @@ const PlaidImportQueue: React.FC<PlaidImportQueueProps> = ({
                   }}
                 >
                   {importingId === c.id ? (
-                    <ActivityIndicator size="small" color="#0B1726" />
+                    <ActivityIndicator size="small" color={colors.onCta} />
                   ) : (
-                    <Text style={{ color: '#0B1726', fontWeight: 'bold', fontSize: typography.small }}>Import</Text>
+                    <Text style={{ color: colors.onCta, fontWeight: 'bold', fontSize: typography.small }}>Import</Text>
                   )}
                 </TouchableOpacity>
               </View>

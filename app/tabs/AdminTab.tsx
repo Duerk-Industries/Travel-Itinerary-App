@@ -3,7 +3,7 @@ import FeatureCohortEditor from '../components/FeatureCohortEditor';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
-import { getAppTheme, type AppTheme } from '../theme/theme';
+import { getAppTheme, type AppTheme, whiteLabelButtonColor } from '../theme/theme';
 import { usePersistedState } from '../hooks/usePersistedState';
 import PackingListTable from '../components/PackingListTable';
 import { AiOperationsSection } from '../components/admin/aiOps/AiOperationsSection';
@@ -390,7 +390,7 @@ const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, st
               <TouchableOpacity
                 style={[
                   localStyles.smallButton,
-                  { backgroundColor: theme.colors.cta },
+                  { backgroundColor: whiteLabelButtonColor(theme) },
                   pendingKey === flag.key && localStyles.buttonDisabled,
                 ]}
                 disabled={pendingKey === flag.key}
@@ -917,7 +917,7 @@ const UserDetailSection: React.FC<{
             />
             <TouchableOpacity
               testID="user-tier-save-button"
-              style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
+              style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, saving && localStyles.buttonDisabled]}
               disabled={saving}
               onPress={saveTier}
             >
@@ -954,7 +954,7 @@ const UserDetailSection: React.FC<{
         />
         <TouchableOpacity
           testID="user-role-save-button"
-          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
+          style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, saving && localStyles.buttonDisabled]}
           disabled={saving}
           onPress={saveRole}
         >
@@ -1418,13 +1418,13 @@ const TiersSection: React.FC<{
                   testID="tier-limit-save-button"
                   style={[
                     localStyles.modalPrimaryButton,
-                    { backgroundColor: theme.colors.cta },
+                    { backgroundColor: whiteLabelButtonColor(theme) },
                     saving && localStyles.buttonDisabled,
                   ]}
                   disabled={saving}
                   onPress={() => saveLimit(editingLimit.tierKey, editingLimit.limitKey)}
                 >
-                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#0B1726' }]}>Save</Text>
+                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1482,7 +1482,7 @@ const TiersSection: React.FC<{
                   testID="tier-feature-save-button"
                   style={[
                     localStyles.modalPrimaryButton,
-                    { backgroundColor: theme.colors.cta },
+                    { backgroundColor: whiteLabelButtonColor(theme) },
                     saving && localStyles.buttonDisabled,
                   ]}
                   disabled={saving}
@@ -1495,7 +1495,7 @@ const TiersSection: React.FC<{
                     saveEntitlement(editingEntitlement.tierKey, editingEntitlement.featureKey, !currentValue);
                   }}
                 >
-                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#0B1726' }]}>Save</Text>
+                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2120,7 +2120,7 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
           placeholder="Alert threshold percent"
           placeholderTextColor={theme.colors.textMuted}
         />
-        <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }]} onPress={saveRetryConfig}>
+        <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }]} onPress={saveRetryConfig}>
           <Text style={localStyles.smallButtonText}>Save Retry Policy</Text>
         </TouchableOpacity>
       </View>
@@ -2630,7 +2630,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             onChangeText={(value: string) => updateProviderForm(provider.provider, { reason: value })}
           />
           <TouchableOpacity
-            style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingProvider === provider.provider && localStyles.buttonDisabled]}
+            style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingProvider === provider.provider && localStyles.buttonDisabled]}
             disabled={savingProvider === provider.provider}
             onPress={() => saveProvider(provider)}
           >
@@ -2668,7 +2668,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             onChangeText={(value: string) => updateCachingReason(group, value)}
           />
           <TouchableOpacity
-            style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingCachingGroup === group && localStyles.buttonDisabled]}
+            style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingCachingGroup === group && localStyles.buttonDisabled]}
             disabled={savingCachingGroup === group}
             onPress={() => saveCachingGroup(group)}
           >
@@ -2676,7 +2676,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
           </TouchableOpacity>
         </View>
       ))}
-      <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta, marginTop: 8 }]} onPress={load}>
+      <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme), marginTop: 8 }]} onPress={load}>
         <Text style={localStyles.smallButtonText}>Refresh</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -3018,7 +3018,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           onChangeText={(value: string) => setAssumptionsForm((current) => (current ? { ...current, reason: value } : current))}
         />
         <TouchableOpacity
-          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingAssumptions && localStyles.buttonDisabled]}
+          style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingAssumptions && localStyles.buttonDisabled]}
           disabled={savingAssumptions}
           onPress={saveAssumptions}
         >
@@ -3068,7 +3068,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           onChangeText={setHostingReason}
         />
         <TouchableOpacity
-          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingHosting && localStyles.buttonDisabled]}
+          style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingHosting && localStyles.buttonDisabled]}
           disabled={savingHosting}
           onPress={saveHosting}
         >
@@ -3101,7 +3101,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           onChangeText={setPricingReason}
         />
         <TouchableOpacity
-          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingPricing && localStyles.buttonDisabled]}
+          style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingPricing && localStyles.buttonDisabled]}
           disabled={savingPricing}
           onPress={savePricing}
         >
@@ -3135,7 +3135,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
         </View>
       ))}
 
-      <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta, marginTop: 8 }]} onPress={load}>
+      <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme), marginTop: 8 }]} onPress={load}>
         <Text style={localStyles.smallButtonText}>Refresh</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -3273,7 +3273,7 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
               );
             })}
             <TouchableOpacity
-              style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving === plan.planKey && localStyles.buttonDisabled]}
+              style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, saving === plan.planKey && localStyles.buttonDisabled]}
               disabled={saving === plan.planKey}
               onPress={() => saveConfig(plan)}
               testID={`admin-billing-save-${plan.planKey}`}
@@ -3405,7 +3405,7 @@ const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<
     </View>)}
     <TextInput value={filename} onChangeText={setFilename} placeholder="new_list.md" placeholderTextColor={theme.colors.textMuted} style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 8, borderRadius: 6 }} />
     <TextInput value={markdown} onChangeText={setMarkdown} multiline numberOfLines={8} placeholder="Paste preset markdown" placeholderTextColor={theme.colors.textMuted} style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 8, borderRadius: 6, minHeight: 140, textAlignVertical: 'top' }} />
-    <Pressable onPress={() => void upload()} style={{ backgroundColor: theme.colors.cta, padding: 10, borderRadius: 6, alignSelf: 'flex-start' }}><Text style={{ color: '#0B1726', fontWeight: '700' }}>Upload preset</Text></Pressable>
+    <Pressable onPress={() => void upload()} style={{ backgroundColor: theme.colors.cta, padding: 10, borderRadius: 6, alignSelf: 'flex-start' }}><Text style={{ color: theme.colors.onCta, fontWeight: '700' }}>Upload preset</Text></Pressable>
   </View>;
 };
 

@@ -184,7 +184,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
               borderRadius: 14, paddingVertical: 4, paddingHorizontal: 9, marginRight: 6,
             }}
           >
-            <Text style={{ color: active ? '#0B1726' : textColor, fontSize: 12 }}>{formatDateLong(dayDate)}</Text>
+            <Text style={{ color: active ? (theme?.colors?.onCta ?? '#FFFFFF') : textColor, fontSize: 12 }}>{formatDateLong(dayDate)}</Text>
           </TouchableOpacity>
         );
       })}

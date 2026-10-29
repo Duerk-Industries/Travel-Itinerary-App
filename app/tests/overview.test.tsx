@@ -844,6 +844,26 @@ describe('Overview UI (nested itinerary)', () => {
     expect(queryByTestId('add-item-option-checklist')).toBeNull();
   });
 
+  // The phone Add menu's Activity option opens the same add form without picking a day first.
+  test('opens the activity add form on its own when the phone Add menu asks, and reports it handled', async () => {
+    const onAutoOpenAddHandled = jest.fn();
+    const { findByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} autoOpenAdd="activity" onAutoOpenAddHandled={onAutoOpenAddHandled} />
+    );
+    expect(await findByTestId('activity-form-modal')).toBeTruthy();
+    expect(onAutoOpenAddHandled).toHaveBeenCalledTimes(1);
+  });
+
+  test('a read-only trip ignores the Add menu request instead of opening a form', async () => {
+    const onAutoOpenAddHandled = jest.fn();
+    const { queryByTestId, findByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} readOnly autoOpenAdd="activity" onAutoOpenAddHandled={onAutoOpenAddHandled} />
+    );
+    await findByTestId('overview-day-card-1');
+    expect(queryByTestId('activity-form-modal')).toBeNull();
+    expect(onAutoOpenAddHandled).toHaveBeenCalledTimes(1);
+  });
+
   test('custom activity add item opens the activity dialog and saves a real activity', async () => {
     const onTourDataChanged = jest.fn();
     const { findByTestId, getByPlaceholderText } = await renderOverview(

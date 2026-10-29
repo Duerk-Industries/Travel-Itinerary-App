@@ -1,6 +1,6 @@
 import React from 'react';
 import { Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+import { gradientFill, type AppTheme } from '../theme/theme';
 import GoogleSignInButton from './GoogleSignInButton';
 import AppleSignInButton from './AppleSignInButton';
 
@@ -194,12 +194,13 @@ const LandingPage: React.FC<LandingPageProps> = ({
               style={{
                 flex: 1,
                 backgroundColor: colors.cta,
+                ...gradientFill(theme.gradients.cta),
                 paddingVertical: spacing.md,
                 borderRadius: 8,
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: '#0B1726', fontWeight: typography.weightBold, fontSize: typography.body }}>
+              <Text style={{ color: colors.onCta, fontWeight: typography.weightBold, fontSize: typography.body }}>
                 Create Account
               </Text>
             </TouchableOpacity>

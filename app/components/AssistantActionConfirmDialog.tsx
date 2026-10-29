@@ -204,7 +204,7 @@ const buildStyles = (theme?: AppTheme) =>
       borderColor: 'transparent',
     },
     pickerRowSelected: {
-      borderColor: '#7C3AED',
+      borderColor: '#141414',
       backgroundColor: theme?.mode === 'dark' ? '#3a2a5c' : '#ede4fb',
     },
     pickerRowTitle: {
@@ -238,7 +238,7 @@ const buildStyles = (theme?: AppTheme) =>
       fontSize: 14,
     },
     confirmButton: {
-      backgroundColor: '#7C3AED',
+      backgroundColor: '#141414',
     },
     confirmButtonText: {
       color: '#fff',

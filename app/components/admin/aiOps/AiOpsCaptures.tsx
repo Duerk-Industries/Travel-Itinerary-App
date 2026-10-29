@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../../../theme/theme';
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
 import type { AiCaptureItem } from './types';
+import { whiteLabelButtonColor } from '../../../theme/theme';
 
 export const AiOpsCaptures: React.FC<{
   theme: AppTheme;
@@ -19,7 +20,7 @@ export const AiOpsCaptures: React.FC<{
     <View style={aiOpsStyles.row}>
       <TextInput style={[aiOpsStyles.input, inputStyle(theme), { flex: 1 }]} value={captureQuery} onChangeText={setCaptureQuery} placeholder="Capture ID" placeholderTextColor={theme.colors.textMuted} />
       <TextInput style={[aiOpsStyles.input, inputStyle(theme), { flex: 1 }]} value={anonymousUserIdQuery} onChangeText={setAnonymousUserIdQuery} placeholder="Anonymous user ID" placeholderTextColor={theme.colors.textMuted} />
-      <TouchableOpacity style={[aiOpsStyles.button, { backgroundColor: theme.colors.cta }, saving === 'capture-search' && aiOpsStyles.disabled]} disabled={saving === 'capture-search'} onPress={onSearch}>
+      <TouchableOpacity style={[aiOpsStyles.button, { backgroundColor: whiteLabelButtonColor(theme) }, saving === 'capture-search' && aiOpsStyles.disabled]} disabled={saving === 'capture-search'} onPress={onSearch}>
         <Text style={aiOpsStyles.buttonText}>Search</Text>
       </TouchableOpacity>
     </View>

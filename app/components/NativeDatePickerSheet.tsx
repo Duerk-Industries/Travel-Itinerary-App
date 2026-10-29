@@ -34,15 +34,15 @@ export type NativeDatePickerSheetProps = {
 export const getPickerSheetColors = (theme?: AppTheme) => {
   const isDark = theme?.mode === 'dark';
   return {
-    surface: theme?.colors.surface ?? (isDark ? '#243647' : '#FFFFFF'),
-    border: theme?.colors.border ?? (isDark ? '#385266' : '#E6ECEF'),
+    surface: theme?.colors.surface ?? (isDark ? '#161616' : '#FFFFFF'),
+    border: theme?.colors.border ?? (isDark ? '#2A2A2A' : '#E8E8E8'),
     text: theme?.colors.text ?? (isDark ? '#E6ECEF' : '#111827'),
     mutedText: theme?.colors.textMuted ?? (isDark ? '#B8C2CC' : '#6B7280'),
     // Tint handed to the native picker (matches the app's link/accent color).
-    accent: theme?.colors.link ?? (isDark ? '#5FD2E0' : '#45B7C6'),
+    accent: theme?.colors.link ?? (isDark ? '#F5F5F5' : '#0A0A0A'),
     // The light theme's link cyan is too low-contrast for text on a white sheet, so the Done
     // label uses the navy brand color in light mode and the (bright) link color in dark mode.
-    action: isDark ? (theme?.colors.link ?? '#5FD2E0') : (theme?.colors.primary ?? '#152944'),
+    action: isDark ? (theme?.colors.link ?? '#F5F5F5') : (theme?.colors.primary ?? '#0A0A0A'),
   };
 };
 

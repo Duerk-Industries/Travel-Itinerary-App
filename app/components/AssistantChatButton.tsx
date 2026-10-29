@@ -11,23 +11,29 @@ import { shadowStyle } from '../utils/shadowStyle';
  * doesn't collide with the trip group-chat FAB.
  */
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
+import { gradientFill } from '../theme/theme';
+import { useFloatingInset } from '../contexts/FloatingInsetContext';
+import Icon from './Icon';
 
 interface Props {
   onPress: () => void;
 }
 
-const AssistantChatButton: React.FC<Props> = ({ onPress }) => (
+const AssistantChatButton: React.FC<Props> = ({ onPress }) => {
+  const floatingInset = useFloatingInset();
+  return (
   <TouchableOpacity
     onPress={onPress}
-    style={styles.fab}
+    style={[styles.fab, floatingInset ? { bottom: 24 + floatingInset } : null]}
     testID="assistant-chat-fab"
     accessibilityRole="button"
     accessibilityLabel="Open the app guide assistant"
   >
-    <Text style={styles.icon} accessibilityElementsHidden importantForAccessibility="no">✨</Text>
+    <Icon name="sparkle" color="#FFFFFF" size={24} />
   </TouchableOpacity>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   fab: {
@@ -37,7 +43,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#7C3AED',
+    // Graphite with a soft gradient and a hairline edge, so it reads on white and on black.
+    backgroundColor: '#141414',
+    ...gradientFill(['#2B2B2B', '#050505']),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,

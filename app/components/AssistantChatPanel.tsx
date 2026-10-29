@@ -404,7 +404,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#141414',
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -464,7 +464,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
   },
   primaryButton: {
     marginTop: 4,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#141414',
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -483,7 +483,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#141414',
   },
   messageList: {
     padding: 10,
@@ -509,7 +509,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
     justifyContent: 'center',
   },
   ownBubble: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#141414',
     borderBottomRightRadius: 4,
   },
   otherBubble: {
@@ -546,7 +546,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
   },
   sendBtn: {
     marginLeft: 8,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#141414',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,

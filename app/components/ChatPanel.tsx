@@ -430,7 +430,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1565C0',
+    backgroundColor: '#141414',
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -547,7 +547,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
     paddingVertical: 8,
   },
   ownBubble: {
-    backgroundColor: '#1565C0',
+    backgroundColor: '#141414',
     borderBottomRightRadius: 4,
   },
   otherBubble: {
@@ -596,7 +596,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
   },
   sendBtn: {
     marginLeft: 8,
-    backgroundColor: '#1565C0',
+    backgroundColor: '#141414',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,

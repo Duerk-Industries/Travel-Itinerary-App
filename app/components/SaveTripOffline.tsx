@@ -132,9 +132,9 @@ export function OfflineSavePanel({ controller, theme }: { controller: SaveTripOf
   const { notice, confirmDevice, mobileWarning, busy } = controller;
   if (!controller.available || (!notice && !confirmDevice && !mobileWarning)) return null;
   const colors = theme?.colors;
-  const primary = { backgroundColor: colors?.cta ?? '#F59E0B', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 };
+  const primary = { backgroundColor: colors?.cta ?? '#141414', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 };
   const secondary = { backgroundColor: colors?.surfaceMuted ?? '#F1F5F9', borderWidth: 1, borderColor: colors?.border ?? '#CBD5E1', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 };
-  const primaryText = { color: '#0B1726', fontWeight: '700' as const };
+  const primaryText = { color: colors?.onCta ?? '#FFFFFF', fontWeight: '700' as const };
   const secondaryText = { color: colors?.text ?? '#0F172A', fontWeight: '700' as const };
   // Fixed on the web so it stays at the bottom of the window however far the page is scrolled.
   const placement = (Platform.OS === 'web' ? { position: 'fixed' } : { position: 'absolute' }) as object;

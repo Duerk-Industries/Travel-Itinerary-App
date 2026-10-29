@@ -99,7 +99,7 @@ const DayMediaGallery = ({
             <View
               testID={`day-media-cover-badge-${item.id}`}
               accessibilityLabel="This is the current cover photo for this day"
-              style={{ backgroundColor: '#F59E0B', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 3 }}
+              style={{ backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 3 }}
             >
               <Text style={{ fontSize: 12 }}>⭐</Text>
               <Text style={{ color: '#111827', fontSize: 11, fontWeight: '700' }}>Cover</Text>

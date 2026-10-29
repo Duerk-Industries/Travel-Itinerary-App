@@ -103,9 +103,9 @@ const PublicReactionChoices: React.FC<{
         accessibilityRole="button"
         accessibilityLabel={`${selectedReaction === emoji ? 'Remove' : 'React with'} ${emoji}${targetLabel ? ` on ${targetLabel}` : ''}`}
         accessibilityState={{ selected: selectedReaction === emoji, disabled: reacting }}
-        style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 16, borderWidth: 1, borderColor: selectedReaction === emoji ? '#2E96A6' : '#D7E1E5', backgroundColor: selectedReaction === emoji ? '#E6F6F8' : '#FFFFFF' }}>
+        style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 16, borderWidth: 1, borderColor: selectedReaction === emoji ? '#0A0A0A' : '#E0E0E0', backgroundColor: selectedReaction === emoji ? '#EFEFEF' : '#FFFFFF' }}>
         <Text style={{ fontSize: 16 }}>{REACTION_GLYPH[emoji]}</Text>
-        {(data.reactionCounts[emoji] ?? 0) > 0 ? <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#38505D', marginLeft: 4 }}>{data.reactionCounts[emoji]}</Text> : null}
+        {(data.reactionCounts[emoji] ?? 0) > 0 ? <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#3A3A3A', marginLeft: 4 }}>{data.reactionCounts[emoji]}</Text> : null}
       </Pressable>
     ))}
   </View>
@@ -160,7 +160,7 @@ const DayEngagementFooter: React.FC<{
   };
 
   return (
-    <View style={{ marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#EEF2F4' }}>
+    <View style={{ marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F2F2F2' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
         {reactionsEnabled ? <PublicReactionChoices data={data} selectedReaction={selectedReaction} onReact={onReact} reacting={reacting} bodyFont={bodyFont} /> : null}
         {commentCount ? (
@@ -170,7 +170,7 @@ const DayEngagementFooter: React.FC<{
             accessibilityState={{ expanded }}
             style={{ marginBottom: 4 }}
           >
-            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#2E96A6' }}>
+            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#0A0A0A' }}>
               💬 {commentCount} {commentCount === 1 ? 'comment' : 'comments'} {expanded ? '▲' : '▼'}
             </Text>
           </Pressable>
@@ -181,21 +181,21 @@ const DayEngagementFooter: React.FC<{
       {expanded && commentCount ? (
         <View style={{ marginTop: 14 }}>
           {loading && !comments ? (
-            <ActivityIndicator size="small" color="#2E96A6" />
+            <ActivityIndicator size="small" color="#0A0A0A" />
           ) : failed && !comments ? (
-            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280' }}>Couldn't load comments right now.</Text>
+            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B6B6B' }}>Couldn't load comments right now.</Text>
           ) : comments && comments.length ? (
             <>
               {comments.map((comment) => (
                 <View key={comment.id} style={{ marginBottom: 14 }}>
-                  <Text style={{ fontFamily: bodyFont, fontSize: 12, color: '#94A0AC', marginBottom: 3 }}>
+                  <Text style={{ fontFamily: bodyFont, fontSize: 12, color: '#8A8A8A', marginBottom: 3 }}>
                     {ROLE_LABEL(comment.authorRole)} · {formatCommentWhen(comment.createdAt)}{comment.editedAt ? ' (edited)' : ''}
                   </Text>
-                  <Text style={{ fontFamily: bodyFont, fontSize: 15, lineHeight: 22, color: comment.deletedAt || comment.body == null ? '#94A0AC' : '#111827', fontStyle: comment.deletedAt || comment.body == null ? 'italic' : 'normal' }}>
+                  <Text style={{ fontFamily: bodyFont, fontSize: 15, lineHeight: 22, color: comment.deletedAt || comment.body == null ? '#8A8A8A' : '#0A0A0A', fontStyle: comment.deletedAt || comment.body == null ? 'italic' : 'normal' }}>
                     {comment.deletedAt || comment.body == null ? 'This comment was removed.' : comment.body}
                   </Text>
                   {comment.replyCount > 0 ? (
-                    <Text style={{ fontFamily: bodyFont, fontSize: 12, color: '#94A0AC', marginTop: 3 }}>
+                    <Text style={{ fontFamily: bodyFont, fontSize: 12, color: '#8A8A8A', marginTop: 3 }}>
                       {comment.replyCount} {comment.replyCount === 1 ? 'reply' : 'replies'}
                     </Text>
                   ) : null}
@@ -203,17 +203,17 @@ const DayEngagementFooter: React.FC<{
               ))}
               {hasMore ? (
                 <Pressable onPress={() => loadPage(comments[comments.length - 1]?.id)} accessibilityRole="button" disabled={loading}>
-                  <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#2E96A6', marginTop: 2 }}>
+                  <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#0A0A0A', marginTop: 2 }}>
                     {loading ? 'Loading…' : 'Show more comments'}
                   </Text>
                 </Pressable>
               ) : null}
               {failed ? (
-                <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280', marginTop: 4 }}>Couldn't load more comments.</Text>
+                <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B6B6B', marginTop: 4 }}>Couldn't load more comments.</Text>
               ) : null}
             </>
           ) : (
-            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280' }}>No public comments on this day.</Text>
+            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B6B6B' }}>No public comments on this day.</Text>
           )}
         </View>
       ) : null}
@@ -402,17 +402,17 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
 
   if (state.status === 'loading') {
     return (
-      <View style={{ flex: 1, minHeight: '100vh' as any, backgroundColor: '#FAFCFD', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#2E96A6" />
+      <View style={{ flex: 1, minHeight: '100vh' as any, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#0A0A0A" />
       </View>
     );
   }
 
   if (state.status === 'not-found') {
     return (
-      <View style={{ flex: 1, minHeight: '100vh' as any, backgroundColor: '#FAFCFD', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Text style={{ fontFamily: displayFont, fontSize: 26, color: '#152944', marginBottom: 8, textAlign: 'center' }}>This trip blog isn't public</Text>
-        <Text style={{ color: '#6B7280', fontSize: 15, textAlign: 'center', maxWidth: 420 }}>
+      <View style={{ flex: 1, minHeight: '100vh' as any, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Text style={{ fontFamily: displayFont, fontSize: 26, color: '#0A0A0A', marginBottom: 8, textAlign: 'center' }}>This trip blog isn't public</Text>
+        <Text style={{ color: '#6B6B6B', fontSize: 15, textAlign: 'center', maxWidth: 420 }}>
           The link may be out of date, or the traveler may have made this trip private again.
         </Text>
       </View>
@@ -421,9 +421,9 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
 
   if (state.status === 'error' || !state.blog) {
     return (
-      <View style={{ flex: 1, minHeight: '100vh' as any, backgroundColor: '#FAFCFD', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Text style={{ fontFamily: displayFont, fontSize: 22, color: '#152944', marginBottom: 8, textAlign: 'center' }}>Something went wrong</Text>
-        <Text style={{ color: '#6B7280', fontSize: 15, textAlign: 'center', maxWidth: 420 }}>{state.message || 'Please try again in a moment.'}</Text>
+      <View style={{ flex: 1, minHeight: '100vh' as any, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Text style={{ fontFamily: displayFont, fontSize: 22, color: '#0A0A0A', marginBottom: 8, textAlign: 'center' }}>Something went wrong</Text>
+        <Text style={{ color: '#6B6B6B', fontSize: 15, textAlign: 'center', maxWidth: 420 }}>{state.message || 'Please try again in a moment.'}</Text>
       </View>
     );
   }
@@ -449,16 +449,16 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
     );
   };
   const renderDay = (day: PublicBlogDay) => (
-    <View key={day.localDate} style={{ marginTop: 40, paddingTop: 40, borderTopWidth: 1, borderTopColor: '#E1E8EC' }}>
-      <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: '#2E96A6', marginBottom: 6 }}>
+    <View key={day.localDate} style={{ marginTop: 40, paddingTop: 40, borderTopWidth: 1, borderTopColor: '#E8E8E8' }}>
+      <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: '#0A0A0A', marginBottom: 6 }}>
         {formatDateLong(day.localDate)}
       </Text>
       {day.headline ? (
-        <Text style={{ fontFamily: displayFont, fontSize: 26, color: '#152944', marginBottom: day.summary ? 6 : 16 }}>{day.headline}</Text>
+        <Text style={{ fontFamily: displayFont, fontSize: 26, color: '#0A0A0A', marginBottom: day.summary ? 6 : 16 }}>{day.headline}</Text>
       ) : null}
       {mapDays.find(d => d.dayDate === day.localDate)?.mapPoints ? <BlogMap testID={`public-map-${day.localDate}`} map={mapDays.find(d => d.dayDate === day.localDate)!.mapPoints} /> : null}
                   {day.summary ? (
-        <Text style={{ color: '#6B7280', fontSize: 15, marginBottom: 16 }}>{day.summary}</Text>
+        <Text style={{ color: '#6B6B6B', fontSize: 15, marginBottom: 16 }}>{day.summary}</Text>
       ) : null}
       {day.items.map((item) => {
         if (item.kindKey === 'core.text') {
@@ -466,7 +466,7 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
           if (!text) return null;
           return (
             <View key={item.id} style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 17, lineHeight: 28, color: '#111827' }}>{text}</Text>
+              <Text style={{ fontSize: 17, lineHeight: 28, color: '#0A0A0A' }}>{text}</Text>
               {renderPostReactions(item)}
             </View>
           );
@@ -477,11 +477,11 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
               <Image
                 source={{ uri: item.primaryUrl }}
                 accessibilityLabel={item.altText || item.caption || 'Trip photo'}
-                style={{ width: '100%', aspectRatio: 3 / 2, borderRadius: 10, backgroundColor: '#F2F5F7' }}
+                style={{ width: '100%', aspectRatio: 3 / 2, borderRadius: 10, backgroundColor: '#F5F5F5' }}
                 resizeMode="cover"
               />
               {item.caption ? (
-                <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
+                <Text style={{ color: '#6B6B6B', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
               ) : null}
               {renderPostReactions(item)}
             </View>
@@ -496,7 +496,7 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
                 style: { width: '100%', borderRadius: 10, display: 'block', backgroundColor: '#000' },
               })}
               {item.caption ? (
-                <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
+                <Text style={{ color: '#6B6B6B', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
               ) : null}
               {renderPostReactions(item)}
             </View>
@@ -521,38 +521,38 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FAFCFD' }}>
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       {coverPhoto ? (
-        <View style={{ width: '100%', aspectRatio: 16 / 7, backgroundColor: '#152944' }}>
+        <View style={{ width: '100%', aspectRatio: 16 / 7, backgroundColor: '#0A0A0A' }}>
           <Image source={{ uri: coverPhoto.primaryUrl! }} accessibilityLabel={coverPhoto.altText || coverPhoto.caption || ''} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         </View>
       ) : null}
       <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 24, paddingTop: coverPhoto ? 36 : 64, paddingBottom: 72 }}>
-        <Text style={{ fontFamily: displayFont, fontSize: 40, lineHeight: 46, color: '#152944', marginBottom: blog.subtitle ? 8 : 20 }}>
+        <Text style={{ fontFamily: displayFont, fontSize: 40, lineHeight: 46, color: '#0A0A0A', marginBottom: blog.subtitle ? 8 : 20 }}>
           {blog.title || 'A trip'}
         </Text>
         {blog.subtitle ? (
-          <Text style={{ fontFamily: displayFontItalic, fontSize: 18, color: '#6B7280', marginBottom: 20 }}>{blog.subtitle}</Text>
+          <Text style={{ fontFamily: displayFontItalic, fontSize: 18, color: '#6B6B6B', marginBottom: 20 }}>{blog.subtitle}</Text>
         ) : null}
         {blog.introduction ? (
-          <Text style={{ fontFamily: bodyDisplayFont, fontSize: 18, lineHeight: 30, color: '#111827', marginBottom: 40 }}>{blog.introduction}</Text>
+          <Text style={{ fontFamily: bodyDisplayFont, fontSize: 18, lineHeight: 30, color: '#0A0A0A', marginBottom: 40 }}>{blog.introduction}</Text>
         ) : null}
 
         {daySegments.map((segment) => segment.kind === 'gap' ? (
           // Marks days with nothing posted, so the dates don't appear to jump.
           <View key={`gap-${segment.fromDate}`} testID={`public-blog-gap-${segment.fromDate}`} style={{ marginTop: 40, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E1E8EC' }} />
-            <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 0.5, color: '#9CA3AF' }}>{formatGapLabel(segment)}</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E1E8EC' }} />
+            <View style={{ flex: 1, height: 1, backgroundColor: '#E8E8E8' }} />
+            <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 0.5, color: '#9A9A9A' }}>{formatGapLabel(segment)}</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: '#E8E8E8' }} />
           </View>
         ) : renderDay(segment.day))}
 
         {!daysWithContent.length ? (
-          <Text style={{ color: '#6B7280', fontSize: 15, marginTop: 20 }}>This trip's story hasn't been shared publicly yet.</Text>
+          <Text style={{ color: '#6B6B6B', fontSize: 15, marginTop: 20 }}>This trip's story hasn't been shared publicly yet.</Text>
         ) : null}
 
-        <View style={{ marginTop: 64, paddingTop: 24, borderTopWidth: 1, borderTopColor: '#E1E8EC', alignItems: 'center' }}>
-          <Text style={{ color: '#94A0AC', fontSize: 12 }}>Told with WanderBunnies</Text>
+        <View style={{ marginTop: 64, paddingTop: 24, borderTopWidth: 1, borderTopColor: '#E8E8E8', alignItems: 'center' }}>
+          <Text style={{ color: '#8A8A8A', fontSize: 12 }}>Told with WanderBunnies</Text>
         </View>
       </View>
     </View>

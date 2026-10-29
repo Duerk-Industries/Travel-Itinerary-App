@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../../../theme/theme';
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
 import type { AiProviderCertification, AiProviderFeatureConfig, AiProviderOption } from './types';
+import { whiteLabelButtonColor } from '../../../theme/theme';
 
 export const AiOpsProviders: React.FC<{
   theme: AppTheme;
@@ -50,7 +51,7 @@ export const AiOpsProviders: React.FC<{
             </Text>
             <View style={aiOpsStyles.rowWrap}>
               <TouchableOpacity
-                style={[aiOpsStyles.button, { backgroundColor: theme.colors.cta }, (saving === `certify-${provider.id}` || unavailable) && aiOpsStyles.disabled]}
+                style={[aiOpsStyles.button, { backgroundColor: whiteLabelButtonColor(theme) }, (saving === `certify-${provider.id}` || unavailable) && aiOpsStyles.disabled]}
                 disabled={saving === `certify-${provider.id}` || unavailable}
                 onPress={() => onCertify(provider.id)}
               >
@@ -160,7 +161,7 @@ export const AiOpsProviders: React.FC<{
           <TouchableOpacity
             style={[
               aiOpsStyles.button,
-              { backgroundColor: theme.colors.cta },
+              { backgroundColor: whiteLabelButtonColor(theme) },
               (saving === feature.featureKey || selectableProviders.length === 0) && aiOpsStyles.disabled,
             ]}
             disabled={saving === feature.featureKey || selectableProviders.length === 0}

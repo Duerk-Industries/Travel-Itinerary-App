@@ -34,8 +34,18 @@ describe.each(['light', 'dark'] as const)('%s theme text contrast', (mode) => {
   });
 });
 
-it('the teal accent alone would fail in light mode, which is why links use the navy there', () => {
-  const light = getAppTheme('light', 'light');
-  expect(ratio(light.colors.link, light.colors.surface)).toBeLessThan(AA);
-  expect(ratio(linkTextColor(light), light.colors.surface)).toBeGreaterThanOrEqual(AA);
+describe.each(['light', 'dark'] as const)('%s theme buttons', (mode) => {
+  const theme = getAppTheme(mode, mode);
+
+  it('button text is readable on both ends of the button gradient and on its solid fallback', () => {
+    for (const stop of [...theme.gradients.cta, theme.colors.cta]) {
+      expect(ratio(theme.colors.onCta, stop)).toBeGreaterThanOrEqual(AA);
+    }
+  });
+
+  it('white hero text is readable on both ends of the hero gradient', () => {
+    for (const stop of theme.gradients.hero) {
+      expect(ratio('#FFFFFF', stop)).toBeGreaterThanOrEqual(AA);
+    }
+  });
 });

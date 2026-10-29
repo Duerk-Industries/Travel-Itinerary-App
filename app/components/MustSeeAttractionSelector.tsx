@@ -236,7 +236,7 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
             </View>
           )}
         </View>
-        {loading && <ActivityIndicator size="small" color="#0d6efd" style={{ marginLeft: 8 }} testID="must-see-loading" />}
+        {loading && <ActivityIndicator size="small" color="#6B6B6B" style={{ marginLeft: 8 }} testID="must-see-loading" />}
         <TouchableOpacity
           style={[styles.button, styles.smallButton, { marginLeft: 8 }]}
           onPress={handleSubmit}

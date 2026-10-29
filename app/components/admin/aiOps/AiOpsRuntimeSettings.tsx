@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../../../theme/theme';
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
 import type { AiRuntimeSetting } from './types';
+import { whiteLabelButtonColor } from '../../../theme/theme';
 
 export const AiOpsRuntimeSettings: React.FC<{
   theme: AppTheme;
@@ -38,7 +39,7 @@ export const AiOpsRuntimeSettings: React.FC<{
       placeholderTextColor={theme.colors.textMuted}
     />
     <TouchableOpacity
-      style={[aiOpsStyles.button, { backgroundColor: theme.colors.cta }, saving === 'runtime-settings' && aiOpsStyles.disabled]}
+      style={[aiOpsStyles.button, { backgroundColor: whiteLabelButtonColor(theme) }, saving === 'runtime-settings' && aiOpsStyles.disabled]}
       disabled={saving === 'runtime-settings'}
       onPress={onSave}
     >

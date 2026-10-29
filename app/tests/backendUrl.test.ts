@@ -3,6 +3,30 @@
 import { resolveBackendUrl } from '../utils/backendUrl';
 
 describe('resolveBackendUrl', () => {
+  // Regression: the PR preview build called https://wander-bunnies.com cross-origin and the API's
+  // CORS allowlist blocked it ("Failed to fetch"). Preview channels proxy /api themselves.
+  it('uses the preview channel origin on Firebase Hosting preview links', () => {
+    const origin = 'https://travel-itinerary-app-483623--pr-128-e7ue3knb.web.app';
+    expect(
+      resolveBackendUrl({
+        appConfigured: 'https://wander-bunnies.com',
+        platformOs: 'web',
+        browserLocation: { hostname: new URL(origin).hostname, protocol: 'https:', port: '', origin },
+      })
+    ).toBe(origin);
+  });
+
+  it('keeps the configured backend on the live Firebase site (no preview channel)', () => {
+    const origin = 'https://travel-itinerary-app-483623.web.app';
+    expect(
+      resolveBackendUrl({
+        appConfigured: 'https://wander-bunnies.com',
+        platformOs: 'web',
+        browserLocation: { hostname: new URL(origin).hostname, protocol: 'https:', port: '', origin },
+      })
+    ).not.toBe(origin);
+  });
+
   it('uses the local backend when the web app is running on localhost even if app config points to duerk.org', () => {
     expect(
       resolveBackendUrl({

@@ -5,6 +5,9 @@ import { shadowStyle } from '../utils/shadowStyle';
  */
 import React from 'react';
 import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import { gradientFill } from '../theme/theme';
+import { useFloatingInset } from '../contexts/FloatingInsetContext';
+import Icon from './Icon';
 
 interface Props {
   onPress: () => void;
@@ -12,6 +15,7 @@ interface Props {
 }
 
 const ChatButton: React.FC<Props> = ({ onPress, unreadCount }) => {
+  const floatingInset = useFloatingInset();
   const accessibilityLabel =
     unreadCount > 0
       ? `Open trip chat, ${unreadCount > 99 ? 'over 99' : unreadCount} unread`
@@ -19,12 +23,12 @@ const ChatButton: React.FC<Props> = ({ onPress, unreadCount }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={styles.fab}
+      style={[styles.fab, floatingInset ? { bottom: 24 + floatingInset } : null]}
       testID="chat-fab"
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <Text style={styles.icon} accessibilityElementsHidden importantForAccessibility="no">💬</Text>
+      <Icon name="chat" color="#FFFFFF" size={24} />
       {unreadCount > 0 && (
         <View style={styles.badge} testID="chat-unread-badge" accessibilityElementsHidden importantForAccessibility="no">
           <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
@@ -42,7 +46,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#1565C0',
+    // Graphite with a soft gradient and a hairline edge, so it reads on white and on black.
+    backgroundColor: '#141414',
+    ...gradientFill(['#2B2B2B', '#050505']),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
