@@ -32,57 +32,16 @@ describe('Item vote routes', () => {
     return app;
   };
 
-  test('allows a member to vote on a proposed flight', async () => {
-    (db.getFlightById as jest.Mock).mockResolvedValue({ id: 'f1', tripId: 't1', status: 'Proposed' });
-    (db.ensureUserInTrip as jest.Mock).mockResolvedValue({ groupId: 'g1' });
-    (db.castItemVote as jest.Mock).mockResolvedValue(undefined);
-    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({ f1: { netVotes: 1, userVote: 1 } });
-
-    const app = appFor('/api/transfers', flightRoutes);
-    const res = await request(app).post('/api/transfers/f1/vote').send({ value: 1 }).expect(200);
-
-    expect(db.castItemVote).toHaveBeenCalledWith('user-1', 't1', 'flight', 'f1', 1, 'vote');
-    expect(res.body).toEqual({ itemId: 'f1', netVotes: 1, userVote: 1 });
-  });
-
-  test('blocks followers from voting on flights', async () => {
-    (db.getFlightById as jest.Mock).mockResolvedValue({ id: 'f1', tripId: 't1', status: 'Proposed' });
-    (db.ensureUserInTrip as jest.Mock).mockResolvedValue(null);
-
-    const app = appFor('/api/transfers', flightRoutes);
-    await request(app).post('/api/transfers/f1/vote').send({ value: 1 }).expect(403);
+  test.each([
+    ['/api/transfers', flightRoutes],
+    ['/api/flights', flightRoutes],
+    ['/api/lodgings', lodgingRoutes],
+    ['/api/activities', activityRoutes],
+    ['/api/car-rentals', carRentalRoutes],
+  ])('retires proposal voting at %s', async (path, router) => {
+    const app = appFor(path, router);
+    await request(app).post(`${path}/item/vote`).send({ value: 1 }).expect(410);
     expect(db.castItemVote).not.toHaveBeenCalled();
-  });
-
-  test('returns vote metadata for tour list responses', async () => {
-    (db.listActivities as jest.Mock).mockResolvedValue([{ id: 'to1', tripId: 't1', status: 'Proposed', name: 'Tour A' }]);
-    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({ to1: { netVotes: -2, userVote: null } });
-
-    const app = appFor('/api/activities', activityRoutes);
-    const res = await request(app).get('/api/activities?tripId=t1').expect(200);
-
-    expect(res.body[0]).toMatchObject({ id: 'to1', netVotes: -2, userVote: null });
-  });
-
-  test('rejects voting on non-proposed lodging', async () => {
-    (db.getLodgingById as jest.Mock).mockResolvedValue({ id: 'l1', tripId: 't1', status: 'Booked' });
-    (db.ensureUserInTrip as jest.Mock).mockResolvedValue({ groupId: 'g1' });
-
-    const app = appFor('/api/lodgings', lodgingRoutes);
-    await request(app).post('/api/lodgings/l1/vote').send({ value: -1 }).expect(400);
-    expect(db.castItemVote).not.toHaveBeenCalled();
-  });
-
-  test('allows voting on proposed car rental', async () => {
-    (db.getCarRentalById as jest.Mock).mockResolvedValue({ id: 'c1', tripId: 't1', status: 'Proposed' });
-    (db.ensureUserInTrip as jest.Mock).mockResolvedValue({ groupId: 'g1' });
-    (db.castItemVote as jest.Mock).mockResolvedValue(undefined);
-    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({ c1: { netVotes: 3, userVote: 1 } });
-
-    const app = appFor('/api/car-rentals', carRentalRoutes);
-    const res = await request(app).post('/api/car-rentals/c1/vote').send({ value: 1 }).expect(200);
-
-    expect(res.body).toEqual({ itemId: 'c1', netVotes: 3, userVote: 1 });
   });
 
   test('allows rating on completed flight', async () => {

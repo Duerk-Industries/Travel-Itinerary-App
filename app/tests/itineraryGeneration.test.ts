@@ -43,7 +43,7 @@ describe('itineraryGeneration utils', () => {
     ]);
   });
 
-  test('adds generated transfers, lodgings, activities, and car rentals with Needed status', async () => {
+  test('adds generated transfers, lodgings, activities, and car rentals with Proposed status', async () => {
     const fetchMock = (global as any).fetch as jest.Mock;
     fetchMock
       .mockResolvedValueOnce({ ok: true, json: async () => [] })
@@ -78,14 +78,14 @@ describe('itineraryGeneration utils', () => {
     const transferCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/transfers');
     expect(transferCall).toBeTruthy();
     const transferPayload = JSON.parse(String(transferCall?.[1]?.body ?? '{}'));
-    expect(transferPayload.status).toBe('Needed');
+    expect(transferPayload.status).toBe('Proposed');
     expect(transferPayload.tripId).toBe('trip-1');
     expect(transferPayload.transferType).toBe('Train');
 
     const lodgingCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/lodgings');
     expect(lodgingCall).toBeTruthy();
     const lodgingPayload = JSON.parse(String(lodgingCall?.[1]?.body ?? '{}'));
-    expect(lodgingPayload.status).toBe('Needed');
+    expect(lodgingPayload.status).toBe('Proposed');
     expect(lodgingPayload.tripId).toBe('trip-1');
 
     const activityCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/activities');
@@ -98,7 +98,7 @@ describe('itineraryGeneration utils', () => {
     const carCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/car-rentals');
     expect(carCall).toBeTruthy();
     const carPayload = JSON.parse(String(carCall?.[1]?.body ?? '{}'));
-    expect(carPayload.status).toBe('Needed');
+    expect(carPayload.status).toBe('Proposed');
     expect(carPayload.tripId).toBe('trip-1');
   });
 

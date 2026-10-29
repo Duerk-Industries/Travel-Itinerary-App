@@ -14,6 +14,7 @@ type Expense = {
   amount: number;
   payerIds: string[];
   forIds: string[];
+  forShares?: Record<string, number> | null;
 };
 
 type CsvConversionOptions = {
@@ -42,7 +43,18 @@ export const convertExpensesToCsv = (options: CsvConversionOptions): string => {
     const ids = expenseType === 'paid' ? expense.payerIds : expense.forIds;
     const rolledUpIds = (ids || []).map((id) => coveredBy[id] || id);
 
-    const totals = computePayerTotals([{ amount: expense.amount, ids: rolledUpIds }], (item) => item.amount, (item) => item.ids, memberIds, { fallbackOnEmpty: true });
+    // An uneven split follows the money to whoever covers each person: weights of people rolled up
+    // into the same covering member add together.
+    let weightsByRolledUpId: Record<string, number> | null = null;
+    if (expenseType === 'incurred' && expense.forShares && rolledUpIds.length) {
+      weightsByRolledUpId = {};
+      (ids || []).forEach((id, index) => {
+        const rolled = rolledUpIds[index];
+        weightsByRolledUpId![rolled] = (weightsByRolledUpId![rolled] ?? 0) + (expense.forShares?.[id] ?? 1);
+      });
+    }
+    const splitIds = weightsByRolledUpId ? Object.keys(weightsByRolledUpId) : rolledUpIds;
+    const totals = computePayerTotals([{ amount: expense.amount, ids: splitIds, weights: weightsByRolledUpId }], (item) => item.amount, (item) => item.ids, memberIds, { fallbackOnEmpty: true, getWeights: (item) => item.weights });
 
     memberIds.forEach((id) => {
       row.push(totals[id]?.toFixed(2) || '0.00');

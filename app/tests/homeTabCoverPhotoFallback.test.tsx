@@ -63,7 +63,6 @@ describe('HomeTab cover photo fallback', () => {
         onSelectTrip={jest.fn()}
         onSelectFollowedTrip={jest.fn()}
         onNavigate={jest.fn()}
-        onFollowTrip={jest.fn(async () => null)}
         featureCoverPhotoFallbackV2
       />,
     );
@@ -86,7 +85,6 @@ describe('HomeTab cover photo fallback', () => {
         onSelectTrip={jest.fn()}
         onSelectFollowedTrip={jest.fn()}
         onNavigate={jest.fn()}
-        onFollowTrip={jest.fn(async () => null)}
         featureCoverPhotoFallbackV2={false}
       />,
     );

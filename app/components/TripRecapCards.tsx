@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import BlogMap from './BlogMap';
 import type { BlogMapDay } from '../../server/src/services/blogMapService';
 import React, { useState } from 'react';
@@ -39,10 +42,16 @@ const dateRange = (start?: string | null, end?: string | null): string | null =>
 // read as one product instead of the recap looking like a settings summary bolted onto the end.
 const TripRecapCards: React.FC<Props> = ({
   recap, mapDays = [], nativeEnabled, topPhotoUrl, fallbackPhotoUrl = null, shareUrl = null, spendTotal = null, currency = 'USD',
-  textColor = '#111827', mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff',
-  showAwards = false, theme, displayFont, displayFontItalic,
+  textColor: _textColorOverride, mutedColor: _mutedColorOverride, borderColor: _borderColorOverride, backgroundColor: _backgroundColorOverride,
+  showAwards = false, theme: _providedTheme, displayFont, displayFontItalic,
 }) => {
-  const accentColor = theme?.colors?.link ?? '#2563eb';
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const textColor = _textColorOverride ?? themeStyle('components_TripRecapCards_34', {  }, (theme ?? _styleTheme));
+  const mutedColor = _mutedColorOverride ?? themeStyle('components_TripRecapCards_35', {  }, (theme ?? _styleTheme));
+  const borderColor = _borderColorOverride ?? themeStyle('components_TripRecapCards_36', {  }, (theme ?? _styleTheme));
+  const backgroundColor = _backgroundColorOverride ?? themeStyle('components_TripRecapCards_37', {  }, (theme ?? _styleTheme));
+  const accentColor = theme?.colors?.link ?? themeStyle('components_TripRecapCards_38', {  }, (theme ?? _styleTheme));
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   const heroUrl = topPhotoUrl || fallbackPhotoUrl || null;
@@ -78,71 +87,71 @@ const TripRecapCards: React.FC<Props> = ({
   };
 
   const shareButton = (onDark: boolean) => (
-    <View style={{ alignItems: 'flex-end' }}>
-      <TouchableOpacity accessibilityRole="button" testID="trip-recap-share" onPress={share} style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
-        <Text style={{ color: onDark ? '#fff' : accentColor, fontWeight: '700' }}>Share</Text>
+    <View style={themeStyle('components_TripRecapCards_1', {  }, (theme ?? _styleTheme))}>
+      <TouchableOpacity accessibilityRole="button" testID="trip-recap-share" onPress={share} style={themeStyle('components_TripRecapCards_2', {  }, (theme ?? _styleTheme))}>
+        <Text style={themeStyle('components_TripRecapCards_3', { onDark: onDark, accentColor: accentColor }, (theme ?? _styleTheme))}>Share</Text>
       </TouchableOpacity>
       {shareFeedback ? (
-        <Text testID="trip-recap-share-feedback" style={{ color: onDark ? 'rgba(255,255,255,0.85)' : mutedColor, fontSize: 11, paddingRight: 4 }}>{shareFeedback}</Text>
+        <Text testID="trip-recap-share-feedback" style={themeStyle('components_TripRecapCards_4', { onDark: onDark, mutedColor: mutedColor }, (theme ?? _styleTheme))}>{shareFeedback}</Text>
       ) : null}
     </View>
   );
 
   return (
-    <View testID="trip-recap-cards" style={{ borderRadius: 16, overflow: 'hidden', backgroundColor, marginBottom: 16, borderWidth: 1, borderColor }}>
+    <View testID="trip-recap-cards" style={themeStyle('components_TripRecapCards_5', { backgroundColor: backgroundColor, borderColor: borderColor }, (theme ?? _styleTheme))}>
       {heroUrl ? (
         <ImageBackground
           source={{ uri: heroUrl }}
           accessibilityLabel={recap?.topPhoto?.altText || recap?.topPhoto?.caption || 'Trip photo'}
-          style={{ minHeight: 240, justifyContent: 'flex-end' }}
+          style={themeStyle('components_TripRecapCards_6', {  }, (theme ?? _styleTheme))}
         >
-          <LinearGradient colors={['rgba(11,23,38,0)', 'rgba(11,23,38,0.1)', 'rgba(11,23,38,0.85)']} style={{ padding: 16 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' }}>Trip recap</Text>
-                <Text style={{ color: '#fff', fontSize: 26, fontFamily: displayFont, marginTop: 2 }}>{recap?.title || 'Our trip'}</Text>
-                {when ? <Text style={{ color: 'rgba(255,255,255,0.9)', marginTop: 3, fontFamily: displayFontItalic }}>{when}</Text> : null}
-                <Text style={{ color: 'rgba(255,255,255,0.9)', marginTop: 6 }}>{statsLine}</Text>
+          <LinearGradient colors={[themeStyle('components_TripRecapCards_39', {  }, (theme ?? _styleTheme)), themeStyle('components_TripRecapCards_40', {  }, (theme ?? _styleTheme)), themeStyle('components_TripRecapCards_41', {  }, (theme ?? _styleTheme))]} style={themeStyle('components_TripRecapCards_7', {  }, (theme ?? _styleTheme))}>
+            <View style={themeStyle('components_TripRecapCards_8', {  }, (theme ?? _styleTheme))}>
+              <View style={themeStyle('components_TripRecapCards_9', {  }, (theme ?? _styleTheme))}>
+                <Text style={themeStyle('components_TripRecapCards_10', {  }, (theme ?? _styleTheme))}>Trip recap</Text>
+                <Text style={themeStyle('components_TripRecapCards_11', { displayFont: displayFont }, (theme ?? _styleTheme))}>{recap?.title || 'Our trip'}</Text>
+                {when ? <Text style={themeStyle('components_TripRecapCards_12', { displayFontItalic: displayFontItalic }, (theme ?? _styleTheme))}>{when}</Text> : null}
+                <Text style={themeStyle('components_TripRecapCards_13', {  }, (theme ?? _styleTheme))}>{statsLine}</Text>
               </View>
-              <View style={{ backgroundColor: 'rgba(11,23,38,0.45)', borderRadius: 8 }}>{shareButton(true)}</View>
+              <View style={themeStyle('components_TripRecapCards_14', {  }, (theme ?? _styleTheme))}>{shareButton(true)}</View>
             </View>
             {heroIsMostLoved ? (
-              <Text style={{ color: 'rgba(255,255,255,0.7)', marginTop: 8, fontSize: 12, fontFamily: displayFontItalic }}>♥ Most-loved photo</Text>
+              <Text style={themeStyle('components_TripRecapCards_15', { displayFontItalic: displayFontItalic }, (theme ?? _styleTheme))}>♥ Most-loved photo</Text>
             ) : null}
           </LinearGradient>
         </ImageBackground>
       ) : (
-        <View style={{ padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: mutedColor, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' }}>Trip recap</Text>
-            <Text style={{ color: textColor, fontSize: 24, fontFamily: displayFont, marginTop: 2 }}>{recap?.title || 'Our trip'}</Text>
-            {when ? <Text style={{ color: mutedColor, marginTop: 3, fontFamily: displayFontItalic }}>{when}</Text> : null}
-            <Text style={{ color: mutedColor, marginTop: 6 }}>{statsLine}</Text>
+        <View style={themeStyle('components_TripRecapCards_16', {  }, (theme ?? _styleTheme))}>
+          <View style={themeStyle('components_TripRecapCards_17', {  }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('components_TripRecapCards_18', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Trip recap</Text>
+            <Text style={themeStyle('components_TripRecapCards_19', { textColor: textColor, displayFont: displayFont }, (theme ?? _styleTheme))}>{recap?.title || 'Our trip'}</Text>
+            {when ? <Text style={themeStyle('components_TripRecapCards_20', { mutedColor: mutedColor, displayFontItalic: displayFontItalic }, (theme ?? _styleTheme))}>{when}</Text> : null}
+            <Text style={themeStyle('components_TripRecapCards_21', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{statsLine}</Text>
           </View>
           {shareButton(false)}
         </View>
       )}
-      <View style={{ padding: 16, paddingTop: heroUrl ? 14 : 4 }}>
+      <View style={themeStyle('components_TripRecapCards_22', { heroUrl: heroUrl }, (theme ?? _styleTheme))}>
         {mapDays.length > 0 && <BlogMap nativeEnabled={nativeEnabled} testID="trip-recap-map" map={{ precision: mapDays.some(d => d.mapPoints.precision === 'approximate') ? 'approximate' : 'exact', points: mapDays.flatMap(d => d.mapPoints.points).slice(0, 100) }} />}
         {(recap?.topContributors || []).length ? (
-          <Text style={{ color: textColor, marginTop: 4 }}>Traveler spotlight: {(recap.topContributors || []).map((c: any) => c.displayName).join(', ')}</Text>
+          <Text style={themeStyle('components_TripRecapCards_23', { textColor: textColor }, (theme ?? _styleTheme))}>Traveler spotlight: {(recap.topContributors || []).map((c: any) => c.displayName).join(', ')}</Text>
         ) : null}
-        {recap?.mostCommentedDay ? <Text style={{ color: textColor, marginTop: 6 }}>Most-commented day: {formatDateLong(recap.mostCommentedDay.dayDate)} · {recap.mostCommentedDay.commentCount} comment{recap.mostCommentedDay.commentCount === 1 ? '' : 's'}</Text> : null}
+        {recap?.mostCommentedDay ? <Text style={themeStyle('components_TripRecapCards_24', { textColor: textColor }, (theme ?? _styleTheme))}>Most-commented day: {formatDateLong(recap.mostCommentedDay.dayDate)} · {recap.mostCommentedDay.commentCount} comment{recap.mostCommentedDay.commentCount === 1 ? '' : 's'}</Text> : null}
         {showAwards ? (
-          <View testID="trip-awards" style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 10 }}>
-            <Text style={{ color: textColor, fontWeight: '800', marginBottom: 5 }}>Trip Awards</Text>
-            {recap?.topPhoto ? <Text style={{ color: textColor }}>🏆 Crowd favorite · {recap.topPhoto.reactionTotal} reactions</Text> : null}
-            {recap?.topPhotoContributor ? <Text style={{ color: textColor, marginTop: 4 }}>📸 Shutterbug · {recap.topPhotoContributor.displayName} · {recap.topPhotoContributor.photoCount} photos</Text> : null}
-            {recap?.mostCommentedDay ? <Text style={{ color: textColor, marginTop: 4 }}>💬 Conversation starter · {formatDateLong(recap.mostCommentedDay.dayDate)}</Text> : null}
+          <View testID="trip-awards" style={themeStyle('components_TripRecapCards_25', { borderColor: borderColor }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('components_TripRecapCards_26', { textColor: textColor }, (theme ?? _styleTheme))}>Trip Awards</Text>
+            {recap?.topPhoto ? <Text style={themeStyle('components_TripRecapCards_27', { textColor: textColor }, (theme ?? _styleTheme))}>🏆 Crowd favorite · {recap.topPhoto.reactionTotal} reactions</Text> : null}
+            {recap?.topPhotoContributor ? <Text style={themeStyle('components_TripRecapCards_28', { textColor: textColor }, (theme ?? _styleTheme))}>📸 Shutterbug · {recap.topPhotoContributor.displayName} · {recap.topPhotoContributor.photoCount} photos</Text> : null}
+            {recap?.mostCommentedDay ? <Text style={themeStyle('components_TripRecapCards_29', { textColor: textColor }, (theme ?? _styleTheme))}>💬 Conversation starter · {formatDateLong(recap.mostCommentedDay.dayDate)}</Text> : null}
           </View>
         ) : null}
-        {spendTotal != null ? <Text testID="trip-recap-spend" style={{ color: textColor, marginTop: 10, fontWeight: '700' }}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(spendTotal)}</Text> : null}
+        {spendTotal != null ? <Text testID="trip-recap-spend" style={themeStyle('components_TripRecapCards_30', { textColor: textColor }, (theme ?? _styleTheme))}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(spendTotal)}</Text> : null}
         {shareUrl ? (
-          <TouchableOpacity accessibilityRole="link" testID="trip-recap-open-public" onPress={() => { void Linking.openURL(shareUrl).catch(() => {}); }} style={{ marginTop: 12 }}>
-            <Text style={{ color: accentColor, fontWeight: '700' }}>Read the full story ↗</Text>
+          <TouchableOpacity accessibilityRole="link" testID="trip-recap-open-public" onPress={() => { void Linking.openURL(shareUrl).catch(() => {}); }} style={themeStyle('components_TripRecapCards_31', {  }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('components_TripRecapCards_32', { accentColor: accentColor }, (theme ?? _styleTheme))}>Read the full story ↗</Text>
           </TouchableOpacity>
         ) : null}
-        <Text style={{ color: mutedColor, fontSize: 11, marginTop: 10 }}>Generated {new Date(recap?.generatedAt || Date.now()).toLocaleDateString()}</Text>
+        <Text style={themeStyle('components_TripRecapCards_33', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Generated {new Date(recap?.generatedAt || Date.now()).toLocaleDateString()}</Text>
       </View>
     </View>
   );

@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../../theme/ThemeContext';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import type { AppTheme } from '../../theme/theme';
+
 import DateField from '../DateField';
 
 /**
@@ -69,24 +72,28 @@ export const dueLabel = (request: Pick<RightsRequest, 'dueAt' | 'status' | 'clos
 const errorFrom = async (res: Response) =>
   ((await res.json().catch(() => ({}))) as { error?: string })?.error ?? `HTTP ${res.status}`;
 
-const Pills = <T extends string>({ options, value, onChange, testIDPrefix, theme }: {
+const Pills = <T extends string>({ options, value, onChange, testIDPrefix, theme: _providedTheme }: {
   options: readonly T[]; value: T; onChange: (v: T) => void; testIDPrefix: string; theme: AppTheme;
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const c = theme.colors;
   return (
-    <View style={styles.pills}>
+    <View style={styles((theme ?? _styleTheme)).pills}>
       {options.map((option) => (
         <TouchableOpacity key={option} accessibilityRole="button" accessibilityState={{ selected: value === option }}
           testID={`${testIDPrefix}-${option}`} onPress={() => onChange(option)}
-          style={[styles.pill, { borderColor: value === option ? c.primary : c.border, backgroundColor: value === option ? c.primary : 'transparent' }]}>
-          <Text style={{ color: value === option ? c.onPrimary : c.text }}>{label(option)}</Text>
+          style={[styles((theme ?? _styleTheme)).pill, themeStyle('components_admin_PrivacyRequestsSection_1', { value: value, option: option, c: c }, (theme ?? _styleTheme))]}>
+          <Text style={themeStyle('components_admin_PrivacyRequestsSection_2', { value: value, option: option, c: c }, (theme ?? _styleTheme))}>{label(option)}</Text>
         </TouchableOpacity>
       ))}
     </View>
   );
 };
 
-const NewRequestForm: React.FC<{ onSubmit: (body: Record<string, unknown>) => Promise<string | null>; theme: AppTheme }> = ({ onSubmit, theme }) => {
+const NewRequestForm: React.FC<{ onSubmit: (body: Record<string, unknown>) => Promise<string | null>; theme: AppTheme }> = ({ onSubmit, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const c = theme.colors;
   const [requestType, setRequestType] = useState<RequestType>('access');
   const [jurisdiction, setJurisdiction] = useState<Jurisdiction>('GDPR');
@@ -97,7 +104,7 @@ const NewRequestForm: React.FC<{ onSubmit: (body: Record<string, unknown>) => Pr
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(receivedAt) && !Number.isNaN(Date.parse(receivedAt));
-  const dateFieldStyles = { input: [styles.input, { borderColor: validDate ? c.border : c.error, color: c.text, backgroundColor: c.surface }], cellText: { color: c.text } };
+  const dateFieldStyles = { input: [styles((theme ?? _styleTheme)).input, themeStyle('components_admin_PrivacyRequestsSection_3', { validDate: validDate, c: c }, (theme ?? _styleTheme))], cellText: themeStyle('components_admin_PrivacyRequestsSection_4', { c: c }, (theme ?? _styleTheme)) };
   const canSave = reason.trim().length >= 3 && validDate;
   const submit = async () => {
     if (!canSave) return;
@@ -110,17 +117,17 @@ const NewRequestForm: React.FC<{ onSubmit: (body: Record<string, unknown>) => Pr
     if (!error) { setAccountUserId(''); setNotes(''); setReason(''); }
   };
   return (
-    <View testID="admin-privacy-new-request" style={[styles.card, { borderColor: c.border }]}>
-      <Text style={[styles.heading, { color: c.text, marginTop: 0 }]}>Record a request</Text>
-      <Text style={[styles.note, { color: c.textMuted }]}>
+    <View testID="admin-privacy-new-request" style={[styles((theme ?? _styleTheme)).card, themeStyle('components_admin_PrivacyRequestsSection_5', { c: c }, (theme ?? _styleTheme))]}>
+      <Text style={[styles((theme ?? _styleTheme)).heading, themeStyle('components_admin_PrivacyRequestsSection_6', { c: c }, (theme ?? _styleTheme))]}>Record a request</Text>
+      <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_7', { c: c }, (theme ?? _styleTheme))]}>
         For requests received by email or another channel. Do not enter the requester's email or name here; keep identity in the
         support mailbox. If they have an account, paste its user ID and only a pseudonymous hash is stored.
       </Text>
-      <Text style={[styles.label, { color: c.text }]}>Type</Text>
+      <Text style={[styles((theme ?? _styleTheme)).label, themeStyle('components_admin_PrivacyRequestsSection_8', { c: c }, (theme ?? _styleTheme))]}>Type</Text>
       <Pills options={REQUEST_TYPES} value={requestType} onChange={setRequestType} testIDPrefix="admin-privacy-new-type" theme={theme} />
-      <Text style={[styles.label, { color: c.text }]}>Jurisdiction</Text>
+      <Text style={[styles((theme ?? _styleTheme)).label, themeStyle('components_admin_PrivacyRequestsSection_9', { c: c }, (theme ?? _styleTheme))]}>Jurisdiction</Text>
       <Pills options={JURISDICTIONS} value={jurisdiction} onChange={setJurisdiction} testIDPrefix="admin-privacy-new-jurisdiction" theme={theme} />
-      <Text style={[styles.label, { color: c.text }]}>Channel</Text>
+      <Text style={[styles((theme ?? _styleTheme)).label, themeStyle('components_admin_PrivacyRequestsSection_10', { c: c }, (theme ?? _styleTheme))]}>Channel</Text>
       <Pills options={CHANNELS} value={channel} onChange={setChannel} testIDPrefix="admin-privacy-new-channel" theme={theme} />
       <DateField
         value={receivedAt}
@@ -132,16 +139,16 @@ const NewRequestForm: React.FC<{ onSubmit: (body: Record<string, unknown>) => Pr
         testID="admin-privacy-new-received"
       />
       <TextInput accessibilityLabel="Account user ID (optional)" placeholder="Account user ID (optional)" value={accountUserId}
-        onChangeText={setAccountUserId} autoCapitalize="none" style={[styles.input, { borderColor: c.border, color: c.text }]} />
+        onChangeText={setAccountUserId} autoCapitalize="none" style={[styles((theme ?? _styleTheme)).input, themeStyle('components_admin_PrivacyRequestsSection_11', { c: c }, (theme ?? _styleTheme))]} />
       <TextInput accessibilityLabel="Notes (optional)" placeholder="Notes: actions taken, no personal details" value={notes}
-        onChangeText={setNotes} multiline style={[styles.input, { borderColor: c.border, color: c.text, minHeight: 48 }]} />
+        onChangeText={setNotes} multiline style={[styles((theme ?? _styleTheme)).input, themeStyle('components_admin_PrivacyRequestsSection_12', { c: c }, (theme ?? _styleTheme))]} />
       <TextInput accessibilityLabel="New request reason" placeholder="Reason (required, audited)" value={reason}
-        onChangeText={setReason} style={[styles.input, { borderColor: c.border, color: c.text }]} />
+        onChangeText={setReason} style={[styles((theme ?? _styleTheme)).input, themeStyle('components_admin_PrivacyRequestsSection_13', { c: c }, (theme ?? _styleTheme))]} />
       <TouchableOpacity accessibilityRole="button" testID="admin-privacy-new-save" disabled={!canSave} onPress={() => { void submit(); }}
-        style={[styles.pill, { borderColor: c.primary, alignSelf: 'flex-start', opacity: canSave ? 1 : 0.5 }]}>
-        <Text style={{ color: c.text }}>Record request</Text>
+        style={[styles((theme ?? _styleTheme)).pill, themeStyle('components_admin_PrivacyRequestsSection_14', { c: c, canSave: canSave }, (theme ?? _styleTheme))]}>
+        <Text style={themeStyle('components_admin_PrivacyRequestsSection_15', { c: c }, (theme ?? _styleTheme))}>Record request</Text>
       </TouchableOpacity>
-      {message ? <Text style={[styles.note, { color: c.textMuted }]}>{message}</Text> : null}
+      {message ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_16', { c: c }, (theme ?? _styleTheme))]}>{message}</Text> : null}
     </View>
   );
 };
@@ -150,7 +157,9 @@ const RequestEditor: React.FC<{
   request: RightsRequest;
   onSave: (id: string, body: Record<string, unknown>) => Promise<string | null>;
   theme: AppTheme;
-}> = ({ request, onSave, theme }) => {
+}> = ({ request, onSave, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const c = theme.colors;
   const [status, setStatus] = useState<RequestStatus>(request.status);
   const [extend, setExtend] = useState(false);
@@ -170,30 +179,32 @@ const RequestEditor: React.FC<{
     setMessage(error);
   };
   return (
-    <View style={{ gap: 8, marginTop: 8 }}>
+    <View style={themeStyle('components_admin_PrivacyRequestsSection_17', {  }, (theme ?? _styleTheme))}>
       <Pills options={STATUSES} value={status} onChange={setStatus} testIDPrefix={`admin-privacy-status-${request.id}`} theme={theme} />
       {!request.extended && !CLOSED.includes(request.status) ? (
-        <View style={[styles.inline, { alignItems: 'center' }]}>
+        <View style={[styles((theme ?? _styleTheme)).inline, themeStyle('components_admin_PrivacyRequestsSection_18', {  }, (theme ?? _styleTheme))]}>
           <Switch accessibilityLabel="Apply the statutory extension" value={extend} onValueChange={setExtend} />
-          <Text style={[styles.note, { color: c.text, flex: 1 }]}>
+          <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_19', { c: c }, (theme ?? _styleTheme))]}>
             Apply the one-time statutory extension (GDPR/UK: +2 months; CCPA/US states: +45 days; other: +30 days). Tell the requester why, before the original due date.
           </Text>
         </View>
       ) : null}
       <TextInput accessibilityLabel="Request notes" placeholder="Notes: actions taken, no personal details" value={notes}
-        onChangeText={setNotes} multiline style={[styles.input, { borderColor: c.border, color: c.text, minHeight: 48 }]} />
+        onChangeText={setNotes} multiline style={[styles((theme ?? _styleTheme)).input, themeStyle('components_admin_PrivacyRequestsSection_20', { c: c }, (theme ?? _styleTheme))]} />
       <TextInput accessibilityLabel="Update reason" placeholder="Reason (required, audited)" value={reason}
-        onChangeText={setReason} style={[styles.input, { borderColor: c.border, color: c.text }]} />
+        onChangeText={setReason} style={[styles((theme ?? _styleTheme)).input, themeStyle('components_admin_PrivacyRequestsSection_21', { c: c }, (theme ?? _styleTheme))]} />
       <TouchableOpacity accessibilityRole="button" testID={`admin-privacy-save-${request.id}`} disabled={!canSave} onPress={() => { void save(); }}
-        style={[styles.pill, { borderColor: c.primary, alignSelf: 'flex-start', opacity: canSave ? 1 : 0.5 }]}>
-        <Text style={{ color: c.text }}>Save</Text>
+        style={[styles((theme ?? _styleTheme)).pill, themeStyle('components_admin_PrivacyRequestsSection_22', { c: c, canSave: canSave }, (theme ?? _styleTheme))]}>
+        <Text style={themeStyle('components_admin_PrivacyRequestsSection_23', { c: c }, (theme ?? _styleTheme))}>Save</Text>
       </TouchableOpacity>
-      {message ? <Text style={[styles.note, { color: c.error }]}>{message}</Text> : null}
+      {message ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_24', { c: c }, (theme ?? _styleTheme))]}>{message}</Text> : null}
     </View>
   );
 };
 
-const RequestsPanel: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme }) => {
+const RequestsPanel: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const c = theme.colors;
   const [filter, setFilter] = useState<'active' | 'all' | RequestStatus>('active');
   const [requests, setRequests] = useState<RightsRequest[] | null>(null);
@@ -236,32 +247,32 @@ const RequestsPanel: React.FC<{ backendUrl: string; headers: Record<string, stri
   };
 
   return (
-    <View testID="admin-privacy-requests" style={{ gap: 10 }}>
+    <View testID="admin-privacy-requests" style={themeStyle('components_admin_PrivacyRequestsSection_25', {  }, (theme ?? _styleTheme))}>
       {overdueCount > 0 ? (
-        <Text testID="admin-privacy-overdue" style={[styles.banner, { borderColor: c.error, color: c.error }]}>
+        <Text testID="admin-privacy-overdue" style={[styles((theme ?? _styleTheme)).banner, themeStyle('components_admin_PrivacyRequestsSection_26', { c: c }, (theme ?? _styleTheme))]}>
           {`${overdueCount} request${overdueCount === 1 ? ' is' : 's are'} past the statutory due date.`}
         </Text>
       ) : null}
-      <View style={[styles.inline, { justifyContent: 'space-between', alignItems: 'center' }]}>
+      <View style={[styles((theme ?? _styleTheme)).inline, themeStyle('components_admin_PrivacyRequestsSection_27', {  }, (theme ?? _styleTheme))]}>
         <Pills options={['active', 'all', ...STATUSES] as const} value={filter} onChange={setFilter} testIDPrefix="admin-privacy-filter" theme={theme} />
         <TouchableOpacity accessibilityRole="button" testID="admin-privacy-new-toggle" onPress={() => setShowForm((v) => !v)}
-          style={[styles.pill, { borderColor: c.primary }]}>
-          <Text style={{ color: c.text }}>{showForm ? 'Close form' : 'Record request'}</Text>
+          style={[styles((theme ?? _styleTheme)).pill, themeStyle('components_admin_PrivacyRequestsSection_28', { c: c }, (theme ?? _styleTheme))]}>
+          <Text style={themeStyle('components_admin_PrivacyRequestsSection_29', { c: c }, (theme ?? _styleTheme))}>{showForm ? 'Close form' : 'Record request'}</Text>
         </TouchableOpacity>
       </View>
       {showForm ? <NewRequestForm theme={theme} onSubmit={(body) => send('POST', '', body)} /> : null}
-      {error ? <Text style={[styles.note, { color: c.error }]}>{error}</Text> : null}
-      {requests && !requests.length ? <Text style={[styles.note, { color: c.textMuted }]}>No requests in this view.</Text> : null}
+      {error ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_30', { c: c }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+      {requests && !requests.length ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_31', { c: c }, (theme ?? _styleTheme))]}>No requests in this view.</Text> : null}
       {(requests ?? []).map((r) => (
-        <View key={r.id} testID={`admin-privacy-request-${r.id}`} style={[styles.card, { borderColor: r.overdue ? c.error : c.border }]}>
+        <View key={r.id} testID={`admin-privacy-request-${r.id}`} style={[styles((theme ?? _styleTheme)).card, themeStyle('components_admin_PrivacyRequestsSection_32', { r: r, c: c }, (theme ?? _styleTheme))]}>
           <TouchableOpacity accessibilityRole="button" onPress={() => setExpanded((cur) => (cur === r.id ? null : r.id))}>
-            <Text style={[styles.heading, { color: c.text, marginTop: 0 }]}>
+            <Text style={[styles((theme ?? _styleTheme)).heading, themeStyle('components_admin_PrivacyRequestsSection_33', { c: c }, (theme ?? _styleTheme))]}>
               {`${label(r.requestType)} · ${label(r.jurisdiction)} · ${label(r.status)}`}
             </Text>
-            <Text style={[styles.note, { color: r.overdue ? c.error : c.textMuted }]}>
+            <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_34', { r: r, c: c }, (theme ?? _styleTheme))]}>
               {`Received ${dateOnly(r.receivedAt)} by ${label(r.channel)} · due ${dateOnly(r.dueAt)}${r.extended ? ' (extended)' : ''} · ${dueLabel(r)}`}
             </Text>
-            <Text style={[styles.note, { color: c.textMuted }]}>
+            <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_35', { c: c }, (theme ?? _styleTheme))]}>
               {r.subjectHash ? `Account subject ${r.subjectHash.slice(0, 12)}…` : 'No linked account'}
               {r.notes ? ` · ${r.notes}` : ''}
             </Text>
@@ -273,7 +284,9 @@ const RequestsPanel: React.FC<{ backendUrl: string; headers: Record<string, stri
   );
 };
 
-const ErasureJobsPanel: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme }) => {
+const ErasureJobsPanel: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const c = theme.colors;
   const [filter, setFilter] = useState<(typeof JOB_FILTERS)[number]>('all');
   const [jobs, setJobs] = useState<ErasureJob[] | null>(null);
@@ -295,31 +308,31 @@ const ErasureJobsPanel: React.FC<{ backendUrl: string; headers: Record<string, s
     return () => { cancelled = true; };
   }, [backendUrl, headers, filter]);
   return (
-    <View testID="admin-privacy-erasure-jobs" style={{ gap: 10 }}>
-      <Text style={[styles.note, { color: c.textMuted }]}>
+    <View testID="admin-privacy-erasure-jobs" style={themeStyle('components_admin_PrivacyRequestsSection_36', {  }, (theme ?? _styleTheme))}>
+      <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_37', { c: c }, (theme ?? _styleTheme))]}>
         Deletion and analytics-erasure jobs started by users (or admins). Pending jobs retry automatically; a failed step needs an engineer
         (see the runbook). Raw user IDs are never shown.
       </Text>
       <Pills options={JOB_FILTERS} value={filter} onChange={setFilter} testIDPrefix="admin-erasure-filter" theme={theme} />
-      {error ? <Text style={[styles.note, { color: c.error }]}>{error}</Text> : null}
-      {jobs && !jobs.length ? <Text style={[styles.note, { color: c.textMuted }]}>No erasure jobs in this view.</Text> : null}
+      {error ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_38', { c: c }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+      {jobs && !jobs.length ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_39', { c: c }, (theme ?? _styleTheme))]}>No erasure jobs in this view.</Text> : null}
       {(jobs ?? []).map((job) => {
         const steps = Object.entries(job.steps ?? {});
         const failed = steps.filter(([, s]) => s.status === 'failed');
         const overdue = job.status !== 'completed' && new Date(job.dueAt).getTime() < Date.now();
         return (
-          <View key={job.id} testID={`admin-erasure-job-${job.id}`} style={[styles.card, { borderColor: job.status === 'failed' || overdue ? c.error : c.border }]}>
-            <Text style={[styles.heading, { color: c.text, marginTop: 0 }]}>{`${job.scope} erasure · ${job.status}${overdue ? ' · OVERDUE' : ''}`}</Text>
-            <Text style={[styles.note, { color: c.textMuted }]}>
+          <View key={job.id} testID={`admin-erasure-job-${job.id}`} style={[styles((theme ?? _styleTheme)).card, themeStyle('components_admin_PrivacyRequestsSection_40', { job: job, overdue: overdue, c: c }, (theme ?? _styleTheme))]}>
+            <Text style={[styles((theme ?? _styleTheme)).heading, themeStyle('components_admin_PrivacyRequestsSection_41', { c: c }, (theme ?? _styleTheme))]}>{`${job.scope} erasure · ${job.status}${overdue ? ' · OVERDUE' : ''}`}</Text>
+            <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_42', { c: c }, (theme ?? _styleTheme))]}>
               {`Requested ${dateOnly(job.requestedAt)} by ${job.requestedBy} · due ${dateOnly(job.dueAt)} · ${job.attempts} attempt${job.attempts === 1 ? '' : 's'}${job.completedAt ? ` · completed ${dateOnly(job.completedAt)}` : ''}`}
             </Text>
-            <Text style={[styles.note, { color: c.textMuted }]}>
+            <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_43', { c: c }, (theme ?? _styleTheme))]}>
               {`${steps.filter(([, s]) => s.status === 'done' || s.status === 'not_applicable').length}/${steps.length} steps done`}
             </Text>
             {failed.map(([name, s]) => (
-              <Text key={name} style={[styles.note, { color: c.error }]}>{`${name}: ${s.error ?? 'failed'}`}</Text>
+              <Text key={name} style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_44', { c: c }, (theme ?? _styleTheme))]}>{`${name}: ${s.error ?? 'failed'}`}</Text>
             ))}
-            {job.lastError && !failed.length ? <Text style={[styles.note, { color: c.error }]}>{job.lastError}</Text> : null}
+            {job.lastError && !failed.length ? <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_45', { c: c }, (theme ?? _styleTheme))]}>{job.lastError}</Text> : null}
           </View>
         );
       })}
@@ -327,13 +340,15 @@ const ErasureJobsPanel: React.FC<{ backendUrl: string; headers: Record<string, s
   );
 };
 
-export const PrivacyRequestsSection: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme }) => {
+export const PrivacyRequestsSection: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const c = theme.colors;
   const [tab, setTab] = useState<'requests' | 'erasure'>('requests');
   return (
-    <View testID="admin-privacy-section" style={styles.section}>
-      <Text style={[styles.title, { color: c.text }]}>Privacy requests</Text>
-      <Text style={[styles.note, { color: c.textMuted }]}>
+    <View testID="admin-privacy-section" style={styles((theme ?? _styleTheme)).section}>
+      <Text style={[styles((theme ?? _styleTheme)).title, themeStyle('components_admin_PrivacyRequestsSection_46', { c: c }, (theme ?? _styleTheme))]}>Privacy requests</Text>
+      <Text style={[styles((theme ?? _styleTheme)).note, themeStyle('components_admin_PrivacyRequestsSection_47', { c: c }, (theme ?? _styleTheme))]}>
         Rights requests have statutory deadlines: GDPR and UK GDPR one month (extendable once by two months); CCPA and other US state
         laws 45 days (extendable once by 45); anything else is tracked at 30 days (+30). Every change is recorded in the audit log.
       </Text>
@@ -345,18 +360,6 @@ export const PrivacyRequestsSection: React.FC<{ backendUrl: string; headers: Rec
   );
 };
 
-const styles = StyleSheet.create({
-  section: { gap: 8 },
-  title: { fontSize: 20, fontWeight: '700' },
-  heading: { fontSize: 15, fontWeight: '700', marginTop: 12 },
-  label: { fontSize: 12, fontWeight: '600' },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
-  inline: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  note: { fontSize: 12, lineHeight: 18 },
-  banner: { borderWidth: 1, borderRadius: 8, padding: 10, fontWeight: '600' },
-  card: { borderWidth: 1, borderRadius: 8, padding: 12, gap: 4 },
-  input: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
-});
+const styles = (_theme: import('../../theme/theme').AppTheme) => themeStyle('components_admin_PrivacyRequestsSection_48', { StyleSheet: StyleSheet }, _theme);
 
 export default PrivacyRequestsSection;

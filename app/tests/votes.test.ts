@@ -3,8 +3,8 @@
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 
 describe('votes utils', () => {
-  test('shows vote buttons only for proposed items with no user vote', () => {
-    expect(shouldShowVoteButtons('Proposed', null)).toBe(true);
+  test('never shows proposal vote buttons', () => {
+    expect(shouldShowVoteButtons('Proposed', null)).toBe(false);
     expect(shouldShowVoteButtons('Proposed', 1)).toBe(false);
     expect(shouldShowVoteButtons('Booked', null)).toBe(false);
   });

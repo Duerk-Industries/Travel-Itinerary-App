@@ -1,3 +1,7 @@
+import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 /**
  * PresenceAvatars
  *
@@ -8,7 +12,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import type { PresenceUser } from '../../packages/messaging/src/types';
-import type { AppTheme } from '../theme/theme';
+
 
 interface Props {
   /** The current user's own ID — excluded from the list */
@@ -20,15 +24,17 @@ interface Props {
   theme?: AppTheme;
 }
 
-const AVATAR_SIZE = 28;
-const OVERLAP = 8;
+const AVATAR_SIZE = layoutMetrics.PresenceAvatars_AVATAR_SIZE;
+const OVERLAP = layoutMetrics.PresenceAvatars_OVERLAP;
 
 const PresenceAvatars: React.FC<Props> = ({
   currentUserId,
   presenceUsers,
   maxVisible = 5,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const others = presenceUsers.filter((u) => u.userId !== currentUserId);
   if (others.length === 0) return null;
 
@@ -36,52 +42,28 @@ const PresenceAvatars: React.FC<Props> = ({
   const overflow = others.length - maxVisible;
 
   return (
-    <View style={styles.row} testID="presence-avatars">
+    <View style={styles((theme ?? _styleTheme)).row} testID="presence-avatars">
       {visible.map((user, idx) => (
         <View
           key={user.userId}
           style={[
-            styles.avatar,
-            { backgroundColor: user.color, marginLeft: idx === 0 ? 0 : -OVERLAP, borderColor: theme?.colors.background ?? '#fff' },
+            styles((theme ?? _styleTheme)).avatar,
+            themeStyle('components_PresenceAvatars_1', { user: user, idx: idx, OVERLAP: OVERLAP, theme: theme }, (theme ?? _styleTheme)),
           ]}
           testID={`presence-avatar-${user.userId}`}
         >
-          <Text style={styles.initials}>{user.initials}</Text>
+          <Text style={styles((theme ?? _styleTheme)).initials}>{user.initials}</Text>
         </View>
       ))}
       {overflow > 0 && (
-        <View style={[styles.avatar, styles.overflow, { marginLeft: -OVERLAP, borderColor: theme?.colors.background ?? '#fff' }]}>
-          <Text style={styles.initials}>+{overflow}</Text>
+        <View style={[styles((theme ?? _styleTheme)).avatar, styles((theme ?? _styleTheme)).overflow, themeStyle('components_PresenceAvatars_2', { OVERLAP: OVERLAP, theme: theme }, (theme ?? _styleTheme))]}>
+          <Text style={styles((theme ?? _styleTheme)).initials}>+{overflow}</Text>
         </View>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 6,
-  },
-  avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#fff',
-  },
-  overflow: {
-    backgroundColor: '#9e9e9e',
-  },
-  initials: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_PresenceAvatars_3', { StyleSheet: StyleSheet, AVATAR_SIZE: AVATAR_SIZE }, _theme);
 
 export default PresenceAvatars;

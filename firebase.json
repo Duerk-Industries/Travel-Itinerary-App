@@ -40,6 +40,20 @@
       }
     ],
     "rewrites": [
+      {
+        "source": "/public/blog/**",
+        "run": {
+          "serviceId": "travel-itinerary-app",
+          "region": "us-east5"
+        }
+      },
+      {
+        "source": "/sitemap-trip-blogs.xml",
+        "run": {
+          "serviceId": "travel-itinerary-app",
+          "region": "us-east5"
+        }
+      },
       { 
         "source": "/api/**",
         "run": { 

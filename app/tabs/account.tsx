@@ -1,3 +1,5 @@
+import { themeStyle, getAppTheme } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import { isCalendarApp } from '../utils/calendarEvents';
 import React, { useEffect, useState } from 'react';
 import { AccountPrivacySettings } from '../components/PrivacySettings';
@@ -15,7 +17,7 @@ import PackingListTable from '../components/PackingListTable';
 import PremiumSubscriptionPanel from '../components/PremiumSubscriptionPanel';
 import { useBillingStatus } from '../hooks/useBillingStatus';
 import { fetchBillingPlans, type PlanInfo } from '../utils/billing';
-import { getAppTheme } from '../theme/theme';
+
 import { type Trait } from './traits';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
@@ -249,6 +251,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   fetchTraits,
   fetchTraitProfile,
 }) => {
+  const _styleTheme = useStyleTheme();
   const colorScheme = useColorScheme();
   const theme = getAppTheme(appearancePreference, colorScheme);
   const [billingPlans, setBillingPlans] = useState<PlanInfo[]>([]);
@@ -285,7 +288,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       : page === 'account-privacy' ? 'Privacy' : page === 'account-preferences' ? 'Preferences' : 'Travel Profile';
 
   const renderPageHeader = (title: string, description: string) => (
-    <View style={localStyles.pageHeader}>
+    <View style={localStyles(_styleTheme).pageHeader}>
       <TouchableOpacity
         style={[styles.button, styles.smallButton]}
         onPress={() => onNavigate('account')}
@@ -293,55 +296,55 @@ const AccountTab: React.FC<AccountTabProps> = ({
       >
         <Text style={styles.buttonText}>Back to Profile</Text>
       </TouchableOpacity>
-      <Text style={[localStyles.pageTitle, { color: theme.colors.text }]}>{title}</Text>
+      <Text style={[localStyles(_styleTheme).pageTitle, themeStyle('tabs_account_1', { theme: theme }, _styleTheme)]}>{title}</Text>
       <Text style={styles.helperText}>{description}</Text>
     </View>
   );
 
   const renderProfileLinks = () => (
-    <View style={localStyles.linksSection} testID="account-profile-links">
+    <View style={localStyles(_styleTheme).linksSection} testID="account-profile-links">
       <Text style={styles.sectionTitle}>Profile settings</Text>
       <Text style={styles.helperText}>Manage the details used for planning trips with your group.</Text>
-      <View style={localStyles.linkGrid}>
+      <View style={localStyles(_styleTheme).linkGrid}>
         <TouchableOpacity
-          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          style={[localStyles(_styleTheme).linkCard, themeStyle('tabs_account_2', { theme: theme }, _styleTheme)]}
           onPress={() => onNavigate('account-preferences')}
           testID="account-link-preferences"
         >
-          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Preferences</Text>
-          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Choose apps, appearance, temperature units, and saved-trip updates.</Text>
+          <Text style={[localStyles(_styleTheme).linkTitle, themeStyle('tabs_account_3', { theme: theme }, _styleTheme)]}>Preferences</Text>
+          <Text style={[localStyles(_styleTheme).linkDescription, themeStyle('tabs_account_4', { theme: theme }, _styleTheme)]}>Choose apps, appearance, temperature units, and saved-trip updates.</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          style={[localStyles(_styleTheme).linkCard, themeStyle('tabs_account_5', { theme: theme }, _styleTheme)]}
           onPress={() => onNavigate('account-fellow-travelers')}
           testID="account-link-fellow-travelers"
         >
-          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Fellow Travelers</Text>
-          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Manage saved travelers and family relationships.</Text>
+          <Text style={[localStyles(_styleTheme).linkTitle, themeStyle('tabs_account_6', { theme: theme }, _styleTheme)]}>Fellow Travelers</Text>
+          <Text style={[localStyles(_styleTheme).linkDescription, themeStyle('tabs_account_7', { theme: theme }, _styleTheme)]}>Manage saved travelers and family relationships.</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          style={[localStyles(_styleTheme).linkCard, themeStyle('tabs_account_8', { theme: theme }, _styleTheme)]}
           onPress={() => onNavigate('account-packing-list')}
           testID="account-link-packing-list"
         >
-          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Packing List</Text>
-          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Edit the personal items added to your trips.</Text>
+          <Text style={[localStyles(_styleTheme).linkTitle, themeStyle('tabs_account_9', { theme: theme }, _styleTheme)]}>Packing List</Text>
+          <Text style={[localStyles(_styleTheme).linkDescription, themeStyle('tabs_account_10', { theme: theme }, _styleTheme)]}>Edit the personal items added to your trips.</Text>
         </TouchableOpacity>
         {aiItineraryGenerationEnabled ? <TouchableOpacity
-          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          style={[localStyles(_styleTheme).linkCard, themeStyle('tabs_account_11', { theme: theme }, _styleTheme)]}
           onPress={() => onNavigate('account-travel-profile')}
           testID="account-link-travel-profile"
         >
-          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Travel Profile</Text>
-          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Save your travel style and itinerary preferences.</Text>
+          <Text style={[localStyles(_styleTheme).linkTitle, themeStyle('tabs_account_12', { theme: theme }, _styleTheme)]}>Travel Profile</Text>
+          <Text style={[localStyles(_styleTheme).linkDescription, themeStyle('tabs_account_13', { theme: theme }, _styleTheme)]}>Save your travel style and itinerary preferences.</Text>
         </TouchableOpacity> : null}
         <TouchableOpacity
-          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          style={[localStyles(_styleTheme).linkCard, themeStyle('tabs_account_14', { theme: theme }, _styleTheme)]}
           onPress={() => onNavigate('account-privacy')}
           testID="account-link-privacy"
         >
-          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Privacy</Text>
-          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Manage analytics, diagnostics, and your privacy choices.</Text>
+          <Text style={[localStyles(_styleTheme).linkTitle, themeStyle('tabs_account_15', { theme: theme }, _styleTheme)]}>Privacy</Text>
+          <Text style={[localStyles(_styleTheme).linkDescription, themeStyle('tabs_account_16', { theme: theme }, _styleTheme)]}>Manage analytics, diagnostics, and your privacy choices.</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -398,7 +401,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       {!isSubPage ? renderProfileLinks() : null}
       {!isSubPage && onLogout ? (
         <TouchableOpacity
-          style={[styles.secondaryButton, { marginTop: 16, minHeight: 44, justifyContent: 'center' }]}
+          style={[styles.secondaryButton, themeStyle('tabs_account_24', {  }, _styleTheme)]}
           onPress={onLogout}
           accessibilityRole="button"
           testID="account-logout"
@@ -445,42 +448,29 @@ const AccountTab: React.FC<AccountTabProps> = ({
         fetchTraitProfile={fetchTraitProfile}
         styles={styles}
       /> : null}
-      <View style={[localStyles.legalSection, { borderTopColor: theme.colors.border }]}>
-        <Text style={[localStyles.legalTitle, { color: theme.colors.textMuted }]}>Legal</Text>
-        <View style={localStyles.legalLinks}>
+      <View style={[localStyles(_styleTheme).legalSection, themeStyle('tabs_account_17', { theme: theme }, _styleTheme)]}>
+        <Text style={[localStyles(_styleTheme).legalTitle, themeStyle('tabs_account_18', { theme: theme }, _styleTheme)]}>Legal</Text>
+        <View style={localStyles(_styleTheme).legalLinks}>
           <Pressable onPress={() => {
             const baseUrl = Platform.OS === 'web' ? window.location.origin : backendUrl.replace(/\/api$/, '');
             void Linking.openURL(`${baseUrl}/privacy.html`);
           }}>
-            <Text style={[localStyles.legalLink, { color: theme.colors.link }]}>Privacy Policy</Text>
+            <Text style={[localStyles(_styleTheme).legalLink, themeStyle('tabs_account_19', { theme: theme }, _styleTheme)]}>Privacy Policy</Text>
           </Pressable>
-          <Text style={{ color: theme.colors.textMuted }}> • </Text>
+          <Text style={themeStyle('tabs_account_20', { theme: theme }, _styleTheme)}> • </Text>
           <Pressable onPress={() => {
             const baseUrl = Platform.OS === 'web' ? window.location.origin : backendUrl.replace(/\/api$/, '');
             void Linking.openURL(`${baseUrl}/terms.html`);
           }}>
-            <Text style={[localStyles.legalLink, { color: theme.colors.link }]}>Terms of Service</Text>
+            <Text style={[localStyles(_styleTheme).legalLink, themeStyle('tabs_account_21', { theme: theme }, _styleTheme)]}>Terms of Service</Text>
           </Pressable>
         </View>
-        <Text style={[localStyles.copyright, { color: theme.colors.textMuted }]}>&copy; 2026 WanderBunnies Travel</Text>
+        <Text style={[localStyles(_styleTheme).copyright, themeStyle('tabs_account_22', { theme: theme }, _styleTheme)]}>&copy; 2026 WanderBunnies Travel</Text>
       </View>
     </View>
   );
 };
 
-const localStyles = StyleSheet.create({
-  pageHeader: { gap: 8, marginBottom: 16 },
-  pageTitle: { fontSize: 26, fontWeight: '700' },
-  linksSection: { marginVertical: 16, gap: 10 },
-  linkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  linkCard: { borderWidth: 1, borderRadius: 8, padding: 14, minWidth: 220, flex: 1, gap: 5 },
-  linkTitle: { fontSize: 17, fontWeight: '700' },
-  linkDescription: { fontSize: 13, lineHeight: 18 },
-  legalSection: { marginTop: 24, paddingVertical: 20, borderTopWidth: 1, alignItems: 'center', gap: 8 },
-  legalTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  legalLinks: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legalLink: { fontSize: 14, fontWeight: '600' },
-  copyright: { fontSize: 12, marginTop: 4 },
-});
+const localStyles = (_theme: import('../theme/theme').AppTheme) => themeStyle('tabs_account_23', { StyleSheet: StyleSheet }, _theme);
 
 export default AccountTab;

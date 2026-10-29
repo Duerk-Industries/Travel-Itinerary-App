@@ -128,7 +128,7 @@ describe('WanderBunnies printout parser', () => {
     }));
     expect(transfers[1]).toEqual(expect.objectContaining({
       type: 'rail', layoverLocation: 'Zaragoza Delicias', layoverDuration: '0h 10m', totalCost: 61,
-      flight: expect.objectContaining({ transferType: 'Train' }),
+      flight: expect.objectContaining({ transferType: 'Public Transit' }),
     }));
   });
 
@@ -221,8 +221,110 @@ describe('WanderBunnies printout parser', () => {
     const { details } = parseWanderBunniesPrint(PRINTED);
     expect(details).toEqual([
       expect.objectContaining({ kind: 'place', title: 'Bar del Pla', time: '19:30', cost: 40, date: '2026-03-04', day: 3 }),
-      expect.objectContaining({ kind: 'checklist', title: 'Packing', checklist: ['Passports', 'Chargers'] }),
+      expect.objectContaining({ kind: 'checklist', title: 'Packing', checklist: [{ label: 'Passports', checked: false }, { label: 'Chargers', checked: true }] }),
     ]);
+  });
+});
+
+// A format-v2 printout: trip notes and guide before day 1, labelled status and dates on transfers, quoted
+// multi-line notes, lodging features, checklist state, a place's address, and an UNSCHEDULED section.
+const PRINTED_V2 = `
+TRAVEL ITINERARY
+Japan Spring
+Monday, April 5, 2027 - Wednesday, April 7, 2027
+TRIP LENGTH
+3 days
+CURRENCY
+USD
+TRIP NOTES
+> Book the Shinkansen first.
+>
+> FLIGHT prices rise after Nov 1.
+TRIP GUIDE
+> Day one is a long travel day.
+DAY 1Monday, April 5, 2027
+FLIGHTBOS → NRT
+Departure23:00 · BOSArrival06:00 · NRT
+CostUSD 900.00StatusBookedDeparture dateMonday, April 5, 2027Arrival dateTuesday, April 6, 2027
+DAY 2Tuesday, April 6, 2027
+FLIGHTBOS → NRT
+Departure23:00 · BOSArrival06:00 · NRT
+CostUSD 900.00StatusBookedDeparture dateMonday, April 5, 2027Arrival dateTuesday, April 6, 2027
+ACCOMMODATIONRyokan Yamashiro
+Check-inTuesday, April 6, 2027Check-outWednesday, April 7, 2027
+Address12 Gion, KyotoRooms1StatusProposed
+FeaturesBreakfast, Dinner
+Notes
+> Ask for a private onsen.
+>
+> Second paragraph.
+ACTIVITYFushimi Inari
+Time15:00LocationFushimi, Kyoto
+Duration2hStatusNeeds BookingCategoryHike
+Booked onKlook
+Notes
+> Go early; closes at dusk.
+NOTEBooking priorities
+> 1. Shinkansen
+> OTHER: ryokan fills early
+CHECKLISTBefore dinner
+☑ Reserve table
+☐ Charge phone
+PLACEBar del Pla
+19:30
+AddressCarrer 1, Barcelona
+Coordinates41.40360, 2.17440Coordinate sourcemanual
+UNSCHEDULED
+ACTIVITYTea ceremony
+LocationGion
+DurationStatusProposed
+Travel tips
+Keep booking references and timing details with you while traveling.
+Printed from WanderBunnies · 10/26/2026 · Format v2
+`;
+
+describe('WanderBunnies printout parser, format v2', () => {
+  test('reads the version, the trip notes and the trip guide', () => {
+    const parsed = parseWanderBunniesPrint(PRINTED_V2);
+    expect(parsed.version).toBe(2);
+    expect(parsed.tripNotes).toBe('Book the Shinkansen first.\n\nFLIGHT prices rise after Nov 1.');
+    expect(parsed.tripGuide).toBe('Day one is a long travel day.');
+    expect(parseWanderBunniesPrint(PRINTED).version).toBe(1);
+    expect(parseWanderBunniesPrint(PRINTED).tripNotes).toBeNull();
+  });
+
+  test('uses the printed transfer dates and status instead of guessing from adjacency', () => {
+    const transfers = parseWanderBunniesPrint(PRINTED_V2).candidates.filter((c) => c.type === 'flight');
+    expect(transfers).toHaveLength(1);
+    expect(transfers[0]).toEqual(expect.objectContaining({ departureDate: '2027-04-05', arrivalDate: '2027-04-06', status: 'Booked', totalCost: 900 }));
+  });
+
+  test('reads quoted notes, lodging features, booked-on and status', () => {
+    const { candidates } = parseWanderBunniesPrint(PRINTED_V2);
+    expect(candidates.find((c) => c.type === 'hotel')).toEqual(expect.objectContaining({
+      features: ['Breakfast', 'Dinner'], notes: 'Ask for a private onsen.\n\nSecond paragraph.', status: 'Proposed',
+    }));
+    expect(candidates.find((c) => c.name === 'Fushimi Inari')).toEqual(expect.objectContaining({
+      status: 'Needs Booking', bookedOn: 'Klook', notes: 'Go early; closes at dusk.', location: 'Fushimi, Kyoto',
+    }));
+  });
+
+  test('keeps a note body whose text starts with a reserved word, a checklist with its state, and a place address', () => {
+    const { details } = parseWanderBunniesPrint(PRINTED_V2);
+    expect(details.map((d) => d.kind)).toEqual(['note', 'checklist', 'place']);
+    expect(details[0]).toEqual(expect.objectContaining({ title: 'Booking priorities', body: '1. Shinkansen\nOTHER: ryokan fills early' }));
+    expect(details[1].checklist).toEqual([{ label: 'Reserve table', checked: true }, { label: 'Charge phone', checked: false }]);
+    expect(details[2]).toEqual(expect.objectContaining({ title: 'Bar del Pla', time: '19:30', address: 'Carrer 1, Barcelona', lat: 41.4036, lng: 2.1744, coordinateSource: 'manual' }));
+  });
+
+  test('reads the UNSCHEDULED section as undated activities', () => {
+    const tea = parseWanderBunniesPrint(PRINTED_V2).candidates.find((c) => c.name === 'Tea ceremony');
+    expect(tea).toEqual(expect.objectContaining({ unscheduled: true, activityDate: null, status: 'Proposed' }));
+  });
+
+  test('stops at the Travel tips boilerplate', () => {
+    const { candidates, details } = parseWanderBunniesPrint(PRINTED_V2);
+    expect([...candidates.map((c) => c.name), ...details.map((d) => d.title)].join('|')).not.toMatch(/Keep booking|Travel tips/);
   });
 });
 
@@ -263,7 +365,7 @@ describe('importing a WanderBunnies printout', () => {
     expect(mockedDb.insertFlight).toHaveBeenNthCalledWith(1, expect.objectContaining({
       departureDate: '2026-03-02', arrivalDate: '2026-03-03', bookingReference: 'ZX81QP', passengerName: 'Alex Rivera, Sam Rivera', cost: 812.4,
     }));
-    expect(mockedDb.insertFlight).toHaveBeenNthCalledWith(2, expect.objectContaining({ transferType: 'Train', layoverLocation: 'Zaragoza Delicias', layoverDuration: '0h 10m' }));
+    expect(mockedDb.insertFlight).toHaveBeenNthCalledWith(2, expect.objectContaining({ transferType: 'Public Transit', layoverLocation: 'Zaragoza Delicias', layoverDuration: '0h 10m' }));
     expect(mockedDb.insertLodging).toHaveBeenCalledWith(expect.objectContaining({ status: 'Booked', refundBy: '2026-03-02', costPerNight: 180, totalCost: 540 }));
     expect(mockedDb.insertActivity).toHaveBeenCalledWith(expect.objectContaining({ name: 'Park Güell', activityType: 'Outdoor Activity' }));
     expect(mockedDb.insertActivity).toHaveBeenCalledWith(expect.objectContaining({ name: 'Sagrada Familia', activityType: 'Sights & Landmarks', status: 'Booked', freeCancelBy: '2026-03-02', reference: 'SF-2210', cost: 58 }));
@@ -337,6 +439,67 @@ describe('importing a WanderBunnies printout', () => {
     expect(result.added).toEqual([]);
     expect(result.skippedDuplicates).toHaveLength(3 + 1 + 4 + 2 + 2);
     expect(mockedDb.insertFlight).not.toHaveBeenCalled();
+  });
+});
+
+describe('importing a format-v2 printout', () => {
+  const trip = { id: 't1', name: 'Japan', destination: 'Japan', startDate: '2027-04-05', endDate: '2027-04-07', notes: 'My own note.' };
+  beforeEach(() => {
+    jest.resetAllMocks();
+    __clearExtractionCache();
+    mockedDb.ensureUserInTrip.mockResolvedValue({ id: 'm1', groupId: 'g1' } as any);
+    mockedDb.getTripById.mockResolvedValue(trip as any);
+    mockedDb.listFlights.mockResolvedValue([]);
+    mockedDb.listLodgings.mockResolvedValue([]);
+    mockedDb.listActivities.mockResolvedValue([]);
+    mockedDb.listCarRentals.mockResolvedValue([]);
+    mockedDb.listItineraries.mockResolvedValue([]);
+    mockedDb.insertFlight.mockResolvedValue({ id: 'f1' } as any);
+    mockedDb.insertLodging.mockResolvedValue({ id: 'l1' } as any);
+    mockedDb.insertActivity.mockImplementation(async (activity: any) => ({ id: `a-${activity.name}` }) as any);
+    mockedDb.createItineraryRecord.mockResolvedValue({ id: 'it1', tripId: 't1' } as any);
+    mockedDb.addItineraryDetail.mockImplementation(async (_u, _i, detail: any) => ({
+      id: `d-${detail.activity}`, ...detail,
+      checklistItems: (detail.checklistItems ?? []).map((item: any, index: number) => ({ id: `c${index}`, ...item })),
+    }) as any);
+  });
+  const run = (dryRun: boolean) => importItineraryDocumentIntoTrip({ tripId: 't1', userId: 'u1', documentText: PRINTED_V2, sourceFilename: 'japan.pdf', dryRun });
+
+  test('keeps notes, features, booked-on, status and the undated activity', async () => {
+    const result = await run(false);
+    expect(result.skippedUnparseable).toEqual([]);
+    expect(mockedDb.insertFlight).toHaveBeenCalledTimes(1);
+    expect(mockedDb.insertFlight).toHaveBeenCalledWith(expect.objectContaining({ status: 'Booked', departureDate: '2027-04-05', arrivalDate: '2027-04-06' }));
+    expect(mockedDb.insertLodging).toHaveBeenCalledWith(expect.objectContaining({ features: ['Breakfast', 'Dinner'], notes: 'Ask for a private onsen.\n\nSecond paragraph.' }));
+    expect(mockedDb.insertActivity).toHaveBeenCalledWith(expect.objectContaining({ name: 'Fushimi Inari', status: 'Needs Booking', bookedOn: 'Klook', notes: 'Go early; closes at dusk.' }));
+    expect(mockedDb.insertActivity).toHaveBeenCalledWith(expect.objectContaining({ name: 'Tea ceremony', date: '' }));
+  });
+
+  test('writes note bodies, a place\'s address and checked checklist entries', async () => {
+    await run(false);
+    expect(mockedDb.addItineraryDetail).toHaveBeenCalledWith('u1', 'it1', expect.objectContaining({ kind: 'note', activity: 'Booking priorities', noteBody: '1. Shinkansen\nOTHER: ryokan fills early' }));
+    expect(mockedDb.addItineraryDetail).toHaveBeenCalledWith('u1', 'it1', expect.objectContaining({ kind: 'place', noteBody: 'Address: Carrer 1, Barcelona\nCoordinates: 41.4036, 2.1744' }));
+    expect(mockedDb.updateItineraryChecklistItem).toHaveBeenCalledTimes(1);
+    expect(mockedDb.updateItineraryChecklistItem).toHaveBeenCalledWith('u1', 'c0', { checked: true });
+  });
+
+  test('appends trip notes and the trip guide without touching existing notes', async () => {
+    const result = await run(false);
+    expect(result.notesAppended).toBe(true);
+    const saved = (mockedDb.updateTripDetails.mock.calls[0][2] as any).notes as string;
+    expect(saved.startsWith('My own note.')).toBe(true);
+    expect(saved).toContain('### Imported from japan.pdf');
+    expect(saved).toContain('Book the Shinkansen first.');
+    expect(saved).toContain('### Trip guide (imported from japan.pdf');
+    expect(saved).toContain('Day one is a long travel day.');
+  });
+
+  test('a preview reports the same items by kind and writes nothing', async () => {
+    const result = await run(true);
+    expect(result.added.map((item) => item.type)).toEqual(expect.arrayContaining(['flight', 'hotel', 'tour_activity', 'note', 'checklist', 'place']));
+    expect(mockedDb.insertActivity).not.toHaveBeenCalled();
+    expect(mockedDb.updateTripDetails).not.toHaveBeenCalled();
+    expect(result.notesPreview).toContain('Trip guide');
   });
 });
 

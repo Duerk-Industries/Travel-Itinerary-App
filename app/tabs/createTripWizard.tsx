@@ -1,6 +1,11 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+import PayerSelect from '../components/PayerSelect';
+import { singlePayerIds } from '../utils/payerSelection';
 import type { ImportTripDraft } from '../../server/src/types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import type { Trait } from './traits';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from './transfers';
@@ -18,7 +23,8 @@ import { renderRichTextBlocks } from '../utils/richText';
 import { formatDateLong } from '../utils/formatDateLong';
 import { ActivityTab, type Tour, buildActivityPayload } from './activities';
 import { type CarRental, type CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './carRentals';
-import { computeDurationFromRange, formatMonthYear } from '../utils/tripDates';
+import { computeDurationFromRange, computeEndDateFromDuration, formatMonthYear, nextMonthStart } from '../utils/tripDates';
+import { budgetRangeFromComfort } from '../utils/aiItineraryRequest';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { saveWizardCarRentals, saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
@@ -27,7 +33,7 @@ import { toWebStyle } from '../utils/webStyle';
 import { track } from '../utils/analytics/track';
 
 const CREATE_TRIP_TASK = { task: 'create_trip', feature: 'create_trip' } as const;
-import type { AppTheme } from '../theme/theme';
+
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   ITINERARY_STATUSES,
@@ -65,14 +71,16 @@ import {
 } from '../utils/promptTraits';
 import LodgingDialog from '../components/LodgingDialog';
 import { LocationSelector, type LocationOption } from '../components/LocationSelector';
+import TripTemplatePicker from '../components/TripTemplatePicker';
 import { MustSeeAttractionSelector, type AttractionOption } from '../components/MustSeeAttractionSelector';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import DateField from '../components/DateField';
+import CarRentalEditForm from '../components/CarRentalEditForm';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { fixedTableColumn } from '../utils/tableColumns';
-  
+
 type Suggestion = {
   id: string;
   firstName?: string;
@@ -95,7 +103,7 @@ const WIZARD_CAR_COLUMNS = [
   { label: 'Notes', width: 220 },
   { label: 'For', width: 180 },
   { label: 'Paid By', width: 180 },
-  { label: 'Actions', width: 160 },
+  { label: 'Actions', width: 200 },
 ] as const;
 
 type CreateTripWizardProps = {
@@ -135,6 +143,7 @@ const steps = [
   'Accommodation Details',
   'Activities',
   'Rental Cars',
+  'Ground Transfers',
   'Review & Confirm',
 ];
 
@@ -210,12 +219,6 @@ const INTEREST_WEIGHT_FIELDS: Array<{
   },
 ];
 
-const budgetRangeFromComfort = (comfort: 'B' | 'M' | 'L'): { min: number; max: number } => {
-  if (comfort === 'B') return { min: 500, max: 1500 };
-  if (comfort === 'L') return { min: 4000, max: 8000 };
-  return { min: 1500, max: 4000 };
-};
-
 const descriptorForValue = (
   value: number,
   descriptors: { lowDescriptor: string; mediumDescriptor: string; highDescriptor: string }
@@ -233,7 +236,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   airportOptions,
   onSearchAirports,
   styles,
-  theme,
+  theme: _providedTheme,
   onCancel,
   onTripCreated,
   onAiItineraryQueued,
@@ -245,6 +248,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   featureQuickStartTripWizard = true,
   aiItineraryGenerationAllowed = true,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const destinationAttractionWizardEnabled = !['0', 'false', 'off', 'no'].includes(
     String(process.env.EXPO_PUBLIC_WIZARD_DESTINATION_ATTRACTIONS_ENABLED ?? 'true')
       .trim()
@@ -262,6 +267,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const isNarrowLayout = viewportWidth < 720;
   const [stepIndex, setStepIndex] = useState(0);
   const [quickStartMode, setQuickStartMode] = useState(featureQuickStartTripWizard);
+  // Quick start already collected the dates (exact, or a flexible length), so the full wizard skips its Dates step.
+  const [skipDatesStep, setSkipDatesStep] = useState(false);
   const [details, setDetails] = useState<TripDetails>({ name: initialDraft?.name ?? '', description: '' });
   const [selectedLocations, setSelectedLocations] = useState<LocationOption[]>([]);
   const [selectedMustSeeAttractions, setSelectedMustSeeAttractions] = useState<AttractionOption[]>([]);
@@ -273,7 +280,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     durationDays: '',
     mode: 'range',
   });
-  const [dateModeSelected, setDateModeSelected] = useState<'range' | 'month' | null>(initialDraft?.startDate ? 'range' : null);
+  const [dateModeSelected, setDateModeSelected] = useState<TripDates['mode'] | null>(initialDraft?.startDate ? 'range' : null);
   const [participants, setParticipants] = useState<ParticipantInput[]>([]);
   const [participantDraft, setParticipantDraft] = useState<ParticipantInput>({ firstName: '', lastName: '', email: '' });
   const [participantSearch, setParticipantSearch] = useState('');
@@ -284,6 +291,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [wizardTours, setWizardTours] = useState<Tour[]>([]);
   const [wizardCarRentals, setWizardCarRentals] = useState<CarRental[]>([]);
   const [wizardCarDraft, setWizardCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
+  const [wizardCarDialogOpen, setWizardCarDialogOpen] = useState(false);
+  const [editingWizardCarId, setEditingWizardCarId] = useState<string | null>(null);
+  const [wizardCarDialogError, setWizardCarDialogError] = useState('');
   const [editingWizardLodgingId, setEditingWizardLodgingId] = useState<string | null>(null);
   const [editingWizardLodging, setEditingWizardLodging] = useState<LodgingDraft | null>(null);
   const [itineraryEnabled, setItineraryEnabled] = useState(false);
@@ -332,6 +342,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (!selectedLocations.length) return null;
     return selectedLocations.map((loc) => loc.name).join(', ');
   }, [selectedLocations]);
+  // A trip that only knows its month gets a placeholder start on the 1st of that month's next occurrence.
+  const monthPlaceholder = useMemo(() => {
+    if (dates.mode === 'range') return null;
+    const startDate = nextMonthStart(Number(dates.startMonth));
+    if (!startDate) return null;
+    return { startDate, endDate: computeEndDateFromDuration(startDate, Number(dates.durationDays)) ?? '' };
+  }, [dates.mode, dates.startMonth, dates.durationDays]);
+  // "Dates not set" asks for a month in a popup, so the trip still gets a placeholder start.
+  const [monthPromptOpen, setMonthPromptOpen] = useState(false);
+  const chooseUndatedMonth = useCallback((value: string) => {
+    setDates((prev) => ({ ...prev, startMonth: value, startYear: value ? (nextMonthStart(Number(value))?.slice(0, 4) ?? '') : '' }));
+    setMonthPromptOpen(false);
+  }, []);
   const wizardTripDefaults = useMemo<Trip>(
     () => ({
       id: 'wizard',
@@ -341,14 +364,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       description: details.description || null,
       destination: selectedLocationLabel || null,
       departureLocation: itineraryDepartureAirport.trim() || null,
-      startDate: dates.mode === 'range' ? dates.startDate || null : null,
-      endDate: dates.mode === 'range' ? dates.endDate || null : null,
-      startMonth: dates.mode === 'month' ? Number(dates.startMonth) || null : null,
-      startYear: dates.mode === 'month' ? Number(dates.startYear) || null : null,
-      durationDays: dates.mode === 'month' ? Number(dates.durationDays) || null : null,
+      startDate: dates.mode === 'range' ? dates.startDate || null : monthPlaceholder?.startDate ?? null,
+      endDate: dates.mode === 'range' ? dates.endDate || null : monthPlaceholder?.endDate ?? null,
+      startMonth: dates.mode !== 'range' ? Number(dates.startMonth) || null : null,
+      startYear: dates.mode !== 'range' ? Number(dates.startYear) || null : null,
+      durationDays: dates.mode !== 'range' ? Number(dates.durationDays) || null : null,
       createdAt: new Date().toISOString(),
     }),
-    [dates, details, itineraryDepartureAirport, selectedLocationLabel]
+    [dates, details, itineraryDepartureAirport, monthPlaceholder, selectedLocationLabel]
   );
   const computedDays = useMemo(() => computeTripDays(dates.startDate, dates.endDate), [dates.startDate, dates.endDate]);
   const monthLabel = useMemo(
@@ -372,13 +395,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     ],
     []
   );
-  const yearOptions = useMemo<SelectFieldOption[]>(() => {
-    const start = new Date().getFullYear();
-    return Array.from({ length: 11 }, (_, i) => {
-      const year = String(start + i);
-      return { label: year, value: year };
-    });
-  }, []);
+  const monthLabelShort = useMemo(() => monthOptions.find((option) => option.value === dates.startMonth)?.label ?? '', [monthOptions, dates.startMonth]);
   const dayOptions = useMemo<SelectFieldOption[]>(
     () => Array.from({ length: 90 }, (_, i) => {
       const day = String(i + 1);
@@ -386,38 +403,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }),
     []
   );
-  const prepaidOptions = useMemo<SelectFieldOption[]>(
-    () => [
-      { label: 'Yes', value: 'Yes' },
-      { label: 'No', value: 'No' },
-    ],
-    []
-  );
   const webInputStyle = useMemo(() => toWebStyle(styles.input), [styles]);
-  const webInputStyleFlex = useMemo(() => ({ ...webInputStyle, flex: 1 }), [webInputStyle]);
+  const webInputStyleFlex = useMemo(() => (themeStyle('tabs_createTripWizard_1', { webInputStyle: webInputStyle }, (theme ?? _styleTheme))), [webInputStyle, _styleTheme]);
   const webDateInputStyle = useMemo(
     () =>
-      toWebStyle([styles.input, styles.webDateInput], {
-        width: '100%',
-        maxWidth: '100%',
-        minWidth: 0,
-        boxSizing: 'border-box',
-        colorScheme: theme?.mode === 'dark' ? 'dark' : 'light',
-      }),
-    [styles, theme?.mode]
+      toWebStyle([styles.input, styles.webDateInput], themeStyle('tabs_createTripWizard_2', { theme: theme }, (theme ?? _styleTheme))),
+    [styles, theme?.mode, _styleTheme]
   );
-  const webDateInputStyleFlex = useMemo(() => ({ ...webDateInputStyle, flex: 1 }), [webDateInputStyle]);
-  const wizardCarInputStyle = useMemo(() => [styles.input, { marginBottom: 0, minHeight: 42 }], [styles]);
-  const wizardCarDateInputStyle = useMemo(() => ({ marginBottom: 0, minHeight: 42 }), []);
-  const wizardCarWebInputStyle = useMemo(
-    () => ({ ...webDateInputStyle, height: 42, minHeight: 42, marginBottom: 0 }),
-    [webDateInputStyle]
-  );
-  const wizardCarDateWrapStyle = useMemo(
-    () => [styles.dateInputWrap, { minWidth: 0, width: '100%', flex: 0, minHeight: 42 }],
-    [styles]
-  );
-  const wizardCarInputCellStyle = useMemo(() => [styles.cell, { justifyContent: 'flex-start' }], [styles]);
+  const webDateInputStyleFlex = useMemo(() => (themeStyle('tabs_createTripWizard_3', { webDateInputStyle: webDateInputStyle }, (theme ?? _styleTheme))), [webDateInputStyle, _styleTheme]);
   const hasKnownInfo = useMemo(
     () => [knownInfo.flights, knownInfo.lodging, knownInfo.tours, knownInfo.cars].some((val) => val.trim().length > 0),
     [knownInfo]
@@ -482,6 +475,29 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     () => Object.values(wizardLodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
     [wizardLodgingTotalsBalanced]
   );
+  const wizardCarTotal = useMemo(
+    () => wizardCarRentals.reduce((sum, c) => sum + (Number(c.cost) || 0), 0),
+    [wizardCarRentals]
+  );
+  const wizardCarPayerTotals = useMemo(
+    () =>
+      computePayerTotals(
+        wizardCarRentals,
+        (c) => Number(c.cost) || 0,
+        (c) => (Array.isArray(c.paidBy) ? c.paidBy : []),
+        wizardMemberIds,
+        { fallbackOnEmpty: false }
+      ),
+    [wizardCarRentals, wizardMemberIds]
+  );
+  const wizardCarTotalsBalanced = useMemo(
+    () => balanceCategoryTotals(wizardCarTotal, wizardCarPayerTotals, wizardMemberIds),
+    [wizardCarPayerTotals, wizardCarTotal, wizardMemberIds]
+  );
+  const wizardCarBreakdownSum = useMemo(
+    () => Object.values(wizardCarTotalsBalanced).reduce((sum, v) => sum + v, 0),
+    [wizardCarTotalsBalanced]
+  );
   const buildWizardLodgingDraft = useCallback(
     () =>
       createLodgingDraftForTrip({
@@ -509,10 +525,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     [wizardTours, wizardMemberIds]
   );
   const tripDayCount = useMemo(() => {
-    const rangeDays = computedDays ?? null;
+    const rangeDays = dates.mode === 'range' ? computedDays : null;
     if (rangeDays) return rangeDays;
     const monthDays = Number(dates.durationDays);
-    if (dates.mode === 'month' && Number.isFinite(monthDays) && monthDays > 0) return monthDays;
+    if (dates.mode !== 'range' && Number.isFinite(monthDays) && monthDays > 0) return monthDays;
     const manualDays = Number(itineraryDays);
     if (Number.isFinite(manualDays) && manualDays > 0) return manualDays;
     return 1;
@@ -525,10 +541,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }, [wizardDefaultPayerId, wizardCarDraft.paidBy.length]);
 
   useEffect(() => {
-    if (dates.mode === 'range' && computedDays && !itineraryDaysTouched) {
+    if (dates.mode === 'duration') {
+      setItineraryDays(dates.durationDays);
+    } else if (dates.mode === 'range' && computedDays && !itineraryDaysTouched) {
       setItineraryDays(String(computedDays));
     }
-  }, [computedDays, dates.mode, itineraryDaysTouched]);
+  }, [computedDays, dates.mode, dates.durationDays, itineraryDaysTouched]);
 
   useEffect(() => {
     setWizardPromptTraits(normalizePromptTraits(defaultPromptTraits));
@@ -561,16 +579,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     const node = itineraryAirportRef.current as any;
     if (node?.measureInWindow) {
       node.measureInWindow((x: number, y: number, width: number, height: number) => {
-        setItineraryAirportAnchor({ x, y, width, height });
+        setItineraryAirportAnchor(themeStyle('tabs_createTripWizard_9', { x: x, y: y, width: width, height: height }, (theme ?? _styleTheme)));
       });
     } else if (typeof node?.getBoundingClientRect === 'function') {
       const rect = node.getBoundingClientRect();
-      setItineraryAirportAnchor({
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height,
-      });
+      setItineraryAirportAnchor(themeStyle('tabs_createTripWizard_10', { rect: rect }, (theme ?? _styleTheme)));
     }
   };
 
@@ -617,7 +630,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
     const monthNum = Number(dates.startMonth);
     const yearNum = Number(dates.startYear);
-    if (monthNum && yearNum) {
+    if (dates.mode === 'month' && monthNum && yearNum) {
       const date = new Date(yearNum, monthNum - 1, day);
       if (!Number.isNaN(date.valueOf())) {
         return date.toISOString().slice(0, 10);
@@ -633,7 +646,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const getItemDayIndex = useCallback((item: ItineraryItemInput): number => {
     const raw = item.date?.trim();
     if (raw) {
-      const match = /^Day\\s+(\\d+)/i.exec(raw);
+      const match = /^Day\s+(\d+)/i.exec(raw);
       if (match) {
         const parsedDay = Number(match[1]);
         return Number.isFinite(parsedDay) && parsedDay > 0 ? parsedDay : 1;
@@ -649,7 +662,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         }
         const monthNum = Number(dates.startMonth);
         const yearNum = Number(dates.startYear);
-        if (monthNum && yearNum) {
+        if (dates.mode === 'month' && monthNum && yearNum) {
           const start = new Date(yearNum, monthNum - 1, 1);
           if (!Number.isNaN(start.valueOf())) {
             const diff = Math.floor((parsed.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -806,7 +819,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       if (!dateModeSelected) return false;
       if (dateModeSelected === 'range') {
         if (!dates.startDate || !dates.endDate) return false;
-      } else {
+      } else if (dateModeSelected === 'month') {
         if (!dates.startMonth || !dates.startYear || !dates.durationDays) return false;
       }
       return !validateTripDates(dates);
@@ -816,8 +829,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     return true;
   }, [dateModeSelected, dates, details, itineraryMode, participants, stepIndex]);
 
-  const quickStartReady = Boolean(details.name.trim() && selectedLocations.length && dates.startDate && dates.endDate && !validateTripDates({ ...dates, mode: 'range' }));
+  const quickStartDatesReady = Boolean(dates.mode === 'duration' ? !validateTripDates(dates) : dates.startDate && dates.endDate && !validateTripDates({ ...dates, mode: 'range' }));
+  const quickStartReady = Boolean(details.name.trim() && selectedLocations.length && quickStartDatesReady);
 
+  const DATES_STEP = 1;
   const goNext = useCallback(() => {
     let error: string | null = null;
     if (stepIndex === 0) error = validateTripDetails(details);
@@ -829,8 +844,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         if (!dates.startDate || !dates.endDate) {
           error = 'Select both a start and end date.';
         }
-      } else if (!dates.startMonth || !dates.startYear || !dates.durationDays) {
-        error = 'Select a month, year, and number of days.';
+      } else if (dateModeSelected === 'month' && (!dates.startMonth || !dates.startYear || !dates.durationDays)) {
+        error = 'Select a month and number of days.';
       }
     }
     if (stepIndex === 1 && !error) error = validateTripDates(dates);
@@ -841,13 +856,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       return;
     }
     setWizardError('');
-    setStepIndex((prev) => Math.min(prev + 1, totalSteps - 1));
-  }, [dateModeSelected, dates, details, itineraryMode, participants, stepIndex, totalSteps]);
+    setStepIndex((prev) => {
+      const next = Math.min(prev + 1, totalSteps - 1);
+      return skipDatesStep && next === DATES_STEP ? next + 1 : next;
+    });
+  }, [dateModeSelected, dates, details, itineraryMode, participants, skipDatesStep, stepIndex, totalSteps]);
 
   const goBack = useCallback(() => {
     setWizardError('');
-    setStepIndex((prev) => Math.max(prev - 1, 0));
-  }, []);
+    setStepIndex((prev) => {
+      const back = Math.max(prev - 1, 0);
+      return skipDatesStep && back === DATES_STEP ? back - 1 : back;
+    });
+  }, [skipDatesStep]);
 
   const insertDescriptionSnippet = (snippet: string) => {
     setDetails((prev) => ({
@@ -904,15 +925,57 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   };
 
 
-  const addWizardCarRental = () => {
+  const openWizardCarDialog = (car: CarRental | null = null) => {
+    setWizardCarDraft(
+      car
+        ? {
+            status: normalizeItineraryStatus(car.status, DEFAULT_NEW_ITINERARY_STATUS),
+            pickupLocation: car.pickupLocation ?? '',
+            pickupDate: car.pickupDate ?? '',
+            dropoffLocation: car.dropoffLocation ?? '',
+            dropoffDate: car.dropoffDate ?? '',
+            reference: car.reference ?? '',
+            vendor: car.vendor ?? '',
+            prepaid: car.prepaid ?? '',
+            cost: String(car.cost ?? ''),
+            model: car.model ?? '',
+            notes: car.notes ?? '',
+            paidBy: Array.isArray(car.paidBy) ? car.paidBy : [],
+            travelerIds: Array.isArray(car.travelerIds) ? car.travelerIds : [],
+          }
+        : createInitialCarRentalDraft()
+    );
+    setEditingWizardCarId(car ? car.id : null);
+    setWizardCarDialogError('');
+    setWizardCarDialogOpen(true);
+  };
+
+  const closeWizardCarDialog = () => {
+    setWizardCarDialogOpen(false);
+    setEditingWizardCarId(null);
+    setWizardCarDialogError('');
+    setWizardCarDraft(createInitialCarRentalDraft());
+  };
+
+  const saveWizardCarDialog = (opts?: { addAnother?: boolean }) => {
     const result = buildCarRentalFromDraft(wizardCarDraft, wizardDefaultPayerId, wizardMemberIds);
     if (result.error || !result.rental) {
-      setWizardError(result.error || 'Unable to add car rental.');
+      setWizardCarDialogError(result.error || 'Unable to save car rental.');
       return;
     }
-    setWizardCarRentals((prev) => [...prev, result.rental as CarRental]);
-    setWizardCarDraft(createInitialCarRentalDraft());
+    const rental = result.rental as CarRental;
+    setWizardCarRentals((prev) =>
+      editingWizardCarId
+        ? prev.map((c) => (c.id === editingWizardCarId ? { ...rental, id: editingWizardCarId } : c))
+        : [...prev, rental]
+    );
     setWizardError('');
+    if (opts?.addAnother && !editingWizardCarId) {
+      setWizardCarDraft(createInitialCarRentalDraft());
+      setWizardCarDialogError('');
+      return;
+    }
+    closeWizardCarDialog();
   };
 
   const removeWizardCarRental = (id: string) => {
@@ -933,7 +996,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
     const totalNum = Number(draft.totalCost) || 0;
     const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
-    const paidBy = draft.paidBy.length ? draft.paidBy : wizardDefaultPayerId ? [wizardDefaultPayerId] : [];
+    const paidBy = singlePayerIds(draft.paidBy, wizardDefaultPayerId);
     const next: Lodging = {
       id: lodgingId ?? `wizard-lodging-${Date.now()}-${Math.round(Math.random() * 10000)}`,
       userId: '',
@@ -1001,6 +1064,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (result.failures.length) {
       setWizardError(`Trip created, but ${result.failures.length} lodging entr${result.failures.length === 1 ? 'y' : 'ies'} failed to save.`);
     }
+    return result.lodgingIds ?? {};
   };
 
   const saveWizardCarRentalsForTrip = async (tripId: string, groupId: string) => {
@@ -1025,7 +1089,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   };
 
-  const saveWizardTours = async (tripId: string, groupId: string) => {
+  const saveWizardTours = async (tripId: string, groupId: string, lodgingIds: Record<string, string> = {}) => {
     if (!userToken || wizardTours.length === 0) return;
     try {
       const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
@@ -1060,6 +1124,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       const failures: string[] = [];
 
       for (const tour of wizardTours) {
+        if (tour.nearLodgingId && !lodgingIds[tour.nearLodgingId]) {
+          failures.push(`Hotel for ${tour.name || 'optional activity'} could not be saved.`);
+          continue;
+        }
         const rawPaidBy = Array.isArray(tour.paidBy) ? tour.paidBy : [];
         const resolvedPaidBy = rawPaidBy
           .map((id) => wizardMembersById.get(String(id)))
@@ -1073,9 +1141,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
 
         const draft = {
-          status: (tour as any).status ?? 'Needed',
+          status: (tour as any).status ?? 'Proposed',
           activityType: (tour as any).activityType ?? 'Tour',
           date: tour.date,
+          nearLodgingId: tour.nearLodgingId ? lodgingIds[tour.nearLodgingId] : null,
           name: tour.name,
           startLocation: tour.startLocation,
           startTime: tour.startTime,
@@ -1119,7 +1188,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const submitWizard = async () => {
     if (!userToken) return;
     const detailError = validateTripDetails(details);
-    const dateError = validateTripDates(quickStartMode ? { ...dates, mode: 'range' } : dates);
+    const dateError = validateTripDates(dates);
     const destinationError = quickStartMode && !selectedLocations.length ? 'Choose at least one destination.' : null;
     const participantError = quickStartMode ? null : validateParticipants(participants);
     if (detailError || dateError || participantError || destinationError) {
@@ -1144,11 +1213,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           description: description.trim() || undefined,
           locationIds: selectedLocations.map((location) => location.id),
           mustSeeAttractions: selectedMustSeeAttractions.map((item) => item.name).filter(Boolean),
-          startDate: dates.mode === 'range' ? dates.startDate || undefined : undefined,
-          endDate: dates.mode === 'range' ? dates.endDate || undefined : undefined,
-          startMonth: dates.mode === 'month' ? Number(dates.startMonth) || undefined : undefined,
-          startYear: dates.mode === 'month' ? Number(dates.startYear) || undefined : undefined,
-          durationDays: dates.mode === 'month' ? Number(dates.durationDays) || undefined : undefined,
+          startDate: dates.mode === 'range' ? dates.startDate || undefined : monthPlaceholder?.startDate,
+          endDate: dates.mode === 'range' ? dates.endDate || undefined : monthPlaceholder?.endDate,
+          startMonth: dates.mode !== 'range' ? Number(dates.startMonth) || undefined : undefined,
+          startYear: dates.mode !== 'range' ? Number(dates.startYear) || undefined : undefined,
+          durationDays: dates.mode !== 'range' ? Number(dates.durationDays) || undefined : undefined,
           participants: participantPayload,
         }),
       });
@@ -1171,15 +1240,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       const groupId = data.groupId as string | undefined;
       if (groupId && !quickStartMode) {
         await saveWizardFlightsForTrip(tripId, groupId);
-        await saveWizardLodgingsForTrip(tripId, groupId);
-        await saveWizardTours(tripId, groupId);
+        const lodgingIds = await saveWizardLodgingsForTrip(tripId, groupId);
+        await saveWizardTours(tripId, groupId, lodgingIds);
         await saveWizardCarRentalsForTrip(tripId, groupId);
       }
 
-      if (!quickStartMode && itineraryEnabled && (itineraryItems.length || generateItinerary)) {
+      if (!quickStartMode && itineraryEnabled && (itineraryItems.length || generateItinerary || dates.mode === 'duration')) {
         const rangeDays = computeDurationFromRange(dates.startDate, dates.endDate);
         const days =
-          (dates.mode === 'range' ? rangeDays : null) ??
+          (dates.mode === 'duration' ? Number(dates.durationDays) : dates.mode === 'range' ? rangeDays : null) ??
           (Number(itineraryDays) > 0 ? Number(itineraryDays) : Number(dates.durationDays) || 1);
         const locationNames = selectedLocations.map((location) => location.name).filter(Boolean);
         const destination = locationNames.length ? locationNames.join(', ') : details.name.trim() || 'Trip';
@@ -1317,8 +1386,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         showCitySearch={!destinationAttractionWizardEnabled}
       />
       <Text style={styles.modalLabel}>Dates</Text>
-      <View style={[styles.row, { flexWrap: isNarrowLayout ? 'wrap' : 'nowrap' }]}>
-        <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+      <View style={[styles.row, themeStyle('tabs_createTripWizard_layout1', {  }, (theme ?? _styleTheme))]}>
+        <TouchableOpacity testID="quick-start-dates-scheduled" accessibilityRole="button" accessibilityState={{ selected: dates.mode === 'range' }} style={[styles.button, styles.smallButton]} onPress={() => setDates((prev) => ({ ...prev, mode: 'range' }))}><Text style={styles.buttonText}>Set dates</Text></TouchableOpacity>
+        <TouchableOpacity testID="quick-start-dates-unscheduled" accessibilityRole="button" accessibilityState={{ selected: dates.mode === 'duration' }} style={[styles.button, styles.smallButton]} onPress={() => { setDates((prev) => ({ ...prev, mode: 'duration' })); setMonthPromptOpen(true); }}><Text style={styles.buttonText}>Dates not set</Text></TouchableOpacity>
+      </View>
+      {dates.mode === 'duration' ? <View>
+        <Text style={styles.modalLabel}>Trip length (days)</Text>
+        <TextInput testID="quick-start-trip-length" accessibilityLabel="Trip length in days" keyboardType="number-pad" style={styles.input} value={dates.durationDays} onChangeText={(durationDays) => setDates((prev) => ({ ...prev, durationDays }))} />
+        <TouchableOpacity testID="wizard-month-change" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => setMonthPromptOpen(true)}><Text style={styles.buttonText}>{monthLabelShort ? `Around ${monthLabelShort}: change` : 'Choose a month'}</Text></TouchableOpacity>
+      </View> : <>
+
+      <View style={[styles.row, themeStyle('tabs_createTripWizard_11', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
+        <View style={[styles.dateInputWrap, themeStyle('tabs_createTripWizard_12', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
           <DateField
             value={dates.startDate}
             onChange={setStartDateWithRangeGuard}
@@ -1329,7 +1408,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             accessibilityLabel="Start date"
           />
         </View>
-        <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+        <View style={[styles.dateInputWrap, themeStyle('tabs_createTripWizard_13', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
           <DateField
             value={dates.endDate}
             onChange={(endDate) => setDates((prev) => ({ ...prev, mode: 'range', endDate }))}
@@ -1342,9 +1421,23 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         </View>
       </View>
       {computedDays ? <Text style={styles.helperText}>{computedDays} day(s)</Text> : null}
+      </>}
+      <TripTemplatePicker
+        backendUrl={backendUrl}
+        headers={wizardJsonHeaders}
+        selectedLocations={selectedLocations}
+        startDate={dates.mode === 'range' ? dates.startDate : monthPlaceholder?.startDate ?? ''}
+        endDate={dates.mode === 'range' ? dates.endDate : monthPlaceholder?.endDate ?? ''}
+        startMonth={monthPlaceholder ? Number(dates.startMonth) : null}
+        tripDays={dates.mode === 'range' ? computedDays : Number(dates.durationDays) || null}
+        tripName={details.name}
+        styles={styles}
+        onCreated={(tripId) => { setCreatedTripId(tripId); handleTripCreated(tripId); }}
+        onUnauthorized={onUnauthorized}
+      />
       <TouchableOpacity
-        style={[styles.button, styles.outlineButton ?? styles.button, { alignSelf: 'flex-start', marginTop: 8 }]}
-        onPress={() => { setQuickStartMode(false); setDateModeSelected(dates.startDate || dates.endDate ? 'range' : null); setDates((prev) => ({ ...prev, mode: 'range' })); }}
+        style={[styles.button, styles.outlineButton ?? styles.button, themeStyle('tabs_createTripWizard_14', {  }, (theme ?? _styleTheme))]}
+        onPress={() => { setQuickStartMode(false); setSkipDatesStep(quickStartDatesReady); setDateModeSelected(dates.mode === 'duration' ? 'duration' : dates.startDate || dates.endDate ? 'range' : null); }}
         testID="quick-start-customize"
       >
         <Text style={styles.buttonText}>Customize before creating</Text>
@@ -1400,33 +1493,37 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             ) : null}
             <TextInput
               ref={descriptionRef}
-              style={[styles.input, { minHeight: 120 }]}
+              style={[styles.input, themeStyle('tabs_createTripWizard_15', {  }, (theme ?? _styleTheme))]}
               placeholder="Description (optional)"
               accessibilityLabel="Description"
               multiline
               value={details.description}
               onChangeText={(text: string) => setDetails((prev) => ({ ...prev, description: text }))}
             />
+            {skipDatesStep ? (
+              <View style={styles.row}>
+                <Text style={styles.helperText} testID="wizard-dates-summary">
+                  {dates.mode === 'duration'
+                    ? `Trip length: ${dates.durationDays} day(s), dates to be decided.`
+                    : `Dates: ${formatDateLong(dates.startDate)} - ${formatDateLong(dates.endDate)}.`}
+                </Text>
+                <TouchableOpacity testID="wizard-dates-change" accessibilityRole="button" onPress={() => setSkipDatesStep(false)}>
+                  <Text style={styles.linkText}>Change dates</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </>
         );
       case 1:
         return (
           <>
             <Text style={styles.sectionTitle}>Dates</Text>
-            <Text style={styles.helperText}>Choose exact dates or a month and duration (optional).</Text>
-            <View style={styles.row}>
+            <Text style={styles.helperText}>Choose exact dates, a month and duration, or a trip length with dates to be decided.</Text>
+            <View style={[styles.row, themeStyle('tabs_createTripWizard_layout1', {  }, (theme ?? _styleTheme))]}>
               <TouchableOpacity
                 style={[
-                  {
-                    backgroundColor: dateModeSelected === 'range' ? (theme?.colors.text ?? '#0A0A0A') : (theme?.colors.surface ?? '#fff'),
-                    borderColor: theme?.colors.text ?? '#0A0A0A',
-                    borderWidth: 1,
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    borderRadius: 6,
-                    alignItems: 'center',
-                  },
-                  { marginRight: 8 },
+                  themeStyle('tabs_createTripWizard_16', { dateModeSelected: dateModeSelected, theme: theme }, (theme ?? _styleTheme)),
+                  themeStyle('tabs_createTripWizard_17', {  }, (theme ?? _styleTheme)),
                 ]}
                 onPress={() => {
                   setDateModeSelected('range');
@@ -1435,7 +1532,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               >
                 <Text
                   style={[
-                    { color: dateModeSelected === 'range' ? (theme?.colors.surface ?? '#FFFFFF') : (theme?.colors.text ?? '#0A0A0A'), fontWeight: '600' },
+                    themeStyle('tabs_createTripWizard_18', { dateModeSelected: dateModeSelected }, (theme ?? _styleTheme)),
                   ]}
                 >
                   I know which dates I'm going
@@ -1443,15 +1540,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
-                  {
-                    backgroundColor: dateModeSelected === 'month' ? (theme?.colors.text ?? '#0A0A0A') : (theme?.colors.surface ?? '#fff'),
-                    borderColor: theme?.colors.text ?? '#0A0A0A',
-                    borderWidth: 1,
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    borderRadius: 6,
-                    alignItems: 'center',
-                  },
+                  themeStyle('tabs_createTripWizard_19', { dateModeSelected: dateModeSelected, theme: theme }, (theme ?? _styleTheme)),
                 ]}
                 onPress={() => {
                   setDateModeSelected('month');
@@ -1460,19 +1549,29 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               >
                 <Text
                   style={[
-                    { color: dateModeSelected === 'month' ? (theme?.colors.surface ?? '#FFFFFF') : (theme?.colors.text ?? '#0A0A0A'), fontWeight: '600' },
+                    themeStyle('tabs_createTripWizard_20', { dateModeSelected: dateModeSelected }, (theme ?? _styleTheme)),
                   ]}
                 >
                   Flexible Timeline
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity testID="wizard-dates-unscheduled" accessibilityRole="button" accessibilityState={{ selected: dateModeSelected === 'duration' }} style={[styles.button, styles.smallButton, dateModeSelected === 'duration' && styles.toggleActive]} onPress={() => { setDateModeSelected('duration'); setDates((prev) => ({ ...prev, mode: 'duration' })); setMonthPromptOpen(true); }}>
+                <Text style={styles.buttonText}>Dates not set</Text>
+              </TouchableOpacity>
             </View>
             {!dateModeSelected ? (
               <Text style={styles.helperText}>Select a date option to continue.</Text>
+            ) : dates.mode === 'duration' ? (
+              <View>
+                <Text style={styles.modalLabel}>Trip length (days)</Text>
+                <TextInput testID="wizard-trip-length" accessibilityLabel="Trip length in days" style={styles.input} keyboardType="number-pad" value={dates.durationDays} onChangeText={(durationDays) => setDates((prev) => ({ ...prev, durationDays }))} />
+                <TouchableOpacity testID="wizard-month-change" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => setMonthPromptOpen(true)}><Text style={styles.buttonText}>{monthLabelShort ? `Around ${monthLabelShort}: change` : 'Choose a month'}</Text></TouchableOpacity>
+                <Text style={styles.helperText}>{monthPlaceholder ? `We'll use ${monthPlaceholder.startDate} as a placeholder start; set exact dates any time.` : 'Choose your dates later. Your itinerary will use numbered days.'}</Text>
+              </View>
             ) : dates.mode === 'range' ? (
               <>
-                <View style={[styles.row, { flexWrap: isNarrowLayout ? 'wrap' : 'nowrap' }]}>
-                  <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+                <View style={[styles.row, themeStyle('tabs_createTripWizard_21', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
+                  <View style={[styles.dateInputWrap, themeStyle('tabs_createTripWizard_22', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
                     <DateField
                       value={dates.startDate}
                       onChange={setStartDateWithRangeGuard}
@@ -1483,7 +1582,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       accessibilityLabel="Start date"
                     />
                   </View>
-                  <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+                  <View style={[styles.dateInputWrap, themeStyle('tabs_createTripWizard_23', { isNarrowLayout: isNarrowLayout }, (theme ?? _styleTheme))]}>
                     <DateField
                       value={dates.endDate}
                       onChange={(endDate) => setDates((prev) => ({ ...prev, endDate }))}
@@ -1506,33 +1605,24 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     value={dates.startMonth}
                     placeholder="Month"
                     title="Select month"
-                    style={{ flex: 1 }}
+                    style={themeStyle('tabs_createTripWizard_24', {  }, (theme ?? _styleTheme))}
                     webStyle={webDateInputStyleFlex}
-                    onChange={(value) => setDates((prev) => ({ ...prev, startMonth: value }))}
+                    onChange={(value) => setDates((prev) => ({ ...prev, startMonth: value, startYear: value ? (nextMonthStart(Number(value))?.slice(0, 4) ?? '') : '' }))}
                   />
                   <SelectField
                     styles={styles}
-                    options={yearOptions}
-                    value={dates.startYear}
-                    placeholder="Year"
-                    title="Select year"
-                    style={{ flex: 1 }}
+                    options={dayOptions}
+                    value={dates.durationDays}
+                    placeholder="Days"
+                    title="Select number of days"
+                    style={themeStyle('tabs_createTripWizard_25', {  }, (theme ?? _styleTheme))}
                     webStyle={webDateInputStyleFlex}
-                    onChange={(value) => setDates((prev) => ({ ...prev, startYear: value }))}
+                    onChange={(value) => setDates((prev) => ({ ...prev, durationDays: value }))}
                   />
                 </View>
-                <SelectField
-                  styles={styles}
-                  options={dayOptions}
-                  value={dates.durationDays}
-                  placeholder="Days"
-                  title="Select number of days"
-                  webStyle={webDateInputStyle}
-                  onChange={(value) => setDates((prev) => ({ ...prev, durationDays: value }))}
-                />
-                {monthLabel && dates.durationDays ? (
-                  <Text style={styles.helperText}>
-                    {monthLabel} · {dates.durationDays} day(s)
+                {monthPlaceholder && dates.durationDays ? (
+                  <Text style={styles.helperText} testID="wizard-month-placeholder">
+                    {monthLabel} · {dates.durationDays} day(s). We'll use {monthPlaceholder.startDate} as a placeholder start; set exact dates any time.
                   </Text>
                 ) : null}
               </>
@@ -1581,7 +1671,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </View>
             <View style={styles.row}>
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, themeStyle('tabs_createTripWizard_26', {  }, (theme ?? _styleTheme))]}
                 placeholder="First name"
                 accessibilityLabel="First name"
                 autoComplete="given-name"
@@ -1590,7 +1680,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 onChangeText={(text: string) => setParticipantDraft((prev) => ({ ...prev, firstName: text }))}
               />
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, themeStyle('tabs_createTripWizard_27', {  }, (theme ?? _styleTheme))]}
                 placeholder="Last name"
                 accessibilityLabel="Last name"
                 autoComplete="family-name"
@@ -1614,7 +1704,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <Text style={styles.buttonText}>Add Participant</Text>
             </TouchableOpacity>
             {participants.length ? (
-              <View style={{ marginTop: 12 }}>
+              <View style={themeStyle('tabs_createTripWizard_28', {  }, (theme ?? _styleTheme))}>
                 {participants.map((p, idx) => (
                   <View key={`${p.firstName}-${p.lastName}-${idx}`} style={styles.memberPill}>
                     <Text style={styles.cellText}>
@@ -1645,7 +1735,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     style={[
                       styles.mapOptionButton ?? styles.button,
                       itineraryMode === 'ai' && (styles.mapOptionActive ?? styles.toggleActive),
-                      { marginRight: 8 },
+                      themeStyle('tabs_createTripWizard_29', {  }, (theme ?? _styleTheme)),
                     ]}
                     onPress={() => selectItineraryMode('ai')}
                   >
@@ -1673,8 +1763,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             )}
             {itineraryMode === 'ai' ? (
               <ScrollView
-                style={{ maxHeight: 520 }}
-                contentContainerStyle={{ paddingBottom: 12 }}
+                style={themeStyle('tabs_createTripWizard_30', {  }, (theme ?? _styleTheme))}
+                contentContainerStyle={themeStyle('tabs_createTripWizard_31', {  }, (theme ?? _styleTheme))}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled
                 keyboardShouldPersistTaps="handled"
@@ -1699,7 +1789,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     setItineraryDaysTouched(true);
                     setItineraryDays(text);
                     }}
-                    editable={!(dates.mode === 'range' && computedDays)}
+                    editable={!(dates.mode === 'range' && computedDays) && dates.mode !== 'duration'}
                   />
                 <Text style={styles.modalLabel}>Planning Preferences</Text>
                 <Text style={styles.helperText}>Tell us how your group likes to travel and we'll shape the AI itinerary around it.</Text>
@@ -1792,8 +1882,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   const value = wizardPromptTraits.tt.w[field.key];
                   const descriptor = descriptorForValue(value, field);
                   return (
-                    <View key={`wizard-weight-${field.key}`} style={{ marginBottom: 10 }}>
-                      <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+                    <View key={`wizard-weight-${field.key}`} style={themeStyle('tabs_createTripWizard_32', {  }, (theme ?? _styleTheme))}>
+                      <View style={[styles.row, themeStyle('tabs_createTripWizard_33', {  }, (theme ?? _styleTheme))]}>
                         <Text style={styles.cellText}>{field.label}</Text>
                         <Text style={styles.helperText}>{descriptor}</Text>
                       </View>
@@ -1805,7 +1895,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                           step={1}
                           value={value}
                           onChange={(e: any) => setWizardWeight(field.key, Number(e.target.value))}
-                          style={{ width: '100%' }}
+                          style={themeStyle('tabs_createTripWizard_34', {  }, (theme ?? _styleTheme))}
                         />
                       ) : (
                         <TextInput
@@ -1832,7 +1922,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <Text style={[styles.traitChipText, wizardPromptTraits.ut.no && styles.traitChipTextSelected]}>Night Owl</Text>
                   </TouchableOpacity>
                 </View>
-                <View style={{ position: 'relative', marginTop: 16 }}>
+                <View style={themeStyle('tabs_createTripWizard_35', {  }, (theme ?? _styleTheme))}>
                   <TextInput
                     ref={itineraryAirportRef}
                     style={styles.input}
@@ -1846,7 +1936,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     }}
                   />
                   <TouchableOpacity
-                    style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
+                    style={themeStyle('tabs_createTripWizard_36', {  }, (theme ?? _styleTheme))}
                     onPress={showItineraryAirportDropdown}
                   >
                     <Text style={styles.selectCaret}></Text>
@@ -1856,8 +1946,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             ) : null}
             {itineraryMode === 'manual' ? (
               <ScrollView
-                style={{ maxHeight: 520 }}
-                contentContainerStyle={{ paddingBottom: 12 }}
+                style={themeStyle('tabs_createTripWizard_37', {  }, (theme ?? _styleTheme))}
+                contentContainerStyle={themeStyle('tabs_createTripWizard_38', {  }, (theme ?? _styleTheme))}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled
                 keyboardShouldPersistTaps="handled"
@@ -1883,7 +1973,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     onChangeText={setItineraryDays}
                   />
                 ) : null}
-                <View style={{ gap: 8 }}>
+                <View style={themeStyle('tabs_createTripWizard_39', {  }, (theme ?? _styleTheme))}>
                   {manualDayList.map((day) => {
                     const items = manualItemsByDay.get(day) ?? [];
                     return (
@@ -1943,11 +2033,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, activity: text }))}
                 />
                 <View style={styles.row}>
-                  <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => addManualItem(manualDay)}>
+                  <TouchableOpacity style={[styles.button, themeStyle('tabs_createTripWizard_40', {  }, (theme ?? _styleTheme))]} onPress={() => addManualItem(manualDay)}>
                     <Text style={styles.buttonText}>Add Itinerary Item</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                    style={[styles.button, styles.dangerButton, themeStyle('tabs_createTripWizard_41', {  }, (theme ?? _styleTheme))]}
                     onPress={() => setManualDay(null)}
                   >
                     <Text style={styles.dangerButtonText}>Done</Text>
@@ -1983,16 +2073,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               theme={theme}
               airportOptions={airportOptions}
               onSearchAirports={onSearchAirports}
-              modalOverlayStyle={{
-                ...(Platform.OS === 'web'
-                  ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }
-                  : { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }),
-                zIndex: 45000,
-                elevation: 80,
-              }}
-              modalCardStyle={{ zIndex: 46000, elevation: 84 }}
+              modalOverlayStyle={themeStyle('tabs_createTripWizard_42', { Platform: Platform }, (theme ?? _styleTheme))}
+              modalCardStyle={themeStyle('tabs_createTripWizard_43', {  }, (theme ?? _styleTheme))}
               showList
               mode="wizard"
+              transferScope="flights"
             />
           </>
         );
@@ -2094,7 +2179,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         styles.actionCell,
                         styles.lodgingActionCol,
                         styles.lastCell,
-                        { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' },
+                        themeStyle('tabs_createTripWizard_44', {  }, (theme ?? _styleTheme)),
                       ]}
                     >
                       <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openWizardLodgingEditor(l)}>
@@ -2132,7 +2217,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 onCancel={closeWizardLodgingEditor}
               />
             ) : null}
-            <View style={{ marginTop: 12 }}>
+            <View style={themeStyle('tabs_createTripWizard_45', {  }, (theme ?? _styleTheme))}>
               <Text style={styles.flightTitle}>Total lodging cost: ${wizardLodgingTotal.toFixed(2)}</Text>
               <Text style={styles.helperText}>Breakdown (aligned with total even when no payers are set):</Text>
               {wizardGroupMembers.map((m) => (
@@ -2140,7 +2225,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   {formatWizardMemberName(m)}: ${Number(wizardLodgingTotalsBalanced[m.id] ?? 0).toFixed(2)}
                 </Text>
               ))}
-              <Text style={[styles.helperText, { marginTop: 4 }]}>Subtotal across payers: ${wizardLodgingBreakdownSum.toFixed(2)}</Text>
+              <Text style={[styles.helperText, themeStyle('tabs_createTripWizard_46', {  }, (theme ?? _styleTheme))]}>Subtotal across payers: ${wizardLodgingBreakdownSum.toFixed(2)}</Text>
             </View>
           </>
         );
@@ -2166,6 +2251,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               theme={theme}
               fetchTours={async () => undefined}
               mode="wizard"
+              lodgings={wizardLodgings}
               defaultActivityDate={dates.mode === 'range' ? dates.startDate : null}
             />
           </>
@@ -2175,6 +2261,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <>
             <Text style={styles.sectionTitle}>Rental Cars</Text>
             <Text style={styles.helperText}>Optional. Add rental cars using the full car rentals interface.</Text>
+            <View style={styles.row}>
+              <Text style={styles.sectionTitle}>Car Rentals</Text>
+              <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openWizardCarDialog(null)} testID="wizard-car-add" accessibilityRole="button" accessibilityLabel="Add car rental">
+                <Text style={styles.buttonText}>+</Text>
+              </TouchableOpacity>
+            </View>
             <HorizontalTableScroll
               style={styles.tableScroll}
               contentContainerStyle={styles.tableScrollContent}
@@ -2233,202 +2325,76 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <View style={[styles.cell, fixedTableColumn(180)]}>
                       <Text style={styles.cellText}>{car.paidBy.length ? car.paidBy.map(wizardPayerName).join(', ') : '-'}</Text>
                     </View>
-                    <View style={[styles.cell, styles.actionCell, fixedTableColumn(160), styles.lastCell]}>
-                      <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeWizardCarRental(car.id)}>
+                    <View style={[styles.cell, styles.actionCell, fixedTableColumn(200), styles.lastCell, themeStyle('tabs_createTripWizard_44', {  }, (theme ?? _styleTheme))]}>
+                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openWizardCarDialog(car)} testID={`wizard-car-edit-${car.id}`}>
+                        <Text style={styles.buttonText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeWizardCarRental(car.id)} testID={`wizard-car-delete-${car.id}`}>
                         <Text style={styles.dangerButtonText}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
                 ))}
-                <View style={[styles.tableRow, styles.inputRow, styles.lastRow, { alignItems: 'stretch' }]}>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Pick up location"
-                      accessibilityLabel="Pick up location"
-                      value={wizardCarDraft.pickupLocation}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, pickupLocation: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <View style={wizardCarDateWrapStyle}>
-                      <DateField
-                        value={wizardCarDraft.pickupDate}
-                        onChange={(pickupDate) => setWizardCarDraft((p) => ({ ...p, pickupDate }))}
-                        styles={styles}
-                        theme={theme}
-                        style={wizardCarDateInputStyle}
-                        testID="wizard-car-pickup-date"
-                        accessibilityLabel="Pick up date"
-                      />
-                    </View>
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Drop off location"
-                      accessibilityLabel="Drop off location"
-                      value={wizardCarDraft.dropoffLocation}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, dropoffLocation: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <View style={wizardCarDateWrapStyle}>
-                      <DateField
-                        value={wizardCarDraft.dropoffDate}
-                        onChange={(dropoffDate) => setWizardCarDraft((p) => ({ ...p, dropoffDate }))}
-                        styles={styles}
-                        theme={theme}
-                        style={wizardCarDateInputStyle}
-                        testID="wizard-car-dropoff-date"
-                        accessibilityLabel="Drop off date"
-                      />
-                    </View>
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(130)]}>
-                    {Platform.OS === 'web' ? (
-                      <select
-                        value={normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
-                        onChange={(e) =>
-                          setWizardCarDraft((p) => ({
-                            ...p,
-                            status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS),
-                          }))
-                        }
-                        style={{ ...wizardCarWebInputStyle, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
-                      >
-                        {ITINERARY_STATUSES.map((opt) => (
-                          <option key={`wizard-car-status-${opt}`} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <Text style={styles.cellText}>{normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
-                    )}
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Reference"
-                      accessibilityLabel="Reference"
-                      value={wizardCarDraft.reference}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, reference: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Vendor"
-                      accessibilityLabel="Vendor"
-                      value={wizardCarDraft.vendor}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, vendor: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
-                    <SelectField
-                      styles={styles}
-                      options={prepaidOptions}
-                      value={wizardCarDraft.prepaid}
-                      placeholder="Select Yes/No"
-                      title="Prepaid status"
-                      style={{ width: '100%' }}
-                      webStyle={wizardCarWebInputStyle}
-                      listStyle={{ position: 'relative', top: 0 }}
-                      onChange={(value) => setWizardCarDraft((p) => ({ ...p, prepaid: value }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(120)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Cost"
-                      accessibilityLabel="Cost"
-                      keyboardType="numeric"
-                      value={wizardCarDraft.cost}
-                      onChangeText={(text: string) =>
-                        setWizardCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))
-                      }
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
-                    <TextInput
-                      style={wizardCarInputStyle}
-                      placeholder="Car model"
-                      accessibilityLabel="Car model"
-                      value={wizardCarDraft.model}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, model: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(220)]}>
-                    <TextInput
-                      style={[wizardCarInputStyle, styles.cellTextWrap]}
-                      placeholder="Notes"
-                      accessibilityLabel="Notes"
-                      value={wizardCarDraft.notes}
-                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, notes: text }))}
-                    />
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
-                    <View style={styles.payerChips}>
-                      {wizardCarDraft.travelerIds.map((id) => (
-                        <View key={`wizard-car-traveler-${id}`} style={styles.payerChip}>
-                          <Text style={styles.cellText}>{wizardPayerName(id)}</Text>
-                          <TouchableOpacity onPress={() => setWizardCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
-                            <Text style={styles.removeText}>x</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                    <View style={styles.payerOptions}>
-                      {wizardGroupMembers
-                        .filter((m) => !wizardCarDraft.travelerIds.includes(m.id))
-                        .map((m) => (
-                          <TouchableOpacity
-                            key={`wizard-car-traveler-add-${m.id}`}
-                            style={styles.smallButton}
-                            onPress={() => setWizardCarDraft((prev) => ({ ...prev, travelerIds: [...prev.travelerIds, m.id] }))}
-                          >
-                            <Text style={styles.buttonText}>Add {formatWizardMemberName(m)}</Text>
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  </View>
-                  <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
-                    <View style={styles.payerChips}>
-                      {wizardCarDraft.paidBy.map((id) => (
-                        <View key={id} style={styles.payerChip}>
-                          <Text style={styles.cellText}>{wizardPayerName(id)}</Text>
-                          <TouchableOpacity onPress={() => setWizardCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                            <Text style={styles.removeText}>x</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                    <View style={styles.payerOptions}>
-                      {wizardGroupMembers
-                        .filter((m) => !wizardCarDraft.paidBy.includes(m.id))
-                        .map((m) => (
-                          <TouchableOpacity
-                            key={m.id}
-                            style={styles.smallButton}
-                            onPress={() => setWizardCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                          >
-                            <Text style={styles.buttonText}>Add {formatWizardMemberName(m)}</Text>
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  </View>
-                  <View style={[styles.cell, styles.actionCell, fixedTableColumn(160), styles.lastCell]}>
-                    <TouchableOpacity style={styles.button} onPress={addWizardCarRental}>
-                      <Text style={styles.buttonText}>Add</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
               </View>
             </HorizontalTableScroll>
+            {wizardCarDialogOpen ? (
+              <CarRentalEditForm
+                draft={wizardCarDraft}
+                onChange={setWizardCarDraft}
+                onSave={() => saveWizardCarDialog()}
+                onSaveAndAddAnother={!editingWizardCarId ? () => saveWizardCarDialog({ addAnother: true }) : undefined}
+                onCancel={closeWizardCarDialog}
+                isNew={!editingWizardCarId}
+                members={wizardGroupMembers}
+                styles={styles}
+                theme={theme}
+                error={wizardCarDialogError}
+              />
+            ) : null}
+            <View style={themeStyle('tabs_createTripWizard_45', {  }, (theme ?? _styleTheme))}>
+              <Text style={styles.flightTitle}>Total car rental cost: ${wizardCarTotal.toFixed(2)}</Text>
+              <Text style={styles.helperText}>Breakdown (aligned with total even when no payers are set):</Text>
+              {wizardGroupMembers.map((m) => (
+                <Text key={m.id} style={styles.helperText}>
+                  {formatWizardMemberName(m)}: ${Number(wizardCarTotalsBalanced[m.id] ?? 0).toFixed(2)}
+                </Text>
+              ))}
+              <Text style={[styles.helperText, themeStyle('tabs_createTripWizard_46', {  }, (theme ?? _styleTheme))]}>Subtotal across payers: ${wizardCarBreakdownSum.toFixed(2)}</Text>
+            </View>
           </>
         );
       case 8:
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Ground Transfers</Text>
+            <Text style={styles.helperText}>Optional. Add trains, buses, ferries, private transfers and other ground transportation.</Text>
+            <FlightsTab
+              backendUrl={backendUrl}
+              userToken={userToken}
+              activeTripId={null}
+              flights={wizardFlights}
+              setFlights={setWizardFlights}
+              groupMembers={wizardGroupMembers}
+              defaultPayerId={wizardDefaultPayerId}
+              formatMemberName={formatWizardMemberName}
+              payerName={wizardPayerName}
+              headers={headers}
+              jsonHeaders={wizardJsonHeaders}
+              findActiveTrip={() => wizardTripDefaults}
+              fetchGroupMembersForActiveTrip={async () => undefined}
+              styles={styles}
+              theme={theme}
+              airportOptions={airportOptions}
+              onSearchAirports={onSearchAirports}
+              modalOverlayStyle={themeStyle('tabs_createTripWizard_42', { Platform: Platform }, (theme ?? _styleTheme))}
+              modalCardStyle={themeStyle('tabs_createTripWizard_43', {  }, (theme ?? _styleTheme))}
+              showList
+              mode="wizard"
+              transferScope="ground"
+            />
+          </>
+        );
+      case 9:
       default:
         return (
           <>
@@ -2447,13 +2413,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             {dates.mode === 'range' && (dates.startDate || dates.endDate) ? (
               <Text style={styles.bodyText}>Dates: {dates.startDate || 'TBD'} - {dates.endDate || 'TBD'}</Text>
             ) : null}
+            {dates.mode === 'duration' ? <Text style={styles.bodyText}>Dates not set · {dates.durationDays} day(s)</Text> : null}
             {dates.mode === 'month' && monthLabel && dates.durationDays ? (
               <Text style={styles.bodyText}>
                 Dates: {monthLabel} · {dates.durationDays} day(s)
               </Text>
             ) : null}
             {details.description ? (
-              <View style={{ marginTop: 8 }}>
+              <View style={themeStyle('tabs_createTripWizard_51', {  }, (theme ?? _styleTheme))}>
                 {renderRichTextBlocks(details.description, {
                   base: styles.bodyText,
                   bold: styles.headerText,
@@ -2539,36 +2506,55 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }
 
   return (
-    <View style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-      <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
-        <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }]}>
+    <View style={themeStyle('tabs_createTripWizard_52', {  }, (theme ?? _styleTheme))}>
+      <View style={[styles.card, themeStyle('tabs_createTripWizard_53', {  }, (theme ?? _styleTheme))]}>
+        <View style={[styles.row, themeStyle('tabs_createTripWizard_54', {  }, (theme ?? _styleTheme))]}>
           <View>
             <Text style={styles.sectionTitle}>{quickStartMode ? 'Create a trip' : 'Create Trip Wizard'}</Text>
             <Text style={styles.helperText}>
-              {quickStartMode ? 'Quick start' : `Step ${stepIndex + 1} of ${totalSteps}: ${steps[stepIndex]}`}
+              {quickStartMode ? 'Quick start' : `Step ${stepIndex + 1 - (skipDatesStep && stepIndex > DATES_STEP ? 1 : 0)} of ${totalSteps - (skipDatesStep ? 1 : 0)}: ${steps[stepIndex]}`}
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.button, styles.dangerButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
+            style={[styles.button, styles.dangerButton, themeStyle('tabs_createTripWizard_55', {  }, (theme ?? _styleTheme))]}
             onPress={() => setShowExitConfirm(true)}
           >
             <Text style={styles.dangerButtonText}>X</Text>
           </TouchableOpacity>
         </View>
         {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
+        <Modal transparent visible={monthPromptOpen} animationType="fade" onRequestClose={() => setMonthPromptOpen(false)}>
+          <View style={styles.modalOverlay} testID="wizard-month-prompt">
+            <TouchableOpacity accessibilityLabel="Close month choice" style={styles.passengerOverlayBackdrop} onPress={() => setMonthPromptOpen(false)} />
+            <View style={styles.modalCard}>
+              <Text style={styles.sectionTitle}>Which month are you thinking of?</Text>
+              <Text style={styles.helperText}>We'll hold the 1st of the next one as a placeholder start. You can set exact dates any time.</Text>
+              <View style={[styles.row, themeStyle('tabs_createTripWizard_layout1', {  }, (theme ?? _styleTheme))]}>
+                {monthOptions.map((option) => (
+                  <TouchableOpacity key={option.value} testID={`wizard-month-prompt-${option.value}`} accessibilityRole="button" accessibilityLabel={`Choose ${option.label}`} accessibilityState={{ selected: dates.startMonth === option.value }} style={[styles.button, styles.smallButton, dates.startMonth === option.value && styles.toggleActive]} onPress={() => chooseUndatedMonth(option.value)}>
+                    <Text style={styles.buttonText}>{option.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity testID="wizard-month-prompt-skip" accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => chooseUndatedMonth('')}>
+                <Text style={styles.buttonText}>Not sure yet</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
         {/* Step content scrolls; nav buttons stay anchored below */}
         <ScrollView
-          style={{ flex: 1, minHeight: 0 }}
-          contentContainerStyle={{ gap: 12, flexGrow: 1 }}
+          style={themeStyle('tabs_createTripWizard_56', {  }, (theme ?? _styleTheme))}
+          contentContainerStyle={themeStyle('tabs_createTripWizard_57', {  }, (theme ?? _styleTheme))}
           keyboardShouldPersistTaps="handled"
         >
           {renderStepContent()}
         </ScrollView>
-        <View style={[styles.row, { marginTop: 8 }]}>
+        <View style={[styles.row, themeStyle('tabs_createTripWizard_58', {  }, (theme ?? _styleTheme))]}>
           <TouchableOpacity
             style={[
               styles.button,
-              { flex: 1 },
+              themeStyle('tabs_createTripWizard_59', {  }, (theme ?? _styleTheme)),
               stepIndex === 0 ? styles.dangerButton : (styles.mapOptionButton ?? styles.button),
             ]}
             onPress={quickStartMode || stepIndex === 0 ? cancelWizard : goBack}
@@ -2578,28 +2564,21 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </Text>
           </TouchableOpacity>
           {quickStartMode ? (
-            <View style={[styles.row, { flex: 1, marginBottom: 0, flexWrap: 'nowrap' }]}>
-              <TouchableOpacity style={[styles.button, { flex: 1 }, !quickStartReady && { opacity: 0.6 }]} onPress={submitWizard} disabled={!quickStartReady || isSubmitting} testID="quick-start-create">
+            <View style={[styles.row, themeStyle('tabs_createTripWizard_60', {  }, (theme ?? _styleTheme))]}>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_createTripWizard_61', {  }, (theme ?? _styleTheme)), !quickStartReady && themeStyle('tabs_createTripWizard_62', {  }, (theme ?? _styleTheme))]} onPress={submitWizard} disabled={!quickStartReady || isSubmitting} testID="quick-start-create">
                 <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
               </TouchableOpacity>
               <View
                 accessibilityLabel="Beta feature"
-                style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: theme?.colors.border ?? '#2A2A2A',
-                  backgroundColor: theme?.mode === 'dark' ? '#35516A' : '#E8F0F6',
-                }}
+                style={themeStyle('tabs_createTripWizard_63', { theme: theme }, (theme ?? _styleTheme))}
               >
-                <Text style={{ color: theme?.colors.text ?? '#111827', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>BETA</Text>
+                <Text style={themeStyle('tabs_createTripWizard_64', { theme: theme }, (theme ?? _styleTheme))}>BETA</Text>
               </View>
             </View>
           ) : stepIndex < totalSteps - 1 ? (
             <>
               <TouchableOpacity
-                style={[styles.button, { flex: 1 }, !canMoveNext && { opacity: 0.6 }]}
+                style={[styles.button, themeStyle('tabs_createTripWizard_65', {  }, (theme ?? _styleTheme)), !canMoveNext && themeStyle('tabs_createTripWizard_66', {  }, (theme ?? _styleTheme))]}
                 onPress={goNext}
                 disabled={!canMoveNext}
               >
@@ -2607,7 +2586,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               </TouchableOpacity>
               {stepIndex >= 3 ? (
                 <TouchableOpacity
-                  style={[styles.button, { flex: 1 }, !canMoveNext && { opacity: 0.6 }]}
+                  style={[styles.button, themeStyle('tabs_createTripWizard_67', {  }, (theme ?? _styleTheme)), !canMoveNext && themeStyle('tabs_createTripWizard_68', {  }, (theme ?? _styleTheme))]}
                   onPress={submitWizard}
                   disabled={!canMoveNext || isSubmitting}
                 >
@@ -2616,43 +2595,30 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               ) : null}
             </>
           ) : (
-            <View style={[styles.row, { flex: 1, marginBottom: 0, flexWrap: 'nowrap' }]}>
-              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={submitWizard} disabled={isSubmitting}>
+            <View style={[styles.row, themeStyle('tabs_createTripWizard_69', {  }, (theme ?? _styleTheme))]}>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_createTripWizard_70', {  }, (theme ?? _styleTheme))]} onPress={submitWizard} disabled={isSubmitting}>
                 <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
               </TouchableOpacity>
               <View
                 accessibilityLabel="Beta feature"
-                style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: theme?.colors.border ?? '#2A2A2A',
-                  backgroundColor: theme?.mode === 'dark' ? '#35516A' : '#E8F0F6',
-                }}
+                style={themeStyle('tabs_createTripWizard_71', { theme: theme }, (theme ?? _styleTheme))}
               >
-                <Text style={{ color: theme?.colors.text ?? '#111827', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>BETA</Text>
+                <Text style={themeStyle('tabs_createTripWizard_72', { theme: theme }, (theme ?? _styleTheme))}>BETA</Text>
               </View>
             </View>
           )}
         </View>
       </View>
       {showItineraryAirportSuggestions && itineraryAirportAnchor ? (
-        <View style={[styles.passengerOverlay, { backgroundColor: 'transparent', zIndex: 52000, elevation: 80 }]}>
+        <View style={[styles.passengerOverlay, themeStyle('tabs_createTripWizard_73', {  }, (theme ?? _styleTheme))]}>
           <TouchableOpacity
-            style={[styles.passengerOverlayBackdrop, { backgroundColor: 'transparent' }]}
+            style={[styles.passengerOverlayBackdrop, themeStyle('tabs_createTripWizard_74', {  }, (theme ?? _styleTheme))]}
             onPress={hideItineraryAirportDropdown}
           />
           <View
             style={[
               styles.passengerOverlayList,
-              {
-                zIndex: 53000,
-                elevation: 84,
-                left: itineraryAirportAnchor.x,
-                top: itineraryAirportAnchor.y + itineraryAirportAnchor.height,
-                width: itineraryAirportAnchor.width || 280,
-              },
+              themeStyle('tabs_createTripWizard_75', { itineraryAirportAnchor: itineraryAirportAnchor }, (theme ?? _styleTheme)),
             ]}
           >
             {itineraryAirportSuggestions.length ? (
@@ -2681,7 +2647,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeWizardLodgingEditor} />
           <View style={styles.modalCard}>
             <Text style={styles.sectionTitle}>Edit Lodging</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
+            <ScrollView style={themeStyle('tabs_createTripWizard_76', {  }, (theme ?? _styleTheme))}>
               <Text style={styles.modalLabel}>Name</Text>
               <TextInput
                 style={styles.input}
@@ -2739,44 +2705,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <Text style={styles.helperText}>{editingWizardLodging.costPerNight ? `$${editingWizardLodging.costPerNight}` : '-'}</Text>
 
               <Text style={styles.modalLabel}>Paid by</Text>
-              <View style={[styles.input, styles.payerBox]}>
-                <View style={styles.payerChips}>
-                  {editingWizardLodging.paidBy.map((id) => (
-                    <View key={id} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{wizardPayerName(id)}</Text>
-                      <TouchableOpacity
-                        onPress={() =>
-                          setEditingWizardLodging((p) =>
-                            p
-                              ? {
-                                  ...p,
-                                  paidBy: p.paidBy.filter((x) => x !== id),
-                                }
-                              : p
-                          )
-                        }
-                      >
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {wizardGroupMembers
-                    .filter((m) => !editingWizardLodging.paidBy.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={styles.smallButton}
-                        onPress={() =>
-                          setEditingWizardLodging((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))
-                        }
-                      >
-                        <Text style={styles.buttonText}>Add {formatWizardMemberName(m)}</Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
-              </View>
+              <PayerSelect members={wizardGroupMembers} value={editingWizardLodging.paidBy} formatName={formatWizardMemberName} onChange={ids => setEditingWizardLodging(prev => prev ? ({ ...prev, paidBy: ids }) : prev)} styles={styles} testID="wizard-lodging-payer" />
 
               <Text style={styles.modalLabel}>Address</Text>
               <TextInput

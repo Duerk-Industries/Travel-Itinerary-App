@@ -6,7 +6,7 @@ import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, B
 import { getCanonicalPublicPathFirebase } from './firebasePublicationRepository';
 import { buildNarrativeBlogBody } from './narrative';
 import { logError } from '../logger';
-import { markSynced, shouldSkipSync } from './syncCoordination';
+import { markSynced, shouldSkipSync, runBlogSyncForTrip } from './syncCoordination';
 import { normalizeBlogTags } from './tags';
 import { clearFirebaseDeletedTarget } from './deletedTargetCleanup';
 
@@ -117,7 +117,7 @@ const syncOneItineraryDetail = async (
   ]);
 };
 
-const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise<void> => {
+const syncLinkedItineraryItems = (tripId: string, userId: string): Promise<void> => runBlogSyncForTrip(tripId, async () => {
   const db = getDb();
   const [itinerarySnap, daySnap] = await Promise.all([
     db.collection('itineraries').where('tripId', '==', tripId).get(),
@@ -139,17 +139,21 @@ const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise
   await Promise.all(
     linkedItems.docs.map(async (item) => {
       const data = item.data() as any;
-      if (data.sourceId && !sourceIds.has(String(data.sourceId)) && !data.sourceDetached) {
+      if (data.sourceId && !sourceIds.has(String(data.sourceId)) && data.deletedAt == null) {
         const linkRef = db.collection('blog_item_source_links').doc(`itinerary_detail_${data.sourceId}`);
-        await Promise.all([
-          item.ref.set({ sourceDetached: true, updatedAt: nowIso() }, { merge: true }),
-          linkRef.set({ detached: true, updatedAt: nowIso() }, { merge: true }),
-        ]);
+        if ((await db.collection('itinerary_details').doc(String(data.sourceId)).get()).exists) return;
+        await clearFirebaseDeletedTarget(db, 'item', item.id);
+        const now = nowIso();
+        const batch = db.batch();
+        batch.set(item.ref, { deletedAt: now, tags: [], sourceDetached: true, version: FieldValue.increment(1), lastEditorUserId: userId, updatedAt: now }, { merge: true });
+        batch.set(linkRef, { detached: true, updatedAt: now }, { merge: true });
+        batch.set(db.collection('trip_blogs').doc(tripId), { contentRevision: FieldValue.increment(1), updatedAt: now }, { merge: true });
+        await batch.commit();
       }
     })
   );
   markSynced(tripId);
-};
+});
 
 // Public entry point for the write-path trigger (itineraryDataRoutes.ts,
 // itineraryAsyncService.ts) — see the matching export in postgresRepository.ts

@@ -5,6 +5,7 @@ import { notify } from './notificationService';
 import { logError, logInfo } from '../logger';
 import { randomUUID } from 'crypto';
 import { isFeatureEnabled } from './entitlementService';
+import { autoPublishBlogIfEligible } from '../routes/blogPublicationRoutes';
 import { getBlogDayByDate, getVisibleMediaForDay, getGroupMemberUserIdsForTrip } from '../blog/firebaseBlogDayData';
 
 const LEASE_SECONDS = 300;
@@ -12,11 +13,13 @@ const WORKER_ID = `blog-worker-${randomUUID()}`;
 
 export const runBlogBackgroundJobs = async () => {
   if (getCurrentDbProvider() === 'firebase') {
+    await runGoLiveJobFirebase();
     await runMemoryLaneJobFirebase();
     await runGroupPromptsJobFirebase();
     await runDayPhotoReminderJobFirebase();
     return;
   }
+  await runGoLiveJob();
   await runMemoryLaneJob();
   await runGroupPromptsJob();
   await runDayPhotoReminderJob();
@@ -31,6 +34,75 @@ export const runBlogBackgroundJobs = async () => {
 const isEndOfDayWindow = (): boolean => {
   const hour = new Date().getUTCHours();
   return hour >= 20 || hour < 2;
+};
+
+// --- Go live at trip start ---------------------------------------------------------------------
+// A blog is public from the day its trip starts, whether or not anyone has opened it by then.
+// autoPublishBlogIfEligible does the real gating (start date, opt-out, ages, profile defaults,
+// alt text) and does nothing once a publication decision exists, so this only has to offer it
+// every trip that is under way. Trips are in progress from one day before start_date (see
+// utils/blogGoLive.ts) until end_date.
+const goLive = async (trips: Array<{ id: string; userIds: string[] }>): Promise<number> => {
+  let published = 0;
+  for (const trip of trips) {
+    for (const userId of trip.userIds) {
+      try {
+        if (await autoPublishBlogIfEligible(trip.id, userId)) published += 1;
+        break; // the first member decides: eligibility is a property of the whole trip
+      } catch (error) {
+        logError('[blog] go-live check failed', error);
+      }
+    }
+  }
+  return published;
+};
+
+const runGoLiveJob = async () => {
+  if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return;
+  const jobKey = 'blog:go_live';
+  if (!await claimLease(jobKey)) return;
+  let success = false;
+  try {
+    const trips = await queryBlog<{ id: string; user_id: string }>(
+      `SELECT t.id, gm.user_id FROM trips t
+       JOIN group_members gm ON gm.group_id = t.group_id
+       WHERE t.start_date <= $2::date AND t.end_date >= $1::date
+         AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL`,
+      [new Date().toISOString().slice(0, 10), new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)]
+    );
+    const byTrip = new Map<string, string[]>();
+    for (const row of trips.rows) byTrip.set(String(row.id), [...(byTrip.get(String(row.id)) ?? []), String(row.user_id)]);
+    const published = await goLive([...byTrip].map(([id, userIds]) => ({ id, userIds })));
+    if (published) logInfo(`[blog] went live at trip start: ${published}`);
+    success = true;
+  } catch (error) {
+    logError('[blog] go-live job failed', error);
+  } finally {
+    await releaseLease(jobKey, success);
+  }
+};
+
+const runGoLiveJobFirebase = async () => {
+  if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return;
+  const jobKey = 'blog:go_live';
+  if (!await claimLeaseFirebase(jobKey)) return;
+  let success = false;
+  try {
+    const db = getDb();
+    const today = new Date().toISOString().slice(0, 10);
+    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const snap = await db.collection('trips').where('startDate', '<=', tomorrow).get();
+    const active = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })).filter((t) => t.endDate && t.endDate >= today);
+    const trips: Array<{ id: string; userIds: string[] }> = [];
+    for (const trip of active) trips.push({ id: trip.id, userIds: await getGroupMemberUserIdsForTrip(trip.id) });
+    const published = await goLive(trips);
+    if (published) logInfo(`[blog] went live at trip start: ${published}`);
+    success = true;
+  } catch (error) {
+    logError('[blog] go-live job failed', error);
+  } finally {
+    await releaseLeaseFirebase(jobKey, success);
+  }
 };
 
 // --- Firebase lease primitive -----------------------------------------------------------------

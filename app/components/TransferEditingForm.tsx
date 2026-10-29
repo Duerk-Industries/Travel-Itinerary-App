@@ -1,3 +1,8 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+import PayerSelect from './PayerSelect';
+import KeyboardViewport from './KeyboardViewport';
 import AirportInput from './AirportInput';
 import { TRANSFER_TYPES as CANONICAL_TRANSFER_TYPES, normalizeTransferType } from '../utils/transferTypes';
 import TransferDirections from './TransferDirections';
@@ -5,13 +10,14 @@ import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from './HotelAddressPicker';
 import { transferLocationFieldLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 import React from 'react';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {  Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption, TransferType } from '../tabs/transfers';
 import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
-import type { AppTheme } from '../theme/theme';
+
 import DateField from './DateField';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
@@ -82,7 +88,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
   groupMembers,
   userMembers,
   styles,
-  theme,
+  theme: _providedTheme,
   formatMemberName,
   payerName,
   airportTarget: activeAirportTarget,
@@ -98,38 +104,24 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
   onClose,
   onSave,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   if (!visible || !flight || !flightId) return null;
 
   const ground = modalKind ? modalKind === 'ground' : flight.transferType !== 'Flight';
 
-  const toggleBaseStyle = styles.toggleOption ?? {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#111',
-    backgroundColor: theme?.colors.surface ?? '#fff',
-  };
-  const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
-    borderColor: theme?.colors.link ?? '#111',
-  };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
-  const rowStyle = [styles.modalRow, { flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }];
-  const fieldStyle = [styles.modalField, { minWidth: 200, flex: 1 }];
-  const dateFieldStyle = [styles.modalField, { flexGrow: 0, flexShrink: 0, flexBasis: 190, minWidth: 190, maxWidth: 240 }];
-  const timeFieldStyle = [styles.modalField, { flexGrow: 0, flexShrink: 0, flexBasis: 180, minWidth: 180, maxWidth: 220 }];
-  const locationFieldStyle = [styles.modalField, { minWidth: 240, flexGrow: 1, flexBasis: 0 }];
+  const toggleBaseStyle = styles.toggleOption ?? themeStyle('components_TransferEditingForm_1', { theme: theme }, (theme ?? _styleTheme));
+  const toggleSelectedStyle = styles.toggleOptionSelected ?? themeStyle('components_TransferEditingForm_2', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextStyle = styles.toggleOptionText ?? themeStyle('components_TransferEditingForm_3', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? themeStyle('components_TransferEditingForm_4', { theme: theme }, (theme ?? _styleTheme));
+  const rowStyle = [styles.modalRow, themeStyle('components_TransferEditingForm_5', {  }, (theme ?? _styleTheme))];
+  const fieldStyle = [styles.modalField, themeStyle('components_TransferEditingForm_6', {  }, (theme ?? _styleTheme))];
+  const dateFieldStyle = [styles.modalField, themeStyle('components_TransferEditingForm_7', {  }, (theme ?? _styleTheme))];
+  const timeFieldStyle = [styles.modalField, themeStyle('components_TransferEditingForm_8', {  }, (theme ?? _styleTheme))];
+  const locationFieldStyle = [styles.modalField, themeStyle('components_TransferEditingForm_9', {  }, (theme ?? _styleTheme))];
 
-  const baseOverlayStyle = {
-    backgroundColor: 'rgba(15,23,42,0.35)',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    padding: 16,
-    paddingTop: 24,
-  };
-  const baseCardStyle = { marginTop: 0, maxHeight: '100%' as const };
+  const baseOverlayStyle = themeStyle('components_TransferEditingForm_10', {  }, (theme ?? _styleTheme));
+  const baseCardStyle = themeStyle('components_TransferEditingForm_11', {  }, (theme ?? _styleTheme));
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
@@ -140,13 +132,12 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
         <Text style={styles.helperText}>
           Current Departure: {formatDateLong(flight.departureDate)} at {flight.departureTime || '?'}
         </Text>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flexShrink: 1 }}
+        <KeyboardViewport
+          style={themeStyle('components_TransferEditingForm_12', {  }, (theme ?? _styleTheme))}
         >
         <ScrollView
-          style={{ maxHeight: 420 }}
-          contentContainerStyle={{ paddingRight: 12, paddingBottom: 8 }}
+          style={themeStyle('components_TransferEditingForm_13', {  }, (theme ?? _styleTheme))}
+          contentContainerStyle={themeStyle('components_TransferEditingForm_14', {  }, (theme ?? _styleTheme))}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           nestedScrollEnabled
@@ -171,12 +162,12 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
               );
             })}
           </View>
-          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Status</Text>
+          <Text style={[styles.modalLabel, themeStyle('components_TransferEditingForm_15', {  }, (theme ?? _styleTheme))]}>Status</Text>
           {Platform.OS === 'web' ? (
             <select
               value={normalizeItineraryStatus(flight.status, DEFAULT_NEW_ITINERARY_STATUS)}
               onChange={(e) => setFlight((prev) => (prev ? { ...prev, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) } : prev))}
-              style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+              style={toWebStyle(styles.input, themeStyle('components_TransferEditingForm_16', {  }, (theme ?? _styleTheme)))}
             >
               {ITINERARY_STATUSES.map((opt) => (
                 <option key={`flight-status-${opt}`} value={opt}>
@@ -201,7 +192,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             </View>
           )}
           {ground && <>
-          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Type</Text>
+          <Text style={[styles.modalLabel, themeStyle('components_TransferEditingForm_17', {  }, (theme ?? _styleTheme))]}>Type</Text>
           {Platform.OS === 'web' ? (
             <select
               value={normalizeTransferType(flight.transferType)}
@@ -217,7 +208,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
                     : prev
                 )
               }
-              style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+              style={toWebStyle(styles.input, themeStyle('components_TransferEditingForm_18', {  }, (theme ?? _styleTheme)))}
             >
               {transferTypes.map((opt) => (
                 <option key={`transfer-type-${opt}`} value={opt}>
@@ -242,7 +233,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             </View>
           )}
           </>}
-          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Departure</Text>
+          <Text style={[styles.modalLabel, themeStyle('components_TransferEditingForm_19', {  }, (theme ?? _styleTheme))]}>Departure</Text>
           <View style={rowStyle}>
             <View style={dateFieldStyle}>
               <Text style={styles.modalLabelSmall}>Date</Text>
@@ -279,10 +270,10 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
           <View style={rowStyle}>
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
-              {ground ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
+              {ground ? <View style={themeStyle('components_TransferEditingForm_20', {  }, (theme ?? _styleTheme))}>
                 <HotelAddressPicker hotels={lodgings} activities={activities} date={flight.departureDate} styles={styles} testID="ground-departure-hotel"
                   onSelect={address => setFlight(prev => prev ? { ...prev, departureLocation: address } : prev)} />
-                <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} testID="flight-modal-departure-location"
+                <TextInput style={[styles.input, themeStyle('components_TransferEditingForm_21', {  }, (theme ?? _styleTheme))]} testID="flight-modal-departure-location"
                   value={transferLocationFieldLabel(flight.departureLocation, lodgings, flight.departureDate, activities)} placeholder="Location" autoComplete="off"
                   onChangeText={(text: string) => setFlight(prev => prev ? { ...prev, departureLocation: text } : prev)} />
               </View> : backendUrl ? (
@@ -313,7 +304,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
               )}
             </View>
           </View>
-          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Arrival</Text>
+          <Text style={[styles.modalLabel, themeStyle('components_TransferEditingForm_22', {  }, (theme ?? _styleTheme))]}>Arrival</Text>
           <View style={rowStyle}>
             <View style={dateFieldStyle}>
               <Text style={styles.modalLabelSmall}>Date</Text>
@@ -342,10 +333,10 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
           <View style={rowStyle}>
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
-              {ground ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
+              {ground ? <View style={themeStyle('components_TransferEditingForm_23', {  }, (theme ?? _styleTheme))}>
                 <HotelAddressPicker hotels={lodgings} activities={activities} date={flight.arrivalDate || flight.departureDate} styles={styles} testID="ground-arrival-hotel"
                   onSelect={address => setFlight(prev => prev ? { ...prev, arrivalLocation: address } : prev)} />
-                <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} testID="flight-modal-arrival-location"
+                <TextInput style={[styles.input, themeStyle('components_TransferEditingForm_24', {  }, (theme ?? _styleTheme))]} testID="flight-modal-arrival-location"
                   value={transferLocationFieldLabel(flight.arrivalLocation, lodgings, flight.arrivalDate || flight.departureDate, activities)} placeholder="Location" autoComplete="off"
                   onChangeText={(text: string) => setFlight(prev => prev ? { ...prev, arrivalLocation: text } : prev)} />
               </View> : backendUrl ? (
@@ -379,7 +370,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
 
           {ground && <TransferDirections lodgings={lodgings} departureDate={flight.departureDate} arrivalDate={flight.arrivalDate} origin={flight.departureLocation} destination={flight.arrivalLocation} transferType={flight.transferType} mapApp={mapApp} styles={styles} />}
           {!ground && <>
-          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Layover</Text>
+          <Text style={[styles.modalLabel, themeStyle('components_TransferEditingForm_25', {  }, (theme ?? _styleTheme))]}>Layover</Text>
           <View style={rowStyle}>
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
@@ -410,13 +401,13 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             </View>
             <View style={timeFieldStyle}>
               <Text style={styles.modalLabelSmall}>Duration</Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={themeStyle('components_TransferEditingForm_26', {  }, (theme ?? _styleTheme))}>
                 {(() => {
                   const { hours, minutes } = parseLayoverDuration(flight.layoverDuration);
                   return (
                     <>
                       <TextInput
-                        style={[styles.input, { flex: 1, minWidth: 90, maxWidth: 140 }]}
+                        style={[styles.input, themeStyle('components_TransferEditingForm_27', {  }, (theme ?? _styleTheme))]}
                         keyboardType="numeric"
                         placeholder="Hours"
                         value={hours}
@@ -426,7 +417,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
                         }}
                       />
                       <TextInput
-                        style={[styles.input, { flex: 1, minWidth: 90, maxWidth: 140 }]}
+                        style={[styles.input, themeStyle('components_TransferEditingForm_28', {  }, (theme ?? _styleTheme))]}
                         keyboardType="numeric"
                         placeholder="Minutes"
                         value={minutes}
@@ -442,7 +433,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             </View>
           </View>
           </>}
-          <Text style={[styles.modalLabel, { marginTop: 16 }]}>{ground ? 'Transfer' : 'Flight'}</Text>
+          <Text style={[styles.modalLabel, themeStyle('components_TransferEditingForm_29', {  }, (theme ?? _styleTheme))]}>{ground ? 'Transfer' : 'Flight'}</Text>
           <View style={rowStyle}>
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>{ground ? 'Provider' : 'Airline'}</Text>
@@ -474,7 +465,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
               />
             </View>
           </View>
-          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Cost</Text>
+          <Text style={[styles.modalLabel, themeStyle('components_TransferEditingForm_30', {  }, (theme ?? _styleTheme))]}>Cost</Text>
           <TextInput
             style={styles.input}
             testID="flight-modal-cost"
@@ -484,31 +475,11 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
               setFlight((prev) => (prev ? { ...prev, cost: sanitizeCostInput(text) } : prev))
             }
           />
-          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Paid by</Text>
-          <View style={styles.payerChips}>
-            {groupMembers.map((m) => {
-              const selected = flight.paidBy.includes(m.id);
-              const name = formatMemberName(m);
-              return (
-                <TouchableOpacity
-                  key={`payer-${m.id}`}
-                  style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                  onPress={() =>
-                    setFlight((prev) => {
-                      if (!prev) return prev;
-                      const next = selected ? prev.paidBy.filter((id) => id !== m.id) : [...prev.paidBy, m.id];
-                      return { ...prev, paidBy: next };
-                    })
-                  }
-                >
-                  <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <Text style={[styles.modalLabel, themeStyle('components_TransferEditingForm_31', {  }, (theme ?? _styleTheme))]}>Paid by</Text>
+          <PayerSelect members={groupMembers} value={flight.paidBy} formatName={formatMemberName} onChange={ids => setFlight((prev) => prev ? ({ ...prev, paidBy: ids }) : prev)} styles={styles} testID="transfer-payer" />
         </ScrollView>
-        </KeyboardAvoidingView>
-        <View style={[styles.row, { marginTop: 16 }]}>
+        </KeyboardViewport>
+        <View style={[styles.row, themeStyle('components_TransferEditingForm_32', {  }, (theme ?? _styleTheme))]}>
           <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onClose}>
             <Text style={styles.dangerButtonText}>Cancel</Text>
           </TouchableOpacity>
@@ -519,21 +490,15 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
         </View>
       </View>
       {!ground && activeAirportTarget && activeAirportTarget.startsWith('modal-') && airportAnchor ? (
-        <View style={[styles.passengerOverlay, { backgroundColor: 'transparent', zIndex: 56000, elevation: 90 }]}>
+        <View style={[styles.passengerOverlay, themeStyle('components_TransferEditingForm_33', {  }, (theme ?? _styleTheme))]}>
           <TouchableOpacity
-            style={[styles.passengerOverlayBackdrop, { backgroundColor: 'transparent' }]}
+            style={[styles.passengerOverlayBackdrop, themeStyle('components_TransferEditingForm_34', {  }, (theme ?? _styleTheme))]}
             onPress={onHideAirportDropdown}
           />
           <View
             style={[
               styles.passengerOverlayList,
-              {
-                zIndex: 57000,
-                elevation: 94,
-                left: airportAnchor.x,
-                top: airportAnchor.y + airportAnchor.height,
-                width: airportAnchor.width || 280,
-              },
+              themeStyle('components_TransferEditingForm_35', { airportAnchor: airportAnchor }, (theme ?? _styleTheme)),
             ]}
           >
             {airportSuggestions.map((airport) => (

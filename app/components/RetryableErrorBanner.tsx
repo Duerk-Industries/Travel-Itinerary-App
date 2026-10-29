@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { memo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { RetryableMutationState } from '../hooks/useRetryableMutation';
@@ -17,34 +19,13 @@ type RetryableErrorBannerProps = {
   textStyle?: Record<string, unknown>;
 };
 
-const defaultContainer: Record<string, unknown> = {
-  paddingVertical: 10,
-  paddingHorizontal: 12,
-  backgroundColor: '#b91c1c',
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-};
+const defaultContainer = (_theme: import('../theme/theme').AppTheme): Record<string, unknown> => themeStyle('components_RetryableErrorBanner_1', {  }, _theme);
 
-const defaultText: Record<string, unknown> = {
-  color: '#ffffff',
-  fontSize: 13,
-  fontWeight: '500',
-  flex: 1,
-};
+const defaultText = (_theme: import('../theme/theme').AppTheme): Record<string, unknown> => themeStyle('components_RetryableErrorBanner_2', {  }, _theme);
 
-const defaultButton: Record<string, unknown> = {
-  paddingHorizontal: 12,
-  paddingVertical: 6,
-  borderRadius: 6,
-  backgroundColor: 'rgba(255,255,255,0.18)',
-};
+const defaultButton = (_theme: import('../theme/theme').AppTheme): Record<string, unknown> => themeStyle('components_RetryableErrorBanner_3', {  }, _theme);
 
-const defaultButtonText: Record<string, unknown> = {
-  color: '#ffffff',
-  fontSize: 13,
-  fontWeight: '700',
-};
+const defaultButtonText = (_theme: import('../theme/theme').AppTheme): Record<string, unknown> => themeStyle('components_RetryableErrorBanner_4', {  }, _theme);
 
 /**
  * Renders a red error banner with a Retry button for a failed mutation. Pair
@@ -64,6 +45,7 @@ const RetryableErrorBannerComponent: React.FC<RetryableErrorBannerProps> = ({
   containerStyle,
   textStyle,
 }) => {
+  const _styleTheme = useStyleTheme();
   if (state !== 'failed' && state !== 'pending') return null;
   if (state === 'pending' && !error) return null;
 
@@ -73,14 +55,14 @@ const RetryableErrorBannerComponent: React.FC<RetryableErrorBannerProps> = ({
 
   return (
     <View
-      style={[defaultContainer, containerStyle] as any}
+      style={[defaultContainer(_styleTheme), containerStyle] as any}
       testID="retryable-error-banner"
       accessible
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
       accessibilityLabel={`${actionLabel ? `${actionLabel} failed. ` : ''}${message}`}
     >
-      <Text style={[defaultText, textStyle] as any} testID="retryable-error-banner-message">
+      <Text style={[defaultText(_styleTheme), textStyle] as any} testID="retryable-error-banner-message">
         {retrying ? 'Retrying…' : message}
       </Text>
       <TouchableOpacity
@@ -89,10 +71,10 @@ const RetryableErrorBannerComponent: React.FC<RetryableErrorBannerProps> = ({
         accessibilityRole="button"
         accessibilityLabel={retryA11y}
         accessibilityState={{ disabled: retrying }}
-        style={[defaultButton, retrying && { opacity: 0.6 }] as any}
+        style={[defaultButton(_styleTheme), retrying && themeStyle('components_RetryableErrorBanner_5', {  }, _styleTheme)] as any}
         testID="retryable-error-banner-retry"
       >
-        <Text style={defaultButtonText as any}>{retrying ? '…' : 'Retry'}</Text>
+        <Text style={defaultButtonText(_styleTheme) as any}>{retrying ? '…' : 'Retry'}</Text>
       </TouchableOpacity>
       {onDismiss ? (
         <TouchableOpacity
@@ -101,10 +83,10 @@ const RetryableErrorBannerComponent: React.FC<RetryableErrorBannerProps> = ({
           accessibilityRole="button"
           accessibilityLabel={actionLabel ? `Dismiss ${actionLabel} error` : 'Dismiss error'}
           accessibilityState={{ disabled: retrying }}
-          style={[defaultButton, retrying && { opacity: 0.6 }] as any}
+          style={[defaultButton(_styleTheme), retrying && themeStyle('components_RetryableErrorBanner_6', {  }, _styleTheme)] as any}
           testID="retryable-error-banner-dismiss"
         >
-          <Text style={defaultButtonText as any}>Dismiss</Text>
+          <Text style={defaultButtonText(_styleTheme) as any}>Dismiss</Text>
         </TouchableOpacity>
       ) : null}
     </View>

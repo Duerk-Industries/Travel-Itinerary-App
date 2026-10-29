@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import GmailForwardingConfirmation from './GmailForwardingConfirmation';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Platform, Share, TouchableOpacity, View } from 'react-native';
@@ -8,6 +10,7 @@ import ImportSenderAddresses from './ImportSenderAddresses';
 export default function ImportForwardingSetup({ address, backendUrl, headers, onRotated, styles }: {
   address: string; backendUrl: string; headers: Record<string, string>; onRotated: (address: string) => void; styles: Record<string, any>;
 }) {
+  const _styleTheme = useStyleTheme();
   const [qr, setQr] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -47,7 +50,7 @@ export default function ImportForwardingSetup({ address, backendUrl, headers, on
       }
     } catch { setNotice('Contact could not be saved. Copy the address instead.'); }
   };
-  const button = (label: string, action: () => void) => <TouchableOpacity key={label} style={[styles.button, { minHeight: 44 }]} accessibilityRole="button" disabled={busy} onPress={action}><Text style={styles.buttonText}>{label}</Text></TouchableOpacity>;
+  const button = (label: string, action: () => void) => <TouchableOpacity key={label} style={[styles.button, themeStyle('components_ImportForwardingSetup_1', {  }, _styleTheme)]} accessibilityRole="button" disabled={busy} onPress={action}><Text style={styles.buttonText}>{label}</Text></TouchableOpacity>;
   return <View style={styles.section}>
     <Text style={styles.sectionTitle}>Forward by Email</Text>
     <Text selectable style={styles.flightTitle}>{address}</Text>
@@ -58,7 +61,7 @@ export default function ImportForwardingSetup({ address, backendUrl, headers, on
       {button('Send a test', () => void request('test'))}
       {button('Rotate address', () => setRotate(true))}
     </View>
-    {qr ? <Image source={{ uri: qr }} style={{ width: 180, height: 180 }} accessibilityLabel="QR code for your private forwarding address" /> : null}
+    {qr ? <Image source={{ uri: qr }} style={themeStyle('components_ImportForwardingSetup_2', {  }, _styleTheme)} accessibilityLabel="QR code for your private forwarding address" /> : null}
     {rotate && <View><Text>Changing your address stops mail to the old address immediately. Update any forwarding rules afterward.</Text><View style={styles.row}>{button('Change my address', () => void request('rotate'))}{button('Keep current address', () => setRotate(false))}</View></View>}
     <Text style={styles.helperText}>Set up automatic forwarding (optional)</Text>
     <View style={styles.row}>{['Gmail', 'Outlook', 'Apple Mail'].map(name => button(name, () => setProvider(name)))}</View>

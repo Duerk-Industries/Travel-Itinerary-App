@@ -1,7 +1,9 @@
+import { themeStyle, linkTextColor } from '../theme/theme';
+import { useAppTheme as useStyleTheme, useAppTheme } from '../theme/ThemeContext';
 import React, { createContext, forwardRef, useContext } from 'react';
 import { Text, type TextProps } from 'react-native';
-import { useAppTheme } from '../theme/ThemeContext';
-import { linkTextColor } from '../theme/theme';
+
+
 
 /** True inside another ThemedText, where text should keep inheriting its parent's color. */
 const InsideText = createContext(false);
@@ -17,6 +19,7 @@ export type ThemedTextProps = TextProps & {
  * a color you set always wins. Text nested inside another ThemedText inherits as usual unless it asks for a tone.
  */
 export const ThemedText = forwardRef<Text, ThemedTextProps>(function ThemedText({ style, tone, ...rest }, ref) {
+  const _styleTheme = useStyleTheme();
   const theme = useAppTheme();
   const { colors } = theme;
   const nested = useContext(InsideText);
@@ -24,7 +27,7 @@ export const ThemedText = forwardRef<Text, ThemedTextProps>(function ThemedText(
   // The provider wraps the Text rather than its children, so the Text's own children stay exactly as written.
   return (
     <InsideText.Provider value>
-      <Text ref={ref} {...rest} style={nested && !tone ? style : [{ color }, style]} />
+      <Text ref={ref} {...rest} style={nested && !tone ? style : [themeStyle('components_ThemedText_1', { color: color }, _styleTheme), style]} />
     </InsideText.Provider>
   );
 });

@@ -71,7 +71,8 @@ export const uploadOneBlogFile = async (
   dayDate: string,
   pickedFile: PickedMediaFile,
   caption?: string | null,
-  tags?: string[]
+  tags?: string[],
+  tripCover = false
 ): Promise<UploadOneFileResult> => {
   const mediaKind = isAudioMimeType(pickedFile.mimeType) ? 'audio' : isVideoMimeType(pickedFile.mimeType) ? 'video' : 'photo';
   const idempotencyKey = createIdempotencyKey('up');
@@ -88,6 +89,7 @@ export const uploadOneBlogFile = async (
       body: JSON.stringify({
         dayDate: typeof dayDate === 'string' ? dayDate : String(dayDate ?? ''),
         mediaKind,
+        tripCover,
         mimeType: pickedFile.mimeType == null ? null : String(pickedFile.mimeType),
         byteSize: Number.isFinite(Number(pickedFile.size)) ? Number(pickedFile.size) : 0,
         caption: caption == null ? null : String(caption),
@@ -139,7 +141,8 @@ export const uploadOneBlogFile = async (
     const body = await completeRes.json().catch(() => ({}));
     return { outcome: 'error', error: body.error || 'Failed to finalize upload' };
   }
-  return { outcome: 'ok', asset };
+  const completedAsset = await completeRes.json().catch(() => null);
+  return { outcome: 'ok', asset: completedAsset?.id ? completedAsset : asset };
 };
 
 export type UploadBatchResult = {

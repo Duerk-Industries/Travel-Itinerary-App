@@ -9,8 +9,6 @@ import * as path from 'path';
 // file that does not use ThemedText (or a style that carries a color). Fix a failure by importing
 // `{ ThemedText as Text }` from components/ThemedText, or by giving the text a color.
 const ALLOWED: Record<string, string> = {
-  'components/NotificationInbox.tsx': 'a modal with its own fixed white background; its text is meant to be dark',
-  'components/PendingExpenseLogoutDialog.tsx': 'a modal with its own fixed white background; its text is meant to be dark',
   'components/KeepsakeMapCaptureHost.tsx': 'rendered off screen to capture a print image; never shown in the app theme',
   'components/BlogRichTextView.tsx': 'bare Text here is nested inside Text that already carries the caller-supplied color',
 };

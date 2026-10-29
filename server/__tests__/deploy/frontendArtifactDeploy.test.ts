@@ -7,6 +7,24 @@ import path from 'path';
 const root = path.resolve(__dirname, '../../..');
 
 describe('Phase 11 frontend artifact deployment', () => {
+  it.each(['/public/blog/**', '/sitemap-trip-blogs.xml'])('routes %s to the backend before the SPA fallback in every hosting config', (sourcePath) => {
+    const hosting = JSON.parse(fs.readFileSync(path.join(root, 'firebase.json'), 'utf8')).hosting;
+    const index = hosting.rewrites.findIndex((rewrite: { source: string }) => rewrite.source === sourcePath);
+    expect(index).toBeGreaterThanOrEqual(0);
+    expect(index).toBeLessThan(hosting.rewrites.findIndex((rewrite: { source: string }) => rewrite.source === '**'));
+    expect(hosting.rewrites[index].run).toEqual({ serviceId: 'travel-itinerary-app', region: 'us-east5' });
+    for (const file of ['deploy-common.sh', 'deploy-common.ps1']) {
+      const fileSource = fs.readFileSync(path.join(root, 'scripts/lib', file), 'utf8');
+      const source = fileSource.slice(fileSource.indexOf('rewrites'));
+      const rewrite = source.split('\n').find(line => line.includes(`source${file.endsWith('.ps1') ? ' =' : ':'} '${sourcePath}'`));
+      expect(rewrite).toBeDefined();
+      expect(rewrite).toContain('run');
+      expect(rewrite).toContain('serviceId');
+      expect(rewrite).toContain('region');
+      expect(source.indexOf(rewrite!)).toBeLessThan(source.indexOf("source" + (file.endsWith('.ps1') ? ' =' : ':') + " '**'"));
+    }
+  });
+
   it.each(['deploy-test.sh', 'deploy-prod.sh', 'cutover-test-to-prod.sh', 'rollback.sh'])(
     '%s deploys the manifest-paired frontend artifact through a generated Firebase config',
     (script) => {

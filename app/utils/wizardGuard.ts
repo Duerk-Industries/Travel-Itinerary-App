@@ -1,4 +1,5 @@
 export type PageKey =
+  | 'all-trips'
   | 'home'
   | 'overview'
   | 'blog'

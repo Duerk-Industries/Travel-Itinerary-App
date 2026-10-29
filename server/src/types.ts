@@ -1,4 +1,4 @@
-export type ItineraryStatus = 'Needed' | 'Proposed' | 'Needs Booking' | 'Booked' | 'Cancelled' | 'Completed';
+export type ItineraryStatus = 'Proposed' | 'Needs Booking' | 'Booked' | 'Cancelled' | 'Completed';
 export type ActivityType =
   | 'Class'
   | 'Concert/Show'
@@ -277,7 +277,9 @@ export type AuditAction =
   | 'DEPLOY_ROLLBACK'
   | 'DEPLOY_TEARDOWN'
   | 'BLOG_COMMENT_HIDDEN'
-  | 'BLOG_COMMENT_UNHIDDEN';
+  | 'BLOG_COMMENT_UNHIDDEN'
+  | 'TRIP_TEMPLATES_IMPORTED'
+  | 'TRIP_TEMPLATE_IMPORT_REMOVED';
 
 export interface AuditLogEntry {
   id: string;
@@ -380,6 +382,7 @@ export interface GroupMember {
 }
 
 export interface Trip {
+  createdBy?: string | null;
   id: string;
   groupId: string;
   name: string;
@@ -657,6 +660,8 @@ export interface Lodging extends PlanningCoordinates {
 }
 
 export interface Activity extends PlanningCoordinates {
+  /** Nearby lodging for an undated optional activity. */
+  nearLodgingId?: string | null;
   catalogId?: string | null;
   dayPosition?: number | null;
   dayOrderPinned?: boolean;
@@ -669,6 +674,7 @@ export interface Activity extends PlanningCoordinates {
   userVote?: -1 | 1 | null;
   netRating?: number;
   userRating?: -1 | 1 | null;
+  /** Empty when this is an optional, unscheduled activity. */
   date: string;
   name: string;
   startLocation: string;
@@ -864,7 +870,7 @@ export interface ItineraryComparison {
 }
 
 export interface ItineraryGeneratedTransfer {
-  status: 'Needed';
+  status: 'Proposed';
   transferType: TransferMode;
   departureDate: string;
   arrivalDate: string;
@@ -879,7 +885,7 @@ export interface ItineraryGeneratedTransfer {
 }
 
 export interface ItineraryGeneratedLodging {
-  status: 'Needed';
+  status: 'Proposed';
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -905,7 +911,7 @@ export interface ItineraryGeneratedActivity {
 }
 
 export interface ItineraryGeneratedCarRental {
-  status: 'Needed';
+  status: 'Proposed';
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;
@@ -963,6 +969,8 @@ export interface Expense {
   exchangeRateDate?: string | null;
   payerIds: string[];
   forIds: string[];
+  /** Weight per traveler in forIds for an uneven split (2 = double portion); absent or null means an equal split. */
+  forShares?: Record<string, number> | null;
   sourceType?: string | null;
   sourceId?: string | null;
   notes?: string | null;

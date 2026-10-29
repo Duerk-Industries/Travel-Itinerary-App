@@ -3,6 +3,33 @@ import { describe, expect, test } from '@jest/globals';
 import { buildAllExpenses, calculateAllTotals } from '../utils/costs';
 
 describe('costs consistency', () => {
+  test('uses the trip creator as the single fallback payer without changing who shares the costs', () => {
+    const members = ['other', 'creator'];
+    const expenses = buildAllExpenses(
+      [{ id: 'flight', cost: 100, passengerIds: members }],
+      [{ id: 'hotel', totalCost: 100, travelerIds: members }],
+      [{ id: 'activity', cost: 100, travelerIds: members }],
+      [{ id: 'car', cost: 100, travelerIds: members }],
+      [{ id: 'daily', amount: 100, forIds: members }], 'USD', members, 'creator');
+    expect(expenses).toHaveLength(5);
+    expenses.forEach((expense) => {
+      expect(expense.payerIds).toEqual(['creator']);
+      expect(expense.forIds).toEqual(members);
+    });
+    const totals = calculateAllTotals(expenses, members, members, {});
+    expect(totals.ledgerPaidTotals).toEqual({ other: 0, creator: 500 });
+    expect(totals.ledgerUsedTotals).toEqual({ other: 250, creator: 250 });
+    expect(totals.finalBalances).toEqual({ other: -250, creator: 250 });
+  });
+
+  test('preserves an explicit payer and resolves legacy multi-payer lists just like the editor', () => {
+    const expenses = buildAllExpenses([
+      { id: 'explicit', cost: 20, paidBy: ['other'] },
+      { id: 'legacy', cost: 40, paidBy: ['other', 'creator'] },
+    ], [], [], [], [{ id: 'daily', amount: 10, payerIds: ['other', 'creator'] }], 'USD', ['creator', 'other'], 'creator');
+    expenses.forEach((expense) => expect(expense.payerIds).toEqual(['other']));
+  });
+
   test.each(['transferType', 'transfer_type'])('keeps per-person paid, incurred and covered balances correct across separate transfer categories (%s)', (typeField) => {
     const members = ['m1', 'm2', 'm3'];
     const expenses = buildAllExpenses([
@@ -15,8 +42,8 @@ describe('costs consistency', () => {
     expect(ground).toHaveLength(1);
     const airTotals = calculateAllTotals(air, members, members, {});
     const groundTotals = calculateAllTotals(ground, members, members, {});
-    expect(airTotals.ledgerPaidTotals.m1).toBe(50.01);
-    expect(airTotals.ledgerPaidTotals.m2).toBe(50);
+    expect(airTotals.ledgerPaidTotals.m1).toBe(100.01);
+    expect(airTotals.ledgerPaidTotals.m2).toBe(0);
     expect(airTotals.ledgerUsedTotals.m2).toBe(50.01);
     expect(airTotals.ledgerUsedTotals.m3).toBe(50);
     expect(groundTotals.ledgerPaidTotals.m3).toBe(45.01);
@@ -28,8 +55,8 @@ describe('costs consistency', () => {
     });
     expect(Object.values(combined.finalBalances).reduce((sum, amount) => sum + amount, 0)).toBeCloseTo(0, 8);
     const covered = calculateAllTotals(expenses, members, ['m1', 'm2'], { m3: 'm1' });
-    expect(covered.finalBalances.m1).toBeCloseTo(22.51, 8);
-    expect(covered.finalBalances.m2).toBeCloseTo(-22.51, 8);
+    expect(covered.finalBalances.m1).toBeCloseTo(72.51, 8);
+    expect(covered.finalBalances.m2).toBeCloseTo(-72.51, 8);
   });
   test('splits air and every ground transfer type without counting booking expenses twice', () => {
     const types = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other', 'Public Transit', 'Private Transfer'];

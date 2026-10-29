@@ -35,6 +35,19 @@ export const computeDurationFromRange = (startDate?: string | null, endDate?: st
   return diff > 0 ? diff : null;
 };
 
+/**
+ * The placeholder start for a trip that only knows its month: the 1st of the next time that month comes
+ * round, counting today's month only if today is its 1st (an already-begun month is next year's).
+ */
+export const nextMonthStart = (month: number, today: Date = new Date()): string | null => {
+  if (!Number.isInteger(month) || month < 1 || month > 12) return null;
+  const year = today.getFullYear();
+  const thisYearStart = new Date(year, month - 1, 1);
+  const todayStart = new Date(year, today.getMonth(), today.getDate());
+  const startYear = thisYearStart >= todayStart ? year : year + 1;
+  return `${startYear}-${String(month).padStart(2, '0')}-01`;
+};
+
 export const computeEndDateFromDuration = (startDate: string, days: number): string | null => {
   const start = parseDate(startDate);
   if (!start || !Number.isFinite(days) || days <= 0) return null;

@@ -1,6 +1,8 @@
 import { ensureUserInTrip, getFeatureFlag } from '../db';
 import { getPlanningDayPoints } from '../services/planningPointsService';
 import { locateTripItem } from '../services/locateItemService';
+import { daysBetween, shiftEstimatedItems } from '../services/tripDateShiftService';
+import { logError } from '../logger';
 import { geocoderConfigured, getGeocoder } from '../services/geocoder';
 import { z } from 'zod';
 import { getEnvFlag } from '../env';
@@ -64,6 +66,7 @@ import { IngestionError } from '../ingestion/shared/userFailures';
 import { ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY } from '../services/itineraryDocumentImportService';
 import { enqueueAsyncDocumentImportJob, getAsyncDocumentImportJob } from '../services/documentImportAsyncService';
 import { TokenPayload } from '../auth';
+import type { Trip } from '../types';
 import { readDto } from '../utils/dtoParse';
 import {
   bulkDeleteShareInvitesDto,
@@ -799,29 +802,40 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.post('/wizard', async (req, res) => {
-  const userId = (req as any).user.userId as string;
-  const role = ((req as any).user as TokenPayload).role;
-  const { name, description, notes, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
-  if (!name || !String(name).trim()) {
-    res.status(400).json({ error: 'Trip name is required' });
-    return;
+/** A wizard-creation failure that maps to a plain HTTP status (validation 400, past-dates 403). */
+export class WizardTripError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+/**
+ * Creates a trip, its group and its members from the Create Trip wizard's payload, enforcing the
+ * same tier limits wherever it is called from. Throws WizardTripError for a bad request and
+ * EntitlementError when a tier limit or feature gate refuses it.
+ */
+export const createWizardTrip = async (
+  user: { userId: string; role?: string; email?: string },
+  body: any,
+  via: 'wizard' | 'template' = 'wizard'
+): Promise<{ trip: Trip; groupId: string; invites: { id: string; email: string }[] }> => {
+  const userId = user.userId;
+  const role = user.role as TokenPayload['role'];
+  const { name, description, notes, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = body ?? {};
+  if (!name || !String(name).trim()) throw new WizardTripError(400, 'Trip name is required');
+  if (!startDate && !endDate && !startMonth && !startYear && durationDays != null &&
+      (!Number.isSafeInteger(Number(durationDays)) || Number(durationDays) <= 0)) {
+    throw new WizardTripError(400, 'Trip length must be a positive whole number of days');
   }
   const memberInputs = Array.isArray(participants) ? participants : [];
   for (const p of memberInputs) {
-    if (!p?.firstName || !p?.lastName) {
-      res.status(400).json({ error: 'Each participant needs a first and last name' });
-      return;
-    }
+    if (!p?.firstName || !p?.lastName) throw new WizardTripError(400, 'Each participant needs a first and last name');
   }
   const emails = memberInputs
     .map((p) => String(p.email ?? '').trim().toLowerCase())
     .filter(Boolean);
   const unique = new Set(emails);
-  if (unique.size !== emails.length) {
-    res.status(400).json({ error: 'Participant emails must be unique' });
-    return;
-  }
+  if (unique.size !== emails.length) throw new WizardTripError(400, 'Participant emails must be unique');
 
   const members = memberInputs.map((p) => {
     const email = String(p.email ?? '').trim().toLowerCase();
@@ -829,70 +843,78 @@ router.post('/wizard', async (req, res) => {
     return email ? { email, guestName: guestName || undefined } : { guestName };
   });
 
-  try {
-    await assertCanUseFeature(userId, 'trip_creation', role);
-    if (role !== 'admin' && isPastUtcDate(typeof endDate === 'string' ? endDate : null)) {
-      res.status(403).json({ error: 'Non-admin users cannot create trips that end in the past.' });
-      return;
-    }
-    const travelerLimit = await getLimit(userId, 'max_travelers_per_trip');
-    if (
-      role !== 'admin' &&
-      Number.isFinite(travelerLimit) &&
-      typeof travelerLimit === 'number' &&
-      memberInputs.length + 1 > travelerLimit
-    ) {
-      throw new EntitlementError(
-        'TIER_LIMIT_REACHED',
-        `You have reached the traveler limit of ${travelerLimit} for your current plan`,
-        { limitKey: 'max_travelers_per_trip' }
-      );
-    }
-    await assertUnderActiveTripLimit(userId, role);
-    const result = await createTripWithGroupAndMembers({
-      ownerId: userId,
-      tripName: String(name).trim(),
-      description: typeof description === 'string' ? description.trim() || null : null,
-      notes: typeof notes === 'string' ? notes.trim() || null : null,
-      destination: null,
-      locationIds: normalizeLocationIds(locationIds),
-      mustSeeAttractions: normalizeMustSeeAttractions(mustSeeAttractions),
-      startDate: typeof startDate === 'string' ? startDate : null,
-      endDate: typeof endDate === 'string' ? endDate : null,
-      startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
-      startYear: Number.isFinite(Number(startYear)) ? Number(startYear) : null,
-      durationDays: Number.isFinite(Number(durationDays)) ? Number(durationDays) : null,
-      currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : 'USD',
-      members,
-    });
-    await recordUsage(userId, 'trip_creations', 1, { windowKey: 'all-time', tripId: result.trip.id });
+  await assertCanUseFeature(userId, 'trip_creation', role);
+  if (role !== 'admin' && isPastUtcDate(typeof endDate === 'string' ? endDate : null)) {
+    throw new WizardTripError(403, 'Non-admin users cannot create trips that end in the past.');
+  }
+  const travelerLimit = await getLimit(userId, 'max_travelers_per_trip');
+  if (
+    role !== 'admin' &&
+    Number.isFinite(travelerLimit) &&
+    typeof travelerLimit === 'number' &&
+    memberInputs.length + 1 > travelerLimit
+  ) {
+    throw new EntitlementError(
+      'TIER_LIMIT_REACHED',
+      `You have reached the traveler limit of ${travelerLimit} for your current plan`,
+      { limitKey: 'max_travelers_per_trip' }
+    );
+  }
+  await assertUnderActiveTripLimit(userId, role);
+  const result = await createTripWithGroupAndMembers({
+    ownerId: userId,
+    tripName: String(name).trim(),
+    description: typeof description === 'string' ? description.trim() || null : null,
+    notes: typeof notes === 'string' ? notes.trim() || null : null,
+    destination: null,
+    locationIds: normalizeLocationIds(locationIds),
+    mustSeeAttractions: normalizeMustSeeAttractions(mustSeeAttractions),
+    startDate: typeof startDate === 'string' ? startDate : null,
+    endDate: typeof endDate === 'string' ? endDate : null,
+    startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
+    startYear: Number.isFinite(Number(startYear)) ? Number(startYear) : null,
+    durationDays: Number.isFinite(Number(durationDays)) ? Number(durationDays) : null,
+    currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : 'USD',
+    members,
+  });
+  await recordUsage(userId, 'trip_creations', 1, { windowKey: 'all-time', tripId: result.trip.id });
 
-    for (const p of memberInputs) {
-      const email = String(p.email ?? '').trim();
-      if (!email) {
-        const firstName = String(p.firstName ?? '').trim();
-        const lastName = String(p.lastName ?? '').trim();
-        if (firstName && lastName) {
-          await createFellowTraveler(userId, firstName, lastName);
-        }
+  for (const p of memberInputs) {
+    const email = String(p.email ?? '').trim();
+    if (!email) {
+      const firstName = String(p.firstName ?? '').trim();
+      const lastName = String(p.lastName ?? '').trim();
+      if (firstName && lastName) {
+        await createFellowTraveler(userId, firstName, lastName);
       }
     }
+  }
 
-    const ownerEmail = (req as any).user?.email as string | undefined;
-    const tripName = result.trip?.name ?? String(name).trim();
-    const inviteEmails = memberInputs.map((p) => String(p.email ?? '').trim()).filter(Boolean);
-    const uniqueEmails = Array.from(new Set(inviteEmails));
-    await Promise.all(
-      uniqueEmails.map((inviteEmail) =>
-        sendTripInviteEmailBestEffort(inviteEmail, tripName, ownerEmail ?? null).catch(() => undefined)
-      )
-    );
+  const ownerEmail = user.email;
+  const tripName = result.trip?.name ?? String(name).trim();
+  const inviteEmails = memberInputs.map((p) => String(p.email ?? '').trim()).filter(Boolean);
+  const uniqueEmails = Array.from(new Set(inviteEmails));
+  await Promise.all(
+    uniqueEmails.map((inviteEmail) =>
+      sendTripInviteEmailBestEffort(inviteEmail, tripName, ownerEmail ?? null).catch(() => undefined)
+    )
+  );
 
-    recordServerEvent({ userId, role: ((req as any).user as TokenPayload)?.role, eventName: 'trip_created', tripId: result.trip.id, properties: { via_wizard: true } });
-    res.status(201).json({ trip: result.trip, groupId: result.groupId, invites: result.invites });
+  recordServerEvent({ userId, role, eventName: 'trip_created', tripId: result.trip.id, properties: { via_wizard: true, via } });
+  return { trip: result.trip, groupId: result.groupId, invites: result.invites };
+};
+
+router.post('/wizard', async (req, res) => {
+  const user = (req as any).user as TokenPayload;
+  try {
+    res.status(201).json(await createWizardTrip(user, req.body));
   } catch (err) {
     if (err instanceof EntitlementError) {
       res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    if (err instanceof WizardTripError) {
+      res.status(err.status).json({ error: err.message });
       return;
     }
     res.status(400).json({ error: (err as Error).message });
@@ -1035,6 +1057,8 @@ router.patch('/:id', async (req, res) => {
       res.status(403).json({ error: 'Non-admin users cannot update a trip to end in the past.' });
       return;
     }
+    // A placeholder start (a trip created with only a month) is replaced by real dates: suggested items follow it.
+    const before: any = dateMode === 'range' && typeof startDate === 'string' ? await getTripById(req.params.id).catch(() => null) : null;
     const updated = await updateTripDetails(userId, req.params.id, {
       ...(hasDescription ? { description: typeof description === 'string' ? description : null } : {}),
       ...(hasNotes ? { notes: typeof notes === 'string' ? notes : null } : {}),
@@ -1049,6 +1073,11 @@ router.patch('/:id', async (req, res) => {
       dateMode: dateMode === 'month' || dateMode === 'range' ? dateMode : undefined,
       currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : null,
     });
+    if (before && Number(before.startMonth) > 0 && before.startDate) {
+      const previous = before.startDate instanceof Date ? before.startDate.toISOString() : String(before.startDate);
+      await shiftEstimatedItems(userId, req.params.id, daysBetween(previous, startDate))
+        .catch((err) => logError('[trip-dates] suggested items not moved', err));
+    }
     res.json(updated);
   } catch (err) {
     const message = (err as Error).message;

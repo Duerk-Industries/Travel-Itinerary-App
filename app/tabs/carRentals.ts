@@ -1,3 +1,4 @@
+import { singlePayerIds } from '../utils/payerSelection';
 import type { PlanningCoordinates } from '../../server/src/types';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
@@ -72,7 +73,7 @@ export const buildCarRentalFromDraft = (
     return { error: 'Enter at least a pickup location, vendor, or car model.' };
   }
   const cleanCost = sanitizeCostInput(draft.cost || '');
-  const paidBy = draft.paidBy.length ? draft.paidBy : defaultPayerId ? [defaultPayerId] : [];
+  const paidBy = singlePayerIds(draft.paidBy, defaultPayerId);
   const travelerIds = draft.travelerIds.length ? draft.travelerIds : paidBy.length ? paidBy : defaultTravelerIds;
   const rental: CarRental = {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,

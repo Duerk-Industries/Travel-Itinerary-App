@@ -13,6 +13,18 @@ describe('blog media upload finalization', () => {
     global.fetch = originalFetch;
   });
 
+  it('returns the finalized picture URLs and marks trip covers as unassigned', async () => {
+    const completed = { id: 'picture-1', dayDate: '', primaryUrl: 'https://example.test/picture.jpg' };
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce(jsonResponse({ asset: { id: 'picture-1' }, uploadUrl: null }, 201))
+      .mockResolvedValueOnce(jsonResponse(completed, 200));
+    global.fetch = fetchMock as jest.Mock;
+    const result = await uploadOneBlogFile({ backendUrl: 'https://example.test', headers: {}, tripId: 'trip-1' }, '',
+      { blob: new Blob(['photo']), mimeType: 'image/jpeg', size: 5 }, null, [], true);
+    expect(result).toEqual({ outcome: 'ok', asset: completed });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ tripCover: true, dayDate: '' });
+  });
+
   it('does not finalize a voice note when storage did not provide an upload URL', async () => {
     const fetchMock = jest.fn().mockResolvedValueOnce(jsonResponse({ asset: { id: 'voice-1' }, uploadUrl: null }, 201));
     global.fetch = fetchMock as jest.Mock;

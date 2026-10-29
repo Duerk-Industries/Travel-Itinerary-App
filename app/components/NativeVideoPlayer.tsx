@@ -1,4 +1,7 @@
 // @ts-nocheck
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 // Native (iOS/Android) inline video playback for trip-blog media, via expo-video. Split out of
 // BlogMediaPreview into its own component because `useVideoPlayer` is a hook and BlogMediaPreview
 // conditionally decides between this and <Image>/web <video> — hooks can't be called from inside
@@ -11,6 +14,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 // playback, so this rendering never needs its own controls in that context. Omitting them keeps
 // every existing full-size caller unchanged.
 const NativeVideoPlayer = ({ uri, backgroundColor, height = 220, muted = false, showControls = true }) => {
+  const _styleTheme = useStyleTheme();
   const player = useVideoPlayer(uri, (instance) => {
     instance.loop = false;
     instance.muted = muted;
@@ -20,7 +24,7 @@ const NativeVideoPlayer = ({ uri, backgroundColor, height = 220, muted = false, 
     <VideoView
       testID="blog-media-video-native"
       player={player}
-      style={{ width: '100%', height, borderRadius: 8, backgroundColor }}
+      style={themeStyle('components_NativeVideoPlayer_1', { height: height, backgroundColor: backgroundColor }, _styleTheme)}
       nativeControls={showControls}
       contentFit={showControls ? 'contain' : 'cover'}
     />

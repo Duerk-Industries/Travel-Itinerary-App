@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
@@ -29,7 +32,9 @@ const GENERAL_KEY = 'general';
 // Renders nothing when packing_lists_v2 is disabled (the presets endpoint
 // 404s), so the account screen degrades cleanly on either feature-flag state
 // without a separate flag lookup on the client.
-const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUrl, headers, jsonHeaders, theme }) => {
+const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUrl, headers, jsonHeaders, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [presets, setPresets] = useState<PackingPreset[]>([]);
   const [addedKeys, setAddedKeys] = useState<Set<string>>(new Set());
@@ -89,7 +94,7 @@ const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUr
 
   if (available === null) {
     return (
-      <View style={[localStyles.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]} testID="account-packing-presets-loading">
+      <View style={[localStyles(_styleTheme).card, themeStyle('components_PackingPresetSelector_1', { theme: theme }, _styleTheme)]} testID="account-packing-presets-loading">
         <ActivityIndicator />
       </View>
     );
@@ -100,36 +105,36 @@ const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUr
 
   return (
     <View
-      style={[localStyles.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+      style={[localStyles(_styleTheme).card, themeStyle('components_PackingPresetSelector_2', { theme: theme }, _styleTheme)]}
       testID="account-packing-presets"
     >
-      <Text style={[localStyles.title, { color: theme.colors.text }]}>Packing list preferences</Text>
-      <Text style={[localStyles.subtitle, { color: theme.colors.textMuted }]}>
+      <Text style={[localStyles(_styleTheme).title, themeStyle('components_PackingPresetSelector_3', { theme: theme }, _styleTheme)]}>Packing list preferences</Text>
+      <Text style={[localStyles(_styleTheme).subtitle, themeStyle('components_PackingPresetSelector_4', { theme: theme }, _styleTheme)]}>
         Add a preset to your editable personal list. Those items are included in every trip you join.
       </Text>
-      {error ? <Text style={localStyles.error}>{error}</Text> : null}
-      <View style={[localStyles.row, { borderColor: theme.colors.border }]} testID="account-packing-preset-general">
-        <View style={localStyles.rowText}>
-          <Text style={[localStyles.rowLabel, { color: theme.colors.text }]}>General</Text>
-          <Text style={[localStyles.rowMeta, { color: theme.colors.textMuted }]}>Always included</Text>
+      {error ? <Text style={localStyles(_styleTheme).error}>{error}</Text> : null}
+      <View style={[localStyles(_styleTheme).row, themeStyle('components_PackingPresetSelector_5', { theme: theme }, _styleTheme)]} testID="account-packing-preset-general">
+        <View style={localStyles(_styleTheme).rowText}>
+          <Text style={[localStyles(_styleTheme).rowLabel, themeStyle('components_PackingPresetSelector_6', { theme: theme }, _styleTheme)]}>General</Text>
+          <Text style={[localStyles(_styleTheme).rowMeta, themeStyle('components_PackingPresetSelector_7', { theme: theme }, _styleTheme)]}>Always included</Text>
         </View>
         <Switch value onValueChange={() => {}} disabled testID="account-packing-preset-toggle-general" />
       </View>
       {activePresets
         .filter((preset) => preset.key !== GENERAL_KEY)
         .map((preset) => (
-          <View key={preset.key} style={[localStyles.row, { borderColor: theme.colors.border }]} testID={`account-packing-preset-${preset.key}`}>
-            <View style={localStyles.rowText}>
-              <Text style={[localStyles.rowLabel, { color: theme.colors.text }]}>{preset.label}</Text>
-              {preset.description ? <Text style={[localStyles.rowMeta, { color: theme.colors.textMuted }]}>{preset.description}</Text> : null}
+          <View key={preset.key} style={[localStyles(_styleTheme).row, themeStyle('components_PackingPresetSelector_8', { theme: theme }, _styleTheme)]} testID={`account-packing-preset-${preset.key}`}>
+            <View style={localStyles(_styleTheme).rowText}>
+              <Text style={[localStyles(_styleTheme).rowLabel, themeStyle('components_PackingPresetSelector_9', { theme: theme }, _styleTheme)]}>{preset.label}</Text>
+              {preset.description ? <Text style={[localStyles(_styleTheme).rowMeta, themeStyle('components_PackingPresetSelector_10', { theme: theme }, _styleTheme)]}>{preset.description}</Text> : null}
             </View>
             <Pressable
-              style={[localStyles.addButton, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceMuted ?? theme.colors.surface }]}
+              style={[localStyles(_styleTheme).addButton, themeStyle('components_PackingPresetSelector_11', { theme: theme }, _styleTheme)]}
               onPress={() => addPreset(preset.key)}
               disabled={addedKeys.has(preset.key)}
               testID={`account-packing-preset-toggle-${preset.key}`}
             >
-              <Text style={{ color: theme.colors.link ?? theme.colors.text, fontWeight: '700' }}>{addedKeys.has(preset.key) ? 'Added' : 'Add'}</Text>
+              <Text style={themeStyle('components_PackingPresetSelector_12', { theme: theme }, _styleTheme)}>{addedKeys.has(preset.key) ? 'Added' : 'Add'}</Text>
             </Pressable>
           </View>
         ))}
@@ -137,16 +142,6 @@ const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUr
   );
 };
 
-const localStyles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 8, padding: 14, marginVertical: 12, gap: 10 },
-  title: { fontSize: 18, fontWeight: '700' },
-  subtitle: { fontSize: 13 },
-  error: { color: '#dc2626', fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },
-  rowText: { flex: 1, gap: 2, paddingRight: 12 },
-  rowLabel: { fontSize: 15, fontWeight: '600' },
-  rowMeta: { fontSize: 12 },
-  addButton: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 },
-});
+const localStyles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_PackingPresetSelector_13', { StyleSheet: StyleSheet }, _theme);
 
 export default PackingPresetSelector;

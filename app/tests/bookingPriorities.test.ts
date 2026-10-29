@@ -4,7 +4,7 @@ describe('buildBookingPriorities', () => {
   const REFERENCE = new Date('2026-08-16T12:00:00Z');
 
   test('excludes every status other than Needs Booking across all item kinds', () => {
-    const statuses = ['Needed', 'Proposed', 'Booked', 'Completed', 'Cancelled', '', null];
+    const statuses = ['Proposed', 'Booked', 'Completed', 'Cancelled', '', null];
     expect(buildBookingPriorities({
       flights: statuses.map((status, index) => ({ id: `f${index}`, status })),
       lodgings: statuses.map((status, index) => ({ id: `l${index}`, status })),

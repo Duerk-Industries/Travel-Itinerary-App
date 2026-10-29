@@ -282,7 +282,7 @@ describe('itinerary prompt plan service', () => {
     expect(result.preferenceContract.mobility).toMatchObject({ value: 'M', source: 'account' });
     expect(result.profile.carPreference).toBe('FullTripRental');
     expect(result.profile.interactionStyle).toBe('Guided');
-    expect(result.generatedItems.transfers[0].status).toBe('Needed');
+    expect(result.generatedItems.transfers[0].status).toBe('Proposed');
     expect(result.generatedItems.transfers[0].transferType).toBe('Bus');
     expect(result.generatedItems.activities.length).toBeGreaterThanOrEqual(2);
     expect(result.generatedItems.activities[0].status).toBe('Proposed');
@@ -293,7 +293,7 @@ describe('itinerary prompt plan service', () => {
     // Every generated activity should retain a useful blurb even when no
     // verified catalog description is available.
     expect(result.generatedItems.activities[0].notes).toBeTruthy();
-    expect(result.generatedItems.carRentals[0].status).toBe('Needed');
+    expect(result.generatedItems.carRentals[0].status).toBe('Proposed');
     // plan.md operational output targets: p0 <350, p1 <450,
     // p2 <600 per seven days, p3 <350. Rendering has no documented target,
     // so use its configured 900-token ceiling. This fixture supplies nonzero

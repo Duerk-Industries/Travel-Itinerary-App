@@ -1,11 +1,14 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+import SelectField from './SelectField';
 import React, { memo, useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
-import { toWebStyle } from '../utils/webStyle';
 import DialogShell from './DialogShell';
 import DateField from './DateField';
 import DraftTextInput from './DraftTextInput';
-import type { AppTheme } from '../theme/theme';
+
 
 type Participant = {
   id: string;
@@ -44,9 +47,11 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
   participantLabel,
   defaultPayerId,
   styles,
-  theme,
+  theme: _providedTheme,
   testID,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const initialPayer = useMemo(() => {
     if (defaultPayerId && sortedIds.includes(defaultPayerId)) return defaultPayerId;
     return sortedIds[0] ?? '';
@@ -122,57 +127,12 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
     options: string[],
     testIdPrefix: string
   ) => {
-    if (Platform.OS === 'web') {
-      return (
-        <View style={{ gap: 4 }}>
-          <Text style={styles.headerText}>{label}</Text>
-          <select
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            style={{
-              ...toWebStyle(styles.input),
-              width: '100%',
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-            }}
-            data-testid={`${testIdPrefix}-select`}
-            aria-label={label}
-          >
-            {options.map((id) => (
-              <option key={id} value={id}>
-                {participantLabel(id)}
-              </option>
-            ))}
-          </select>
-        </View>
-      );
-    }
     return (
-      <View style={{ gap: 4 }}>
+      <View style={themeStyle('components_PaymentDialog_1', {  }, (theme ?? _styleTheme))}>
         <Text style={styles.headerText}>{label}</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {options.map((id) => {
-            const selected = id === value;
-            return (
-              <TouchableOpacity
-                key={`${testIdPrefix}-${id}`}
-                style={[
-                  styles.expenseToggleButton,
-                  selected ? styles.expenseToggleSelected : styles.expenseToggleUnselected,
-                ]}
-                onPress={() => setValue(id)}
-                testID={`${testIdPrefix}-${id}`}
-                accessibilityRole="button"
-                accessibilityLabel={`${label}: ${participantLabel(id)}`}
-                accessibilityState={{ selected }}
-              >
-                <Text style={[styles.expenseToggleText, selected && styles.expenseToggleTextSelected]}>
-                  {participantLabel(id)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <SelectField styles={styles} title={label} testID={`${testIdPrefix}-select`} value={value}
+          options={options.map(id => ({ value: id, label: participantLabel(id) })).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }))}
+          onChange={id => { if (id) setValue(id); }} />
       </View>
     );
   };
@@ -185,12 +145,12 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
       onClose={onCancel}
       testID={testID ?? 'payment-dialog'}
       useNativeModal
-      overlayStyle={{ justifyContent: 'center' }}
+      overlayStyle={themeStyle('components_PaymentDialog_2', {  }, (theme ?? _styleTheme))}
       cardStyle={[styles.modalCard, styles.expenseModalCard]}
     >
           <View style={styles.row}>
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              style={[styles.button, styles.smallButton, themeStyle('components_PaymentDialog_3', {  }, (theme ?? _styleTheme))]}
               onPress={onCancel}
               accessibilityRole="button"
               accessibilityLabel="Close payment dialog"
@@ -198,8 +158,8 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
               <Text style={styles.buttonText}>Close</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={{ gap: 12, paddingBottom: 8 }}>
-            <View style={{ gap: 4 }}>
+          <ScrollView style={themeStyle('components_PaymentDialog_4', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('components_PaymentDialog_5', {  }, (theme ?? _styleTheme))}>
+            <View style={themeStyle('components_PaymentDialog_6', {  }, (theme ?? _styleTheme))}>
               <Text style={styles.headerText}>Payment Date</Text>
               <DateField
                 value={paymentDate}
@@ -215,7 +175,7 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
             {renderDropdown('Payer', payerId, setPayerId, payerOptions, 'payment-payer')}
             {renderDropdown('Receiver', receiverId, setReceiverId, receiverOptions, 'payment-receiver')}
 
-            <View style={{ gap: 4 }}>
+            <View style={themeStyle('components_PaymentDialog_7', {  }, (theme ?? _styleTheme))}>
               <Text style={styles.headerText}>Amount</Text>
               <DraftTextInput
                 style={styles.input}
@@ -229,9 +189,9 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
               />
             </View>
 
-            {error ? <Text style={styles.errorText ?? { color: 'red' }}>{error}</Text> : null}
+            {error ? <Text style={styles.errorText ?? themeStyle('components_PaymentDialog_8', {  }, (theme ?? _styleTheme))}>{error}</Text> : null}
 
-            <View style={[styles.row, { gap: 8 }]}>
+            <View style={[styles.row, themeStyle('components_PaymentDialog_9', {  }, (theme ?? _styleTheme))]}>
               <TouchableOpacity
                 style={[styles.button, styles.smallButton]}
                 onPress={handleSave}

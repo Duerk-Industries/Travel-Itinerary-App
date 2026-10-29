@@ -191,13 +191,13 @@ export async function createTripViaWizard(
   await page.waitForLoadState('networkidle');
   await page.getByText('Next').click();
 
-  // Steps 4–8 (Itinerary, Flight Details, Accommodation Details, Activities,
-  // Rental Cars): click through without asserting exact order/labels, since
+  // Steps 4–9 (Itinerary, Flight Details, Accommodation Details, Activities,
+  // Rental Cars, Ground Transfers): click through without asserting exact order/labels, since
   // that sequence has changed before and is not what this helper is testing.
   // The Itinerary step gates "Next" behind an explicit Yes/No AI-generation
   // choice — pick "No" to skip it and keep this helper fast and API-key-free.
   const reviewHeading = page.getByText('Review & Confirm', { exact: true });
-  for (let i = 0; i < 8 && !(await reviewHeading.isVisible().catch(() => false)); i += 1) {
+  for (let i = 0; i < 9 && !(await reviewHeading.isVisible().catch(() => false)); i += 1) {
     await page.waitForLoadState('networkidle');
     const skipAiItinerary = page.getByText('No', { exact: true });
     if (await skipAiItinerary.isVisible().catch(() => false)) {
@@ -208,7 +208,7 @@ export async function createTripViaWizard(
     await page.waitForTimeout(300);
   }
 
-  // Step 9: Review & Confirm
+  // Step 10: Review & Confirm
   await expect(reviewHeading).toBeVisible();
   await expect(page.getByText(tripName)).toBeVisible();
   await page.waitForLoadState('networkidle');

@@ -1,7 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, type AppTheme } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import { uiTransferCalendarEvent } from '../utils/calendarEvents';
 import React, { useEffect, useState } from 'react';
 import type { Flight } from '../tabs/transfers';
-import type { AppTheme } from '../theme/theme';
+
 import type { MapApp } from '../utils/mapLinks';
 import { isFlightTransfer } from '../utils/transferCategory';
 import { formatFlightDetails } from '../utils/overviewBuilder';
@@ -15,7 +17,9 @@ type Props = {
   lodgings?: TransferHotel[]; activities?: TransferActivity[];
   onClose: () => void; onEdit: () => void; onDelete: () => void; testID?: string;
 };
-function TransferDetails({ flight, backendUrl, headers, styles, theme, readOnly, mapApp, lodgings = [], activities = [], onClose, onEdit, onDelete, testID }: Props) {
+function TransferDetails({ flight, backendUrl, headers, styles, theme: _providedTheme, readOnly, mapApp, lodgings = [], activities = [], onClose, onEdit, onDelete, testID }: Props) {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [detailAirportLabels, setDetailAirportLabels] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!flight || !isFlightTransfer(flight)) return;

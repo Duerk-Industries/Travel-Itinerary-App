@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import AddToCalendarButton from './AddToCalendarButton';
 import { rentalCalendarEvent } from '../utils/calendarEvents';
 import React from 'react';
@@ -11,11 +14,12 @@ import {
   LEGACY_ITINERARY_STATUS,
   normalizeItineraryStatus,
 } from '../utils/itineraryStatus';
-import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
 import CarRentalEditForm from './CarRentalEditForm';
 import EditableDataGrid, { type GridCellError, type GridColumn } from './EditableDataGrid';
-import type { AppTheme } from '../theme/theme';
+
 import { fixedTableColumn } from '../utils/tableColumns';
+import CsvTransferControls from './CsvTransferControls';
 
 export type CarRentalsPanelProps = {
   /** Committed car-rental rows rendered in the table. */
@@ -39,8 +43,6 @@ export type CarRentalsPanelProps = {
   onUpdateCarRental: (id: string, draft?: CarRentalDraft) => boolean | void | Promise<boolean | void>;
   /** Delete a car-rental row by id. */
   onRemoveCarRental: (id: string) => void | Promise<void>;
-  /** Upvote/downvote a proposed rental (±1). */
-  onVoteCarRental: (id: string, value: 1 | -1) => void | Promise<void>;
   /** Post-trip rating (±1). */
   onRateCarRental: (id: string, value: 1 | -1) => void | Promise<void>;
   theme?: AppTheme;
@@ -50,6 +52,17 @@ export type CarRentalsPanelProps = {
   /** Kill switch for row-tap-to-edit + sticky identity/actions columns
    * (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`. */
   featureTapToEditTables?: boolean;
+  /** Car-rental CSV import/export. Omit (or leave both flags off) to hide the buttons. */
+  csvTransfer?: {
+    backendUrl: string;
+    headers: Record<string, string>;
+    tripId?: string | null;
+    tripStart?: string | null;
+    tripEnd?: string | null;
+    enabledImport: boolean;
+    enabledExport: boolean;
+    onImported?: () => void;
+  };
 };
 
 /**
@@ -74,14 +87,16 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   onAddCarRental,
   onUpdateCarRental,
   onRemoveCarRental,
-  onVoteCarRental,
   onRateCarRental,
-  theme,
+  theme: _providedTheme,
   externalEditCarRentalId,
   onExternalEditHandled,
   showList = true,
   featureTapToEditTables = true,
+  csvTransfer,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [editingCarId, setEditingCarId] = React.useState<string | null>(null);
   const [tableEditing, setTableEditing] = React.useState(false);
@@ -168,7 +183,6 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
     { key: 'cost', label: 'Cost', width: 110, editor: 'decimal', getValue: (row) => String(row.cost || '') },
     { key: 'model', label: 'Car Model', width: 150, editor: 'text', getValue: (row) => row.model || '' },
     { key: 'notes', label: 'Notes', width: 230, editor: 'textarea', getValue: (row) => row.notes || '' },
-    { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
@@ -210,14 +224,17 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
         <>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Car Rentals</Text>
+        {csvTransfer && !tableEditing ? (
+          <CsvTransferControls entity="car-rentals" backendUrl={csvTransfer.backendUrl} headers={csvTransfer.headers} tripId={csvTransfer.tripId} tripStart={csvTransfer.tripStart} tripEnd={csvTransfer.tripEnd} rows={carRentals} styles={styles} theme={theme} enabledImport={csvTransfer.enabledImport} enabledExport={csvTransfer.enabledExport} readOnly={isFollowingMode} onImported={csvTransfer.onImported} />
+        ) : null}
         {!isFollowingMode ? (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          <View style={themeStyle('components_CarRentalsPanel_1', {  }, (theme ?? _styleTheme))}>
             {!tableEditing ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="car-rental-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
             {tableEditing ? <>
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={cancelGridEdit} disabled={gridSaving} testID="car-rental-table-cancel"><Text style={styles.dangerButtonText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={styles.button} onPress={saveGridEdit} disabled={gridSaving} testID="car-rental-table-save"><Text style={styles.buttonText}>{gridSaving ? 'Saving…' : 'Save changes'}</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="car-rental-table-undo"><Text style={styles.buttonText}>↶</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="car-rental-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('components_CarRentalsPanel_2', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="car-rental-table-undo"><Text style={styles.buttonText}>↶</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('components_CarRentalsPanel_3', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="car-rental-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
             </> : null}
             {!tableEditing ? <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={openAddDialog} testID="car-rental-add"><Text style={styles.buttonText}>+ Add Rental</Text></TouchableOpacity> : null}
           </View>
@@ -235,7 +252,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
       >
       <View style={styles.table} testID="car-rentals-table">
         <View style={[styles.tableRow, styles.tableHeaderRow]}>
-          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(240), Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortCarTable('pickupLocation')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(240), Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_4', { theme: theme }, (theme ?? _styleTheme)) as any)]} onPress={() => sortCarTable('pickupLocation')}>
             <Text style={styles.headerText}>Route</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(120)]} onPress={() => sortCarTable('pickupDate')}>
@@ -247,20 +264,18 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
           <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('status')}>
             <Text style={styles.headerText}>Status</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('netVotes')}>
-            <Text style={styles.headerText}>Votes</Text>
-          </TouchableOpacity>
+
           <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('netRating')}>
             <Text style={styles.headerText}>Rating</Text>
           </TouchableOpacity>
-          <View style={[styles.tableHeaderCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
+          <View style={[styles.tableHeaderCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_5', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
             <Text style={styles.headerText}>Actions</Text>
           </View>
         </View>
 
         {sortedCarRentals.map((car, idx, arr) => (
           <TouchableOpacity key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]} onPress={() => { if (!isFollowingMode && featureTapToEditTables) openEditDialog(car); }} activeOpacity={0.8}>
-            <View style={[styles.tableCell, fixedTableColumn(240), Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+            <View style={[styles.tableCell, fixedTableColumn(240), Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_6', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
               <Text style={styles.cellText}>
                 {`${car.pickupLocation || 'Pickup'} → ${car.dropoffLocation || 'Drop-off'}`}
               </Text>
@@ -281,9 +296,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                 {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}
               </Text>
             </View>
-            <View style={[styles.tableCell, fixedTableColumn(110)]}>
-              <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
-            </View>
+
             <View style={[styles.tableCell, fixedTableColumn(110)]}>
               {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
                 <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
@@ -291,26 +304,17 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                 <Text style={styles.cellText}>-</Text>
               )}
             </View>
-            <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+            <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_7', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
               <View style={styles.actionCell}>
                 <AddToCalendarButton event={rentalCalendarEvent(car)} styles={styles} />
-                {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
-                  <>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => onVoteCarRental(car.id, 1)}>
-                      <Text style={styles.buttonText}>👍</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => onVoteCarRental(car.id, -1)}>
-                      <Text style={styles.buttonText}>👎</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : null}
+
                 {!isFollowingMode && shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
                   <>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => onRateCarRental(car.id, 1)}>
                       <Text style={styles.buttonText}>⭐</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => onRateCarRental(car.id, -1)}>
-                      <Text style={styles.buttonText}>✖</Text>
+                      <Text style={styles.dangerButtonText}>✖</Text>
                     </TouchableOpacity>
                   </>
                 ) : null}

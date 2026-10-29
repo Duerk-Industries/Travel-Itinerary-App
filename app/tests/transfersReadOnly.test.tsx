@@ -95,6 +95,23 @@ const flight: Flight = {
 };
 
 describe('FlightsTab read-only mode', () => {
+  test.each(['Flight', 'Public Transit'] as const)('opens an external %s editor without rendering its list', (transferType) => {
+    const transfer = { ...flight, transferType, transfer_type: transferType };
+    const onExternalEditHandled = jest.fn();
+    const { getByTestId, queryByTestId, getByText } = render(
+      <FlightsTab backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+        flights={[transfer]} setFlights={jest.fn()} groupMembers={[member]} defaultPayerId={member.id}
+        formatMemberName={(m) => m.id} payerName={() => 'Member'} headers={{}} jsonHeaders={{}}
+        findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}}
+        styles={styles} airportOptions={[]} onSearchAirports={() => {}}
+        externalEditFlightId={transfer.id} onExternalEditHandled={onExternalEditHandled} showList={false} />
+    );
+    expect(getByTestId('flight-modal-save')).toBeTruthy();
+    expect(queryByTestId(`transfer-edit-${transfer.id}`)).toBeNull();
+    fireEvent.press(getByText('Cancel'));
+    expect(onExternalEditHandled).toHaveBeenCalledTimes(1);
+  });
+
   beforeEach(() => {
     // FlightsTab refreshes its list on mount. Keep this suite self-contained so
     // that the background refresh cannot attempt localhost after Jest teardown.
@@ -108,7 +125,7 @@ describe('FlightsTab read-only mode', () => {
     jest.restoreAllMocks();
   });
 
-  test.each(['light', 'dark'] as const)('Details text follows the %s theme', mode => {
+  test.each(['light', 'dark'] as const)('Details uses the Edit button styling in the %s theme', mode => {
     const theme = getAppTheme(mode, 'light');
     const { getByTestId } = render(<FlightsTab transferScope="flights" backendUrl="http://localhost"
       userToken="token" activeTripId="trip-1" flights={[flight]} setFlights={jest.fn() as any}
@@ -117,7 +134,9 @@ describe('FlightsTab read-only mode', () => {
       fetchGroupMembersForActiveTrip={async () => {}} styles={styles} theme={theme}
       airportOptions={[]} onSearchAirports={() => {}} />);
     const button = getByTestId('transfer-details-flight-1');
-    expect(button.findByType('Text').props.style).toEqual(expect.arrayContaining([{ color: theme.colors.text }]));
+    const edit = getByTestId('transfer-edit-flight-1');
+    expect(button.props.style).toEqual(edit.props.style);
+    expect(button.findByType('Text').props.style).toEqual(edit.findByType('Text').props.style);
   });
 
   test.each(['flights', 'ground'] as const)('%s screen filters rows and totals, and offers the right transfer types', (transferScope) => {

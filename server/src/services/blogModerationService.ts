@@ -1,4 +1,4 @@
-import { ensureUserOwnsTrip, writeAuditLog } from '../db';
+import { ensureUserInTrip, writeAuditLog } from '../db';
 import { blogEngagementRepository } from '../blog/engagementRepository';
 import { BlogComment } from '../blog/engagementTypes';
 import { BlogEngagementUnauthorizedError, BlogTargetNotFoundError } from './blogEngagementErrors';
@@ -56,7 +56,7 @@ export const checkSpam = (body: string): SpamCheckResult => {
   return { isSpam: false, reason: null };
 };
 
-// --- Hide / unhide (owner or admin only) ------------------------------------------------------
+// --- Hide / unhide (any traveler on the trip, or an admin) -------------------------------------
 //
 // Deliberately not routed through resolveComment (which governs traveler/follower engagement) —
 // architecture §4: "Admin access is deliberately narrower than trip-owner access... The
@@ -65,8 +65,9 @@ export const checkSpam = (body: string): SpamCheckResult => {
 // resolveEngagementTarget/resolveComment already established for their own actions.
 const assertModerator = async (tripId: string, actorUserId: string, actorRole: string | undefined): Promise<void> => {
   if (actorRole === 'admin') return;
-  if (await ensureUserOwnsTrip(tripId, actorUserId)) return;
-  throw new BlogEngagementUnauthorizedError('Only the trip owner or an admin may moderate comments on this trip');
+  // Every traveler on the trip can moderate its comments (followers cannot), since the blog is theirs together.
+  if (await ensureUserInTrip(tripId, actorUserId)) return;
+  throw new BlogEngagementUnauthorizedError('Only travelers on this trip or an admin may moderate its comments');
 };
 
 const getCommentInTrip = async (tripId: string, commentId: string): Promise<BlogComment> => {

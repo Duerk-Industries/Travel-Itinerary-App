@@ -1,4 +1,9 @@
 // @ts-nocheck
+import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 // Mounted once near the top of app/App.tsx (see useShareIntent's own requirement to run before
 // other providers). Surfaces whenever the OS reports a pending "send to WanderBunnies" share —
 // lets the traveler confirm which trip/day it belongs to, preview what was shared, add an
@@ -35,22 +40,24 @@ type IncomingShareModalProps = {
   onImported?: () => void;
 };
 
-const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, styles, theme, onImported }: IncomingShareModalProps) => {
+const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, styles, theme: _providedTheme, onImported }: IncomingShareModalProps) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
   const [selectedTripId, setSelectedTripId] = useState(activeTripId ?? null);
   const [dayDate, setDayDate] = useState(todayDate());
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const textColor = theme?.colors?.text ?? '#111827';
-  const mutedColor = theme?.colors?.textMuted ?? '#6b7280';
-  const borderColor = theme?.colors?.border ?? '#ccd4df';
-  const surfaceColor = theme?.colors?.surface ?? '#ffffff';
+  const textColor = theme?.colors?.text ?? themeStyle('components_IncomingShareModal_22', {  }, (theme ?? _styleTheme));
+  const mutedColor = theme?.colors?.textMuted ?? themeStyle('components_IncomingShareModal_23', {  }, (theme ?? _styleTheme));
+  const borderColor = theme?.colors?.border ?? themeStyle('components_IncomingShareModal_24', {  }, (theme ?? _styleTheme));
+  const surfaceColor = theme?.colors?.surface ?? themeStyle('components_IncomingShareModal_25', {  }, (theme ?? _styleTheme));
   const dateFieldStyles = {
     ...(styles ?? {}),
-    cellText: { ...(styles?.cellText ?? {}), color: textColor },
+    cellText: themeStyle('components_IncomingShareModal_1', { styles: styles, textColor: textColor }, (theme ?? _styleTheme)),
   };
-  const dateFieldStyle = { borderWidth: 1, borderColor, borderRadius: 8, padding: 8, color: textColor, marginBottom: 12 };
+  const dateFieldStyle = themeStyle('components_IncomingShareModal_2', { borderColor: borderColor, textColor: textColor }, (theme ?? _styleTheme));
 
   useEffect(() => {
     if (!hasShareIntent) return;
@@ -145,19 +152,19 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
   };
 
   return (
-    <DialogShell visible title="Send to WanderBunnies" styles={styles} onClose={close} useNativeModal cardStyle={{ maxWidth: 480, width: '92%', maxHeight: '85%' }}>
-      <ScrollView style={{ maxHeight: 420 }}>
-        <Text style={{ color: mutedColor, marginBottom: 10 }}>
+    <DialogShell visible title="Send to WanderBunnies" styles={styles} onClose={close} useNativeModal cardStyle={themeStyle('components_IncomingShareModal_3', {  }, (theme ?? _styleTheme))}>
+      <ScrollView style={themeStyle('components_IncomingShareModal_4', {  }, (theme ?? _styleTheme))}>
+        <Text style={themeStyle('components_IncomingShareModal_5', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
           {files.length} {files.length === 1 ? 'item' : 'items'} shared from your device.
         </Text>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+        <View style={themeStyle('components_IncomingShareModal_6', {  }, (theme ?? _styleTheme))}>
           {files.map((file, index) => (
-            <View key={file.path ?? index} style={{ width: 64, height: 64, borderRadius: 6, overflow: 'hidden', borderWidth: 1, borderColor, backgroundColor: surfaceColor, alignItems: 'center', justifyContent: 'center' }}>
+            <View key={file.path ?? index} style={themeStyle('components_IncomingShareModal_7', { borderColor: borderColor, surfaceColor: surfaceColor }, (theme ?? _styleTheme))}>
               {isVideoMimeType(file.mimeType) ? (
-                <Text style={{ fontSize: 20 }}>🎬</Text>
+                <Text style={themeStyle('components_IncomingShareModal_8', {  }, (theme ?? _styleTheme))}>🎬</Text>
               ) : (
-                <Image source={{ uri: file.path }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                <Image source={{ uri: file.path }} style={themeStyle('components_IncomingShareModal_9', {  }, (theme ?? _styleTheme))} resizeMode="cover" />
               )}
             </View>
           ))}
@@ -165,24 +172,24 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
 
         {trips.length > 1 ? (
           <>
-            <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Trip</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+            <Text style={themeStyle('components_IncomingShareModal_10', { textColor: textColor }, (theme ?? _styleTheme))}>Trip</Text>
+            <View style={themeStyle('components_IncomingShareModal_11', {  }, (theme ?? _styleTheme))}>
               {trips.map((trip) => (
                 <TouchableOpacity
                   key={trip.id}
                   testID={`share-trip-${trip.id}`}
                   accessibilityRole="button"
                   onPress={() => { setSelectedTripId(trip.id); setDayDate(defaultDayDateFor(trip)); }}
-                  style={[styles?.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: trip.id === selectedTripId ? undefined : (theme?.colors?.surfaceMuted ?? '#e5e7eb') }]}
+                  style={[styles?.button, themeStyle('components_IncomingShareModal_12', { trip: trip, selectedTripId: selectedTripId, theme: theme }, (theme ?? _styleTheme))]}
                 >
-                  <Text style={trip.id === selectedTripId ? styles?.buttonText : { color: textColor }}>{trip.name}</Text>
+                  <Text style={trip.id === selectedTripId ? styles?.buttonText : themeStyle('components_IncomingShareModal_13', { textColor: textColor }, (theme ?? _styleTheme))}>{trip.name}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </>
         ) : null}
 
-        <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Day (YYYY-MM-DD)</Text>
+        <Text style={themeStyle('components_IncomingShareModal_14', { textColor: textColor }, (theme ?? _styleTheme))}>Day (YYYY-MM-DD)</Text>
         <DateField
           testID="share-day-input"
           value={dayDate}
@@ -196,7 +203,7 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
           accessibilityLabel="Trip day"
         />
 
-        <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Message (optional)</Text>
+        <Text style={themeStyle('components_IncomingShareModal_15', { textColor: textColor }, (theme ?? _styleTheme))}>Message (optional)</Text>
         <TextInput
           testID="share-message-input"
           multiline
@@ -204,15 +211,15 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
           onChangeText={setMessage}
           placeholder={files.length > 1 ? 'A note about today…' : 'Add a caption…'}
           placeholderTextColor={mutedColor}
-          style={{ minHeight: 70, borderWidth: 1, borderColor, borderRadius: 8, padding: 8, textAlignVertical: 'top', color: textColor, marginBottom: 4 }}
+          style={themeStyle('components_IncomingShareModal_16', { borderColor: borderColor, textColor: textColor }, (theme ?? _styleTheme))}
         />
-        <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 12 }}>
+        <Text style={themeStyle('components_IncomingShareModal_17', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
           {files.length > 1 ? 'With multiple items, this becomes a general message for the day.' : 'With a single item, this becomes its caption.'}
         </Text>
       </ScrollView>
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-        <TouchableOpacity accessibilityRole="button" disabled={submitting} onPress={importFiles} style={[styles?.button, { minHeight: 44 }]}><Text style={styles?.buttonText}>Import to WanderBunnies</Text></TouchableOpacity>
+      <View style={themeStyle('components_IncomingShareModal_18', {  }, (theme ?? _styleTheme))}>
+        <TouchableOpacity accessibilityRole="button" disabled={submitting} onPress={importFiles} style={[styles?.button, themeStyle('components_IncomingShareModal_19', {  }, (theme ?? _styleTheme))]}><Text style={styles?.buttonText}>Import to WanderBunnies</Text></TouchableOpacity>
         <TouchableOpacity
           testID="share-submit"
           accessibilityRole="button"
@@ -222,8 +229,8 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
         >
           {submitting ? <ActivityIndicator /> : <Text style={styles?.buttonText}>Add to trip blog</Text>}
         </TouchableOpacity>
-        <TouchableOpacity testID="share-cancel" accessibilityRole="button" disabled={submitting} onPress={close} style={[styles?.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]}>
-          <Text style={{ color: textColor }}>Cancel</Text>
+        <TouchableOpacity testID="share-cancel" accessibilityRole="button" disabled={submitting} onPress={close} style={[styles?.button, themeStyle('components_IncomingShareModal_20', { theme: theme }, (theme ?? _styleTheme))]}>
+          <Text style={themeStyle('components_IncomingShareModal_21', { textColor: textColor }, (theme ?? _styleTheme))}>Cancel</Text>
         </TouchableOpacity>
       </View>
     </DialogShell>

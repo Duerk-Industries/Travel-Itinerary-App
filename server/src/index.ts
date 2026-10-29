@@ -27,6 +27,7 @@ import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './con
 import { getBillingPlanConfig } from './db';
 import { startScheduledAggregation } from './ai/analytics/scheduledAggregation';
 import { syncPackingPresetCatalogFromDisk } from './services/packingListCatalogService';
+import { syncTripTemplatesFromSeed } from './services/tripTemplateService';
 import { mailAdmissionProblems } from './ingestion/worker/mailReceiptWorker';
 import { isFeatureEnabled } from './services/entitlementService';
 import { refreshMeanVector } from './services/meanVectorService';
@@ -100,6 +101,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
       if (problems.length) logError(`[startup] Forwarded mailbox is enabled but not ready, so it will not accept mail: ${problems.join('; ')}. The rest of the API is running.`);
     }
     await syncPackingPresetCatalogFromDisk();
+    await syncTripTemplatesFromSeed();
     await warnIfStripePricesUnconfigured(getBillingPlanConfig);
     await seedDefaultTestAccountsIfEnabled();
     await refreshMeanVector().catch(err => logError('[mean-vector] Startup refresh failed', err));

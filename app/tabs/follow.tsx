@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { decodeInviteCode, encodeInviteCode, InvitePayload } from '../utils/inviteCodes';
@@ -147,6 +149,7 @@ export const FollowTab: React.FC<FollowTabProps> = ({
   logout,
   onOpenFollowedTrip,
 }) => {
+  const _styleTheme = useStyleTheme();
   const followTripByInvite = async () => {
     if (!userToken) return;
     const code = followInviteCode.trim();
@@ -340,10 +343,10 @@ export const FollowTab: React.FC<FollowTabProps> = ({
               {onOpenFollowedTrip ? (
                 <Text style={styles.linkText ?? styles.buttonText}>Open followed trip</Text>
               ) : null}
-              <Text style={[styles.bodyText, { fontWeight: '700', marginTop: 6 }]}>Today's itinerary</Text>
+              <Text style={[styles.bodyText, themeStyle('tabs_follow_1', {  }, _styleTheme)]}>Today's itinerary</Text>
               {f.todayDetails && f.todayDetails.length ? (
                 f.todayDetails.map((d) => (
-                  <View key={d.id ?? `${f.tripId}-${d.activity}`} style={{ marginTop: 4 }}>
+                  <View key={d.id ?? `${f.tripId}-${d.activity}`} style={themeStyle('tabs_follow_2', {  }, _styleTheme)}>
                     <Text style={styles.bodyText}>
                       {d.time ? `${d.time}  · ` : ''}
                       {d.activity}
@@ -372,10 +375,10 @@ export const FollowTab: React.FC<FollowTabProps> = ({
               <View key={trip.id} style={styles.followTripItem}>
                 <Text style={styles.flightTitle}>{trip.name}</Text>
                 <Text style={styles.helperText}>Group: {trip.groupName || 'N/A'}</Text>
-                <View style={{ marginTop: 6, gap: 6 }}>
+                <View style={themeStyle('tabs_follow_3', {  }, _styleTheme)}>
                   {code ? (
                     <View style={[styles.codeRow]}>
-                      <Text style={[styles.bodyText, { fontWeight: '700' }]}>Code: {code}</Text>
+                      <Text style={[styles.bodyText, themeStyle('tabs_follow_4', {  }, _styleTheme)]}>Code: {code}</Text>
                       <TouchableOpacity
                         style={[styles.button, styles.smallButton]}
                         onPress={() => {

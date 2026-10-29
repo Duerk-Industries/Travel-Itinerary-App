@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+
 import { taskFailure, track } from '../utils/analytics/track';
 
 type PreviewItem = { type: string; id: string | null; summary: string };
@@ -41,9 +44,11 @@ export const canShowItineraryDocumentImport = (params: {
   && ['premium', 'pro'].includes(String(params.userTier ?? '').toLowerCase());
 
 export const ItineraryDocumentImport: React.FC<Props> = ({
-  backendUrl, headers, tripId, userTier, featureEnabled, styles, readOnly = false, theme, onImported,
+  backendUrl, headers, tripId, userTier, featureEnabled, styles, readOnly = false, theme: _providedTheme, onImported,
   expanded: controlledExpanded, onExpandedChange, hideTrigger = false,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [internalExpanded, setInternalExpanded] = useState(false);
   const expanded = controlledExpanded ?? internalExpanded;
   const setExpanded = (value: boolean | ((current: boolean) => boolean)) => {
@@ -156,22 +161,22 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
   const fileInputColor = theme?.colors.text
     ?? StyleSheet.flatten(styles.bodyText)?.color
     ?? StyleSheet.flatten(styles.helperText)?.color
-    ?? '#ffffff';
+    ?? themeStyle('components_ItineraryDocumentImport_11', {  }, (theme ?? _styleTheme));
 
   return (
-    <View testID="itinerary-document-import" style={{ gap: 10 }}>
+    <View testID="itinerary-document-import" style={themeStyle('components_ItineraryDocumentImport_1', {  }, (theme ?? _styleTheme))}>
       {!hideTrigger ? (
-        <TouchableOpacity style={[styles.button, styles.smallButton, { alignSelf: 'flex-start' }]} onPress={() => setExpanded((value) => !value)}>
+        <TouchableOpacity style={[styles.button, styles.smallButton, themeStyle('components_ItineraryDocumentImport_2', {  }, (theme ?? _styleTheme))]} onPress={() => setExpanded((value) => !value)}>
           <Text style={styles.buttonText}>{expanded ? 'Close itinerary import' : 'Import Itinerary'}</Text>
         </TouchableOpacity>
       ) : null}
       {expanded ? (
-        <View style={[styles.card, { gap: 10, padding: 12 }]}>
+        <View style={[styles.card, themeStyle('components_ItineraryDocumentImport_3', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.headerText}>Import itinerary document</Text>
           <Text style={styles.helperText}>Paste text or choose a PDF, Markdown, or text file. You will preview changes before anything is saved.</Text>
           <TextInput
             testID="itinerary-import-text"
-            style={[styles.input, { minHeight: 140, textAlignVertical: 'top' }]}
+            style={[styles.input, themeStyle('components_ItineraryDocumentImport_4', {  }, (theme ?? _styleTheme))]}
             multiline
             placeholder="Paste reservations or itinerary text"
             value={documentText}
@@ -182,7 +187,7 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
             type="file"
             accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain"
             aria-label="Choose itinerary document"
-            style={{ color: fileInputColor, colorScheme: theme?.mode ?? 'light' }}
+            style={themeStyle('components_ItineraryDocumentImport_5', { fileInputColor: fileInputColor, theme: theme }, (theme ?? _styleTheme))}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               const file = event.target.files?.[0] ?? null;
               setSelectedFile(file);
@@ -196,25 +201,25 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
           <TouchableOpacity
             testID="itinerary-import-preview"
             disabled={busy}
-            style={[styles.button, styles.smallButton, busy ? { opacity: 0.6 } : null]}
+            style={[styles.button, styles.smallButton, busy ? themeStyle('components_ItineraryDocumentImport_6', {  }, (theme ?? _styleTheme)) : null]}
             onPress={() => submit(true)}
           >
             <Text style={styles.buttonText}>{busy ? 'Analyzing document…' : 'Preview import'}</Text>
           </TouchableOpacity>
           {busy ? (
-            <View accessibilityLiveRegion="polite" style={{ alignItems: 'center', gap: 6 }}>
+            <View accessibilityLiveRegion="polite" style={themeStyle('components_ItineraryDocumentImport_7', {  }, (theme ?? _styleTheme))}>
               <ActivityIndicator color={fileInputColor} />
               <Text style={styles.helperText}>Extracting itinerary items. Large PDFs can take up to a minute.</Text>
             </View>
           ) : null}
           {errorMessage ? (
-            <View testID="itinerary-import-error" accessibilityRole="alert" style={{ paddingVertical: 8 }}>
+            <View testID="itinerary-import-error" accessibilityRole="alert" style={themeStyle('components_ItineraryDocumentImport_8', {  }, (theme ?? _styleTheme))}>
               <Text style={styles.dangerButtonText ?? styles.bodyText}>{errorMessage}</Text>
             </View>
           ) : null}
           {successMessage ? <Text testID="itinerary-import-success" style={styles.bodyText}>{successMessage}</Text> : null}
           {preview ? (
-            <View testID="itinerary-import-preview-results" style={{ gap: 6 }}>
+            <View testID="itinerary-import-preview-results" style={themeStyle('components_ItineraryDocumentImport_9', {  }, (theme ?? _styleTheme))}>
               <Text style={styles.headerText}>Preview</Text>
               {(preview.warnings ?? []).map((warning, index) => (
                 <Text key={`warn-${index}`} testID="itinerary-import-warning" accessibilityRole="alert" style={styles.bodyText}>Check: {warning}</Text>
@@ -226,7 +231,7 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
               <TouchableOpacity
                 testID="itinerary-import-confirm"
                 disabled={busy}
-                style={[styles.button, busy ? { opacity: 0.6 } : null]}
+                style={[styles.button, busy ? themeStyle('components_ItineraryDocumentImport_10', {  }, (theme ?? _styleTheme)) : null]}
                 onPress={() => submit(false)}
               >
                 <Text style={styles.buttonText}>Confirm import</Text>

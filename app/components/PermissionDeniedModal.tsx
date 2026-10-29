@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { memo, useEffect, useState } from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import DialogShell from './DialogShell';
@@ -8,6 +10,7 @@ type PermissionDeniedModalProps = {
 };
 
 const PermissionDeniedModalComponent: React.FC<PermissionDeniedModalProps> = ({ styles }) => {
+  const _styleTheme = useStyleTheme();
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => subscribePermissionDenied(setMessage), []);
@@ -27,7 +30,7 @@ const PermissionDeniedModalComponent: React.FC<PermissionDeniedModalProps> = ({ 
       useNativeModal
     >
       <TouchableOpacity
-        style={[styles.button, { flex: 1 }]}
+        style={[styles.button, themeStyle('components_PermissionDeniedModal_1', {  }, _styleTheme)]}
         onPress={dismiss}
         accessibilityRole="button"
         accessibilityLabel="OK"

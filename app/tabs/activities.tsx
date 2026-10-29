@@ -1,21 +1,26 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+import { singlePayerIds } from '../utils/payerSelection';
 import AddToCalendarButton from '../components/AddToCalendarButton';
 import { activityCalendarEvent } from '../utils/calendarEvents';
-import type { PlanningCoordinates } from '../../server/src/types';
+import type { Activity, PlanningCoordinates } from '../../server/src/types';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from '../components/KeyboardAwareModal';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { startItemSaveTask } from '../utils/analytics/track';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
-import type { AppTheme } from '../theme/theme';
-import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+
+import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
 import GetYourGuideCta from '../components/GetYourGuideCta';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CsvTransferControls from '../components/CsvTransferControls';
-import ActivityEditForm from '../components/ActivityEditForm';
+import ActivityEditForm, { type ActivityFormLodging } from '../components/ActivityEditForm';
 import { resolveMemberClipboardValue } from '../utils/clipboardGrid';
 import { fixedTableColumn } from '../utils/tableColumns';
 import {
@@ -42,7 +47,7 @@ const fixedColumnStyle = fixedTableColumn;
 import { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
 export { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
 
-export type Tour = PlanningCoordinates & {
+export type Tour = PlanningCoordinates & Pick<Activity, 'nearLodgingId'> & {
   dayPosition?: number | null;
   catalogId?: string | null;
   id: string;
@@ -66,7 +71,7 @@ export type Tour = PlanningCoordinates & {
   travelerIds?: string[];
 };
 
-export type TourDraft = {
+export type TourDraft = Pick<Activity, 'nearLodgingId'> & {
   status: ItineraryStatus;
   activityType: ActivityType;
   date: string;
@@ -100,12 +105,18 @@ const activitySortValue = (tour: Tour, key: string): string | number => {
   return String(value);
 };
 
-const sortActivityRows = (rows: Tour[], sort: ActivitySort): Tour[] => {
+const sortActivityRows = (rows: Tour[], sort: ActivitySort, lodgings: ActivityFormLodging[] = []): Tour[] => {
   const key = sort.key ?? 'date';
   const direction = sort.direction === 'asc' ? 1 : -1;
+  const hotelEndDates = new Map(lodgings.map((hotel) => [hotel.id, hotel.checkOutDate?.slice(0, 10) ?? '']));
+  const activityDate = (tour: Tour): string => {
+    if (tour.date) return tour.date;
+    const checkout = tour.nearLodgingId ? hotelEndDates.get(tour.nearLodgingId) : '';
+    return checkout && /^\d{4}-\d{2}-\d{2}$/.test(checkout) ? checkout : '';
+  };
   return [...rows].sort((left, right) => {
-    const leftValue = activitySortValue(left, key);
-    const rightValue = activitySortValue(right, key);
+    const leftValue = key === 'date' ? activityDate(left) : activitySortValue(left, key);
+    const rightValue = key === 'date' ? activityDate(right) : activitySortValue(right, key);
     const leftEmpty = leftValue === '';
     const rightEmpty = rightValue === '';
     if (leftEmpty !== rightEmpty) return leftEmpty ? 1 : -1;
@@ -115,6 +126,8 @@ const sortActivityRows = (rows: Tour[], sort: ActivitySort): Tour[] => {
       const comparison = String(leftValue).localeCompare(String(rightValue), undefined, { sensitivity: 'base', numeric: true });
       if (comparison !== 0) return comparison * direction;
     }
+    // Optional choices follow every scheduled activity on the hotel's checkout day.
+    if (key === 'date' && Boolean(left.date) !== Boolean(right.date)) return left.date ? -1 : 1;
     if (sort.key === null && key === 'date') {
       const timeComparison = String(left.startTime ?? '').localeCompare(String(right.startTime ?? ''), undefined, { numeric: true });
       if (timeComparison !== 0) return timeComparison;
@@ -162,7 +175,7 @@ export const buildActivityPayload = (draft: TourDraft, defaultPayerId?: string |
   const activityType = ACTIVITY_TYPES.includes(draft.activityType) ? draft.activityType : 'Tour';
   if (!shouldRelaxRequiredFields(status) && !draft.name.trim()) return { error: 'Please enter an activity name.' };
   const cleanCost = sanitizeCostInput(draft.cost || '');
-  let payload: TourDraft = { ...draft, activityType, status, cost: cleanCost };
+  let payload: TourDraft = { ...draft, activityType, status, cost: cleanCost, paidBy: singlePayerIds(draft.paidBy, defaultPayerId) };
   if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
     payload = { ...payload, paidBy: [defaultPayerId] };
   }
@@ -261,8 +274,77 @@ export const fetchActivitiesForTrip = async ({
   return (data as any[]).map(normalizeActivityFromApi);
 };
 
+/** A template activity that fits a city and day of this trip, offered until the traveler adds it. */
+export type ActivitySuggestion = {
+  key: string;
+  name: string;
+  city: string;
+  activityType: string;
+  startTime: string;
+  duration: string;
+  startLocation: string;
+  /** The one-sentence version, shown while the suggestion is on offer. */
+  description: string;
+  /** The paragraph that becomes the activity's notes once it is added; absent from an older server, which sends only the sentence. */
+  details?: string;
+  image: { url: string; credit: string } | null;
+  bookAhead: boolean;
+  dates: string[];
+};
+
+/** The picture and sentence for one of the trip's optional activities, when it matches a template activity. */
+export type ActivityMedia = { description: string; image: { url: string; credit: string } | null };
+
+// Suggestions are a nicety: any failure, or the templates switched off, just means none are shown.
+// With a `date`, only the suggestions for the city that day's lodging puts the traveler in.
+export const fetchActivitySuggestions = async ({
+  backendUrl,
+  activeTripId,
+  token,
+  date,
+}: {
+  backendUrl: string;
+  activeTripId: string | null;
+  token?: string | null;
+  date?: string | null;
+}): Promise<{ suggestions: ActivitySuggestion[]; dismissedCount: number; activityMedia: Record<string, ActivityMedia> }> => {
+  const none = { suggestions: [], dismissedCount: 0, activityMedia: {} };
+  if (!activeTripId || !token) return none;
+  try {
+    const query = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? `?date=${date}` : '';
+    const res = await fetch(`${backendUrl}/api/trip-templates/trips/${activeTripId}/activity-suggestions${query}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return none;
+    const data = await res.json();
+    return Array.isArray(data?.suggestions)
+      ? { suggestions: data.suggestions, dismissedCount: Number(data.dismissedCount) || 0, activityMedia: data.activityMedia && typeof data.activityMedia === 'object' ? data.activityMedia : {} }
+      : none;
+  } catch {
+    return none;
+  }
+};
+
+// A dismissal is saved for this traveler on the trip; restoring brings back everything they dismissed.
+const sendSuggestionDismissal = async (backendUrl: string, token: string | null, tripId: string, key?: string): Promise<boolean> => {
+  try {
+    const res = await fetch(`${backendUrl}/api/trip-templates/trips/${tripId}/activity-suggestions/dismissals`, {
+      method: key ? 'POST' : 'DELETE',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      ...(key ? { body: JSON.stringify({ key }) } : {}),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
+const SUGGESTIONS_COLLAPSED = 4;
+
 export const normalizeActivityFromApi = (t: any): Tour => ({
     ...t,
+    date: t.date ?? '',
+    nearLodgingId: t.nearLodgingId ?? null,
     activityType: ACTIVITY_TYPES.includes(t.activityType) ? t.activityType : 'Tour',
     status: normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS),
     netVotes: Number(t.netVotes ?? 0) || 0,
@@ -297,6 +379,7 @@ type TourTabProps = {
   mode?: 'live' | 'wizard';
   readOnly?: boolean;
   defaultActivityDate?: string | null;
+  lodgings?: ActivityFormLodging[];
   tripEndDate?: string | null;
   destination?: string | null;
   featureGridEditing?: boolean;
@@ -312,6 +395,8 @@ type TourTabProps = {
   featureTapToEditTables?: boolean;
   featureActivityRecap?: boolean;
   onOpenActivityRecap?: (activity: Tour) => void;
+  /** Offer template activities that fit the days and cities of this trip. Off unless the page asks for it. */
+  showSuggestions?: boolean;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -328,12 +413,13 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   payerTotals,
   toursTotal,
   styles,
-  theme,
+  theme: _providedTheme,
   fetchTours,
   onDataChanged,
   mode = 'live',
   readOnly = false,
   defaultActivityDate = null,
+  lodgings = [],
   tripEndDate = null,
   destination = null,
   featureGridEditing = false,
@@ -347,7 +433,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   featureTapToEditTables = true,
   featureActivityRecap = false,
   onOpenActivityRecap,
+  showSuggestions = false,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
@@ -402,6 +491,64 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     setEditingTourId(tour?.id ?? null);
   };
 
+  // `lodgings` defaults to a fresh array each render, so the effect watches a signature of it instead.
+  const lodgingSignature = lodgings.map((l) => `${l.id}:${l.checkInDate ?? ''}:${l.checkOutDate ?? ''}`).join('|');
+  const tourSignature = tours.map((t) => `${t.id}:${t.name}:${t.date}`).join('|');
+  const [suggestions, setSuggestions] = useState<ActivitySuggestion[]>([]);
+  const [dismissedCount, setDismissedCount] = useState(0);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+  useEffect(() => {
+    if (!showSuggestions || mode === 'wizard' || readOnly || !showList) {
+      setSuggestions([]);
+      setDismissedCount(0);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchActivitySuggestions({ backendUrl, activeTripId, token: userToken }).then((found) => {
+      if (cancelled) return;
+      setSuggestions(found.suggestions);
+      setDismissedCount(found.dismissedCount);
+    });
+    // Lodgings place the traveler and activities take suggestions off the list, so refresh when either changes.
+    return () => { cancelled = true; };
+  }, [backendUrl, activeTripId, userToken, mode, readOnly, showList, showSuggestions, tourSignature, lodgingSignature]);
+  const visibleSuggestions = suggestions;
+  const dismissSuggestion = async (key: string) => {
+    if (!activeTripId) return;
+    if (!(await sendSuggestionDismissal(backendUrl, userToken, activeTripId, key))) {
+      Alert.alert('Unable to dismiss this suggestion. Please try again.');
+      return;
+    }
+    setSuggestions((current) => current.filter((s) => s.key !== key));
+    setDismissedCount((count) => count + 1);
+  };
+  const restoreSuggestions = async () => {
+    if (!activeTripId || !(await sendSuggestionDismissal(backendUrl, userToken, activeTripId))) return;
+    const found = await fetchActivitySuggestions({ backendUrl, activeTripId, token: userToken });
+    setSuggestions(found.suggestions);
+    setDismissedCount(found.dismissedCount);
+  };
+
+  // Adding a suggestion goes through the normal editor, so the traveler confirms the details before it is saved.
+  const openSuggestionEditor = (suggestion: ActivitySuggestion, date: string) => {
+    if (readOnly || !activeTripId) return;
+    const base: TourDraft = {
+      ...createInitialActivityState(date || defaultActivityDate),
+      date,
+      status: suggestion.bookAhead ? 'Needs Booking' : 'Proposed',
+      activityType: ACTIVITY_TYPES.includes(suggestion.activityType as ActivityType) ? (suggestion.activityType as ActivityType) : 'Tour',
+      name: suggestion.name,
+      startLocation: suggestion.startLocation,
+      startTime: suggestion.startTime,
+      duration: suggestion.duration,
+      notes: suggestion.details || suggestion.description,
+      travelerIds: activeMembers.map((m) => m.id),
+    };
+    if (defaultPayerId) base.paidBy = [defaultPayerId];
+    setEditingTour(base);
+    setEditingTourId(null);
+  };
+
   const closeTourEditor = () => {
     setEditingTour(null);
     setEditingTourId(null);
@@ -429,6 +576,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     const cleanCost = (editingTour.cost || '').replace(/[^0-9.]/g, '');
     let payload: TourDraft = {
       ...editingTour,
+      paidBy: singlePayerIds(editingTour.paidBy, defaultPayerId),
       activityType: ACTIVITY_TYPES.includes(editingTour.activityType) ? editingTour.activityType : 'Tour',
       status,
       cost: cleanCost,
@@ -498,24 +646,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       .catch((err) => Alert.alert(err.message));
   };
 
-  const voteOnTour = async (id: string, value: 1 | -1) => {
-    if (readOnly) return;
-    try {
-      const res = await fetch(`${backendUrl}/api/activities/${id}/vote`, {
-        method: 'POST',
-        headers: jsonHeaders,
-        body: JSON.stringify({ value }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Unable to submit vote');
-      }
-      onDataChanged ? onDataChanged() : await fetchTours();
-    } catch (err: any) {
-      Alert.alert(err?.message || 'Unable to submit vote');
-    }
-  };
-
   const rateTour = async (id: string, value: 1 | -1) => {
     if (readOnly) return;
     try {
@@ -535,8 +665,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const payerTotalsList = useMemo(() => Object.entries(payerTotals), [payerTotals]);
-  const sortedTours = useMemo(() => sortActivityRows(tours, activitySort), [tours, activitySort]);
-  const sortedGridRows = useMemo(() => sortActivityRows(gridRows, activitySort), [gridRows, activitySort]);
+  const sortedTours = useMemo(() => sortActivityRows(tours, activitySort, lodgings), [tours, activitySort, lodgings]);
+  const sortedGridRows = useMemo(() => sortActivityRows(gridRows, activitySort, lodgings), [gridRows, activitySort, lodgings]);
   const sortActivityTable = (key: string) => {
     setActivitySort((current) => current.key === key
       ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
@@ -566,7 +696,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         key: 'paidBy',
         label: 'Paid By',
         width: 210,
-        editor: 'multiSelect',
+        editor: 'singleSelect',
         getValue: (row) => people(row.paidBy),
         getSelectedIds: (row) => row.paidBy ?? [],
         pickerOptions: activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member) })),
@@ -582,7 +712,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       },
       { key: 'netRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
       { key: 'userRating', label: 'Your Rating', width: 120, editor: 'readonly', editable: false, getValue: (row) => row.userRating ? String(row.userRating) : '-' },
-      { key: 'netVotes', label: 'Votes', width: 100, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
       { key: 'suggestions', label: 'Suggestions', width: 140, editor: 'readonly', editable: false, getValue: () => 'See details' },
       { key: 'actions', label: 'Actions', width: 110, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
     ];
@@ -672,10 +801,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       setGridError(rowId, columnKey, 'Select a supported option.');
       return;
     }
-    if (column.editor === 'multiSelect') {
+    if (column.editor === 'multiSelect' || column.editor === 'singleSelect') {
       const resolved = resolveMemberClipboardValue(rawValue, activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member), email: member.email })));
       if (!resolved.ok) {
         setGridError(rowId, columnKey, resolved.error);
+        return;
+      }
+      if (column.editor === 'singleSelect' && resolved.value.length > 1) {
+        setGridError(rowId, columnKey, 'Select only one payer.');
         return;
       }
       value = resolved.value;
@@ -718,10 +851,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: 'Select a supported option.' });
         continue;
       }
-      if (column.editor === 'multiSelect') {
+      if (column.editor === 'multiSelect' || column.editor === 'singleSelect') {
         const resolved = resolveMemberClipboardValue(change.value, activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member), email: member.email })));
         if (!resolved.ok) {
           nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: resolved.error });
+          continue;
+        }
+        if (column.editor === 'singleSelect' && resolved.value.length > 1) {
+          nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: 'Select only one payer.' });
           continue;
         }
         value = resolved.value;
@@ -852,10 +989,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const renderDetailRow = (label: string, value: React.ReactNode) => (
-    <View style={[styles.modalRow, { alignItems: 'flex-start' }]} key={label}>
-      <Text style={[styles.cellText, { minWidth: 140, flexShrink: 0, fontWeight: '600' }]}>{label}</Text>
+    <View style={[styles.modalRow, themeStyle('tabs_activities_1', {  }, (theme ?? _styleTheme))]} key={label}>
+      <Text style={[styles.cellText, themeStyle('tabs_activities_2', {  }, (theme ?? _styleTheme))]}>{label}</Text>
       {typeof value === 'string' || typeof value === 'number' ? (
-        <Text style={[styles.cellText, { flex: 1 }]}>{value || '-'}</Text>
+        <Text style={[styles.cellText, themeStyle('tabs_activities_3', {  }, (theme ?? _styleTheme))]}>{value || '-'}</Text>
       ) : (
         value
       )}
@@ -869,7 +1006,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Activities</Text>
         {!readOnly ? (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          <View style={themeStyle('tabs_activities_4', {  }, (theme ?? _styleTheme))}>
             {featureGridEditing && !tableEditing ? (
               <TouchableOpacity style={styles.button} onPress={beginGridEdit} testID="activity-table-edit">
                 <Text style={styles.buttonText}>Edit table</Text>
@@ -880,7 +1017,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               <>
                 <TouchableOpacity
                   disabled={gridSaving}
-                  style={[styles.button, styles.dangerButton, gridSaving && { opacity: 0.45 }]}
+                  style={[styles.button, styles.dangerButton, gridSaving && themeStyle('tabs_activities_5', {  }, (theme ?? _styleTheme))]}
                   onPress={cancelGridEdit}
                   testID="activity-table-cancel"
                 >
@@ -888,7 +1025,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={gridSaving}
-                  style={[styles.button, gridSaving && { opacity: 0.45 }]}
+                  style={[styles.button, gridSaving && themeStyle('tabs_activities_6', {  }, (theme ?? _styleTheme))]}
                   onPress={saveGridEdit}
                   testID="activity-table-save"
                 >
@@ -896,7 +1033,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={gridSaving || gridHistory.length === 0}
-                  style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, (gridSaving || gridHistory.length === 0) && { opacity: 0.45 }]}
+                  style={[styles.button, themeStyle('tabs_activities_7', {  }, (theme ?? _styleTheme)), (gridSaving || gridHistory.length === 0) && themeStyle('tabs_activities_8', {  }, (theme ?? _styleTheme))]}
                   onPress={undoGridChange}
                   accessibilityLabel="Undo activity table change"
                   testID="activity-table-undo"
@@ -905,7 +1042,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={gridSaving || gridRedo.length === 0}
-                  style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, (gridSaving || gridRedo.length === 0) && { opacity: 0.45 }]}
+                  style={[styles.button, themeStyle('tabs_activities_9', {  }, (theme ?? _styleTheme)), (gridSaving || gridRedo.length === 0) && themeStyle('tabs_activities_10', {  }, (theme ?? _styleTheme))]}
                   onPress={redoGridChange}
                   accessibilityLabel="Redo activity table change"
                   testID="activity-table-redo"
@@ -966,7 +1103,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ].map((col, idx, arr) => (
               <TouchableOpacity
                 key={col.key}
-                style={[styles.cell, fixedColumnStyle(col.width), col.key === 'name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any), idx === arr.length - 1 && styles.lastCell]}
+                style={[styles.cell, fixedColumnStyle(col.width), col.key === 'name' && Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_activities_11', { theme: theme }, (theme ?? _styleTheme)) as any), idx === arr.length - 1 && styles.lastCell]}
                 onPress={() => sortActivityTable(col.key)}
                 accessibilityRole="button"
                 accessibilityLabel={`Sort by ${col.label}`}
@@ -979,18 +1116,18 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           {sortedTours.map((t) => (
             <TouchableOpacity key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openTourEditor(t); }} activeOpacity={0.8}>
               <View style={[styles.cell, fixedColumnStyle(140)]}>
-                <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
+                <Text style={styles.cellText}>{t.date ? formatDateLong(t.date) : 'Optional'}</Text>
               </View>
               <View style={[styles.cell, fixedColumnStyle(180)]}>
                 <Text style={styles.cellText}>{t.activityType || 'Tour'}</Text>
               </View>
-              <View style={[styles.cell, fixedColumnStyle(220), Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+              <View style={[styles.cell, fixedColumnStyle(220), Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_activities_12', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
                 <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); setSelectedTourId(t.id); }} testID={`activity-details-${t.id}`}>
                   <Text numberOfLines={1} style={[styles.cellText, styles.linkText]}>{t.name || '-'}</Text>
                 </TouchableOpacity>
                 {!readOnly && featureActivityRecap && normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                  <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); onOpenActivityRecap?.(t); }} testID={`activity-recap-${t.id}`} style={{ alignSelf: 'flex-start', marginTop: 3 }}>
-                    <Text style={[styles.linkText, { fontSize: 12 }]}>Recap</Text>
+                  <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); onOpenActivityRecap?.(t); }} testID={`activity-recap-${t.id}`} style={themeStyle('tabs_activities_13', {  }, (theme ?? _styleTheme))}>
+                    <Text style={[styles.linkText, themeStyle('tabs_activities_14', {  }, (theme ?? _styleTheme))]}>Recap</Text>
                   </TouchableOpacity>
                 ) : null}
                 {mode !== 'wizard' ? (
@@ -1025,10 +1162,50 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         </View>
         </HorizontalTableScroll>
       </> : null}
-      <View style={{ marginTop: 8 }}>
+      {mode !== 'wizard' && !readOnly && (visibleSuggestions.length || dismissedCount) ? (
+        <View testID="activity-suggestions" style={themeStyle('tabs_activities_20', {  }, (theme ?? _styleTheme))}>
+          <Text style={styles.sectionTitle}>Suggestions</Text>
+          <Text style={styles.helperText}>Ideas for the places you will be, from the example itineraries. Add one to keep it, or dismiss it.</Text>
+          {dismissedCount ? (
+            <TouchableOpacity onPress={restoreSuggestions} testID="activity-suggestions-restore">
+              <Text style={styles.linkText}>{`Bring back ${dismissedCount} dismissed`}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {(showAllSuggestions ? visibleSuggestions : visibleSuggestions.slice(0, SUGGESTIONS_COLLAPSED)).map((s) => (
+            <View key={s.key} testID={`activity-suggestion-${s.key}`} style={themeStyle('tabs_activities_21', {  }, (theme ?? _styleTheme))}>
+              {s.image ? <Image source={{ uri: s.image.url }} accessibilityIgnoresInvertColors accessibilityLabel={s.name} style={themeStyle('components_TripTemplatePicker_16', {  }, (theme ?? _styleTheme))} /> : null}
+              <View style={themeStyle('tabs_activities_22', {  }, (theme ?? _styleTheme))}>
+                <Text style={styles.cellText}>{s.name}</Text>
+                <Text style={styles.helperText}>
+                  {[s.city, s.dates.slice(0, 3).map((d) => formatDateLong(d)).join(', ') + (s.dates.length > 3 ? ` +${s.dates.length - 3} more` : ''), s.duration, s.bookAhead ? 'Book ahead' : ''].filter(Boolean).join(' · ')}
+                </Text>
+                {s.description ? <Text numberOfLines={3} style={styles.helperText}>{s.description}</Text> : null}
+                {s.image ? <Text style={[styles.helperText, themeStyle('components_TripTemplatePicker_15', {  }, (theme ?? _styleTheme))]}>Photo: {s.image.credit}</Text> : null}
+                <View style={themeStyle('tabs_activities_23', {  }, (theme ?? _styleTheme))}>
+                  <TouchableOpacity style={styles.button} onPress={() => openSuggestionEditor(s, s.dates[0])} testID={`activity-suggestion-add-${s.key}`}>
+                    <Text style={styles.buttonText}>Add to specific day</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.button} onPress={() => openSuggestionEditor(s, '')} testID={`activity-suggestion-optional-${s.key}`}>
+                    <Text style={styles.buttonText}>Add as optional</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => dismissSuggestion(s.key)} testID={`activity-suggestion-dismiss-${s.key}`}>
+                    <Text style={styles.dangerButtonText}>Dismiss</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ))}
+          {visibleSuggestions.length > SUGGESTIONS_COLLAPSED ? (
+            <TouchableOpacity onPress={() => setShowAllSuggestions((current) => !current)} testID="activity-suggestions-toggle">
+              <Text style={styles.linkText}>{showAllSuggestions ? 'Show fewer' : `Show all ${visibleSuggestions.length}`}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+      <View style={themeStyle('tabs_activities_15', {  }, (theme ?? _styleTheme))}>
             <Text style={styles.flightTitle}>Total activity cost: ${toursTotal.toFixed(2)}</Text>
         {payerTotalsList.length ? (
-          <View style={{ marginTop: 4 }}>
+          <View style={themeStyle('tabs_activities_16', {  }, (theme ?? _styleTheme))}>
             {payerTotalsList.map(([id, total]) => (
               <Text key={id} style={styles.helperText}>
                 {payerName(id)}: ${total.toFixed(2)}
@@ -1043,13 +1220,13 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         <Modal transparent visible={Boolean(selectedTour)} animationType="fade" onRequestClose={() => setSelectedTourId(null)}>
           <View style={styles.modalOverlay} testID="activity-details-modal">
             <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setSelectedTourId(null)} />
-            <View style={[styles.modalCard, { marginTop: 0 }]}>
+            <View style={[styles.modalCard, themeStyle('tabs_activities_17', {  }, (theme ?? _styleTheme))]}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Activity Details</Text>
               </View>
-              <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+              <ScrollView style={themeStyle('tabs_activities_18', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('tabs_activities_19', {  }, (theme ?? _styleTheme))}>
                 <AddToCalendarButton event={activityCalendarEvent(selectedTour)} styles={styles} />
-                {renderDetailRow('Date', formatDateLong(selectedTour.date))}
+                {renderDetailRow('Date', selectedTour.date ? formatDateLong(selectedTour.date) : 'Optional')}
                 {renderDetailRow('Type', selectedTour.activityType || 'Tour')}
                 {renderDetailRow('Activity', selectedTour.name || '-')}
                 {renderDetailRow('Start Location', selectedTour.startLocation || '-')}
@@ -1065,7 +1242,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                         <Text style={styles.buttonText}>👍</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateTour(selectedTour.id, -1)}>
-                        <Text style={styles.buttonText}>👎</Text>
+                        <Text style={styles.dangerButtonText}>👎</Text>
                       </TouchableOpacity>
                     </View>
                   ) : normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
@@ -1081,22 +1258,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 {renderDetailRow('Description', selectedTour.notes || '-')}
                 {renderDetailRow('Paid by', formatPeopleList(selectedTour.paidBy))}
                 {renderDetailRow('Attendees', formatPeopleList(selectedTour.travelerIds))}
-                {renderDetailRow(
-                  'Votes',
-                  !readOnly && shouldShowVoteButtons(selectedTour.status, selectedTour.userVote) ? (
-                    <View style={styles.actionCell}>
-                      <Text style={styles.cellText}>{formatNetVotes(selectedTour.netVotes ?? 0)}</Text>
-                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnTour(selectedTour.id, 1)}>
-                        <Text style={styles.buttonText}>👍</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnTour(selectedTour.id, -1)}>
-                        <Text style={styles.buttonText}>👎</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    formatNetVotes(selectedTour.netVotes ?? 0)
-                  )
-                )}
                 <Text style={styles.modalLabel}>Actions</Text>
                 <View style={styles.actionCell}>
                   {!readOnly && featureActivityRecap && normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
@@ -1147,7 +1308,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           styles={styles}
           readOnly={readOnly}
           rows={[
-            { label: 'Date', value: formatDateLong(selectedTour.date) },
+            { label: 'Date', value: selectedTour.date ? formatDateLong(selectedTour.date) : 'Optional' },
             { label: 'Type', value: selectedTour.activityType || 'Tour' },
             { label: 'Start Location', value: selectedTour.startLocation || '-' },
             { label: 'Start Time', value: selectedTour.startTime || '-' },
@@ -1160,7 +1321,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             { label: 'Paid by', value: formatPeopleList(selectedTour.paidBy) },
             { label: 'Attendees', value: formatPeopleList(selectedTour.travelerIds) },
             { label: 'Rating', value: formatNetVotes(selectedTour.netRating ?? 0) },
-            { label: 'Votes', value: formatNetVotes(selectedTour.netVotes ?? 0) },
           ]}
           theme={theme}
           onClose={() => setSelectedTourId(null)}
@@ -1184,6 +1344,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       ) : null}
       {!readOnly && editingTour ? (
         <ActivityEditForm
+          lodgings={lodgings}
           draft={editingTour}
           onChange={(updater) => setEditingTour((prev) => (prev ? updater(prev) : prev))}
           onSave={saveTour}

@@ -8,6 +8,14 @@ describe('applyVoteSummary', () => {
     jest.clearAllMocks();
   });
 
+  it('returns legacy Needed records as Proposed without changing the saved item', async () => {
+    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({});
+    const saved = { id: 'legacy', status: 'Needed' };
+    const [item] = await applyVoteSummary('user-1', 'trip-1', 'lodging', [saved]);
+    expect(item.status).toBe('Proposed');
+    expect(saved.status).toBe('Needed');
+  });
+
   it('applies saved vote metadata even when the adapter normalizes item id casing', async () => {
     (db.getItemVoteSummaries as jest.Mock)
       .mockResolvedValueOnce({

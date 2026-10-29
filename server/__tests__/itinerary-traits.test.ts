@@ -260,8 +260,8 @@ describe('Itinerary generation and trait lifecycle', () => {
     expect(itinRes.body.plan).toBeTruthy();
     expect(typeof itinRes.body.plan).toBe('string');
     expect(Array.isArray(itinRes.body.details)).toBe(true);
-    expect(itinRes.body.generatedItems?.transfers?.[0]?.status).toBe('Needed');
-    expect(itinRes.body.generatedItems?.lodgings?.[0]?.status).toBe('Needed');
+    expect(itinRes.body.generatedItems?.transfers?.[0]?.status).toBe('Proposed');
+    expect(itinRes.body.generatedItems?.lodgings?.[0]?.status).toBe('Proposed');
     expect(Array.isArray(itinRes.body.generatedItems?.activities)).toBe(true);
   });
 });

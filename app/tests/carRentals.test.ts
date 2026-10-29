@@ -37,15 +37,15 @@ describe('Car rental helpers', () => {
     expect(result.rental?.status).toBe('Booked');
   });
 
-  test('allows blank business fields when status is Needed', () => {
+  test('allows blank business fields when status is Proposed', () => {
     const result = buildCarRentalFromDraft(
       {
         ...createInitialCarRentalDraft(),
-        status: 'Needed',
+        status: 'Proposed',
       },
       null
     );
     expect(result.error).toBeUndefined();
-    expect(result.rental?.status).toBe('Needed');
+    expect(result.rental?.status).toBe('Proposed');
   });
 });

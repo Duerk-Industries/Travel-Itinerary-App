@@ -1,3 +1,8 @@
+import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+import { singlePayerIds } from '../utils/payerSelection';
 import { FlightDetailsDialog, GroundTransferDetailsDialog } from '../components/TransferDetailsDialog';
 import { TRANSFER_TYPES as CANONICAL_TRANSFER_TYPES, normalizeTransferType } from '../utils/transferTypes';
 import type { TransferMode } from '../../server/src/types';
@@ -9,7 +14,8 @@ import { isFlightTransfer } from '../utils/transferCategory';
 import { airportDisplayForCode } from '../utils/airportDisplay';
 import type { PlanningCoordinates } from '../../server/src/types';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, type ViewStyle } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, type ViewStyle } from 'react-native';
+import Modal from '../components/KeyboardAwareModal';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -19,11 +25,12 @@ import { FlightEditingForm, GroundTransferEditingForm } from '../components/Tran
 import { toWebStyle } from '../utils/webStyle';
 import { buildMemberDisplayLookup, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeTimeInput } from '../utils/normalizeTimeInput';
-import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import DateField from '../components/DateField';
-import type { AppTheme } from '../theme/theme';
+
 import { fixedTableColumn } from '../utils/tableColumns';
+import CsvTransferControls from '../components/CsvTransferControls';
 import { startItemSaveTask } from '../utils/analytics/track';
 import {
   ITINERARY_STATUSES,
@@ -345,7 +352,7 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
     carrier: trim(flight.carrier),
     flightNumber: trim(flight.flightNumber),
     bookingReference: trim(flight.bookingReference),
-    paidBy: flight.paidBy?.length ? flight.paidBy : defaultPayerId ? [defaultPayerId] : [],
+    paidBy: singlePayerIds(flight.paidBy, defaultPayerId),
     ...(tripId ? { tripId } : {}),
   };
 };
@@ -518,6 +525,9 @@ type FlightsTabProps = {
   // usage) keep today's behavior; App.tsx wires this to the
   // feature_tap_to_edit_tables flag for the live table view.
   featureTapToEditTables?: boolean;
+  // Ground-transfer CSV import/export (the Ground Transfers page only; flights are never imported from CSV).
+  featureGroundTransferCsvImport?: boolean;
+  featureGroundTransferCsvExport?: boolean;
 };
 
 type Airport = {
@@ -540,11 +550,10 @@ const fallbackAirports: Airport[] = [
   { name: 'Dubai International', city: 'Dubai', country: 'UAE', iata_code: 'DXB' },
 ];
 
-const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'votes' | 'rating'; label: string; minWidth?: number }[] = [
+const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'rating'; label: string; minWidth?: number }[] = [
   { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
   { key: 'status', label: 'Status', minWidth: 120 },
   { key: 'transfer_type', label: 'Type', minWidth: 120 },
-  { key: 'votes', label: 'Votes', minWidth: 96 },
   { key: 'rating', label: 'Rating', minWidth: 96 },
   { key: 'departure_date', label: 'Departure Date' },
   { key: 'departure_location', label: 'Departure Location' },
@@ -564,8 +573,8 @@ const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'votes' | 'ra
 
 // Shrinks the Edit/Delete and thumbs-up/down buttons in the transfers table down to roughly
 // one line of text tall, instead of the app-wide button paddings meant for standalone buttons.
-const COMPACT_ACTION_BUTTON: ViewStyle = { height: 24, minWidth: 56, paddingHorizontal: 8, paddingVertical: 2 };
-const COMPACT_ICON_BUTTON: ViewStyle = { minWidth: 0, paddingHorizontal: 6, paddingVertical: 2 };
+const COMPACT_ACTION_BUTTON: ViewStyle = themeStyle('tabs_transfers_1', {  }, getStyleTheme('auto', null));
+const COMPACT_ICON_BUTTON: ViewStyle = themeStyle('tabs_transfers_2', {  }, getStyleTheme('auto', null));
 
 
 export const FlightsTab: React.FC<FlightsTabProps> = ({
@@ -597,9 +606,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   readOnly = false,
   modalOverlayStyle,
   modalCardStyle,
-  theme,
+  theme: _providedTheme,
   featureTapToEditTables = true,
+  featureGroundTransferCsvImport = false,
+  featureGroundTransferCsvExport = false,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const flights = useMemo(() => allFlights.filter(item => transferScope === 'all' || (transferScope === 'flights' ? isFlightTransfer(item) : !isFlightTransfer(item))), [allFlights, transferScope]);
   const allowedTransferTypes = useMemo(() => TRANSFER_TYPES.filter(type => transferScope === 'all' || (transferScope === 'flights' ? type === 'Flight' : type !== 'Flight')), [transferScope]);
   const initialDraft = (): FlightDraft => ({ ...createInitialFlightState(), transferType: transferScope === 'ground' ? 'Public Transit' : 'Flight' });
@@ -768,7 +781,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     { key: 'carrier', label: 'Airline', width: 150, editor: 'text', getValue: (row) => row.carrier || '' },
     { key: 'flight_number', label: 'Flight Number', width: 125, editor: 'text', getValue: (row) => row.flight_number || '' },
     { key: 'booking_reference', label: 'Booking Ref', width: 160, editor: 'text', getValue: (row) => row.booking_reference || '' },
-    { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], [allowedTransferTypes]);
@@ -938,12 +950,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   // the more natural way to reach off-screen columns on a small viewport.
   const dynamicColumnWidths = useMemo<Record<string, number>>(() => {
     if (Platform.OS !== 'web') return {};
-    const CHAR_WIDTH_PX = 7.2;
-    const CELL_PADDING_PX = 32;
-    const MAX_COLUMN_WIDTH_PX = 420;
+    const CHAR_WIDTH_PX = layoutMetrics.transfers_CHAR_WIDTH_PX;
+    const CELL_PADDING_PX = layoutMetrics.transfers_CELL_PADDING_PX;
+    const MAX_COLUMN_WIDTH_PX = layoutMetrics.transfers_MAX_COLUMN_WIDTH_PX;
     const widths: Record<string, number> = {};
     for (const col of tableColumns) {
-      if (col.key === 'actions' || col.key === 'votes' || col.key === 'rating') continue;
+      if (col.key === 'actions' || col.key === 'rating') continue;
       let longest = col.label.length;
       for (const item of sortedFlights) {
         const text = getColumnDisplayValue(item, col.key);
@@ -1045,7 +1057,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     const node = passengerDropdownRef.current as any;
     if (node?.measureInWindow) {
       node.measureInWindow((x: number, y: number, width: number, height: number) => {
-        setPassengerAnchor({ x, y, width, height });
+        setPassengerAnchor(themeStyle('tabs_transfers_3', { x: x, y: y, width: width, height: height }, (theme ?? _styleTheme)));
         setShowPassengerDropdown(true);
       });
     } else {
@@ -1086,9 +1098,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (node?.measureInWindow) {
       node.measureInWindow((x: number, y: number, width: number, height: number) => {
         if (inWindow) {
-          setAirportAnchor({ x, y, width, height });
+          setAirportAnchor(themeStyle('tabs_transfers_4', { x: x, y: y, width: width, height: height }, (theme ?? _styleTheme)));
         } else {
-          setAirportAnchor({ x: x - containerOffset.x, y: y - containerOffset.y, width, height });
+          setAirportAnchor(themeStyle('tabs_transfers_5', { x: x, containerOffset: containerOffset, y: y, width: width, height: height }, (theme ?? _styleTheme)));
         }
       });
     } else if (typeof node?.getBoundingClientRect === 'function') {
@@ -1096,14 +1108,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       const containerRect = (containerRef.current as any)?.getBoundingClientRect?.();
       const containerLeft = (containerRect?.left ?? 0) + (typeof window !== 'undefined' ? window.scrollX : 0);
       const containerTop = (containerRect?.top ?? 0) + (typeof window !== 'undefined' ? window.scrollY : 0);
-      setAirportAnchor({
-        x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0) - (inWindow ? 0 : containerLeft),
-        y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0) - (inWindow ? 0 : containerTop),
-        width: rect.width,
-        height: rect.height,
-      });
+      setAirportAnchor(themeStyle('tabs_transfers_6', { rect: rect, inWindow: inWindow, containerLeft: containerLeft, containerTop: containerTop }, (theme ?? _styleTheme)));
     } else {
-      setAirportAnchor({ x: 16, y: 120, width: 260, height: 40 });
+      setAirportAnchor(themeStyle('tabs_transfers_7', {  }, (theme ?? _styleTheme)));
     }
   };
 
@@ -1382,24 +1389,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     onDataChanged ? onDataChanged() : fetchFlights();
   };
 
-  const voteOnFlight = async (id: string, value: 1 | -1) => {
-    if (readOnly) return;
-    try {
-      const res = await fetch(`${backendUrl}/api/transfers/${id}/vote`, {
-        method: 'POST',
-        headers: jsonHeaders,
-        body: JSON.stringify({ value }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Unable to submit vote');
-      }
-      onDataChanged ? onDataChanged() : fetchFlights();
-    } catch (err: any) {
-      Alert.alert(err?.message || 'Unable to submit vote');
-    }
-  };
-
   const rateFlight = async (id: string, value: 1 | -1) => {
     if (readOnly) return;
     try {
@@ -1574,38 +1563,31 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     ? [styles.card, styles.flightsSection]
     : [
         styles.flightsSection,
-        {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          padding: 0,
-          margin: 0,
-          zIndex: 50000,
-          elevation: 50,
-        },
+        themeStyle('tabs_transfers_8', {  }, (theme ?? _styleTheme)),
       ];
 
   return (
     <View
-      style={[containerStyle, { pointerEvents: showList ? 'auto' : 'box-none' }]}
+      style={[containerStyle, themeStyle('tabs_transfers_9', { showList: showList }, (theme ?? _styleTheme))]}
       ref={containerRef as any}
     >
       {showList ? (
         <>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+        {transferScope === 'ground' && !tableEditing ? (
+          <CsvTransferControls entity="transfers" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={findActiveTrip()?.startDate} tripEnd={findActiveTrip()?.endDate} rows={allFlights} styles={styles} theme={theme} enabledImport={featureGroundTransferCsvImport} enabledExport={featureGroundTransferCsvExport} readOnly={readOnly} onImported={onDataChanged} />
+        ) : null}
         {!readOnly ? (
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={themeStyle('tabs_transfers_10', {  }, (theme ?? _styleTheme))}>
             {!tableEditing ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="transfer-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
             {tableEditing ? <>
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={cancelGridEdit} disabled={gridSaving} testID="transfer-table-cancel"><Text style={styles.dangerButtonText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={styles.button} onPress={saveGridEdit} disabled={gridSaving} testID="transfer-table-save"><Text style={styles.buttonText}>{gridSaving ? 'Saving…' : 'Save changes'}</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="transfer-table-undo"><Text style={styles.buttonText}>↶</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="transfer-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_11', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="transfer-table-undo"><Text style={styles.buttonText}>↶</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_12', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="transfer-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
             </> : null}
-            <TouchableOpacity style={[styles.button, styles.outlineButton, { marginRight: 8 }]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
+            <TouchableOpacity style={[styles.button, styles.outlineButton, themeStyle('tabs_transfers_13', {  }, (theme ?? _styleTheme))]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
               <Text style={styles.buttonText}>Paste Info</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
@@ -1631,8 +1613,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 style={[
                   styles.cell,
                   fixedTableColumn(colWidth(col)),
-                  col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
-                  col.key === 'actions' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
+                  col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_transfers_14', { theme: theme }, (theme ?? _styleTheme)) as any),
+                  col.key === 'actions' && Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_transfers_15', { theme: theme }, (theme ?? _styleTheme)) as any),
                   idx === tableColumns.length - 1 && styles.lastCell,
                 ]}
                 onPress={() => col.key !== 'actions' && sortFlightTable(String(col.key))}
@@ -1653,15 +1635,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         styles.cell,
                         styles.actionCell,
                         fixedTableColumn(colWidth(col)),
-                        Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
+                        Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_transfers_16', { theme: theme }, (theme ?? _styleTheme)) as any),
                         isLast && styles.lastCell,
                       ]}
                     >
                       {!item.passengerInGroup ? <Text style={styles.warningText}>Passenger not in trip group</Text> : null}
                       <View style={styles.actionCell}>
-                        <TouchableOpacity style={[styles.tableActionButton, COMPACT_ACTION_BUTTON]}
+                        <TouchableOpacity accessibilityRole="button" style={[styles.tableActionButton, styles.tableActionButtonPrimary, COMPACT_ACTION_BUTTON]}
                           onPress={() => setSelectedTransfer(item)} testID={`transfer-details-${item.id}`}>
-                          <Text style={[styles.buttonText, { color: theme?.colors.text }]}>Details</Text>
+                          <Text style={styles.buttonText}>Details</Text>
                         </TouchableOpacity>
                         {!readOnly ? (
                           <>
@@ -1679,44 +1661,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       {!isFlightTransfer(item) && <TransferDirections compact lodgings={lodgings} departureDate={item.departure_date} arrivalDate={item.arrival_date || item.departure_date} origin={item.departure_location || item.departure_airport_label || item.departure_airport_code || ''}
                         destination={item.arrival_location || item.arrival_airport_label || item.arrival_airport_code || ''}
                         transferType={item.transfer_type || item.transferType || 'Flight'} mapApp={mapApp} styles={styles} />}
-                    </View>
-                  );
-                }
-                if (col.key === 'votes') {
-                  const showButtons = shouldShowVoteButtons(
-                    normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS),
-                    item.userVote
-                  );
-                  return (
-                    <View
-                      key={`${item.id}-${col.key}`}
-                      style={[
-                        styles.cell,
-                        styles.actionCell,
-                        fixedTableColumn(colWidth(col)),
-                        isLast && styles.lastCell,
-                      ]}
-                    >
-                      {!readOnly && showButtons ? (
-                        <>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton, COMPACT_ICON_BUTTON]}
-                            onPress={() => voteOnFlight(item.id, 1)}
-                            testID={`flight-vote-up-${item.id}`}
-                          >
-                            <Text style={styles.buttonText}>👍</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton, styles.dangerButton, COMPACT_ICON_BUTTON]}
-                            onPress={() => voteOnFlight(item.id, -1)}
-                            testID={`flight-vote-down-${item.id}`}
-                          >
-                            <Text style={styles.buttonText}>👎</Text>
-                          </TouchableOpacity>
-                        </>
-                      ) : (
-                        <Text style={styles.cellText}>{formatNetVotes(item.netVotes ?? 0)}</Text>
-                      )}
                     </View>
                   );
                 }
@@ -1746,7 +1690,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                             style={[styles.button, styles.smallButton, styles.dangerButton, COMPACT_ICON_BUTTON]}
                             onPress={() => rateFlight(item.id, -1)}
                           >
-                            <Text style={styles.buttonText}>👎</Text>
+                            <Text style={styles.dangerButtonText}>👎</Text>
                           </TouchableOpacity>
                         </View>
                       ) : normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
@@ -1764,7 +1708,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     style={[
                       styles.cell,
                       fixedTableColumn(colWidth(col)),
-                      col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
+                      col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_transfers_18', { theme: theme }, (theme ?? _styleTheme)) as any),
                       isLast && styles.lastCell,
                     ]}
                   >
@@ -1809,7 +1753,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     </View>
                   );
                 }
-                if (col.key === 'votes' || col.key === 'rating') {
+                if (col.key === 'rating') {
                   return (
                     <View
                       key={`input-${col.key}`}
@@ -1900,7 +1844,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         <select
                           value={valueMap.status}
                           onChange={(e) => setters.status(e.target.value)}
-                          style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                          style={toWebStyle(styles.input, themeStyle('tabs_transfers_19', {  }, (theme ?? _styleTheme)))}
                         >
                           {ITINERARY_STATUSES.map((opt) => (
                             <option key={opt} value={opt}>
@@ -1928,7 +1872,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         <select
                           value={valueMap.transfer_type}
                           onChange={(e) => setters.transfer_type(e.target.value)}
-                          style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                          style={toWebStyle(styles.input, themeStyle('tabs_transfers_20', {  }, (theme ?? _styleTheme)))}
                         >
                           {allowedTransferTypes.map((opt) => (
                             <option key={opt} value={opt}>
@@ -1954,20 +1898,20 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.locationField,
-                        { ...fixedTableColumn(colWidth(col)), position: 'relative' },
+                        themeStyle('tabs_transfers_21', { fixedTableColumn: fixedTableColumn, colWidth: colWidth, col: col }, (theme ?? _styleTheme)),
                         isLast && styles.lastCell,
                       ]}
                     >
-                      {ground ? <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {ground ? <View style={themeStyle('tabs_transfers_22', {  }, (theme ?? _styleTheme))}>
                         <HotelAddressPicker hotels={lodgings} activities={activities} date={isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate}
                           styles={styles} testID={`ground-inline-${isDeparture ? 'departure' : 'arrival'}-hotel`} onSelect={setters[col.key]} />
-                        <TextInput style={[styles.input, { flex: 1 }]} value={transferLocationFieldLabel(rawValue, lodgings, isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate, activities)} onChangeText={setters[col.key]} autoComplete="off" />
+                        <TextInput style={[styles.input, themeStyle('tabs_transfers_23', {  }, (theme ?? _styleTheme))]} value={transferLocationFieldLabel(rawValue, lodgings, isDeparture ? newFlight.departureDate : newFlight.arrivalDate || newFlight.departureDate, activities)} onChangeText={setters[col.key]} autoComplete="off" />
                       </View> : (
                       <TouchableOpacity
-                        style={[styles.input, { justifyContent: 'center' }]}
+                        style={[styles.input, themeStyle('tabs_transfers_24', {  }, (theme ?? _styleTheme))]}
                         onPress={() => openLocationOverlay(isDeparture ? 'dep' : 'arr', rawValue)}
                       >
-                        <Text style={[styles.cellText, !displayValue ? { color: '#9ca3af' } : null]}>
+                        <Text style={[styles.cellText, !displayValue ? themeStyle('tabs_transfers_25', {  }, (theme ?? _styleTheme)) : null]}>
                           {displayValue || (isDeparture ? 'Select departure airport' : 'Select arrival airport')}
                         </Text>
                       </TouchableOpacity>
@@ -2083,11 +2027,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           <View
             style={[
               styles.passengerOverlayList,
-              {
-                left: passengerAnchor.x,
-                top: passengerAnchor.y + passengerAnchor.height,
-                width: passengerAnchor.width,
-              },
+              themeStyle('tabs_transfers_26', { passengerAnchor: passengerAnchor }, (theme ?? _styleTheme)),
             ]}
           >
             {groupMembers.map((member) => {
@@ -2115,20 +2055,14 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <View
           style={[
             styles.passengerOverlay,
-            { backgroundColor: 'transparent', zIndex: 52000, elevation: 80 },
+            themeStyle('tabs_transfers_27', {  }, (theme ?? _styleTheme)),
           ]}
         >
-          <TouchableOpacity style={[styles.passengerOverlayBackdrop, { backgroundColor: 'transparent' }]} onPress={hideAirportDropdown} />
+          <TouchableOpacity style={[styles.passengerOverlayBackdrop, themeStyle('tabs_transfers_28', {  }, (theme ?? _styleTheme))]} onPress={hideAirportDropdown} />
           <View
             style={[
               styles.passengerOverlayList,
-              {
-                zIndex: 53000,
-                elevation: 84,
-                left: airportAnchor.x,
-                top: airportAnchor.y + airportAnchor.height,
-                width: airportAnchor.width || 280,
-              },
+              themeStyle('tabs_transfers_29', { airportAnchor: airportAnchor }, (theme ?? _styleTheme)),
             ]}
           >
             {airportSuggestions.map((airport) => (
@@ -2151,13 +2085,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       ) : null}
       {!readOnly && showPasteModal ? (
         <Modal transparent visible={showPasteModal} animationType="fade" onRequestClose={() => setShowPasteModal(false)}>
-          <View style={[styles.passengerOverlay, { backgroundColor: 'rgba(15,23,42,0.35)', justifyContent: 'center', alignItems: 'center', padding: 16 }]}>
+          <View style={[styles.passengerOverlay, themeStyle('tabs_transfers_30', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setShowPasteModal(false)} />
-            <View style={[styles.modalCard, { width: '100%', maxWidth: 500, maxHeight: '90%' }]}>
+            <View style={[styles.modalCard, themeStyle('tabs_transfers_31', {  }, (theme ?? _styleTheme))]}>
               <Text style={styles.sectionTitle}>Paste Booking Info</Text>
               <Text style={styles.helperText}>Paste your flight confirmation email or text below, and our AI will extract the details.</Text>
               <TextInput
-                style={[styles.input, { height: 150, textAlignVertical: 'top', marginTop: 12, marginBottom: 16 }]}
+                style={[styles.input, themeStyle('tabs_transfers_32', {  }, (theme ?? _styleTheme))]}
                 multiline
                 placeholder="Paste email text or itinerary here..."
                 value={pasteText}
@@ -2166,9 +2100,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               />
               <View style={styles.row}>
                 <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => { setShowPasteModal(false); setPasteText(''); }} disabled={isParsing}>
-                  <Text style={styles.buttonText}>Cancel</Text>
+                  <Text style={styles.dangerButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, isParsing && { opacity: 0.5 }]} onPress={handlePasteAndParse} disabled={isParsing}>
+                <TouchableOpacity style={[styles.button, isParsing && themeStyle('tabs_transfers_33', {  }, (theme ?? _styleTheme))]} onPress={handlePasteAndParse} disabled={isParsing}>
                   <Text style={styles.buttonText}>{isParsing ? 'Parsing...' : 'Parse & Add'}</Text>
                 </TouchableOpacity>
               </View>

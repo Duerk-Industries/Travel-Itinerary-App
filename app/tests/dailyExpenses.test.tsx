@@ -204,6 +204,25 @@ describe('DailyExpensesTab', () => {
     }
   });
 
+  it.each([
+    ['web', true, true, true, false, true, true],
+    ['ios', true, true, true, false, false, true],
+    ['web', false, false, true, false, false, false],
+    ['web', true, true, true, true, false, false],
+    ['web', true, true, false, false, false, false],
+  ] as const)('hides unavailable actions on %s (receipt=%s, import=%s, costs=%s, readOnly=%s)',
+    (platform, receiptAllowed, importAllowed, costAllowed, readOnly, scanVisible, importVisible) => {
+      const originalOS = Platform.OS;
+      Platform.OS = platform;
+      try {
+        const screen = render(<DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+          groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles}
+          costTrackingAllowed={costAllowed} receiptScanningAllowed={receiptAllowed} expenseImportAllowed={importAllowed} readOnly={readOnly} />);
+        expect(Boolean(screen.queryByTestId('expense-scan-receipt-button'))).toBe(scanVisible);
+        expect(Boolean(screen.queryByTestId('expense-import-button'))).toBe(importVisible);
+      } finally { Platform.OS = originalOS; }
+    });
+
   it('hides receipt scanning when the user is not entitled', () => {
     const screen = render(
       <DailyExpensesTab
@@ -273,7 +292,8 @@ describe('DailyExpensesTab', () => {
         'http://example.test/api/expenses/e1',
         expect.objectContaining({ method: 'PUT' }),
       ));
-      const body = JSON.parse((fetchMock.mock.calls[0] as any[])[1].body);
+      // (opening the day also looks up which expenses have a stored receipt; only the PUT carries a body)
+      const body = JSON.parse(((fetchMock.mock.calls as any[][]).find((call) => call[1]?.method === 'PUT') as any[])[1].body);
       expect(body).toEqual(expect.objectContaining({ amount: 18.75, vendor: 'Flour Bakery' }));
       expect(body.notes).toBeUndefined();
       expect(setExpenses).toHaveBeenCalled();
@@ -294,8 +314,8 @@ describe('DailyExpensesTab', () => {
       );
 
       expect(screen.getByTestId('expense-add-button').props.disabled).toBe(true);
-      expect(screen.getByTestId('expense-scan-receipt-button').props.disabled).toBe(true);
-      expect(screen.getByTestId('expense-import-button').props.disabled).toBe(true);
+      expect(screen.queryByTestId('expense-scan-receipt-button')).toBeNull();
+      expect(screen.queryByTestId('expense-import-button')).toBeNull();
       // Testing Library can invoke an onPress even when a native Touchable is
       // disabled. Exercise that stale/programmatic path too: Save still must
       // not post an expense while the cached trip is read-only.
@@ -309,7 +329,8 @@ describe('DailyExpensesTab', () => {
       fireEvent.press(screen.getAllByText('$12.00')[0]);
       fireEvent.press(screen.getByTestId('expense-delete-e1'));
       fireEvent.press(screen.getByTestId('expense-detail-delete-confirm-yes'));
-      expect(fetchMock).not.toHaveBeenCalled();
+      // Reading which expenses have a receipt is fine; nothing may be changed.
+      expect((fetchMock.mock.calls as any[][]).filter((call) => call[1]?.method && call[1].method !== 'GET')).toEqual([]);
     } finally {
       global.fetch = originalFetch;
     }
@@ -339,7 +360,7 @@ describe('DailyExpensesTab', () => {
         const screen = renderOffline();
         expect(screen.getByTestId('expense-add-button').props.disabled).toBe(false);
         // Editing, scanning and importing stay unavailable offline.
-        expect(screen.getByTestId('expense-import-button').props.disabled).toBe(true);
+        expect(screen.queryByTestId('expense-import-button')).toBeNull();
 
         fireEvent.press(screen.getByTestId('expense-add-button'));
         fireEvent.changeText(screen.getByPlaceholderText('Amount'), '18.75');
@@ -422,41 +443,22 @@ describe('DailyExpensesTab', () => {
     });
   });
 
-  it('surfaces unreachable expenses and opens linked itinerary items from their description', () => {
-    const setExpenses = jest.fn();
-    const onEditItineraryItem = jest.fn();
+  it('does not show Other Expenses on the Daily Expenses page', () => {
+    const paidActivity = { ...expenses[0], id: 'paid-activity', category: 'Activities', amount: 25, sourceType: 'activity', sourceId: 'activity' };
+    const screen = render(<DailyExpensesTab
+      backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+      groupMembers={groupMembers} expenses={[...expenses, paidActivity]} setExpenses={jest.fn()}
+      defaultPayerId="m1" styles={styles} costTrackingAllowed />);
+    expect(screen.queryByTestId('other-expenses')).toBeNull();
+  });
 
-    const list = [
-      ...expenses,
-      { id: 'act-1', tripId: 't1', groupId: 'g1', userId: 'u1', expenseDate: '2025-02-01', category: 'Activities', amount: 63.71, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'], createdAt: '', sourceType: 'activity', sourceId: 'a1' },
-      { id: 'act-0', tripId: 't1', groupId: 'g1', userId: 'u1', expenseDate: '2025-02-02', category: 'Activities', amount: 0, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'], createdAt: '', sourceType: 'activity', sourceId: 'a2' },
-      { id: 'old-1', tripId: 't1', groupId: 'g1', userId: 'u1', expenseDate: '2024-12-25', category: 'Lunch', amount: 9, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'], createdAt: '' },
-    ];
-
-    const screen = render(
-      <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
-        groupMembers={groupMembers} expenses={list as any} setExpenses={setExpenses} defaultPayerId="m1" styles={styles}
-        itineraryExpenseDescriptions={{ 'activity:a1': 'Rome Food Tour', 'activity:a2': 'Colosseum Tour' }}
-        onEditItineraryItem={onEditItineraryItem} costTrackingAllowed />
-    );
-
-    // The grid can't show any of these three; the "Other expenses" table does.
-    expect(screen.getByText('Other expenses (3)')).toBeTruthy();
-    expect(screen.getByTestId('other-expense-row-act-1')).toBeTruthy();
-    expect(screen.getByTestId('other-expense-row-old-1')).toBeTruthy();
-    expect(screen.getByText('Paid by')).toBeTruthy();
-    expect(within(screen.getByTestId('other-expense-row-act-1')).getByText('Rome Food Tour')).toBeTruthy();
-    expect(within(screen.getByTestId('other-expense-row-act-1')).getAllByText('Alex Rider')).toHaveLength(2);
-    expect(screen.queryByText('from itinerary')).toBeNull();
-    expect(screen.queryByText('Action')).toBeNull();
-    expect(screen.queryByTestId('expense-delete-act-1')).toBeNull();
-    // e1 (Breakfast, in range) stays in the grid, not here.
-    expect(screen.queryByTestId('other-expense-row-e1')).toBeNull();
-
-    fireEvent.press(screen.getByTestId('other-expense-edit-source-act-1'));
-    expect(onEditItineraryItem).toHaveBeenCalledWith('activity', 'a1');
-
-    // The bulk "remove zero-amount" shortcut only shows with 2+ zero entries; here there is 1.
+  it('omits Other Expenses entirely when all of its entries are zero', () => {
+    const zeroActivity = { ...expenses[0], id: 'free', category: 'Activities', amount: 0, sourceType: 'activity', sourceId: 'free-activity' };
+    const screen = render(<DailyExpensesTab
+      backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+      groupMembers={groupMembers} expenses={[zeroActivity]} setExpenses={jest.fn()}
+      defaultPayerId="m1" styles={styles} costTrackingAllowed />);
+    expect(screen.queryByTestId('other-expenses')).toBeNull();
     expect(screen.queryByTestId('other-expenses-clear-zero')).toBeNull();
   });
 

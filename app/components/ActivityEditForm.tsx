@@ -1,10 +1,18 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+import PayerSelect from './PayerSelect';
 import ActivityDescriptionGenerator from './ActivityDescriptionGenerator';
-import React from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import SelectField from './SelectField';
+import { localTodayDateOnly } from '../utils/dateOnly';
+import type { Lodging } from '../../server/src/types';
+import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
-import type { AppTheme } from '../theme/theme';
+
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
 import type { TourDraft } from '../tabs/activities';
@@ -25,8 +33,14 @@ export type ActivityFormMember = {
   removedAt?: string | null;
 };
 
+export type ActivityFormLodging = Pick<Lodging, 'id' | 'name'> & {
+  checkInDate?: Lodging['check_in_date'];
+  checkOutDate?: Lodging['check_out_date'];
+};
+
 export type ActivityEditFormProps = {
   draft: TourDraft;
+  lodgings?: ActivityFormLodging[];
   onChange: (updater: (prev: TourDraft) => TourDraft) => void;
   onSave: () => void | Promise<void>;
   onCancel: () => void;
@@ -38,57 +52,76 @@ export type ActivityEditFormProps = {
 
 const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
   draft,
+  lodgings = [],
   onChange,
   onSave,
   onCancel,
   isNew,
   members,
   styles,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const activeMembers = members.filter((m) => m.status !== 'removed' && !m.removedAt);
 
-  const toggleBaseStyle = styles.toggleOption ?? {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#111',
-    backgroundColor: theme?.colors.surface ?? '#fff',
-  };
-  const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
-    borderColor: theme?.colors.link ?? '#111',
-  };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
+  const toggleBaseStyle = styles.toggleOption ?? themeStyle('components_ActivityEditForm_1', { theme: theme }, (theme ?? _styleTheme));
+  const toggleSelectedStyle = styles.toggleOptionSelected ?? themeStyle('components_ActivityEditForm_2', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextStyle = styles.toggleOptionText ?? themeStyle('components_ActivityEditForm_3', { theme: theme }, (theme ?? _styleTheme));
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? themeStyle('components_ActivityEditForm_4', { theme: theme }, (theme ?? _styleTheme));
 
 
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
   const activityType = draft.activityType || 'Tour';
+  const [schedulingMode, setSchedulingMode] = useState<'scheduled' | 'optional'>(() => draft.date ? 'scheduled' : 'optional');
+  const lastScheduledDate = useRef(draft.date || localTodayDateOnly());
+  const hotelOptions = useMemo(() => [
+    { value: '', label: 'No hotel — available every day' },
+    ...[...lodgings].sort((a, b) =>
+      (a.checkInDate || '9999').localeCompare(b.checkInDate || '9999') ||
+      (a.checkOutDate || '9999').localeCompare(b.checkOutDate || '9999') ||
+      a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
+    ).map((hotel) => ({ value: hotel.id, label: hotel.name || 'Hotel' })),
+  ], [lodgings]);
+  const changeSchedulingMode = (value: string) => {
+    const optional = value === 'optional';
+    if (draft.date) lastScheduledDate.current = draft.date;
+    setSchedulingMode(optional ? 'optional' : 'scheduled');
+    onChange((prev) => ({ ...prev, date: optional ? '' : lastScheduledDate.current }));
+  };
+
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onCancel}>
       <View style={styles.modalOverlay} testID="activity-form-modal">
         <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onCancel} />
-        <View style={[styles.modalCard, { marginTop: 0 }]}>
-          <Text style={styles.sectionTitle}>{isNew ? 'Add Activity' : 'Edit Activity'}</Text>
-          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
-            <Text style={styles.modalLabel}>Date</Text>
-            <DateField
-              value={draft.date}
-              onChange={(date) => onChange((prev) => ({ ...prev, date }))}
-              styles={styles}
-              theme={theme}
-              testID="activity-date"
-              accessibilityLabel="Activity date"
-            />
+        <View style={[styles.modalCard, themeStyle('components_ActivityEditForm_5', {  }, (theme ?? _styleTheme))]}>
+          <Text style={styles.sectionTitle}>{isNew ? (schedulingMode === 'scheduled' ? 'Add Activity' : 'Add Optional Activity') : 'Edit Activity'}</Text>
+          <ScrollView style={themeStyle('components_ActivityEditForm_6', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('components_ActivityEditForm_7', {  }, (theme ?? _styleTheme))} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+            <View style={themeStyle('components_ActivityEditForm_layout1', {  }, (theme ?? _styleTheme))} testID="activity-scheduling-row">
+              <View style={themeStyle('components_ActivityEditForm_layout2', {  }, (theme ?? _styleTheme))}>
+                <Text style={styles.modalLabel}>Scheduling</Text>
+                <SelectField title="Activity scheduling" testID="activity-scheduling" value={schedulingMode === 'optional' ? 'optional' : ''}
+                  options={[{ value: '', label: 'Scheduled' }, { value: 'optional', label: 'Optional' }]}
+                  onChange={changeSchedulingMode} styles={styles} style={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))} webStyle={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))} />
+              </View>
+              <View style={themeStyle('components_ActivityEditForm_layout4', {  }, (theme ?? _styleTheme))}>
+                <Text style={styles.modalLabel}>{schedulingMode === 'optional' ? 'Near hotel' : 'Date'}</Text>
+                {schedulingMode === 'optional' ? <SelectField title="Near hotel" testID="activity-near-hotel"
+                  value={draft.nearLodgingId ?? ''} options={hotelOptions} styles={styles}
+                  style={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))} webStyle={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))}
+                  onChange={(id) => onChange((prev) => ({ ...prev, nearLodgingId: id || null }))} /> : <DateField
+                  value={draft.date} onChange={(date) => { if (date) lastScheduledDate.current = date; onChange((prev) => ({ ...prev, date })); }}
+                  styles={styles} theme={theme} testID="activity-date" accessibilityLabel="Activity date" style={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))}
+                />}
+              </View>
+            </View>
             <Text style={styles.modalLabel}>Status</Text>
             {Platform.OS === 'web' ? (
               <select
                 value={status}
                 onChange={(e) => onChange((prev) => ({ ...prev, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                style={toWebStyle(styles.input, themeStyle('components_ActivityEditForm_8', {  }, (theme ?? _styleTheme)))}
               >
                 {ITINERARY_STATUSES.map((opt) => (
                   <option key={opt} value={opt}>
@@ -122,7 +155,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
                     activityType: ACTIVITY_TYPES.includes(e.target.value as ActivityType) ? (e.target.value as ActivityType) : 'Tour',
                   }))
                 }
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                style={toWebStyle(styles.input, themeStyle('components_ActivityEditForm_9', {  }, (theme ?? _styleTheme)))}
               >
                 {ACTIVITY_TYPES.map((opt) => (
                   <option key={opt} value={opt}>
@@ -201,15 +234,15 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               accessibilityLabel="Free cancellation by date"
             />
             <Text style={styles.modalLabel}>Platform Booked On</Text>
-            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <View style={themeStyle('components_ActivityEditForm_10', {  }, (theme ?? _styleTheme))}>
               <TextInput
-                style={[styles.input, { flex: 1, minWidth: 220 }]}
+                style={[styles.input, themeStyle('components_ActivityEditForm_11', {  }, (theme ?? _styleTheme))]}
                 placeholder="Viator, Get Your Guide, Klook, etc."
                 value={draft.bookedOn}
                 onChangeText={(text: string) => onChange((prev) => ({ ...prev, bookedOn: text }))}
               />
               <TextInput
-                style={[styles.input, { flex: 1, minWidth: 220 }]}
+                style={[styles.input, themeStyle('components_ActivityEditForm_12', {  }, (theme ?? _styleTheme))]}
                 placeholder="Reference"
                 value={draft.reference}
                 onChangeText={(text: string) => onChange((prev) => ({ ...prev, reference: text }))}
@@ -217,16 +250,16 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
             </View>
             <Text style={styles.modalLabel}>Description</Text>
             <TextInput
-              style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
+              style={[styles.input, themeStyle('components_ActivityEditForm_13', {  }, (theme ?? _styleTheme))]}
               placeholder="Description"
               value={draft.notes}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, notes: text }))}
               multiline
             />
             <ActivityDescriptionGenerator
-              key={JSON.stringify([draft.name, draft.startLocation, draft.date, draft.notes])}
+              key={JSON.stringify([draft.name, draft.startLocation, draft.date])}
               input={{ name: draft.name, location: draft.startLocation, notes: draft.notes }}
-              styles={styles} onApply={notes => onChange(previous => ({ ...previous, notes }))} />
+              styles={styles} onApply={notes => onChange(previous => ({ ...previous, notes: previous.notes.trim() ? `${previous.notes.trimEnd()}\n\n${notes}` : notes }))} />
             <Text style={styles.modalLabel}>Participants</Text>
             <View style={styles.payerChips}>
               {activeMembers.map((m) => {
@@ -250,32 +283,13 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               })}
             </View>
             <Text style={styles.modalLabel}>Paid by</Text>
-            <View style={styles.payerChips}>
-              {activeMembers.map((m) => {
-                const selected = draft.paidBy.includes(m.id);
-                const name = formatMemberDisplayName(m);
-                return (
-                  <TouchableOpacity
-                    key={`tour-payer-${m.id}`}
-                    style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                    onPress={() =>
-                      onChange((prev) => {
-                        const next = selected ? prev.paidBy.filter((id) => id !== m.id) : [...prev.paidBy, m.id];
-                        return { ...prev, paidBy: next };
-                      })
-                    }
-                  >
-                    <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <PayerSelect members={activeMembers} value={draft.paidBy} formatName={formatMemberDisplayName} onChange={ids => onChange((prev) => ({ ...prev, paidBy: ids }))} styles={styles} testID="activity-payer" />
           </ScrollView>
-          <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
+          <View style={[styles.tableFooter, themeStyle('components_ActivityEditForm_14', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onCancel} testID="activity-cancel">
               <Text style={styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={onSave} testID="activity-save">
+            <TouchableOpacity style={styles.button} onPress={onSave} disabled={schedulingMode === 'scheduled' && !draft.date} testID="activity-save">
               <Text style={styles.buttonText}>Save</Text>
             </TouchableOpacity>
           </View>

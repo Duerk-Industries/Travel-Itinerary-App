@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "id": "japan-t03",
+  "title": "Kansai Focus - 7 days (fly into Osaka)",
+  "summary": "Slow down in the Kansai region: four days in Kyoto and two in Osaka, flying in and out of Osaka.",
+  "days": 7,
+  "route": "Kyoto (Nara day trip) > Osaka",
+  "arrive": "Osaka (KIX)",
+  "depart": "Osaka (KIX)",
+  "countries": [
+    "Japan"
+  ],
+  "cities": [
+    "Kyoto",
+    "Osaka"
+  ],
+  "imageQuery": "Kyoto Japan Fushimi Inari",
+  "highlights": [
+    "Nara day trip",
+    "Fushimi Inari torii gate hike",
+    "Kiyomizu-dera Temple",
+    "Sannenzaka & Ninenzaka lanes to Yasaka Shrine",
+    "Gion evening walk"
+  ],
+  "destinationKeys": [
+    "japan",
+    "japan/kyoto",
+    "japan/osaka"
+  ],
+  "hero": "japan/kyoto",
+  "sources": [
+    "InsideKyoto #5 (Kansai & West)",
+    "kimkim Culinary Tokyo/Kyoto/Osaka (Kansai leg)",
+    "GoWithGuide 7 days"
+  ],
+  "stays": [
+    {
+      "base": "Kyoto",
+      "hotel": "Hotel in Kyoto",
+      "start": 0,
+      "nights": 4,
+      "area": "Kyoto Station or Downtown",
+      "breakfast": false,
+      "dinner": false
+    },
+    {
+      "base": "Osaka",
+      "hotel": "Hotel in Osaka",
+      "start": 4,
+      "nights": 2,
+      "area": "Namba or Umeda",
+      "breakfast": false,
+      "dinner": false
+    }
+  ],
+  "activities": [
+    {
+      "day": 0,
+      "type": "Food & Drink",
+      "time": "19:00",
+      "duration": "2h",
+      "name": "Riverside alley dinner",
+      "notes": "Pontocho lane or Kiyamachi; seasonal river terraces in summer.",
+      "where": "Downtown Kyoto",
+      "book": "",
+      "place": "japan/pontocho"
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "08:00",
+      "duration": "1.5h",
+      "name": "Kiyomizu-dera Temple",
+      "notes": "Go at opening to beat crowds.",
+      "where": "Higashiyama, Kyoto",
+      "book": "",
+      "place": "japan/kiyomizu-dera"
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "09:45",
+      "duration": "2h",
+      "name": "Sannenzaka & Ninenzaka lanes to Yasaka Shrine",
+      "notes": "Preserved slopes, tea shops; ends near Maruyama Park.",
+      "where": "Higashiyama, Kyoto",
+      "book": "",
+      "place": "japan/sannenzaka"
+    },
+    {
+      "day": 1,
+      "type": "Class",
+      "time": "14:00",
+      "duration": "1.5h",
+      "name": "Tea ceremony experience",
+      "notes": "Small-group matcha ceremony; kimono rental optional.",
+      "where": "Higashiyama, Kyoto",
+      "book": "Yes - book a session",
+      "place": "japan/tea-ceremony"
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "19:00",
+      "duration": "1.5h",
+      "name": "Gion evening walk",
+      "notes": "Hanamikoji and Shirakawa lanes; do not photograph or follow geiko/maiko.",
+      "where": "Gion, Kyoto",
+      "book": "",
+      "place": "japan/gion"
+    },
+    {
+      "day": 2,
+      "type": "Day Trip",
+      "time": "08:30",
+      "duration": "5h",
+      "name": "Nara day trip",
+      "notes": "Todai-ji Great Buddha, Nara Park deer, Kasuga Taisha lanterns. ~45 min by train.",
+      "where": "Nara Park, Nara",
+      "book": "",
+      "place": "japan/nara"
+    },
+    {
+      "day": 3,
+      "type": "Sights & Landmarks",
+      "time": "07:30",
+      "duration": "1h",
+      "name": "Arashiyama Bamboo Grove",
+      "notes": "Before 8:00 or it is shoulder to shoulder.",
+      "where": "Arashiyama, Kyoto",
+      "book": "",
+      "place": "japan/arashiyama-bamboo"
+    },
+    {
+      "day": 3,
+      "type": "Sights & Landmarks",
+      "time": "08:30",
+      "duration": "1h",
+      "name": "Tenryu-ji Temple garden",
+      "notes": "Zen garden next to the grove.",
+      "where": "Arashiyama, Kyoto",
+      "book": "",
+      "place": "japan/tenryu-ji"
+    },
+    {
+      "day": 3,
+      "type": "Sights & Landmarks",
+      "time": "11:00",
+      "duration": "1h",
+      "name": "Kinkaku-ji (Golden Pavilion)",
+      "notes": "",
+      "where": "Kita, Kyoto",
+      "book": "",
+      "place": "japan/kinkaku-ji"
+    },
+    {
+      "day": 3,
+      "type": "Sights & Landmarks",
+      "time": "12:15",
+      "duration": "1h",
+      "name": "Ryoan-ji rock garden",
+      "notes": "Short bus/walk from Kinkaku-ji.",
+      "where": "Ukyo, Kyoto",
+      "book": "",
+      "place": "japan/ryoan-ji"
+    },
+    {
+      "day": 3,
+      "type": "Sights & Landmarks",
+      "time": "14:30",
+      "duration": "1.5h",
+      "name": "Nijo Castle",
+      "notes": "Nightingale floors; closed some Tuesdays in winter.",
+      "where": "Nakagyo, Kyoto",
+      "book": "",
+      "place": "japan/nijo-castle"
+    },
+    {
+      "day": 4,
+      "type": "Hike",
+      "time": "07:30",
+      "duration": "2.5h",
+      "name": "Fushimi Inari torii gate hike",
+      "notes": "Open 24h; walk past the crowds toward the summit. Late afternoon light or early morning.",
+      "where": "Fushimi, Kyoto",
+      "book": "",
+      "place": "japan/fushimi-inari"
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "13:00",
+      "duration": "2h",
+      "name": "Osaka Castle & park",
+      "notes": "",
+      "where": "Chuo, Osaka",
+      "book": "",
+      "place": "japan/osaka-castle"
+    },
+    {
+      "day": 4,
+      "type": "Food & Drink",
+      "time": "17:00",
+      "duration": "3h",
+      "name": "Dotonbori street food evening",
+      "notes": "Takoyaki, okonomiyaki, kushikatsu under the neon signs.",
+      "where": "Namba, Osaka",
+      "book": "",
+      "place": "japan/dotonbori"
+    },
+    {
+      "day": 5,
+      "type": "Food & Drink",
+      "time": "12:00",
+      "duration": "1.5h",
+      "name": "Kuromon Market lunch",
+      "notes": "Seafood stalls.",
+      "where": "Nipponbashi, Osaka",
+      "book": "",
+      "place": "japan/kuromon-market"
+    },
+    {
+      "day": 5,
+      "type": "Sights & Landmarks",
+      "time": "14:30",
+      "duration": "2h",
+      "name": "Shinsekai retro district",
+      "notes": "Tsutenkaku tower and kushikatsu counters.",
+      "where": "Shinsekai, Osaka",
+      "book": "",
+      "place": "japan/shinsekai"
+    },
+    {
+      "day": 5,
+      "type": "Ticketed Attraction",
+      "time": "17:30",
+      "duration": "1.5h",
+      "name": "Sunset skyscraper observatory",
+      "notes": "Umeda Sky Building floating garden or similar.",
+      "where": "Umeda, Osaka",
+      "book": "",
+      "place": "japan/osaka-sunset-observatory"
+    },
+    {
+      "day": 5,
+      "type": "Day Trip",
+      "time": "",
+      "duration": "6h",
+      "name": "Optional: Himeji Castle day trip",
+      "notes": "Japan's finest original castle, ~1h by shinkansen. Swap for any Osaka day.",
+      "where": "Himeji, Hyogo",
+      "book": "",
+      "place": "japan/himeji-castle"
+    }
+  ],
+  "legs": [
+    {
+      "day": 0,
+      "transferType": "Public Transit",
+      "from": "Kansai International Airport (KIX)",
+      "to": "Kyoto Station",
+      "time": "",
+      "minutes": 80,
+      "carrier": "JR Haruka (limited express)",
+      "notes": "Get an ICOCA card at the airport.",
+      "book": ""
+    },
+    {
+      "day": 4,
+      "transferType": "Public Transit",
+      "from": "Kyoto Station",
+      "to": "Osaka (Umeda)",
+      "time": "11:00",
+      "minutes": 30,
+      "carrier": "JR Special Rapid (or Hankyu/Keihan to Umeda/Namba)",
+      "notes": "No reservation needed.",
+      "book": ""
+    },
+    {
+      "day": 6,
+      "transferType": "Public Transit",
+      "from": "Namba Station (Osaka)",
+      "to": "Kansai International Airport (KIX)",
+      "time": "",
+      "minutes": 40,
+      "carrier": "Nankai Rapi:t (limited express)",
+      "notes": "Or JR Haruka from Shin-Osaka/Tennoji. Time to the flight; KIX check-in closes ~60 min before departure.",
+      "book": ""
+    }
+  ]
+}

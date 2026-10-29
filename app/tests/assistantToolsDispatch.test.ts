@@ -96,6 +96,6 @@ describe('ACTION_DISPATCH.updateItineraryStatus', () => {
     await ACTION_DISPATCH.updateItineraryStatus({ status: 'not-a-real-status', resolvedActivityId: 'activity-1' }, CTX);
     expect(mockedUpdateActivityStatus).toHaveBeenCalledTimes(1);
     const call = mockedUpdateActivityStatus.mock.calls[0][0];
-    expect(['Needed', 'Proposed', 'Booked', 'Cancelled', 'Completed']).toContain(call.status);
+    expect(['Proposed', 'Booked', 'Cancelled', 'Completed']).toContain(call.status);
   });
 });

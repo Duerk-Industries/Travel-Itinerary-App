@@ -1,14 +1,19 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, getAppTheme, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import { shadowStyle } from '../utils/shadowStyle';
 import FeatureCohortEditor from '../components/FeatureCohortEditor';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import Modal from '../components/KeyboardAwareModal';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
-import { getAppTheme, type AppTheme, whiteLabelButtonColor } from '../theme/theme';
+
 import { usePersistedState } from '../hooks/usePersistedState';
 import PackingListTable from '../components/PackingListTable';
 import { AiOperationsSection } from '../components/admin/aiOps/AiOperationsSection';
 import { AnalyticsSection } from '../components/admin/AnalyticsSection';
 import { PrivacyRequestsSection } from '../components/admin/PrivacyRequestsSection';
+import { TripTemplatesSection } from '../components/admin/TripTemplatesSection';
 import type { AiOpsSection } from '../components/admin/aiOps/types';
 export type { AiOpsSection } from '../components/admin/aiOps/types';
 
@@ -16,7 +21,7 @@ export type { AiOpsSection } from '../components/admin/aiOps/types';
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'cost-estimate' | 'metrics' | 'billing' | 'analytics' | 'privacy-requests';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'cost-estimate' | 'metrics' | 'billing' | 'analytics' | 'privacy-requests' | 'trip-templates';
 
 type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
 type MetricsSnapshot = {
@@ -241,38 +246,26 @@ const apiFetch = async (backendUrl: string, headers: Record<string, string>, pat
   return res.json();
 };
 
-const getCardStyle = (theme: AppTheme, opacity = 0.06, y = 2, radius = 10) => ({
-  backgroundColor: theme.colors.surface,
-  borderColor: theme.colors.border,
-  ...shadowStyle(theme.mode === 'dark' ? '#000000' : theme.colors.primary, opacity, 0, y, radius),
-});
+const getCardStyle = (theme: AppTheme, opacity = 0.06, y = 2, radius = 10) => (themeStyle('tabs_AdminTab_1', { theme: theme, shadowStyle: shadowStyle, opacity: opacity, y: y, radius: radius }, (theme ?? getStyleTheme('light', 'light'))));
 
-const getInputStyle = (theme: AppTheme) => ({
-  backgroundColor: theme.mode === 'dark' ? theme.colors.backgroundAlt : theme.colors.surfaceMuted,
-  borderColor: theme.colors.border,
-  color: theme.colors.text,
-});
+const getInputStyle = (theme: AppTheme) => (themeStyle('tabs_AdminTab_2', { theme: theme }, (theme ?? getStyleTheme('light', 'light'))));
 
-const getSecondaryPillStyle = (theme: AppTheme, active = false) => ({
-  backgroundColor: active ? theme.colors.primary : theme.colors.backgroundAlt,
-  borderColor: active ? theme.colors.primary : theme.colors.border,
-});
+const getSecondaryPillStyle = (theme: AppTheme, active = false) => (themeStyle('tabs_AdminTab_3', { active: active, theme: theme }, (theme ?? getStyleTheme('light', 'light'))));
 
-const getSecondaryPillTextStyle = (theme: AppTheme, active = false) => ({
-  color: active ? theme.colors.onPrimary : theme.colors.text,
-});
+const getSecondaryPillTextStyle = (theme: AppTheme, active = false) => (themeStyle('tabs_AdminTab_4', { active: active, theme: theme }, (theme ?? getStyleTheme('light', 'light'))));
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
 // --- Overview ---
-const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSectionProps> = ({ onNav, theme }) => (
-  <View style={localStyles.section}>
-    <View style={[localStyles.heroCard, getCardStyle(theme, 0, 0, 0), { backgroundColor: theme.colors.primary }]}>
-      <Text style={[localStyles.heroEyebrow, { color: theme.colors.link }]}>Operations</Text>
-      <Text style={[localStyles.heroTitle, { color: theme.colors.onPrimary }]}>Admin Panel</Text>
-      <Text style={[localStyles.heroBody, { color: theme.colors.onPrimary }]}>
+const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSectionProps> = ({ onNav, theme: _providedTheme }) => { const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme); return ((
+  <View style={localStyles((theme ?? _styleTheme)).section}>
+    <View style={[localStyles((theme ?? _styleTheme)).heroCard, getCardStyle(theme, 0, 0, 0), themeStyle('tabs_AdminTab_5', { theme: theme }, (theme ?? _styleTheme))]}>
+      <Text style={[localStyles((theme ?? _styleTheme)).heroEyebrow, themeStyle('tabs_AdminTab_6', { theme: theme }, (theme ?? _styleTheme))]}>Operations</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).heroTitle, themeStyle('tabs_AdminTab_7', { theme: theme }, (theme ?? _styleTheme))]}>Admin Panel</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).heroBody, themeStyle('tabs_AdminTab_8', { theme: theme }, (theme ?? _styleTheme))]}>
         Manage users, access, entitlements, and audit visibility from one place.
       </Text>
     </View>
@@ -292,23 +285,26 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Metrics', section: 'metrics' as AdminSection, desc: 'In-process counters and cache hit rates' },
         { label: 'Analytics', section: 'analytics' as AdminSection, desc: 'Feature adoption, cost, reliability, platform mix and trip-phase engagement (consenting users)' },
         { label: 'Privacy Requests', section: 'privacy-requests' as AdminSection, desc: 'Rights requests with statutory due dates, and account/analytics erasure jobs' },
+        { label: 'Itinerary Templates', section: 'trip-templates' as AdminSection, desc: 'Download LLM instructions, import sample itineraries, and update the live templates' },
       ] as { label: string; section: AdminSection; desc: string }[]
     ).map((item) => (
-      <TouchableOpacity key={item.section} style={[localStyles.navCard, getCardStyle(theme, 0.07, 2, 6)]} onPress={() => onNav(item.section)}>
-        <View style={[localStyles.navAccent, { backgroundColor: item.section === 'features' ? theme.colors.link : item.section === 'tiers' ? theme.colors.premium : theme.colors.cta }]} />
-        <Text style={[localStyles.navCardTitle, { color: theme.colors.text }]}>{item.label}</Text>
-        <Text style={[localStyles.navCardDesc, { color: theme.colors.textMuted }]}>{item.desc}</Text>
+      <TouchableOpacity key={item.section} style={[localStyles((theme ?? _styleTheme)).navCard, getCardStyle(theme, 0.07, 2, 6)]} onPress={() => onNav(item.section)}>
+        <View style={[localStyles((theme ?? _styleTheme)).navAccent, themeStyle('tabs_AdminTab_9', { item: item, theme: theme }, (theme ?? _styleTheme))]} />
+        <Text style={[localStyles((theme ?? _styleTheme)).navCardTitle, themeStyle('tabs_AdminTab_10', { theme: theme }, (theme ?? _styleTheme))]}>{item.label}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).navCardDesc, themeStyle('tabs_AdminTab_11', { theme: theme }, (theme ?? _styleTheme))]}>{item.desc}</Text>
       </TouchableOpacity>
     ))}
   </View>
-);
+)); };
 
 // --- Feature Flags ---
 const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -354,34 +350,34 @@ const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, st
     }
   };
 
-  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
-  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+  if (loading) return <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_12', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_13', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text>;
 
   return (
-    <View style={localStyles.section}>
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Feature Flags</Text>
-      {flags.length === 0 && <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No feature flags found.</Text>}
+    <View style={localStyles((theme ?? _styleTheme)).section}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_14', { theme: theme }, (theme ?? _styleTheme))]}>Feature Flags</Text>
+      {flags.length === 0 && <Text style={[localStyles((theme ?? _styleTheme)).emptyText, themeStyle('tabs_AdminTab_15', { theme: theme }, (theme ?? _styleTheme))]}>No feature flags found.</Text>}
       {flags.map((flag) => (
-        <View key={flag.key} style={[localStyles.card, getCardStyle(theme)]}>
-          <View style={localStyles.row}>
-            <View style={localStyles.flex}>
-              <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{flag.key}</Text>
-              {flag.description ? <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{flag.description}</Text> : null}
+        <View key={flag.key} style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+          <View style={localStyles((theme ?? _styleTheme)).row}>
+            <View style={localStyles((theme ?? _styleTheme)).flex}>
+              <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_16', { theme: theme }, (theme ?? _styleTheme))]}>{flag.key}</Text>
+              {flag.description ? <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_17', { theme: theme }, (theme ?? _styleTheme))]}>{flag.description}</Text> : null}
             </View>
             <View
               style={[
-                localStyles.badge,
-                { backgroundColor: flag.enabled ? theme.colors.success : theme.colors.alert },
+                localStyles((theme ?? _styleTheme)).badge,
+                themeStyle('tabs_AdminTab_18', { flag: flag, theme: theme }, (theme ?? _styleTheme)),
               ]}
             >
-              <Text style={localStyles.badgeText}>{flag.enabled ? 'ON' : 'OFF'}</Text>
+              <Text style={localStyles((theme ?? _styleTheme)).badgeText}>{flag.enabled ? 'ON' : 'OFF'}</Text>
             </View>
           </View>
           {flag.supportsCohort && <FeatureCohortEditor featureKey={flag.key} backendUrl={backendUrl} headers={headers} theme={theme} />}
           {reasonVisible[flag.key] || true ? (
-            <View style={localStyles.inlineForm}>
+            <View style={localStyles((theme ?? _styleTheme)).inlineForm}>
               <TextInput
-                style={[localStyles.smallInput, getInputStyle(theme)]}
+                style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
                 placeholder="Reason (required)"
                 placeholderTextColor={theme.colors.textMuted}
                 value={reasonInputs[flag.key] ?? ''}
@@ -389,14 +385,14 @@ const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, st
               />
               <TouchableOpacity
                 style={[
-                  localStyles.smallButton,
-                  { backgroundColor: whiteLabelButtonColor(theme) },
-                  pendingKey === flag.key && localStyles.buttonDisabled,
+                  localStyles((theme ?? _styleTheme)).smallButton,
+                  themeStyle('tabs_AdminTab_19', { theme: theme }, (theme ?? _styleTheme)),
+                  pendingKey === flag.key && localStyles((theme ?? _styleTheme)).buttonDisabled,
                 ]}
                 disabled={pendingKey === flag.key}
                 onPress={() => toggle(flag)}
               >
-                <Text style={localStyles.smallButtonText}>{flag.enabled ? 'Disable' : 'Enable'}</Text>
+                <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{flag.enabled ? 'Disable' : 'Enable'}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -412,7 +408,9 @@ const UsersSection: React.FC<{
   headers: Record<string, string>;
   tiers: Tier[];
   onViewUser: (user: AdminUser) => void;
-} & ThemedSectionProps> = ({ backendUrl, headers, tiers, onViewUser, theme }) => {
+} & ThemedSectionProps> = ({ backendUrl, headers, tiers, onViewUser, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = usePersistedState<string>('admin.users.search', '');
@@ -535,57 +533,57 @@ const UsersSection: React.FC<{
   };
 
   return (
-    <View style={localStyles.section}>
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Users</Text>
+    <View style={localStyles((theme ?? _styleTheme)).section}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_20', { theme: theme }, (theme ?? _styleTheme))]}>Users</Text>
       <TextInput
-        style={[localStyles.input, getInputStyle(theme)]}
+        style={[localStyles((theme ?? _styleTheme)).input, getInputStyle(theme)]}
         placeholder="Search by email, name, or user ID..."
         placeholderTextColor={theme.colors.textMuted}
         value={search}
         onChangeText={(t: string) => { setSearch(t); setPage(1); }}
       />
-      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
-      {loading ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
-      {!loading && users.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No users found.</Text> : null}
+      {error ? <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_21', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+      {loading ? <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_22', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text> : null}
+      {!loading && users.length === 0 ? <Text style={[localStyles((theme ?? _styleTheme)).emptyText, themeStyle('tabs_AdminTab_23', { theme: theme }, (theme ?? _styleTheme))]}>No users found.</Text> : null}
       {selectedIds.size > 0 ? (
         <View
-          style={[localStyles.card, getCardStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}
           accessibilityLabel={`Bulk actions for ${selectedIds.size} selected user${selectedIds.size === 1 ? '' : 's'}`}
           testID="admin-users-bulk-action-bar"
         >
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{selectedIds.size} selected</Text>
-          <View style={[localStyles.row, { flexWrap: 'wrap', gap: 8, marginTop: 8 }]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_24', { theme: theme }, (theme ?? _styleTheme))]}>{selectedIds.size} selected</Text>
+          <View style={[localStyles((theme ?? _styleTheme)).row, themeStyle('tabs_AdminTab_25', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity
-              style={[localStyles.smallButton, { backgroundColor: theme.colors.surfaceMuted }]}
+              style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_26', { theme: theme }, (theme ?? _styleTheme))]}
               onPress={() => setBulkTierDropdownOpen((v) => !v)}
               accessibilityRole="button"
               accessibilityLabel="Choose target tier"
               testID="admin-users-bulk-tier-dropdown-toggle"
             >
-              <Text style={[localStyles.smallButtonText, { color: theme.colors.text }]}>
+              <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('tabs_AdminTab_27', { theme: theme }, (theme ?? _styleTheme))]}>
                 {selectedTier?.displayName ?? selectedTier?.key ?? 'Select tier'}
               </Text>
             </TouchableOpacity>
             {bulkTierDropdownOpen ? (
-              <View style={[localStyles.card, getCardStyle(theme), { padding: 8 }]}>
+              <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme), themeStyle('tabs_AdminTab_28', {  }, (theme ?? _styleTheme))]}>
                 {sortedBulkTiers.length === 0 ? (
-                  <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>No tiers loaded.</Text>
+                  <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_29', { theme: theme }, (theme ?? _styleTheme))]}>No tiers loaded.</Text>
                 ) : null}
                 {sortedBulkTiers.map((t) => (
                   <TouchableOpacity
                     key={t.id}
-                    style={[localStyles.smallButton, { backgroundColor: theme.colors.surfaceMuted, marginBottom: 4 }]}
+                    style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_30', { theme: theme }, (theme ?? _styleTheme))]}
                     onPress={() => { setBulkTierKey(t.key); setBulkTierDropdownOpen(false); }}
                     accessibilityRole="menuitem"
                     testID={`admin-users-bulk-tier-option-${t.key}`}
                   >
-                    <Text style={[localStyles.smallButtonText, { color: theme.colors.text }]}>{t.displayName}</Text>
+                    <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('tabs_AdminTab_31', { theme: theme }, (theme ?? _styleTheme))]}>{t.displayName}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             ) : null}
             <TextInput
-              style={[localStyles.input, getInputStyle(theme), { flex: 1, minWidth: 200 }]}
+              style={[localStyles((theme ?? _styleTheme)).input, getInputStyle(theme), themeStyle('tabs_AdminTab_32', {  }, (theme ?? _styleTheme))]}
               placeholder="Reason (min 3 chars)"
               placeholderTextColor={theme.colors.textMuted}
               value={bulkReason}
@@ -595,9 +593,9 @@ const UsersSection: React.FC<{
             />
             <TouchableOpacity
               style={[
-                localStyles.smallButton,
-                { backgroundColor: theme.colors.primary },
-                (!bulkTierKey || bulkReason.trim().length < 3 || bulkApplying) && localStyles.buttonDisabled,
+                localStyles((theme ?? _styleTheme)).smallButton,
+                themeStyle('tabs_AdminTab_33', { theme: theme }, (theme ?? _styleTheme)),
+                (!bulkTierKey || bulkReason.trim().length < 3 || bulkApplying) && localStyles((theme ?? _styleTheme)).buttonDisabled,
               ]}
               disabled={!bulkTierKey || bulkReason.trim().length < 3 || bulkApplying}
               onPress={applyBulkTier}
@@ -606,30 +604,30 @@ const UsersSection: React.FC<{
               accessibilityLabel={`Apply ${selectedTier?.displayName ?? bulkTierKey} tier to ${selectedIds.size} selected user${selectedIds.size === 1 ? '' : 's'}`}
               testID="admin-users-bulk-apply"
             >
-              <Text style={[localStyles.smallButtonText, { color: theme.colors.onPrimary }]}>
+              <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('tabs_AdminTab_34', { theme: theme }, (theme ?? _styleTheme))]}>
                 {bulkApplying ? 'Applying…' : 'Apply tier'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[localStyles.smallButton, { backgroundColor: theme.colors.surfaceMuted }]}
+              style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_35', { theme: theme }, (theme ?? _styleTheme))]}
               onPress={clearSelection}
               accessibilityRole="button"
               accessibilityLabel="Clear user selection"
               testID="admin-users-bulk-clear"
             >
-              <Text style={[localStyles.smallButtonText, { color: theme.colors.text }]}>Clear</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('tabs_AdminTab_36', { theme: theme }, (theme ?? _styleTheme))]}>Clear</Text>
             </TouchableOpacity>
           </View>
           <View
-            style={[localStyles.row, { flexWrap: 'wrap', gap: 8, marginTop: 8 }]}
+            style={[localStyles((theme ?? _styleTheme)).row, themeStyle('tabs_AdminTab_37', {  }, (theme ?? _styleTheme))]}
             testID="admin-users-bulk-role-row"
           >
             <TouchableOpacity
               style={[
-                localStyles.smallButton,
+                localStyles((theme ?? _styleTheme)).smallButton,
                 bulkRole === 'admin'
-                  ? { backgroundColor: theme.colors.primary }
-                  : { backgroundColor: theme.colors.surfaceMuted },
+                  ? themeStyle('tabs_AdminTab_38', { theme: theme }, (theme ?? _styleTheme))
+                  : themeStyle('tabs_AdminTab_39', { theme: theme }, (theme ?? _styleTheme)),
               ]}
               onPress={() => setBulkRole((r) => (r === 'admin' ? null : 'admin'))}
               accessibilityRole="button"
@@ -639,8 +637,8 @@ const UsersSection: React.FC<{
             >
               <Text
                 style={[
-                  localStyles.smallButtonText,
-                  { color: bulkRole === 'admin' ? theme.colors.onPrimary : theme.colors.text },
+                  localStyles((theme ?? _styleTheme)).smallButtonText,
+                  themeStyle('tabs_AdminTab_40', { bulkRole: bulkRole, theme: theme }, (theme ?? _styleTheme)),
                 ]}
               >
                 Admin
@@ -648,10 +646,10 @@ const UsersSection: React.FC<{
             </TouchableOpacity>
             <TouchableOpacity
               style={[
-                localStyles.smallButton,
+                localStyles((theme ?? _styleTheme)).smallButton,
                 bulkRole === 'user'
-                  ? { backgroundColor: theme.colors.primary }
-                  : { backgroundColor: theme.colors.surfaceMuted },
+                  ? themeStyle('tabs_AdminTab_41', { theme: theme }, (theme ?? _styleTheme))
+                  : themeStyle('tabs_AdminTab_42', { theme: theme }, (theme ?? _styleTheme)),
               ]}
               onPress={() => setBulkRole((r) => (r === 'user' ? null : 'user'))}
               accessibilityRole="button"
@@ -661,8 +659,8 @@ const UsersSection: React.FC<{
             >
               <Text
                 style={[
-                  localStyles.smallButtonText,
-                  { color: bulkRole === 'user' ? theme.colors.onPrimary : theme.colors.text },
+                  localStyles((theme ?? _styleTheme)).smallButtonText,
+                  themeStyle('tabs_AdminTab_43', { bulkRole: bulkRole, theme: theme }, (theme ?? _styleTheme)),
                 ]}
               >
                 User
@@ -670,9 +668,9 @@ const UsersSection: React.FC<{
             </TouchableOpacity>
             <TouchableOpacity
               style={[
-                localStyles.smallButton,
-                { backgroundColor: theme.colors.primary },
-                (!bulkRole || bulkReason.trim().length < 3 || bulkRoleApplying) && localStyles.buttonDisabled,
+                localStyles((theme ?? _styleTheme)).smallButton,
+                themeStyle('tabs_AdminTab_44', { theme: theme }, (theme ?? _styleTheme)),
+                (!bulkRole || bulkReason.trim().length < 3 || bulkRoleApplying) && localStyles((theme ?? _styleTheme)).buttonDisabled,
               ]}
               disabled={!bulkRole || bulkReason.trim().length < 3 || bulkRoleApplying}
               onPress={applyBulkRole}
@@ -681,7 +679,7 @@ const UsersSection: React.FC<{
               accessibilityLabel={`Apply ${bulkRole ?? 'role'} to ${selectedIds.size} selected user${selectedIds.size === 1 ? '' : 's'}`}
               testID="admin-users-bulk-role-apply"
             >
-              <Text style={[localStyles.smallButtonText, { color: theme.colors.onPrimary }]}>
+              <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('tabs_AdminTab_45', { theme: theme }, (theme ?? _styleTheme))]}>
                 {bulkRoleApplying ? 'Applying…' : 'Apply role'}
               </Text>
             </TouchableOpacity>
@@ -691,35 +689,35 @@ const UsersSection: React.FC<{
       {users.map((u) => {
         const checked = selectedIds.has(u.id);
         return (
-          <View key={u.id} style={[localStyles.card, getCardStyle(theme)]}>
-            <View style={localStyles.row}>
+          <View key={u.id} style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+            <View style={localStyles((theme ?? _styleTheme)).row}>
               <TouchableOpacity
                 onPress={() => toggleSelected(u.id)}
-                style={{ paddingRight: 10, paddingVertical: 4 }}
+                style={themeStyle('tabs_AdminTab_46', {  }, (theme ?? _styleTheme))}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked }}
                 accessibilityLabel={`${checked ? 'Deselect' : 'Select'} ${u.email ?? u.id}`}
                 testID={`admin-users-row-select-${u.id}`}
               >
-                <Text style={{ fontSize: 18, color: theme.colors.text }}>{checked ? '☑' : '☐'}</Text>
+                <Text style={themeStyle('tabs_AdminTab_47', { theme: theme }, (theme ?? _styleTheme))}>{checked ? '☑' : '☐'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={localStyles.flex} onPress={() => onViewUser(u)}>
-                <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{u.email ?? u.id}</Text>
+              <TouchableOpacity style={localStyles((theme ?? _styleTheme)).flex} onPress={() => onViewUser(u)}>
+                <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_48', { theme: theme }, (theme ?? _styleTheme))]}>{u.email ?? u.id}</Text>
                 {(u.firstName || u.lastName) ? (
-                  <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                  <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_49', { theme: theme }, (theme ?? _styleTheme))]}>
                     {[u.firstName, u.lastName].filter(Boolean).join(' ')}
                   </Text>
                 ) : null}
               </TouchableOpacity>
-              <View style={localStyles.tagRow}>
+              <View style={localStyles((theme ?? _styleTheme)).tagRow}>
                 {u.role === 'admin' ? (
-                  <View style={[localStyles.tagAdmin, { backgroundColor: theme.colors.primary }]}>
-                    <Text style={localStyles.tagText}>admin</Text>
+                  <View style={[localStyles((theme ?? _styleTheme)).tagAdmin, themeStyle('tabs_AdminTab_50', { theme: theme }, (theme ?? _styleTheme))]}>
+                    <Text style={localStyles((theme ?? _styleTheme)).tagText}>admin</Text>
                   </View>
                 ) : null}
                 {u.tierKey ? (
-                  <View style={[localStyles.tagTier, { backgroundColor: theme.colors.premium }]}>
-                    <Text style={localStyles.tagText}>{u.tierKey}</Text>
+                  <View style={[localStyles((theme ?? _styleTheme)).tagTier, themeStyle('tabs_AdminTab_51', { theme: theme }, (theme ?? _styleTheme))]}>
+                    <Text style={localStyles((theme ?? _styleTheme)).tagText}>{u.tierKey}</Text>
                   </View>
                 ) : null}
               </View>
@@ -728,29 +726,29 @@ const UsersSection: React.FC<{
         );
       })}
       {totalPages > 1 ? (
-        <View style={localStyles.pagination}>
+        <View style={localStyles((theme ?? _styleTheme)).pagination}>
           <TouchableOpacity
             style={[
-              localStyles.pageButton,
-              { backgroundColor: theme.colors.primary },
-              page === 1 && localStyles.buttonDisabled,
+              localStyles((theme ?? _styleTheme)).pageButton,
+              themeStyle('tabs_AdminTab_52', { theme: theme }, (theme ?? _styleTheme)),
+              page === 1 && localStyles((theme ?? _styleTheme)).buttonDisabled,
             ]}
             disabled={page === 1}
             onPress={() => setPage((p) => p - 1)}
           >
-            <Text style={localStyles.pageButtonText}>Prev</Text>
+            <Text style={localStyles((theme ?? _styleTheme)).pageButtonText}>Prev</Text>
           </TouchableOpacity>
-          <Text style={[localStyles.pageInfo, { color: theme.colors.textMuted }]}>{page} / {totalPages}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).pageInfo, themeStyle('tabs_AdminTab_53', { theme: theme }, (theme ?? _styleTheme))]}>{page} / {totalPages}</Text>
           <TouchableOpacity
             style={[
-              localStyles.pageButton,
-              { backgroundColor: theme.colors.primary },
-              page === totalPages && localStyles.buttonDisabled,
+              localStyles((theme ?? _styleTheme)).pageButton,
+              themeStyle('tabs_AdminTab_54', { theme: theme }, (theme ?? _styleTheme)),
+              page === totalPages && localStyles((theme ?? _styleTheme)).buttonDisabled,
             ]}
             disabled={page === totalPages}
             onPress={() => setPage((p) => p + 1)}
           >
-            <Text style={localStyles.pageButtonText}>Next</Text>
+            <Text style={localStyles((theme ?? _styleTheme)).pageButtonText}>Next</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -765,7 +763,9 @@ const UserDetailSection: React.FC<{
   userId: string;
   tiers: Tier[];
   onBack: () => void;
-} & ThemedSectionProps> = ({ backendUrl, headers, userId, tiers, onBack, theme }) => {
+} & ThemedSectionProps> = ({ backendUrl, headers, userId, tiers, onBack, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [availableTiers, setAvailableTiers] = useState<Tier[]>(tiers);
   const [loading, setLoading] = useState(true);
@@ -843,8 +843,8 @@ const UserDetailSection: React.FC<{
     }
   };
 
-  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
-  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+  if (loading) return <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_55', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_56', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text>;
   if (!user) return null;
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || user.id;
@@ -854,49 +854,49 @@ const UserDetailSection: React.FC<{
   const selectedTierLabel = sortedTiers.find((tier) => tier.key === tierKey)?.displayName ?? tierKey ?? '';
 
   return (
-    <View style={localStyles.section}>
-      <TouchableOpacity onPress={onBack} style={localStyles.backLink}>
-        <Text style={[localStyles.backLinkText, { color: theme.colors.link }]}>Back to Users</Text>
+    <View style={localStyles((theme ?? _styleTheme)).section}>
+      <TouchableOpacity onPress={onBack} style={localStyles((theme ?? _styleTheme)).backLink}>
+        <Text style={[localStyles((theme ?? _styleTheme)).backLinkText, themeStyle('tabs_AdminTab_57', { theme: theme }, (theme ?? _styleTheme))]}>Back to Users</Text>
       </TouchableOpacity>
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>{displayName}</Text>
-      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{user.email}</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_58', { theme: theme }, (theme ?? _styleTheme))]}>{displayName}</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_59', { theme: theme }, (theme ?? _styleTheme))]}>{user.email}</Text>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Current Tier: {currentTierKey}</Text>
-        <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Change Tier</Text>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_60', { theme: theme }, (theme ?? _styleTheme))]}>Current Tier: {currentTierKey}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).fieldLabel, themeStyle('tabs_AdminTab_61', { theme: theme }, (theme ?? _styleTheme))]}>Change Tier</Text>
         {!tierLocked ? (
           <TouchableOpacity
             testID="user-tier-dropdown-button"
-            style={[localStyles.dropdownButton, getInputStyle(theme)]}
+            style={[localStyles((theme ?? _styleTheme)).dropdownButton, getInputStyle(theme)]}
             onPress={() => setTierDropdownOpen((open) => !open)}
           >
-            <Text style={[localStyles.dropdownButtonText, { color: theme.colors.text }]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).dropdownButtonText, themeStyle('tabs_AdminTab_62', { theme: theme }, (theme ?? _styleTheme))]}>
               {selectedTierLabel || 'Select a tier'} v
             </Text>
           </TouchableOpacity>
         ) : (
-          <View style={[localStyles.dropdownButton, getInputStyle(theme), localStyles.dropdownLocked]}>
-            <Text style={[localStyles.dropdownButtonText, { color: theme.colors.textMuted }]}>Pro (locked for admins)</Text>
+          <View style={[localStyles((theme ?? _styleTheme)).dropdownButton, getInputStyle(theme), localStyles((theme ?? _styleTheme)).dropdownLocked]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).dropdownButtonText, themeStyle('tabs_AdminTab_63', { theme: theme }, (theme ?? _styleTheme))]}>Pro (locked for admins)</Text>
           </View>
         )}
         {tierDropdownOpen && !tierLocked ? (
-          <View style={[localStyles.dropdownMenu, getCardStyle(theme, 0.18, 8, 18)]}>
+          <View style={[localStyles((theme ?? _styleTheme)).dropdownMenu, getCardStyle(theme, 0.18, 8, 18)]}>
             {sortedTiers.map((tier) => (
               <Pressable
                 key={tier.key}
                 testID={`user-tier-option-${tier.key}`}
                 style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => [
-                  localStyles.dropdownOption,
-                  hovered && { backgroundColor: theme.mode === 'dark' ? '#2C4356' : '#F4F8FB' },
-                  pressed && { backgroundColor: theme.mode === 'dark' ? '#35516A' : '#E8F0F6' },
-                  tierKey === tier.key && { backgroundColor: theme.colors.backgroundAlt },
+                  localStyles((theme ?? _styleTheme)).dropdownOption,
+                  hovered && themeStyle('tabs_AdminTab_64', { theme: theme }, (theme ?? _styleTheme)),
+                  pressed && themeStyle('tabs_AdminTab_65', { theme: theme }, (theme ?? _styleTheme)),
+                  tierKey === tier.key && themeStyle('tabs_AdminTab_66', { theme: theme }, (theme ?? _styleTheme)),
                 ]}
                 onPress={() => {
                   setTierKey(tier.key);
                   setTierDropdownOpen(false);
                 }}
               >
-                <Text style={[localStyles.dropdownOptionText, { color: theme.colors.text }]}>
+                <Text style={[localStyles((theme ?? _styleTheme)).dropdownOptionText, themeStyle('tabs_AdminTab_67', { theme: theme }, (theme ?? _styleTheme))]}>
                   {tier.displayName}
                 </Text>
               </Pressable>
@@ -904,12 +904,12 @@ const UserDetailSection: React.FC<{
           </View>
         ) : null}
         {tierLocked ? (
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Admin users are automatically assigned the Pro tier.</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_68', { theme: theme }, (theme ?? _styleTheme))]}>Admin users are automatically assigned the Pro tier.</Text>
         ) : (
           <>
             <TextInput
               testID="user-tier-reason-input"
-              style={[localStyles.smallInput, getInputStyle(theme)]}
+              style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
               placeholder="Reason (required)"
               placeholderTextColor={theme.colors.textMuted}
               value={tierReason}
@@ -917,36 +917,36 @@ const UserDetailSection: React.FC<{
             />
             <TouchableOpacity
               testID="user-tier-save-button"
-              style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, saving && localStyles.buttonDisabled]}
+              style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_69', { theme: theme }, (theme ?? _styleTheme)), saving && localStyles((theme ?? _styleTheme)).buttonDisabled]}
               disabled={saving}
               onPress={saveTier}
             >
-              <Text style={localStyles.smallButtonText}>Save Tier</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save Tier</Text>
             </TouchableOpacity>
           </>
         )}
       </View>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Current Role: {user.role}</Text>
-        <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Change Role</Text>
-        <View style={localStyles.tierButtons}>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_70', { theme: theme }, (theme ?? _styleTheme))]}>Current Role: {user.role}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).fieldLabel, themeStyle('tabs_AdminTab_71', { theme: theme }, (theme ?? _styleTheme))]}>Change Role</Text>
+        <View style={localStyles((theme ?? _styleTheme)).tierButtons}>
           {(['user', 'admin'] as const).map((r) => (
             <TouchableOpacity
               key={r}
-              style={[localStyles.tierButton, getSecondaryPillStyle(theme, role === r)]}
+              style={[localStyles((theme ?? _styleTheme)).tierButton, getSecondaryPillStyle(theme, role === r)]}
               onPress={() => setRole(r)}
             >
-              <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, role === r)]}>{r}</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).tierButtonText, getSecondaryPillTextStyle(theme, role === r)]}>{r}</Text>
             </TouchableOpacity>
           ))}
         </View>
         {role === 'admin' ? (
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Saving the admin role will also set the tier to Pro.</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_72', { theme: theme }, (theme ?? _styleTheme))]}>Saving the admin role will also set the tier to Pro.</Text>
         ) : null}
         <TextInput
           testID="user-role-reason-input"
-          style={[localStyles.smallInput, getInputStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
           placeholder="Reason (required)"
           placeholderTextColor={theme.colors.textMuted}
           value={roleReason}
@@ -954,23 +954,23 @@ const UserDetailSection: React.FC<{
         />
         <TouchableOpacity
           testID="user-role-save-button"
-          style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, saving && localStyles.buttonDisabled]}
+          style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_73', { theme: theme }, (theme ?? _styleTheme)), saving && localStyles((theme ?? _styleTheme)).buttonDisabled]}
           disabled={saving}
           onPress={saveRole}
         >
-          <Text style={localStyles.smallButtonText}>Save Role</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save Role</Text>
         </TouchableOpacity>
       </View>
 
-      {saveMsg ? <Text style={[localStyles.saveMsg, { color: saveMsg.startsWith('Error:') ? theme.colors.error : theme.colors.success }]}>{saveMsg}</Text> : null}
+      {saveMsg ? <Text style={[localStyles((theme ?? _styleTheme)).saveMsg, themeStyle('tabs_AdminTab_74', { saveMsg: saveMsg, theme: theme }, (theme ?? _styleTheme))]}>{saveMsg}</Text> : null}
 
       {user.usage && user.usage.length > 0 ? (
-        <View style={[localStyles.card, getCardStyle(theme)]}>
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Usage</Text>
+        <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_75', { theme: theme }, (theme ?? _styleTheme))]}>Usage</Text>
           {user.usage.map((c, i) => (
-            <View key={i} style={localStyles.row}>
-              <Text style={[localStyles.flex, { color: theme.colors.text }]}>{c.metricKey} ({c.windowKey})</Text>
-              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{c.count}</Text>
+            <View key={i} style={localStyles((theme ?? _styleTheme)).row}>
+              <Text style={[localStyles((theme ?? _styleTheme)).flex, themeStyle('tabs_AdminTab_76', { theme: theme }, (theme ?? _styleTheme))]}>{c.metricKey} ({c.windowKey})</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_77', { theme: theme }, (theme ?? _styleTheme))]}>{c.count}</Text>
             </View>
           ))}
         </View>
@@ -985,7 +985,9 @@ const TiersSection: React.FC<{
   headers: Record<string, string>;
   onTiersLoaded: (tiers: Tier[]) => void;
   theme: AppTheme;
-}> = ({ backendUrl, headers, onTiersLoaded, theme }) => {
+}> = ({ backendUrl, headers, onTiersLoaded, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1158,78 +1160,71 @@ const TiersSection: React.FC<{
     }
   };
 
-  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
-  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+  if (loading) return <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_78', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_79', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text>;
 
   return (
-    <View style={localStyles.section}>
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Tiers</Text>
-      {saveMsg ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{saveMsg}</Text> : null}
-      {tiers.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No tiers found.</Text> : null}
+    <View style={localStyles((theme ?? _styleTheme)).section}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_80', { theme: theme }, (theme ?? _styleTheme))]}>Tiers</Text>
+      {saveMsg ? <Text style={[localStyles((theme ?? _styleTheme)).saveMsg, themeStyle('tabs_AdminTab_81', { theme: theme }, (theme ?? _styleTheme))]}>{saveMsg}</Text> : null}
+      {tiers.length === 0 ? <Text style={[localStyles((theme ?? _styleTheme)).emptyText, themeStyle('tabs_AdminTab_82', { theme: theme }, (theme ?? _styleTheme))]}>No tiers found.</Text> : null}
       {tiers.length > 0 ? (
         <View
           style={[
-            localStyles.tableShell,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-              ...shadowStyle(theme.mode === 'dark' ? '#000000' : theme.colors.primary, 0.08, 0, 3, 8),
-            },
+            localStyles((theme ?? _styleTheme)).tableShell,
+            themeStyle('tabs_AdminTab_83', { theme: theme, shadowStyle: shadowStyle }, (theme ?? _styleTheme)),
           ]}
         >
           <HorizontalTableScroll>
             <View>
               <View
                 style={[
-                  localStyles.tableHeaderRow,
-                  { backgroundColor: theme.colors.primary, borderBottomColor: theme.colors.border },
+                  localStyles((theme ?? _styleTheme)).tableHeaderRow,
+                  themeStyle('tabs_AdminTab_84', { theme: theme }, (theme ?? _styleTheme)),
                 ]}
               >
                 <View
                   style={[
-                    localStyles.tableNameCell,
-                    localStyles.tableHeaderCell,
-                    { width: nameColumnWidth, borderRightColor: theme.colors.border },
+                    localStyles((theme ?? _styleTheme)).tableNameCell,
+                    localStyles((theme ?? _styleTheme)).tableHeaderCell,
+                    themeStyle('tabs_AdminTab_85', { nameColumnWidth: nameColumnWidth, theme: theme }, (theme ?? _styleTheme)),
                   ]}
                 >
-                  <Text style={[localStyles.tableHeaderText, { color: theme.colors.onPrimary }]}>Name</Text>
+                  <Text style={[localStyles((theme ?? _styleTheme)).tableHeaderText, themeStyle('tabs_AdminTab_86', { theme: theme }, (theme ?? _styleTheme))]}>Name</Text>
                 </View>
                 {tierColumns.map((tier) => (
                   <View
                     key={tier.key}
                     style={[
-                      localStyles.tableTierCell,
-                      localStyles.tableHeaderCell,
-                      { width: tierColumnWidth, borderRightColor: theme.colors.border },
+                      localStyles((theme ?? _styleTheme)).tableTierCell,
+                      localStyles((theme ?? _styleTheme)).tableHeaderCell,
+                      themeStyle('tabs_AdminTab_87', { tierColumnWidth: tierColumnWidth, theme: theme }, (theme ?? _styleTheme)),
                     ]}
                   >
-                    <Text style={[localStyles.tableHeaderText, { color: theme.colors.onPrimary }]}>
+                    <Text style={[localStyles((theme ?? _styleTheme)).tableHeaderText, themeStyle('tabs_AdminTab_88', { theme: theme }, (theme ?? _styleTheme))]}>
                       {tier.displayName}
                     </Text>
                   </View>
                 ))}
               </View>
 
-              <ScrollView style={localStyles.tableBodyScroll} nestedScrollEnabled>
+              <ScrollView style={localStyles((theme ?? _styleTheme)).tableBodyScroll} nestedScrollEnabled>
                 {tableRows.map((row, index) => (
                   <View
                     key={row.key}
                     style={[
-                      localStyles.tableDataRow,
-                      {
-                        backgroundColor: index % 2 === 0 ? theme.colors.surface : theme.colors.surfaceMuted,
-                        borderBottomColor: theme.colors.border,
-                      },
+                      localStyles((theme ?? _styleTheme)).tableDataRow,
+                      themeStyle('tabs_AdminTab_89', { index: index, theme: theme }, (theme ?? _styleTheme)),
                     ]}
                   >
                     <View
                       style={[
-                        localStyles.tableNameCell,
-                        { width: nameColumnWidth, borderRightColor: theme.colors.border },
+                        localStyles((theme ?? _styleTheme)).tableNameCell,
+                        themeStyle('tabs_AdminTab_90', { nameColumnWidth: nameColumnWidth, theme: theme }, (theme ?? _styleTheme)),
                       ]}
                     >
-                      <Text style={[localStyles.tableNameText, { color: theme.colors.text }]}>{row.label}</Text>
-                      <Text style={[localStyles.tableMetaText, { color: theme.colors.textMuted }]}>
+                      <Text style={[localStyles((theme ?? _styleTheme)).tableNameText, themeStyle('tabs_AdminTab_91', { theme: theme }, (theme ?? _styleTheme))]}>{row.label}</Text>
+                      <Text style={[localStyles((theme ?? _styleTheme)).tableMetaText, themeStyle('tabs_AdminTab_92', { theme: theme }, (theme ?? _styleTheme))]}>
                         {row.kind === 'limit' ? 'Limit' : 'Toggle'}
                       </Text>
                     </View>
@@ -1242,14 +1237,14 @@ const TiersSection: React.FC<{
                           <View
                             key={`${row.key}-${tier.key}`}
                             style={[
-                              localStyles.tableTierCell,
-                              { width: tierColumnWidth, borderRightColor: theme.colors.border },
+                              localStyles((theme ?? _styleTheme)).tableTierCell,
+                              themeStyle('tabs_AdminTab_93', { tierColumnWidth: tierColumnWidth, theme: theme }, (theme ?? _styleTheme)),
                             ]}
                           >
                             <TouchableOpacity
                               accessibilityRole="button"
                               testID={`tier-limit-cell-${row.key}-${tier.key}`}
-                              style={localStyles.tableLinkButton}
+                              style={localStyles((theme ?? _styleTheme)).tableLinkButton}
                               onPress={() => {
                                 setEditingLimit({ tierKey: tier.key, limitKey: row.key });
                                 setLimitValue(cellValue.explicitValue === null ? '' : String(cellValue.explicitValue));
@@ -1257,7 +1252,7 @@ const TiersSection: React.FC<{
                                 setSaveMsg(null);
                               }}
                             >
-                              <Text style={[localStyles.tableLinkText, { color: theme.colors.link }]}>
+                              <Text style={[localStyles((theme ?? _styleTheme)).tableLinkText, themeStyle('tabs_AdminTab_94', { theme: theme }, (theme ?? _styleTheme))]}>
                                 {cellValue.explicitValue === null
                                   ? 'Not set'
                                   : cellValue.explicitValue === -1
@@ -1280,12 +1275,12 @@ const TiersSection: React.FC<{
                           : displayValue === false
                             ? theme.colors.alert
                             : theme.colors.backgroundAlt;
-                      const buttonBorderColor = isInherited ? theme.colors.border : 'transparent';
+                      const buttonBorderColor = isInherited ? theme.colors.border : themeStyle('tabs_AdminTab_312', {  }, (theme ?? _styleTheme));
                       const primaryTextColor = isInherited
                         ? theme.colors.text
                         : displayValue === null
                           ? theme.colors.text
-                          : '#FFFFFF';
+                          : themeStyle('tabs_AdminTab_313', {  }, (theme ?? _styleTheme));
                       const secondaryTextColor = isInherited ? theme.colors.textMuted : primaryTextColor;
                       const buttonLabel = isInherited
                         ? 'Inherited'
@@ -1302,20 +1297,16 @@ const TiersSection: React.FC<{
                         <View
                           key={`${row.key}-${tier.key}`}
                           style={[
-                            localStyles.tableTierCell,
-                            { width: tierColumnWidth, borderRightColor: theme.colors.border },
+                            localStyles((theme ?? _styleTheme)).tableTierCell,
+                            themeStyle('tabs_AdminTab_95', { tierColumnWidth: tierColumnWidth, theme: theme }, (theme ?? _styleTheme)),
                           ]}
                         >
                           <TouchableOpacity
                             accessibilityRole="button"
                             testID={`tier-feature-cell-${row.key}-${tier.key}`}
                             style={[
-                              localStyles.toggleCellButton,
-                              {
-                                backgroundColor: buttonBackgroundColor,
-                                borderColor: buttonBorderColor,
-                                borderWidth: isInherited ? 1 : 0,
-                              },
+                              localStyles((theme ?? _styleTheme)).toggleCellButton,
+                              themeStyle('tabs_AdminTab_96', { buttonBackgroundColor: buttonBackgroundColor, buttonBorderColor: buttonBorderColor, isInherited: isInherited }, (theme ?? _styleTheme)),
                             ]}
                             disabled={isInherited}
                             onPress={isInherited ? undefined : () => {
@@ -1324,11 +1315,11 @@ const TiersSection: React.FC<{
                               setSaveMsg(null);
                             }}
                           >
-                            <Text style={[localStyles.toggleCellText, { color: primaryTextColor }]}>
+                            <Text style={[localStyles((theme ?? _styleTheme)).toggleCellText, themeStyle('tabs_AdminTab_97', { primaryTextColor: primaryTextColor }, (theme ?? _styleTheme))]}>
                               {buttonLabel}
                             </Text>
                             {secondaryLabel ? (
-                              <Text style={[localStyles.toggleCellSubtext, { color: secondaryTextColor }]}>
+                              <Text style={[localStyles((theme ?? _styleTheme)).toggleCellSubtext, themeStyle('tabs_AdminTab_98', { secondaryTextColor: secondaryTextColor }, (theme ?? _styleTheme))]}>
                                 {secondaryLabel}
                               </Text>
                             ) : null}
@@ -1351,18 +1342,18 @@ const TiersSection: React.FC<{
         onRequestClose={resetLimitDialog}
       >
         {editingLimit ? (
-          <View style={[localStyles.modalBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.45)' }]}>
+          <View style={[localStyles((theme ?? _styleTheme)).modalBackdrop, themeStyle('tabs_AdminTab_99', {  }, (theme ?? _styleTheme))]}>
             <View
               style={[
-                localStyles.modalCard,
-                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+                localStyles((theme ?? _styleTheme)).modalCard,
+                themeStyle('tabs_AdminTab_100', { theme: theme }, (theme ?? _styleTheme)),
               ]}
             >
-              <Text style={[localStyles.modalTitle, { color: theme.colors.text }]}>Update limit</Text>
-              <Text style={[localStyles.modalBodyText, { color: theme.colors.textMuted }]}>
+              <Text style={[localStyles((theme ?? _styleTheme)).modalTitle, themeStyle('tabs_AdminTab_101', { theme: theme }, (theme ?? _styleTheme))]}>Update limit</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).modalBodyText, themeStyle('tabs_AdminTab_102', { theme: theme }, (theme ?? _styleTheme))]}>
                 {editingLimit.limitKey} for {editingLimit.tierKey}
               </Text>
-              <Text style={[localStyles.modalBodyText, { color: theme.colors.textMuted }]}>
+              <Text style={[localStyles((theme ?? _styleTheme)).modalBodyText, themeStyle('tabs_AdminTab_103', { theme: theme }, (theme ?? _styleTheme))]}>
                 Current value:{' '}
                 {currentEditingLimitValue === null
                   ? 'Not set'
@@ -1373,12 +1364,8 @@ const TiersSection: React.FC<{
               <TextInput
                 testID="tier-limit-value-input"
                 style={[
-                  localStyles.modalInput,
-                  {
-                    backgroundColor: theme.colors.backgroundAlt,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text,
-                  },
+                  localStyles((theme ?? _styleTheme)).modalInput,
+                  themeStyle('tabs_AdminTab_104', { theme: theme }, (theme ?? _styleTheme)),
                 ]}
                 placeholder="New number (-1 = unlimited)"
                 placeholderTextColor={theme.colors.textMuted}
@@ -1389,13 +1376,9 @@ const TiersSection: React.FC<{
               <TextInput
                 testID="tier-limit-reason-input"
                 style={[
-                  localStyles.modalInput,
-                  localStyles.modalTextArea,
-                  {
-                    backgroundColor: theme.colors.backgroundAlt,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text,
-                  },
+                  localStyles((theme ?? _styleTheme)).modalInput,
+                  localStyles((theme ?? _styleTheme)).modalTextArea,
+                  themeStyle('tabs_AdminTab_105', { theme: theme }, (theme ?? _styleTheme)),
                 ]}
                 placeholder="Reason (required)"
                 placeholderTextColor={theme.colors.textMuted}
@@ -1403,28 +1386,28 @@ const TiersSection: React.FC<{
                 onChangeText={setLimitReason}
                 multiline
               />
-              <View style={localStyles.modalActions}>
+              <View style={localStyles((theme ?? _styleTheme)).modalActions}>
                 <TouchableOpacity
                   testID="tier-limit-cancel-button"
                   style={[
-                    localStyles.modalSecondaryButton,
-                    { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceMuted },
+                    localStyles((theme ?? _styleTheme)).modalSecondaryButton,
+                    themeStyle('tabs_AdminTab_106', { theme: theme }, (theme ?? _styleTheme)),
                   ]}
                   onPress={resetLimitDialog}
                 >
-                  <Text style={[localStyles.modalSecondaryButtonText, { color: theme.colors.text }]}>Cancel</Text>
+                  <Text style={[localStyles((theme ?? _styleTheme)).modalSecondaryButtonText, themeStyle('tabs_AdminTab_107', { theme: theme }, (theme ?? _styleTheme))]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   testID="tier-limit-save-button"
                   style={[
-                    localStyles.modalPrimaryButton,
-                    { backgroundColor: whiteLabelButtonColor(theme) },
-                    saving && localStyles.buttonDisabled,
+                    localStyles((theme ?? _styleTheme)).modalPrimaryButton,
+                    themeStyle('tabs_AdminTab_108', { theme: theme }, (theme ?? _styleTheme)),
+                    saving && localStyles((theme ?? _styleTheme)).buttonDisabled,
                   ]}
                   disabled={saving}
                   onPress={() => saveLimit(editingLimit.tierKey, editingLimit.limitKey)}
                 >
-                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
+                  <Text style={[[localStyles((theme ?? _styleTheme)).modalPrimaryButtonText, themeStyle('tabs_AdminTab_109', {  }, (theme ?? _styleTheme))], themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1439,27 +1422,23 @@ const TiersSection: React.FC<{
         onRequestClose={resetEntitlementDialog}
       >
         {editingEntitlement ? (
-          <View style={[localStyles.modalBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.45)' }]}>
+          <View style={[localStyles((theme ?? _styleTheme)).modalBackdrop, themeStyle('tabs_AdminTab_110', {  }, (theme ?? _styleTheme))]}>
             <View
               style={[
-                localStyles.modalCard,
-                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+                localStyles((theme ?? _styleTheme)).modalCard,
+                themeStyle('tabs_AdminTab_111', { theme: theme }, (theme ?? _styleTheme)),
               ]}
             >
-              <Text style={[localStyles.modalTitle, { color: theme.colors.text }]}>Change feature access</Text>
-              <Text style={[localStyles.modalBodyText, { color: theme.colors.textMuted }]}>
+              <Text style={[localStyles((theme ?? _styleTheme)).modalTitle, themeStyle('tabs_AdminTab_112', { theme: theme }, (theme ?? _styleTheme))]}>Change feature access</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).modalBodyText, themeStyle('tabs_AdminTab_113', { theme: theme }, (theme ?? _styleTheme))]}>
                 {editingEntitlement.featureKey} for {editingEntitlement.tierKey}
               </Text>
               <TextInput
                 testID="tier-feature-reason-input"
                 style={[
-                  localStyles.modalInput,
-                  localStyles.modalTextArea,
-                  {
-                    backgroundColor: theme.colors.backgroundAlt,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text,
-                  },
+                  localStyles((theme ?? _styleTheme)).modalInput,
+                  localStyles((theme ?? _styleTheme)).modalTextArea,
+                  themeStyle('tabs_AdminTab_114', { theme: theme }, (theme ?? _styleTheme)),
                 ]}
                 placeholder="Reason (required)"
                 placeholderTextColor={theme.colors.textMuted}
@@ -1467,23 +1446,23 @@ const TiersSection: React.FC<{
                 onChangeText={setEntitlementReason}
                 multiline
               />
-              <View style={localStyles.modalActions}>
+              <View style={localStyles((theme ?? _styleTheme)).modalActions}>
                 <TouchableOpacity
                   testID="tier-feature-cancel-button"
                   style={[
-                    localStyles.modalSecondaryButton,
-                    { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceMuted },
+                    localStyles((theme ?? _styleTheme)).modalSecondaryButton,
+                    themeStyle('tabs_AdminTab_115', { theme: theme }, (theme ?? _styleTheme)),
                   ]}
                   onPress={resetEntitlementDialog}
                 >
-                  <Text style={[localStyles.modalSecondaryButtonText, { color: theme.colors.text }]}>Cancel</Text>
+                  <Text style={[localStyles((theme ?? _styleTheme)).modalSecondaryButtonText, themeStyle('tabs_AdminTab_116', { theme: theme }, (theme ?? _styleTheme))]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   testID="tier-feature-save-button"
                   style={[
-                    localStyles.modalPrimaryButton,
-                    { backgroundColor: whiteLabelButtonColor(theme) },
-                    saving && localStyles.buttonDisabled,
+                    localStyles((theme ?? _styleTheme)).modalPrimaryButton,
+                    themeStyle('tabs_AdminTab_117', { theme: theme }, (theme ?? _styleTheme)),
+                    saving && localStyles((theme ?? _styleTheme)).buttonDisabled,
                   ]}
                   disabled={saving}
                   onPress={() => {
@@ -1495,7 +1474,7 @@ const TiersSection: React.FC<{
                     saveEntitlement(editingEntitlement.tierKey, editingEntitlement.featureKey, !currentValue);
                   }}
                 >
-                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
+                  <Text style={[[localStyles((theme ?? _styleTheme)).modalPrimaryButtonText, themeStyle('tabs_AdminTab_118', {  }, (theme ?? _styleTheme))], themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1510,8 +1489,10 @@ const TiersSection: React.FC<{
 const MetricsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [snapshot, setSnapshot] = useState<MetricsSnapshot | null>(null);
   const [queueDepth, setQueueDepth] = useState<QueueDepthSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1547,60 +1528,60 @@ const MetricsSection: React.FC<{ backendUrl: string; headers: Record<string, str
     : [];
 
   return (
-    <View style={localStyles.section} testID="admin-metrics-section">
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Metrics</Text>
-      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 8 }]}>
+    <View style={localStyles((theme ?? _styleTheme)).section} testID="admin-metrics-section">
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_119', { theme: theme }, (theme ?? _styleTheme))]}>Metrics</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_120', { theme: theme }, (theme ?? _styleTheme))]}>
         Per-instance in-process counters since process start. Multi-instance deployments will see per-instance numbers.
       </Text>
       <TouchableOpacity
-        style={[localStyles.smallButton, { backgroundColor: theme.colors.primary, alignSelf: 'flex-start', marginBottom: 12 }]}
+        style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_121', { theme: theme }, (theme ?? _styleTheme))]}
         onPress={load}
         accessibilityRole="button"
         accessibilityLabel="Refresh metrics"
         testID="admin-metrics-refresh"
       >
-        <Text style={[localStyles.smallButtonText, { color: theme.colors.onPrimary }]}>Refresh</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('tabs_AdminTab_122', { theme: theme }, (theme ?? _styleTheme))]}>Refresh</Text>
       </TouchableOpacity>
-      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
-      {loading && !snapshot ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
+      {error ? <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_123', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+      {loading && !snapshot ? <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_124', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text> : null}
 
       {queueDepth ? (
         <View
-          style={[localStyles.card, getCardStyle(theme), { marginBottom: 12 }]}
+          style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme), themeStyle('tabs_AdminTab_125', {  }, (theme ?? _styleTheme))]}
           testID="admin-metrics-queue-depth"
         >
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginBottom: 4 }]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_126', { theme: theme }, (theme ?? _styleTheme))]}>
             Ingestion queue depth
           </Text>
-          <View style={localStyles.row}>
-            <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.text }]}>Active</Text>
+          <View style={localStyles((theme ?? _styleTheme)).row}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardSub, localStyles((theme ?? _styleTheme)).flex, themeStyle('tabs_AdminTab_127', { theme: theme }, (theme ?? _styleTheme))]}>Active</Text>
             <Text
-              style={[localStyles.cardTitle, { color: theme.colors.text }]}
+              style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_128', { theme: theme }, (theme ?? _styleTheme))]}
               testID="admin-metrics-queue-active"
             >
               {queueDepth.totalActive}
             </Text>
           </View>
-          <View style={localStyles.row}>
-            <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.text }]}>Failed (retriable)</Text>
+          <View style={localStyles((theme ?? _styleTheme)).row}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardSub, localStyles((theme ?? _styleTheme)).flex, themeStyle('tabs_AdminTab_129', { theme: theme }, (theme ?? _styleTheme))]}>Failed (retriable)</Text>
             <Text
-              style={[localStyles.cardTitle, { color: theme.colors.text }]}
+              style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_130', { theme: theme }, (theme ?? _styleTheme))]}
               testID="admin-metrics-queue-failed"
             >
               {queueDepth.failedRetriable}
             </Text>
           </View>
-          <View style={localStyles.row}>
-            <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.textMuted }]}>Terminal</Text>
+          <View style={localStyles((theme ?? _styleTheme)).row}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardSub, localStyles((theme ?? _styleTheme)).flex, themeStyle('tabs_AdminTab_131', { theme: theme }, (theme ?? _styleTheme))]}>Terminal</Text>
             <Text
-              style={[localStyles.cardSub, { color: theme.colors.textMuted }]}
+              style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_132', { theme: theme }, (theme ?? _styleTheme))]}
               testID="admin-metrics-queue-terminal"
             >
               {queueDepth.totalTerminal}
             </Text>
           </View>
           {Object.entries(queueDepth.countsByState).length > 0 ? (
-            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 6 }]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_133', { theme: theme }, (theme ?? _styleTheme))]}>
               {Object.entries(queueDepth.countsByState)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([state, n]) => `${state}:${n}`)
@@ -1612,44 +1593,44 @@ const MetricsSection: React.FC<{ backendUrl: string; headers: Record<string, str
 
       {snapshot ? (
         <>
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginBottom: 4 }]}>Cache hit rates</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_134', { theme: theme }, (theme ?? _styleTheme))]}>Cache hit rates</Text>
           {snapshot.cacheRatios.length === 0 ? (
-            <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).emptyText, themeStyle('tabs_AdminTab_135', { theme: theme }, (theme ?? _styleTheme))]}>
               No cache traffic observed yet on this instance.
             </Text>
           ) : (
             snapshot.cacheRatios.map((row) => (
               <View
                 key={row.namespace}
-                style={[localStyles.card, getCardStyle(theme)]}
+                style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}
                 testID={`admin-metrics-cache-row-${row.namespace}`}
               >
-                <View style={localStyles.row}>
-                  <Text style={[localStyles.cardTitle, localStyles.flex, { color: theme.colors.text }]}>{row.namespace}</Text>
-                  <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{fmtPct(row.hitRate)}</Text>
+                <View style={localStyles((theme ?? _styleTheme)).row}>
+                  <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, localStyles((theme ?? _styleTheme)).flex, themeStyle('tabs_AdminTab_136', { theme: theme }, (theme ?? _styleTheme))]}>{row.namespace}</Text>
+                  <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_137', { theme: theme }, (theme ?? _styleTheme))]}>{fmtPct(row.hitRate)}</Text>
                 </View>
-                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_138', { theme: theme }, (theme ?? _styleTheme))]}>
                   {row.hits} hits / {row.misses} misses ({row.total} total)
                 </Text>
               </View>
             ))
           )}
 
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 16, marginBottom: 4 }]}>Counters</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_139', { theme: theme }, (theme ?? _styleTheme))]}>Counters</Text>
           {nonCacheCounters.length === 0 ? (
-            <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No counter activity on this instance.</Text>
+            <Text style={[localStyles((theme ?? _styleTheme)).emptyText, themeStyle('tabs_AdminTab_140', { theme: theme }, (theme ?? _styleTheme))]}>No counter activity on this instance.</Text>
           ) : (
             nonCacheCounters.map(([name, value]) => (
-              <View key={name} style={[localStyles.card, getCardStyle(theme)]} testID={`admin-metrics-counter-${name}`}>
-                <View style={localStyles.row}>
-                  <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.text }]}>{name}</Text>
-                  <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{value}</Text>
+              <View key={name} style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]} testID={`admin-metrics-counter-${name}`}>
+                <View style={localStyles((theme ?? _styleTheme)).row}>
+                  <Text style={[localStyles((theme ?? _styleTheme)).cardSub, localStyles((theme ?? _styleTheme)).flex, themeStyle('tabs_AdminTab_141', { theme: theme }, (theme ?? _styleTheme))]}>{name}</Text>
+                  <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_142', { theme: theme }, (theme ?? _styleTheme))]}>{value}</Text>
                 </View>
               </View>
             ))
           )}
 
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 12 }]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_143', { theme: theme }, (theme ?? _styleTheme))]}>
             Accumulating since {new Date(snapshot.startedAtIso).toLocaleString()}
           </Text>
         </>
@@ -1662,8 +1643,10 @@ const MetricsSection: React.FC<{ backendUrl: string; headers: Record<string, str
 const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [rows, setRows] = useState<UserDataRow[]>([]);
   const [total, setTotal] = useState(0);
   const [window, setWindow] = usePersistedState<'7d' | '30d' | 'all-time'>(
@@ -1695,56 +1678,56 @@ const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, st
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
-    <View style={localStyles.section}>
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>User Data</Text>
-      <View style={localStyles.tierButtons}>
+    <View style={localStyles((theme ?? _styleTheme)).section}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_144', { theme: theme }, (theme ?? _styleTheme))]}>User Data</Text>
+      <View style={localStyles((theme ?? _styleTheme)).tierButtons}>
         {(['7d', '30d', 'all-time'] as const).map((w) => (
           <TouchableOpacity
             key={w}
-            style={[localStyles.tierButton, getSecondaryPillStyle(theme, window === w)]}
+            style={[localStyles((theme ?? _styleTheme)).tierButton, getSecondaryPillStyle(theme, window === w)]}
             onPress={() => { setWindow(w); setPage(1); }}
           >
-            <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, window === w)]}>{w}</Text>
+            <Text style={[localStyles((theme ?? _styleTheme)).tierButtonText, getSecondaryPillTextStyle(theme, window === w)]}>{w}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
-      {loading ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
-      {!loading && rows.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No data.</Text> : null}
+      {error ? <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_145', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+      {loading ? <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_146', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text> : null}
+      {!loading && rows.length === 0 ? <Text style={[localStyles((theme ?? _styleTheme)).emptyText, themeStyle('tabs_AdminTab_147', { theme: theme }, (theme ?? _styleTheme))]}>No data.</Text> : null}
       {rows.map((row) => (
-        <View key={row.id} style={[localStyles.card, getCardStyle(theme)]}>
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{row.email ?? row.id}</Text>
-          <View style={localStyles.tagRow}>
-            {row.role === 'admin' ? <View style={[localStyles.tagAdmin, { backgroundColor: theme.colors.primary }]}><Text style={localStyles.tagText}>admin</Text></View> : null}
-            {row.tierKey ? <View style={[localStyles.tagTier, { backgroundColor: theme.colors.premium }]}><Text style={localStyles.tagText}>{row.tierKey}</Text></View> : null}
+        <View key={row.id} style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_148', { theme: theme }, (theme ?? _styleTheme))]}>{row.email ?? row.id}</Text>
+          <View style={localStyles((theme ?? _styleTheme)).tagRow}>
+            {row.role === 'admin' ? <View style={[localStyles((theme ?? _styleTheme)).tagAdmin, themeStyle('tabs_AdminTab_149', { theme: theme }, (theme ?? _styleTheme))]}><Text style={localStyles((theme ?? _styleTheme)).tagText}>admin</Text></View> : null}
+            {row.tierKey ? <View style={[localStyles((theme ?? _styleTheme)).tagTier, themeStyle('tabs_AdminTab_150', { theme: theme }, (theme ?? _styleTheme))]}><Text style={localStyles((theme ?? _styleTheme)).tagText}>{row.tierKey}</Text></View> : null}
           </View>
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Trips: {row.tripCount}</Text>
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Trip creations: {row.tripCreations}</Text>
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>AI generations: {row.aiGenerations}</Text>
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Tokens: {row.tokens}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_151', { theme: theme }, (theme ?? _styleTheme))]}>Trips: {row.tripCount}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_152', { theme: theme }, (theme ?? _styleTheme))]}>Trip creations: {row.tripCreations}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_153', { theme: theme }, (theme ?? _styleTheme))]}>AI generations: {row.aiGenerations}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_154', { theme: theme }, (theme ?? _styleTheme))]}>Tokens: {row.tokens}</Text>
           {row.apiCalls ? (
-            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_155', { theme: theme }, (theme ?? _styleTheme))]}>
               API calls: {Object.entries(row.apiCalls).map(([key, value]) => `${key} ${value}`).join(' | ')}
             </Text>
           ) : null}
         </View>
       ))}
       {totalPages > 1 ? (
-        <View style={localStyles.pagination}>
+        <View style={localStyles((theme ?? _styleTheme)).pagination}>
           <TouchableOpacity
-            style={[localStyles.pageButton, { backgroundColor: theme.colors.primary }, page === 1 && localStyles.buttonDisabled]}
+            style={[localStyles((theme ?? _styleTheme)).pageButton, themeStyle('tabs_AdminTab_156', { theme: theme }, (theme ?? _styleTheme)), page === 1 && localStyles((theme ?? _styleTheme)).buttonDisabled]}
             disabled={page === 1}
             onPress={() => setPage((p) => p - 1)}
           >
-            <Text style={localStyles.pageButtonText}>Prev</Text>
+            <Text style={localStyles((theme ?? _styleTheme)).pageButtonText}>Prev</Text>
           </TouchableOpacity>
-          <Text style={[localStyles.pageInfo, { color: theme.colors.textMuted }]}>{page} / {totalPages}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).pageInfo, themeStyle('tabs_AdminTab_157', { theme: theme }, (theme ?? _styleTheme))]}>{page} / {totalPages}</Text>
           <TouchableOpacity
-            style={[localStyles.pageButton, { backgroundColor: theme.colors.primary }, page === totalPages && localStyles.buttonDisabled]}
+            style={[localStyles((theme ?? _styleTheme)).pageButton, themeStyle('tabs_AdminTab_158', { theme: theme }, (theme ?? _styleTheme)), page === totalPages && localStyles((theme ?? _styleTheme)).buttonDisabled]}
             disabled={page === totalPages}
             onPress={() => setPage((p) => p + 1)}
           >
-            <Text style={localStyles.pageButtonText}>Next</Text>
+            <Text style={localStyles((theme ?? _styleTheme)).pageButtonText}>Next</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -1756,8 +1739,10 @@ const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, st
 const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -1786,38 +1771,38 @@ const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, st
   const fmt = (s: string) => new Date(s).toLocaleString();
 
   return (
-    <View style={localStyles.section}>
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Audit Log</Text>
-      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
-      {loading ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
-      {!loading && entries.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No audit entries.</Text> : null}
+    <View style={localStyles((theme ?? _styleTheme)).section}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_159', { theme: theme }, (theme ?? _styleTheme))]}>Audit Log</Text>
+      {error ? <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_160', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+      {loading ? <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_161', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text> : null}
+      {!loading && entries.length === 0 ? <Text style={[localStyles((theme ?? _styleTheme)).emptyText, themeStyle('tabs_AdminTab_162', { theme: theme }, (theme ?? _styleTheme))]}>No audit entries.</Text> : null}
       {entries.map((entry) => (
-        <View key={entry.id} style={[localStyles.card, getCardStyle(theme)]}>
-          <View style={localStyles.row}>
-            <Text style={[localStyles.cardTitle, localStyles.flex, { color: theme.colors.text }]}>{entry.action}</Text>
-            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{fmt(entry.createdAt)}</Text>
+        <View key={entry.id} style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+          <View style={localStyles((theme ?? _styleTheme)).row}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, localStyles((theme ?? _styleTheme)).flex, themeStyle('tabs_AdminTab_163', { theme: theme }, (theme ?? _styleTheme))]}>{entry.action}</Text>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_164', { theme: theme }, (theme ?? _styleTheme))]}>{fmt(entry.createdAt)}</Text>
           </View>
-          {entry.reason ? <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Reason: {entry.reason}</Text> : null}
-          {entry.actorUserId ? <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Actor: {entry.actorUserId}</Text> : null}
-          {entry.targetUserId ? <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Target: {entry.targetUserId}</Text> : null}
+          {entry.reason ? <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_165', { theme: theme }, (theme ?? _styleTheme))]}>Reason: {entry.reason}</Text> : null}
+          {entry.actorUserId ? <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_166', { theme: theme }, (theme ?? _styleTheme))]}>Actor: {entry.actorUserId}</Text> : null}
+          {entry.targetUserId ? <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_167', { theme: theme }, (theme ?? _styleTheme))]}>Target: {entry.targetUserId}</Text> : null}
         </View>
       ))}
       {totalPages > 1 ? (
-        <View style={localStyles.pagination}>
+        <View style={localStyles((theme ?? _styleTheme)).pagination}>
           <TouchableOpacity
-            style={[localStyles.pageButton, { backgroundColor: theme.colors.primary }, page === 1 && localStyles.buttonDisabled]}
+            style={[localStyles((theme ?? _styleTheme)).pageButton, themeStyle('tabs_AdminTab_168', { theme: theme }, (theme ?? _styleTheme)), page === 1 && localStyles((theme ?? _styleTheme)).buttonDisabled]}
             disabled={page === 1}
             onPress={() => setPage((p) => p - 1)}
           >
-            <Text style={localStyles.pageButtonText}>Prev</Text>
+            <Text style={localStyles((theme ?? _styleTheme)).pageButtonText}>Prev</Text>
           </TouchableOpacity>
-          <Text style={[localStyles.pageInfo, { color: theme.colors.textMuted }]}>{page} / {totalPages}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).pageInfo, themeStyle('tabs_AdminTab_169', { theme: theme }, (theme ?? _styleTheme))]}>{page} / {totalPages}</Text>
           <TouchableOpacity
-            style={[localStyles.pageButton, { backgroundColor: theme.colors.primary }, page === totalPages && localStyles.buttonDisabled]}
+            style={[localStyles((theme ?? _styleTheme)).pageButton, themeStyle('tabs_AdminTab_170', { theme: theme }, (theme ?? _styleTheme)), page === totalPages && localStyles((theme ?? _styleTheme)).buttonDisabled]}
             disabled={page === totalPages}
             onPress={() => setPage((p) => p + 1)}
           >
-            <Text style={localStyles.pageButtonText}>Next</Text>
+            <Text style={localStyles((theme ?? _styleTheme)).pageButtonText}>Next</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -1828,8 +1813,10 @@ const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, st
 const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [metrics, setMetrics] = useState<IngestionMetrics | null>(null);
   const [shadowParseSummary, setShadowParseSummary] = useState<ShadowParseSummary | null>(null);
   const [shadowParseError, setShadowParseError] = useState<string | null>(null);
@@ -1912,9 +1899,9 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
 
   if (observabilityEnabled === false) {
     return (
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Ingestion</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_171', { theme: theme }, (theme ?? _styleTheme))]}>Ingestion</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_172', { theme: theme }, (theme ?? _styleTheme))]}>
           Ingestion observability is currently disabled (feature_ingest_admin_observability).
         </Text>
       </View>
@@ -1965,8 +1952,8 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
     }
   };
 
-  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
-  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+  if (loading) return <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_173', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_174', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text>;
   if (!metrics) return null;
 
   const duplicateRate = metrics.duplicateRate.totalCount
@@ -1977,82 +1964,82 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
     : '0%';
 
   return (
-    <View style={localStyles.section}>
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Ingestion Operations</Text>
-      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Duplicate Rate</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{duplicateRate}</Text>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Low Confidence Rate</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{lowConfidenceRate}</Text>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Retries / Dead Letters</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+    <View style={localStyles((theme ?? _styleTheme)).section}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_175', { theme: theme }, (theme ?? _styleTheme))]}>Ingestion Operations</Text>
+      {message ? <Text style={[localStyles((theme ?? _styleTheme)).saveMsg, themeStyle('tabs_AdminTab_176', { theme: theme }, (theme ?? _styleTheme))]}>{message}</Text> : null}
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_177', { theme: theme }, (theme ?? _styleTheme))]}>Duplicate Rate</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_178', { theme: theme }, (theme ?? _styleTheme))]}>{duplicateRate}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_179', { theme: theme }, (theme ?? _styleTheme))]}>Low Confidence Rate</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_180', { theme: theme }, (theme ?? _styleTheme))]}>{lowConfidenceRate}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_181', { theme: theme }, (theme ?? _styleTheme))]}>Retries / Dead Letters</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_182', { theme: theme }, (theme ?? _styleTheme))]}>
           {metrics.retryAndDeadLetter.retryCount} retries • {metrics.retryAndDeadLetter.deadLetterCount} dead-lettered
         </Text>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Gmail Auth Failures</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{metrics.gmailAuthFailures}</Text>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Webhook Signature Failures</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{metrics.webhookSignatureFailures}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_183', { theme: theme }, (theme ?? _styleTheme))]}>Gmail Auth Failures</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_184', { theme: theme }, (theme ?? _styleTheme))]}>{metrics.gmailAuthFailures}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_185', { theme: theme }, (theme ?? _styleTheme))]}>Webhook Signature Failures</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_186', { theme: theme }, (theme ?? _styleTheme))]}>{metrics.webhookSignatureFailures}</Text>
       </View>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Ingestion Volume by Source and Tier</Text>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_187', { theme: theme }, (theme ?? _styleTheme))]}>Ingestion Volume by Source and Tier</Text>
         {metrics.ingestionVolumeBySourceAndTier.map((row) => (
-          <Text key={`${row.sourceType}-${row.tierKey}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          <Text key={`${row.sourceType}-${row.tierKey}`} style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_188', { theme: theme }, (theme ?? _styleTheme))]}>
             {row.sourceType} • {row.tierKey}: {row.count}
           </Text>
         ))}
       </View>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Parse Success / Failure by Stage</Text>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_189', { theme: theme }, (theme ?? _styleTheme))]}>Parse Success / Failure by Stage</Text>
         {metrics.parseRateByStage.map((row) => (
-          <Text key={row.stageName} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          <Text key={row.stageName} style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_190', { theme: theme }, (theme ?? _styleTheme))]}>
             {row.stageName}: {row.successCount} success • {row.failureCount} failure
           </Text>
         ))}
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>Average Processing Latency</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_191', { theme: theme }, (theme ?? _styleTheme))]}>Average Processing Latency</Text>
         {metrics.averageLatencyByStage.map((row) => (
-          <Text key={row.stageName} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          <Text key={row.stageName} style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_192', { theme: theme }, (theme ?? _styleTheme))]}>
             {row.stageName}: {row.averageMs} ms
           </Text>
         ))}
       </View>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Shadow-Parse Quality (LLM vs. production)</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_193', { theme: theme }, (theme ?? _styleTheme))]}>Shadow-Parse Quality (LLM vs. production)</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_194', { theme: theme }, (theme ?? _styleTheme))]}>
           How often a sampled shadow LLM extraction agreed with whatever strategy actually served the item. Reads this
           instance's local capture archive only, so numbers reflect recent traffic on this server, not a global total.
         </Text>
         {shadowParseError ? (
-          <Text style={[localStyles.cardSub, { color: theme.colors.error }]}>{shadowParseError}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_195', { theme: theme }, (theme ?? _styleTheme))]}>{shadowParseError}</Text>
         ) : !shadowParseSummary || shadowParseSummary.comparedSampleCount === 0 ? (
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>No shadow-parse samples captured on this instance yet.</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_196', { theme: theme }, (theme ?? _styleTheme))]}>No shadow-parse samples captured on this instance yet.</Text>
         ) : (
           <>
-            <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_197', { theme: theme }, (theme ?? _styleTheme))]}>
               Overall: {Math.round(shadowParseSummary.averageAgreementRate! * 100)}% agreement
             </Text>
-            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_198', { theme: theme }, (theme ?? _styleTheme))]}>
               {shadowParseSummary.comparedSampleCount} of {shadowParseSummary.sampleCount} sampled captures had a comparison
             </Text>
             {shadowParseSummary.byItemType.map((row) => (
-              <Text key={row.itemType} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+              <Text key={row.itemType} style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_199', { theme: theme }, (theme ?? _styleTheme))]}>
                 {row.itemType}: {Math.round(row.averageAgreementRate * 100)}% agreement ({row.sampleCount} samples)
               </Text>
             ))}
             {shadowParseSummary.topMismatchedFields.length ? (
               <>
-                <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>Most-mismatched fields</Text>
+                <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_200', { theme: theme }, (theme ?? _styleTheme))]}>Most-mismatched fields</Text>
                 {shadowParseSummary.topMismatchedFields.map((row) => (
-                  <Text key={`${row.itemType}-${row.fieldName}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                  <Text key={`${row.itemType}-${row.fieldName}`} style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_201', { theme: theme }, (theme ?? _styleTheme))]}>
                     {row.itemType}.{row.fieldName}: {row.mismatchCount} mismatches
                   </Text>
                 ))}
               </>
             ) : (
-              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 10 }]}>
+              <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_202', { theme: theme }, (theme ?? _styleTheme))]}>
                 Per-field mismatch detail isn't retained in production captures (stripped for privacy before persisting) —
                 only available when reading a local/dev capture archive.
               </Text>
@@ -2061,96 +2048,96 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
         )}
       </View>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>LLM Usage and Estimated Cost</Text>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_203', { theme: theme }, (theme ?? _styleTheme))]}>LLM Usage and Estimated Cost</Text>
         {metrics.llmUsageByModel.map((row) => (
-          <Text key={`${row.provider}-${row.modelName}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          <Text key={`${row.provider}-${row.modelName}`} style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_204', { theme: theme }, (theme ?? _styleTheme))]}>
             {row.provider} / {row.modelName}: {row.tokensIn} in • {row.tokensOut} out • ${row.estimatedCostUsd.toFixed(2)}
           </Text>
         ))}
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>Cost per User</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_205', { theme: theme }, (theme ?? _styleTheme))]}>Cost per User</Text>
         {metrics.costPerUser.map((row) => (
-          <Text key={row.userId} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          <Text key={row.userId} style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_206', { theme: theme }, (theme ?? _styleTheme))]}>
             {row.userId}: ${row.estimatedCostUsd.toFixed(2)}
           </Text>
         ))}
       </View>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Quota Consumption by User / Tier</Text>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_207', { theme: theme }, (theme ?? _styleTheme))]}>Quota Consumption by User / Tier</Text>
         {metrics.quotaByUserTier.map((row) => (
-          <Text key={row.userId} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          <Text key={row.userId} style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_208', { theme: theme }, (theme ?? _styleTheme))]}>
             {row.userId} • {row.tierKey}: {row.uploadsUsed}
           </Text>
         ))}
       </View>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Retry Policy</Text>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_209', { theme: theme }, (theme ?? _styleTheme))]}>Retry Policy</Text>
         {retryConfig ? (
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_210', { theme: theme }, (theme ?? _styleTheme))]}>
             Last updated: {new Date(retryConfig.updatedAt).toLocaleString()}
           </Text>
         ) : null}
         <TextInput
-          style={[localStyles.smallInput, getInputStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
           value={retryForm.maxAttempts}
           onChangeText={(value: string) => setRetryForm((current) => ({ ...current, maxAttempts: value }))}
           placeholder="Max attempts"
           placeholderTextColor={theme.colors.textMuted}
         />
         <TextInput
-          style={[localStyles.smallInput, getInputStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
           value={retryForm.baseDelaySeconds}
           onChangeText={(value: string) => setRetryForm((current) => ({ ...current, baseDelaySeconds: value }))}
           placeholder="Base delay seconds"
           placeholderTextColor={theme.colors.textMuted}
         />
         <TextInput
-          style={[localStyles.smallInput, getInputStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
           value={retryForm.maxDelaySeconds}
           onChangeText={(value: string) => setRetryForm((current) => ({ ...current, maxDelaySeconds: value }))}
           placeholder="Max delay seconds"
           placeholderTextColor={theme.colors.textMuted}
         />
         <TextInput
-          style={[localStyles.smallInput, getInputStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
           value={retryForm.alertThresholdPercent}
           onChangeText={(value: string) => setRetryForm((current) => ({ ...current, alertThresholdPercent: value }))}
           placeholder="Alert threshold percent"
           placeholderTextColor={theme.colors.textMuted}
         />
-        <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }]} onPress={saveRetryConfig}>
-          <Text style={localStyles.smallButtonText}>Save Retry Policy</Text>
+        <TouchableOpacity style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_211', { theme: theme }, (theme ?? _styleTheme))]} onPress={saveRetryConfig}>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save Retry Policy</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Clear Extraction Cache</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_212', { theme: theme }, (theme ?? _styleTheme))]}>Clear Extraction Cache</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_213', { theme: theme }, (theme ?? _styleTheme))]}>
           Delete all cached extraction results so re-uploaded documents are re-parsed with the latest logic version.
         </Text>
         <TouchableOpacity
-          style={[localStyles.tierButton, getSecondaryPillStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).tierButton, getSecondaryPillStyle(theme)]}
           onPress={clearCache}
         >
-          <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme)]}>Clear Cache</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).tierButtonText, getSecondaryPillTextStyle(theme)]}>Clear Cache</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Dead-Letter Re-drive</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_214', { theme: theme }, (theme ?? _styleTheme))]}>Dead-Letter Re-drive</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_215', { theme: theme }, (theme ?? _styleTheme))]}>
           Move dead-lettered jobs back to `PENDING` and enqueue them again.
         </Text>
-        <View style={localStyles.tierButtons}>
+        <View style={localStyles((theme ?? _styleTheme)).tierButtons}>
           {(['ALL', 'MAILGUN', 'GMAIL'] as const).map((provider) => (
             <TouchableOpacity
               key={provider}
-              style={[localStyles.tierButton, getSecondaryPillStyle(theme)]}
+              style={[localStyles((theme ?? _styleTheme)).tierButton, getSecondaryPillStyle(theme)]}
               onPress={() => redriveDeadLetters(provider)}
             >
-              <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme)]}>Re-drive {provider}</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).tierButtonText, getSecondaryPillTextStyle(theme)]}>Re-drive {provider}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -2218,8 +2205,10 @@ type GetYourGuideAdminStatus = {
 const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [providers, setProviders] = useState<ApiLimitProvider[]>([]);
   const [getYourGuideStatus, setGetYourGuideStatus] = useState<GetYourGuideAdminStatus | null>(null);
   const [providerForms, setProviderForms] = useState<Record<string, ApiLimitProviderForm>>({});
@@ -2480,66 +2469,60 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
     }
   };
 
-  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
-  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+  if (loading) return <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_216', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_217', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text>;
 
   return (
-    <ScrollView style={[localStyles.section, localStyles.apiLimitsScroll]} contentContainerStyle={localStyles.apiLimitsScrollContent}>
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>API Rate Limits</Text>
-      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
+    <ScrollView style={[localStyles((theme ?? _styleTheme)).section, localStyles((theme ?? _styleTheme)).apiLimitsScroll]} contentContainerStyle={localStyles((theme ?? _styleTheme)).apiLimitsScrollContent}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_218', { theme: theme }, (theme ?? _styleTheme))]}>API Rate Limits</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_219', { theme: theme }, (theme ?? _styleTheme))]}>
         Limits are configured in api-limits.yaml. Usage resets per window period, request counts are durable, and provider spend is estimated from recorded token usage.
       </Text>
-      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
+      {message ? <Text style={[localStyles((theme ?? _styleTheme)).saveMsg, themeStyle('tabs_AdminTab_220', { theme: theme }, (theme ?? _styleTheme))]}>{message}</Text> : null}
       {getYourGuideStatus ? (
-        <View style={[localStyles.card, getCardStyle(theme)]} testID="admin-getyourguide-status">
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>GetYourGuide operations</Text>
-          <Text style={[localStyles.cardSub, { color: getYourGuideStatus.featureEnabled ? theme.colors.success : theme.colors.textMuted }]}>Kill switch: {getYourGuideStatus.featureEnabled ? 'enabled' : 'disabled'} | Partner configuration: {getYourGuideStatus.partnerConfigured ? 'present' : 'missing'} | API: {getYourGuideStatus.apiConfigured ? 'configured' : 'not configured'}</Text>
-          <Text style={[localStyles.cardSub, { color: getYourGuideStatus.circuit?.open ? theme.colors.error : theme.colors.textMuted }]}>Partner circuit: {getYourGuideStatus.circuit?.open ? 'open' : 'closed'} | Consecutive failures: {getYourGuideStatus.circuit?.consecutiveFailures ?? 0}</Text>
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Cache permission: {getYourGuideStatus.cachePermission ? 'written permission recorded' : 'request-only (no persistence)'} | Revenue/commission: separate dashboard</Text>
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Requests: {getYourGuideStatus.observability?.requests ?? 0} | Successes: {getYourGuideStatus.observability?.successes ?? 0} | Failures: {getYourGuideStatus.observability?.failures ?? 0} | 429s: {getYourGuideStatus.observability?.rateLimited ?? 0} | Clicks: {getYourGuideStatus.observability?.clicks ?? 0}</Text>
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Cache fresh: {getYourGuideStatus.observability?.cache.hits ?? 0} | stale: {getYourGuideStatus.observability?.cache.stale ?? 0} | negative: {getYourGuideStatus.observability?.cache.negative ?? 0} | misses: {getYourGuideStatus.observability?.cache.misses ?? 0}</Text>
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Latency p95: {getYourGuideStatus.observability?.latencyMs.p95 == null ? 'n/a' : `${getYourGuideStatus.observability.latencyMs.p95} ms`} | Suppression reasons: {Object.keys(getYourGuideStatus.observability?.suppressionByReason ?? {}).length ? Object.entries(getYourGuideStatus.observability?.suppressionByReason ?? {}).map(([reason, count]) => `${reason}=${count}`).join(', ') : 'none'}</Text>
+        <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]} testID="admin-getyourguide-status">
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_221', { theme: theme }, (theme ?? _styleTheme))]}>GetYourGuide operations</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_222', { getYourGuideStatus: getYourGuideStatus, theme: theme }, (theme ?? _styleTheme))]}>Kill switch: {getYourGuideStatus.featureEnabled ? 'enabled' : 'disabled'} | Partner configuration: {getYourGuideStatus.partnerConfigured ? 'present' : 'missing'} | API: {getYourGuideStatus.apiConfigured ? 'configured' : 'not configured'}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_223', { getYourGuideStatus: getYourGuideStatus, theme: theme }, (theme ?? _styleTheme))]}>Partner circuit: {getYourGuideStatus.circuit?.open ? 'open' : 'closed'} | Consecutive failures: {getYourGuideStatus.circuit?.consecutiveFailures ?? 0}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_224', { theme: theme }, (theme ?? _styleTheme))]}>Cache permission: {getYourGuideStatus.cachePermission ? 'written permission recorded' : 'request-only (no persistence)'} | Revenue/commission: separate dashboard</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_225', { theme: theme }, (theme ?? _styleTheme))]}>Requests: {getYourGuideStatus.observability?.requests ?? 0} | Successes: {getYourGuideStatus.observability?.successes ?? 0} | Failures: {getYourGuideStatus.observability?.failures ?? 0} | 429s: {getYourGuideStatus.observability?.rateLimited ?? 0} | Clicks: {getYourGuideStatus.observability?.clicks ?? 0}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_226', { theme: theme }, (theme ?? _styleTheme))]}>Cache fresh: {getYourGuideStatus.observability?.cache.hits ?? 0} | stale: {getYourGuideStatus.observability?.cache.stale ?? 0} | negative: {getYourGuideStatus.observability?.cache.negative ?? 0} | misses: {getYourGuideStatus.observability?.cache.misses ?? 0}</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_227', { theme: theme }, (theme ?? _styleTheme))]}>Latency p95: {getYourGuideStatus.observability?.latencyMs.p95 == null ? 'n/a' : `${getYourGuideStatus.observability.latencyMs.p95} ms`} | Suppression reasons: {Object.keys(getYourGuideStatus.observability?.suppressionByReason ?? {}).length ? Object.entries(getYourGuideStatus.observability?.suppressionByReason ?? {}).map(([reason, count]) => `${reason}=${count}`).join(', ') : 'none'}</Text>
         </View>
       ) : null}
       {providers.map((provider) => (
-        <View key={provider.provider} style={[localStyles.card, getCardStyle(theme)]}>
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+        <View key={provider.provider} style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_228', { theme: theme }, (theme ?? _styleTheme))]}>
             {provider.provider}
           </Text>
-          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_229', { theme: theme }, (theme ?? _styleTheme))]}>
             Window: {provider.windowHours}h ({provider.window}) | Overall limit: {provider.overallLimit ?? 'none'} | Used: {provider.overallUsage}
           </Text>
           <Text
             style={[
-              localStyles.cardSub,
-              {
-                color:
-                  provider.isBudgetExceeded ||
-                  ((provider.budgetUsagePercent ?? 0) >= (provider.budgetAlertThresholdPercent ?? Number.POSITIVE_INFINITY))
-                    ? theme.colors.error
-                    : theme.colors.textMuted,
-              },
+              localStyles((theme ?? _styleTheme)).cardSub,
+              themeStyle('tabs_AdminTab_230', { provider: provider, theme: theme }, (theme ?? _styleTheme)),
             ]}
           >
             Budget ({provider.budgetWindowKey ?? 'current'}): {provider.monthlyBudgetUsd == null ? 'not set' : `$${provider.monthlyBudgetUsd.toFixed(2)}`} | Estimated spend: ${(provider.estimatedSpendUsd ?? 0).toFixed(4)}
             {provider.budgetUsagePercent != null ? ` (${Math.round(provider.budgetUsagePercent)}%)` : ''}
           </Text>
-          <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Window</Text>
-          <View style={localStyles.tierButtons}>
+          <Text style={[localStyles((theme ?? _styleTheme)).fieldLabel, themeStyle('tabs_AdminTab_231', { theme: theme }, (theme ?? _styleTheme))]}>Window</Text>
+          <View style={localStyles((theme ?? _styleTheme)).tierButtons}>
             {(['hour', 'day'] as const).map((windowOption) => (
               <TouchableOpacity
                 key={`${provider.provider}-${windowOption}`}
-                style={[localStyles.tierButton, getSecondaryPillStyle(theme, providerForms[provider.provider]?.window === windowOption)]}
+                style={[localStyles((theme ?? _styleTheme)).tierButton, getSecondaryPillStyle(theme, providerForms[provider.provider]?.window === windowOption)]}
                 onPress={() => updateProviderForm(provider.provider, { window: windowOption })}
               >
-                <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, providerForms[provider.provider]?.window === windowOption)]}>
+                <Text style={[localStyles((theme ?? _styleTheme)).tierButtonText, getSecondaryPillTextStyle(theme, providerForms[provider.provider]?.window === windowOption)]}>
                   {windowOption}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
           <TextInput
-            style={[localStyles.smallInput, getInputStyle(theme)]}
+            style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
             placeholder="Window hours"
             placeholderTextColor={theme.colors.textMuted}
             keyboardType="numeric"
@@ -2547,7 +2530,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             onChangeText={(value: string) => updateProviderForm(provider.provider, { windowHours: value })}
           />
           <TextInput
-            style={[localStyles.smallInput, getInputStyle(theme)]}
+            style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
             placeholder="Overall limit (blank for none)"
             placeholderTextColor={theme.colors.textMuted}
             keyboardType="numeric"
@@ -2555,7 +2538,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             onChangeText={(value: string) => updateProviderForm(provider.provider, { overallLimit: value })}
           />
           <TextInput
-            style={[localStyles.smallInput, getInputStyle(theme)]}
+            style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
             placeholder="Monthly budget USD (blank for none)"
             placeholderTextColor={theme.colors.textMuted}
             keyboardType="numeric"
@@ -2563,7 +2546,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             onChangeText={(value: string) => updateProviderForm(provider.provider, { monthlyBudgetUsd: value })}
           />
           <TextInput
-            style={[localStyles.smallInput, getInputStyle(theme)]}
+            style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
             placeholder="Budget alert threshold %"
             placeholderTextColor={theme.colors.textMuted}
             keyboardType="numeric"
@@ -2571,13 +2554,13 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             onChangeText={(value: string) => updateProviderForm(provider.provider, { alertThresholdPercent: value })}
           />
           {(provider.budgetingModels ?? []).map((model) => (
-            <View key={`${provider.provider}-${model.model}`} style={localStyles.apiLimitCallerRow}>
-              <View style={localStyles.flex}>
-                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{model.model}</Text>
-                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>USD / 1M tokens</Text>
+            <View key={`${provider.provider}-${model.model}`} style={localStyles((theme ?? _styleTheme)).apiLimitCallerRow}>
+              <View style={localStyles((theme ?? _styleTheme)).flex}>
+                <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_232', { theme: theme }, (theme ?? _styleTheme))]}>{model.model}</Text>
+                <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_233', { theme: theme }, (theme ?? _styleTheme))]}>USD / 1M tokens</Text>
               </View>
               <TextInput
-                style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                style={[localStyles((theme ?? _styleTheme)).apiLimitInput, getInputStyle(theme)]}
                 placeholder="Input"
                 placeholderTextColor={theme.colors.textMuted}
                 keyboardType="numeric"
@@ -2587,7 +2570,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
                 }
               />
               <TextInput
-                style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                style={[localStyles((theme ?? _styleTheme)).apiLimitInput, getInputStyle(theme)]}
                 placeholder="Output"
                 placeholderTextColor={theme.colors.textMuted}
                 keyboardType="numeric"
@@ -2602,17 +2585,17 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             const pct = caller.limit > 0 ? Math.round((caller.currentUsage / caller.limit) * 100) : 0;
             const isHigh = pct >= 75;
             return (
-              <View key={caller.caller} style={localStyles.apiLimitCallerRow}>
-                <View style={localStyles.flex}>
-                  <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+              <View key={caller.caller} style={localStyles((theme ?? _styleTheme)).apiLimitCallerRow}>
+                <View style={localStyles((theme ?? _styleTheme)).flex}>
+                  <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_234', { theme: theme }, (theme ?? _styleTheme))]}>
                     {caller.caller}
                   </Text>
-                  <Text style={[localStyles.cardSub, { color: isHigh ? theme.colors.error : theme.colors.textMuted }]}>
+                  <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_235', { isHigh: isHigh, theme: theme }, (theme ?? _styleTheme))]}>
                     Used: {caller.currentUsage} / {caller.limit} ({pct}%)
                   </Text>
                 </View>
                 <TextInput
-                  style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                  style={[localStyles((theme ?? _styleTheme)).apiLimitInput, getInputStyle(theme)]}
                   placeholder="Limit"
                   placeholderTextColor={theme.colors.textMuted}
                   keyboardType="numeric"
@@ -2623,35 +2606,35 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             );
           })}
           <TextInput
-            style={[localStyles.smallInput, getInputStyle(theme)]}
+            style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
             placeholder="Reason for change (required)"
             placeholderTextColor={theme.colors.textMuted}
             value={providerForms[provider.provider]?.reason ?? ''}
             onChangeText={(value: string) => updateProviderForm(provider.provider, { reason: value })}
           />
           <TouchableOpacity
-            style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingProvider === provider.provider && localStyles.buttonDisabled]}
+            style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_236', { theme: theme }, (theme ?? _styleTheme)), savingProvider === provider.provider && localStyles((theme ?? _styleTheme)).buttonDisabled]}
             disabled={savingProvider === provider.provider}
             onPress={() => saveProvider(provider)}
           >
-            <Text style={localStyles.smallButtonText}>Save {provider.provider}</Text>
+            <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save {provider.provider}</Text>
           </TouchableOpacity>
         </View>
       ))}
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Caching</Text>
-      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_237', { theme: theme }, (theme ?? _styleTheme))]}>Caching</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_238', { theme: theme }, (theme ?? _styleTheme))]}>
         Cache retention/refresh settings, in days unless otherwise noted.
       </Text>
       {Object.entries(caching).map(([group, values]) => (
-        <View key={group} style={[localStyles.card, getCardStyle(theme)]}>
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{group}</Text>
+        <View key={group} style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_239', { theme: theme }, (theme ?? _styleTheme))]}>{group}</Text>
           {Object.keys(values).map((key) => (
-            <View key={key} style={localStyles.apiLimitCallerRow}>
-              <View style={localStyles.flex}>
-                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{key}</Text>
+            <View key={key} style={localStyles((theme ?? _styleTheme)).apiLimitCallerRow}>
+              <View style={localStyles((theme ?? _styleTheme)).flex}>
+                <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_240', { theme: theme }, (theme ?? _styleTheme))]}>{key}</Text>
               </View>
               <TextInput
-                style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                style={[localStyles((theme ?? _styleTheme)).apiLimitInput, getInputStyle(theme)]}
                 placeholder={key}
                 placeholderTextColor={theme.colors.textMuted}
                 keyboardType="numeric"
@@ -2661,23 +2644,23 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             </View>
           ))}
           <TextInput
-            style={[localStyles.smallInput, getInputStyle(theme)]}
+            style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
             placeholder="Reason for change (required)"
             placeholderTextColor={theme.colors.textMuted}
             value={cachingForms[group]?.reason ?? ''}
             onChangeText={(value: string) => updateCachingReason(group, value)}
           />
           <TouchableOpacity
-            style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingCachingGroup === group && localStyles.buttonDisabled]}
+            style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_241', { theme: theme }, (theme ?? _styleTheme)), savingCachingGroup === group && localStyles((theme ?? _styleTheme)).buttonDisabled]}
             disabled={savingCachingGroup === group}
             onPress={() => saveCachingGroup(group)}
           >
-            <Text style={localStyles.smallButtonText}>Save {group}</Text>
+            <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save {group}</Text>
           </TouchableOpacity>
         </View>
       ))}
-      <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme), marginTop: 8 }]} onPress={load}>
-        <Text style={localStyles.smallButtonText}>Refresh</Text>
+      <TouchableOpacity style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_242', { theme: theme }, (theme ?? _styleTheme))]} onPress={load}>
+        <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Refresh</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -2757,8 +2740,10 @@ const newHostingRowId = (): string => `hosting-${Date.now()}-${Math.round(Math.r
 const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [data, setData] = useState<CostEstimateData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -2933,37 +2918,37 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
     }
   };
 
-  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
-  if (error && !data) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+  if (loading) return <Text style={[localStyles((theme ?? _styleTheme)).loading, themeStyle('tabs_AdminTab_243', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text>;
+  if (error && !data) return <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_244', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text>;
   if (!data || !assumptionsForm) return null;
 
   const { projected } = data;
 
   return (
-    <ScrollView style={[localStyles.section, localStyles.apiLimitsScroll]} contentContainerStyle={localStyles.apiLimitsScrollContent}>
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Cost Estimator</Text>
-      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
+    <ScrollView style={[localStyles((theme ?? _styleTheme)).section, localStyles((theme ?? _styleTheme)).apiLimitsScroll]} contentContainerStyle={localStyles((theme ?? _styleTheme)).apiLimitsScrollContent}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_245', { theme: theme }, (theme ?? _styleTheme))]}>Cost Estimator</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_246', { theme: theme }, (theme ?? _styleTheme))]}>
         Projected monthly cost from editable assumptions, versus actual recorded spend by month.
       </Text>
-      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
-      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+      {message ? <Text style={[localStyles((theme ?? _styleTheme)).saveMsg, themeStyle('tabs_AdminTab_247', { theme: theme }, (theme ?? _styleTheme))]}>{message}</Text> : null}
+      {error ? <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_248', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
 
-      <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Projected monthly cost</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>LLM (itinerary generations): ${projected.llmCostUsd.toFixed(2)}</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Per-request APIs: ${projected.requestApiCostUsd.toFixed(2)}</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Hosting: ${projected.hostingCostUsd.toFixed(2)}</Text>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 8 }]}>Total: ${projected.totalCostUsd.toFixed(2)}/mo</Text>
-        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 8 }]}>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_249', { theme: theme }, (theme ?? _styleTheme))]}>Projected monthly cost</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_250', { theme: theme }, (theme ?? _styleTheme))]}>LLM (itinerary generations): ${projected.llmCostUsd.toFixed(2)}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_251', { theme: theme }, (theme ?? _styleTheme))]}>Per-request APIs: ${projected.requestApiCostUsd.toFixed(2)}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_252', { theme: theme }, (theme ?? _styleTheme))]}>Hosting: ${projected.hostingCostUsd.toFixed(2)}</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_253', { theme: theme }, (theme ?? _styleTheme))]}>Total: ${projected.totalCostUsd.toFixed(2)}/mo</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_254', { theme: theme }, (theme ?? _styleTheme))]}>
           Premium price: ${projected.premiumMonthlyPriceUsd.toFixed(2)} | Net of Stripe fees: ${projected.netRevenuePerPremiumUserUsd.toFixed(2)}/user
         </Text>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+        <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_255', { theme: theme }, (theme ?? _styleTheme))]}>
           Break-even: {projected.breakEvenPremiumUsers == null ? 'not reachable at this price' : `${projected.breakEvenPremiumUsers} premium users`}
         </Text>
       </View>
 
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Assumptions</Text>
-      <View style={[localStyles.card, getCardStyle(theme)]}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_256', { theme: theme }, (theme ?? _styleTheme))]}>Assumptions</Text>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
         {(
           [
             ['totalUsers', 'Total users'],
@@ -2977,9 +2962,9 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           ] as Array<[keyof AssumptionsFormState, string]>
         ).map(([field, label]) => (
           <View key={field}>
-            <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>{label}</Text>
+            <Text style={[localStyles((theme ?? _styleTheme)).fieldLabel, themeStyle('tabs_AdminTab_257', { theme: theme }, (theme ?? _styleTheme))]}>{label}</Text>
             <TextInput
-              style={[localStyles.smallInput, getInputStyle(theme)]}
+              style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
               placeholder={label}
               placeholderTextColor={theme.colors.textMuted}
               keyboardType="numeric"
@@ -2988,14 +2973,14 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
             />
           </View>
         ))}
-        <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Provider call volume (per user / month)</Text>
+        <Text style={[localStyles((theme ?? _styleTheme)).fieldLabel, themeStyle('tabs_AdminTab_258', { theme: theme }, (theme ?? _styleTheme))]}>Provider call volume (per user / month)</Text>
         {Object.keys(assumptionsForm.providerCallsPerUserPerMonth).map((provider) => (
-          <View key={provider} style={localStyles.apiLimitCallerRow}>
-            <View style={localStyles.flex}>
-              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{provider}</Text>
+          <View key={provider} style={localStyles((theme ?? _styleTheme)).apiLimitCallerRow}>
+            <View style={localStyles((theme ?? _styleTheme)).flex}>
+              <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_259', { theme: theme }, (theme ?? _styleTheme))]}>{provider}</Text>
             </View>
             <TextInput
-              style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+              style={[localStyles((theme ?? _styleTheme)).apiLimitInput, getInputStyle(theme)]}
               placeholder="0"
               placeholderTextColor={theme.colors.textMuted}
               keyboardType="numeric"
@@ -3011,27 +2996,27 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           </View>
         ))}
         <TextInput
-          style={[localStyles.smallInput, getInputStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
           placeholder="Reason for change (required)"
           placeholderTextColor={theme.colors.textMuted}
           value={assumptionsForm.reason}
           onChangeText={(value: string) => setAssumptionsForm((current) => (current ? { ...current, reason: value } : current))}
         />
         <TouchableOpacity
-          style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingAssumptions && localStyles.buttonDisabled]}
+          style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_260', { theme: theme }, (theme ?? _styleTheme)), savingAssumptions && localStyles((theme ?? _styleTheme)).buttonDisabled]}
           disabled={savingAssumptions}
           onPress={saveAssumptions}
         >
-          <Text style={localStyles.smallButtonText}>Save assumptions</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save assumptions</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Hosting line items</Text>
-      <View style={[localStyles.card, getCardStyle(theme)]}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_261', { theme: theme }, (theme ?? _styleTheme))]}>Hosting line items</Text>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
         {hostingRows.map((row, index) => (
-          <View key={row.id} style={localStyles.apiLimitCallerRow}>
+          <View key={row.id} style={localStyles((theme ?? _styleTheme)).apiLimitCallerRow}>
             <TextInput
-              style={[localStyles.smallInput, getInputStyle(theme), localStyles.flex]}
+              style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme), localStyles((theme ?? _styleTheme)).flex]}
               placeholder="Name (e.g. Cloud Run)"
               placeholderTextColor={theme.colors.textMuted}
               value={row.name}
@@ -3040,7 +3025,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
               }
             />
             <TextInput
-              style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+              style={[localStyles((theme ?? _styleTheme)).apiLimitInput, getInputStyle(theme)]}
               placeholder="USD / month"
               placeholderTextColor={theme.colors.textMuted}
               keyboardType="numeric"
@@ -3050,41 +3035,41 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
               }
             />
             <TouchableOpacity onPress={() => setHostingRows((current) => current.filter((_, i) => i !== index))}>
-              <Text style={[localStyles.breadcrumbLink, { color: theme.colors.error }]}>Remove</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).breadcrumbLink, themeStyle('tabs_AdminTab_262', { theme: theme }, (theme ?? _styleTheme))]}>Remove</Text>
             </TouchableOpacity>
           </View>
         ))}
         <TouchableOpacity
-          style={[localStyles.smallButton, { backgroundColor: theme.colors.backgroundAlt, borderWidth: 1, borderColor: theme.colors.border }]}
+          style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_263', { theme: theme }, (theme ?? _styleTheme))]}
           onPress={() => setHostingRows((current) => [...current, { id: newHostingRowId(), name: '', monthlyCostUsd: '0' }])}
         >
-          <Text style={[localStyles.smallButtonText, { color: theme.colors.text }]}>Add line item</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('tabs_AdminTab_264', { theme: theme }, (theme ?? _styleTheme))]}>Add line item</Text>
         </TouchableOpacity>
         <TextInput
-          style={[localStyles.smallInput, getInputStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
           placeholder="Reason for change (required)"
           placeholderTextColor={theme.colors.textMuted}
           value={hostingReason}
           onChangeText={setHostingReason}
         />
         <TouchableOpacity
-          style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingHosting && localStyles.buttonDisabled]}
+          style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_265', { theme: theme }, (theme ?? _styleTheme)), savingHosting && localStyles((theme ?? _styleTheme)).buttonDisabled]}
           disabled={savingHosting}
           onPress={saveHosting}
         >
-          <Text style={localStyles.smallButtonText}>Save hosting line items</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save hosting line items</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Per-request API pricing</Text>
-      <View style={[localStyles.card, getCardStyle(theme)]}>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_266', { theme: theme }, (theme ?? _styleTheme))]}>Per-request API pricing</Text>
+      <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
         {Object.keys(pricingForm).map((provider) => (
-          <View key={provider} style={localStyles.apiLimitCallerRow}>
-            <View style={localStyles.flex}>
-              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{provider}</Text>
+          <View key={provider} style={localStyles((theme ?? _styleTheme)).apiLimitCallerRow}>
+            <View style={localStyles((theme ?? _styleTheme)).flex}>
+              <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_267', { theme: theme }, (theme ?? _styleTheme))]}>{provider}</Text>
             </View>
             <TextInput
-              style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+              style={[localStyles((theme ?? _styleTheme)).apiLimitInput, getInputStyle(theme)]}
               placeholder="USD / request"
               placeholderTextColor={theme.colors.textMuted}
               keyboardType="numeric"
@@ -3094,30 +3079,30 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           </View>
         ))}
         <TextInput
-          style={[localStyles.smallInput, getInputStyle(theme)]}
+          style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
           placeholder="Reason for change (required)"
           placeholderTextColor={theme.colors.textMuted}
           value={pricingReason}
           onChangeText={setPricingReason}
         />
         <TouchableOpacity
-          style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, savingPricing && localStyles.buttonDisabled]}
+          style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_268', { theme: theme }, (theme ?? _styleTheme)), savingPricing && localStyles((theme ?? _styleTheme)).buttonDisabled]}
           disabled={savingPricing}
           onPress={savePricing}
         >
-          <Text style={localStyles.smallButtonText}>Save pricing</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Save pricing</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Actual spend by month</Text>
-      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 8 }]}>{COST_ESTIMATOR_TRACKING_STARTED_LABEL}</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_269', { theme: theme }, (theme ?? _styleTheme))]}>Actual spend by month</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_270', { theme: theme }, (theme ?? _styleTheme))]}>{COST_ESTIMATOR_TRACKING_STARTED_LABEL}</Text>
       {data.actual.months.map((month) => (
-        <View key={month.windowKey} style={[localStyles.card, getCardStyle(theme)]}>
-          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+        <View key={month.windowKey} style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_271', { theme: theme }, (theme ?? _styleTheme))]}>
             {month.windowKey} — ${month.totalUsd.toFixed(2)}
           </Text>
           {month.byProvider.length === 0 && Object.keys(data.requestPricing).length === 0 ? (
-            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>No recorded spend.</Text>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_272', { theme: theme }, (theme ?? _styleTheme))]}>No recorded spend.</Text>
           ) : (
             Array.from(new Set([
               ...Object.keys(data.requestPricing),
@@ -3126,7 +3111,7 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
             ])).sort().map((provider) => {
               const spend = month.byProvider.find((entry) => entry.provider === provider)?.spendUsd ?? 0;
               return (
-                <Text key={provider} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                <Text key={provider} style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_273', { theme: theme }, (theme ?? _styleTheme))]}>
                   {provider}: ${spend.toFixed(2)}
                 </Text>
               );
@@ -3135,8 +3120,8 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
         </View>
       ))}
 
-      <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme), marginTop: 8 }]} onPress={load}>
-        <Text style={localStyles.smallButtonText}>Refresh</Text>
+      <TouchableOpacity style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_274', { theme: theme }, (theme ?? _styleTheme))]} onPress={load}>
+        <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Refresh</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -3145,8 +3130,10 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
 const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [plans, setPlans] = useState<BillingPlanConfig[]>([]);
   const [forms, setForms] = useState<Record<string, Record<string, string | boolean>>>({});
   const [billingEnabled, setBillingEnabled] = useState(false);
@@ -3218,22 +3205,22 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
   };
 
   return (
-    <View style={localStyles.section} testID="admin-billing-section">
-      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Billing</Text>
-      <Text style={[localStyles.cardSub, { color: billingEnabled ? theme.colors.success : theme.colors.error, marginBottom: 12 }]}>
+    <View style={localStyles((theme ?? _styleTheme)).section} testID="admin-billing-section">
+      <Text style={[localStyles((theme ?? _styleTheme)).sectionTitle, themeStyle('tabs_AdminTab_275', { theme: theme }, (theme ?? _styleTheme))]}>Billing</Text>
+      <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_276', { billingEnabled: billingEnabled, theme: theme }, (theme ?? _styleTheme))]}>
         Stripe billing is {billingEnabled ? 'enabled' : 'disabled'} on this server.
       </Text>
-      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
-      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
+      {error ? <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_277', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+      {message ? <Text style={[localStyles((theme ?? _styleTheme)).saveMsg, themeStyle('tabs_AdminTab_278', { theme: theme }, (theme ?? _styleTheme))]}>{message}</Text> : null}
       {plans.map((plan) => {
         const form = forms[plan.planKey];
         if (!form) return null;
         return (
-          <View key={plan.planKey} style={[localStyles.card, getCardStyle(theme)]}>
-            <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+          <View key={plan.planKey} style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_279', { theme: theme }, (theme ?? _styleTheme))]}>
               Premium {plan.interval === 'month' ? 'Monthly' : 'Annual'}
             </Text>
-            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_280', { theme: theme }, (theme ?? _styleTheme))]}>
               Active Price: {plan.activeStripePriceId ?? 'Not published'} ({plan.livemode ? 'live' : 'test'})
             </Text>
             {([
@@ -3242,9 +3229,9 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
               ['pastDueGraceDays', 'Past-due grace days'],
             ] as const).map(([field, label]) => (
               <View key={field}>
-                <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>{label}</Text>
+                <Text style={[localStyles((theme ?? _styleTheme)).fieldLabel, themeStyle('tabs_AdminTab_281', { theme: theme }, (theme ?? _styleTheme))]}>{label}</Text>
                 <TextInput
-                  style={[localStyles.smallInput, getInputStyle(theme)]}
+                  style={[localStyles((theme ?? _styleTheme)).smallInput, getInputStyle(theme)]}
                   keyboardType="numeric"
                   value={String(form[field])}
                   onChangeText={(value) => update(plan.planKey, field, value)}
@@ -3259,26 +3246,26 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
             ] as const).map(([field, label]) => {
               const active = Boolean(form[field]);
               return (
-                <View key={field} style={[localStyles.row, { marginTop: 10 }]}>
-                  <Text style={[localStyles.flex, { color: theme.colors.text }]}>{label}</Text>
+                <View key={field} style={[localStyles((theme ?? _styleTheme)).row, themeStyle('tabs_AdminTab_282', {  }, (theme ?? _styleTheme))]}>
+                  <Text style={[localStyles((theme ?? _styleTheme)).flex, themeStyle('tabs_AdminTab_283', { theme: theme }, (theme ?? _styleTheme))]}>{label}</Text>
                   <TouchableOpacity
-                    style={[localStyles.smallButton, { backgroundColor: active ? theme.colors.success : theme.colors.alert }]}
+                    style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_284', { active: active, theme: theme }, (theme ?? _styleTheme))]}
                     onPress={() => update(plan.planKey, field, !active)}
                     accessibilityRole="switch"
                     accessibilityState={{ checked: active }}
                   >
-                    <Text style={localStyles.smallButtonText}>{active ? 'On' : 'Off'}</Text>
+                    <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>{active ? 'On' : 'Off'}</Text>
                   </TouchableOpacity>
                 </View>
               );
             })}
             <TouchableOpacity
-              style={[localStyles.smallButton, { backgroundColor: whiteLabelButtonColor(theme) }, saving === plan.planKey && localStyles.buttonDisabled]}
+              style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_285', { theme: theme }, (theme ?? _styleTheme)), saving === plan.planKey && localStyles((theme ?? _styleTheme)).buttonDisabled]}
               disabled={saving === plan.planKey}
               onPress={() => saveConfig(plan)}
               testID={`admin-billing-save-${plan.planKey}`}
             >
-              <Text style={localStyles.smallButtonText}>{saving === plan.planKey ? 'Saving...' : 'Save'}</Text>
+              <Text style={[localStyles((theme ?? _styleTheme)).smallButtonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{saving === plan.planKey ? 'Saving...' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
         );
@@ -3294,7 +3281,9 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
 type PackingPresetItem = { category: string; label: string; position?: number };
 type PackingPresetAdminRow = { key: string; label: string; isActive: boolean; items?: PackingPresetItem[] };
 
-const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme }) => {
+const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [presets, setPresets] = useState<PackingPresetAdminRow[]>([]);
   const [filename, setFilename] = useState('');
   const [markdown, setMarkdown] = useState('');
@@ -3352,31 +3341,31 @@ const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<
     setMessage(res.ok ? 'Preset items saved.' : data.error ?? 'Unable to save preset items');
     if (res.ok) { setExpandedKey(null); void load(); }
   };
-  return <View style={{ gap: 12 }}>
-    <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: '700' }}>Preset catalog</Text>
-    {message ? <Text style={{ color: theme.colors.textMuted }}>{message}</Text> : null}
+  return <View style={themeStyle('tabs_AdminTab_286', {  }, (theme ?? _styleTheme))}>
+    <Text style={themeStyle('tabs_AdminTab_287', { theme: theme }, (theme ?? _styleTheme))}>Preset catalog</Text>
+    {message ? <Text style={themeStyle('tabs_AdminTab_288', { theme: theme }, (theme ?? _styleTheme))}>{message}</Text> : null}
     {presets.map((preset) => <View key={preset.key} testID={`admin-packing-preset-row-${preset.key}`}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text style={{ color: theme.colors.text }}>{preset.label} ({preset.key}){preset.isActive ? '' : ' — removed'}</Text>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+      <View style={themeStyle('tabs_AdminTab_289', {  }, (theme ?? _styleTheme))}>
+        <Text style={themeStyle('tabs_AdminTab_290', { theme: theme }, (theme ?? _styleTheme))}>{preset.label} ({preset.key}){preset.isActive ? '' : ' — removed'}</Text>
+        <View style={themeStyle('tabs_AdminTab_291', {  }, (theme ?? _styleTheme))}>
           {preset.key !== 'general' ? (
             <Pressable onPress={() => toggleEdit(preset)} testID={`admin-packing-preset-edit-${preset.key}`}>
-              <Text style={{ color: theme.colors.link }}>{expandedKey === preset.key ? 'Close' : 'Edit items'}</Text>
+              <Text style={themeStyle('tabs_AdminTab_292', { theme: theme }, (theme ?? _styleTheme))}>{expandedKey === preset.key ? 'Close' : 'Edit items'}</Text>
             </Pressable>
           ) : null}
-          {preset.key !== 'general' ? <Pressable onPress={() => void (preset.isActive ? remove(preset.key) : reactivate(preset.key))}><Text style={{ color: preset.isActive ? theme.colors.error : theme.colors.link }}>{preset.isActive ? 'Remove' : 'Reactivate'}</Text></Pressable> : null}
+          {preset.key !== 'general' ? <Pressable onPress={() => void (preset.isActive ? remove(preset.key) : reactivate(preset.key))}><Text style={themeStyle('tabs_AdminTab_293', { preset: preset, theme: theme }, (theme ?? _styleTheme))}>{preset.isActive ? 'Remove' : 'Reactivate'}</Text></Pressable> : null}
         </View>
       </View>
       {expandedKey === preset.key ? (
-        <View style={{ gap: 8, paddingVertical: 8, paddingLeft: 12 }} testID={`admin-packing-preset-editor-${preset.key}`}>
+        <View style={themeStyle('tabs_AdminTab_294', {  }, (theme ?? _styleTheme))} testID={`admin-packing-preset-editor-${preset.key}`}>
           {editableItems.map((item, index) => (
-            <View key={index} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <View key={index} style={themeStyle('tabs_AdminTab_295', {  }, (theme ?? _styleTheme))}>
               <TextInput
                 value={item.category}
                 onChangeText={(text) => updateEditableItem(index, { category: text })}
                 placeholder="Category"
                 placeholderTextColor={theme.colors.textMuted}
-                style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 6, borderRadius: 6, flex: 1 }}
+                style={themeStyle('tabs_AdminTab_296', { theme: theme }, (theme ?? _styleTheme))}
                 testID={`admin-packing-preset-item-category-${preset.key}-${index}`}
               />
               <TextInput
@@ -3384,28 +3373,28 @@ const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<
                 onChangeText={(text) => updateEditableItem(index, { label: text })}
                 placeholder="Item label"
                 placeholderTextColor={theme.colors.textMuted}
-                style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 6, borderRadius: 6, flex: 2 }}
+                style={themeStyle('tabs_AdminTab_297', { theme: theme }, (theme ?? _styleTheme))}
                 testID={`admin-packing-preset-item-label-${preset.key}-${index}`}
               />
               <Pressable onPress={() => removeEditableItem(index)} testID={`admin-packing-preset-item-remove-${preset.key}-${index}`}>
-                <Text style={{ color: theme.colors.error }}>Remove</Text>
+                <Text style={themeStyle('tabs_AdminTab_298', { theme: theme }, (theme ?? _styleTheme))}>Remove</Text>
               </Pressable>
             </View>
           ))}
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={themeStyle('tabs_AdminTab_299', {  }, (theme ?? _styleTheme))}>
             <Pressable onPress={addEditableItem} testID={`admin-packing-preset-item-add-${preset.key}`}>
-              <Text style={{ color: theme.colors.link }}>+ Add item</Text>
+              <Text style={themeStyle('tabs_AdminTab_300', { theme: theme }, (theme ?? _styleTheme))}>+ Add item</Text>
             </Pressable>
             <Pressable onPress={() => void saveItems(preset.key)} testID={`admin-packing-preset-save-${preset.key}`}>
-              <Text style={{ color: theme.colors.cta, fontWeight: '700' }}>Save items</Text>
+              <Text style={themeStyle('tabs_AdminTab_301', { theme: theme }, (theme ?? _styleTheme))}>Save items</Text>
             </Pressable>
           </View>
         </View>
       ) : null}
     </View>)}
-    <TextInput value={filename} onChangeText={setFilename} placeholder="new_list.md" placeholderTextColor={theme.colors.textMuted} style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 8, borderRadius: 6 }} />
-    <TextInput value={markdown} onChangeText={setMarkdown} multiline numberOfLines={8} placeholder="Paste preset markdown" placeholderTextColor={theme.colors.textMuted} style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 8, borderRadius: 6, minHeight: 140, textAlignVertical: 'top' }} />
-    <Pressable onPress={() => void upload()} style={{ backgroundColor: theme.colors.cta, padding: 10, borderRadius: 6, alignSelf: 'flex-start' }}><Text style={{ color: theme.colors.onCta, fontWeight: '700' }}>Upload preset</Text></Pressable>
+    <TextInput value={filename} onChangeText={setFilename} placeholder="new_list.md" placeholderTextColor={theme.colors.textMuted} style={themeStyle('tabs_AdminTab_302', { theme: theme }, (theme ?? _styleTheme))} />
+    <TextInput value={markdown} onChangeText={setMarkdown} multiline numberOfLines={8} placeholder="Paste preset markdown" placeholderTextColor={theme.colors.textMuted} style={themeStyle('tabs_AdminTab_303', { theme: theme }, (theme ?? _styleTheme))} />
+    <Pressable onPress={() => void upload()} style={themeStyle('tabs_AdminTab_304', { theme: theme }, (theme ?? _styleTheme))}><Text style={[themeStyle('tabs_AdminTab_305', {  }, (theme ?? _styleTheme)), themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Upload preset</Text></Pressable>
   </View>;
 };
 
@@ -3417,6 +3406,7 @@ const AdminTab: React.FC<AdminTabProps> = ({
   onSectionChange,
   onAiOpsSectionChange,
 }) => {
+  const _styleTheme = useStyleTheme();
   const colorScheme = useColorScheme();
   const theme = getAppTheme('auto', colorScheme);
   const [section, setSection] = useState<AdminSection>(initialSection);
@@ -3454,7 +3444,7 @@ const AdminTab: React.FC<AdminTabProps> = ({
           />
         );
       case 'packing-defaults':
-        return <View style={{ gap: 24 }}><PackingListTable backendUrl={backendUrl} headers={headers} theme={theme} variant="admin" title="Universal packing defaults" /><PackingPresetAdminSection backendUrl={backendUrl} headers={headers} theme={theme} /></View>;
+        return <View style={themeStyle('tabs_AdminTab_306', {  }, _styleTheme)}><PackingListTable backendUrl={backendUrl} headers={headers} theme={theme} variant="admin" title="Universal packing defaults" /><PackingPresetAdminSection backendUrl={backendUrl} headers={headers} theme={theme} /></View>;
       case 'users':
         return <UsersSection backendUrl={backendUrl} headers={headers} tiers={loadedTiers} onViewUser={handleViewUser} theme={theme} />;
       case 'user-detail':
@@ -3484,6 +3474,8 @@ const AdminTab: React.FC<AdminTabProps> = ({
         return <AnalyticsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'privacy-requests':
         return <PrivacyRequestsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'trip-templates':
+        return <TripTemplatesSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'metrics':
         return <MetricsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'billing':
@@ -3509,25 +3501,26 @@ const AdminTab: React.FC<AdminTabProps> = ({
     metrics: 'Metrics',
     analytics: 'Analytics',
     'privacy-requests': 'Privacy Requests',
+    'trip-templates': 'Itinerary Templates',
     billing: 'Billing',
   };
 
   return (
-    <View style={[localStyles.content, { backgroundColor: theme.colors.background }]}>
+    <View style={[localStyles(_styleTheme).content, themeStyle('tabs_AdminTab_307', { theme: theme }, _styleTheme)]}>
       {section !== 'overview' ? (
-        <View style={localStyles.breadcrumb}>
+        <View style={localStyles(_styleTheme).breadcrumb}>
           <TouchableOpacity onPress={() => goTo('overview')}>
-            <Text style={[localStyles.breadcrumbLink, { color: theme.colors.link }]}>Admin</Text>
+            <Text style={[localStyles(_styleTheme).breadcrumbLink, themeStyle('tabs_AdminTab_308', { theme: theme }, _styleTheme)]}>Admin</Text>
           </TouchableOpacity>
-          <Text style={[localStyles.breadcrumbSep, { color: theme.colors.textMuted }]}> / </Text>
-          <Text style={[localStyles.breadcrumbCurrent, { color: theme.colors.text }]}>{sectionLabel[section]}</Text>
+          <Text style={[localStyles(_styleTheme).breadcrumbSep, themeStyle('tabs_AdminTab_309', { theme: theme }, _styleTheme)]}> / </Text>
+          <Text style={[localStyles(_styleTheme).breadcrumbCurrent, themeStyle('tabs_AdminTab_310', { theme: theme }, _styleTheme)]}>{sectionLabel[section]}</Text>
         </View>
       ) : null}
-      <View style={localStyles.sectionHost}>
+      <View style={localStyles(_styleTheme).sectionHost}>
         {section === 'api-limits' || section === 'cost-estimate' ? (
           renderSection()
         ) : (
-          <ScrollView style={localStyles.sectionScroll} contentContainerStyle={localStyles.sectionScrollContent}>
+          <ScrollView style={localStyles(_styleTheme).sectionScroll} contentContainerStyle={localStyles(_styleTheme).sectionScrollContent}>
             {renderSection()}
           </ScrollView>
         )}
@@ -3542,269 +3535,4 @@ export default AdminTab;
 // Styles
 // ---------------------------------------------------------------------------
 
-const localStyles = StyleSheet.create({
-  content: { flex: 1, minHeight: 0, padding: 16, paddingBottom: 0, width: '100%' },
-  section: { marginBottom: 24 },
-  sectionHost: { flex: 1, minHeight: 0 },
-  sectionScroll: { flex: 1, minHeight: 0 },
-  sectionScrollContent: { paddingBottom: 40 },
-  sectionTitle: { fontSize: 22, fontWeight: '700', marginBottom: 16, color: '#1a1a2e' },
-  loading: { color: '#888', marginVertical: 8 },
-  errorText: { color: '#c0392b', marginVertical: 8 },
-  emptyText: { color: '#888', fontStyle: 'italic' },
-  saveMsg: { color: '#27ae60', marginTop: 8, fontWeight: '600' },
-  // Cards
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 12,
-    ...shadowStyle('#000000', 0.06, 0, 2, 10),
-    elevation: 2,
-  },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: '#1a1a2e', marginBottom: 2 },
-  cardSub: { fontSize: 13, color: '#555', marginTop: 2 },
-  heroCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    paddingVertical: 22,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  heroEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 8,
-  },
-  heroTitle: { fontSize: 28, fontWeight: '700', marginBottom: 8 },
-  heroBody: { fontSize: 14, lineHeight: 20, maxWidth: 520 },
-  // Nav cards
-  navCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-    ...shadowStyle('#000000', 0.07, 0, 2, 6),
-    elevation: 3,
-  },
-  navAccent: { width: 48, height: 6, borderRadius: 999, marginBottom: 14 },
-  navCardTitle: { fontSize: 17, fontWeight: '700', color: '#1a1a2e', marginBottom: 4 },
-  navCardDesc: { fontSize: 13, color: '#666' },
-  // Layout
-  row: { flexDirection: 'row', alignItems: 'center' },
-  flex: { flex: 1 },
-  inlineField: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
-  inlineFieldLabel: { minWidth: 220, flex: 1 },
-  compactRow: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ddd' },
-  tableCellPrimary: { fontSize: 13, fontWeight: '700' },
-  // Badges
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 8 },
-  badgeOn: { backgroundColor: '#27ae60' },
-  badgeOff: { backgroundColor: '#e74c3c' },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  // Tags
-  tagRow: { flexDirection: 'row', gap: 4 },
-  tagAdmin: { backgroundColor: '#8e44ad', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
-  tagTier: { backgroundColor: '#2980b9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
-  tagText: { color: '#fff', fontSize: 11, fontWeight: '600' },
-  // Forms
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    padding: 10,
-    fontSize: 14,
-    marginBottom: 10,
-    backgroundColor: '#fafafa',
-  },
-  smallInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    padding: 8,
-    fontSize: 13,
-    marginTop: 6,
-    backgroundColor: '#fafafa',
-  },
-  inlineForm: { marginTop: 8 },
-  fieldLabel: { fontSize: 12, fontWeight: '600', color: '#888', marginTop: 10, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  smallButton: {
-    backgroundColor: '#2c3e50',
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 6,
-    marginTop: 6,
-    alignSelf: 'flex-start',
-  },
-  smallButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  buttonDisabled: { opacity: 0.4 },
-  dropdownButton: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  dropdownLocked: {
-    justifyContent: 'center',
-  },
-  dropdownButtonText: { fontSize: 14, fontWeight: '600' },
-  dropdownMenu: {
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: 8,
-    ...shadowStyle('#000000', 0.18, 0, 8, 18),
-    elevation: 12,
-  },
-  dropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#999',
-  },
-  dropdownOptionText: { fontSize: 14, fontWeight: '500' },
-  // Tier buttons
-  tierButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  tierButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#f5f5f5',
-  },
-  tierButtonActive: { backgroundColor: '#2c3e50', borderColor: '#2c3e50' },
-  tierButtonText: { fontSize: 13, color: '#333' },
-  tierButtonTextActive: { color: '#fff' },
-  // Limit rows
-  limitRow: { marginBottom: 6 },
-  editButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 4,
-    backgroundColor: '#ecf0f1',
-    marginLeft: 8,
-  },
-  editButtonText: { fontSize: 12, color: '#333' },
-  tableShell: {
-    borderWidth: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-    ...shadowStyle('#000000', 0.08, 0, 3, 8),
-    elevation: 3,
-  },
-  tableHeaderRow: { flexDirection: 'row', minHeight: 64, borderBottomWidth: 1 },
-  tableHeaderCell: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-    borderRightWidth: 1,
-  },
-  tableBodyScroll: { maxHeight: 560 },
-  tableDataRow: { flexDirection: 'row', minHeight: 76, borderBottomWidth: 1 },
-  tableNameCell: {
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRightWidth: 1,
-  },
-  tableTierCell: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-    borderRightWidth: 1,
-  },
-  tableHeaderText: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
-  tableNameText: { fontSize: 14, fontWeight: '600' },
-  tableMetaText: { fontSize: 11, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.6 },
-  tableLinkButton: { paddingVertical: 8, paddingHorizontal: 12 },
-  tableLinkText: { fontSize: 14, fontWeight: '600', textDecorationLine: 'underline' },
-  toggleCellButton: {
-    minWidth: 104,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toggleCellText: { fontSize: 13, fontWeight: '700' },
-  toggleCellSubtext: { fontSize: 11, marginTop: 4, textAlign: 'center' },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 440,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-  },
-  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
-  modalBodyText: { fontSize: 14, marginBottom: 6 },
-  modalInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    marginTop: 12,
-  },
-  modalTextArea: { minHeight: 96, textAlignVertical: 'top' },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 20 },
-  modalSecondaryButton: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  modalSecondaryButtonText: { fontSize: 14, fontWeight: '600' },
-  modalPrimaryButton: {
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-  },
-  modalPrimaryButtonText: { fontSize: 14, fontWeight: '700' },
-  // Pagination
-  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, gap: 12 },
-  apiLimitsScroll: { flex: 1, minHeight: 0 },
-  apiLimitsScrollContent: { paddingBottom: 32 },
-  apiLimitCallerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 6,
-  },
-  apiLimitInput: {
-    minWidth: 110,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-  },
-  pageButton: {
-    paddingVertical: 7,
-    paddingHorizontal: 16,
-    backgroundColor: '#2c3e50',
-    borderRadius: 6,
-  },
-  pageButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  pageInfo: { fontSize: 13, color: '#555' },
-  // Breadcrumb
-  breadcrumb: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  breadcrumbLink: { color: '#2980b9', fontSize: 14 },
-  breadcrumbSep: { color: '#aaa', fontSize: 14 },
-  breadcrumbCurrent: { color: '#555', fontSize: 14 },
-  // Back link
-  backLink: { marginBottom: 12 },
-  backLinkText: { color: '#2980b9', fontSize: 14 },
-});
+const localStyles = (_theme: import('../theme/theme').AppTheme) => themeStyle('tabs_AdminTab_311', { StyleSheet: StyleSheet, shadowStyle: shadowStyle }, _theme);

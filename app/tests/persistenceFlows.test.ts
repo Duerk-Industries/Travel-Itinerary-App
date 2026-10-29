@@ -73,7 +73,7 @@ describe('Persistence flows for flights and lodging', () => {
           { id: 'member-api-1', email: 'traveler@example.com', status: 'active' },
         ],
       })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'lodging-api-1' }) });
 
     const lodging: Lodging = {
       id: 'lodging-1',
@@ -104,6 +104,7 @@ describe('Persistence flows for flights and lodging', () => {
     });
 
     expect(result.ok).toBe(true);
+    expect(result.lodgingIds).toEqual({ 'lodging-1': 'lodging-api-1' });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const lodgingCall = fetchMock.mock.calls[1];
     const lodgingPayload = JSON.parse(lodgingCall[1].body);

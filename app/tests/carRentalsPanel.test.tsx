@@ -225,22 +225,12 @@ describe('CarRentalsPanel', () => {
     expect(getByText('View only')).toBeTruthy();
   });
 
-  it('shows vote buttons only for non-completed statuses when the user has not voted yet', () => {
+  it('does not show proposal votes or vote counts', () => {
     const rental = makeCarRental({ status: 'Proposed' as any, userVote: null });
-    const { getAllByText } = render(
-      <CarRentalsPanel {...baseProps} carRentals={[rental]} />,
-    );
-    // Thumbs-up 👍 + thumbs-down 👎 should each render once.
-    expect(getAllByText('👍')).toHaveLength(1);
-    expect(getAllByText('👎')).toHaveLength(1);
-  });
-
-  it('fires onVoteCarRental when the thumbs-up is pressed', () => {
-    const rental = makeCarRental({ status: 'Proposed' as any, userVote: null });
-    const { getByText } = render(
-      <CarRentalsPanel {...baseProps} carRentals={[rental]} />,
-    );
-    fireEvent.press(getByText('👍'));
-    expect(baseProps.onVoteCarRental).toHaveBeenCalledWith('car-1', 1);
+    const { queryByText } = render(<CarRentalsPanel {...baseProps} carRentals={[rental]} />);
+    expect(queryByText('👍')).toBeNull();
+    expect(queryByText('👎')).toBeNull();
+    expect(queryByText('Votes')).toBeNull();
+    expect(baseProps.onVoteCarRental).not.toHaveBeenCalled();
   });
 });

@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { AppState, Text, View } from 'react-native';
 import type * as NativeMap from '@maplibre/maplibre-react-native';
@@ -8,6 +10,7 @@ import type { KeepsakeMapCaptureHandle, KeepsakeMapCaptureHostProps } from './Ke
 type Request = {map:BlogDayMapPoints;scope:string;finish:(image?:string) => void;timer:ReturnType<typeof setTimeout>;capturing:boolean};
 const compatible = () => {try {return require('expo-constants').default.expoConfig?.extra?.nativeMapRenderer === true;} catch {return false;}};
 export default forwardRef<KeepsakeMapCaptureHandle,KeepsakeMapCaptureHostProps>(function KeepsakeMapCaptureHost({enabled,scope},ref) {
+  const _styleTheme = useStyleTheme();
   const [request,setRequest] = useState<Request|null>(null);
   const current = useRef<Request|null>(null), mapRef = useRef<NativeMap.MapViewRef|null>(null);
   const [lib,setLib] = useState<typeof NativeMap|null>(null);
@@ -43,16 +46,16 @@ export default forwardRef<KeepsakeMapCaptureHandle,KeepsakeMapCaptureHostProps>(
     const job=request;if(current.current !== job || job.capturing) return;job.capturing=true;
     void mapRef.current?.takeSnap(false).then(value => job.finish(keepsakeImage(value))).catch(() => job.finish());
   };
-  return <View style={{alignItems:'center',paddingVertical:8}} testID="native-keepsake-capture">
-    <Text accessibilityLiveRegion="polite">Preparing approximate map…</Text>
-    <lib.MapView ref={mapRef} testID="native-keepsake-map" style={{width:320,height:200}} surfaceView={false} mapStyle="https://tiles.openfreemap.org/styles/liberty" attributionEnabled logoEnabled={false} scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false}
+  return <View style={themeStyle('components_KeepsakeMapCaptureHost_1', {  }, _styleTheme)} testID="native-keepsake-capture">
+    <Text accessibilityLiveRegion="polite">Preparing approximate mapï¿½</Text>
+    <lib.MapView ref={mapRef} testID="native-keepsake-map" style={themeStyle('components_KeepsakeMapCaptureHost_2', {  }, _styleTheme)} surfaceView={false} mapStyle="https://tiles.openfreemap.org/styles/liberty" attributionEnabled logoEnabled={false} scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false}
       onDidFinishRenderingMapFully={capture} onDidFailLoadingMap={() => request.finish()}>
-      <lib.Camera animationDuration={0} {...(points.length > 1 ? {bounds:{...bounds,paddingTop:30,paddingBottom:30,paddingLeft:30,paddingRight:30}} : {centerCoordinate:[points[0].lng,points[0].lat],zoomLevel:11})}/>
+      <lib.Camera animationDuration={0} {...(points.length > 1 ? {bounds:themeStyle('components_KeepsakeMapCaptureHost_3', { bounds: bounds }, _styleTheme)} : {centerCoordinate:[points[0].lng,points[0].lat],zoomLevel:11})}/>
       <lib.ShapeSource id="keepsake-areas" shape={{type:'FeatureCollection',features:points.map((p,n)=>({type:'Feature',properties:{label:String(n+1)},geometry:{type:'Point',coordinates:[p.lng,p.lat]}}))}}>
-        <lib.CircleLayer id="keepsake-pins" style={{circleRadius:12,circleColor:'#2563eb',circleStrokeColor:'#ffffff',circleStrokeWidth:2}}/>
-        <lib.SymbolLayer id="keepsake-numbers" style={{textField:['get','label'],textSize:12,textFont:['Noto Sans Regular'],textColor:'#ffffff'}}/>
+        <lib.CircleLayer id="keepsake-pins" style={themeStyle('keepsakeMapLayer1', {  }, _styleTheme)}/>
+        <lib.SymbolLayer id="keepsake-numbers" style={themeStyle('keepsakeMapLayer2', {  }, _styleTheme)}/>
       </lib.ShapeSource>
     </lib.MapView>
-    <Text>Approximate areas · © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors</Text>
+    <Text>Approximate areas ï¿½ ï¿½ OpenFreeMap ï¿½ OpenMapTiles ï¿½ OpenStreetMap contributors</Text>
   </View>;
 });

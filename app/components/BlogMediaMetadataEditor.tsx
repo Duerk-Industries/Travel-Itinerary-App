@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AutoGrowTextInput from './AutoGrowTextInput';
@@ -24,10 +27,16 @@ type Props = {
 };
 
 const BlogMediaMetadataEditor: React.FC<Props> = ({
-  item, canSuggest = false, canRecord = false, busy = false, onSave, onSuggest, onTranscribe, textColor = '#111827',
-  mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff', styles, theme,
+  item, canSuggest = false, canRecord = false, busy = false, onSave, onSuggest, onTranscribe, textColor: _textColorOverride,
+  mutedColor: _mutedColorOverride, borderColor: _borderColorOverride, backgroundColor: _backgroundColorOverride, styles, theme: _providedTheme,
 }) => {
-  const accentColor = theme?.colors?.link ?? '#7c3aed';
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const textColor = _textColorOverride ?? themeStyle('components_BlogMediaMetadataEditor_15', {  }, (theme ?? _styleTheme));
+  const mutedColor = _mutedColorOverride ?? themeStyle('components_BlogMediaMetadataEditor_16', {  }, (theme ?? _styleTheme));
+  const borderColor = _borderColorOverride ?? themeStyle('components_BlogMediaMetadataEditor_17', {  }, (theme ?? _styleTheme));
+  const backgroundColor = _backgroundColorOverride ?? themeStyle('components_BlogMediaMetadataEditor_18', {  }, (theme ?? _styleTheme));
+  const accentColor = theme?.colors?.link ?? themeStyle('components_BlogMediaMetadataEditor_19', {  }, (theme ?? _styleTheme));
   const [caption, setCaption] = useState('');
   const [altText, setAltText] = useState('');
   const [isDecorative, setIsDecorative] = useState(false);
@@ -118,8 +127,8 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
   };
 
   return (
-    <View testID="blog-media-metadata-editor" style={{ marginTop: 10, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor }}>
-      <Text style={{ color: textColor, fontWeight: '700' }}>Photo details</Text>
+    <View testID="blog-media-metadata-editor" style={themeStyle('components_BlogMediaMetadataEditor_1', { borderColor: borderColor, backgroundColor: backgroundColor }, (theme ?? _styleTheme))}>
+      <Text style={themeStyle('components_BlogMediaMetadataEditor_2', { textColor: textColor }, (theme ?? _styleTheme))}>Photo details</Text>
       <AutoGrowTextInput
         testID="blog-media-caption-input"
         value={caption}
@@ -129,7 +138,7 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         minHeight={38}
         maxLines={6}
         lineHeight={20}
-        style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8, lineHeight: 20 }}
+        style={themeStyle('components_BlogMediaMetadataEditor_3', { textColor: textColor, borderColor: borderColor }, (theme ?? _styleTheme))}
       />
       <TextInput
         testID="blog-media-tags-input"
@@ -137,7 +146,7 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         onChangeText={(value) => setTags(value.slice(0, 720))}
         placeholder="Tags (optional, comma-separated)"
         placeholderTextColor={mutedColor}
-        style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8 }}
+        style={themeStyle('components_BlogMediaMetadataEditor_4', { textColor: textColor, borderColor: borderColor }, (theme ?? _styleTheme))}
       />
       <AutoGrowTextInput
         testID="blog-media-alt-text-input"
@@ -149,18 +158,18 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         minHeight={38}
         maxLines={6}
         lineHeight={20}
-        style={{ color: textColor, opacity: isDecorative ? 0.55 : 1, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8, lineHeight: 20 }}
+        style={themeStyle('components_BlogMediaMetadataEditor_5', { textColor: textColor, isDecorative: isDecorative, borderColor: borderColor }, (theme ?? _styleTheme))}
       />
-      <TouchableOpacity testID="blog-media-decorative-toggle" accessibilityRole="checkbox" accessibilityState={{ checked: isDecorative }} onPress={() => { setIsDecorative((value) => !value); setNotice(''); }} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-        <Text style={{ color: textColor, marginRight: 6 }}>{isDecorative ? '☑' : '☐'}</Text>
-        <Text style={{ color: mutedColor }}>Decorative image (no alt text needed)</Text>
+      <TouchableOpacity testID="blog-media-decorative-toggle" accessibilityRole="checkbox" accessibilityState={{ checked: isDecorative }} onPress={() => { setIsDecorative((value) => !value); setNotice(''); }} style={themeStyle('components_BlogMediaMetadataEditor_6', {  }, (theme ?? _styleTheme))}>
+        <Text style={themeStyle('components_BlogMediaMetadataEditor_7', { textColor: textColor }, (theme ?? _styleTheme))}>{isDecorative ? '☑' : '☐'}</Text>
+        <Text style={themeStyle('components_BlogMediaMetadataEditor_8', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Decorative image (no alt text needed)</Text>
       </TouchableOpacity>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-        <TouchableOpacity testID="blog-media-save-metadata" disabled={busy || (!isDecorative && !altText.trim())} onPress={save} style={[styles?.button, !isDecorative && !altText.trim() ? { opacity: 0.5 } : null]}>
+      <View style={themeStyle('components_BlogMediaMetadataEditor_9', {  }, (theme ?? _styleTheme))}>
+        <TouchableOpacity testID="blog-media-save-metadata" disabled={busy || (!isDecorative && !altText.trim())} onPress={save} style={[styles?.button, !isDecorative && !altText.trim() ? themeStyle('components_BlogMediaMetadataEditor_10', {  }, (theme ?? _styleTheme)) : null]}>
           <Text style={styles?.buttonText}>{busy ? 'Saving…' : 'Save details'}</Text>
         </TouchableOpacity>
         {canSuggest ? (
-          <TouchableOpacity testID="blog-media-suggest-metadata" disabled={busy} onPress={suggest} style={[styles?.button, { backgroundColor: accentColor }]}>
+          <TouchableOpacity testID="blog-media-suggest-metadata" disabled={busy} onPress={suggest} style={[styles?.button, themeStyle('components_BlogMediaMetadataEditor_11', { accentColor: accentColor }, (theme ?? _styleTheme))]}>
             <Text style={styles?.buttonText}>{busy ? 'Working…' : 'Suggest with AI'}</Text>
           </TouchableOpacity>
         ) : null}
@@ -169,7 +178,7 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
             testID="blog-media-record-caption"
             disabled={busy || recordingState === 'transcribing'}
             onPress={toggleRecording}
-            style={[styles?.button, { backgroundColor: recordingState === 'recording' ? '#b91c1c' : accentColor }]}
+            style={[styles?.button, themeStyle('components_BlogMediaMetadataEditor_12', { recordingState: recordingState, accentColor: accentColor }, (theme ?? _styleTheme))]}
           >
             <Text style={styles?.buttonText}>
               {recordingState === 'recording' ? '● Stop' : recordingState === 'transcribing' ? 'Transcribing…' : '🎙 Record caption'}
@@ -178,9 +187,9 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         ) : null}
       </View>
       {notice ? (
-        <Text accessibilityLiveRegion="polite" style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>{notice}</Text>
+        <Text accessibilityLiveRegion="polite" style={themeStyle('components_BlogMediaMetadataEditor_13', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{notice}</Text>
       ) : !busy && !isDecorative && !altText.trim() ? (
-        <Text accessibilityLiveRegion="polite" style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>
+        <Text accessibilityLiveRegion="polite" style={themeStyle('components_BlogMediaMetadataEditor_14', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
           Add alt text (or mark this photo decorative) to save — it's required so screen readers can describe it.
         </Text>
       ) : null}

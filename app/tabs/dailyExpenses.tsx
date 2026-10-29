@@ -1,15 +1,21 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+import PayerSelect from '../components/PayerSelect';
+import { singlePayerIds } from '../utils/payerSelection';
+import { splitAmountByWeights } from '../utils/costs';
 import { exportCsv } from '../utils/csvExport';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ExpenseReceiptPanel from '../components/ExpenseReceiptPanel';
 import DialogShell from '../components/DialogShell';
 import PlaidImportQueue from '../components/PlaidImportQueue';
 import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import DateField from '../components/DateField';
-import { resolveExpenseDescription } from '../utils/expenseDescription';
 import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -57,6 +63,8 @@ type Expense = {
   notes?: string | null;
   payerIds: string[];
   forIds: string[];
+  /** Weight per traveler in forIds for an uneven split; absent or null means equal. */
+  forShares?: Record<string, number> | null;
   createdAt: string;
   sourceType?: string | null;
   sourceId?: string | null;
@@ -95,6 +103,7 @@ type DailyExpensesTabProps = {
   onOpenBalances?: () => void;
   costTrackingAllowed?: boolean;
   receiptScanningAllowed?: boolean;
+  expenseImportAllowed?: boolean;
   readOnly?: boolean;
   /** Lets "Add Expense" work while the rest of the tab is read-only because the device is offline. */
   allowOfflineAdd?: boolean;
@@ -125,33 +134,18 @@ type DailyExpenseDraft = {
   amount: string;
   vendor: string;
   forIds: string[];
+  /** Weight per selected traveler when splitting unevenly; null splits equally. */
+  forShares?: Record<string, number> | null;
   payerIds: string[];
 };
 
 const dayCardStyles = {
-  card: {
-    padding: 12,
-    marginBottom: 8,
-  } as const,
-  headerRow: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    marginBottom: 6,
-  } as const,
-  dateLabel: {
-    fontWeight: '600' as const,
-  } as const,
-  dayTotal: {
-    fontWeight: '600' as const,
-  } as const,
-  categoryRow: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    paddingVertical: 4,
-  } as const,
-  emptyNote: {
-    fontStyle: 'italic' as const,
-  } as const,
+  card: themeStyle('tabs_dailyExpenses_1', {  }, getStyleTheme('auto', null)),
+  headerRow: themeStyle('tabs_dailyExpenses_2', {  }, getStyleTheme('auto', null)),
+  dateLabel: themeStyle('tabs_dailyExpenses_3', {  }, getStyleTheme('auto', null)),
+  dayTotal: themeStyle('tabs_dailyExpenses_4', {  }, getStyleTheme('auto', null)),
+  categoryRow: themeStyle('tabs_dailyExpenses_5', {  }, getStyleTheme('auto', null)),
+  emptyNote: themeStyle('tabs_dailyExpenses_6', {  }, getStyleTheme('auto', null)),
 };
 
 const formatDateLabel = (iso: string): string => {
@@ -184,7 +178,7 @@ const buildDateRange = (trip: Trip | null): string[] => {
 const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   autoOpenAdd = false,
   onAutoOpenAddHandled,
-  theme,
+  theme: _providedTheme,
   backendUrl,
   headers,
   jsonHeaders,
@@ -199,10 +193,15 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   onOpenBalances,
   costTrackingAllowed,
   receiptScanningAllowed,
+  expenseImportAllowed = false,
   readOnly = false,
   allowOfflineAdd = false,
   pendingExpenses,
 }) => {
+  const canScanReceipt = Boolean(receiptScanningAllowed && costTrackingAllowed && !readOnly && Platform.OS === 'web');
+  const canImportExpenses = Boolean(expenseImportAllowed && costTrackingAllowed && !readOnly);
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null);
   const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
   const tripPendingEntries = useMemo(
@@ -223,24 +222,24 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     return map;
   }, [activeMembers]);
 
-  const otherExpenseDescription = (expense: Expense): string =>
-    resolveExpenseDescription(expense, itineraryExpenseDescriptions) || '-';
 
   const tripDates = useMemo(() => buildDateRange(trip), [trip]);
   const expenseDraftStorageKey = `stp.daily-expense-draft.${trip?.id ?? 'none'}`;
+  // The category used last starts the next expense, so a run of similar expenses (rides, souvenirs) needs no re-picking.
+  const [lastCategory, setLastCategory] = usePersistedState<CategoryOption>('stp.daily-expense-last-category', 'Breakfast');
   const defaultExpenseDraft = useMemo<DailyExpenseDraft>(() => {
     const todayIso = localTodayDateOnly();
     return {
       isOpen: false,
       date: tripDates.includes(todayIso) ? todayIso : tripDates[0] ?? todayIso,
-      category: 'Breakfast',
+      category: categoryOptions.includes(lastCategory) ? lastCategory : 'Breakfast',
       currency: trip?.currency ?? 'USD',
       amount: '',
       vendor: '',
       forIds: activeMembers.map((member) => member.id),
       payerIds: defaultPayerId ? [defaultPayerId] : [],
     };
-  }, [activeMembers, defaultPayerId, trip?.currency, tripDates]);
+  }, [activeMembers, defaultPayerId, trip?.currency, tripDates, lastCategory]);
   const [storedExpenseDraft, setExpenseDraft] = usePersistedState<DailyExpenseDraft | null>(
     expenseDraftStorageKey,
     null,
@@ -253,6 +252,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     amount: draftAmount,
     vendor: draftVendor,
     forIds: draftForIds,
+    forShares: draftForShares = null,
     payerIds: draftPayerIds,
   } = expenseDraft;
   const updateExpenseDraft = (update: Partial<DailyExpenseDraft>) => {
@@ -266,11 +266,20 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const setDraftForIds = (next: React.SetStateAction<string[]>) => {
     setExpenseDraft((current) => {
       const draft = current ?? defaultExpenseDraft;
-      return {
-        ...draft,
-        forIds: typeof next === 'function' ? next(draft.forIds) : next,
-      };
+      const forIds = typeof next === 'function' ? next(draft.forIds) : next;
+      // Weights follow the selection: a deselected traveler loses theirs, a newly selected one starts at one share.
+      const forShares = draft.forShares
+        ? forIds.reduce<Record<string, number>>((all, id) => ({ ...all, [id]: draft.forShares?.[id] ?? 1 }), {})
+        : null;
+      return { ...draft, forIds, forShares };
     });
+  };
+  const setDraftShare = (memberId: string, weight: number) => {
+    const next = Math.min(20, Math.max(1, Math.round(weight)));
+    updateExpenseDraft({ forShares: { ...(draftForShares ?? {}), [memberId]: next } });
+  };
+  const setSplitUneven = (uneven: boolean) => {
+    updateExpenseDraft({ forShares: uneven ? draftForIds.reduce<Record<string, number>>((all, id) => ({ ...all, [id]: 1 }), {}) : null });
   };
   const setDraftPayerIds = (next: React.SetStateAction<string[]>) => {
     setExpenseDraft((current) => {
@@ -293,10 +302,37 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const receiptFileInputRef = useRef<any>(null);
+  // Stored receipt images: which of this trip's expenses have one, and the one being viewed.
+  const [receiptExpenseIds, setReceiptExpenseIds] = useState<Set<string>>(new Set());
+  const [receiptViewer, setReceiptViewer] = useState<{ id: string; title: string } | null>(null);
+  useEffect(() => {
+    // Looked up when a day's details are opened, the only place receipts are shown.
+    if (!trip?.id || !costTrackingAllowed || !detailTarget) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/expenses/receipts?tripId=${encodeURIComponent(trip.id)}`, { headers });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled) setReceiptExpenseIds(new Set(Array.isArray(data.expenseIds) ? data.expenseIds.map(String) : []));
+      } catch {
+        // The receipt indicator is supplementary; expenses work without it.
+      }
+    })();
+    return () => { cancelled = true; };
+    // headers is rebuilt by the caller on every render; the trip decides when to reload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backendUrl, trip?.id, costTrackingAllowed, detailTarget?.date, detailTarget?.category]);
 
-  const expenseItems = useMemo(
-    () => expenses.filter((expense) => categoryOptions.includes(expense.category as CategoryOption)),
+  // Keep zero-cost itinerary records intact so a later cost update can surface
+  // them again, without requiring users to repeatedly delete mirrored $0 rows.
+  const nonZeroExpenses = useMemo(
+    () => expenses.filter((expense) => (Number(expense.amount) || 0) !== 0),
     [expenses]
+  );
+  const expenseItems = useMemo(
+    () => nonZeroExpenses.filter((expense) => categoryOptions.includes(expense.category as CategoryOption)),
+    [nonZeroExpenses]
   );
 
   const dailyTotals = useMemo(() => {
@@ -329,17 +365,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       (expense) => expense.expenseDate === detailTarget.date && expense.category === detailTarget.category
     );
   }, [detailTarget, expenseItems]);
-
-  // Every expense the day × category grid can't reach — a non-grid category (Flights / Lodging /
-  // Activities / Car Rentals, usually mirrored from an itinerary item) or a date outside the
-  // trip's range. Without this they'd be invisible in this tab and impossible to delete here.
-  const tripDateSet = useMemo(() => new Set(tripDates), [tripDates]);
-  const otherExpenses = useMemo(
-    () => expenses
-      .filter((e) => !categoryOptions.includes(e.category as CategoryOption) || !tripDateSet.has(e.expenseDate))
-      .sort((a, b) => (a.expenseDate < b.expenseDate ? -1 : a.expenseDate > b.expenseDate ? 1 : 0)),
-    [expenses, tripDateSet]
-  );
 
   const toggleSelection = (ids: string[], id: string): string[] =>
     ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
@@ -379,11 +404,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       amount: String(expense.amount ?? ''),
       vendor: expense.vendor || expense.notes || '',
       forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+      forShares: expense.forShares ?? null,
       payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     });
   };
 
   const handleReceiptPickerPress = () => {
+    if (!canScanReceipt) return;
     if (!receiptScanningAllowed) {
       alertMessage('Receipt scanning is available with Premium.');
       return;
@@ -425,6 +452,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const handleReceiptFile = async (file: File | null | undefined) => {
+    if (!canScanReceipt) return;
     if (!receiptScanningAllowed) {
       alertMessage('Receipt scanning is available with Premium.');
       return;
@@ -522,8 +550,12 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       amountInTripCurrency: amountInTripCurrency ?? undefined,
       exchangeRateToTripCurrency: exchangeRateToTripCurrency ?? undefined,
       exchangeRateDate: exchangeRateDate ?? undefined,
-      payerIds: draftPayerIds,
+      payerIds: singlePayerIds(draftPayerIds, defaultPayerId),
       forIds: draftForIds,
+      // Sent only for a genuinely uneven split; the server treats all-equal weights as an equal split too.
+      forShares: draftForShares && draftForIds.some((id) => (draftForShares[id] ?? 1) !== (draftForShares[draftForIds[0]] ?? 1))
+        ? draftForIds.reduce<Record<string, number>>((all, id) => ({ ...all, [id]: draftForShares[id] ?? 1 }), {})
+        : undefined,
       vendor: draftVendor || undefined,
     };
     // A new expense carries one stable operation key for its whole life. Whether the first attempt
@@ -571,6 +603,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       setExpenses((prev) => editingExpenseId
         ? prev.map((expense) => expense.id === data.id ? data as Expense : expense)
         : [data as Expense, ...prev.filter((expense) => expense.id !== data.id)]);
+      setLastCategory(draftCategory);
       cancelAddExpenseModal();
     } catch (err) {
       // The request never got an answer (lost connection mid-save). For a new expense the answer is
@@ -606,27 +639,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     }
   };
 
-  const [bulkDeleting, setBulkDeleting] = useState(false);
-  const deleteExpensesByIds = async (ids: string[]) => {
-    if (readOnly) {
-      alertMessage('Offline trip information is read-only. Reconnect to delete expenses.');
-      return;
-    }
-    if (!costTrackingAllowed || !ids.length) return;
-    setBulkDeleting(true);
-    const deleted: string[] = [];
-    try {
-      for (const id of ids) {
-        const res = await fetch(`${backendUrl}/api/expenses/${id}`, { method: 'DELETE', headers });
-        if (res.ok) deleted.push(id);
-      }
-      if (deleted.length) setExpenses((prev) => prev.filter((e) => !deleted.includes(e.id)));
-      if (deleted.length < ids.length) alertMessage(`Deleted ${deleted.length} of ${ids.length}. Some could not be removed.`);
-    } finally {
-      setBulkDeleting(false);
-    }
-  };
-
   if (!trip) {
     return (
       <View style={styles.card}>
@@ -645,9 +657,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     );
   }
 
-  const fullWidthExpenseField = isNarrowLayout ? { flexBasis: '100%', minWidth: '100%', maxWidth: '100%' } : null;
-  const narrowSelectField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 150, minWidth: 132, maxWidth: '100%' } : null;
-  const narrowAmountField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 120, minWidth: 120, maxWidth: '100%' } : null;
+  const fullWidthExpenseField = isNarrowLayout ? themeStyle('tabs_dailyExpenses_7', {  }, (theme ?? _styleTheme)) : null;
+  const narrowSelectField = isNarrowLayout ? themeStyle('tabs_dailyExpenses_8', {  }, (theme ?? _styleTheme)) : null;
+  const narrowAmountField = isNarrowLayout ? themeStyle('tabs_dailyExpenses_9', {  }, (theme ?? _styleTheme)) : null;
   const categoryFieldStyle = [styles.expenseFieldCategory, narrowSelectField];
   const currencyFieldStyle = [styles.expenseFieldCurrency, narrowSelectField];
   const dateFieldStyle = isNarrowLayout
@@ -658,28 +670,24 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const narrowCardsScrollStyle = isNarrowLayout
     ? [
         styles.dailyExpensesVerticalScroll,
-        { maxHeight: Math.max(360, viewportHeight - 220), flexGrow: 0 },
+        themeStyle('tabs_dailyExpenses_10', { viewportHeight: viewportHeight }, (theme ?? _styleTheme)),
       ]
     : styles.dailyExpensesVerticalScroll;
-  const webFieldBase = {
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box',
-  };
+  const webFieldBase = themeStyle('tabs_dailyExpenses_11', {  }, (theme ?? _styleTheme));
 
   return (
     <View style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Daily Expenses</Text>
         <TouchableOpacity
-          style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+          style={[styles.button, styles.smallButton, themeStyle('tabs_dailyExpenses_12', {  }, (theme ?? _styleTheme))]}
           onPress={openAddExpenseModal}
           disabled={readOnly && !(allowOfflineAdd && pendingExpenses)}
           testID="expense-add-button"
         >
           <Text style={styles.buttonText}>+ Add Expense</Text>
         </TouchableOpacity>
-        {receiptScanningAllowed ? (
+        {canScanReceipt ? (
           <TouchableOpacity
             style={[styles.button, styles.smallButton, receiptParsing && styles.buttonDisabled]}
             onPress={handleReceiptPickerPress}
@@ -689,14 +697,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
             <Text style={styles.buttonText}>{receiptParsing ? 'Scanning...' : 'Scan Receipt'}</Text>
           </TouchableOpacity>
         ) : null}
+        {canImportExpenses ? (
         <TouchableOpacity
           style={[styles.button, styles.smallButton]}
-          onPress={() => setImportExpensesVisible(true)}
+          onPress={() => { if (canImportExpenses) setImportExpensesVisible(true); }}
           disabled={readOnly}
           testID="expense-import-button"
         >
           <Text style={styles.buttonText}>Import</Text>
         </TouchableOpacity>
+        ) : null}
         {onOpenBalances ? (
           <TouchableOpacity
             style={[styles.button, styles.smallButton]}
@@ -709,14 +719,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           </TouchableOpacity>
         ) : null}
       </View>
-      {receiptScanningAllowed && Platform.OS === 'web' ? (
+      {canScanReceipt ? (
         <input
           ref={receiptFileInputRef}
           type="file"
           accept="image/*"
           capture="environment"
           onChange={(event) => handleReceiptFile(event.target.files?.[0])}
-          style={{ display: 'none' }}
+          style={themeStyle('tabs_dailyExpenses_13', {  }, (theme ?? _styleTheme))}
           data-testid="expense-receipt-input"
         />
       ) : null}
@@ -737,7 +747,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
             const { payload } = entry.args;
             return (
               <View key={entry.id} style={styles.groupRow} testID={`expense-pending-${entry.id}`}>
-                <View style={{ flex: 1 }}>
+                <View style={themeStyle('tabs_dailyExpenses_14', {  }, (theme ?? _styleTheme))}>
                   <Text style={styles.cellText}>
                     {formatDateLong(payload.expenseDate)} · {payload.category}
                     {payload.vendor ? ` · ${payload.vendor}` : ''} · {payload.amount.toFixed(2)} {payload.currency}
@@ -804,7 +814,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           useNativeModal
         />
       ) : null}
-      {importExpensesVisible && trip && (
+      {canImportExpenses && importExpensesVisible && trip && (
         <PlaidImportQueue
           theme={theme}
           styles={styles}
@@ -830,13 +840,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           cardStyle={[styles.modalCard, styles.expenseModalCard]}
         >
               {receiptNotice ? (
-                <Text style={[styles.helperText, { marginBottom: 8 }]} testID="expense-receipt-review-notice">
+                <Text style={[styles.helperText, themeStyle('tabs_dailyExpenses_15', {  }, (theme ?? _styleTheme))]} testID="expense-receipt-review-notice">
                   {receiptNotice}
                 </Text>
               ) : null}
               <View style={styles.row}>
                 <TouchableOpacity
-                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+                  style={[styles.button, styles.smallButton, themeStyle('tabs_dailyExpenses_16', {  }, (theme ?? _styleTheme))]}
                   onPress={cancelAddExpenseModal}
                   accessibilityRole="button"
                   accessibilityLabel="Cancel expense"
@@ -845,7 +855,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   <Text style={styles.buttonText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.expenseModalScroll} contentContainerStyle={{ gap: 8, overflow: 'visible', paddingBottom: 8 }}>
+              <ScrollView style={styles.expenseModalScroll} contentContainerStyle={themeStyle('tabs_dailyExpenses_17', {  }, (theme ?? _styleTheme))}>
                 <View style={styles.expenseFieldRow}>
                   <DateField
                     value={draftDate}
@@ -865,11 +875,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     placeholder="Category"
                     title="Expense category"
                     style={categoryFieldStyle}
-                    webStyle={toWebStyle(styles.input, {
-                      ...toWebStyle(styles.expenseFieldCategory),
-                      ...toWebStyle(narrowSelectField),
-                      ...webFieldBase,
-                    })}
+                    webStyle={toWebStyle(styles.input, themeStyle('expenseSelectWeb1', { toWebStyle: toWebStyle, styles: styles, narrowSelectField: narrowSelectField, webFieldBase: webFieldBase }, _styleTheme))}
                     onChange={(value) => setDraftCategory((value || 'Other') as CategoryOption)}
                   />
                   <SelectField
@@ -879,11 +885,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     placeholder="Currency"
                     title="Expense currency"
                     style={currencyFieldStyle}
-                    webStyle={toWebStyle(styles.input, {
-                      ...toWebStyle(styles.expenseFieldCurrency),
-                      ...toWebStyle(narrowSelectField),
-                      ...webFieldBase,
-                    })}
+                    webStyle={toWebStyle(styles.input, themeStyle('expenseSelectWeb2', { toWebStyle: toWebStyle, styles: styles, narrowSelectField: narrowSelectField, webFieldBase: webFieldBase }, _styleTheme))}
                     onChange={setDraftCurrency}
                   />
                   <DraftTextInput
@@ -907,12 +909,36 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 </View>
 
                 <Text style={styles.headerText}>For</Text>
+                <View style={styles.row}>
+                  <TouchableOpacity
+                    testID="expense-for-everyone"
+                    accessibilityRole="button"
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => setDraftForIds(activeMembers.map((member) => member.id))}
+                  >
+                    <Text style={styles.buttonText}>Everyone</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="expense-for-only"
+                    accessibilityRole="button"
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => setDraftForIds([])}
+                  >
+                    <Text style={styles.buttonText}>Only these travelers</Text>
+                  </TouchableOpacity>
+                </View>
+                {draftForIds.length < activeMembers.length ? (
+                  <Text style={styles.helperText} testID="expense-for-hint">
+                    {draftForIds.length ? `Shared by ${draftForIds.length} of ${activeMembers.length} travelers.` : 'Tap the travelers who share this expense.'}
+                  </Text>
+                ) : null}
                 <View style={styles.toggleGroup}>
                   {activeMembers.map((member) => {
                     const selected = draftForIds.includes(member.id);
                     return (
                       <TouchableOpacity
                         key={`for-toggle-${member.id}`}
+                        testID={`expense-for-${member.id}`}
                         style={[
                           styles.expenseToggleButton,
                           selected ? styles.expenseToggleSelected : styles.expenseToggleUnselected,
@@ -927,26 +953,42 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   })}
                 </View>
 
-                <Text style={styles.headerText}>Payers</Text>
-                <View style={styles.toggleGroup}>
-                  {activeMembers.map((member) => {
-                    const selected = draftPayerIds.includes(member.id);
-                    return (
-                      <TouchableOpacity
-                        key={`payer-toggle-${member.id}`}
-                        style={[
-                          styles.expenseToggleButton,
-                          selected ? styles.expenseToggleSelected : styles.expenseToggleUnselected,
-                        ]}
-                        onPress={() => setDraftPayerIds((prev) => toggleSelection(prev, member.id))}
-                      >
-                        <Text style={[styles.expenseToggleText, selected && styles.expenseToggleTextSelected]}>
-                          {memberNameMap.get(member.id) ?? 'Traveler'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                {draftForIds.length > 1 ? (
+                  <TouchableOpacity
+                    testID="expense-split-uneven"
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: Boolean(draftForShares) }}
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => setSplitUneven(!draftForShares)}
+                  >
+                    <Text style={styles.buttonText}>{draftForShares ? 'Split equally' : 'Split unevenly'}</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {draftForShares && draftForIds.length > 1 ? (
+                  <View testID="expense-shares">
+                    <Text style={styles.helperText}>Shares: a double portion counts as 2.</Text>
+                    {(() => {
+                      const weights = draftForIds.map((id) => draftForShares[id] ?? 1);
+                      const amounts = splitAmountByWeights(Number(draftAmount) || 0, weights);
+                      return draftForIds.map((id, index) => (
+                        <View key={`share-${id}`} style={styles.row}>
+                          <Text style={styles.cellText}>{memberNameMap.get(id) ?? 'Traveler'}</Text>
+                          <TouchableOpacity testID={`expense-share-dec-${id}`} accessibilityRole="button" accessibilityLabel={`Fewer shares for ${memberNameMap.get(id) ?? 'traveler'}`} style={[styles.button, styles.smallButton]} onPress={() => setDraftShare(id, weights[index] - 1)}>
+                            <Text style={styles.buttonText}>−</Text>
+                          </TouchableOpacity>
+                          <Text style={styles.cellText} testID={`expense-share-weight-${id}`}>{weights[index]}</Text>
+                          <TouchableOpacity testID={`expense-share-inc-${id}`} accessibilityRole="button" accessibilityLabel={`More shares for ${memberNameMap.get(id) ?? 'traveler'}`} style={[styles.button, styles.smallButton]} onPress={() => setDraftShare(id, weights[index] + 1)}>
+                            <Text style={styles.buttonText}>+</Text>
+                          </TouchableOpacity>
+                          <Text style={styles.helperText} testID={`expense-share-amount-${id}`}>{(amounts[index] ?? 0).toFixed(2)}</Text>
+                        </View>
+                      ));
+                    })()}
+                  </View>
+                ) : null}
+
+                <Text style={styles.headerText}>Payer</Text>
+                <PayerSelect members={activeMembers} value={draftPayerIds} onChange={setDraftPayerIds} styles={styles} testID="expense-payer" />
 
                 <View style={styles.row}>
                   <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveExpense} testID="expense-save">
@@ -962,7 +1004,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <ScrollView
           testID="daily-expenses-cards"
           style={narrowCardsScrollStyle}
-          contentContainerStyle={[styles.dailyExpensesVerticalContent, { paddingBottom: 24 }]}
+          contentContainerStyle={[styles.dailyExpensesVerticalContent, themeStyle('tabs_dailyExpenses_18', {  }, (theme ?? _styleTheme))]}
           nestedScrollEnabled
           showsVerticalScrollIndicator
           keyboardShouldPersistTaps="handled"
@@ -1054,70 +1096,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         </HorizontalTableScroll>
       )}
 
-      {otherExpenses.length ? (
-        <View style={{ marginTop: 18 }} testID="other-expenses">
-          <Text style={styles.sectionTitle}>Other expenses ({otherExpenses.length})</Text>
-          <Text style={styles.helperText}>
-            Expenses outside the daily grid above — a different category (often mirrored from a flight, lodging, activity or car rental) or a date outside this trip. Select a linked description to edit its itinerary item.
-          </Text>
-          {otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).length >= 2 ? (
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton, { alignSelf: 'flex-start', marginTop: 6, marginBottom: 4 }]}
-              disabled={bulkDeleting}
-              onPress={() => deleteExpensesByIds(otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).map((e) => e.id))}
-              testID="other-expenses-clear-zero"
-            >
-              <Text style={styles.buttonText}>
-                {bulkDeleting ? 'Removing…' : `Remove ${otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).length} zero-amount entries`}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-          <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-            <View style={styles.table} testID="other-expenses-table">
-              <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Date', 'Category', 'Description', 'Paid by', 'For', 'Amount'].map((header, index) => (
-                  <View key={header} style={[styles.cell, fixedTableColumn(index === 5 ? 90 : index === 2 ? 200 : 130), index === 5 && styles.lastCell]}>
-                    <Text style={styles.headerText}>{header}</Text>
-                  </View>
-                ))}
-              </View>
-              {otherExpenses.map((expense, index) => (
-                <View key={expense.id} style={[styles.tableRow, index === otherExpenses.length - 1 && styles.lastRow]} testID={`other-expense-row-${expense.id}`}>
-                  <View style={[styles.cell, fixedTableColumn(130)]}>
-                    <Text style={styles.cellText}>{formatDateLabel(expense.expenseDate)}</Text>
-                  </View>
-                  <View style={[styles.cell, fixedTableColumn(130)]}>
-                    <Text style={styles.cellText}>{expense.category}</Text>
-                  </View>
-                  <View style={[styles.cell, fixedTableColumn(200)]}>
-                    {!readOnly && expense.sourceType && expense.sourceId && onEditItineraryItem ? (
-                      <TouchableOpacity
-                        accessibilityRole="link"
-                        accessibilityLabel={`Edit ${otherExpenseDescription(expense)}`}
-                        onPress={() => onEditItineraryItem(expense.sourceType as string, expense.sourceId as string)}
-                        testID={`other-expense-edit-source-${expense.id}`}
-                      >
-                        <Text style={[styles.cellText, styles.linkText]}>{otherExpenseDescription(expense)}</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.cellText}>{otherExpenseDescription(expense)}</Text>
-                    )}
-                  </View>
-                  <View style={[styles.cell, fixedTableColumn(130)]}>
-                    <Text style={styles.cellText}>{expense.payerIds.length ? expense.payerIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, fixedTableColumn(130)]}>
-                    <Text style={styles.cellText}>{expense.forIds.length ? expense.forIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, fixedTableColumn(90)]}>
-                    <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </HorizontalTableScroll>
-        </View>
-      ) : null}
 
       {detailTarget ? (
         <DialogShell
@@ -1130,15 +1108,15 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           cardStyle={[styles.modalCard, styles.detailModal]}
         >
               <View style={styles.row}>
-                <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => setDetailTarget(null)}>
+                <TouchableOpacity style={[styles.button, styles.smallButton, themeStyle('tabs_dailyExpenses_19', {  }, (theme ?? _styleTheme))]} onPress={() => setDetailTarget(null)}>
                   <Text style={styles.buttonText}>Close</Text>
                 </TouchableOpacity>
               </View>
               {pendingDeleteExpense && detailItems.some((e) => e.id === pendingDeleteExpense.id) ? (
                 // Inline confirm — a second stacked Modal can render behind this one on web.
-                <View testID="expense-detail-delete-confirm" style={{ borderWidth: 1, borderColor: theme?.colors?.alert ?? '#b91c1c', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                <View testID="expense-detail-delete-confirm" style={themeStyle('tabs_dailyExpenses_20', { theme: theme }, (theme ?? _styleTheme))}>
                   <Text style={styles.cellText}>Delete this ${(Number(pendingDeleteExpense.amount) || 0).toFixed(2)} expense? This cannot be undone.</Text>
-                  <View style={[styles.row, { marginTop: 8, gap: 8 }]}>
+                  <View style={[styles.row, themeStyle('tabs_dailyExpenses_21', {  }, (theme ?? _styleTheme))]}>
                     <TouchableOpacity testID="expense-detail-delete-confirm-yes" accessibilityRole="button" accessibilityLabel="Confirm delete" style={[styles.button, styles.smallButton, styles.tableActionButtonDanger]} onPress={() => deleteExpense(pendingDeleteExpense)}>
                       <Text style={styles.buttonText}>Delete</Text>
                     </TouchableOpacity>
@@ -1148,16 +1126,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   </View>
                 </View>
               ) : null}
-              <HorizontalTableScroll style={{ marginTop: 8 }} contentContainerStyle={styles.tableScrollContent}>
-                <View style={[styles.table, { minWidth: 620 }]}>
+              <HorizontalTableScroll style={themeStyle('tabs_dailyExpenses_22', {  }, (theme ?? _styleTheme))} contentContainerStyle={styles.tableScrollContent}>
+                <View style={[styles.table, themeStyle('tabs_dailyExpenses_23', {  }, (theme ?? _styleTheme))]}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
-                    {['Description', 'For', 'Payers', 'Amount', 'Action'].map((header, index) => (
+                    {['Description', 'For', 'Payer', 'Amount', 'Action'].map((header, index) => (
                       <View key={header} style={[styles.cell, fixedTableColumn(index === 3 ? 90 : 150), index === 4 && styles.lastCell]}>
                         <Text style={styles.headerText}>{header}</Text>
                       </View>
                     ))}
                   </View>
-                  <ScrollView style={{ maxHeight: viewportHeight ? Math.min(360, viewportHeight * 0.4) : 360 }} nestedScrollEnabled>
+                  <ScrollView style={themeStyle('tabs_dailyExpenses_24', { viewportHeight: viewportHeight }, (theme ?? _styleTheme))} nestedScrollEnabled>
                     {detailItems.map((expense, index) => (
                       <View key={expense.id} style={[styles.tableRow, index === detailItems.length - 1 && styles.lastRow]}>
                         <View style={[styles.cell, fixedTableColumn(150)]}>
@@ -1177,7 +1155,17 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                           <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
                         </View>
                         <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>
-                          <View style={[styles.actionCell, { flexWrap: 'wrap' }]}>
+                          <View style={[styles.actionCell, themeStyle('tabs_dailyExpenses_25', {  }, (theme ?? _styleTheme))]}>
+                            {receiptExpenseIds.has(expense.id) || (!readOnly && Platform.OS === 'web') ? (
+                              <TouchableOpacity
+                                style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
+                                onPress={() => setReceiptViewer({ id: expense.id, title: expense.vendor || expense.notes || 'expense' })}
+                                accessibilityLabel={receiptExpenseIds.has(expense.id) ? 'View receipt' : 'Attach receipt'}
+                                testID={`expense-receipt-${expense.id}`}
+                              >
+                                <Text style={styles.buttonText}>{receiptExpenseIds.has(expense.id) ? 'Receipt' : '+ Receipt'}</Text>
+                              </TouchableOpacity>
+                            ) : null}
                             <TouchableOpacity
                               style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
                               onPress={() => openEditExpenseModal(expense)}
@@ -1196,6 +1184,23 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                         </View>
                       </View>
                     ))}
+                    {receiptViewer && detailItems.some((e) => e.id === receiptViewer.id) ? (
+                      <ExpenseReceiptPanel
+                        backendUrl={backendUrl}
+                        headers={headers}
+                        expenseId={receiptViewer.id}
+                        title={receiptViewer.title}
+                        hasReceipt={receiptExpenseIds.has(receiptViewer.id)}
+                        canEdit={!readOnly}
+                        onChanged={(has) => setReceiptExpenseIds((current) => {
+                          const next = new Set(current);
+                          if (has) next.add(receiptViewer.id); else next.delete(receiptViewer.id);
+                          return next;
+                        })}
+                        onClose={() => setReceiptViewer(null)}
+                        styles={styles}
+                      />
+                    ) : null}
                     {!detailItems.length ? (
                       <View style={[styles.tableRow, styles.lastRow]}>
                         <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>

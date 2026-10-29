@@ -13,6 +13,13 @@ import {
 const fixture = (name: string) => fs.readFileSync(path.resolve(__dirname, '../../docs/implementation_plans/itinerary_improvement', name), 'utf8');
 
 describe('activity and lodging CSV transfer', () => {
+  it('treats an empty date as optional while rejecting an invalid supplied date', () => {
+    const rows = toActivityReviewRows([{ Date: '', Name: 'Optional museum' }, { Date: 'not a date', Name: 'Invalid museum' }],
+      { date: 'Date', name: 'Name' }, '2027-05-01', '2027-05-10');
+    expect(rows[0].fields.date).toBe('');
+    expect(rows[0].errors).toHaveLength(0);
+    expect(rows[1].errors).toHaveLength(1);
+  });
   it('parses and maps the supplied activity fixture without dropping duplicates', () => {
     const parsed = parseCsv(fixture('Japan Checklist - Activities-1.csv'));
     expect(parsed.issues.filter((issue) => issue.severity === 'error')).toHaveLength(0);

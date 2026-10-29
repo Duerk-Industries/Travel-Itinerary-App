@@ -61,22 +61,70 @@ describe('CreateTripWizard Quick Start', () => {
     expect(getByTestId('quick-start-trip-name')).toBeTruthy();
     expect(getByTestId('quick-start-create')).toBeTruthy();
     // The full wizard's step-by-step heading is not shown in Quick Start mode.
-    expect(queryByText('Step 1 of 9: Trip Details')).toBeNull();
+    expect(queryByText('Step 1 of 10: Trip Details')).toBeNull();
   });
 
   it('opens directly on the full step wizard when featureQuickStartTripWizard is disabled', () => {
     const { getByText, queryByText } = render(
       <CreateTripWizard {...baseProps} featureQuickStartTripWizard={false} />
     );
-    expect(getByText('Step 1 of 9: Trip Details')).toBeTruthy();
+    expect(getByText('Step 1 of 10: Trip Details')).toBeTruthy();
     expect(queryByText('Start planning in seconds')).toBeNull();
   });
 
   it('lets a traveler switch from Quick Start into the full wizard via "Customize before creating"', () => {
     const { getByTestId, getByText, queryByText } = render(<CreateTripWizard {...baseProps} />);
     fireEvent.press(getByTestId('quick-start-customize'));
-    expect(getByText('Step 1 of 9: Trip Details')).toBeTruthy();
+    expect(getByText('Step 1 of 10: Trip Details')).toBeTruthy();
     expect(queryByText('Start planning in seconds')).toBeNull();
+  });
+
+  describe('dates already chosen on Quick Start', () => {
+    const withDates = { name: 'Trip to Tokyo', destinationQuery: 'Tokyo', startDate: '2027-05-10', endDate: '2027-05-12' };
+
+    it('skips the Dates step going forward and back', () => {
+      const ui = render(<CreateTripWizard {...baseProps} initialDraft={withDates} />);
+      fireEvent.press(ui.getByTestId('quick-start-customize'));
+      expect(ui.getByText('Step 1 of 9: Trip Details')).toBeTruthy();
+      expect(ui.getByTestId('wizard-dates-summary')).toBeTruthy();
+      fireEvent.press(ui.getByText('Next'));
+      expect(ui.getByText('Step 2 of 9: Participants')).toBeTruthy();
+      expect(ui.queryByText('Dates')).toBeNull();
+      fireEvent.press(ui.getByText('Back'));
+      expect(ui.getByText('Step 1 of 9: Trip Details')).toBeTruthy();
+    });
+
+    it('skips it for a flexible timeline too', () => {
+      const ui = render(<CreateTripWizard {...baseProps} initialDraft={{ name: 'Trip to Tokyo', destinationQuery: 'Tokyo', startDate: '', endDate: '' }} />);
+      fireEvent.press(ui.getByTestId('quick-start-dates-unscheduled'));
+      fireEvent.changeText(ui.getByTestId('quick-start-trip-length'), '5');
+      fireEvent.press(ui.getByTestId('quick-start-customize'));
+      expect(ui.getByText('Step 1 of 9: Trip Details')).toBeTruthy();
+      fireEvent.press(ui.getByText('Next'));
+      expect(ui.getByText('Step 2 of 9: Participants')).toBeTruthy();
+    });
+
+    it('keeps the Dates step when a flexible timeline has no trip length yet', () => {
+      const ui = render(<CreateTripWizard {...baseProps} initialDraft={{ name: 'Trip to Tokyo', destinationQuery: 'Tokyo', startDate: '', endDate: '' }} />);
+      fireEvent.press(ui.getByTestId('quick-start-dates-unscheduled'));
+      fireEvent.press(ui.getByTestId('quick-start-customize'));
+      expect(ui.getByText('Step 1 of 10: Trip Details')).toBeTruthy();
+    });
+
+    it('still shows the Dates step when no dates were set, and when the traveler asks to change them', () => {
+      const none = render(<CreateTripWizard {...baseProps} initialDraft={{ name: 'Trip to Tokyo', destinationQuery: 'Tokyo', startDate: '', endDate: '' }} />);
+      fireEvent.press(none.getByTestId('quick-start-customize'));
+      expect(none.queryByTestId('wizard-dates-summary')).toBeNull();
+      fireEvent.press(none.getByText('Next'));
+      expect(none.getByText('Step 2 of 10: Dates')).toBeTruthy();
+
+      const changed = render(<CreateTripWizard {...baseProps} initialDraft={withDates} />);
+      fireEvent.press(changed.getByTestId('quick-start-customize'));
+      fireEvent.press(changed.getByTestId('wizard-dates-change'));
+      expect(changed.getByText('Step 1 of 10: Trip Details')).toBeTruthy();
+      fireEvent.press(changed.getByText('Next'));
+      expect(changed.getByText('Step 2 of 10: Dates')).toBeTruthy();
+    });
   });
 
   it('disables Create Trip until a name, destination, and both dates are present', () => {

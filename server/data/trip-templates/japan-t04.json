@@ -1,0 +1,480 @@
+{
+  "schemaVersion": 1,
+  "id": "japan-t04",
+  "title": "Golden Route + Hiroshima - 10 days",
+  "summary": "The golden route stretched to ten days, with a Mount Fuji day trip and a night in Hiroshima.",
+  "days": 10,
+  "route": "Tokyo (Fuji day trip) > Kyoto (Nara) > Hiroshima/Miyajima > Osaka",
+  "arrive": "Tokyo (NRT/HND)",
+  "depart": "Osaka (KIX)",
+  "countries": [
+    "Japan"
+  ],
+  "cities": [
+    "Tokyo",
+    "Kyoto",
+    "Hiroshima",
+    "Osaka"
+  ],
+  "imageQuery": "Hiroshima Japan Miyajima",
+  "highlights": [
+    "Mt Fuji Five Lakes day trip",
+    "Nara day trip",
+    "Fushimi Inari torii gate hike",
+    "Mt Misen hike or ropeway",
+    "Senso-ji Temple & Nakamise street"
+  ],
+  "destinationKeys": [
+    "japan",
+    "japan/tokyo",
+    "japan/kyoto",
+    "japan/hiroshima",
+    "japan/osaka"
+  ],
+  "hero": "japan/miyajima",
+  "sources": [
+    "kimkim 10 days #1 Golden Route with Hiroshima",
+    "kimkim 10 days #2 Food & History",
+    "Japan Activity 10-day",
+    "Intrepid Japan Express",
+    "kimkim Japan's Big Four"
+  ],
+  "stays": [
+    {
+      "base": "Tokyo",
+      "hotel": "Hotel in Tokyo",
+      "start": 0,
+      "nights": 3,
+      "area": "Shinjuku, Shibuya, or Tokyo Station area",
+      "breakfast": false,
+      "dinner": false
+    },
+    {
+      "base": "Kyoto",
+      "hotel": "Hotel in Kyoto",
+      "start": 3,
+      "nights": 3,
+      "area": "Kyoto Station or Downtown",
+      "breakfast": false,
+      "dinner": false
+    },
+    {
+      "base": "Hiroshima",
+      "hotel": "Hotel in Hiroshima",
+      "start": 6,
+      "nights": 1,
+      "area": "Near Hiroshima Station or Peace Park",
+      "breakfast": false,
+      "dinner": false
+    },
+    {
+      "base": "Osaka",
+      "hotel": "Hotel in Osaka",
+      "start": 7,
+      "nights": 2,
+      "area": "Namba or Umeda",
+      "breakfast": false,
+      "dinner": false
+    }
+  ],
+  "activities": [
+    {
+      "day": 0,
+      "type": "Sights & Landmarks",
+      "time": "17:00",
+      "duration": "1h",
+      "name": "Free city-view observation deck",
+      "notes": "Tokyo Metropolitan Government Building observatory is free; good jet-lag-day orientation.",
+      "where": "Shinjuku, Tokyo",
+      "book": "",
+      "place": "japan/tokyo-free-observation-deck"
+    },
+    {
+      "day": 0,
+      "type": "Food & Drink",
+      "time": "19:00",
+      "duration": "2h",
+      "name": "Izakaya alley dinner",
+      "notes": "Omoide Yokocho / Golden Gai-style yakitori and small bars.",
+      "where": "Shinjuku, Tokyo",
+      "book": "",
+      "place": "japan/omoide-yokocho"
+    },
+    {
+      "day": 1,
+      "type": "Food & Drink",
+      "time": "08:00",
+      "duration": "1.5h",
+      "name": "Fish market breakfast",
+      "notes": "Tsukiji Outer Market stalls: sushi, tamagoyaki, grilled seafood.",
+      "where": "Tsukiji, Tokyo",
+      "book": "",
+      "place": "japan/tsukiji-outer-market"
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "10:00",
+      "duration": "2h",
+      "name": "Senso-ji Temple & Nakamise street",
+      "notes": "Tokyo's oldest temple and its shopping lane.",
+      "where": "Asakusa, Tokyo",
+      "book": "",
+      "place": "japan/senso-ji"
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "13:30",
+      "duration": "1.5h",
+      "name": "Meiji Jingu Shrine",
+      "notes": "Forest shrine; go early.",
+      "where": "Harajuku, Tokyo",
+      "book": "",
+      "place": "japan/meiji-jingu"
+    },
+    {
+      "day": 1,
+      "type": "Sights & Landmarks",
+      "time": "15:30",
+      "duration": "1h",
+      "name": "Shibuya Crossing",
+      "notes": "Scramble crossing; view from above at a station-side cafe or deck.",
+      "where": "Shibuya, Tokyo",
+      "book": "",
+      "place": "japan/shibuya-crossing"
+    },
+    {
+      "day": 1,
+      "type": "Ticketed Attraction",
+      "time": "17:00",
+      "duration": "1.5h",
+      "name": "Sunset rooftop observation deck",
+      "notes": "Shibuya Sky or similar; sunset slots sell out.",
+      "where": "Shibuya, Tokyo",
+      "book": "Yes - timed tickets, sunset sells out",
+      "place": "japan/tokyo-sunset-deck"
+    },
+    {
+      "day": 2,
+      "type": "Day Trip",
+      "time": "07:30",
+      "duration": "11h",
+      "name": "Mt Fuji Five Lakes day trip",
+      "notes": "Lake Kawaguchiko viewpoints, pagoda viewpoint, lakeside cruise. Fuji is clouded on many days - check the forecast and keep this day flexible.",
+      "where": "Kawaguchiko, Yamanashi",
+      "book": "Yes - highway bus or limited express seats",
+      "place": "japan/mt-fuji-five-lakes"
+    },
+    {
+      "day": 3,
+      "type": "Hike",
+      "time": "15:00",
+      "duration": "2.5h",
+      "name": "Fushimi Inari torii gate hike",
+      "notes": "Open 24h; walk past the crowds toward the summit. Late afternoon light or early morning.",
+      "where": "Fushimi, Kyoto",
+      "book": "",
+      "place": "japan/fushimi-inari"
+    },
+    {
+      "day": 3,
+      "type": "Sights & Landmarks",
+      "time": "19:00",
+      "duration": "1.5h",
+      "name": "Gion evening walk",
+      "notes": "Hanamikoji and Shirakawa lanes; do not photograph or follow geiko/maiko.",
+      "where": "Gion, Kyoto",
+      "book": "",
+      "place": "japan/gion"
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "07:30",
+      "duration": "1h",
+      "name": "Arashiyama Bamboo Grove",
+      "notes": "Before 8:00 or it is shoulder to shoulder.",
+      "where": "Arashiyama, Kyoto",
+      "book": "",
+      "place": "japan/arashiyama-bamboo"
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "08:30",
+      "duration": "1h",
+      "name": "Tenryu-ji Temple garden",
+      "notes": "Zen garden next to the grove.",
+      "where": "Arashiyama, Kyoto",
+      "book": "",
+      "place": "japan/tenryu-ji"
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "11:00",
+      "duration": "1h",
+      "name": "Kinkaku-ji (Golden Pavilion)",
+      "notes": "",
+      "where": "Kita, Kyoto",
+      "book": "",
+      "place": "japan/kinkaku-ji"
+    },
+    {
+      "day": 4,
+      "type": "Sights & Landmarks",
+      "time": "12:15",
+      "duration": "1h",
+      "name": "Ryoan-ji rock garden",
+      "notes": "Short bus/walk from Kinkaku-ji.",
+      "where": "Ukyo, Kyoto",
+      "book": "",
+      "place": "japan/ryoan-ji"
+    },
+    {
+      "day": 5,
+      "type": "Day Trip",
+      "time": "08:30",
+      "duration": "5h",
+      "name": "Nara day trip",
+      "notes": "Todai-ji Great Buddha, Nara Park deer, Kasuga Taisha lanterns. ~45 min by train.",
+      "where": "Nara Park, Nara",
+      "book": "",
+      "place": "japan/nara"
+    },
+    {
+      "day": 5,
+      "type": "Sights & Landmarks",
+      "time": "15:00",
+      "duration": "1.5h",
+      "name": "Kiyomizu-dera Temple",
+      "notes": "Go at opening to beat crowds.",
+      "where": "Higashiyama, Kyoto",
+      "book": "",
+      "place": "japan/kiyomizu-dera"
+    },
+    {
+      "day": 5,
+      "type": "Sights & Landmarks",
+      "time": "16:45",
+      "duration": "2h",
+      "name": "Sannenzaka & Ninenzaka lanes to Yasaka Shrine",
+      "notes": "Preserved slopes, tea shops; ends near Maruyama Park.",
+      "where": "Higashiyama, Kyoto",
+      "book": "",
+      "place": "japan/sannenzaka"
+    },
+    {
+      "day": 6,
+      "type": "Sights & Landmarks",
+      "time": "10:30",
+      "duration": "3h",
+      "name": "Peace Memorial Park & Museum",
+      "notes": "Allow at least 2 hours for the museum.",
+      "where": "Naka, Hiroshima",
+      "book": "",
+      "place": "japan/hiroshima-peace-park"
+    },
+    {
+      "day": 6,
+      "type": "Sights & Landmarks",
+      "time": "14:30",
+      "duration": "1h",
+      "name": "Shukkeien Garden",
+      "notes": "",
+      "where": "Naka, Hiroshima",
+      "book": "",
+      "place": "japan/shukkeien"
+    },
+    {
+      "day": 6,
+      "type": "Food & Drink",
+      "time": "19:00",
+      "duration": "1.5h",
+      "name": "Hiroshima-style okonomiyaki dinner",
+      "notes": "Layered noodle okonomiyaki at a griddle counter.",
+      "where": "Naka, Hiroshima",
+      "book": "",
+      "place": "japan/hiroshima-okonomiyaki"
+    },
+    {
+      "day": 7,
+      "type": "Sights & Landmarks",
+      "time": "09:30",
+      "duration": "2h",
+      "name": "Itsukushima Shrine & floating torii",
+      "notes": "Check the tide table: torii 'floats' at high tide, walkable at low tide.",
+      "where": "Miyajima, Hiroshima",
+      "book": "",
+      "place": "japan/itsukushima"
+    },
+    {
+      "day": 7,
+      "type": "Hike",
+      "time": "12:00",
+      "duration": "3h",
+      "name": "Mt Misen hike or ropeway",
+      "notes": "Summit views over the Seto Inland Sea.",
+      "where": "Miyajima, Hiroshima",
+      "book": "",
+      "place": "japan/mt-misen"
+    },
+    {
+      "day": 7,
+      "type": "Food & Drink",
+      "time": "19:00",
+      "duration": "3h",
+      "name": "Dotonbori street food evening",
+      "notes": "Takoyaki, okonomiyaki, kushikatsu under the neon signs.",
+      "where": "Namba, Osaka",
+      "book": "",
+      "place": "japan/dotonbori"
+    },
+    {
+      "day": 8,
+      "type": "Sights & Landmarks",
+      "time": "09:30",
+      "duration": "2h",
+      "name": "Osaka Castle & park",
+      "notes": "",
+      "where": "Chuo, Osaka",
+      "book": "",
+      "place": "japan/osaka-castle"
+    },
+    {
+      "day": 8,
+      "type": "Food & Drink",
+      "time": "12:00",
+      "duration": "1.5h",
+      "name": "Kuromon Market lunch",
+      "notes": "Seafood stalls.",
+      "where": "Nipponbashi, Osaka",
+      "book": "",
+      "place": "japan/kuromon-market"
+    },
+    {
+      "day": 8,
+      "type": "Sights & Landmarks",
+      "time": "14:30",
+      "duration": "2h",
+      "name": "Shinsekai retro district",
+      "notes": "Tsutenkaku tower and kushikatsu counters.",
+      "where": "Shinsekai, Osaka",
+      "book": "",
+      "place": "japan/shinsekai"
+    },
+    {
+      "day": 8,
+      "type": "Ticketed Attraction",
+      "time": "17:30",
+      "duration": "1.5h",
+      "name": "Sunset skyscraper observatory",
+      "notes": "Umeda Sky Building floating garden or similar.",
+      "where": "Umeda, Osaka",
+      "book": "",
+      "place": "japan/osaka-sunset-observatory"
+    }
+  ],
+  "legs": [
+    {
+      "day": 0,
+      "transferType": "Public Transit",
+      "from": "Narita (NRT) or Haneda (HND) Airport",
+      "to": "Tokyo hotel area",
+      "time": "",
+      "minutes": 90,
+      "carrier": "Narita Express, Keikyu, or Tokyo Monorail",
+      "notes": "Airport limousine bus is the door-to-door alternative. Set up an IC card (Suica/PASMO; Apple Wallet works).",
+      "book": ""
+    },
+    {
+      "day": 3,
+      "transferType": "Public Transit",
+      "from": "Tokyo Station",
+      "to": "Kyoto Station",
+      "time": "09:00",
+      "minutes": 135,
+      "carrier": "JR Tokaido Shinkansen (Nozomi/Hikari)",
+      "notes": "Shinkansen. Consider forwarding large luggage (takkyubin). Nozomi is not covered by the standard JR Pass.",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 6,
+      "transferType": "Public Transit",
+      "from": "Kyoto Station",
+      "to": "Hiroshima Station",
+      "time": "08:00",
+      "minutes": 105,
+      "carrier": "JR Tokaido/Sanyo Shinkansen (Nozomi/Hikari)",
+      "notes": "Shinkansen. Consider forwarding large luggage (takkyubin). Nozomi is not covered by the standard JR Pass.",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 7,
+      "transferType": "Public Transit",
+      "from": "Hiroshima Station",
+      "to": "Miyajimaguchi Station",
+      "time": "08:00",
+      "minutes": 30,
+      "carrier": "JR Sanyo Line (local)",
+      "notes": "",
+      "book": ""
+    },
+    {
+      "day": 7,
+      "transferType": "Public Transit",
+      "from": "Miyajimaguchi Pier",
+      "to": "Miyajima Pier",
+      "time": "08:40",
+      "minutes": 10,
+      "carrier": "JR Miyajima Ferry",
+      "notes": "JR Pass covers the JR ferry. Check the tide table before you go.",
+      "book": ""
+    },
+    {
+      "day": 7,
+      "transferType": "Public Transit",
+      "from": "Miyajima Pier",
+      "to": "Miyajimaguchi Pier",
+      "time": "16:00",
+      "minutes": 10,
+      "carrier": "JR Miyajima Ferry",
+      "notes": "JR Pass covers the JR ferry.",
+      "book": ""
+    },
+    {
+      "day": 7,
+      "transferType": "Public Transit",
+      "from": "Miyajimaguchi Station",
+      "to": "Hiroshima Station",
+      "time": "16:20",
+      "minutes": 30,
+      "carrier": "JR Sanyo Line (local)",
+      "notes": "",
+      "book": ""
+    },
+    {
+      "day": 7,
+      "transferType": "Public Transit",
+      "from": "Hiroshima Station",
+      "to": "Shin-Osaka Station",
+      "time": "17:05",
+      "minutes": 85,
+      "carrier": "JR Sanyo Shinkansen (Nozomi/Hikari/Sakura)",
+      "notes": "Shinkansen.",
+      "book": "Yes - reserved seat recommended"
+    },
+    {
+      "day": 9,
+      "transferType": "Public Transit",
+      "from": "Namba Station (Osaka)",
+      "to": "Kansai International Airport (KIX)",
+      "time": "",
+      "minutes": 40,
+      "carrier": "Nankai Rapi:t (limited express)",
+      "notes": "Or JR Haruka from Shin-Osaka/Tennoji. Time to the flight; KIX check-in closes ~60 min before departure.",
+      "book": ""
+    }
+  ]
+}

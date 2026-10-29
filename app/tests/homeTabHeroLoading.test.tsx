@@ -65,7 +65,6 @@ describe('HomeTab hero loading state', () => {
         onSelectTrip={jest.fn()}
         onSelectFollowedTrip={jest.fn()}
         onNavigate={jest.fn()}
-        onFollowTrip={jest.fn(async () => null)}
       />,
     );
 
@@ -103,7 +102,6 @@ describe('HomeTab hero loading state', () => {
         onSelectTrip={jest.fn()}
         onSelectFollowedTrip={jest.fn()}
         onNavigate={jest.fn()}
-        onFollowTrip={jest.fn(async () => null)}
       />,
     );
 
@@ -135,7 +133,6 @@ describe('HomeTab hero loading state', () => {
         onSelectTrip={jest.fn()}
         onSelectFollowedTrip={jest.fn()}
         onNavigate={jest.fn()}
-        onFollowTrip={jest.fn(async () => null)}
       />,
     );
 

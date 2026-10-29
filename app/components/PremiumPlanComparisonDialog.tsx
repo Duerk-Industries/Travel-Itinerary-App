@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import DialogShell from './DialogShell';
@@ -56,6 +58,7 @@ const PremiumPlanComparisonDialog: React.FC<PremiumPlanComparisonDialogProps> = 
   styles,
   onMaybeLater,
 }) => {
+  const _styleTheme = useStyleTheme();
   const { width, height } = useWindowDimensions();
   const isCompact = width < 480 || height < 700;
   const [plans, setPlans] = useState<PlanInfo[]>([]);
@@ -168,7 +171,7 @@ const PremiumPlanComparisonDialog: React.FC<PremiumPlanComparisonDialogProps> = 
       <Text style={styles.planComparisonOptionTitle}>{heading}</Text>
       <Text style={styles.planComparisonOptionPrice}>{price}</Text>
       {trialText ? <Text style={styles.planComparisonOptionTrial}>{trialText}</Text> : null}
-      {actionPlan === planKey ? <ActivityIndicator size="small" color="#fff" /> : null}
+      {actionPlan === planKey ? <ActivityIndicator size="small" color={themeStyle('components_PremiumPlanComparisonDialog_4', {  }, _styleTheme)} /> : null}
     </TouchableOpacity>
   );
 
@@ -191,12 +194,12 @@ const PremiumPlanComparisonDialog: React.FC<PremiumPlanComparisonDialogProps> = 
       onClose={onMaybeLater}
       testID="premium-plan-comparison-dialog"
       accessibilityRole="alert"
-      cardStyle={[styles.planComparisonModal, isCompact && { width: '100%', maxHeight: '92%' }]}
+      cardStyle={[styles.planComparisonModal, isCompact && themeStyle('components_PremiumPlanComparisonDialog_1', {  }, _styleTheme)]}
     >
       <ScrollView
         testID="premium-plan-comparison-scroll"
-        style={{ maxHeight: isCompact ? 380 : 480 }}
-        contentContainerStyle={{ paddingBottom: 8 }}
+        style={themeStyle('components_PremiumPlanComparisonDialog_2', { isCompact: isCompact }, _styleTheme)}
+        contentContainerStyle={themeStyle('components_PremiumPlanComparisonDialog_3', {  }, _styleTheme)}
       >
         <View style={styles.planComparisonGrid}>
           <View style={styles.planComparisonTier}>

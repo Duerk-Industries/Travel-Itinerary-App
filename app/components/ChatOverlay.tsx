@@ -1,9 +1,11 @@
+import { resolveComponentTheme as resolveStyleTheme, type AppTheme } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import ChatButton from './ChatButton';
 import ChatPanel from './ChatPanel';
 import { useChat } from '../contexts/ChatContext';
 import { getSocket } from '../utils/socket';
-import type { AppTheme } from '../theme/theme';
+
 
 type Props = {
   userToken: string | null;
@@ -18,7 +20,9 @@ type Props = {
  * context. Keeping this as a leaf consumer means open/close/unread
  * transitions only re-render this subtree rather than the entire shell.
  */
-const ChatOverlay: React.FC<Props> = ({ userToken, activeTripId, userId, userName, theme }) => {
+const ChatOverlay: React.FC<Props> = ({ userToken, activeTripId, userId, userName, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { chatOpen, chatMinimized, chatUnread, openChat, closeChat, minimizeChat, restoreChat, setChatUnread } =
     useChat();
 

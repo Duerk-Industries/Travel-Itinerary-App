@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../../../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../../../theme/ThemeContext';
 import React from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
-import type { AppTheme } from '../../../theme/theme';
+
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
 import type { AiAbTestMetric, AiExperiment } from './types';
 import { whiteLabelButtonColor } from '../../../theme/theme';
@@ -25,32 +28,33 @@ export const AiOpsExperiments: React.FC<{
   setReason: (value: string) => void;
   onCreate: () => void;
   onUpdateStatus: (experiment: AiExperiment, status: string, winningVariantId?: string) => void;
-}> = ({ theme, experiments, metrics, reason, saving, setReason, onCreate, onUpdateStatus }) => (
-  <View style={[aiOpsStyles.card, cardStyle(theme)]}>
-    <Text style={[aiOpsStyles.cardTitle, { color: theme.colors.text }]}>Experiments</Text>
+}> = ({ theme: _providedTheme, experiments, metrics, reason, saving, setReason, onCreate, onUpdateStatus }) => { const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme); return ((
+  <View style={[aiOpsStyles((theme ?? _styleTheme)).card, cardStyle(theme)]}>
+    <Text style={[aiOpsStyles((theme ?? _styleTheme)).cardTitle, themeStyle('components_admin_aiOps_AiOpsExperiments_1', { theme: theme }, (theme ?? _styleTheme))]}>Experiments</Text>
     <TextInput
-      style={[aiOpsStyles.input, inputStyle(theme)]}
+      style={[aiOpsStyles((theme ?? _styleTheme)).input, inputStyle(theme)]}
       value={reason}
       onChangeText={setReason}
       placeholder="Reason for audit log"
       placeholderTextColor={theme.colors.textMuted}
     />
     <TouchableOpacity
-      style={[aiOpsStyles.button, { backgroundColor: whiteLabelButtonColor(theme) }, saving === 'experiment-create' && aiOpsStyles.disabled]}
+      style={[aiOpsStyles((theme ?? _styleTheme)).button, themeStyle('components_admin_aiOps_AiOpsExperiments_2', { theme: theme }, (theme ?? _styleTheme)), saving === 'experiment-create' && aiOpsStyles((theme ?? _styleTheme)).disabled]}
       disabled={saving === 'experiment-create'}
       onPress={onCreate}
     >
-      <Text style={aiOpsStyles.buttonText}>{saving === 'experiment-create' ? 'Creating...' : 'Create shadow compare'}</Text>
+      <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>{saving === 'experiment-create' ? 'Creating...' : 'Create shadow compare'}</Text>
     </TouchableOpacity>
-    {experiments.length === 0 ? <Text style={[aiOpsStyles.empty, { color: theme.colors.textMuted }]}>No experiments running.</Text> : null}
+    {experiments.length === 0 ? <Text style={[aiOpsStyles((theme ?? _styleTheme)).empty, themeStyle('components_admin_aiOps_AiOpsExperiments_3', { theme: theme }, (theme ?? _styleTheme))]}>No experiments running.</Text> : null}
     {experiments.map((experiment) => {
       const metricByVariant = latestMetricsByVariant(metrics, experiment.experimentId);
       const controlVariantId = experiment.controlVariantId ?? experiment.variants[0]?.variantId;
       const controlMetric = controlVariantId ? metricByVariant.get(controlVariantId) : undefined;
       return (
-        <View key={experiment.experimentId} style={aiOpsStyles.compactRow}>
-          <Text style={[aiOpsStyles.cardTitle, { color: theme.colors.text }]}>{experiment.name}</Text>
-          <Text style={[aiOpsStyles.cardSub, { color: theme.colors.textMuted }]}>
+        <View key={experiment.experimentId} style={aiOpsStyles((theme ?? _styleTheme)).compactRow}>
+          <Text style={[aiOpsStyles((theme ?? _styleTheme)).cardTitle, themeStyle('components_admin_aiOps_AiOpsExperiments_4', { theme: theme }, (theme ?? _styleTheme))]}>{experiment.name}</Text>
+          <Text style={[aiOpsStyles((theme ?? _styleTheme)).cardSub, themeStyle('components_admin_aiOps_AiOpsExperiments_5', { theme: theme }, (theme ?? _styleTheme))]}>
             {experiment.featureKey} - {experiment.experimentKind} - {experiment.status} - {experiment.variants.length} variants
           </Text>
           {experiment.variants.map((variant) => {
@@ -60,48 +64,48 @@ export const AiOpsExperiments: React.FC<{
               : null;
             const confidence = metric && metric.requestCount >= (experiment.minSampleSize ?? 200) ? 'ready' : 'low';
             return (
-              <Text key={variant.variantId} style={[aiOpsStyles.cardSub, { color: theme.colors.textMuted }]}>
+              <Text key={variant.variantId} style={[aiOpsStyles((theme ?? _styleTheme)).cardSub, themeStyle('components_admin_aiOps_AiOpsExperiments_6', { theme: theme }, (theme ?? _styleTheme))]}>
                 {variant.variantId}: {variant.trafficPercent}% traffic, {metric?.requestCount ?? 0} requests, quality {Math.round(metric?.avgQualityScore ?? 0)}
                 {delta == null ? '' : `, delta ${Math.round(delta * 10) / 10}`}, success {formatPercent(metric?.successRate ?? 0)}, cost ${Math.round((metric?.avgCostUsd ?? 0) * 10000) / 10000}, confidence {confidence}
               </Text>
             );
           })}
-          <View style={aiOpsStyles.rowWrap}>
+          <View style={aiOpsStyles((theme ?? _styleTheme)).rowWrap}>
             {experiment.status === 'draft' || experiment.status === 'paused' ? (
               <TouchableOpacity
-                style={[aiOpsStyles.button, { backgroundColor: theme.colors.success }, saving === `experiment-${experiment.experimentId}` && aiOpsStyles.disabled]}
+                style={[aiOpsStyles((theme ?? _styleTheme)).button, themeStyle('components_admin_aiOps_AiOpsExperiments_7', { theme: theme }, (theme ?? _styleTheme)), saving === `experiment-${experiment.experimentId}` && aiOpsStyles((theme ?? _styleTheme)).disabled]}
                 disabled={saving === `experiment-${experiment.experimentId}`}
                 onPress={() => onUpdateStatus(experiment, 'running')}
               >
-                <Text style={aiOpsStyles.buttonText}>{experiment.status === 'paused' ? 'Resume' : 'Start'}</Text>
+                <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>{experiment.status === 'paused' ? 'Resume' : 'Start'}</Text>
               </TouchableOpacity>
             ) : null}
             {experiment.status === 'running' ? (
               <TouchableOpacity
-                style={[aiOpsStyles.button, { backgroundColor: theme.colors.alert }, saving === `experiment-${experiment.experimentId}` && aiOpsStyles.disabled]}
+                style={[aiOpsStyles((theme ?? _styleTheme)).button, themeStyle('components_admin_aiOps_AiOpsExperiments_8', { theme: theme }, (theme ?? _styleTheme)), saving === `experiment-${experiment.experimentId}` && aiOpsStyles((theme ?? _styleTheme)).disabled]}
                 disabled={saving === `experiment-${experiment.experimentId}`}
                 onPress={() => onUpdateStatus(experiment, 'paused')}
               >
-                <Text style={aiOpsStyles.buttonText}>Pause</Text>
+                <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>Pause</Text>
               </TouchableOpacity>
             ) : null}
             {experiment.status !== 'completed' ? (
               <TouchableOpacity
-                style={[aiOpsStyles.button, { backgroundColor: theme.colors.alert }, saving === `experiment-${experiment.experimentId}` && aiOpsStyles.disabled]}
+                style={[aiOpsStyles((theme ?? _styleTheme)).button, themeStyle('components_admin_aiOps_AiOpsExperiments_9', { theme: theme }, (theme ?? _styleTheme)), saving === `experiment-${experiment.experimentId}` && aiOpsStyles((theme ?? _styleTheme)).disabled]}
                 disabled={saving === `experiment-${experiment.experimentId}`}
                 onPress={() => onUpdateStatus(experiment, 'completed')}
               >
-                <Text style={aiOpsStyles.buttonText}>End</Text>
+                <Text style={aiOpsStyles((theme ?? _styleTheme)).buttonText}>End</Text>
               </TouchableOpacity>
             ) : null}
             {experiment.variants.filter((variant) => variant.variantId !== controlVariantId).map((variant) => (
               <TouchableOpacity
                 key={variant.variantId}
-                style={[aiOpsStyles.button, { backgroundColor: whiteLabelButtonColor(theme) }, saving === `experiment-${experiment.experimentId}` && aiOpsStyles.disabled]}
+                style={[aiOpsStyles((theme ?? _styleTheme)).button, themeStyle('components_admin_aiOps_AiOpsExperiments_10', { theme: theme }, (theme ?? _styleTheme)), saving === `experiment-${experiment.experimentId}` && aiOpsStyles((theme ?? _styleTheme)).disabled]}
                 disabled={saving === `experiment-${experiment.experimentId}`}
                 onPress={() => onUpdateStatus(experiment, 'completed', variant.variantId)}
               >
-                <Text style={aiOpsStyles.buttonText}>Promote {variant.variantId}</Text>
+                <Text style={[aiOpsStyles((theme ?? _styleTheme)).buttonText, themeStyle('ctaLabel', {}, (theme ?? _styleTheme))]}>Promote {variant.variantId}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -109,4 +113,4 @@ export const AiOpsExperiments: React.FC<{
       );
     })}
   </View>
-);
+)); };

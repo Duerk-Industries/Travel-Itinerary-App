@@ -1,9 +1,12 @@
+import { packingListPrintCss, themeStyle, getAppTheme, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
 import PackingListMatrix from './PackingListMatrix';
 import SelectField, { type SelectFieldOption } from './SelectField';
-import { getAppTheme, type AppTheme } from '../theme/theme';
+
 import { normalizePackingLabel } from '../utils/packingListNormalize';
 
 export type PackingItem = {
@@ -107,20 +110,7 @@ export const buildPrintablePackingListHtml = (
 <head>
   <meta charset="utf-8" />
   <title>${escapeHtml(title)}</title>
-  <style>
-    @page { size: letter landscape; margin: 0.4in; }
-    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    body { font-family: Arial, sans-serif; color: #111827; margin: 0; font-size: 10px; }
-    h1 { font-size: 16px; margin: 0 0 10px; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #111827; }
-    th, td { border: 1px solid #111827; padding: 4px 5px; text-align: left; vertical-align: middle; line-height: 1.2; }
-    th { background: #F3F4F6; font-size: 8px; text-transform: uppercase; overflow-wrap: anywhere; }
-    th:first-child, td:first-child { width: 34%; }
-    .category td { background: #E5E7EB; font-weight: 700; padding: 5px; }
-    .check { text-align: center; font-size: 12px; font-weight: 700; }
-    tr { break-inside: avoid; page-break-inside: avoid; }
-    @media screen { body { padding: 24px; } }
-  </style>
+  <style>${packingListPrintCss}</style>
 </head>
 <body>
   <h1>${escapeHtml(title)}</h1>
@@ -133,6 +123,7 @@ export const buildPrintablePackingListHtml = (
 };
 
 const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, variant, title, allowPrint = false, printTitle, theme: providedTheme }) => {
+  const _styleTheme = useStyleTheme();
   const colorScheme = useColorScheme();
   const theme = providedTheme ?? getAppTheme('auto', colorScheme);
   const [items, setItems] = useState<PackingItem[]>([]);
@@ -229,7 +220,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
             .filter((item: PackingItem) => normalizePackingLabel(item.label) !== normalizePackingLabel(group.label))
             .map((item: PackingItem) => ({ ...item, category: item.category || group.label }))
         )
-      : (data.items ?? []).map((item: PackingItem, index: number) => ({ ...item, position: index }));
+      : (data.items ?? []).map((item: PackingItem, index: number) => (themeStyle('components_PackingListTable_1', { item: item, index: index }, (theme ?? _styleTheme))));
     setItems(nextItems);
     setDraftItems(hasGroups
       ? ((data.manualItems ?? data.groups.find((group: any) => group.kind === 'trip_manual')?.items ?? []) as PackingItem[])
@@ -283,15 +274,15 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   }, [draftItems, items]);
 
   const categoryPickerStyles = {
-    input: { borderWidth: 1, borderRadius: 6, minHeight: 36, backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+    input: themeStyle('components_PackingListTable_2', { theme: theme }, (theme ?? _styleTheme)),
     dropdown: {},
-    selectButton: { paddingHorizontal: 8, paddingVertical: 6, minHeight: 34 },
-    selectButtonRow: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const },
-    cellText: { color: theme.colors.text },
-    placeholderText: { color: theme.colors.textMuted },
-    selectCaret: { color: theme.colors.textMuted },
-    dropdownList: { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1 },
-    dropdownOption: { paddingHorizontal: 8, paddingVertical: 8 },
+    selectButton: themeStyle('components_PackingListTable_3', {  }, (theme ?? _styleTheme)),
+    selectButtonRow: themeStyle('components_PackingListTable_4', {  }, (theme ?? _styleTheme)),
+    cellText: themeStyle('components_PackingListTable_5', { theme: theme }, (theme ?? _styleTheme)),
+    placeholderText: themeStyle('components_PackingListTable_6', { theme: theme }, (theme ?? _styleTheme)),
+    selectCaret: themeStyle('components_PackingListTable_7', { theme: theme }, (theme ?? _styleTheme)),
+    dropdownList: themeStyle('components_PackingListTable_8', { theme: theme }, (theme ?? _styleTheme)),
+    dropdownOption: themeStyle('components_PackingListTable_9', {  }, (theme ?? _styleTheme)),
   };
 
   const updateDraft = (id: string, patch: Partial<PackingItem>) => {
@@ -301,7 +292,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   const addDraftItem = () => {
     const item = createDraftItem(0);
     setPendingFocusId(item.id);
-    setDraftItems((prev) => [item, ...prev].map((entry, pos) => ({ ...entry, position: pos })));
+    setDraftItems((prev) => [item, ...prev].map((entry, pos) => (themeStyle('components_PackingListTable_10', { entry: entry, pos: pos }, (theme ?? _styleTheme)))));
   };
 
   const persistItems = async (nextDraftItems: PackingItem[], closeEditor: boolean) => {
@@ -334,7 +325,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   const removeDraftItem = (item: PackingItem) => {
     const nextDraftItems = draftItems
       .filter((entry) => entry.id !== item.id)
-      .map((entry, pos) => ({ ...entry, position: pos }));
+      .map((entry, pos) => (themeStyle('components_PackingListTable_11', { entry: entry, pos: pos }, (theme ?? _styleTheme))));
     setDraftItems(nextDraftItems);
     if (variant !== 'user') return;
     if (item.id.startsWith('draft-') || item.id.startsWith('preset-')) {
@@ -404,7 +395,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           id: `preset-${presetKey}-${item.id ?? index}`,
           position: source.length + index,
         }));
-      const merged = [...source, ...additions].map((item, index) => ({ ...item, position: index }));
+      const merged = [...source, ...additions].map((item, index) => (themeStyle('components_PackingListTable_12', { item: item, index: index }, (theme ?? _styleTheme))));
       setItems(merged);
       setDraftItems(merged);
       setSelectedPresetKeys(['general']);
@@ -528,46 +519,46 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   if (!canLoad) return null;
 
   return (
-    <View style={[localStyles.container, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]} testID={`${variant}-packing-list`}>
-      <View style={localStyles.header}>
-        <Text style={[localStyles.title, { color: theme.colors.text }]}>{title ?? 'Packing list'}</Text>
-        <View style={localStyles.actions}>
+    <View style={[localStyles((theme ?? _styleTheme)).container, themeStyle('components_PackingListTable_13', { theme: theme }, (theme ?? _styleTheme))]} testID={`${variant}-packing-list`}>
+      <View style={localStyles((theme ?? _styleTheme)).header}>
+        <Text style={[localStyles((theme ?? _styleTheme)).title, themeStyle('components_PackingListTable_14', { theme: theme }, (theme ?? _styleTheme))]}>{title ?? 'Packing list'}</Text>
+        <View style={localStyles((theme ?? _styleTheme)).actions}>
           {editMode ? (
             <>
-              <Pressable style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]} onPress={() => { if (!v2 || !isTrip) setDraftItems(items); setEditMode(false); }}>
-                <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Cancel</Text>
+              <Pressable style={[localStyles((theme ?? _styleTheme)).button, themeStyle('components_PackingListTable_15', { theme: theme }, (theme ?? _styleTheme))]} onPress={() => { if (!v2 || !isTrip) setDraftItems(items); setEditMode(false); }}>
+                <Text style={[localStyles((theme ?? _styleTheme)).buttonText, themeStyle('components_PackingListTable_16', { theme: theme }, (theme ?? _styleTheme))]}>Cancel</Text>
               </Pressable>
-              <Pressable style={[localStyles.button, { backgroundColor: theme.colors.cta }]} onPress={() => void save()} disabled={saving}>
-                <Text style={[localStyles.buttonText, { color: theme.colors.onCta }]}>{saving ? 'Saving...' : 'Save'}</Text>
+              <Pressable style={[localStyles((theme ?? _styleTheme)).button, themeStyle('components_PackingListTable_17', { theme: theme }, (theme ?? _styleTheme))]} onPress={() => void save()} disabled={saving}>
+                <Text style={[localStyles((theme ?? _styleTheme)).buttonText, themeStyle('components_PackingListTable_18', {  }, (theme ?? _styleTheme))]}>{saving ? 'Saving...' : 'Save'}</Text>
               </Pressable>
             </>
           ) : (
             <>
               {allowPrint && isTrip && Platform.OS === 'web' ? (
                 <Pressable
-                  style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]}
+                  style={[localStyles((theme ?? _styleTheme)).button, themeStyle('components_PackingListTable_19', { theme: theme }, (theme ?? _styleTheme))]}
                   onPress={printList}
                   testID={`${variant}-packing-print`}
                 >
-                  <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Print</Text>
+                  <Text style={[localStyles((theme ?? _styleTheme)).buttonText, themeStyle('components_PackingListTable_20', { theme: theme }, (theme ?? _styleTheme))]}>Print</Text>
                 </Pressable>
               ) : null}
-              <Pressable style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]} onPress={() => { if (!v2 || !isTrip) setDraftItems(items); setEditMode(true); }}>
-                <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Edit</Text>
+              <Pressable style={[localStyles((theme ?? _styleTheme)).button, themeStyle('components_PackingListTable_21', { theme: theme }, (theme ?? _styleTheme))]} onPress={() => { if (!v2 || !isTrip) setDraftItems(items); setEditMode(true); }}>
+                <Text style={[localStyles((theme ?? _styleTheme)).buttonText, themeStyle('components_PackingListTable_22', { theme: theme }, (theme ?? _styleTheme))]}>Edit</Text>
               </Pressable>
             </>
           )}
         </View>
       </View>
-      {loading ? <Text style={[localStyles.meta, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
-      {error ? <Text style={[localStyles.meta, { color: theme.colors.error }]}>{error}</Text> : null}
+      {loading ? <Text style={[localStyles((theme ?? _styleTheme)).meta, themeStyle('components_PackingListTable_23', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text> : null}
+      {error ? <Text style={[localStyles((theme ?? _styleTheme)).meta, themeStyle('components_PackingListTable_24', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
       {editMode ? (
         <Pressable
-          style={[localStyles.addButton, { borderColor: theme.colors.border }]}
+          style={[localStyles((theme ?? _styleTheme)).addButton, themeStyle('components_PackingListTable_25', { theme: theme }, (theme ?? _styleTheme))]}
           onPress={addDraftItem}
           testID={`${variant}-packing-add-item`}
         >
-          <Text style={[localStyles.addButtonText, { color: theme.colors.link }]}>+ Add item</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).addButtonText, themeStyle('components_PackingListTable_26', { theme: theme }, (theme ?? _styleTheme))]}>+ Add item</Text>
         </Pressable>
       ) : null}
       {v2 ? (
@@ -575,32 +566,32 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           horizontal
           nestedScrollEnabled
           showsHorizontalScrollIndicator
-          style={localStyles.presetScroll}
-          contentContainerStyle={localStyles.presetActions}
+          style={localStyles((theme ?? _styleTheme)).presetScroll}
+          contentContainerStyle={localStyles((theme ?? _styleTheme)).presetActions}
           testID={`${variant}-packing-preset-scroll`}
         >
-          {isTrip ? availableTripSources.map((source) => <Pressable key={source.key} style={[localStyles.presetButton, { borderColor: theme.colors.border, backgroundColor: source.active ? theme.colors.cta : theme.colors.surfaceMuted }]} onPress={() => void toggleTripSource(source)}><Text style={{ color: source.active ? theme.colors.onCta : theme.colors.text }}>{source.active ? '✓ ' : '+ '}{source.label}</Text></Pressable>) : presets.map((preset) => <Pressable key={preset.key} style={[localStyles.presetButton, { borderColor: theme.colors.border, backgroundColor: selectedPresetKeys.includes(preset.key) ? theme.colors.cta : theme.colors.surfaceMuted }]} onPress={() => void addPreset(preset.key)}><Text style={{ color: selectedPresetKeys.includes(preset.key) ? theme.colors.onCta : theme.colors.text }}>{selectedPresetKeys.includes(preset.key) ? '✓ ' : ''}{preset.label}</Text></Pressable>)}
+          {isTrip ? availableTripSources.map((source) => <Pressable key={source.key} style={[localStyles((theme ?? _styleTheme)).presetButton, themeStyle('components_PackingListTable_27', { theme: theme, source: source }, (theme ?? _styleTheme))]} onPress={() => void toggleTripSource(source)}><Text style={themeStyle('components_PackingListTable_28', { theme: theme, source: source }, (theme ?? _styleTheme))}>{source.active ? '✓ ' : '+ '}{source.label}</Text></Pressable>) : presets.map((preset) => <Pressable key={preset.key} style={[localStyles((theme ?? _styleTheme)).presetButton, themeStyle('components_PackingListTable_29', { theme: theme, selectedPresetKeys: selectedPresetKeys, preset: preset }, (theme ?? _styleTheme))]} onPress={() => void addPreset(preset.key)}><Text style={themeStyle('components_PackingListTable_30', { theme: theme, selectedPresetKeys: selectedPresetKeys, preset: preset }, (theme ?? _styleTheme))}>{selectedPresetKeys.includes(preset.key) ? '✓ ' : ''}{preset.label}</Text></Pressable>)}
         </ScrollView>
       ) : null}
       {!(!editMode && isTrip) ? <HorizontalTableScroll>
         <View>
-          <View style={[localStyles.row, localStyles.headerRow, { borderColor: theme.colors.border }]}>
-            <Text style={[localStyles.itemHeader, { color: theme.colors.textMuted }]}>Item</Text>
+          <View style={[localStyles((theme ?? _styleTheme)).row, localStyles((theme ?? _styleTheme)).headerRow, themeStyle('components_PackingListTable_31', { theme: theme }, (theme ?? _styleTheme))]}>
+            <Text style={[localStyles((theme ?? _styleTheme)).itemHeader, themeStyle('components_PackingListTable_32', { theme: theme }, (theme ?? _styleTheme))]}>Item</Text>
             {isTrip ? orderedTravelers.map((traveler) => (
-              <Text key={traveler.id} style={[localStyles.travelerHeader, { color: theme.colors.textMuted }]} numberOfLines={1}>
+              <Text key={traveler.id} style={[localStyles((theme ?? _styleTheme)).travelerHeader, themeStyle('components_PackingListTable_33', { theme: theme }, (theme ?? _styleTheme))]} numberOfLines={1}>
                 {traveler.displayName}
               </Text>
             )) : null}
-            {editMode ? <Text style={[localStyles.editHeader, { color: theme.colors.textMuted }]}>Actions</Text> : null}
+            {editMode ? <Text style={[localStyles((theme ?? _styleTheme)).editHeader, themeStyle('components_PackingListTable_34', { theme: theme }, (theme ?? _styleTheme))]}>Actions</Text> : null}
           </View>
           {groupedItems.map((group, groupIndex) => (
             <View key={`${group.category}-${groupIndex}`}>
-              <View style={[localStyles.categoryRow, { backgroundColor: theme.colors.backgroundAlt }]}>
-                <Text style={[localStyles.categoryText, { color: theme.colors.text }]}>{group.category}</Text>
+              <View style={[localStyles((theme ?? _styleTheme)).categoryRow, themeStyle('components_PackingListTable_35', { theme: theme }, (theme ?? _styleTheme))]}>
+                <Text style={[localStyles((theme ?? _styleTheme)).categoryText, themeStyle('components_PackingListTable_36', { theme: theme }, (theme ?? _styleTheme))]}>{group.category}</Text>
               </View>
               {group.items.map((item) => (
-                <View key={item.id} style={[localStyles.row, { borderColor: theme.colors.border }]}>
-                  <View style={localStyles.itemCell}>
+                <View key={item.id} style={[localStyles((theme ?? _styleTheme)).row, themeStyle('components_PackingListTable_37', { theme: theme }, (theme ?? _styleTheme))]}>
+                  <View style={localStyles((theme ?? _styleTheme)).itemCell}>
                     {editMode ? (
                       <>
                         {isNewPackingItem(item) ? (
@@ -609,13 +600,13 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                             options={categoryOptions}
                             onChange={(category) => updateDraft(item.id, { category })}
                             styles={categoryPickerStyles}
-                            webStyle={{ ...localStyles.categorySelectWeb, color: theme.colors.text, backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+                            webStyle={themeStyle('components_PackingListTable_38', { localStyles: localStyles((theme ?? _styleTheme)), theme: theme }, (theme ?? _styleTheme))}
                             title="Packing category"
                             testID={`${variant}-packing-category-${item.id}`}
                           />
                         ) : null}
                         <TextInput
-                          style={[localStyles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          style={[localStyles((theme ?? _styleTheme)).input, themeStyle('components_PackingListTable_39', { theme: theme }, (theme ?? _styleTheme))]}
                           value={item.label}
                           onChangeText={(label: string) => updateDraft(item.id, { label })}
                           placeholder="Item"
@@ -628,7 +619,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                         />
                       </>
                     ) : (
-                      <Text style={[localStyles.itemText, { color: theme.colors.text }]}>{item.label}</Text>
+                      <Text style={[localStyles((theme ?? _styleTheme)).itemText, themeStyle('components_PackingListTable_40', { theme: theme }, (theme ?? _styleTheme))]}>{item.label}</Text>
                     )}
                   </View>
                   {isTrip ? orderedTravelers.map((traveler) => {
@@ -636,27 +627,27 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                     return (
                       <Pressable
                         key={`${item.id}-${traveler.id}`}
-                        style={[localStyles.checkCell, { borderColor: theme.colors.border }]}
+                        style={[localStyles((theme ?? _styleTheme)).checkCell, themeStyle('components_PackingListTable_41', { theme: theme }, (theme ?? _styleTheme))]}
                         onPress={() => void togglePacked(item, traveler)}
                         disabled={editMode}
                         testID={`packing-check-${item.id}-${traveler.id}`}
                       >
-                        <Text style={[localStyles.checkText, { color: checked ? theme.colors.success : theme.colors.textMuted }]}>
+                        <Text style={[localStyles((theme ?? _styleTheme)).checkText, themeStyle('components_PackingListTable_42', { checked: checked, theme: theme }, (theme ?? _styleTheme))]}>
                           {checked ? '✓' : ''}
                         </Text>
                       </Pressable>
                     );
                   }) : null}
                   {editMode ? (
-                    <View style={localStyles.editCell}>
+                    <View style={localStyles((theme ?? _styleTheme)).editCell}>
                       <Pressable
-                        style={localStyles.orderButton}
+                        style={localStyles((theme ?? _styleTheme)).orderButton}
                         onPress={() => removeDraftItem(item)}
                         disabled={saving}
                         accessibilityLabel={`Remove ${item.label || 'packing item'}`}
                         testID={`${variant}-packing-remove-item-${item.id}`}
                       >
-                        <Text style={[localStyles.orderText, { color: theme.colors.error }]}>×</Text>
+                        <Text style={[localStyles((theme ?? _styleTheme)).orderText, themeStyle('components_PackingListTable_43', { theme: theme }, (theme ?? _styleTheme))]}>×</Text>
                       </Pressable>
                     </View>
                   ) : null}
@@ -678,38 +669,6 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   );
 };
 
-const localStyles = StyleSheet.create({
-  container: { width: '100%', borderWidth: 1, borderRadius: 8, padding: 12, gap: 10 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  title: { fontSize: 20, fontWeight: '700' },
-  actions: { flexDirection: 'row', gap: 8 },
-  button: { borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8 },
-  buttonText: { fontWeight: '700' },
-  addButton: { borderWidth: 1, borderRadius: 6, padding: 10, alignSelf: 'flex-start' },
-  addButtonText: { fontWeight: '700' },
-  meta: { fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'stretch', borderBottomWidth: StyleSheet.hairlineWidth, minHeight: 44, flexShrink: 0 },
-  headerRow: { minHeight: 36 },
-  itemHeader: { width: 240, flexShrink: 0, padding: 8, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-  travelerHeader: { width: 110, flexShrink: 0, padding: 8, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  editHeader: { width: 116, flexShrink: 0, padding: 8, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-  categoryRow: { paddingHorizontal: 8, paddingVertical: 7, minHeight: 32 },
-  categoryText: { fontWeight: '700' },
-  itemCell: { width: 240, flexShrink: 0, padding: 8, gap: 6, justifyContent: 'center' },
-  itemText: { fontSize: 15 },
-  checkCell: { width: 110, flexShrink: 0, alignItems: 'center', justifyContent: 'center', borderLeftWidth: StyleSheet.hairlineWidth },
-  checkText: { fontSize: 20, fontWeight: '700' },
-  editCell: { width: 116, flexShrink: 0, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  orderButton: { minWidth: 28, minHeight: 28, alignItems: 'center', justifyContent: 'center' },
-  orderText: { fontSize: 18, fontWeight: '700' },
-  categorySelectWeb: { width: '100%', minHeight: 36, borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, fontSize: 14 },
-  input: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, minHeight: 36 },
-  // Constrain the horizontal viewport. Without an explicit width/flex
-  // constraint React Native Web can size this ScrollView to its children,
-  // leaving no overflow area to scroll.
-  presetScroll: { width: '100%', maxWidth: '100%', minWidth: 0, flexGrow: 0, flexShrink: 1, alignSelf: 'stretch' },
-  presetActions: { gap: 8, paddingVertical: 2, flexGrow: 0, flexShrink: 0, alignItems: 'center' },
-  presetButton: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 7 },
-});
+const localStyles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_PackingListTable_44', { StyleSheet: StyleSheet }, _theme);
 
 export default PackingListTable;

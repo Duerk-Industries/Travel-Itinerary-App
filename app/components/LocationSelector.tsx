@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, TextInput, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import DropdownOptionButton from './DropdownOptionButton';
@@ -41,6 +43,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
   showCitySearch = true,
   initialQuery = '',
 }) => {
+  const _styleTheme = useStyleTheme();
   const [countryStateQuery, setCountryStateQuery] = useState(initialQuery);
   const [countryStateSuggestions, setCountryStateSuggestions] = useState<LocationOption[]>([]);
   const [countryStateLoading, setCountryStateLoading] = useState(false);
@@ -298,12 +301,12 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
   const activeDropdownZIndex = showCountryStateDropdown || showCityDropdown ? 800 : 1;
 
   return (
-    <View style={{ position: 'relative', zIndex: activeDropdownZIndex }} testID="location-selector-root">
-      <View style={[styles.row, { alignItems: 'flex-start', zIndex: showCountryStateDropdown ? activeDropdownZIndex : 1 }]}>
-        <View style={[styles.dropdown, { flex: 1 }]}>
+    <View style={themeStyle('components_LocationSelector_1', { activeDropdownZIndex: activeDropdownZIndex }, _styleTheme)} testID="location-selector-root">
+      <View style={[styles.row, themeStyle('components_LocationSelector_2', { showCountryStateDropdown: showCountryStateDropdown, activeDropdownZIndex: activeDropdownZIndex }, _styleTheme)]}>
+        <View style={[styles.dropdown, themeStyle('components_LocationSelector_3', {  }, _styleTheme)]}>
           <TextInput
             ref={countryStateInputRef}
-            style={[styles.input, { flex: 1 }]}
+            style={[styles.input, themeStyle('components_LocationSelector_4', {  }, _styleTheme)]}
             placeholder={placeholder}
             value={countryStateQuery}
             onChangeText={setCountryStateQuery}
@@ -320,7 +323,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
                   onPress={() => handleAddCountryState(location)}
                   testID={`location-suggestion-${location.id}`}
                 >
-                  <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                  <View style={[styles.row, themeStyle('components_LocationSelector_5', {  }, _styleTheme)]}>
                     <Text style={styles.bodyText}>{location.name}</Text>
                     <Text style={styles.helperText}>{labelForType(location.sourceType)}</Text>
                   </View>
@@ -333,7 +336,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
                   onPress={handleCountryStateManualAdd}
                   testID="manual-country-option"
                 >
-                  <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                  <View style={[styles.row, themeStyle('components_LocationSelector_6', {  }, _styleTheme)]}>
                     <Text style={styles.bodyText}>Add "{countryStateQuery.trim()}"</Text>
                     <Text style={styles.helperText}>Manual Country</Text>
                   </View>
@@ -343,10 +346,10 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
           )}
         </View>
         {countryStateLoading && (
-          <ActivityIndicator size="small" color="#6B6B6B" style={{ marginLeft: 8, marginTop: 10 }} testID="country-state-loading" />
+          <ActivityIndicator size="small" color={themeStyle('components_LocationSelector_18', {  }, _styleTheme)} style={themeStyle('components_LocationSelector_7', {  }, _styleTheme)} testID="country-state-loading" />
         )}
         <TouchableOpacity 
-            style={[styles.button, styles.smallButton, { marginLeft: 8 }]} 
+            style={[styles.button, styles.smallButton, themeStyle('components_LocationSelector_8', {  }, _styleTheme)]} 
             onPress={handleCountryStateSubmit}
             testID="add-country-state-button"
         >
@@ -356,11 +359,11 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
 
       {showCitySearch && (
         <>
-          <View style={[styles.row, { alignItems: 'flex-start', marginTop: 12, zIndex: showCityDropdown ? activeDropdownZIndex : 1 }]}>
-            <View style={[styles.dropdown, { flex: 1 }]}>
+          <View style={[styles.row, themeStyle('components_LocationSelector_9', { showCityDropdown: showCityDropdown, activeDropdownZIndex: activeDropdownZIndex }, _styleTheme)]}>
+            <View style={[styles.dropdown, themeStyle('components_LocationSelector_10', {  }, _styleTheme)]}>
               <TextInput
                 ref={cityInputRef}
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, themeStyle('components_LocationSelector_11', {  }, _styleTheme)]}
                 placeholder="Search cities"
                 value={cityQuery}
                 onChangeText={setCityQuery}
@@ -378,7 +381,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
                       onPress={() => handleAddCity(location)}
                       testID={`city-suggestion-${location.id}`}
                     >
-                      <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                      <View style={[styles.row, themeStyle('components_LocationSelector_12', {  }, _styleTheme)]}>
                         <Text style={styles.bodyText}>{location.name}</Text>
                         <Text style={styles.helperText}>City</Text>
                       </View>
@@ -391,7 +394,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
                       onPress={handleCityManualAdd}
                       testID="manual-city-option"
                     >
-                      <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                      <View style={[styles.row, themeStyle('components_LocationSelector_13', {  }, _styleTheme)]}>
                         <Text style={styles.bodyText}>Add "{cityQuery.trim()}"</Text>
                         <Text style={styles.helperText}>Manual City</Text>
                       </View>
@@ -401,10 +404,10 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
               )}
             </View>
             {cityLoading && (
-              <ActivityIndicator size="small" color="#6B6B6B" style={{ marginLeft: 8, marginTop: 10 }} testID="city-loading" />
+              <ActivityIndicator size="small" color={themeStyle('components_LocationSelector_19', {  }, _styleTheme)} style={themeStyle('components_LocationSelector_14', {  }, _styleTheme)} testID="city-loading" />
             )}
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 8 }]}
+              style={[styles.button, styles.smallButton, themeStyle('components_LocationSelector_15', {  }, _styleTheme)]}
               onPress={handleCitySubmit}
               testID="add-city-button"
               disabled={!canSearchCities}
@@ -414,13 +417,13 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
           </View>
 
           {!canSearchCities && (
-            <Text style={[styles.helperText, { marginTop: 4 }]}>Select at least one country or state to add cities.</Text>
+            <Text style={[styles.helperText, themeStyle('components_LocationSelector_16', {  }, _styleTheme)]}>Select at least one country or state to add cities.</Text>
           )}
         </>
       )}
 
       {selectedLocations.length > 0 && (
-        <View style={[styles.row, { flexWrap: 'wrap', gap: 8, marginTop: 8 }]}>
+        <View style={[styles.row, themeStyle('components_LocationSelector_17', {  }, _styleTheme)]}>
           {selectedLocations.map((location) => (
             <View key={`selected-location-${location.id}`} style={styles.payerChip} testID={`selected-location-${location.id}`}>
               <Text style={styles.cellText}>{location.name}</Text>

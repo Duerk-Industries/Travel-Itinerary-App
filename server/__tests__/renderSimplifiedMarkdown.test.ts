@@ -20,7 +20,7 @@ const buildFakeResult = (): ItineraryPromptPlanResult =>
     generatedItems: {
       transfers: [
         {
-          status: 'Needed',
+          status: 'Proposed',
           transferType: 'Train',
           departureDate: '2026-09-14',
           arrivalDate: '2026-09-14',
@@ -35,7 +35,7 @@ const buildFakeResult = (): ItineraryPromptPlanResult =>
       ],
       lodgings: [
         {
-          status: 'Needed',
+          status: 'Proposed',
           name: "Lodging at 'Boston'",
           checkInDate: '2026-09-12',
           checkOutDate: '2026-09-14',

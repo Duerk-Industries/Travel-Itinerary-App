@@ -74,7 +74,8 @@ export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft & { p
 export const buildTourDraftFromRow = (tour: Tour): TourDraft => ({
   status: normalizeItineraryStatus((tour as any).status, LEGACY_ITINERARY_STATUS),
   activityType: (tour as any).activityType ?? 'Tour',
-  date: tour.date,
+  date: tour.date ?? '',
+  nearLodgingId: tour.nearLodgingId ?? null,
   name: tour.name,
   startLocation: tour.startLocation,
   startTime: tour.startTime,

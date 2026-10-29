@@ -21,8 +21,19 @@
 
 const DEBOUNCE_MS = 60_000;
 const lastSyncedAtByTrip = new Map<string, number>();
+const pendingSyncByTrip = new Map<string, Promise<void>>();
+
+// A deletion sync must follow any older source snapshot, rather than race it.
+export const runBlogSyncForTrip = async (tripId: string, work: () => Promise<void>): Promise<void> => {
+  const previous = pendingSyncByTrip.get(tripId) ?? Promise.resolve();
+  const pending = previous.catch(() => undefined).then(work);
+  pendingSyncByTrip.set(tripId, pending);
+  try { await pending; }
+  finally { if (pendingSyncByTrip.get(tripId) === pending) pendingSyncByTrip.delete(tripId); }
+};
 
 export const shouldSkipSync = (tripId: string): boolean => {
+  if (pendingSyncByTrip.has(tripId)) return false;
   const last = lastSyncedAtByTrip.get(tripId);
   return last != null && Date.now() - last < DEBOUNCE_MS;
 };

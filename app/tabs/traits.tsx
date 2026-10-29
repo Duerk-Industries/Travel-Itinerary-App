@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { TraitRecord } from './traitsLogic';
@@ -139,6 +141,7 @@ export function TraitsTab<T extends TraitRecord>({
   fetchTraitProfile,
   styles,
 }: TraitsTabProps<T>) {
+  const _styleTheme = useStyleTheme();
   const storedPromptProfile = useMemo(() => extractPromptTraitsFromTraits(traits), [traits]);
   const [promptTraits, setPromptTraits] = useState(() => normalizePromptTraits(storedPromptProfile.profile));
   const [customInterest, setCustomInterest] = useState('');
@@ -367,8 +370,8 @@ export function TraitsTab<T extends TraitRecord>({
           const value = promptTraits.tt.w[field.key];
           const descriptor = descriptorForValue(value, field);
           return (
-            <View key={`account-weight-${field.key}`} style={{ marginBottom: 10 }}>
-              <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+            <View key={`account-weight-${field.key}`} style={themeStyle('tabs_traits_1', {  }, _styleTheme)}>
+              <View style={[styles.row, themeStyle('tabs_traits_2', {  }, _styleTheme)]}>
                 <Text style={styles.cellText}>{field.label}</Text>
                 <Text style={styles.helperText}>{descriptor}</Text>
               </View>
@@ -381,7 +384,7 @@ export function TraitsTab<T extends TraitRecord>({
                   step={1}
                   value={value}
                   onChange={(e: any) => setTripWeight(field.key, String(e.target.value))}
-                  style={{ width: '100%' }}
+                  style={themeStyle('tabs_traits_3', {  }, _styleTheme)}
                 />
               ) : (
                 <TextInput
@@ -423,7 +426,7 @@ export function TraitsTab<T extends TraitRecord>({
         </View>
         <View style={styles.row}>
           <TextInput
-            style={[styles.input, { flex: 1 }]}
+            style={[styles.input, themeStyle('tabs_traits_4', {  }, _styleTheme)]}
             placeholder="Custom interest, or 'no nightlife' / 'avoid crowds'"
             value={customInterest}
             onChangeText={setCustomInterest}

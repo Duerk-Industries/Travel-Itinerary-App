@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+
 
 export type ReactionValue = 1 | -1;
 
@@ -46,8 +49,10 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
   onCast,
   onClear,
   onError,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [localSummary, setLocalSummary] = useState<ReactionSummary>(summary);
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
@@ -88,13 +93,13 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
   const disabled = !canReact || pending;
 
   const themedStyles = theme ? {
-    count: { color: theme.colors.textMuted },
-    countActive: { color: theme.colors.text },
-    score: { color: theme.colors.textMuted },
+    count: themeStyle('components_ReactionBar_1', { theme: theme }, (theme ?? _styleTheme)),
+    countActive: themeStyle('components_ReactionBar_2', { theme: theme }, (theme ?? _styleTheme)),
+    score: themeStyle('components_ReactionBar_3', { theme: theme }, (theme ?? _styleTheme)),
   } : null;
 
   return (
-    <View style={styles.row} accessibilityRole="toolbar" testID={`reaction-bar-${detailId}`}>
+    <View style={styles((theme ?? _styleTheme)).row} accessibilityRole="toolbar" testID={`reaction-bar-${detailId}`}>
       <Pressable
         testID={`reaction-up-${detailId}`}
         accessibilityRole="button"
@@ -102,12 +107,12 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
         accessibilityState={{ disabled, selected: upActive }}
         disabled={disabled}
         onPress={() => handlePress(1)}
-        style={[styles.button, upActive && styles.buttonActiveUp, disabled && styles.buttonDisabled]}
+        style={[styles((theme ?? _styleTheme)).button, upActive && styles((theme ?? _styleTheme)).buttonActiveUp, disabled && styles((theme ?? _styleTheme)).buttonDisabled]}
       >
-        <Text style={[styles.glyph, upActive && styles.glyphActive]}>{'👍'}</Text>
-        <Text style={[styles.count, themedStyles?.count, upActive && (themedStyles?.countActive ?? styles.countActive)]}>{localSummary.upCount}</Text>
+        <Text style={[styles((theme ?? _styleTheme)).glyph, upActive && styles((theme ?? _styleTheme)).glyphActive]}>{'👍'}</Text>
+        <Text style={[styles((theme ?? _styleTheme)).count, themedStyles?.count, upActive && (themedStyles?.countActive ?? styles((theme ?? _styleTheme)).countActive)]}>{localSummary.upCount}</Text>
       </Pressable>
-      <Text style={[styles.score, themedStyles?.score]} testID={`reaction-score-${detailId}`}>
+      <Text style={[styles((theme ?? _styleTheme)).score, themedStyles?.score]} testID={`reaction-score-${detailId}`}>
         {localSummary.score > 0 ? `+${localSummary.score}` : `${localSummary.score}`}
       </Text>
       <Pressable
@@ -117,10 +122,10 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
         accessibilityState={{ disabled, selected: downActive }}
         disabled={disabled}
         onPress={() => handlePress(-1)}
-        style={[styles.button, downActive && styles.buttonActiveDown, disabled && styles.buttonDisabled]}
+        style={[styles((theme ?? _styleTheme)).button, downActive && styles((theme ?? _styleTheme)).buttonActiveDown, disabled && styles((theme ?? _styleTheme)).buttonDisabled]}
       >
-        <Text style={[styles.glyph, downActive && styles.glyphActive]}>{'👎'}</Text>
-        <Text style={[styles.count, themedStyles?.count, downActive && (themedStyles?.countActive ?? styles.countActive)]}>{localSummary.downCount}</Text>
+        <Text style={[styles((theme ?? _styleTheme)).glyph, downActive && styles((theme ?? _styleTheme)).glyphActive]}>{'👎'}</Text>
+        <Text style={[styles((theme ?? _styleTheme)).count, themedStyles?.count, downActive && (themedStyles?.countActive ?? styles((theme ?? _styleTheme)).countActive)]}>{localSummary.downCount}</Text>
       </Pressable>
     </View>
   );
@@ -140,64 +145,6 @@ const propsAreEqual = (prev: ReactionBarProps, next: ReactionBarProps): boolean 
 
 const ReactionBar = React.memo(ReactionBarBase, propsAreEqual);
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    // Neutral grey rather than a black tint: a pure-black overlay all but
-    // disappears against a dark-mode surface, leaving the chip outline (and
-    // the near-black `count`/`countActive` text below, when no `theme` is
-    // supplied) unreadable. Grey keeps some contrast on either background.
-    borderColor: 'rgba(128,128,128,0.25)',
-    backgroundColor: 'rgba(128,128,128,0.12)',
-  },
-  buttonActiveUp: {
-    backgroundColor: 'rgba(46, 125, 50, 0.12)',
-    borderColor: 'rgba(46, 125, 50, 0.6)',
-  },
-  buttonActiveDown: {
-    backgroundColor: 'rgba(198, 40, 40, 0.12)',
-    borderColor: 'rgba(198, 40, 40, 0.6)',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  glyph: {
-    fontSize: 14,
-  },
-  glyphActive: {
-    fontSize: 14,
-  },
-  // These are only a fallback for a caller that omits `theme` — the current
-  // (only) production caller always passes it, and `themedStyles` above
-  // takes over with theme-aware colors whenever it's present. A mid-grey
-  // fallback, rather than near-black, keeps some legibility in dark mode
-  // too instead of assuming a light background.
-  count: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6b7280',
-  },
-  countActive: {
-    color: '#6b7280',
-  },
-  score: {
-    minWidth: 28,
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#6b7280',
-  },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_ReactionBar_4', { StyleSheet: StyleSheet }, _theme);
 
 export default ReactionBar;

@@ -2556,6 +2556,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
       const data = t.data() as any;
       return {
         id: t.id,
+        createdBy: data.createdBy ?? null,
         groupId: data.groupId,
         name: data.name,
         description: data.description ?? null,
@@ -2595,6 +2596,7 @@ export const createTrip = async (
   }
   const id = randomUUID();
   const payload = {
+    createdBy: userId,
     groupId,
     name,
     description: details.description ?? null,
@@ -2745,6 +2747,7 @@ const deleteAllTripArtifacts = async (tripId: string): Promise<void> => {
   await deleteQueryBatch(db.collection('trip_payments').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_removals').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('expenses').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('expense_receipts').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('flights').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('lodgings').where('trip_id', '==', tripId));
   await deleteQueryBatch(db.collection('tours').where('tripId', '==', tripId));
@@ -4289,6 +4292,8 @@ const normalizeLodgingRecord = (data: any) => ({
 
 const normalizeActivityRecord = (data: any) => ({
   ...data,
+  date: data.date ?? '',
+  nearLodgingId: data.nearLodgingId ?? null,
   userId: data.userId ?? data.user_id,
   tripId: data.tripId ?? data.trip_id,
   startLocation: data.startLocation ?? data.start_location,
@@ -4904,6 +4909,8 @@ export const deleteLodging = async (lodgingId: string, userId: string): Promise<
   if (!tripId) return;
   const membership = await ensureUserInTrip(tripId, userId);
   if (!membership) return;
+  const linked = await db.collection('tours').where('tripId', '==', tripId).where('nearLodgingId', '==', lodgingId).get();
+  await Promise.all(linked.docs.map((activity) => activity.ref.update({ nearLodgingId: null })));
   await db.collection('lodgings').doc(lodgingId).delete();
 };
 
@@ -4968,6 +4975,8 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
   const id = randomUUID();
   const payload = {
     ...activity,
+    date: activity.date || '',
+    nearLodgingId: activity.nearLodgingId ?? null,
     activityType: (activity as any).activityType ?? 'Tour',
     status: normalizeItineraryStatus((activity as any).status),
     id,
@@ -5354,6 +5363,7 @@ export const insertExpense = async (expense: {
   exchangeRateDate?: string | null;
   payerIds?: string[];
   forIds?: string[];
+  forShares?: Record<string, number> | null;
   sourceType?: string | null;
   sourceId?: string | null;
   vendor?: string | null;
@@ -5384,6 +5394,7 @@ export const insertExpense = async (expense: {
     exchangeRateDate: expense.exchangeRateDate ?? null,
     payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    forShares: expense.forShares ?? null,
     sourceType: expense.sourceType ?? null,
     sourceId: expense.sourceId ?? null,
     vendor: expense.vendor ?? null,
@@ -5422,6 +5433,7 @@ export const insertExpenseIdempotent = async (
     exchangeRateDate: expense.exchangeRateDate ?? null,
     payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    forShares: expense.forShares ?? null,
     sourceType: null,
     sourceId: null,
     vendor: expense.vendor ?? null,
@@ -5453,6 +5465,7 @@ export const updateExpense = async (
     exchangeRateDate?: string | null;
     payerIds?: string[];
     forIds?: string[];
+    forShares?: Record<string, number> | null;
     vendor?: string | null;
     notes?: string | null;
   }
@@ -5474,6 +5487,7 @@ export const updateExpense = async (
     exchangeRateDate: expense.exchangeRateDate ?? null,
     payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    forShares: expense.forShares ?? null,
     vendor: expense.vendor ?? null,
     notes: expense.notes ?? null,
   };
@@ -9866,4 +9880,188 @@ export const listLegacyBlogMapArtifacts = async (afterPath='',limit=100): Promis
 export const deleteLegacyBlogMapArtifact = async (row:import('./types').LegacyBlogMapArtifact): Promise<boolean> => {
   const db=getDb(), ref=db.collection('blog_day_map_artifacts').doc(`${row.tripId}:${row.dayDate}:${row.pointsHash}`);
   return db.runTransaction(async tx => {const doc=await tx.get(ref);if(!doc.exists || doc.data()?.gcsPath !== row.path) return false;tx.delete(ref);return true;});
+};
+
+// --- Expense receipt images ------------------------------------------------------------------
+// Mirrors the Postgres expense_receipts table: one document per expense, keyed by the expense id.
+export type ExpenseReceiptRecord = { expenseId: string; tripId: string; objectKey: string; contentType: string };
+
+export const getExpenseTripForUser = async (expenseId: string, userId: string): Promise<{ tripId: string } | null> => {
+  const doc = await getDb().collection('expenses').doc(expenseId).get();
+  if (!doc.exists) return null;
+  const tripId = String((doc.data() as any)?.tripId ?? '');
+  if (!tripId || !(await ensureUserInTrip(tripId, userId))) return null;
+  return { tripId };
+};
+
+export const getExpenseReceipt = async (expenseId: string, userId: string): Promise<ExpenseReceiptRecord | null> => {
+  if (!(await getExpenseTripForUser(expenseId, userId))) return null;
+  const doc = await getDb().collection('expense_receipts').doc(expenseId).get();
+  if (!doc.exists) return null;
+  const data = doc.data() as any;
+  return { expenseId, tripId: String(data.tripId), objectKey: String(data.objectKey), contentType: String(data.contentType) };
+};
+
+export const setExpenseReceipt = async (receipt: ExpenseReceiptRecord & { uploadedBy: string }): Promise<void> => {
+  await getDb().collection('expense_receipts').doc(receipt.expenseId).set({
+    expenseId: receipt.expenseId,
+    tripId: receipt.tripId,
+    objectKey: receipt.objectKey,
+    contentType: receipt.contentType,
+    uploadedBy: receipt.uploadedBy,
+    createdAt: nowIso(),
+  });
+};
+
+export const deleteExpenseReceipt = async (expenseId: string): Promise<void> => {
+  await getDb().collection('expense_receipts').doc(expenseId).delete();
+};
+
+export const listExpenseIdsWithReceipt = async (userId: string, tripId: string): Promise<string[]> => {
+  if (!(await ensureUserInTrip(tripId, userId))) return [];
+  const snap = await getDb().collection('expense_receipts').where('tripId', '==', tripId).get();
+  return snap.docs.map((doc) => doc.id);
+};
+
+// --- Itinerary templates ---------------------------------------------------------------------
+// Mirrors the Postgres trip_templates table: one document per template, keyed by the template id.
+export type TripTemplateRecord = {
+  id: string;
+  title: string;
+  summary: string;
+  days: number;
+  route: string;
+  imageQuery: string;
+  countries: string[];
+  cities: string[];
+  highlights: string[];
+  contentHash: string;
+  enabled: boolean;
+  sortOrder: number;
+};
+
+export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {
+  const ref = getDb().collection('trip_templates').doc(template.id);
+  const existing = await ref.get();
+  // `enabled` belongs to the admin once the document exists; seeding never re-enables a template.
+  const enabled = existing.exists ? (existing.data() as any).enabled !== false : template.enabled;
+  await ref.set({ ...template, enabled, updatedAt: nowIso() });
+};
+
+export type EstimatedItemType = 'activity' | 'lodging' | 'transfer';
+export type EstimatedItem = { type: EstimatedItemType; id: string };
+
+// Mirrors the Postgres trip_estimated_items table: one document per marked item.
+export const addTripEstimatedItems = async (tripId: string, items: EstimatedItem[]): Promise<void> => {
+  const batch = getDb().batch();
+  for (const item of items) {
+    batch.set(getDb().collection('trip_estimated_items').doc(`${item.type}_${item.id}`), { tripId, itemType: item.type, itemId: item.id, createdAt: nowIso() });
+  }
+  await batch.commit();
+};
+
+export const listTripEstimatedItems = async (tripId: string): Promise<EstimatedItem[]> => {
+  const snap = await getDb().collection('trip_estimated_items').where('tripId', '==', tripId).get();
+  return snap.docs.map((doc) => {
+    const data = doc.data() as any;
+    return { type: data.itemType as EstimatedItemType, id: String(data.itemId) };
+  });
+};
+
+export const removeTripEstimatedItem = async (type: EstimatedItemType, itemId: string): Promise<void> => {
+  await getDb().collection('trip_estimated_items').doc(`${type}_${itemId}`).delete();
+};
+
+export const clearTripEstimatedItems = async (tripId: string): Promise<void> => {
+  const snap = await getDb().collection('trip_estimated_items').where('tripId', '==', tripId).get();
+  const batch = getDb().batch();
+  snap.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+};
+
+// Mirrors the Postgres trip_template_imports table: one document per imported template or shared
+// place/destination entry. Keys contain "/", which a document id cannot, so they are URI-encoded.
+export type TripTemplateImportKind = 'template' | 'place' | 'destination';
+export type TripTemplateImportRecord = {
+  kind: TripTemplateImportKind;
+  key: string;
+  payload: unknown;
+  contentHash: string;
+  importedBy: string | null;
+  updatedAt: string;
+};
+
+const tripTemplateImportDocId = (kind: TripTemplateImportKind, key: string): string => `${kind}_${encodeURIComponent(key)}`;
+
+export const listTripTemplateImports = async (): Promise<TripTemplateImportRecord[]> => {
+  const snap = await getDb().collection('trip_template_imports').get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data() as any;
+      return {
+        kind: data.kind as TripTemplateImportKind,
+        key: String(data.key ?? ''),
+        // Stored as a JSON string: a template is deeply nested and Firestore limits nesting and document size.
+        payload: typeof data.payload === 'string' ? JSON.parse(data.payload) : data.payload,
+        contentHash: String(data.contentHash ?? ''),
+        importedBy: data.importedBy ? String(data.importedBy) : null,
+        updatedAt: String(data.updatedAt ?? ''),
+      } as TripTemplateImportRecord;
+    })
+    .sort((a, b) => a.kind.localeCompare(b.kind) || a.key.localeCompare(b.key));
+};
+
+export const upsertTripTemplateImport = async (record: Omit<TripTemplateImportRecord, 'updatedAt'>): Promise<void> => {
+  await getDb().collection('trip_template_imports').doc(tripTemplateImportDocId(record.kind, record.key)).set({
+    kind: record.kind, key: record.key, payload: JSON.stringify(record.payload), contentHash: record.contentHash, importedBy: record.importedBy, updatedAt: nowIso(),
+  });
+};
+
+export const deleteTripTemplateImport = async (kind: TripTemplateImportKind, key: string): Promise<boolean> => {
+  const ref = getDb().collection('trip_template_imports').doc(tripTemplateImportDocId(kind, key));
+  const existing = await ref.get();
+  if (!existing.exists) return false;
+  await ref.delete();
+  return true;
+};
+
+// Mirrors the Postgres trip_dismissed_suggestions table. Keys contain "/", which a document id cannot, so they are URI-encoded.
+export const dismissActivitySuggestion = async (tripId: string, userId: string, key: string): Promise<void> => {
+  await getDb().collection('trip_dismissed_suggestions').doc(`${tripId}_${userId}_${encodeURIComponent(key)}`).set({ tripId, userId, suggestionKey: key, createdAt: nowIso() });
+};
+
+export const listDismissedActivitySuggestions = async (tripId: string, userId: string): Promise<string[]> => {
+  const snap = await getDb().collection('trip_dismissed_suggestions').where('tripId', '==', tripId).where('userId', '==', userId).get();
+  return snap.docs.map((doc) => String((doc.data() as any).suggestionKey));
+};
+
+export const restoreDismissedActivitySuggestions = async (tripId: string, userId: string): Promise<void> => {
+  const snap = await getDb().collection('trip_dismissed_suggestions').where('tripId', '==', tripId).where('userId', '==', userId).get();
+  const batch = getDb().batch();
+  snap.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+};
+
+export const listTripTemplates = async (options: { enabledOnly?: boolean } = {}): Promise<TripTemplateRecord[]> => {
+  const snap = await getDb().collection('trip_templates').get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data() as any;
+      return {
+        id: doc.id,
+        title: String(data.title ?? ''),
+        summary: String(data.summary ?? ''),
+        days: Number(data.days) || 0,
+        route: String(data.route ?? ''),
+        imageQuery: String(data.imageQuery ?? ''),
+        countries: Array.isArray(data.countries) ? data.countries.map(String) : [],
+        cities: Array.isArray(data.cities) ? data.cities.map(String) : [],
+        highlights: Array.isArray(data.highlights) ? data.highlights.map(String) : [],
+        contentHash: String(data.contentHash ?? ''),
+        enabled: data.enabled !== false,
+        sortOrder: Number(data.sortOrder) || 0,
+      } as TripTemplateRecord;
+    })
+    .filter((template) => !options.enabledOnly || template.enabled)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
 };

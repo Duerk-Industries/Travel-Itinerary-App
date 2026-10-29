@@ -330,7 +330,7 @@ describe('AssistantChatPanel', () => {
       const activities = [
         {
           id: 'a',
-          status: 'Needed' as const,
+          status: 'Proposed' as const,
           activityType: 'Tour' as const,
           date: '2026-04-12',
           name: 'Eiffel Tower tour',

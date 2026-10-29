@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState, useCallback } from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, Alert, Platform } from 'react-native';
-import { AppTheme } from '../theme/theme';
+
 
 type PlaidSuccess = {
   publicToken: string;
@@ -39,12 +42,14 @@ type PlaidLinkButtonProps = {
 };
 
 const PlaidLinkButton: React.FC<PlaidLinkButtonProps> = ({
-  theme,
+  theme: _providedTheme,
   backendUrl,
   jsonHeaders,
   onSuccess,
   style,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { colors, typography, spacing } = theme;
   const [loading, setLoading] = useState(false);
 
@@ -115,21 +120,14 @@ const PlaidLinkButton: React.FC<PlaidLinkButtonProps> = ({
       onPress={handlePress}
       disabled={loading}
       style={[
-        {
-          backgroundColor: colors.cta,
-          paddingVertical: spacing.md,
-          borderRadius: 8,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'row',
-        },
+        themeStyle('components_PlaidLinkButton_1', { colors: colors, spacing: spacing }, (theme ?? _styleTheme)),
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={colors.onCta} />
+        <ActivityIndicator size="small" color={themeStyle('components_PlaidLinkButton_3', {  }, (theme ?? _styleTheme))} />
       ) : (
-        <Text style={{ color: colors.onCta, fontWeight: 'bold', fontSize: typography.body }}>
+        <Text style={themeStyle('components_PlaidLinkButton_2', { typography: typography }, (theme ?? _styleTheme))}>
           Connect Bank Account
         </Text>
       )}

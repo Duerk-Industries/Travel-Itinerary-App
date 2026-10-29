@@ -47,6 +47,14 @@ class FakeFirestore {
   batch() {
     return new FakeBatch();
   }
+  // planningFirestore wraps batch().commit() in a transaction, so the fake must run one.
+  async runTransaction<T>(work: (tx: { set: (ref: FakeDocRef, data: any) => unknown }) => Promise<T>): Promise<T> {
+    const ops: Array<{ ref: FakeDocRef; data: any }> = [];
+    const tx = { set: (ref: FakeDocRef, data: any) => { ops.push({ ref, data }); return tx; } };
+    const result = await work(tx);
+    for (const { ref, data } of ops) ref['store'].set(ref.id, data);
+    return result;
+  }
 }
 
 jest.mock('../src/apis/airportDatasetCallers', () => ({

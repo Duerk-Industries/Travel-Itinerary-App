@@ -10,6 +10,8 @@ import authRoutes from './routes/authRoutes';
 import transferRoutes from './routes/transferRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
 import tripRoutes from './routes/tripRoutes';
+import tripTemplateRoutes from './routes/tripTemplateRoutes';
+import adminTripTemplateRoutes from './routes/adminTripTemplateRoutes';
 import itineraryRoutes from './routes/itineraryRoutes';
 import itineraryDataRoutes from './routes/itineraryDataRoutes';
 import traitRoutes from './routes/traitRoutes';
@@ -19,6 +21,7 @@ import carRentalRoutes from './routes/carRentalRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import { trackItemSaved } from './analytics/itemSavedTracker';
+import { confirmEditedItem } from './services/tripDateShiftService';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import paymentRoutes from './routes/ledgerPaymentRoutes';
@@ -162,6 +165,8 @@ app.use((req, res, next) => {
   cors(corsOptions)(req, res, next);
 });
 app.use('/api', dataTransferRoutes);
+// Template bundles are large, so this router brings its own (admin-only) JSON parser and goes first.
+app.use('/api/admin/trip-templates', adminTripTemplateRoutes);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -453,11 +458,12 @@ app.post('/api/auth/apple/callback', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', webAuthRoutes);
 app.use('/api/web-auth', webAuthRoutes);
-app.use('/api/transfers', trackItemSaved('transfer'), transferRoutes);
+app.use('/api/transfers', trackItemSaved('transfer'), confirmEditedItem('transfer'), transferRoutes);
 // Backward-compatible alias for older clients/tests still calling flights endpoints — do not remove.
-app.use('/api/flights', trackItemSaved('transfer'), transferRoutes);
+app.use('/api/flights', trackItemSaved('transfer'), confirmEditedItem('transfer'), transferRoutes);
 app.use('/api/groups', groupsRouter);
 app.use('/api/trips', tripRoutes);
+app.use('/api/trip-templates', tripTemplateRoutes);
 app.use('/api/trips', blogRoutes);
 app.use('/api/trips', blogAuthoringRoutes);
 app.use('/api/trips', blogEngagementRoutes);
@@ -473,11 +479,11 @@ app.use('/', blogSitemapRoutes);
 app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/itineraries', itineraryDataRoutes);
 app.use('/api/traits', traitRoutes);
-app.use('/api/lodgings', trackItemSaved('lodging'), lodgingRoutes);
+app.use('/api/lodgings', trackItemSaved('lodging'), confirmEditedItem('lodging'), lodgingRoutes);
 app.use('/api/places', placeRoutes);
 app.use('/api/maps', staticMapRoutes);
 app.use('/api/affiliate', getYourGuideRoutes);
-app.use('/api/activities', trackItemSaved('activity'), activityRoutes);
+app.use('/api/activities', trackItemSaved('activity'), confirmEditedItem('activity'), activityRoutes);
 app.use('/api/car-rentals', trackItemSaved('car_rental'), carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/analytics', analyticsRoutes);

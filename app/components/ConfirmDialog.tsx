@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { memo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import DialogShell from './DialogShell';
@@ -43,6 +45,7 @@ const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
   busyLabel = "Working…",
   errorMessage,
 }) => {
+  const _styleTheme = useStyleTheme();
   return (
     <DialogShell
       visible={visible}
@@ -56,13 +59,13 @@ const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
       useNativeModal={useNativeModal}
     >
       {errorMessage ? (
-        <Text style={[styles.helperText, { color: '#B3261E', marginBottom: 8 }]} accessibilityRole="alert">
+        <Text style={[styles.helperText, themeStyle('components_ConfirmDialog_1', {  }, _styleTheme)]} accessibilityRole="alert">
           {errorMessage}
         </Text>
       ) : null}
       <View style={styles.row}>
         <TouchableOpacity
-          style={[styles.button, styles.dangerButton, { flex: 1 }, busy ? { opacity: 0.6 } : null]}
+          style={[styles.button, styles.dangerButton, themeStyle('components_ConfirmDialog_2', {  }, _styleTheme), busy ? themeStyle('components_ConfirmDialog_3', {  }, _styleTheme) : null]}
           onPress={busy ? undefined : onConfirm}
           disabled={busy}
           accessibilityRole="button"
@@ -72,7 +75,7 @@ const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
           <Text style={styles.dangerButtonText}>{busy ? busyLabel : confirmLabel}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.button, { flex: 1 }, busy ? { opacity: 0.6 } : null]}
+          style={[styles.button, themeStyle('components_ConfirmDialog_4', {  }, _styleTheme), busy ? themeStyle('components_ConfirmDialog_5', {  }, _styleTheme) : null]}
           onPress={busy ? undefined : onCancel}
           disabled={busy}
           accessibilityRole="button"

@@ -195,6 +195,8 @@ function New-HostingConfig([string]$OutputFile, [string]$Site, [string]$PublicDi
         @{ source = '**'; headers = @(@{ key = 'Content-Security-Policy'; value = $csp }) }
       )
       rewrites = @(
+        @{ source = '/public/blog/**'; run = @{ serviceId = $ServiceName; region = $Region } }
+        @{ source = '/sitemap-trip-blogs.xml'; run = @{ serviceId = $ServiceName; region = $Region } }
         @{ source = '/api/**'; run = @{ serviceId = $ServiceName; region = $Region } }
         @{ source = '/socket.io/**'; run = @{ serviceId = $ServiceName; region = $Region } }
         @{ source = '**'; destination = '/index.html' }

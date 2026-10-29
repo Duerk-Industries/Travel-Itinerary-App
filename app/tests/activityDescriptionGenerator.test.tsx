@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ActivityEditForm from '../components/ActivityEditForm';
+import { createInitialActivityState } from '../tabs/activities';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import ActivityDescriptionGenerator from '../components/ActivityDescriptionGenerator';
 import { registerLocalDescriptions, withLocalAiLock } from '../utils/localActivityDescriptions';
@@ -15,22 +17,23 @@ it('shows the button only after a loaded generator is registered and hides it wh
   expect(view.queryByText('Generate description')).toBeNull();
 });
 
-it('keeps a generated draft separate until the user applies it', async () => {
-  const generate = jest.fn(async () => 'Visit the museum in Tokyo to see its ceramics collection.');
-  const unregister = registerLocalDescriptions(generate);
+it('appends generated text immediately while preserving edits made during generation', async () => {
+  let finish!: (text: string) => void;
+  const unregister = registerLocalDescriptions(() => new Promise<string>(resolve => { finish = resolve; }));
+  const onSave = jest.fn();
+  const Harness = () => {
+    const [draft, setDraft] = useState(() => ({ ...createInitialActivityState(), name: input.name, startLocation: input.location, notes: input.notes }));
+    return <ActivityEditForm draft={draft} onChange={setDraft} onSave={onSave} onCancel={jest.fn()} isNew members={[]} styles={{}} />;
+  };
   try {
-    const onApply = jest.fn();
-    const view = render(<ActivityDescriptionGenerator input={input} styles={{}} onApply={onApply} />);
+    const view = render(<Harness />);
     fireEvent.press(view.getByText('Generate description'));
-    await waitFor(() => expect(view.getByText('Use description')).toBeTruthy());
-    expect(generate).toHaveBeenCalledWith(input);
-    expect(onApply).not.toHaveBeenCalled();
-    fireEvent.press(view.getByText('Discard draft'));
-    expect(onApply).not.toHaveBeenCalled();
-    fireEvent.press(view.getByText('Generate description'));
-    await waitFor(() => expect(view.getByText('Use description')).toBeTruthy());
-    fireEvent.press(view.getByText('Use description'));
-    expect(onApply).toHaveBeenCalledWith('Visit the museum in Tokyo to see its ceramics collection.');
+    fireEvent.changeText(view.getByPlaceholderText('Description'), 'My updated notes.');
+    await act(async () => { finish('A short museum description.'); });
+    await waitFor(() => expect(view.getByPlaceholderText('Description').props.value).toBe('My updated notes.\n\nA short museum description.'));
+    expect(view.queryByText('Use description')).toBeNull();
+    expect(view.queryByText('Discard draft')).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
   } finally { act(() => unregister()); }
 });
 

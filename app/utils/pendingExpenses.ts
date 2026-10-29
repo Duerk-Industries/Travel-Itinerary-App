@@ -14,6 +14,8 @@ export type PendingExpensePayload = {
   exchangeRateDate?: string;
   payerIds: string[];
   forIds: string[];
+  /** Weight per person in forIds for an uneven split; omitted for an equal split. */
+  forShares?: Record<string, number>;
   vendor?: string;
 };
 
@@ -140,6 +142,7 @@ export const buildPendingExpenseRow = (entryId: string, userId: string, args: Pe
   notes: null,
   payerIds: args.payload.payerIds,
   forIds: args.payload.forIds,
+  forShares: args.payload.forShares ?? null,
   createdAt: new Date(enqueuedAtMs).toISOString(),
   sourceType: null,
   sourceId: null,

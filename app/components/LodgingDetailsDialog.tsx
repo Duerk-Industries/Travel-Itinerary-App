@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import AddToCalendarButton from './AddToCalendarButton';
 import { lodgingCalendarEvent } from '../utils/calendarEvents';
 import React, { memo, useEffect, useMemo, useState } from 'react';
@@ -7,7 +10,7 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { buildStaticMapUrl } from '../utils/googleMaps';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useImageSource } from '../utils/imageSource';
-import type { AppTheme } from '../theme/theme';
+
 import TripDayMap from './TripDayMap';
 import DialogShell from './DialogShell';
 
@@ -50,7 +53,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
   backendUrl,
   requestHeaders,
   styles,
-  theme,
+  theme: _providedTheme,
   payerName,
   travelerName,
   readOnly = false,
@@ -60,6 +63,8 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
   onOpenMap,
   testID,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width } = useWindowDimensions();
   const isCompact = width < 520;
   const imageHeight = Math.max(170, Math.min(260, width * 0.52));
@@ -154,18 +159,18 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
       styles={styles}
       onClose={onClose}
       testID={testID}
-      cardStyle={[styles.modalCard, detailStyles.detailCard, isCompact && { width: '100%', maxHeight: '95%' }]}
+      cardStyle={[styles.modalCard, detailStyles.detailCard, isCompact && themeStyle('components_LodgingDetailsDialog_1', {  }, (theme ?? _styleTheme))]}
       showTitle={false}
     >
         <ScrollView
-          style={{ flexShrink: 1, minHeight: 0 }}
-          contentContainerStyle={{ paddingBottom: 8 }}
+          style={themeStyle('components_LodgingDetailsDialog_2', {  }, (theme ?? _styleTheme))}
+          contentContainerStyle={themeStyle('components_LodgingDetailsDialog_3', {  }, (theme ?? _styleTheme))}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           nestedScrollEnabled
           contentInsetAdjustmentBehavior="automatic"
         >
-          <View style={[detailStyles.imageWrap, { height: imageHeight }]}>
+          <View style={[detailStyles.imageWrap, themeStyle('components_LodgingDetailsDialog_4', { imageHeight: imageHeight }, (theme ?? _styleTheme))]}>
             {imageUrl ? (
               <Image source={imageSource} style={detailStyles.image} resizeMode="cover" />
             ) : (
@@ -185,7 +190,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
           <View style={detailStyles.headerRow}>
             <View style={detailStyles.headerMeta}>
               <Text style={detailStyles.title} accessibilityRole="header">{lodging.name}</Text>
-              <Text style={[detailStyles.mutedText, { marginTop: 2 }]} numberOfLines={2}>
+              <Text style={[detailStyles.mutedText, themeStyle('components_LodgingDetailsDialog_5', {  }, (theme ?? _styleTheme))]} numberOfLines={2}>
                 {lodging.address || 'Address not available'}
               </Text>
             </View>
@@ -246,7 +251,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
           </View>
           {Platform.OS === 'web' && lodging ? <TripDayMap tripId={lodging.tripId} points={[{ ...lodging, kind: 'lodging', title: lodging.name, address: lodging.address }]} backendUrl={backendUrl} requestHeaders={requestHeaders} /> : mapImageUrl ? (
             <View style={detailStyles.mapCard}>
-              <Image style={[detailStyles.mapImage, { height: mapHeight }]} source={mapImageSource} resizeMode="cover" />
+              <Image style={[detailStyles.mapImage, themeStyle('components_LodgingDetailsDialog_6', { mapHeight: mapHeight }, (theme ?? _styleTheme))]} source={mapImageSource} resizeMode="cover" />
               <View style={detailStyles.mapMeta}>
                 <Text style={detailStyles.summaryLabel}>Location preview</Text>
                 <Text style={detailStyles.summaryValue} numberOfLines={2} onPress={() => onOpenMap(lodging.address)}>
@@ -300,145 +305,4 @@ const LodgingDetailsDialog = memo(LodgingDetailsDialogComponent);
 
 export default LodgingDetailsDialog;
 
-const buildDetailStyles = (theme?: AppTheme) => StyleSheet.create({
-  detailCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    padding: 0,
-    maxWidth: 420,
-    width: '100%',
-  },
-  imageWrap: {
-    position: 'relative',
-    height: 200,
-    backgroundColor: theme?.colors.surfaceMuted ?? '#e5e7eb',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  imageFallback: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(15,23,42,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    paddingBottom: 8,
-  },
-  headerMeta: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: theme?.colors.text ?? '#0f172a',
-  },
-  mutedText: {
-    color: theme?.colors.textMuted ?? '#64748b',
-    fontSize: 13,
-  },
-  statusBadge: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#34d399',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: theme?.mode === 'dark' ? 'rgba(52,211,153,0.15)' : '#ecfdf5',
-  },
-  statusText: {
-    color: theme?.mode === 'dark' ? '#6EE7B7' : '#047857',
-    fontWeight: '600',
-  },
-  summaryCard: {
-    paddingHorizontal: 16,
-    paddingTop: 0,
-    paddingBottom: 12,
-    backgroundColor: theme?.colors.surface ?? '#fff',
-  },
-  detailList: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  detailLabel: {
-    width: 110,
-    color: theme?.colors.text ?? '#0f172a',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  detailValue: {
-    flex: 1,
-    textAlign: 'left',
-    color: theme?.colors.text ?? '#111827',
-    fontSize: 13,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: theme?.colors.textMuted ?? '#475569',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  summaryValue: {
-    fontSize: 16,
-    color: theme?.colors.text ?? '#0f172a',
-    fontWeight: '600',
-    textAlign: 'right',
-    maxWidth: '70%',
-  },
-  mapCard: {
-    margin: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#e5e7eb',
-    overflow: 'hidden',
-    backgroundColor: theme?.colors.surface ?? '#fff',
-  },
-  mapImage: {
-    width: '100%',
-    height: 180,
-    backgroundColor: theme?.colors.surfaceMuted ?? '#e5e7eb',
-  },
-  mapMeta: {
-    padding: 12,
-    gap: 4,
-  },
-  mapLink: {
-    fontWeight: '600',
-  },
-  actionGroup: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-});
+const buildDetailStyles = (theme?: AppTheme) => StyleSheet.create(themeStyle('components_LodgingDetailsDialog_7', { theme: theme }, (theme ?? getStyleTheme('light', 'light'))));

@@ -4,9 +4,11 @@ import { isFeatureEnabled } from '../services/entitlementService';
 import { ensureUserInTrip, getCurrentDbProvider } from '../db';
 import { queryBlog } from '../db.postgres';
 import { randomUUID } from 'crypto';
-import { autoPublishFirebase, consentPublicationFirebase, getPublicationStatusFirebase, requestPublicationFirebase, revokePublicationFirebase } from '../blog/firebasePublicationRepository';
+import { autoPublishFirebase, consentPublicationFirebase, getPublicationReadinessFirebase, getPublicationStatusFirebase, requestPublicationFirebase, revokePublicationFirebase } from '../blog/firebasePublicationRepository';
 import { blogMediaRepository } from '../blog/repository';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { hasTripStarted, tripGoLiveDate } from '../utils/blogGoLive';
+import { loadPublicBlogDocument } from './publicBlogRoutes';
 
 const router = Router();
 const slug = (v: string) => v.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'trip';
@@ -84,7 +86,8 @@ const eligibleAdults = async (tripId: string): Promise<{ adults: string[]; missi
 //   - every account-holding group member has a date of birth showing 16+ (guests and invitees
 //     without an account are ignored);
 //   - no member's profile default (users.blog_default_public) is private;
-//   - public photos have alt text (same gate as a manual publication request).
+//   - public photos have alt text (same gate as a manual publication request);
+//   - the trip has started (the blog goes live at trip start, not before; see utils/blogGoLive.ts).
 // Travelers and followers can always read the blog; this only governs public web viewing.
 const altTextGateClear = async (userId: string, tripId: string): Promise<boolean> => {
   if (!(await isFeatureEnabled('trip_blog_alt_text'))) return true;
@@ -109,6 +112,8 @@ export const autoPublishBlogIfEligible = async (tripId: string, actorUserId: str
     queryBlog<{ epoch: number; state: string }>('SELECT epoch, state FROM blog_publication_epochs WHERE trip_id = $1 ORDER BY epoch DESC LIMIT 1', [tripId]),
   ]);
   if (blog.rows[0]?.public_opt_out) return false;
+  const startRow = await queryBlog<{ start_date: unknown }>('SELECT start_date FROM trips WHERE id = $1', [tripId]);
+  if (!hasTripStarted(startRow.rows[0]?.start_date)) return false;
   const prior = latest.rows[0];
   if (prior && (!options.force || prior.state === 'public' || prior.state === 'pending_consent')) return false;
   // Same reasoning: these three don't depend on each other, so fan them out together instead of
@@ -142,6 +147,68 @@ export const revokePublicBlog = async (tripId: string, userId: string): Promise<
   if (revoked.rows[0]) await syncBlogVisibility(tripId, Number(revoked.rows[0].epoch), 'revoked');
   return Boolean(revoked.rows[0]);
 };
+
+// Everything that stands between a blog and going public, so the UI can show it before anyone clicks.
+// Counts only: it never names the travelers who are missing a date of birth.
+router.get('/:tripId/blog/publication/readiness', authenticate, async (req: any, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return res.status(404).json({ error: 'Public sharing is not enabled' });
+    const userId = String(req.user.userId);
+    if (!(await ensureUserInTrip(req.params.tripId, userId))) return res.status(403).json({ error: 'Not authorized' });
+    if (getCurrentDbProvider() === 'firebase') return res.json(await getPublicationReadinessFirebase(req.params.tripId, userId));
+    const tripId = String(req.params.tripId);
+    const [blog, latest, trip, members, eligibility, privateDefaults, self] = await Promise.all([
+      queryBlog<{ public_opt_out: boolean }>('SELECT public_opt_out FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]),
+      queryBlog<{ state: string }>('SELECT state FROM blog_publication_epochs WHERE trip_id = $1 ORDER BY epoch DESC LIMIT 1', [tripId]),
+      queryBlog<{ start_date: unknown }>('SELECT start_date FROM trips WHERE id = $1', [tripId]),
+      queryBlog<{ user_id: string | null }>('SELECT gm.user_id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id WHERE t.id = $1 AND gm.removed_at IS NULL', [tripId]),
+      eligibleAdults(tripId),
+      queryBlog<{ count: string }>('SELECT COUNT(*) AS count FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND u.blog_default_public = FALSE', [tripId]),
+      queryBlog<{ date_of_birth: unknown }>('SELECT date_of_birth FROM users WHERE id = $1', [userId]),
+    ]);
+    const accountMembers = new Set(members.rows.filter((row) => row.user_id).map((row) => String(row.user_id))).size;
+    let altTextIssues: Array<{ assetId: string; dayDate: string }> = [];
+    if (await isFeatureEnabled('trip_blog_alt_text')) {
+      await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_PUBLICATION_READINESS_READ', requireConfiguredLimit: true });
+      await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', requireConfiguredLimit: true });
+      altTextIssues = await blogMediaRepository().listPublicationAccessibilityIssues(userId, tripId);
+    }
+    const missingBirthDate = eligibility.missingBirthDate;
+    const underAge = Math.max(0, accountMembers - eligibility.adults.length - missingBirthDate);
+    const optedOut = Boolean(blog.rows[0]?.public_opt_out);
+    const privateDefaultCount = Number(privateDefaults.rows[0]?.count ?? 0);
+    res.json({
+      state: latest.rows[0]?.state ?? 'private',
+      optedOut,
+      tripStarted: hasTripStarted(trip.rows[0]?.start_date),
+      goLiveDate: tripGoLiveDate(trip.rows[0]?.start_date),
+      missingBirthDate,
+      selfMissingBirthDate: self.rows[0]?.date_of_birth == null,
+      underAge,
+      privateDefaultCount,
+      altTextIssues: altTextIssues.slice(0, 50),
+      altTextIssueCount: altTextIssues.length,
+      ready: !optedOut && missingBirthDate === 0 && underAge === 0 && privateDefaultCount === 0 && altTextIssues.length === 0 && accountMembers > 0,
+    });
+  } catch (err) { res.status(err instanceof ApiLimitExceededError ? 429 : 400).json({ error: (err as Error).message }); }
+});
+
+// Preview as public: the same document the public page renders (public-audience items only), for
+// travelers on this trip. Always available -- before the trip starts, while private, or after an
+// opt-out -- and never cached or indexed, because it can show a blog that is not published.
+router.get('/:tripId/blog/preview', authenticate, async (req: any, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog'))) return res.status(404).json({ error: 'Trip blog is not enabled' });
+    if (!(await ensureUserInTrip(req.params.tripId, String(req.user.userId)))) return res.status(403).json({ error: 'Not authorized' });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_DOCUMENT_READ', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', units: 8, requireConfiguredLimit: true });
+    const document = await loadPublicBlogDocument(String(req.params.tripId));
+    if (!document) return res.status(404).json({ error: 'Trip blog not found' });
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Robots-Tag', 'noindex');
+    res.json(document);
+  } catch (err) { res.status(err instanceof ApiLimitExceededError ? 429 : 400).json({ error: (err as Error).message }); }
+});
 
 router.get('/:tripId/blog/publication/status', authenticate, async (req: any, res) => {
   try {

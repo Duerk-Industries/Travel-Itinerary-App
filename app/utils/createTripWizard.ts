@@ -11,7 +11,7 @@ export type TripDates = {
   startMonth: string;
   startYear: string;
   durationDays: string;
-  mode: 'range' | 'month';
+  mode: 'range' | 'month' | 'duration';
 };
 
 export type ParticipantInput = {
@@ -106,6 +106,10 @@ export const validateTripDetails = (details: TripDetails): string | null => {
 };
 
 export const validateTripDates = (dates: TripDates): string | null => {
+  if (dates.mode === 'duration') {
+    const days = Number(dates.durationDays);
+    return Number.isSafeInteger(days) && days > 0 ? null : 'Enter a positive whole number of days.';
+  }
   if (dates.mode === 'range') {
     const { startDate, endDate } = dates;
     if (!startDate && !endDate) return null;
@@ -121,7 +125,7 @@ export const validateTripDates = (dates: TripDates): string | null => {
   const { startMonth, startYear, durationDays } = dates;
   if (!startMonth && !startYear && !durationDays) return null;
   if (!startMonth || !startYear || !durationDays) {
-    return 'Enter month, year, and number of days.';
+    return 'Enter a month and number of days.';
   }
   const monthNum = Number(startMonth);
   const yearNum = Number(startYear);

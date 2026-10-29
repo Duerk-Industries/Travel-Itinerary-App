@@ -8,6 +8,24 @@ Tests run against a real HTTP server (in-memory, Firebase emulator, or PostgreSQ
 
 ---
 
+## Mobile keyboard and selector layering regressions
+
+`app/e2e/mobile-input-regressions.test.ts` runs the real web frontend with mocked API responses and an isolated test session. It does not require a backend or modify an existing account.
+
+```sh
+npx playwright test --config playwright.mobile-input.config.ts
+```
+
+For an already running frontend, set `MOBILE_INPUT_BASE_URL` (for example, `http://localhost:8081`). Optionally set `MOBILE_INPUT_BROWSER_CHANNEL=chrome` to use installed Chrome instead of Playwright's bundled Chromium.
+
+The browser tests cover 390px and 1280px widths. They simulate visual viewport heights of 480px and 360px without shrinking the layout viewport, plus browser panning while the keyboard is open. Activity Save, Expense Save, and Profile Save must fit within the visible area and pass a click-point occlusion check. Expense Covering dropdowns must remain clickable and support actual browser keyboard selection without disturbing another row.
+
+Native regression tests in `selectFieldLayering.test.tsx`, `ExpenseCovering.test.tsx`, and `keyboardViewport.test.tsx` check independent modal windows, clipped parents, long option lists, selections, clearing rules, dismissal, and keyboard boundary restoration. They do not replace physical iOS/Android keyboard and popup testing.
+
+The same browser suite also checks packing-list traveler column headers at 390px and 1280px. With 12 travelers and 30 items, every name must match its column and align with that traveler's checkboxes in both the first and last item rows. The checks repeat after horizontal and vertical scrolling, and the visible header must remain at the top without being covered. `packingListMatrixSticky.test.tsx` additionally checks header/checkbox ordering on web, iOS, and Android, including duplicate first names and reordered travelers.
+
+---
+
 ## Suite 1 — Authentication (`auth.test.ts`)
 
 **Goal:** Verify that authentication flows work end-to-end, session tokens are persisted, and the performance budget for login is met.

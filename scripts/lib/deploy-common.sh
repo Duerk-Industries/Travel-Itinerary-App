@@ -208,6 +208,8 @@ const config = {
       },
     ],
     rewrites: [
+      { source: '/public/blog/**', run: { serviceId, region } },
+      { source: '/sitemap-trip-blogs.xml', run: { serviceId, region } },
       { source: '/api/**', run: { serviceId, region } },
       { source: '/socket.io/**', run: { serviceId, region } },
       { source: '**', destination: '/index.html' },

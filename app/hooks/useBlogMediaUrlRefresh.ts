@@ -6,10 +6,11 @@ import { AppState, Platform } from 'react-native';
 const REFRESH_AFTER_MS = 45 * 60_000;
 
 type BlogWithMedia = {
+  tripPhotos?: Array<{ primaryUrl?: string | null; thumbnailUrl?: string | null }>;
   days?: Array<{ items?: Array<{ primaryUrl?: string | null; thumbnailUrl?: string | null; assets?: Array<{ primaryUrl?: string | null; thumbnailUrl?: string | null }> }> }>;
 } | null;
 
-const hasMediaUrls = (blog: BlogWithMedia): boolean => Boolean(blog?.days?.some((day) => day.items?.some((item) =>
+const hasMediaUrls = (blog: BlogWithMedia): boolean => Boolean(blog?.tripPhotos?.some((photo) => photo.primaryUrl || photo.thumbnailUrl) || blog?.days?.some((day) => day.items?.some((item) =>
   item.primaryUrl || item.thumbnailUrl || item.assets?.some((asset) => asset.primaryUrl || asset.thumbnailUrl)
 )));
 

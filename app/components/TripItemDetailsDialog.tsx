@@ -1,8 +1,11 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import AddToCalendarButton from './AddToCalendarButton';
 import { type CalendarEvent } from '../utils/calendarEvents';
 import React, { memo, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+
 import DialogShell from './DialogShell';
 
 export type TripItemDetailRow = {
@@ -38,7 +41,7 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
   status,
   rows,
   styles,
-  theme,
+  theme: _providedTheme,
   readOnly = false,
   onClose,
   onEdit,
@@ -48,42 +51,9 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
   secondaryAction = null,
   testID,
 }) => {
-  const detailStyles = useMemo(() => StyleSheet.create({
-    card: {
-      width: '100%',
-      maxWidth: 520,
-      maxHeight: '92%',
-      borderRadius: 16,
-      padding: 0,
-      overflow: 'hidden',
-    },
-    header: {
-      paddingHorizontal: 18,
-      paddingTop: 18,
-      paddingBottom: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme?.colors.border ?? '#e5e7eb',
-    },
-    headerLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    title: { flex: 1, fontSize: 20, fontWeight: '700', color: theme?.colors.text ?? '#0f172a' },
-    subtitle: { marginTop: 4, color: theme?.colors.textMuted ?? '#64748b' },
-    status: {
-      borderWidth: 1,
-      borderColor: theme?.colors.border ?? '#cbd5e1',
-      borderRadius: 999,
-      paddingHorizontal: 9,
-      paddingVertical: 4,
-    },
-    statusText: { color: theme?.colors.text ?? '#0f172a', fontSize: 12, fontWeight: '600' },
-    close: { padding: 4 },
-    closeText: { fontSize: 18, color: theme?.colors.textMuted ?? '#64748b' },
-    body: { paddingHorizontal: 18, paddingVertical: 12 },
-    row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 7 },
-    label: { width: 125, color: theme?.colors.text ?? '#0f172a', fontWeight: '700', fontSize: 13 },
-    value: { flex: 1, color: theme?.colors.text ?? '#111827', fontSize: 13 },
-    footer: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, padding: 16, borderTopWidth: 1, borderTopColor: theme?.colors.border ?? '#e5e7eb' },
-    actionGroup: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  }), [theme]);
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const detailStyles = useMemo(() => StyleSheet.create(themeStyle('components_TripItemDetailsDialog_1', { theme: theme }, (theme ?? _styleTheme))), [theme, _styleTheme]);
 
   if (!visible) return null;
   return (
@@ -106,12 +76,12 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
         </View>
         {subtitle ? <Text style={detailStyles.subtitle} numberOfLines={3}>{subtitle}</Text> : null}
       </View>
-      <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={detailStyles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView style={themeStyle('components_TripItemDetailsDialog_2', {  }, (theme ?? _styleTheme))} contentContainerStyle={detailStyles.body} keyboardShouldPersistTaps="handled">
         {rows.map((row) => (
           <View key={row.label} style={detailStyles.row}>
             <Text style={detailStyles.label}>{row.label}</Text>
             {row.onPress ? (
-              <TouchableOpacity style={{ flex: 1 }} onPress={row.onPress}><Text style={[detailStyles.value, styles.linkText]}>{row.value}</Text></TouchableOpacity>
+              <TouchableOpacity style={themeStyle('components_TripItemDetailsDialog_3', {  }, (theme ?? _styleTheme))} onPress={row.onPress}><Text style={[detailStyles.value, styles.linkText]}>{row.value}</Text></TouchableOpacity>
             ) : <Text style={detailStyles.value}>{row.value || '-'}</Text>}
           </View>
         ))}

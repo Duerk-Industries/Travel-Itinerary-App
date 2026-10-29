@@ -303,38 +303,8 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-router.post('/:id/vote', async (req, res) => {
-  const userId = (req as any).user.userId as string;
-  const dto = readDto(voteOrRatingDto, req.body, res);
-  if (!dto) return;
-  const value = dto.value;
-  const lodging = await getLodgingById(req.params.id);
-  if (!lodging) {
-    res.status(404).json({ error: 'Lodging not found' });
-    return;
-  }
-  const tripId = String((lodging as any).tripId ?? (lodging as any).trip_id ?? '');
-  if (!tripId) {
-    res.status(400).json({ error: 'Lodging has no trip' });
-    return;
-  }
-  const membership = await ensureUserInTrip(tripId, userId);
-  if (!membership) {
-    res.status(403).json({ error: 'Only trip members may vote' });
-    return;
-  }
-  const status = normalizeItineraryStatus((lodging as any).status);
-  if (status !== 'Proposed') {
-    res.status(400).json({ error: 'Voting is only allowed for Proposed items' });
-    return;
-  }
-  await castItemVote(userId, tripId, 'lodging', req.params.id, value, 'vote');
-  const summary = await getItemVoteSummaries(userId, tripId, 'lodging', [req.params.id], 'vote');
-  res.json({
-    itemId: req.params.id,
-    netVotes: summary[req.params.id]?.netVotes ?? 0,
-    userVote: summary[req.params.id]?.userVote ?? value,
-  });
+router.post('/:id/vote', (_req, res) => {
+  res.status(410).json({ error: 'Proposal voting is no longer available' });
 });
 
 router.post('/:id/rating', async (req, res) => {

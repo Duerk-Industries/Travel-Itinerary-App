@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // A multiline TextInput that is as tall as its text: one line when empty or short, growing as
 // lines are added, and only scrollable once the text needs more than `maxLines` lines. A plain
 // multiline TextInput keeps a fixed height (two rows on web), which leaves blank space under a short
@@ -14,6 +16,7 @@ type Props = TextInputProps & {
 };
 
 const AutoGrowTextInput = forwardRef<TextInput, Props>(({ minHeight = 40, maxLines = 8, lineHeight = 20, style, onContentSizeChange, ...rest }, ref) => {
+  const _styleTheme = useStyleTheme();
   const [contentHeight, setContentHeight] = useState(0);
   // minHeight already includes padding, so the cap is "padding + maxLines of text".
   const maxHeight = minHeight - lineHeight + maxLines * lineHeight;
@@ -29,7 +32,7 @@ const AutoGrowTextInput = forwardRef<TextInput, Props>(({ minHeight = 40, maxLin
         setContentHeight(Math.ceil(event.nativeEvent.contentSize.height));
         onContentSizeChange?.(event);
       }}
-      style={[style, { height, minHeight, maxHeight }]}
+      style={[style, themeStyle('components_AutoGrowTextInput_1', { height: height, minHeight: minHeight, maxHeight: maxHeight }, _styleTheme)]}
     />
   );
 });

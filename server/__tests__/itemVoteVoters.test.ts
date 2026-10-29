@@ -5,15 +5,15 @@ import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
 import { registerAndLoginWebUser } from './helpers';
 
-// Item lists carry thumbs-up/down counts and who voted each way, so clients can show voter
-// avatars next to the counts — not just the net total.
-describe('vote summaries include per-direction counts and voter ids', () => {
+// Retired proposal endpoints must not create new vote records.
+describe('proposal voting is retired', () => {
   const uniq = Date.now();
   const userA = { email: `voters-a+${uniq}@example.com`, firstName: 'Ava', lastName: 'Voter', password: 'testtest' };
   const userB = { email: `voters-b+${uniq}@example.com`, firstName: 'Ben', lastName: 'Voter', password: 'testtest' };
   let a: { token: string; userId: string };
   let b: { token: string; userId: string };
   let tripId: string;
+  let groupId: string;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
@@ -22,7 +22,7 @@ describe('vote summaries include per-direction counts and voter ids', () => {
     b = await registerAndLoginWebUser(userB);
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${a.token}`).expect(200);
-    const groupId = groups.body[0]?.id as string;
+    groupId = groups.body[0]?.id as string;
     const trip = await request(app)
       .post('/api/trips')
       .set('Authorization', `Bearer ${a.token}`)
@@ -45,7 +45,17 @@ describe('vote summaries include per-direction counts and voter ids', () => {
     await closePool();
   });
 
-  it('returns upVotes/downVotes and the voters for each lodging', async () => {
+  it('records the trip creator separately from the group owner', async () => {
+    const created = await request(app).post('/api/trips').set('Authorization', `Bearer ${b.token}`)
+      .send({ name: 'Member-created trip', groupId }).expect(201);
+    expect(created.body.createdBy).toBe(b.userId);
+    const listed = await request(app).get('/api/trips').set('Authorization', `Bearer ${a.token}`).expect(200);
+    expect(listed.body.find((trip: { id: string }) => trip.id === created.body.id).createdBy).toBe(b.userId);
+    const fetched = await request(app).get(`/api/trips/${created.body.id}`).set('Authorization', `Bearer ${a.token}`).expect(200);
+    expect(fetched.body.createdBy).toBe(b.userId);
+  });
+
+  it('rejects proposal votes from both travelers', async () => {
     const lodging = await request(app)
       .post('/api/lodgings')
       .set('Authorization', `Bearer ${a.token}`)
@@ -53,13 +63,13 @@ describe('vote summaries include per-direction counts and voter ids', () => {
       .expect(201);
     const lodgingId = lodging.body.id as string;
 
-    await request(app).post(`/api/lodgings/${lodgingId}/vote`).set('Authorization', `Bearer ${a.token}`).send({ value: 1 }).expect(200);
-    await request(app).post(`/api/lodgings/${lodgingId}/vote`).set('Authorization', `Bearer ${b.token}`).send({ value: -1 }).expect(200);
+    await request(app).post(`/api/lodgings/${lodgingId}/vote`).set('Authorization', `Bearer ${a.token}`).send({ value: 1 }).expect(410);
+    await request(app).post(`/api/lodgings/${lodgingId}/vote`).set('Authorization', `Bearer ${b.token}`).send({ value: -1 }).expect(410);
 
     const list = await request(app).get(`/api/lodgings?tripId=${tripId}`).set('Authorization', `Bearer ${a.token}`).expect(200);
     const row = list.body.find((l: any) => l.id === lodgingId);
-    expect(row).toMatchObject({ netVotes: 0, userVote: 1, upVotes: 1, downVotes: 1 });
-    expect(row.upVoterIds).toEqual([a.userId]);
-    expect(row.downVoterIds).toEqual([b.userId]);
+    expect(row).toMatchObject({ netVotes: 0, userVote: null, upVotes: 0, downVotes: 0 });
+    expect(row.upVoterIds).toEqual([]);
+    expect(row.downVoterIds).toEqual([]);
   });
 });

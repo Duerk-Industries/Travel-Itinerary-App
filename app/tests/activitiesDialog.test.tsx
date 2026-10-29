@@ -25,6 +25,7 @@ jest.mock('react-native', () => {
     SectionList: 'SectionList',
     Switch: 'Switch',
     Modal: 'Modal',
+    KeyboardAvoidingView: 'KeyboardAvoidingView',
     SafeAreaView: 'SafeAreaView',
     ActivityIndicator: 'ActivityIndicator',
     AppState: {
@@ -127,6 +128,11 @@ const renderActivityHarness = (
         styles={styles as any}
         fetchTours={jest.fn()}
         mode="wizard"
+        lodgings={[
+          { id: 'hotel-late', name: 'Late Hotel', checkInDate: '2027-05-07' },
+          { id: 'hotel-1', name: 'Central Hotel', checkInDate: '2027-05-04', checkOutDate: '2027-05-06' },
+          { id: 'hotel-early', name: 'Early Hotel', checkInDate: '2027-05-01' },
+        ]}
         defaultActivityDate={defaultActivityDate}
         featureStandardizedItemDialogs={featureStandardizedItemDialogs}
         theme={theme}
@@ -170,6 +176,57 @@ describe('Activity dialog layout', () => {
     expect(getByText('Museum Tour')).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+  });
+
+  it('saves an optional activity near a hotel without assigning a day', async () => {
+    const { getByTestId, getByPlaceholderText, getByText, queryByTestId } = renderActivityHarness([], '2027-05-01');
+    fireEvent.press(getByTestId('activity-add'));
+    fireEvent.press(within(getByTestId('activity-scheduling')).getByLabelText('Activity scheduling'));
+    fireEvent.press(getByTestId('activity-scheduling-option-optional'));
+    expect(getByText('Add Optional Activity')).toBeTruthy();
+    fireEvent.changeText(getByPlaceholderText('Activity name'), 'Nearby museum');
+    fireEvent.press(within(getByTestId('activity-near-hotel')).getByLabelText('Near hotel'));
+    fireEvent.press(getByTestId('activity-near-hotel-option-hotel-1'));
+    fireEvent.press(getByTestId('activity-save'));
+    await waitFor(() => expect(queryByTestId('activity-form-modal')).toBeNull());
+    expect(getByText('Optional')).toBeTruthy();
+  });
+
+  it('switches between date and hotel dropdowns and orders hotels by check-in date', () => {
+    const { getByTestId, queryByTestId } = renderActivityHarness([], '2027-05-02');
+    fireEvent.press(getByTestId('activity-add'));
+    expect(within(getByTestId('activity-scheduling')).getByText('Scheduled')).toBeTruthy();
+    expect(getByTestId('activity-date')).toBeTruthy();
+    expect(queryByTestId('activity-near-hotel')).toBeNull();
+    fireEvent.press(within(getByTestId('activity-scheduling')).getByLabelText('Activity scheduling'));
+    fireEvent.press(getByTestId('activity-scheduling-option-optional'));
+    expect(queryByTestId('activity-date')).toBeNull();
+    expect(within(getByTestId('activity-near-hotel')).getByText('No hotel — available every day')).toBeTruthy();
+    fireEvent.press(within(getByTestId('activity-near-hotel')).getByLabelText('Near hotel'));
+    const hotelOptions = within(getByTestId('activity-near-hotel-options')).getAllByTestId(/^activity-near-hotel-option-/);
+    expect(hotelOptions.map((option) => option.props.testID)).toEqual([
+      'activity-near-hotel-option-none', 'activity-near-hotel-option-hotel-early',
+      'activity-near-hotel-option-hotel-1', 'activity-near-hotel-option-hotel-late',
+    ]);
+    fireEvent.press(getByTestId('activity-near-hotel-option-none'));
+    fireEvent.press(within(getByTestId('activity-scheduling')).getByLabelText('Activity scheduling'));
+    fireEvent.press(getByTestId('activity-scheduling-option-none'));
+    expect(queryByTestId('activity-near-hotel')).toBeNull();
+    expect(within(getByTestId('activity-form-modal')).getByText('2027-05-02')).toBeTruthy();
+  });
+
+  it('places optional activities after the nearby hotel checkout day and unlinked options last', () => {
+    const { getAllByTestId } = renderActivityHarness([
+      { ...sampleTour, id: 'optional-nearby', date: '', nearLodgingId: 'hotel-1', startTime: '00:01' },
+      { ...sampleTour, id: 'next-day', date: '2027-05-07' },
+      { ...sampleTour, id: 'optional-anywhere', date: '', nearLodgingId: null },
+      { ...sampleTour, id: 'checkout-late', date: '2027-05-06', startTime: '23:59' },
+      { ...sampleTour, id: 'checkout-early', date: '2027-05-06', startTime: '08:00' },
+    ]);
+    expect(getAllByTestId(/^activity-row-/).map((row) => row.props.testID)).toEqual([
+      'activity-row-checkout-early', 'activity-row-checkout-late', 'activity-row-optional-nearby',
+      'activity-row-next-day', 'activity-row-optional-anywhere',
+    ]);
   });
 
   it('defaults new activities to the trip first date when provided', () => {
@@ -230,7 +287,7 @@ describe('Activity dialog layout', () => {
     expect(getByText('Description')).toBeTruthy();
     expect(getByText('Paid by')).toBeTruthy();
     expect(getByText('Attendees')).toBeTruthy();
-    expect(getByText('Votes')).toBeTruthy();
+    expect(queryByText('Votes')).toBeNull();
     expect(getByText('Actions')).toBeTruthy();
     expect(getByText('Viator')).toBeTruthy();
     expect(getByText('TOUR1')).toBeTruthy();

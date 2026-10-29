@@ -1,4 +1,11 @@
 // @ts-nocheck
+import ActionDropdown from '../components/ActionDropdown';
+import BannerPicturePicker from '../components/BannerPicturePicker';
+import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
+
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 import AddToCalendarButton from '../components/AddToCalendarButton';
 import { activityCalendarEvent, uiTransferCalendarEvent, lodgingCalendarEvent, rentalCalendarEvent, makeCalendarEvent, type CalendarEvent } from '../utils/calendarEvents';
 import { normalizeTransferType } from '../utils/transferTypes';
@@ -33,6 +40,7 @@ import {
 } from '../utils/tripDates';
 import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeDateString } from '../utils/normalizeDateString';
+import { dayToOpen, localIsoDate } from '../utils/tripDayFocus';
 import {
   buildFlightPayload,
   createFlightDraftForTrip,
@@ -51,9 +59,13 @@ import {
   type LodgingDraft,
 } from '../tabs/lodging';
 import {
+  ACTIVITY_TYPES,
   buildActivityPayload,
   createInitialActivityState,
   createActivityForTrip,
+  fetchActivitySuggestions,
+  type ActivityMedia,
+  type ActivitySuggestion,
   type TourDraft,
 } from '../tabs/activities';
 import {
@@ -64,7 +76,6 @@ import {
 } from '../tabs/carRentals';
 import AvatarStack from '../components/AvatarStack';
 import { formatStayRange, stayDayNote } from '../utils/stayDates';
-import { linkTextColor } from '../theme/theme';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import ActivityEditForm from '../components/ActivityEditForm';
 import CarRentalEditForm from '../components/CarRentalEditForm';
@@ -90,8 +101,8 @@ import LodgingDialog from '../components/LodgingDialog';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
 import GetYourGuideCta from '../components/GetYourGuideCta';
-import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
-import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
+import { optionalActivitiesForDay } from '../utils/optionalActivities';
+import AddItemPopover, { type AddItemActivityOption, type AddItemKind } from '../components/AddItemPopover';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
 import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
 import ItineraryDocumentImport, { canShowItineraryDocumentImport } from '../components/ItineraryDocumentImport';
@@ -112,6 +123,7 @@ import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itin
 import { useImageSourceGetter } from '../utils/imageSource';
 import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 import { printItinerary as openPrintableItinerary } from '../utils/printableItinerary';
+import CsvTransferControls from '../components/CsvTransferControls';
 import { startItemSaveTask } from '../utils/analytics/track';
 
 type Trip = {
@@ -153,6 +165,7 @@ type Lodging = {
 };
 
 type Tour = {
+  nearLodgingId?: import('../../server/src/types').Activity['nearLodgingId'];
   id: string;
   status?: string;
   date: string;
@@ -230,6 +243,8 @@ type OverviewTabProps = {
   aiItineraryEtaSeconds?: number | null;
   aiItineraryFailedMessage?: string | null;
   onRetryAiItinerary?: (tripId: string) => void;
+  /** Present only when AI itinerary generation is available; starts generation for the open trip. */
+  onGenerateAiItinerary?: (tripId: string) => void;
   onDismissAiItineraryError?: (tripId: string) => void;
   // Reflects the `ai_itinerary_generation` feature flag (+ tier entitlement)
   // for the current user. When false, the Retry button is hidden since a
@@ -238,6 +253,7 @@ type OverviewTabProps = {
   editSignal?: number;
   goToDay1Signal?: number;
   onUpdateCurrency?: (tripId: string, currency: string) => void;
+  onOpenShareTrip?: () => void;
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
@@ -270,6 +286,9 @@ type OverviewTabProps = {
   featureItineraryReactions?: boolean;
   featureItineraryItemKinds?: boolean;
   featureItineraryDocumentImport?: boolean;
+  // Day-plan (notes, checklists, places) CSV import/export.
+  featureDayPlanCsvImport?: boolean;
+  featureDayPlanCsvExport?: boolean;
   userTier?: string | null;
   /** Defined in offline mode (including null when this trip has no itinerary). */
   cachedItinerary?: {
@@ -469,6 +488,9 @@ export const isWithinOverviewWeatherWindow = (
   return currentTime >= startTime - 7 * msPerDay && currentTime <= endTime + msPerDay;
 };
 
+/** The day's optional activities plus template suggestions offered in the "Add activity" menu, in all. */
+const MAX_POPOVER_ACTIVITIES = 4;
+
 const localTodayIso = (): string => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -495,11 +517,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   aiItineraryEtaSeconds,
   aiItineraryFailedMessage,
   onRetryAiItinerary,
+  onGenerateAiItinerary,
   onDismissAiItineraryError,
   aiItineraryGenerationAllowed = true,
   editSignal,
   goToDay1Signal,
   onUpdateCurrency,
+  onOpenShareTrip,
   onOpenAddress,
   onRefreshTrips,
   onRefreshGroups,
@@ -512,7 +536,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onUpdateCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
-  theme,
+  theme: _providedTheme,
   readOnly = false,
   autoOpenAdd = null,
   onAutoOpenAddHandled,
@@ -521,13 +545,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   featureItineraryReactions = true,
   featureItineraryItemKinds = true,
   featureItineraryDocumentImport = false,
+  featureDayPlanCsvImport = false,
+  featureDayPlanCsvExport = false,
   userTier,
   cachedItinerary,
   onItineraryCacheChange,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
-  const tripDateCellStyle = isPhoneLayout ? { gap: 4 } : { gap: 4, flex: 1, maxWidth: 220 };
+  const tripDateCellStyle = themeStyle('tabs_overview_98', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme));
   const isTabletLayout = viewportWidth >= 700 && viewportWidth < 1100;
   const dayHeroHeight = Math.max(190, Math.min(300, viewportWidth * (isPhoneLayout ? 0.52 : 0.3)));
   const lodgingThumbnailSize = isPhoneLayout ? 64 : isTabletLayout ? 72 : 80;
@@ -543,22 +571,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const lodgingImageStyle = useMemo(() => stripResizeMode(styles.lodgingImage), [stripResizeMode, styles.lodgingImage]);
   const getImageSource = useImageSourceGetter();
   const responsiveCardStyle = useMemo(
-    () => ({
-      padding: isPhoneLayout ? 12 : 16,
-      borderRadius: isPhoneLayout ? 10 : 12,
-    }),
-    [isPhoneLayout]
+    () => (themeStyle('tabs_overview_1', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))),
+    [isPhoneLayout, _styleTheme]
   );
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryId, setItineraryId] = useState<string | null>(null);
+  // Bumped after a day-plan CSV import so the itinerary is read again, bypassing the cache.
+  const [itineraryReload, setItineraryReload] = useState(0);
   const [itineraryPlanMarkdown, setItineraryPlanMarkdown] = useState<string | null>(null);
   const [showItineraryPlanNotes, setShowItineraryPlanNotes] = useState(false);
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
+  const [schedulingOptionalActivity, setSchedulingOptionalActivity] = useState(false);
   const [activeAddDialog, setActiveAddDialog] = useState<AddItemKind | null>(null);
   const [addPopoverDay, setAddPopoverDay] = useState<number | null>(null);
+  const [addPopoverDate, setAddPopoverDate] = useState<string | null>(null);
   const [isEditingDayItems, setIsEditingDayItems] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [documentImportOpen, setDocumentImportOpen] = useState(false);
@@ -651,6 +680,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
   const [visibleMapDate, setVisibleMapDate] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // One scrollable list of every day's plan, in place of the day cards (the 'Whole trip' pill).
+  const [wholeTripView, setWholeTripView] = useState(false);
+  const [confirmGenerate, setConfirmGenerate] = useState(false);
+  const [pictureDay, setPictureDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
   const [blogDayImages, setBlogDayImages] = useState<Record<string, string>>({});
   const [dayWeather, setDayWeather] = useState<Record<string, OverviewWeather>>({});
@@ -712,7 +745,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   useEffect(() => {
     const loadItinerary = async () => {
-      if (cachedItinerary !== undefined) {
+      if (cachedItinerary !== undefined && itineraryReload === 0) {
         setItineraryDetails((cachedItinerary?.details ?? []) as ItineraryDetail[]);
         setItineraryId(cachedItinerary?.id ?? null);
         setItineraryPlanMarkdown(cachedItinerary?.planMarkdown ?? null);
@@ -766,10 +799,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       }
     };
     loadItinerary();
-  }, [backendUrl, cachedItinerary, headers, trip?.id]);
+  }, [backendUrl, cachedItinerary, headers, trip?.id, itineraryReload]);
 
   useEffect(() => {
-    if (cachedItinerary !== undefined || !onItineraryCacheChange || !trip?.id) return;
+    if ((cachedItinerary !== undefined && itineraryReload === 0) || !onItineraryCacheChange || !trip?.id) return;
     onItineraryCacheChange(trip.id, {
       id: itineraryId,
       planMarkdown: itineraryPlanMarkdown,
@@ -782,6 +815,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     cachedItinerary,
     onItineraryCacheChange,
     trip?.id,
+    itineraryReload,
   ]);
 
   const sortedItineraryDetails = useMemo(
@@ -858,7 +892,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     async (defaultDay: number): Promise<string | null> => {
       if (itineraryId) return itineraryId;
       if (!trip?.id) return null;
-      const days = computeTripDays(trip.startDate ?? null, trip.endDate ?? null) ?? defaultDay ?? 1;
+      const days = computeTripDays(trip.startDate ?? null, trip.endDate ?? null) ?? Math.max(trip.durationDays ?? 1, defaultDay ?? 1);
       const res = await fetch(`${backendUrl}/api/itineraries`, {
         method: 'POST',
         headers: jsonHeaders,
@@ -878,7 +912,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       if (newId) setItineraryId(newId);
       return newId;
     },
-    [backendUrl, itineraryId, jsonHeaders, trip?.id, trip?.destination, trip?.name, trip?.startDate, trip?.endDate]
+    [backendUrl, itineraryId, jsonHeaders, trip?.id, trip?.destination, trip?.name, trip?.startDate, trip?.endDate, trip?.durationDays]
   );
 
   const postNewDetail = useCallback(
@@ -928,38 +962,97 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   const openCustomActivityDialog = useCallback(
-    (dayIndex?: number | null) => {
+    (date?: string | null) => {
       setEditingTourId(null);
-      setTourDraft(createInitialActivityState(getDateForDayIndex(dayIndex)));
+      setTourDraft(createInitialActivityState(date));
       setShowAddTour(true);
     },
-    [getDateForDayIndex]
+    []
   );
 
   const handlePopoverSelect = useCallback((kind: AddItemKind) => {
     if (kind === 'activity') {
       setAddPopoverOpen(false);
       setActiveAddDialog(null);
-      openCustomActivityDialog(addPopoverDay ?? 1);
+      openCustomActivityDialog(addPopoverDate ?? getDateForDayIndex(addPopoverDay));
       return;
     }
     setActiveAddDialog(kind);
     setAddPopoverOpen(false);
-  }, [addPopoverDay, openCustomActivityDialog]);
+  }, [addPopoverDay, addPopoverDate, getDateForDayIndex, openCustomActivityDialog]);
 
-  const handleAddPlace = useCallback(
-    async (input: PlacePickerSubmit) => {
-      const ok = await postNewDetail(input.day, {
-        day: input.day,
-        time: input.time ?? null,
-        activity: input.name,
-        kind: 'place',
-        noteBody: input.notes ?? null,
+  const availableOptionalActivities = optionalActivitiesForDay(tours, lodgings, addPopoverDate ?? getDateForDayIndex(addPopoverDay), trip ?? {});
+  // The "Add activity" menu offers the day's optional activities first, then template suggestions for the city the
+  // day's lodging puts the traveler in, and never more than this many in all.
+  const popoverDate = addPopoverDate ?? getDateForDayIndex(addPopoverDay);
+  const popoverToken = (headers.Authorization ?? '').replace(/^Bearer\s+/i, '');
+  const [popoverSuggestions, setPopoverSuggestions] = useState<ActivitySuggestion[]>([]);
+  const [popoverMedia, setPopoverMedia] = useState<Record<string, ActivityMedia>>({});
+  useEffect(() => {
+    if (!addPopoverOpen || readOnly || !trip?.id || !popoverDate || !popoverToken) {
+      setPopoverSuggestions([]);
+      setPopoverMedia({});
+      return undefined;
+    }
+    let cancelled = false;
+    fetchActivitySuggestions({ backendUrl, activeTripId: trip.id, token: popoverToken, date: popoverDate }).then((found) => {
+      if (cancelled) return;
+      setPopoverSuggestions(found.suggestions);
+      setPopoverMedia(found.activityMedia);
+    });
+    return () => { cancelled = true; };
+  }, [addPopoverOpen, readOnly, trip?.id, popoverDate, popoverToken, backendUrl]);
+  const popoverOptionalOptions: AddItemActivityOption[] = availableOptionalActivities.slice(0, MAX_POPOVER_ACTIVITIES).map((activity) => ({
+    id: activity.id,
+    name: activity.name,
+    description: popoverMedia[activity.id]?.description || String(activity.notes ?? '').split('\n')[0].trim() || undefined,
+    image: popoverMedia[activity.id]?.image ?? null,
+  }));
+  const popoverSuggestedOptions: AddItemActivityOption[] = popoverSuggestions
+    .slice(0, Math.max(0, MAX_POPOVER_ACTIVITIES - popoverOptionalOptions.length))
+    .map((suggestion) => ({ id: suggestion.key, name: suggestion.name, description: suggestion.description || undefined, image: suggestion.image }));
+  // A suggestion goes through the normal editor, filled in for this day, so the traveler confirms it before it is saved.
+  const selectSuggestedActivity = (key: string) => {
+    const suggestion = popoverSuggestions.find((item) => item.key === key);
+    if (!suggestion || readOnly) return;
+    const draft: TourDraft = {
+      ...createInitialActivityState(popoverDate),
+      date: popoverDate ?? '',
+      status: suggestion.bookAhead ? 'Needs Booking' : 'Proposed',
+      activityType: ACTIVITY_TYPES.includes(suggestion.activityType as any) ? (suggestion.activityType as TourDraft['activityType']) : 'Tour',
+      name: suggestion.name,
+      startLocation: suggestion.startLocation,
+      startTime: suggestion.startTime,
+      duration: suggestion.duration,
+      notes: suggestion.details || suggestion.description,
+      travelerIds: overviewTravelerIds,
+      paidBy: defaultPayerId ? [defaultPayerId] : [],
+    };
+    setAddPopoverOpen(false);
+    setActiveAddDialog(null);
+    setEditingTourId(null);
+    setTourDraft(draft);
+    setShowAddTour(true);
+  };
+  const scheduleOptionalActivity = async (id: string) => {
+    if (readOnly || schedulingOptionalActivity) return;
+    const date = addPopoverDate ?? getDateForDayIndex(addPopoverDay);
+    if (!date || !availableOptionalActivities.some((activity) => activity.id === id)) return;
+    setSchedulingOptionalActivity(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/activities/${encodeURIComponent(id)}`, {
+        method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ date }),
       });
-      if (ok) closeAllAddDialogs();
-    },
-    [postNewDetail, closeAllAddDialogs]
-  );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Unable to schedule this activity.');
+      }
+      setAddPopoverOpen(false);
+      onTourDataChanged();
+    } catch (error) {
+      Alert.alert(error instanceof Error ? error.message : 'Unable to schedule this activity.');
+    } finally { setSchedulingOptionalActivity(false); }
+  };
 
   const handleAddNote = useCallback(
     async (input: NoteSubmit) => {
@@ -1174,6 +1267,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     _query: string
   ) => undefined;
 
+  const isUnscheduled = Boolean(trip?.durationDays && !trip?.startDate && !trip?.endDate && !trip?.startMonth && !trip?.startYear);
   const displayStartDate = trip?.startDate ?? null;
   const displayEndDate = trip?.endDate ?? null;
   const eventDateBounds = useMemo(() => {
@@ -1263,6 +1357,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       }
       return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
     };
+    if (isUnscheduled) return Array.from({ length: trip!.durationDays! }, (_, index) => `unscheduled-${index + 1}`);
     const dates: string[] = [];
     const start = overviewStartDate;
     const end = overviewEndDate;
@@ -1300,7 +1395,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       dates.push(new Date().toISOString().slice(0, 10));
     }
     return Array.from(new Set(dates));
-  }, [overviewStartDate, overviewEndDate, flights, lodgings, tours, carRentals]);
+  }, [overviewStartDate, overviewEndDate, flights, lodgings, tours, carRentals, isUnscheduled, trip?.durationDays]);
 
   useEffect(() => {
     const buildDayCards = () => {
@@ -1420,6 +1515,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
   }, [pendingGoToDay1, dayCards]);
 
+  // During the trip the Itinerary opens on today instead of the overview, once per trip, so the
+  // traveler is not hunting for the date. It waits until the day cards match the trip's own date
+  // range, so a previous trip's cards cannot be mistaken for this one's.
+  const openedTodayForTrip = useRef<string | null>(null);
+  useEffect(() => {
+    if (!trip?.id || !trip.startDate || !trip.endDate || openedTodayForTrip.current === trip.id || !dayCards.length) return;
+    const matchesRange = dayCards.length === allDates.length && dayCards.every((card, idx) => card.date === allDates[idx]);
+    if (!matchesRange) return;
+    openedTodayForTrip.current = trip.id;
+    const today = dayToOpen(dayCards.map((card) => card.date), localIsoDate());
+    if (today) setSelectedDay(today);
+  }, [trip?.id, trip?.startDate, trip?.endDate, dayCards, allDates]);
+
   useEffect(() => {
     const cache = async () => {
       if (!trip?.id || !dayCards.length) return;
@@ -1461,7 +1569,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   useEffect(() => {
     const todayIso = new Date().toISOString().slice(0, 10);
     const shouldFetchWeather = isWithinOverviewWeatherWindow(todayIso, overviewStartDate, overviewEndDate);
-    if (!shouldFetchWeather || !dayCards.length) {
+    if (isUnscheduled || !shouldFetchWeather || !dayCards.length) {
       weatherRequestKeyRef.current = '';
       setDayWeather({});
       return;
@@ -1527,13 +1635,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return () => {
       active = false;
     };
-  }, [backendUrl, headers, dayCards, overviewStartDate, overviewEndDate, trip?.destination, trip?.id, tripLocationLabel]);
+  }, [backendUrl, headers, dayCards, overviewStartDate, overviewEndDate, trip?.destination, trip?.id, tripLocationLabel, isUnscheduled]);
 
   useEffect(() => {
     let active = true;
     const fetchImages = async () => {
       if (!dayCards.length) return;
-      const missingCards = dayCards.filter((card) => !blogDayImages[card.date] && !dayImages[card.date]);
+      const missingCards = dayCards.filter((card) => /^\d{4}-\d{2}-\d{2}$/.test(card.date) && !blogDayImages[card.date] && !dayImages[card.date]);
       if (!missingCards.length) return;
       const days = missingCards.map((card) => ({
         date: card.date,
@@ -1589,7 +1697,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     const validationError = validateTripDates({
-      mode: dateDraft.mode,
+      mode: isUnscheduled && dateDraft.mode === 'month' && !dateDraft.startMonth && !dateDraft.startYear ? 'duration' : dateDraft.mode,
       startDate: dateDraft.startDate,
       endDate: dateDraft.endDate,
       startMonth: dateDraft.startMonth,
@@ -2036,7 +2144,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   // Day-details "+ Add X" buttons — same add flow/fields as each type's own dedicated
   // page, just pre-seeded with the day currently being viewed and reachable without
   // switching into the overview's "edit everything" (isEditing) mode.
-  const addFlightForDay = (dateIso: string) => {
+  const addFlightForDay = (dateIso: string, transferType: FlightEditDraft['transferType'] = 'Flight') => {
     if (readOnly) return;
     setSelectedFlight(null);
     setReturnToOverviewViewAfterItemEdit(true);
@@ -2052,8 +2160,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       draft.passengerIds = groupMembers.map((m) => m.id);
       draft.passengerName = buildPassengerName(draft.passengerIds) || draft.passengerName;
     }
-    draft.departureDate = dateIso;
-    draft.arrivalDate = dateIso;
+    draft.transferType = transferType;
+    draft.departureDate = dateIso.startsWith('unscheduled-') ? '' : dateIso;
+    draft.arrivalDate = dateIso.startsWith('unscheduled-') ? '' : dateIso;
     setEditingFlightDraft(draft);
     setShowFlightEditor(true);
   };
@@ -2064,6 +2173,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setReturnToOverviewViewAfterItemEdit(true);
     setEditingLodgingId(null);
     const draft = buildOverviewLodgingDraft();
+    dateIso = dateIso.startsWith('unscheduled-') ? '' : dateIso;
     draft.checkInDate = dateIso;
     draft.checkOutDate = addDaysToIso(dateIso, 1) || dateIso;
     setLodgingDraft(draft);
@@ -2074,9 +2184,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (readOnly) return;
     setSelectedTour(null);
     setReturnToOverviewViewAfterItemEdit(true);
-    setEditingTourId(null);
-    setTourDraft(createInitialActivityState(dateIso));
-    setShowAddTour(true);
+    setAddPopoverDay(Math.max(1, dayCards.findIndex((day) => day.date === dateIso) + 1));
+    setAddPopoverDate(dateIso.startsWith('unscheduled-') ? null : dateIso);
+    setAddPopoverOpen(true);
   };
 
   // The phone Add menu opens the same add form as a day's "+ Add X" chip, for today when
@@ -2099,6 +2209,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (readOnly) return;
     setEditingRentalId(null);
     const draft = createInitialCarRentalDraft();
+    dateIso = dateIso.startsWith('unscheduled-') ? '' : dateIso;
     draft.pickupDate = dateIso;
     draft.dropoffDate = dateIso;
     setRentalDraft(draft);
@@ -2173,12 +2284,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
             </TouchableOpacity>
           ) : (
-            <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
+            <Text style={[styles.bodyText, themeStyle('tabs_overview_2', {  }, (theme ?? _styleTheme))]}>{item.value}</Text>
           );
           return (
-            <View key={item.label} style={[styles.row, { alignItems: 'center' }]}>
+            <View key={item.label} style={[styles.row, themeStyle('tabs_overview_3', {  }, (theme ?? _styleTheme))]}>
               <Text style={styles.headerText}>{item.label}:</Text>
-              <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
+              <View style={themeStyle('tabs_overview_4', {  }, (theme ?? _styleTheme))}>{content}</View>
             </View>
           );
         })}
@@ -2244,12 +2355,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
                     </TouchableOpacity>
                   ) : (
-                    <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
+                    <Text style={[styles.bodyText, themeStyle('tabs_overview_5', {  }, (theme ?? _styleTheme))]}>{item.value}</Text>
                   );
                   return (
-                    <View key={`${section.title ?? 'section'}-${item.label}`} style={[styles.row, { alignItems: 'center' }]}>
+                    <View key={`${section.title ?? 'section'}-${item.label}`} style={[styles.row, themeStyle('tabs_overview_6', {  }, (theme ?? _styleTheme))]}>
                       <Text style={styles.headerText}>{item.label}:</Text>
-                      <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
+                      <View style={themeStyle('tabs_overview_7', {  }, (theme ?? _styleTheme))}>{content}</View>
                     </View>
                   );
                 })}
@@ -2335,8 +2446,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const startLabel = formatFriendlyDate(overviewStartDate);
   const endLabel = formatFriendlyDate(overviewEndDate);
   const dateRange = startLabel || endLabel ? `${startLabel ?? 'Start'} - ${endLabel ?? 'End'}` : null;
-  const dayColStyle = { minWidth: 90, width: 90 };
-  const dateColStyle = { minWidth: 200, width: 200 };
+  const dayColStyle = themeStyle('tabs_overview_8', {  }, (theme ?? _styleTheme));
+  const dateColStyle = themeStyle('tabs_overview_9', {  }, (theme ?? _styleTheme));
   const normalizedAttendees = useMemo(() => dedupeAttendees(attendees), [attendees]);
   const attendeeLabel = (member: OverviewTabProps['attendees'][number]) => formatAttendeeLabel(member);
   const attendeeTestId = (member: OverviewTabProps['attendees'][number]) => {
@@ -2346,6 +2457,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const formatShortDayLabel = (dateStr: string): string => {
+    if (dateStr.startsWith('unscheduled-')) return '';
     const parts = dateStr.split('-').map((v) => Number(v));
     const date = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(dateStr);
     if (Number.isNaN(date.valueOf())) return dateStr;
@@ -2357,6 +2469,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const formatLongDayLabel = (dateStr: string): string => {
+    if (dateStr.startsWith('unscheduled-')) return '';
     const parts = dateStr.split('-').map((v) => Number(v));
     const date = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(dateStr);
     if (Number.isNaN(date.valueOf())) return dateStr;
@@ -2366,7 +2479,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return `${weekday} ${monthLabel} ${date.getDate()}`;
   };
 
-  const formatDayCardLabel = (card: DayCard): string => `${card.label} - ${formatLongDayLabel(card.date)}`;
+  const formatDayCardLabel = (card: DayCard): string => card.date.startsWith('unscheduled-') ? card.label : `${card.label} - ${formatLongDayLabel(card.date)}`;
 
   const allMemberIds = useMemo(() => groupMembers.map((m) => m.id), [groupMembers]);
 
@@ -2395,6 +2508,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       trip,
       travelers: normalizedAttendees,
       locationLabel: tripLocationLabel,
+      planMarkdown: itineraryPlanMarkdown,
+      unscheduled: tours.filter((tour) => !String(tour.date ?? '').trim()),
       days: dayCards.map((card, idx) => {
         const info = dayDataByDate.get(card.date);
         return {
@@ -2479,6 +2594,64 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
 
+  // Shared by the Edit layout's Travelers section and the Add traveler button on the normal view.
+  const renderAddTravelerForm = () => (
+          <View style={styles.addTravelerForm}>
+            <View style={[styles.row, themeStyle('tabs_overview_75', {  }, (theme ?? _styleTheme))]}>
+              <TextInput
+                style={[styles.input, themeStyle('tabs_overview_76', {  }, (theme ?? _styleTheme))]}
+                placeholder="First name"
+                autoComplete="given-name"
+                textContentType="givenName"
+                value={travelerDraft.firstName}
+                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, firstName: text }))}
+              />
+              <TextInput
+                style={[styles.input, themeStyle('tabs_overview_77', {  }, (theme ?? _styleTheme))]}
+                placeholder="Last name"
+                autoComplete="family-name"
+                textContentType="familyName"
+                value={travelerDraft.lastName}
+                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, lastName: text }))}
+              />
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Email (optional)"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              keyboardType="email-address"
+              value={travelerDraft.email}
+              onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, email: text }))}
+            />
+            <View style={[styles.row, themeStyle('tabs_overview_78', {  }, (theme ?? _styleTheme))]}>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, styles.dangerButton]}
+                onPress={() => setShowAddTraveler(false)}
+              >
+                <Text style={styles.dangerButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addTraveler}>
+                <Text style={styles.buttonText}>Save Traveler</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+  );
+
+  // One line per thing happening on a day, for the whole-trip list.
+  const buildWholeTripLines = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }): string[] => {
+    if (!info) return [];
+    const withTime = (time: string | null | undefined, text: string) => (time ? `${time} · ${text}` : text);
+    return [
+      ...info.flights.map((f) => withTime(f.departure_time, `${f.departure_location || f.departure_airport_code || 'Departure'} → ${(f as any).arrival_location || f.arrival_airport_code || 'Arrival'}`)),
+      ...info.tours.map((t) => withTime(t.startTime, t.name)),
+      ...info.details.filter((d) => !d.kind || d.kind === 'activity').map((d) => withTime(d.time, d.activity)),
+      ...info.lodgings.map((l) => `Stay: ${l.name}`),
+      ...info.rentals.map((r) => `Rental car: ${r.vendor || r.pickupLocation}`),
+    ].filter(Boolean);
+  };
+
   const OverviewTransferEditor = editingFlightDraft && !isFlightTransfer(editingFlightDraft) ? GroundTransferEditingForm : FlightEditingForm;
   const renderOverviewFlightEditor = () => (
     <OverviewTransferEditor
@@ -2539,7 +2712,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <View style={[styles.card, responsiveCardStyle]} testID="overview-plan-notes-card">
         <TouchableOpacity
           testID="overview-plan-notes-toggle"
-          style={[styles.row, { justifyContent: 'space-between' }]}
+          style={[styles.row, themeStyle('tabs_overview_10', {  }, (theme ?? _styleTheme))]}
           onPress={() => setShowItineraryPlanNotes((prev) => !prev)}
         >
           <Text style={styles.sectionTitle}>Trip Guide</Text>
@@ -2564,13 +2737,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     );
   };
 
-  const renderTripNotes = () => (
-    <View style={{ gap: 6 }} testID="overview-trip-notes">
+  const renderTripNotes = () => (!isEditing && !trip?.notes ? null : (
+    <View style={themeStyle('tabs_overview_11', {  }, (theme ?? _styleTheme))} testID="overview-trip-notes">
       <Text style={styles.headerText}>Notes</Text>
       {isEditing ? (
         <TextInput
           testID="overview-trip-notes-input"
-          style={[styles.input, { minHeight: 120, textAlignVertical: 'top' }]}
+          style={[styles.input, themeStyle('tabs_overview_12', {  }, (theme ?? _styleTheme))]}
           multiline
           placeholder="Add general notes for this trip"
           value={notesDraft}
@@ -2592,7 +2765,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <Text style={styles.helperText}>No notes yet.</Text>
       )}
     </View>
-  );
+  ));
 
   const renderDocumentImporter = () => trip?.id ? (
     <ItineraryDocumentImport
@@ -2661,7 +2834,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <View style={[styles.card, responsiveCardStyle]} testID="overview-booking-priorities-card">
         <Text style={styles.sectionTitle}>What to book now</Text>
         {bookingPriorities.slice(0, 6).map((item) => (
-          <View key={`${item.kind}-${item.id}`} style={[styles.row, { justifyContent: 'space-between' }]} testID={`overview-booking-priority-${item.kind}-${item.id}`}>
+          <View key={`${item.kind}-${item.id}`} style={[styles.row, themeStyle('tabs_overview_13', {  }, (theme ?? _styleTheme))]} testID={`overview-booking-priority-${item.kind}-${item.id}`}>
             <Text style={styles.bodyText}>
               {bookingPriorityKindLabel[item.kind]}: {item.label}
               {item.date ? ` (${item.date})` : ''}
@@ -2682,16 +2855,24 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       horizontal
       showsHorizontalScrollIndicator
       nestedScrollEnabled
-      style={{ width: '100%', maxWidth: '100%', minWidth: 0, flexGrow: 0, flexShrink: 1, alignSelf: 'stretch', marginVertical: 8 }}
-      contentContainerStyle={{ paddingRight: 8, flexGrow: 0, flexShrink: 0 }}
+      style={themeStyle('tabs_overview_14', {  }, (theme ?? _styleTheme))}
+      contentContainerStyle={themeStyle('tabs_overview_15', {  }, (theme ?? _styleTheme))}
       testID="overview-day-bar-scroll"
     >
       <TouchableOpacity
         testID="overview-day-pill-overview"
-        style={[styles.dayPill, !activeDate && styles.dayPillActive]}
-        onPress={() => setSelectedDay(null)}
+        style={[styles.dayPill, !activeDate && !wholeTripView && styles.dayPillActive]}
+        onPress={() => { setWholeTripView(false); setSelectedDay(null); }}
       >
-        <Text style={[styles.dayPillText, !activeDate && styles.dayPillActiveText]}>Overview</Text>
+        <Text style={[styles.dayPillText, !activeDate && !wholeTripView && styles.dayPillActiveText]}>Overview</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        testID="overview-day-pill-whole-trip"
+        accessibilityRole="button"
+        style={[styles.dayPill, !activeDate && wholeTripView && styles.dayPillActive]}
+        onPress={() => { setWholeTripView(true); setSelectedDay(null); }}
+      >
+        <Text style={[styles.dayPillText, !activeDate && wholeTripView && styles.dayPillActiveText]}>Whole trip</Text>
       </TouchableOpacity>
       {dayCards.map((card, idx) => {
         const isActive = activeDate === card.date;
@@ -2726,15 +2907,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       const activeDayIndex =
         activeDayInfo?.index ?? (activeDayCard ? dayCards.findIndex((card) => card.date === activeDayCard.date) + 1 : null);
       const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
-      // Outlined chips for the item types this day has no section for yet, so they read as
-      // buttons and never break mid-label at phone width.
-      const addMoreChipStyle = {
-        borderWidth: 1,
-        borderColor: theme?.colors.border ?? '#E6ECEF',
-        borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-      };
 
       const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string, subtitle?: string | null) => {
         const img = blogDayImages[card.date] ?? dayImages[card.date];
@@ -2748,10 +2920,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             testID={testID}
             style={[
               styles.dayHeroCard,
-              { height: dayHeroHeight },
+              themeStyle('tabs_overview_16', { dayHeroHeight: dayHeroHeight }, (theme ?? _styleTheme)),
             ]}
-            onPress={onPress}
-            disabled={!onPress}
+            onPress={onPress ?? (!readOnly && !isUnscheduled ? () => setPictureDay(card.date) : undefined)}
+            disabled={!onPress && (readOnly || isUnscheduled)}
           >
             {img ? (
               <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
@@ -2766,25 +2938,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
             {weatherLabel ? (
               <View
-                style={{
-                  position: 'absolute',
-                  top: 12,
-                  right: 12,
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(15, 23, 42, 0.74)',
-                }}
+                style={themeStyle('tabs_overview_17', {  }, (theme ?? _styleTheme))}
                 testID={`${testID || 'day-hero'}-weather`}
               >
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{weatherLabel}</Text>
+                <Text style={themeStyle('tabs_overview_18', {  }, (theme ?? _styleTheme))}>{weatherLabel}</Text>
               </View>
             ) : null}
             <View style={styles.dayHeroTextWrap}>
               <Text
                 style={[
                   styles.dayHeroTitle,
-                  isPhoneLayout ? { fontSize: 18, lineHeight: 23 } : isTabletLayout ? { fontSize: 20 } : null,
+                  isPhoneLayout ? themeStyle('tabs_overview_19', {  }, (theme ?? _styleTheme)) : isTabletLayout ? themeStyle('tabs_overview_20', {  }, (theme ?? _styleTheme)) : null,
                 ]}
                 numberOfLines={isPhoneLayout ? 4 : 3}
                 ellipsizeMode="tail"
@@ -2794,16 +2958,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {subtitle ? (
                 <Text
                   testID={`${testID || 'day-hero'}-subtitle`}
-                  style={[styles.dayHeroAction, { marginTop: 4, fontWeight: '600' }, isPhoneLayout ? { fontSize: 12 } : null]}
+                  style={[styles.dayHeroAction, themeStyle('tabs_overview_102', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))]}
                   numberOfLines={1}
                 >
                   {subtitle}
                 </Text>
               ) : null}
               {showAction ? (
-                <Text style={[styles.dayHeroAction, isPhoneLayout ? { fontSize: 11 } : null]}>View details</Text>
+                <Text style={[styles.dayHeroAction, isPhoneLayout ? themeStyle('tabs_overview_21', {  }, (theme ?? _styleTheme)) : null]}>View details</Text>
               ) : null}
             </View>
+            {!showAction && !readOnly && !isUnscheduled ? (
+              <View pointerEvents="none" style={styles.homeHeroChangeTripBadge}>
+                <Text style={styles.homeHeroChangeTripText}>Click to Change Picture</Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         );
       };
@@ -2815,6 +2984,99 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const flightsForDay = activeDayInfo.flights;
         // Same order the day map letters its pins in: an explicit saved position first, then start time.
         const toursForDay = orderDayActivities(activeDayInfo.tours);
+        const locationDetails = (activeDayInfo.details ?? []).filter((detail) => detail.kind !== 'note' && detail.kind !== 'checklist');
+        const noteDetails = (activeDayInfo.details ?? []).filter((detail) => detail.kind === 'note' || detail.kind === 'checklist');
+        const renderDayDetail = (d: ItineraryDetail) => {
+          const isActivity = !d.kind || d.kind === 'activity';
+          return (
+            <View key={d.id} testID={`day-details-item-${d.id}`} style={[styles.dayInfoRow, isPhoneLayout ? themeStyle('tabs_overview_99', {  }, (theme ?? _styleTheme)) : themeStyle('tabs_overview_35', {  }, (theme ?? _styleTheme))]}>
+              <View style={isPhoneLayout ? themeStyle('tabs_overview_100', {  }, (theme ?? _styleTheme)) : themeStyle('tabs_overview_36', {  }, (theme ?? _styleTheme))}>
+                {d.kind === 'place' ? (
+                  <View>
+                    <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
+                    {d.noteBody ? (
+                      <Text style={[styles.helperText, themeStyle('tabs_overview_37', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
+                    ) : null}
+                  </View>
+                ) : d.kind === 'note' ? (
+                  <View>
+                    <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
+                    {d.noteBody ? (
+                      <Text style={[styles.helperText, themeStyle('tabs_overview_38', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
+                    ) : null}
+                  </View>
+                ) : d.kind === 'checklist' ? (
+                  <View style={themeStyle('tabs_overview_39', {  }, (theme ?? _styleTheme))}>
+                    <Text style={[styles.dayInfoRoute, themeStyle('tabs_overview_40', {  }, (theme ?? _styleTheme))]}>{`📋 ${d.activity}`}</Text>
+                    {(d.checklistItems ?? []).map((it) => {
+                      const checked = !!it.checkedBy;
+                      return (
+                        <TouchableOpacity
+                          key={it.id}
+                          testID={`overview-checklist-toggle-${it.id}`}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked, disabled: !featureItineraryItemKinds }}
+                          disabled={!featureItineraryItemKinds}
+                          onPress={() => toggleChecklistItem(d.id, it)}
+                          style={[
+                            themeStyle('tabs_overview_41', {  }, (theme ?? _styleTheme)),
+                            !featureItineraryItemKinds && themeStyle('tabs_overview_42', {  }, (theme ?? _styleTheme)),
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.checklistCheckbox,
+                              checked && styles.checklistCheckboxChecked,
+                            ]}
+                          >
+                            {checked ? <Text style={styles.checklistCheckboxMark}>✓</Text> : null}
+                          </View>
+                          <Text
+                            style={[
+                              styles.helperText,
+                              checked && themeStyle('tabs_overview_43', { theme: theme }, (theme ?? _styleTheme)),
+                            ]}
+                          >
+                            {it.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.dayInfoRoute}>{d.activity}</Text>
+                )}
+              </View>
+              <View testID={`day-details-item-actions-${d.id}`} style={themeStyle('tabs_overview_101', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}>
+                {d.time && !isUnscheduled ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} compact /> : null}
+                {isActivity ? (
+                  <View style={themeStyle('tabs_overview_44', {  }, (theme ?? _styleTheme))}>
+                    <ReactionBar
+                      detailId={d.id}
+                      summary={d.reactions ?? emptyReactionSummary}
+                      canReact={featureItineraryReactions}
+                      onCast={castReactionForDetail}
+                      onClear={clearReactionForDetail}
+                      theme={theme}
+                    />
+                  </View>
+                ) : null}
+                {isEditingDayItems ? (
+                  <TouchableOpacity
+                    testID={`day-details-delete-${d.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete item"
+                    onPress={() => deleteDetail(d.id)}
+                    style={styles.detailDeleteButton}
+                    hitSlop={themeStyle('tabs_overview_45', {  }, (theme ?? _styleTheme))}
+                  >
+                    <Text style={styles.detailDeleteButtonText}>×</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
+          );
+        };
         const lodgingsForDay = activeDayInfo.lodgings;
         const rentalsForDay = activeDayInfo.rentals;
 
@@ -2850,18 +3112,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const showLodgingNames = new Set(lodgingParticipantKeys).size > 1;
 
         return (
-          <View style={[styles.card, responsiveCardStyle, { position: 'relative', flex: 1, minHeight: 0 }]}>
+          <View style={[styles.card, responsiveCardStyle, themeStyle('tabs_overview_22', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity testID="day-details-back" style={styles.dayDetailsBackButton} onPress={() => setSelectedDay(null)}>
               <Text style={styles.dayDetailsBackText}>← Back</Text>
             </TouchableOpacity>
             <ScrollView
               ref={scrollRef}
-              style={{ flex: 1, minHeight: 0 }}
-              contentContainerStyle={{
-                gap: isPhoneLayout ? 12 : 16,
-                paddingTop: isPhoneLayout ? 48 : 56,
-                paddingBottom: 24,
-              }}
+              style={themeStyle('tabs_overview_23', {  }, (theme ?? _styleTheme))}
+              contentContainerStyle={themeStyle('tabs_overview_24', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}
               onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
               scrollEventThrottle={16}
               keyboardShouldPersistTaps="handled"
@@ -2873,12 +3131,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.flightTitle}>{trip.name}</Text>
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero', heroSubtitle)}
-              {dayMapPoints.length ? (
+              {dayMapPoints.length && !isUnscheduled ? (
                 <TripDayMap key={activeDayCard.date} onOpenChange={open => setVisibleMapDate(open ? activeDayCard.date : null)} tripId={trip.id} dayDate={activeDayCard.date} points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
               ) : null}
               {!readOnly && visibleMapDate === activeDayCard.date && dayMapPoints.length > 0 && <NearbyPlacesPanel tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} destination={trip.destination}
                 center={nearbyAnchor ? { lat: nearbyAnchor.lat!, lng: nearbyAnchor.lng! } : undefined} onAdded={onTourDataChanged} />}
-              {!readOnly && <TripsLikeThis tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} onAdded={onTourDataChanged} />}
+              {!readOnly && !isUnscheduled && <TripsLikeThis tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} onAdded={onTourDataChanged} />}
               {narrativeLines.length ? (
                 <View style={styles.dayNarrativeBox}>
                   {narrativeLines.map((line, idx) => (
@@ -2903,13 +3161,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     // Stacked rather than side by side: long airport/station names used to push the
                     // route off the card and hide the times on phones.
                     return (
-                      <View key={flight.id} style={{ paddingVertical: 6, gap: 2 }} testID={`day-details-transfer-row-${flight.id}`}>
+                      <View key={flight.id} style={themeStyle('tabs_overview_104', {  }, (theme ?? _styleTheme))} testID={`day-details-transfer-row-${flight.id}`}>
                         <TouchableOpacity
                           testID={`day-details-transfer-${flight.id}`}
                           accessibilityRole="link"
                           onPress={() => setSelectedFlight(flight)}
                         >
-                          <Text style={[styles.dayInfoRoute, styles.linkText, { textDecorationLine: 'underline' }]}>
+                          <Text style={[styles.dayInfoRoute, styles.linkText, themeStyle('tabs_overview_25', {  }, (theme ?? _styleTheme))]}>
                             {`${route.icon} ${route.from || 'Departure'} → ${route.to || 'Arrival'}`}
                           </Text>
                         </TouchableOpacity>
@@ -2923,15 +3181,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </View>
                     );
                   })}
-                  <TouchableOpacity
-                    testID="day-details-add-transfer-button"
-                    accessibilityRole="button"
-                    accessibilityLabel="Add transfer to this day"
-                    style={[styles.dayInfoButton, { marginTop: 8 }]}
-                    onPress={() => addFlightForDay(activeDayCard.date)}
-                  >
-                    <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
-                  </TouchableOpacity>
+
                 </View>
               ) : null}
 
@@ -2962,21 +3212,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   >
                     <Text style={styles.dayInfoButtonText}>See rental car details →</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    testID="day-details-add-rental-button"
-                    accessibilityRole="button"
-                    accessibilityLabel="Add rental car to this day"
-                    style={[styles.dayInfoButton, { marginTop: 8 }]}
-                    onPress={() => addRentalForDay(activeDayCard.date)}
-                  >
-                    <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
-                  </TouchableOpacity>
+
                 </View>
               ) : null}
 
-              {toursForDay.length ? (
-                <View style={styles.dayInfoCard}>
-                  <Text style={styles.sectionTitle}>Activities</Text>
+              {toursForDay.length || locationDetails.length ? (
+                <View style={styles.dayInfoCard} testID="day-details-locations-activities">
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>Locations and Activities</Text>
+                    {locationDetails.length > 0 && !readOnly ? <TouchableOpacity testID="day-details-edit-locations-button" style={styles.dayInfoButton} onPress={() => setIsEditingDayItems((prev) => !prev)}>
+                      <Text style={styles.dayInfoButtonText}>{isEditingDayItems ? 'Save' : 'Edit'}</Text>
+                    </TouchableOpacity> : null}
+                  </View>
+                  {locationDetails.map(renderDayDetail)}
                   <DayActivitiesOrdering
                     tripId={trip.id}
                     date={activeDayCard.date}
@@ -3050,7 +3298,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     testID="day-details-add-activity-button"
                     accessibilityRole="button"
                     accessibilityLabel="Add activity to this day"
-                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    style={[styles.dayInfoButton, themeStyle('tabs_overview_28', {  }, (theme ?? _styleTheme))]}
                     onPress={() => addTourForDay(activeDayCard.date)}
                   >
                     <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
@@ -3075,7 +3323,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       >
                         {lodging.imageUrl ? (
                           <Image
-                            style={[lodgingImageStyle, { width: lodgingThumbnailSize, height: lodgingThumbnailSize }]}
+                            style={[lodgingImageStyle, themeStyle('tabs_overview_29', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme))]}
                             source={getImageSource(lodging.imageUrl)}
                             resizeMode="cover"
                           />
@@ -3084,17 +3332,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             testID={`day-details-lodging-placeholder-${lodging.id}`}
                             style={[
                               styles.lodgingImageFallback,
-                              { width: lodgingThumbnailSize, height: lodgingThumbnailSize },
+                              themeStyle('tabs_overview_30', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme)),
                             ]}
                           >
-                            <Text style={{ fontSize: Math.round(lodgingThumbnailSize * 0.42) }}>🏨</Text>
+                            <Text style={themeStyle('tabs_overview_105', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme))}>🏨</Text>
                           </View>
                         )}
                         <View style={styles.dayInfoText}>
                           <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
                           <Text style={styles.helperText}>{formatStayRange(lodging.checkInDate, lodging.checkOutDate)}</Text>
                           {stayDayNote(lodging.checkInDate, lodging.checkOutDate, activeDayCard.date) ? (
-                            <Text style={[styles.helperText, { fontWeight: '700', color: theme ? linkTextColor(theme) : undefined }]}>
+                            <Text style={[styles.helperText, themeStyle('tabs_overview_106', { theme: theme }, (theme ?? _styleTheme))]}>
                               {stayDayNote(lodging.checkInDate, lodging.checkOutDate, activeDayCard.date)}
                             </Text>
                           ) : null}
@@ -3105,206 +3353,58 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </TouchableOpacity>
                     );
                   })}
-                  <TouchableOpacity
-                    testID="day-details-add-accommodation-button"
-                    accessibilityRole="button"
-                    accessibilityLabel="Add accommodation to this day"
-                    style={[styles.dayInfoButton, { marginTop: 8 }]}
-                    onPress={() => addLodgingForDay(activeDayCard.date)}
-                  >
-                    <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
-                  </TouchableOpacity>
+
                 </View>
               ) : null}
 
-              {/* Phase 3: per-day itinerary items (place / note / checklist / custom activity). */}
-              <View style={styles.dayInfoCard} testID="day-details-itinerary-items">
-                <View style={[styles.sectionHeaderRow, { marginBottom: 0 }]}>
-                  <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Locations, notes & checklists</Text>
-                  <TouchableOpacity
-                    testID={isEditingDayItems ? 'day-details-save-items-button' : 'day-details-edit-items-button'}
-                    accessibilityRole="button"
-                    accessibilityLabel={isEditingDayItems ? 'Save section edits' : 'Edit section'}
-                    style={[styles.dayInfoButton, { marginLeft: 'auto', paddingVertical: 6 }]}
-                    onPress={() => setIsEditingDayItems((prev) => !prev)}
-                  >
-                    <Text style={styles.dayInfoButtonText}>{isEditingDayItems ? 'Save' : 'Edit'}</Text>
-                  </TouchableOpacity>
-                </View>
-                {(activeDayInfo.details ?? []).length === 0 ? (
-                  <Text style={styles.helperText}>
-                    {itineraryLoading ? 'Loading itinerary...' : 'No items yet for this day.'}
-                  </Text>
-                ) : (
-                  (activeDayInfo.details ?? []).map((d) => {
-                    const isActivity = !d.kind || d.kind === 'activity';
-                    // On phones the calendar/vote/delete controls don't fit beside the name: stack them
-                    // under it in a wrapping row, instead of crushing the name to a few letters per line.
-                    return (
-                      <View
-                        key={d.id}
-                        testID={`day-details-item-${d.id}`}
-                        style={[
-                          styles.dayInfoRow,
-                          isPhoneLayout
-                            ? { flexDirection: 'column', alignItems: 'stretch', gap: 8 }
-                            : { alignItems: 'flex-start', gap: 8 },
-                        ]}
-                      >
-                        <View style={isPhoneLayout ? { gap: 4 } : { flex: 1, gap: 4 }}>
-                          {d.kind === 'place' ? (
-                            <View>
-                              <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
-                              {d.noteBody ? (
-                                <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
-                              ) : null}
-                            </View>
-                          ) : d.kind === 'note' ? (
-                            <View>
-                              <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
-                              {d.noteBody ? (
-                                <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
-                              ) : null}
-                            </View>
-                          ) : d.kind === 'checklist' ? (
-                            <View style={{ width: '100%' }}>
-                              <Text style={[styles.dayInfoRoute, { marginBottom: 4 }]}>{`📋 ${d.activity}`}</Text>
-                              {(d.checklistItems ?? []).map((it) => {
-                                const checked = !!it.checkedBy;
-                                return (
-                                  <TouchableOpacity
-                                    key={it.id}
-                                    testID={`overview-checklist-toggle-${it.id}`}
-                                    accessibilityRole="checkbox"
-                                    accessibilityState={{ checked, disabled: !featureItineraryItemKinds }}
-                                    disabled={!featureItineraryItemKinds}
-                                    onPress={() => toggleChecklistItem(d.id, it)}
-                                    style={[
-                                      { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 },
-                                      !featureItineraryItemKinds && { opacity: 0.5 },
-                                    ]}
-                                  >
-                                    <View
-                                      style={[
-                                        styles.checklistCheckbox,
-                                        checked && styles.checklistCheckboxChecked,
-                                      ]}
-                                    >
-                                      {checked ? <Text style={styles.checklistCheckboxMark}>✓</Text> : null}
-                                    </View>
-                                    <Text
-                                      style={[
-                                        styles.helperText,
-                                        checked && { textDecorationLine: 'line-through', color: theme.colors.textMuted },
-                                      ]}
-                                    >
-                                      {it.label}
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
-                              })}
-                            </View>
-                          ) : (
-                            <Text style={styles.dayInfoRoute}>{d.activity}</Text>
-                          )}
-                        </View>
-                        <View
-                          testID={`day-details-item-actions-${d.id}`}
-                          style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, ...(isPhoneLayout ? {} : { flexShrink: 0 }) }}
-                        >
-                          {d.time ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} compact /> : null}
-                          {isActivity ? (
-                            <View style={{ flexShrink: 0 }}>
-                              <ReactionBar
-                                detailId={d.id}
-                                summary={d.reactions ?? emptyReactionSummary}
-                                canReact={featureItineraryReactions}
-                                onCast={castReactionForDetail}
-                                onClear={clearReactionForDetail}
-                                theme={theme}
-                              />
-                            </View>
-                          ) : null}
-                          {isEditingDayItems ? (
-                            <TouchableOpacity
-                              testID={`day-details-delete-${d.id}`}
-                              accessibilityRole="button"
-                              accessibilityLabel="Delete item"
-                              onPress={() => deleteDetail(d.id)}
-                              style={styles.detailDeleteButton}
-                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                              <Text style={styles.detailDeleteButtonText}>×</Text>
-                            </TouchableOpacity>
-                          ) : null}
-                        </View>
-                      </View>
-                    );
-                  })
-                )}
-                <TouchableOpacity
-                  testID="day-details-add-item-button"
-                  accessibilityRole="button"
-                  accessibilityLabel="Add item to this day"
-                  style={[styles.dayInfoButton, { marginTop: 8 }]}
-                  onPress={() => {
-                    setAddPopoverDay(activeDayInfo?.index ?? 1);
-                    setAddPopoverOpen(true);
-                  }}
-                >
-                  <Text style={styles.dayInfoButtonText}>+ Add item</Text>
-                </TouchableOpacity>
-              </View>
-
-              {!flightsForDay.length || !rentalsForDay.length || !toursForDay.length || !lodgingsForDay.length ? (
-                <View testID="day-details-add-more" style={{ gap: 6 }}>
-                  <Text style={styles.helperText}>Add to this day</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {!flightsForDay.length ? (
-                    <TouchableOpacity
-                      testID="day-details-add-transfer-button"
-                      accessibilityRole="button"
-                      accessibilityLabel="Add transfer to this day"
-                      style={addMoreChipStyle}
-                      onPress={() => addFlightForDay(activeDayCard.date)}
-                    >
-                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add transfer</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  {!rentalsForDay.length ? (
-                    <TouchableOpacity
-                      testID="day-details-add-rental-button"
-                      accessibilityRole="button"
-                      accessibilityLabel="Add rental car to this day"
-                      style={addMoreChipStyle}
-                      onPress={() => addRentalForDay(activeDayCard.date)}
-                    >
-                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add rental car</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  {!toursForDay.length ? (
-                    <TouchableOpacity
-                      testID="day-details-add-activity-button"
-                      accessibilityRole="button"
-                      accessibilityLabel="Add activity to this day"
-                      style={addMoreChipStyle}
-                      onPress={() => addTourForDay(activeDayCard.date)}
-                    >
-                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add activity</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  {!lodgingsForDay.length ? (
-                    <TouchableOpacity
-                      testID="day-details-add-accommodation-button"
-                      accessibilityRole="button"
-                      accessibilityLabel="Add accommodation to this day"
-                      style={addMoreChipStyle}
-                      onPress={() => addLodgingForDay(activeDayCard.date)}
-                    >
-                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add accommodation</Text>
-                    </TouchableOpacity>
-                  ) : null}
+              {noteDetails.length > 0 ? (
+                <View style={styles.dayInfoCard} testID="day-details-itinerary-items">
+                  <View style={[styles.sectionHeaderRow, themeStyle('tabs_overview_32', {}, (theme ?? _styleTheme))]}>
+                    <Text style={[styles.sectionTitle, themeStyle('tabs_overview_33', {}, (theme ?? _styleTheme))]}>Notes and Checklists</Text>
+                    {!readOnly ? <TouchableOpacity
+                      testID={isEditingDayItems ? 'day-details-save-items-button' : 'day-details-edit-items-button'}
+                      accessibilityRole="button" accessibilityLabel={isEditingDayItems ? 'Save section edits' : 'Edit section'}
+                      style={styles.dayInfoButton} onPress={() => setIsEditingDayItems((prev) => !prev)}>
+                      <Text style={styles.dayInfoButtonText}>{isEditingDayItems ? 'Save' : 'Edit'}</Text>
+                    </TouchableOpacity> : null}
                   </View>
+                  {noteDetails.map(renderDayDetail)}
+                </View>
+              ) : null}
+
+              {!readOnly ? (
+                <View testID="day-details-add-actions" style={[themeStyle('tabs_overview_47', {}, (theme ?? _styleTheme)), themeStyle('tabs_overview_layout1', {  }, (theme ?? _styleTheme))]}>
+                  <Text style={[styles.helperText, themeStyle('tabs_overview_layout4', {  }, (theme ?? _styleTheme))]}>Add to this day</Text>
+                  <TouchableOpacity testID="day-details-add-flight-button" accessibilityRole="button" accessibilityLabel="Add flight to this day"
+                    style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addFlightForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add flight</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="day-details-add-transfer-button" accessibilityRole="button" accessibilityLabel="Add ground transfer to this day"
+                    style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addFlightForDay(activeDayCard.date, 'Public Transit')}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add transfer</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="day-details-add-accommodation-button" accessibilityRole="button" accessibilityLabel="Add accommodation to this day"
+                    style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addLodgingForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add accommodation</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="day-details-add-rental-button" accessibilityRole="button" accessibilityLabel="Add rental car to this day"
+                    style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addRentalForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add rental car</Text>
+                  </TouchableOpacity>
+                  {!toursForDay.length && !locationDetails.length ? <TouchableOpacity testID="day-details-add-activity-button" accessibilityRole="button"
+                    accessibilityLabel="Add activity to this day" style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addTourForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add activity</Text>
+                  </TouchableOpacity> : null}
+                  {featureItineraryItemKinds ? <>
+                    <TouchableOpacity testID="day-details-add-note-button" accessibilityRole="button" accessibilityLabel="Add note to this day"
+                      style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('note'); }}>
+                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add note</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity testID="day-details-add-checklist-button" accessibilityRole="button" accessibilityLabel="Add checklist to this day"
+                      style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('checklist'); }}>
+                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add checklist</Text>
+                    </TouchableOpacity>
+                  </> : null}
                 </View>
               ) : null}
 
@@ -3330,8 +3430,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return (
         <ScrollView
           ref={scrollRef}
-          style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
+          style={[styles.card, responsiveCardStyle, themeStyle('tabs_overview_48', {  }, (theme ?? _styleTheme))]}
+          contentContainerStyle={themeStyle('tabs_overview_49', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}
           onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
@@ -3339,28 +3439,35 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           nestedScrollEnabled
           contentInsetAdjustmentBehavior="automatic"
         >
-          <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
+          <View style={[styles.row, themeStyle('tabs_overview_layout2', {  }, (theme ?? _styleTheme))]}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0, width: '100%' } : null]}>
-              {renderDocumentImportButton()}
-              <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={handlePrintItinerary}>
-                <Text style={styles.buttonText}>Print itinerary</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
-                <Text style={styles.buttonText}>Edit</Text>
-              </TouchableOpacity>
+            <View style={themeStyle('tabs_overview_layout3', {  }, (theme ?? _styleTheme))}>
+              <CsvTransferControls entity="day-plan" backendUrl={backendUrl} headers={jsonHeaders} tripId={trip?.id} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={itineraryDetails} styles={styles} theme={theme} enabledImport={featureDayPlanCsvImport} enabledExport={featureDayPlanCsvExport} readOnly={readOnly} onImported={() => setItineraryReload((count) => count + 1)}
+                renderActions={({ importCsv, exportCsv }) => <ActionDropdown testID="overview-actions-menu" styles={styles} actions={[
+                  ...(!readOnly ? [{ id: 'overview-add-traveler', label: 'Add Traveler', onSelect: () => setShowAddTraveler(true) }] : []),
+                  { id: 'overview-edit', label: 'Edit', onSelect: () => setIsEditing(true) },
+                  ...(onOpenShareTrip ? [{ id: 'itinerary-share-trip-button', label: 'Share', onSelect: onOpenShareTrip }] : []),
+                  ...(showDocumentImport ? [{ id: 'overview-import-itinerary', label: 'Import Itinerary', onSelect: () => setDocumentImportOpen(true) }] : []),
+                  ...(featureDayPlanCsvImport && !readOnly ? [{ id: 'day-plan-import', label: 'Import CSV', onSelect: importCsv }] : []),
+                  ...(featureDayPlanCsvExport ? [{ id: 'day-plan-export', label: 'Export CSV', onSelect: exportCsv }] : []),
+                  ...(onGenerateAiItinerary && aiItineraryGenerationAllowed && !readOnly && !aiItineraryPending ? [{ id: 'overview-generate-itinerary', label: 'Generate itinerary', onSelect: () => setConfirmGenerate(true) }] : []),
+                  { id: 'overview-print-itinerary', label: 'Print itinerary', onSelect: handlePrintItinerary },
+                ]} />}
+              />
             </View>
           </View>
           {renderDocumentImporter()}
           <Text style={styles.flightTitle}>{trip.name}</Text>
+          {isUnscheduled ? <Text style={styles.helperText}>Dates not set · {trip.durationDays} day(s)</Text> : null}
           {travelerAvatars.length ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }} testID="overview-travelers">
+            <View style={themeStyle('tabs_overview_53', {  }, (theme ?? _styleTheme))} testID="overview-travelers">
               <AvatarStack people={travelerAvatars} size={26} max={6} testID="overview-traveler-avatars" />
               <Text style={styles.helperText}>
                 {travelerAvatars.length} {travelerAvatars.length === 1 ? 'traveler' : 'travelers'} planning together
               </Text>
             </View>
           ) : null}
+          {!readOnly && showAddTraveler ? renderAddTravelerForm() : null}
 
           {trip.description ? (
             <View>
@@ -3382,8 +3489,35 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
           {renderDayBar(null)}
 
-          <View style={{ gap: 12 }}>
-            {dayCards.map((card, idx) => {
+          {wholeTripView ? (
+            <View testID="overview-whole-trip" style={themeStyle('tabs_overview_54', {  }, (theme ?? _styleTheme))}>
+              {dayCards.map((card, idx) => {
+                const info = dayDataByDate.get(card.date);
+                const lines = buildWholeTripLines(info);
+                const mapPoints = info ? selectPlanningDayPoints({
+                  date: card.date,
+                  flights: info.flights.map((f) => ({ ...f, departureDate: f.departure_date, arrivalDate: f.arrival_date, departureLocation: f.departure_location, arrivalLocation: f.arrival_location, departureAirportCode: f.departure_airport_code, arrivalAirportCode: f.arrival_airport_code })),
+                  lodgings: info.lodgings.map((l) => ({ ...l, check_in_date: l.checkInDate, check_out_date: l.checkOutDate })),
+                  activities: info.tours.map((t) => ({ ...t, cost: Number(t.cost) || 0 })),
+                  carRentals: info.rentals,
+                }) : [];
+                // Each day: its plan and its map. Costs and expenses are deliberately left out here.
+                return (
+                  <View key={card.date}>
+                    <TouchableOpacity testID={`overview-whole-trip-day-${idx + 1}`} accessibilityRole="button" onPress={() => setSelectedDay(card.date)}>
+                      <Text style={styles.headerText}>{formatDayCardLabel(card)}</Text>
+                      {lines.length ? lines.map((line, lineIdx) => <Text key={lineIdx} style={styles.bodyText}>{line}</Text>) : <Text style={styles.helperText}>Nothing planned yet.</Text>}
+                    </TouchableOpacity>
+                    {mapPoints.length ? <TripDayMap tripId={trip.id} dayDate={card.date} points={mapPoints} backendUrl={backendUrl} requestHeaders={headers} testID={`overview-whole-trip-map-${idx + 1}`} /> : null}
+                    <View style={styles.divider} />
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+
+          <View style={wholeTripView ? undefined : themeStyle('tabs_overview_54', {  }, (theme ?? _styleTheme))}>
+            {(wholeTripView ? [] : dayCards).map((card, idx) => {
               const info = dayDataByDate.get(card.date);
               const heroTitle = buildDaySummary(info);
               const heroSubtitle = buildDaySubtitle(info, card.date);
@@ -3401,8 +3535,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return (
       <ScrollView
         ref={scrollRef}
-        style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
+        style={[styles.card, responsiveCardStyle, themeStyle('tabs_overview_55', {  }, (theme ?? _styleTheme))]}
+        contentContainerStyle={themeStyle('tabs_overview_56', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}
           onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
@@ -3410,10 +3544,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         nestedScrollEnabled
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
+        <View style={[styles.row, isPhoneLayout ? themeStyle('tabs_overview_57', {  }, (theme ?? _styleTheme)) : null]}>
           <Text style={styles.sectionTitle}>Overview</Text>
           {isEditing ? (
-            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0 } : null]}>
+            <View style={[styles.row, themeStyle('tabs_overview_58', {  }, (theme ?? _styleTheme)), isPhoneLayout ? themeStyle('tabs_overview_59', {  }, (theme ?? _styleTheme)) : null]}>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveOverviewEdits}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
@@ -3425,11 +3559,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0 } : null]}>
+            <View style={[styles.row, themeStyle('tabs_overview_60', {  }, (theme ?? _styleTheme)), isPhoneLayout ? themeStyle('tabs_overview_61', {  }, (theme ?? _styleTheme)) : null]}>
               {renderDocumentImportButton()}
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
                 <Text style={styles.buttonText}>Edit</Text>
               </TouchableOpacity>
+              {onOpenShareTrip ? (
+                <TouchableOpacity accessibilityRole="button" testID="itinerary-share-trip-button" style={[styles.button, styles.smallButton]} onPress={onOpenShareTrip}>
+                  <Text style={styles.buttonText}>Share</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           )}
         </View>
@@ -3453,7 +3592,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <>
             <View style={styles.divider} />
             <Text style={styles.headerText}>Currency</Text>
-            <View style={[styles.input, styles.dropdown, { marginTop: 6 }]}>
+            <View style={[styles.input, styles.dropdown, themeStyle('tabs_overview_62', {  }, (theme ?? _styleTheme))]}>
               <TouchableOpacity style={styles.selectButtonRow} onPress={() => setShowCurrencyDropdown((prev) => !prev)}>
                 <Text style={styles.cellText}>{currentCurrency}</Text>
                 <Text style={styles.selectCaret}>▾</Text>
@@ -3482,7 +3621,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         {renderTripNotes()}
 
-        <View style={[styles.row, { alignItems: 'flex-start' }]}>
+        <View style={[styles.row, themeStyle('tabs_overview_63', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.headerText}>Trip Dates</Text>
         </View>
         {isEditing ? (
@@ -3504,7 +3643,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             {dateDraft.mode === 'range' ? (
               <>
                 {/* Labeled Start / End fields: stacked full width on phones, side by side otherwise. */}
-                <View testID="overview-trip-date-range" style={{ flexDirection: isPhoneLayout ? 'column' : 'row', gap: 12, marginTop: 4 }}>
+                <View testID="overview-trip-date-range" style={themeStyle('tabs_overview_97', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}>
                   <View style={tripDateCellStyle}>
                     <Text style={styles.helperText}>Start</Text>
                     <DateField
@@ -3533,7 +3672,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <>
                 {Platform.OS === 'web' ? (
                   <>
-                    <View style={[styles.row, { gap: 8 }]}>
+                    <View style={[styles.row, themeStyle('tabs_overview_68', {  }, (theme ?? _styleTheme))]}>
                       <select
                         aria-label="Trip start month"
                         value={dateDraft.startMonth}
@@ -3579,14 +3718,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <>
                     <View style={styles.row}>
                       <TextInput
-                        style={[styles.input, { flex: 1, maxWidth: 160 }]}
+                        style={[styles.input, themeStyle('tabs_overview_69', {  }, (theme ?? _styleTheme))]}
                         placeholder="Month (1-12)"
                         keyboardType="numeric"
                         value={dateDraft.startMonth}
                         onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startMonth: text }))}
                       />
                       <TextInput
-                        style={[styles.input, { flex: 1, maxWidth: 160 }]}
+                        style={[styles.input, themeStyle('tabs_overview_70', {  }, (theme ?? _styleTheme))]}
                         placeholder="Year (YYYY)"
                         keyboardType="numeric"
                         value={dateDraft.startYear}
@@ -3594,7 +3733,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       />
                     </View>
                     <TextInput
-                      style={[styles.input, { maxWidth: 200 }]}
+                      style={[styles.input, themeStyle('tabs_overview_71', {  }, (theme ?? _styleTheme))]}
                       placeholder="Number of days"
                       keyboardType="numeric"
                       value={dateDraft.durationDays}
@@ -3607,7 +3746,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </View>
         ) : null}
 
-        <View style={[styles.row, { alignItems: 'flex-start' }]}>
+        <View style={[styles.row, themeStyle('tabs_overview_72', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.headerText}>Description</Text>
         </View>
         {!isEditing ? (
@@ -3627,7 +3766,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ) : (
           <View>
             <TextInput
-              style={[styles.input, { minHeight: 120 }]}
+              style={[styles.input, themeStyle('tabs_overview_73', {  }, (theme ?? _styleTheme))]}
               multiline
               value={descriptionDraft}
               onChangeText={setDescriptionDraft}
@@ -3639,58 +3778,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         <View style={styles.row}>
           <Text style={styles.headerText}>Travelers</Text>
-          {isEditing && (
+          {!readOnly && (
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              testID="overview-add-traveler"
+              style={[styles.button, styles.smallButton, themeStyle('tabs_overview_74', {  }, (theme ?? _styleTheme))]}
               onPress={() => setShowAddTraveler((prev) => !prev)}
             >
-              <Text style={styles.buttonText}>+ Add</Text>
+              <Text style={styles.buttonText}>+ Add traveler</Text>
             </TouchableOpacity>
           )}
         </View>
-        {isEditing && showAddTraveler ? (
-          <View style={styles.addTravelerForm}>
-            <View style={[styles.row, { gap: 8 }]}>
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="First name"
-                autoComplete="given-name"
-                textContentType="givenName"
-                value={travelerDraft.firstName}
-                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, firstName: text }))}
-              />
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="Last name"
-                autoComplete="family-name"
-                textContentType="familyName"
-                value={travelerDraft.lastName}
-                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, lastName: text }))}
-              />
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Email (optional)"
-              autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
-              keyboardType="email-address"
-              value={travelerDraft.email}
-              onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, email: text }))}
-            />
-            <View style={[styles.row, { justifyContent: 'flex-end', gap: 8 }]}>
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton, styles.dangerButton]}
-                onPress={() => setShowAddTraveler(false)}
-              >
-                <Text style={styles.dangerButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addTraveler}>
-                <Text style={styles.buttonText}>Save Traveler</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : null}
+        {!readOnly && showAddTraveler ? renderAddTravelerForm() : null}
         <View style={styles.attendeeList}>
           {attendees.map((member) => (
             <View
@@ -3707,7 +3805,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <TouchableOpacity
                   style={styles.attendeeRemoveButton}
                   onPress={() => removeTraveler(member.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  hitSlop={themeStyle('tabs_overview_79', {  }, (theme ?? _styleTheme))}
                 >
                   <Text style={styles.attendeeRemoveText}>✕</Text>
                 </TouchableOpacity>
@@ -3716,7 +3814,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ))}
         </View>
         {isEditing ? (
-          <View style={{ marginTop: 10 }}>
+          <View style={themeStyle('tabs_overview_80', {  }, (theme ?? _styleTheme))}>
             <Text style={styles.headerText}>Pending Invites</Text>
             {pendingInvites.length ? (
               pendingInvites.map((invite) => (
@@ -3732,18 +3830,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         <View style={styles.divider} />
 
-        <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        <View style={[styles.row, themeStyle('tabs_overview_81', {  }, (theme ?? _styleTheme))]}>
           <Text style={styles.headerText}>Transfers</Text>
           {isEditing && (
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              style={[styles.button, styles.smallButton, themeStyle('tabs_overview_82', {  }, (theme ?? _styleTheme))]}
               onPress={() => openFlightAdd()}
             >
               <Text style={styles.buttonText}>+ Add Transfer</Text>
             </TouchableOpacity>
           )}
         </View>
-        <View style={{ gap: 8 }}>
+        <View style={themeStyle('tabs_overview_83', {  }, (theme ?? _styleTheme))}>
           {rows
             .filter((r) => r.type === 'flight')
             .map((row, idx) => {
@@ -3796,14 +3894,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <Text style={styles.headerText}>Lodging</Text>
           {isEditing && (
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              style={[styles.button, styles.smallButton, themeStyle('tabs_overview_84', {  }, (theme ?? _styleTheme))]}
               onPress={() => openAddLodging()}
             >
               <Text style={styles.buttonText}>+ Add Lodging</Text>
             </TouchableOpacity>
           )}
         </View>
-        <View style={{ gap: 8 }}>
+        <View style={themeStyle('tabs_overview_85', {  }, (theme ?? _styleTheme))}>
           {rows
             .filter((r) => r.type === 'lodging')
             .map((row) => {
@@ -3846,12 +3944,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.row}>
           <Text style={styles.headerText}>Activities</Text>
           {isEditing && (
-            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddTour}>
+            <TouchableOpacity style={[styles.button, styles.smallButton, themeStyle('tabs_overview_86', {  }, (theme ?? _styleTheme))]} onPress={openAddTour}>
               <Text style={styles.buttonText}>+ Add Activity</Text>
             </TouchableOpacity>
           )}
         </View>
-        <View style={{ gap: 8 }}>
+        <View style={themeStyle('tabs_overview_87', {  }, (theme ?? _styleTheme))}>
           {rows
             .filter((r) => r.type === 'tour')
             .map((row) => {
@@ -3883,12 +3981,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.row}>
           <Text style={styles.headerText}>Rental Cars</Text>
           {isEditing && (
-            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddRental}>
+            <TouchableOpacity style={[styles.button, styles.smallButton, themeStyle('tabs_overview_88', {  }, (theme ?? _styleTheme))]} onPress={openAddRental}>
               <Text style={styles.buttonText}>+ Add Rental</Text>
             </TouchableOpacity>
           )}
         </View>
-        <View style={{ gap: 8 }}>
+        <View style={themeStyle('tabs_overview_89', {  }, (theme ?? _styleTheme))}>
           {rows
             .filter((r) => r.type === 'rental')
             .map((row) => {
@@ -3910,14 +4008,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   return (
-    <View style={{ flex: 1, minHeight: 0 }}>
+    <View style={themeStyle('tabs_overview_90', {  }, (theme ?? _styleTheme))}>
       {trip && aiItineraryPending ? (
         <View
-          style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}
+          style={[styles.card, themeStyle('tabs_overview_91', {  }, (theme ?? _styleTheme))]}
           testID="ai-itinerary-pending-banner"
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ActivityIndicator size="small" color={theme ? theme.colors.textMuted : '#6B6B6B'} testID="ai-itinerary-pending-spinner" />
+          <View style={themeStyle('tabs_overview_92', {  }, (theme ?? _styleTheme))}>
+            <ActivityIndicator size="small" color={themeStyle('tabs_overview_96', {  }, (theme ?? _styleTheme))} testID="ai-itinerary-pending-spinner" />
             <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
           </View>
           <Text style={styles.helperText} testID="ai-itinerary-stage-label">
@@ -3930,13 +4028,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </View>
       ) : null}
       {trip && !aiItineraryPending && aiItineraryFailedMessage ? (
-        <View style={[styles.card, { borderColor: '#fecaca', borderWidth: 1, marginBottom: 10, paddingVertical: 8 }]}>
+        <View style={[styles.card, themeStyle('tabs_overview_93', {  }, (theme ?? _styleTheme))]}>
           <Text
-            style={[styles.helperText, { color: theme.colors.error }]}
+            style={[styles.helperText, themeStyle('tabs_overview_94', { theme: theme }, (theme ?? _styleTheme))]}
           >
             AI itinerary generation failed: {aiItineraryFailedMessage}
           </Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+          <View style={themeStyle('tabs_overview_95', {  }, (theme ?? _styleTheme))}>
             {aiItineraryGenerationAllowed ? (
               <TouchableOpacity
                 style={[styles.button, styles.smallButton]}
@@ -3957,17 +4055,31 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               onPress={() => onDismissAiItineraryError?.(trip.id)}
               testID="ai-itinerary-dismiss-button"
             >
-              <Text style={styles.buttonText}>Dismiss</Text>
+              <Text style={styles.dangerButtonText}>Dismiss</Text>
             </TouchableOpacity>
           </View>
         </View>
       ) : null}
       {renderContent()}
+      <ConfirmDialog
+        visible={confirmGenerate}
+        title="Generate itinerary"
+        message="This suggests activities, stays and transfers for the trip and adds them as Proposed. Everything already planned stays as it is. It counts toward your monthly generations."
+        confirmLabel="Generate"
+        onConfirm={() => {
+          setConfirmGenerate(false);
+          if (trip) onGenerateAiItinerary?.(trip.id);
+        }}
+        onCancel={() => setConfirmGenerate(false)}
+        styles={styles}
+        testID="overview-generate-itinerary-confirm"
+      />
       {!isEditing && showFlightEditor ? renderOverviewFlightEditor() : null}
       {!isEditing && showAddLodging ? renderOverviewLodgingEditor() : null}
 
       {showAddTour ? (
         <ActivityEditForm
+          lodgings={lodgings}
           draft={tourDraft}
           onChange={setTourDraft}
           onSave={saveTour}
@@ -3992,26 +4104,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         />
       ) : null}
 
+      {trip?.id && pictureDay && !readOnly ? <BannerPicturePicker visible backendUrl={backendUrl} headers={headers} tripId={trip.id} dayDate={pictureDay} styles={styles} onClose={() => setPictureDay(null)} onSaved={(url) => setBlogDayImages((previous) => ({ ...previous, [pictureDay]: url }))} /> : null}
       {addPopoverOpen ? (
         <AddItemPopover
           visible
           onSelect={handlePopoverSelect}
+          mode="activities"
+          optionalActivities={popoverOptionalOptions}
+          onSelectOptionalActivity={scheduleOptionalActivity}
+          suggestedActivities={popoverSuggestedOptions}
+          onSelectSuggestedActivity={selectSuggestedActivity}
+          busy={schedulingOptionalActivity}
           onClose={() => setAddPopoverOpen(false)}
           theme={theme}
-          hiddenKinds={featureItineraryItemKinds ? undefined : ['place', 'note', 'checklist']}
-        />
-      ) : null}
-      {activeAddDialog === 'place' ? (
-        <PlacePickerDialog
-          visible
-          defaultDay={addPopoverDay ?? 1}
-          backendUrl={backendUrl}
-          headers={headers}
-          selectedLocationIds={tripLocationOptions.map((o) => o.id)}
-          selectedLocationNames={locationNames}
-          onSubmit={handleAddPlace}
-          onCancel={closeAllAddDialogs}
-          theme={theme}
+          hiddenKinds={featureItineraryItemKinds ? undefined : ['note', 'checklist']}
         />
       ) : null}
       {activeAddDialog === 'note' ? (

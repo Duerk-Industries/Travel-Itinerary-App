@@ -1,10 +1,13 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import DialogShell from './DialogShell';
 import DateField from './DateField';
 import { requestAppleAgeConfirmation } from '../utils/appleAgeRange';
 import { localTodayDateOnly } from '../utils/dateOnly';
-import type { AppTheme } from '../theme/theme';
+
 
 /**
  * Post-sign-in date-of-birth prompt (docs/implementation-plans/analytics-upgrade.md,
@@ -101,12 +104,14 @@ const noop = () => undefined;
 const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
   visible,
   styles,
-  theme,
+  theme: _providedTheme,
   backendUrl,
   token,
   onVerified,
   onSignOut,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -154,7 +159,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
         {message ? <Text style={styles.helperText}>{message}</Text> : null}
         <View style={styles.row}>
           <TouchableOpacity
-            style={[styles.button, styles.smallButton, { minHeight: 44, justifyContent: 'center' }, busy && styles.buttonDisabled]}
+            style={[styles.button, styles.smallButton, themeStyle('components_AgeVerificationDialog_1', {  }, (theme ?? _styleTheme)), busy && styles.buttonDisabled]}
             onPress={deleteAccount}
             disabled={busy}
             testID="age-verification-delete-account"
@@ -164,7 +169,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
             <Text style={styles.buttonText}>{busy ? 'Deleting...' : 'Delete my account'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, styles.smallButton, styles.secondaryButton, { minHeight: 44, justifyContent: 'center' }]}
+            style={[styles.button, styles.smallButton, styles.secondaryButton, themeStyle('components_AgeVerificationDialog_2', {  }, (theme ?? _styleTheme))]}
             onPress={onSignOut}
             testID="age-verification-sign-out"
             accessibilityRole="button"
@@ -201,7 +206,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
       {message ? <Text style={styles.helperText}>{message}</Text> : null}
       <View style={styles.row}>
         <TouchableOpacity
-          style={[styles.button, styles.smallButton, { minHeight: 44, justifyContent: 'center' }, (busy || !dateOfBirth.trim()) && styles.buttonDisabled]}
+          style={[styles.button, styles.smallButton, themeStyle('components_AgeVerificationDialog_3', {  }, (theme ?? _styleTheme)), (busy || !dateOfBirth.trim()) && styles.buttonDisabled]}
           onPress={submit}
           disabled={busy || !dateOfBirth.trim()}
           testID="age-verification-submit"
@@ -211,7 +216,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
           <Text style={styles.buttonText}>{busy ? 'Saving...' : 'Continue'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.button, styles.smallButton, styles.secondaryButton, { minHeight: 44, justifyContent: 'center' }]}
+          style={[styles.button, styles.smallButton, styles.secondaryButton, themeStyle('components_AgeVerificationDialog_4', {  }, (theme ?? _styleTheme))]}
           onPress={onSignOut}
           testID="age-verification-sign-out"
           accessibilityRole="button"

@@ -1,8 +1,11 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import type { Trip } from '../../server/src/types';
-import type { AppTheme } from '../theme/theme';
+
 import { downloadOfflineTripSnapshot } from '../utils/downloadOfflineTripSnapshot';
 import { estimateBytes, getConnectionCost, readWifiOnlyPreference, shouldWarnBeforeDownload } from '../utils/offlineDownloadPolicy';
 import { loadOfflineTripCache, saveOfflineTripSnapshot, startOfflineAccessPeriod, type OfflineCacheOwner } from '../utils/offlineTripCache';
@@ -111,15 +114,17 @@ const DownloadIcon: React.FC<{ color: string; size?: number }> = ({ color, size 
 );
 
 /** The top-bar button: a download icon with the same footprint as the notification bell beside it. */
-export function OfflineSaveButton({ controller, theme }: { controller: SaveTripOfflineController; theme?: AppTheme }) {
+export function OfflineSaveButton({ controller, theme: _providedTheme }: { controller: SaveTripOfflineController; theme?: AppTheme }) {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   if (!controller.available) return null;
   const off = controller.busy || controller.disabled;
-  const color = theme?.colors.text ?? '#0F172A';
+  const color = theme?.colors.text ?? themeStyle('components_SaveTripOffline_17', {  }, (theme ?? _styleTheme));
   return <TouchableOpacity testID="offline-save-button" accessibilityRole="button" accessibilityLabel="Save this trip offline"
     accessibilityHint="Downloads this trip to this device so you can read it without a connection"
     accessibilityState={{ disabled: off, busy: controller.busy }} disabled={off}
     {...(Platform.OS === 'web' ? ({ title: 'Save this trip offline' } as object) : {})}
-    onPress={() => void controller.start()} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8, opacity: controller.disabled ? 0.5 : 1 }}>
+    onPress={() => void controller.start()} style={themeStyle('components_SaveTripOffline_1', { controller: controller }, (theme ?? _styleTheme))}>
     {controller.busy ? <ActivityIndicator size="small" color={color} /> : <DownloadIcon color={color} />}
   </TouchableOpacity>;
 }
@@ -128,35 +133,37 @@ export function OfflineSaveButton({ controller, theme }: { controller: SaveTripO
  * Status and questions for the save, anchored to the bottom of the screen so they are seen without scrolling. Renders
  * nothing when there is nothing to say.
  */
-export function OfflineSavePanel({ controller, theme }: { controller: SaveTripOfflineController; theme?: AppTheme }) {
+export function OfflineSavePanel({ controller, theme: _providedTheme }: { controller: SaveTripOfflineController; theme?: AppTheme }) {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { notice, confirmDevice, mobileWarning, busy } = controller;
   if (!controller.available || (!notice && !confirmDevice && !mobileWarning)) return null;
   const colors = theme?.colors;
-  const primary = { backgroundColor: colors?.cta ?? '#141414', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 };
-  const secondary = { backgroundColor: colors?.surfaceMuted ?? '#F1F5F9', borderWidth: 1, borderColor: colors?.border ?? '#CBD5E1', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 };
-  const primaryText = { color: colors?.onCta ?? '#FFFFFF', fontWeight: '700' as const };
-  const secondaryText = { color: colors?.text ?? '#0F172A', fontWeight: '700' as const };
+  const primary = themeStyle('components_SaveTripOffline_2', { colors: colors }, (theme ?? _styleTheme));
+  const secondary = themeStyle('components_SaveTripOffline_3', { colors: colors }, (theme ?? _styleTheme));
+  const primaryText = themeStyle('components_SaveTripOffline_4', {  }, (theme ?? _styleTheme));
+  const secondaryText = themeStyle('components_SaveTripOffline_5', { colors: colors }, (theme ?? _styleTheme));
   // Fixed on the web so it stays at the bottom of the window however far the page is scrolled.
-  const placement = (Platform.OS === 'web' ? { position: 'fixed' } : { position: 'absolute' }) as object;
-  return <View pointerEvents="box-none" style={[{ left: 0, right: 0, bottom: 0, zIndex: 60, paddingHorizontal: 12, paddingBottom: 12, alignItems: 'center' }, placement]}>
-    <View testID="offline-save-panel" style={{ width: '100%', maxWidth: 720, gap: 10, padding: 14, borderRadius: 12, borderWidth: 1, backgroundColor: colors?.surface ?? '#FFFFFF', borderColor: colors?.border ?? '#CBD5E1', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 }}>
-      {mobileWarning && <View style={{ gap: 8 }}>
+  const placement = (Platform.OS === 'web' ? themeStyle('components_SaveTripOffline_6', {  }, (theme ?? _styleTheme)) : themeStyle('components_SaveTripOffline_7', {  }, (theme ?? _styleTheme))) as object;
+  return <View pointerEvents="box-none" style={[themeStyle('components_SaveTripOffline_8', {  }, (theme ?? _styleTheme)), placement]}>
+    <View testID="offline-save-panel" style={themeStyle('components_SaveTripOffline_9', { colors: colors }, (theme ?? _styleTheme))}>
+      {mobileWarning && <View style={themeStyle('components_SaveTripOffline_10', {  }, (theme ?? _styleTheme))}>
         <Text accessibilityLiveRegion="polite">{mobileWarning}</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View style={themeStyle('components_SaveTripOffline_11', {  }, (theme ?? _styleTheme))}>
           <TouchableOpacity accessibilityRole="button" style={primary} onPress={controller.acceptMobileData}><Text style={primaryText}>Save on mobile data</Text></TouchableOpacity>
           <TouchableOpacity accessibilityRole="button" style={secondary} onPress={controller.waitForWifi}><Text style={secondaryText}>Wait for Wi-Fi</Text></TouchableOpacity>
         </View>
       </View>}
-      {confirmDevice && <View style={{ gap: 8 }}>
+      {confirmDevice && <View style={themeStyle('components_SaveTripOffline_12', {  }, (theme ?? _styleTheme))}>
         <Text>This browser will keep private trip details on this device. Avoid saving on shared devices. Browser storage is not encrypted by WanderBunnies. Signing out removes saved trip copies.</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View style={themeStyle('components_SaveTripOffline_13', {  }, (theme ?? _styleTheme))}>
           <TouchableOpacity accessibilityRole="button" style={primary} onPress={() => void controller.save()}><Text style={primaryText}>Save on this device</Text></TouchableOpacity>
           <TouchableOpacity accessibilityRole="button" style={secondary} onPress={controller.cancelDeviceConfirm}><Text style={secondaryText}>Cancel offline save</Text></TouchableOpacity>
         </View>
       </View>}
-      {notice && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Text accessibilityLiveRegion="polite" style={{ flex: 1 }}>{notice}</Text>
-        {!busy && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dismiss message" style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }} onPress={controller.dismissNotice}><Text tone="link">Dismiss</Text></TouchableOpacity>}
+      {notice && <View style={themeStyle('components_SaveTripOffline_14', {  }, (theme ?? _styleTheme))}>
+        <Text accessibilityLiveRegion="polite" style={themeStyle('components_SaveTripOffline_15', {  }, (theme ?? _styleTheme))}>{notice}</Text>
+        {!busy && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dismiss message" style={themeStyle('components_SaveTripOffline_16', {  }, (theme ?? _styleTheme))} onPress={controller.dismissNotice}><Text tone="link">Dismiss</Text></TouchableOpacity>}
       </View>}
     </View>
   </View>;

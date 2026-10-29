@@ -1,5 +1,8 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { memo } from 'react';
-import { Modal, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import { useEscapeToClose } from '../hooks/useEscapeToClose';
 
 type DialogShellProps = {
@@ -32,14 +35,15 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
   cardStyle,
   accessibilityRole = 'none',
   showTitle = true,
-  scrollable = false,
+  scrollable = true,
 }) => {
+  const _styleTheme = useStyleTheme();
   useEscapeToClose(visible, onClose);
   if (!visible) return null;
 
   const content = (
     <View
-      style={[styles.modalOverlay, { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-start', alignItems: 'center', padding: 16, paddingTop: 24 }, overlayStyle]}
+      style={[styles.modalOverlay, themeStyle('components_DialogShell_1', {  }, _styleTheme), overlayStyle]}
       testID={testID}
       accessible
       accessibilityRole={accessibilityRole}
@@ -47,7 +51,7 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
       accessibilityLabel={title}
       accessibilityHint={message}
     >
-      <View style={[styles.confirmModal, cardStyle, { marginTop: 0, maxHeight: '100%' }]}>
+      <View style={[styles.confirmModal, cardStyle, themeStyle('components_DialogShell_2', {  }, _styleTheme)]}>
         {showTitle ? (
           <Text style={styles.sectionTitle} accessibilityRole="header">
             {title}
@@ -55,7 +59,7 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
         ) : null}
         {message ? <Text style={styles.helperText}>{message}</Text> : null}
         {scrollable ? (
-          <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator>
+          <ScrollView style={themeStyle('dialogScroll', {}, _styleTheme)} keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator>
             {children}
           </ScrollView>
         ) : children}

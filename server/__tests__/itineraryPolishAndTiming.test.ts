@@ -552,7 +552,7 @@ describe('rescopeDayTripCarRental', () => {
   // Oslo for one Lillehammer day trip — expensive/unnecessary advice for a
   // city stay where driving/parking is a hassle.
   const baseRental: ItineraryGeneratedCarRental = {
-    status: 'Needed',
+    status: 'Proposed',
     pickupLocation: 'Oslo',
     pickupDate: '2026-01-01',
     dropoffLocation: 'Oslo',

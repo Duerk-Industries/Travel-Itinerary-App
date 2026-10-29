@@ -1,10 +1,14 @@
+import { keepsakeLoadingHtml, themeStyle } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import KeepsakeMapCaptureHost from './KeepsakeMapCaptureHost';
 import type { KeepsakeMapCaptureHandle } from './KeepsakeMapCaptureHost.types';
 import { keepsakeMapFallback } from '../utils/keepsakeMapData';
 import { captureKeepsakeMap, type KeepsakeMapCapture } from '../utils/keepsakeMapCapture';
 import type { BlogMapDay } from '../../server/src/services/blogMapService';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Modal, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
 import {
   KEEPSAKE_THEMES,
   buildKeepsakeHtml,
@@ -47,7 +51,9 @@ const keepsakeText = (blog: any): string =>
     ]),
   ].filter(Boolean).join('\n\n');
 
-const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, nativeEnabled = false, textColor = '#111827' }) => {
+const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, nativeEnabled = false, textColor: _textColorOverride }) => {
+  const _styleTheme = useStyleTheme();
+  const textColor = _textColorOverride ?? themeStyle('components_BlogKeepsakeButton_19', {  }, _styleTheme);
   const scope = `${backendUrl}:${tripId}:${JSON.stringify(headers)}`;
   const identity = useRef({scope}); if(identity.current.scope !== scope) identity.current={scope};
   const host = useRef<KeepsakeMapCaptureHandle>(null), lock = useRef<object|null>(null);
@@ -99,7 +105,7 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, nati
       if (Platform.OS === 'web') {
         if (!popup) throw new Error('Allow pop-ups to open the print keepsake');
         popup.opener = null;
-        popup.document.write('<p style="font:16px system-ui;padding:24px;color:#6b7280">Preparing your keepsake…</p>');
+        popup.document.write(keepsakeLoadingHtml(_styleTheme));
         const blog = await loadBlog(); check(); check();
         popup.document.open();
         popup.document.write(buildKeepsakeHtml(blog, themeKey, await loadMaps(check)));
@@ -142,14 +148,15 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, nati
   return (
     <>
       <KeepsakeMapCaptureHost ref={host} enabled={nativeEnabled} scope={scope}/>
-      <TouchableOpacity testID="blog-keepsake-export" accessibilityRole="button" disabled={busy} onPress={() => setChoosing(true)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
-        <Text style={{ color: textColor, fontWeight: '700' }}>{busy ? 'Preparing keepsake…' : 'Print / share keepsake'}</Text>
+      <TouchableOpacity testID="blog-keepsake-export" accessibilityRole="button" disabled={busy} onPress={() => setChoosing(true)} style={themeStyle('components_BlogKeepsakeButton_1', {  }, _styleTheme)}>
+        <Text style={themeStyle('components_BlogKeepsakeButton_2', { textColor: textColor }, _styleTheme)}>{busy ? 'Preparing keepsake…' : 'Print / share keepsake'}</Text>
       </TouchableOpacity>
       <Modal visible={choosing} transparent animationType="fade" onRequestClose={() => setChoosing(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', justifyContent: 'center', padding: 20 }}>
-          <View testID="keepsake-theme-picker" style={{ backgroundColor: '#fff', borderRadius: 16, padding: 20, maxWidth: 440, width: '100%', alignSelf: 'center' }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 4 }}>Choose a keepsake style</Text>
-            <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 14 }}>Your trip's notes and photos, laid out for printing or saving as a PDF.</Text>
+        <View style={themeStyle('components_BlogKeepsakeButton_3', {  }, _styleTheme)}>
+          <View testID="keepsake-theme-picker" style={themeStyle('components_BlogKeepsakeButton_4', {  }, _styleTheme)}>
+            <ScrollView style={themeStyle('dialogScroll', {}, _styleTheme)} nestedScrollEnabled showsVerticalScrollIndicator>
+            <Text style={themeStyle('components_BlogKeepsakeButton_5', {  }, _styleTheme)}>Choose a keepsake style</Text>
+            <Text style={themeStyle('components_BlogKeepsakeButton_6', {  }, _styleTheme)}>Your trip's notes and photos, laid out for printing or saving as a PDF.</Text>
             {KEEPSAKE_THEMES.map((theme) => {
               const selected = theme.key === themeKey;
               return (
@@ -159,28 +166,29 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, nati
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
                   onPress={() => setThemeKey(theme.key)}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 12, borderWidth: 2, borderColor: selected ? theme.accent : '#e5e7eb', marginBottom: 8 }}
+                  style={themeStyle('components_BlogKeepsakeButton_7', { selected: selected, theme: theme }, _styleTheme)}
                 >
                   {/* Mini page preview: background, card and accent stripe. */}
-                  <View style={{ width: 48, height: 40, borderRadius: 8, backgroundColor: theme.page, borderWidth: 1, borderColor: '#d1d5db', padding: 6, justifyContent: 'center' }}>
-                    <View style={{ height: 22, borderRadius: 4, backgroundColor: theme.card, borderTopWidth: 3, borderTopColor: theme.accent }} />
+                  <View style={themeStyle('components_BlogKeepsakeButton_8', { theme: theme }, _styleTheme)}>
+                    <View style={themeStyle('components_BlogKeepsakeButton_9', { theme: theme }, _styleTheme)} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: '700', color: '#111827' }}>{theme.name}</Text>
-                    <Text style={{ fontSize: 12, color: '#6b7280' }}>{theme.description}</Text>
+                  <View style={themeStyle('components_BlogKeepsakeButton_10', {  }, _styleTheme)}>
+                    <Text style={themeStyle('components_BlogKeepsakeButton_11', {  }, _styleTheme)}>{theme.name}</Text>
+                    <Text style={themeStyle('components_BlogKeepsakeButton_12', {  }, _styleTheme)}>{theme.description}</Text>
                   </View>
-                  {selected ? <Text style={{ color: theme.accent === '#F5B041' ? '#b7791f' : theme.accent, fontWeight: '800' }}>✓</Text> : null}
+                  {selected ? <Text style={themeStyle('components_BlogKeepsakeButton_13', { theme: theme }, _styleTheme)}>✓</Text> : null}
                 </TouchableOpacity>
               );
             })}
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
-              <TouchableOpacity testID="keepsake-theme-cancel" onPress={() => setChoosing(false)} style={{ paddingVertical: 10, paddingHorizontal: 14 }}>
-                <Text style={{ color: '#374151', fontWeight: '600' }}>Cancel</Text>
+            <View style={themeStyle('components_BlogKeepsakeButton_14', {  }, _styleTheme)}>
+              <TouchableOpacity testID="keepsake-theme-cancel" onPress={() => setChoosing(false)} style={themeStyle('components_BlogKeepsakeButton_15', {  }, _styleTheme)}>
+                <Text style={themeStyle('components_BlogKeepsakeButton_16', {  }, _styleTheme)}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity testID="keepsake-create" onPress={createKeepsake} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#141414' }}>
-                <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{Platform.OS === 'web' ? 'Create & print' : 'Create PDF'}</Text>
+              <TouchableOpacity testID="keepsake-create" onPress={createKeepsake} style={themeStyle('components_BlogKeepsakeButton_17', {  }, _styleTheme)}>
+                <Text style={themeStyle('components_BlogKeepsakeButton_18', {  }, _styleTheme)}>{Platform.OS === 'web' ? 'Create & print' : 'Create PDF'}</Text>
               </TouchableOpacity>
             </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>

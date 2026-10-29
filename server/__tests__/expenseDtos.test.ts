@@ -31,6 +31,7 @@ describe('expense DTOs', () => {
       exchangeRateDate: '2026-04-23',
       payerIds: ['123'],
       forIds: ['member-1'],
+      forShares: null,
       vendor: 'Coffee Shop',
       notes: 'coffee',
     });

@@ -1,3 +1,6 @@
+import '@expo/metro-runtime';
+import { themeStyle } from './theme/theme';
+import { useAppTheme as useStyleTheme } from './theme/ThemeContext';
 // Required by Expo SDK 50+ for web HMR / fast refresh and async route support.
 // Safe to import on every platform; the native runtime no-ops.
 import '@expo/metro-runtime';
@@ -49,20 +52,21 @@ if (globalErrorUtils && typeof globalErrorUtils.setGlobalHandler === 'function')
 }
 
 const StartupFailure = ({ error, componentStack }) => {
+  const _styleTheme = useStyleTheme();
   const [showDetails, setShowDetails] = useState(false);
   return (
   <SafeAreaProvider>
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title}>WanderBunnies could not start</Text>
-        <Text style={styles.message}>{getErrorMessage(error)}</Text>
-        <TouchableOpacity accessibilityRole="button" onPress={() => setShowDetails(value => !value)} style={styles.detailsButton}>
-          <Text style={styles.message}>{showDetails ? 'Hide technical details' : 'Show technical details'}</Text>
+    <SafeAreaView style={styles(_styleTheme).safeArea}>
+      <View style={styles(_styleTheme).container}>
+        <Text style={styles(_styleTheme).title}>WanderBunnies could not start</Text>
+        <Text style={styles(_styleTheme).message}>{getErrorMessage(error)}</Text>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setShowDetails(value => !value)} style={styles(_styleTheme).detailsButton}>
+          <Text style={styles(_styleTheme).message}>{showDetails ? 'Hide technical details' : 'Show technical details'}</Text>
         </TouchableOpacity>
-        {showDetails ? <ScrollView style={styles.details}>
-          <Text selectable testID="startup-error-details" style={styles.diagnostic}>{formatStartupDiagnostic(error, componentStack)}</Text>
+        {showDetails ? <ScrollView style={styles(_styleTheme).details}>
+          <Text selectable testID="startup-error-details" style={styles(_styleTheme).diagnostic}>{formatStartupDiagnostic(error, componentStack)}</Text>
         </ScrollView> : null}
-        {error && typeof error.stack === 'string' ? <Text selectable style={styles.stack}>{error.stack.slice(0, 1500)}</Text> : null}
+        {error && typeof error.stack === 'string' ? <Text selectable style={styles(_styleTheme).stack}>{error.stack.slice(0, 1500)}</Text> : null}
       </View>
     </SafeAreaView>
   </SafeAreaProvider>
@@ -153,38 +157,7 @@ const Root = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#102438',
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 : 24,
-  },
-  title: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  message: {
-    color: '#dce8f2',
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  detailsButton: { marginTop: 20, paddingVertical: 12 },
-  details: { flexGrow: 0, maxHeight: '60%', marginTop: 8 },
-  diagnostic: { color: '#dce8f2', fontSize: 12, lineHeight: 18, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  stack: {
-    color: '#9fb3c8',
-    fontSize: 11,
-    lineHeight: 15,
-    marginTop: 12,
-  },
-});
+const styles = (_theme) => themeStyle('AppEntry_1', { StyleSheet: StyleSheet, Platform: Platform, StatusBar: StatusBar }, _theme);
 
 // wrapApp returns Root unchanged when Sentry isn't initialized, so this is
 // safe even on a fresh checkout with no DSN configured.

@@ -1,9 +1,12 @@
+import { themeStyle, type AppTheme } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+import KeyboardViewport from './KeyboardViewport';
 import React from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
+import {  Platform, ScrollView, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
 import type { LodgingDraft } from '../tabs/lodging';
 import LodgingForm from './LodgingForm'; // Assuming we extract the form fields into this component
 import DialogShell from './DialogShell';
-import type { AppTheme } from '../theme/theme';
+
 
 type MemberOption = {
   id: string;
@@ -33,6 +36,7 @@ type LodgingDialogProps = {
 };
 
 const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
+  const _styleTheme = useStyleTheme();
   const { width } = useWindowDimensions();
   const isCompact = width < 520;
 
@@ -46,16 +50,15 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
       onClose={props.onCancel}
       testID={props.testID}
       useNativeModal
-      overlayStyle={{ justifyContent: 'center' }}
-      cardStyle={[props.styles.modalCard, { marginTop: 0 }, isCompact && { width: '100%', maxHeight: '90%' }]}
+      overlayStyle={themeStyle('components_LodgingDialog_1', {  }, _styleTheme)}
+      cardStyle={[props.styles.modalCard, themeStyle('components_LodgingDialog_2', {  }, _styleTheme), isCompact && themeStyle('components_LodgingDialog_3', {  }, _styleTheme)]}
     >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={{ flexShrink: 1 }}
+          <KeyboardViewport
+            style={themeStyle('components_LodgingDialog_4', {  }, _styleTheme)}
           >
             <ScrollView
-              style={{ maxHeight: isCompact ? 520 : 440 }}
-              contentContainerStyle={{ paddingRight: 12, paddingBottom: 16 }}
+              style={themeStyle('components_LodgingDialog_5', { isCompact: isCompact }, _styleTheme)}
+              contentContainerStyle={themeStyle('components_LodgingDialog_6', {  }, _styleTheme)}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
               nestedScrollEnabled
@@ -63,7 +66,7 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
             >
               <LodgingForm {...props} isCompact={isCompact} />
             </ScrollView>
-          </KeyboardAvoidingView>
+          </KeyboardViewport>
           <View style={props.styles.row}>
             <TouchableOpacity
               style={[props.styles.button, props.styles.dangerButton]}

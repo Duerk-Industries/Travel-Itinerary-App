@@ -42,9 +42,9 @@ describe('app.config.ts', () => {
     expect((config.android as any)?.edgeToEdgeEnabled).toBe(true);
   });
 
-  it('keeps the Android soft keyboard in pan mode so inputs scroll above the keyboard', () => {
+  it('resizes the Android window so page actions remain above the keyboard', () => {
     const config = loadConfig();
-    expect((config.android as any)?.softwareKeyboardLayoutMode).toBe('pan');
+    expect((config.android as any)?.softwareKeyboardLayoutMode).toBe('resize');
   });
 
   describe('iOS ATS', () => {

@@ -7,7 +7,7 @@ import { BlogContributor } from './engagementTypes';
 import { displayNameFromRow } from './postgresEngagementRepository';
 import { buildNarrativeBlogBody } from './narrative';
 import { logError } from '../logger';
-import { markSynced, shouldSkipSync } from './syncCoordination';
+import { markSynced, shouldSkipSync, runBlogSyncForTrip } from './syncCoordination';
 import { normalizeBlogTags } from './tags';
 import { clearPostgresDeletedTarget } from './deletedTargetCleanup';
 
@@ -153,7 +153,7 @@ const syncOneItineraryDetail = async (
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
 };
 
-const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise<void> => {
+const syncLinkedItineraryItems = (tripId: string, userId: string): Promise<void> => runBlogSyncForTrip(tripId, async () => {
   const [sources, days] = await Promise.all([
     queryBlog<any>(
       `SELECT d.id, d.day, d.activity, d.kind, d.place_id, d.note_body, t.start_date
@@ -166,14 +166,26 @@ const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise
   const sourceIds = new Set(sources.rows.map((row) => String(row.id)));
   await Promise.all(sources.rows.map((row) => syncOneItineraryDetail(row, tripId, userId, days.rows)));
 
-  const staleLinks = await queryBlog<{ item_id: string; source_id: string }>(`SELECT l.item_id, l.source_id FROM blog_item_source_links l JOIN blog_items i ON i.id = l.item_id WHERE i.trip_id = $1 AND l.source_type = 'itinerary_detail' AND l.detached = FALSE`, [tripId]);
+  const staleLinks = await queryBlog<{ item_id: string; source_id: string }>(`SELECT l.item_id, l.source_id FROM blog_item_source_links l JOIN blog_items i ON i.id = l.item_id WHERE i.trip_id = $1 AND l.source_type = 'itinerary_detail' AND i.deleted_at IS NULL`, [tripId]);
   await Promise.all(
     staleLinks.rows
       .filter((link) => !sourceIds.has(String(link.source_id)))
-      .map((link) => queryBlog('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [link.item_id]))
+      .map((link) => withBlogTransaction(async (client) => {
+        // Another itinerary write may have happened after this sync took its source snapshot.
+        const source = await client.query('SELECT id FROM itinerary_details WHERE id = $1', [link.source_id]);
+        if (source.rowCount) return;
+        const deleted = await client.query(
+          "UPDATE blog_items SET deleted_at = NOW(), tags = '[]'::jsonb, version = version + 1, last_editor_user_id = $2, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL",
+          [link.item_id, userId]
+        );
+        if (!deleted.rowCount) return;
+        await clearPostgresDeletedTarget(client, 'item', link.item_id);
+        await client.query('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [link.item_id]);
+        await client.query('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+      }))
   );
   markSynced(tripId);
-};
+});
 
 // Public entry point for the write-path trigger (itineraryDataRoutes.ts,
 // itineraryAsyncService.ts): fire this in the background right after an

@@ -69,8 +69,8 @@ describe('PaymentDialog accessibility', () => {
     expect(getByLabelText('Payment amount').props.accessibilityLabel).toBe('Payment amount');
   });
 
-  it('marks selected participant toggles via accessibilityState.selected', () => {
-    const { getByTestId } = render(
+  it('marks the selected payer in the dropdown via accessibilityState.selected', () => {
+    const { getByTestId, getByLabelText } = render(
       <PaymentDialog
         visible
         onCancel={() => {}}
@@ -82,13 +82,13 @@ describe('PaymentDialog accessibility', () => {
         styles={bareStyles}
       />
     );
-    // Platform.OS mock is 'ios', so the native toggle branch renders.
-    const alicePayer = getByTestId('payment-payer-alice');
-    const bobPayer = getByTestId('payment-payer-bob');
-    expect(alicePayer.props.accessibilityRole).toBe('button');
-    expect(alicePayer.props.accessibilityLabel).toBe('Payer: Alice');
-    expect(alicePayer.props.accessibilityState).toEqual({ selected: true });
-    expect(bobPayer.props.accessibilityState).toEqual({ selected: false });
+    fireEvent.press(getByLabelText('Payer'));
+    const alicePayer = getByTestId('payment-payer-select-option-alice');
+    const bobPayer = getByTestId('payment-payer-select-option-bob');
+    expect(alicePayer.props.accessibilityRole).toBe('menuitem');
+    expect(alicePayer.props.accessibilityLabel).toBe('Select Alice');
+    expect(alicePayer.props.accessibilityState.selected).toBe(true);
+    expect(bobPayer.props.accessibilityState.selected).toBe(false);
   });
 
   it('opens a native date picker for the payment date', () => {

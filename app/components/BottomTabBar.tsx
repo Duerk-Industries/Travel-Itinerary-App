@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon, { type IconName } from './Icon';
-import { gradientFill, type AppTheme } from '../theme/theme';
+import { themeStyle, type AppTheme } from '../theme/theme';
 
 export type BottomTab = { page: string; label: string; icon: IconName };
 export type AddOptionKey = 'expense' | 'blog' | 'activity' | 'flight' | 'lodging' | 'import';
@@ -30,14 +30,12 @@ type Props = {
  */
 const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs, addOptions, addTitle, onNavigate, onChooseAdd, bottomInset = 0 }) => {
   const [addOpen, setAddOpen] = useState(false);
-  const { colors } = theme;
-  const dark = theme.mode === 'dark';
-  const activePill = dark ? '#262626' : '#EFEFEF';
+  const styles = themeStyle('components_BottomTabBar_1', { StyleSheet: StyleSheet, BOTTOM_TAB_BAR_HEIGHT: BOTTOM_TAB_BAR_HEIGHT }, theme);
   const isActive = (page: string) => activePage === page || (page === 'account' && activePage.startsWith('account'));
 
   const renderTab = (tab: BottomTab) => {
     const active = isActive(tab.page);
-    const tint = active ? colors.text : colors.textMuted;
+    const tint = themeStyle('components_BottomTabBar_5', { active: active }, theme);
     return (
       <TouchableOpacity
         key={tab.page}
@@ -48,10 +46,10 @@ const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs,
         accessibilityState={{ selected: active }}
         testID={`bottom-tab-${tab.page}`}
       >
-        <View style={[styles.iconPill, active && { backgroundColor: activePill }]}>
+        <View style={[styles.iconPill, active && themeStyle('components_BottomTabBar_3', {  }, theme)]}>
           <Icon name={tab.icon} color={tint} />
         </View>
-        <Text style={[styles.label, { color: tint, fontWeight: active ? '700' : '500' }]} numberOfLines={1}>{tab.label}</Text>
+        <Text style={[styles.label, themeStyle('components_BottomTabBar_4', { active: active }, theme)]} numberOfLines={1}>{tab.label}</Text>
       </TouchableOpacity>
     );
   };
@@ -66,7 +64,7 @@ const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs,
       <View
         accessibilityRole="tablist"
         testID="bottom-tab-bar"
-        style={[styles.bar, { paddingBottom: 6 + bottomInset, backgroundColor: dark ? '#0A0A0A' : colors.surface, borderTopColor: colors.border }]}
+        style={[styles.bar, themeStyle('components_BottomTabBar_2', { bottomInset: bottomInset }, theme)]}
       >
         {leftTabs.map(renderTab)}
         <TouchableOpacity
@@ -77,10 +75,10 @@ const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs,
           accessibilityState={{ expanded: addOpen }}
           testID="bottom-tab-add"
         >
-          <View style={[styles.addButton, { backgroundColor: colors.cta, borderColor: dark ? '#0A0A0A' : colors.surface }, gradientFill(theme.gradients.cta)]}>
-            <Icon name={addOpen ? 'close' : 'plus'} color={colors.onCta} size={24} strokeWidth={2.2} />
+          <View style={styles.addButton}>
+            <Icon name={addOpen ? 'close' : 'plus'} color={themeStyle('components_BottomTabBar_7', {  }, theme)} size={24} strokeWidth={2.2} />
           </View>
-          <Text style={[styles.label, { color: colors.text, fontWeight: '600' }]}>{addOpen ? 'Close' : 'Add'}</Text>
+          <Text style={styles.addLabel}>{addOpen ? 'Close' : 'Add'}</Text>
         </TouchableOpacity>
         {rightTabs.map(renderTab)}
       </View>
@@ -89,35 +87,35 @@ const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs,
       <Modal visible transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
         <Pressable style={styles.scrim} onPress={() => setAddOpen(false)} accessibilityLabel="Close add menu" testID="add-sheet-scrim" />
         <View
-          style={[styles.sheet, { bottom: bottomInset + 12, backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={[styles.sheet, themeStyle('components_BottomTabBar_6', { bottomInset: bottomInset }, theme)]}
           accessibilityViewIsModal
           testID="add-sheet"
         >
-          <View style={[styles.grabber, { backgroundColor: colors.border }]} />
-          <Text style={[styles.sheetTitle, { color: colors.text }]} numberOfLines={2}>{addTitle}</Text>
-          <Text style={[styles.sheetSubtitle, { color: colors.textMuted }]}>Pick what you want to add.</Text>
+          <View style={styles.grabber} />
+          <Text style={styles.sheetTitle} numberOfLines={2}>{addTitle}</Text>
+          <Text style={styles.sheetSubtitle}>Pick what you want to add.</Text>
           <View style={styles.grid}>
             {addOptions.map((option) => (
               <TouchableOpacity
                 key={option.key}
-                style={[styles.option, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+                style={styles.option}
                 onPress={() => choose(option.key)}
                 accessibilityRole="button"
                 accessibilityLabel={`Add ${option.label.toLowerCase()}`}
                 testID={`add-option-${option.key}`}
               >
-                <Icon name={option.icon} color={colors.text} size={26} />
-                <Text style={[styles.optionLabel, { color: colors.text }]} numberOfLines={1}>{option.label}</Text>
+                <Icon name={option.icon} color={themeStyle('components_BottomTabBar_8', {  }, theme)} size={26} />
+                <Text style={styles.optionLabel} numberOfLines={1}>{option.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <TouchableOpacity
-            style={[styles.cancel, { borderColor: colors.border }]}
+            style={styles.cancel}
             onPress={() => setAddOpen(false)}
             accessibilityRole="button"
             testID="add-sheet-cancel"
           >
-            <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
+            <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -125,108 +123,5 @@ const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs,
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    width: '100%',
-    minHeight: BOTTOM_TAB_BAR_HEIGHT,
-    paddingTop: 6,
-    paddingHorizontal: 8,
-    borderTopWidth: 1,
-  },
-  tab: {
-    flex: 1,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 3,
-  },
-  iconPill: {
-    width: 52,
-    height: 30,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    fontSize: 11,
-  },
-  addButton: {
-    width: 56,
-    height: 56,
-    marginTop: -26,
-    borderRadius: 28,
-    borderWidth: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrim: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  sheet: {
-    position: 'absolute',
-    left: 8,
-    right: 8,
-    borderRadius: 26,
-    borderWidth: 1,
-    paddingTop: 10,
-    paddingHorizontal: 18,
-    paddingBottom: 20,
-    gap: 4,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 999,
-    marginBottom: 8,
-  },
-  sheetTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  sheetSubtitle: {
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  option: {
-    flexBasis: '30%',
-    flexGrow: 1,
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  optionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  cancel: {
-    marginTop: 12,
-    minHeight: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-});
 
 export default BottomTabBar;

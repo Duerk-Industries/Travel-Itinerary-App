@@ -132,7 +132,7 @@ export const buildGetYourGuideItineraryCandidates = (params: GetYourGuideCandida
       budgetTier: catalog?.budgetTier ?? null,
       interestTags: catalog?.interestTags ?? [],
       mustSee: isMustSee(activity.name, mustSeeNames),
-      alreadyBooked: Boolean(activity.bookedOn || activity.reference || String((activity as any).status) === 'Needed'),
+      alreadyBooked: Boolean(activity.bookedOn || activity.reference || ['Booked', 'Completed'].includes(String(activity.status))),
     };
     return candidate;
   });

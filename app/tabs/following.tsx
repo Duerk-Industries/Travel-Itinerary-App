@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FollowedTrip } from './follow';
@@ -143,6 +145,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
   onSelectTrip,
   onUnfollowTrip,
 }) => {
+  const _styleTheme = useStyleTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [detail, setDetail] = useState<FollowedTripDetail | null>(null);
@@ -300,7 +303,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
               key={trip.tripId}
               style={[
                 styles.followTripItem,
-                selectedTripId === trip.tripId ? { borderColor: '#8A8A8A', borderWidth: 1 } : null,
+                selectedTripId === trip.tripId ? themeStyle('tabs_following_1', {  }, _styleTheme) : null,
               ]}
               activeOpacity={0.85}
               onPress={() => onSelectTrip(trip.tripId)}
@@ -310,7 +313,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
                 {(trip.destination ? `${trip.destination}  · ` : '') +
                   (trip.inviterName ? `Invited by ${trip.inviterName}` : 'Shared')}
               </Text>
-              <View style={[styles.row, { marginTop: 6 }]}>
+              <View style={[styles.row, themeStyle('tabs_following_2', {  }, _styleTheme)]}>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, styles.dangerButton]}
                   onPress={async () => {
@@ -353,25 +356,25 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
               <View style={styles.divider} />
               <Text style={styles.headerText}>Activity Feed ({detail?.activity?.length ?? 0})</Text>
               {groupedActivityByDate.map((dateGroup) => (
-                <View key={dateGroup.label} style={{ marginTop: 6 }}>
-                  <Text style={[styles.helperText, { fontWeight: '700', marginBottom: 4 }]}>{dateGroup.label}</Text>
+                <View key={dateGroup.label} style={themeStyle('tabs_following_3', {  }, _styleTheme)}>
+                  <Text style={[styles.helperText, themeStyle('tabs_following_4', {  }, _styleTheme)]}>{dateGroup.label}</Text>
                   {dateGroup.items.map((event: any) => {
                     const timestamp = getEventTimestamp(event);
                     const secondary = getSecondaryText(event);
                     return (
                       <View
                         key={event?.id ?? `${timestamp}-${event?.type}`}
-                        style={{ paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}
+                        style={themeStyle('tabs_following_5', {  }, _styleTheme)}
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                          <View style={{ flexDirection: 'row', flex: 1, gap: 8 }}>
-                            <Text style={{ width: 20, fontSize: 14 }}>{EVENT_ICON[event?.type] ?? '•'}</Text>
-                            <View style={{ flex: 1 }}>
-                              <Text style={[styles.bodyText, { fontWeight: '700' }]}>{getPrimaryText(event)}</Text>
+                        <View style={themeStyle('tabs_following_6', {  }, _styleTheme)}>
+                          <View style={themeStyle('tabs_following_7', {  }, _styleTheme)}>
+                            <Text style={themeStyle('tabs_following_8', {  }, _styleTheme)}>{EVENT_ICON[event?.type] ?? '•'}</Text>
+                            <View style={themeStyle('tabs_following_9', {  }, _styleTheme)}>
+                              <Text style={[styles.bodyText, themeStyle('tabs_following_10', {  }, _styleTheme)]}>{getPrimaryText(event)}</Text>
                               {secondary ? <Text style={styles.helperText}>{secondary}</Text> : null}
                             </View>
                           </View>
-                          <Text style={[styles.helperText, { minWidth: 56, textAlign: 'right' }]}>{getRelativeTime(timestamp)}</Text>
+                          <Text style={[styles.helperText, themeStyle('tabs_following_11', {  }, _styleTheme)]}>{getRelativeTime(timestamp)}</Text>
                         </View>
                       </View>
                     );
@@ -382,23 +385,23 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
               <View style={styles.divider} />
               <Text style={styles.headerText}>Discussion ({detail?.comments?.length ?? 0})</Text>
               {(detail?.comments ?? []).map((comment: any) => (
-                <View key={comment?.id} style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
-                  <Text style={[styles.bodyText, { fontWeight: '700' }]}>{comment?.authorName || comment?.authorEmail || 'Traveler'}</Text>
+                <View key={comment?.id} style={themeStyle('tabs_following_12', {  }, _styleTheme)}>
+                  <Text style={[styles.bodyText, themeStyle('tabs_following_13', {  }, _styleTheme)]}>{comment?.authorName || comment?.authorEmail || 'Traveler'}</Text>
                   <Text style={styles.bodyText}>{comment?.body ?? ''}</Text>
                   <Text style={styles.helperText}>{comment?.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}</Text>
                 </View>
               ))}
               {detail?.comments?.length ? null : <Text style={styles.helperText}>No comments yet. Start the discussion.</Text>}
-              <View style={{ marginTop: 8 }}>
+              <View style={themeStyle('tabs_following_14', {  }, _styleTheme)}>
                 <TextInput
-                  style={[styles.input, { minHeight: 70, textAlignVertical: 'top' }]}
+                  style={[styles.input, themeStyle('tabs_following_15', {  }, _styleTheme)]}
                   placeholder="Write a comment..."
                   multiline
                   value={newComment}
                   onChangeText={setNewComment}
                 />
                 {commentError ? <Text style={styles.errorText}>{commentError}</Text> : null}
-                <TouchableOpacity style={[styles.button, { marginTop: 6 }]} onPress={postComment} disabled={postingComment || !newComment.trim()}>
+                <TouchableOpacity style={[styles.button, themeStyle('tabs_following_16', {  }, _styleTheme)]} onPress={postComment} disabled={postingComment || !newComment.trim()}>
                   <Text style={styles.buttonText}>{postingComment ? 'Posting...' : 'Post Comment'}</Text>
                 </TouchableOpacity>
               </View>
@@ -440,8 +443,8 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
                       return String(a?.time ?? '').localeCompare(String(b?.time ?? ''));
                     });
                   return (
-                    <View key={itineraryId || itinerary.destination} style={{ marginTop: 6 }}>
-                      <Text style={[styles.bodyText, { fontWeight: '700' }]}>
+                    <View key={itineraryId || itinerary.destination} style={themeStyle('tabs_following_17', {  }, _styleTheme)}>
+                      <Text style={[styles.bodyText, themeStyle('tabs_following_18', {  }, _styleTheme)]}>
                         {`${itinerary?.destination ?? 'Itinerary'} · ${itinerary?.days ?? '?'} day(s)`}
                       </Text>
                       {details.length ? (

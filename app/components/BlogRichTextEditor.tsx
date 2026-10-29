@@ -1,4 +1,7 @@
 // @ts-nocheck
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 // Rich-text (WYSIWYG) editor for Trip Blog entries, backed by @10play/tentap-editor
 // (TipTap/ProseMirror under a WebView on native, an iframe shim on web via
 // @10play/react-native-web-webview — see metro.shared.cjs for the web resolver
@@ -30,11 +33,15 @@ const BlogRichTextEditable = ({
   onChangeHTML,
   editable = true,
   minHeight = 160,
-  borderColor = '#ccd4df',
-  backgroundColor = '#ffffff',
-  textColor = '#111827',
+  borderColor: _borderColorOverride,
+  backgroundColor: _backgroundColorOverride,
+  textColor: _textColorOverride,
   testID,
 }: Props) => {
+  const _styleTheme = useStyleTheme();
+  const borderColor = _borderColorOverride ?? themeStyle('components_BlogRichTextEditor_4', {  }, _styleTheme);
+  const backgroundColor = _backgroundColorOverride ?? themeStyle('components_BlogRichTextEditor_5', {  }, _styleTheme);
+  const textColor = _textColorOverride ?? themeStyle('components_BlogRichTextEditor_6', {  }, _styleTheme);
   // theme.webview.backgroundColor (below) only paints the WebView/iframe's own background — it
   // doesn't touch the actual document text color, which TipTap otherwise renders in its default
   // black regardless of the app's light/dark theme (illegible against a dark background). Rather
@@ -68,8 +75,8 @@ const BlogRichTextEditable = ({
     initialContent: value || '',
     bridgeExtensions,
     theme: {
-      webview: { backgroundColor },
-      toolbar: { toolbarBody: { backgroundColor, borderTopColor: borderColor, borderBottomColor: borderColor } },
+      webview: themeStyle('components_BlogRichTextEditor_1', { backgroundColor: backgroundColor }, _styleTheme),
+      toolbar: { toolbarBody: themeStyle('components_BlogRichTextEditor_2', { backgroundColor: backgroundColor, borderColor: borderColor }, _styleTheme) },
     },
     onChange: async () => {
       if (!onChangeHTML) return;
@@ -81,14 +88,7 @@ const BlogRichTextEditable = ({
   return (
     <View
       testID={testID}
-      style={{
-        borderWidth: editable ? 1 : 0,
-        borderColor,
-        borderRadius: 8,
-        backgroundColor,
-        minHeight: editable ? minHeight : undefined,
-        overflow: 'hidden',
-      }}
+      style={themeStyle('components_BlogRichTextEditor_3', { editable: editable, borderColor: borderColor, backgroundColor: backgroundColor, minHeight: minHeight }, _styleTheme)}
     >
       <RichText editor={editor} />
       {editable ? <Toolbar editor={editor} items={DEFAULT_TOOLBAR_ITEMS} /> : null}

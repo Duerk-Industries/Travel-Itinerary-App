@@ -1,0 +1,76 @@
+- generic [ref=f68e9]:
+  - generic [ref=f68e10]:
+    - generic [ref=f68e11]:
+      - generic "Back" [ref=f68e101] [cursor=pointer]: <
+      - generic "Forward": ">"
+      - generic "WanderBunnies logo" [ref=f68e12]:
+        - img "WanderBunnies logo" [ref=f68e104]
+      - generic [ref=f68e14]: WanderBunnies
+    - generic [ref=f68e106]:
+      - button "Save this trip offline" [ref=f68e107] [cursor=pointer]
+      - button "Notifications, 0 unread" [ref=f68e110] [cursor=pointer]:
+        - generic [ref=f68e111]: 🔔
+      - generic "Account" [ref=f68e112] [cursor=pointer]: 👤
+      - generic [ref=f68e114] [cursor=pointer]: Admin
+      - generic [ref=f68e116] [cursor=pointer]: Logout
+  - generic [ref=f68e196]:
+    - generic [ref=f68e197]:
+      - generic [ref=f68e198]: Your trip
+      - generic [ref=f68e199]:
+        - generic [ref=f68e200] [cursor=pointer]: + Create Trip
+        - generic [ref=f68e202] [cursor=pointer]: Follow Trip
+        - generic [ref=f68e204] [cursor=pointer]: Share
+    - generic [ref=f68e206] [cursor=pointer]:
+      - generic [ref=f68e210]:
+        - generic [ref=f68e211]: 3-day adventure in
+        - generic [ref=f68e212]: Assessment Phone Weekend 20261024
+      - generic: Click to Change Trip
+    - generic [ref=f68e213]:
+      - generic [ref=f68e214] [cursor=pointer]:
+        - generic [ref=f68e215]: 🧭
+        - generic [ref=f68e216]: Itinerary
+        - generic [ref=f68e217]: ">"
+      - generic [ref=f68e218] [cursor=pointer]:
+        - generic [ref=f68e219]: 📖
+        - generic [ref=f68e220]: Trip Blog
+        - generic [ref=f68e221]: ">"
+      - generic [ref=f68e222] [cursor=pointer]:
+        - generic [ref=f68e223]: ✈️
+        - generic [ref=f68e224]: Flights
+        - generic [ref=f68e225]: ">"
+      - generic [ref=f68e226] [cursor=pointer]:
+        - generic [ref=f68e227]: 🏨
+        - generic [ref=f68e228]: Lodging
+        - generic [ref=f68e229]: ">"
+      - generic [ref=f68e230] [cursor=pointer]:
+        - generic [ref=f68e231]: 🎟️
+        - generic [ref=f68e232]: Activities
+        - generic [ref=f68e233]: ">"
+      - generic [ref=f68e234] [cursor=pointer]:
+        - generic [ref=f68e235]: 🚌
+        - generic [ref=f68e236]: Ground Transfers
+        - generic [ref=f68e237]: ">"
+      - generic [ref=f68e238] [cursor=pointer]:
+        - generic [ref=f68e239]: 🚗
+        - generic [ref=f68e240]: Car Rentals
+        - generic [ref=f68e241]: ">"
+      - generic [ref=f68e242] [cursor=pointer]:
+        - generic [ref=f68e243]: 🧾
+        - generic [ref=f68e244]: Daily Expenses
+        - generic [ref=f68e245]: ">"
+      - generic [ref=f68e246] [cursor=pointer]:
+        - generic [ref=f68e247]: 💵
+        - generic [ref=f68e248]: Cost Report
+        - generic [ref=f68e249]: ">"
+      - generic [ref=f68e250] [cursor=pointer]:
+        - generic [ref=f68e251]: ✓
+        - generic [ref=f68e252]: Packing
+        - generic [ref=f68e253]: ">"
+      - generic [ref=f68e254] [cursor=pointer]:
+        - generic [ref=f68e255]: 📥
+        - generic [ref=f68e256]: Import Travel Confirmations
+        - generic [ref=f68e257]: ">"
+  - button "Open trip chat" [ref=f68e188] [cursor=pointer]:
+    - generic [ref=f68e189]: 💬
+  - button "Open the app guide assistant" [ref=f68e190] [cursor=pointer]:
+    - generic [ref=f68e191]: ✨

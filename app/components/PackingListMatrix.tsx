@@ -1,3 +1,6 @@
+import { layoutMetrics, themeStyle } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { toWebStyle } from '../utils/webStyle';
@@ -26,8 +29,8 @@ type Props = {
   colors: { border: string; text: string; textMuted: string; backgroundAlt: string; success: string; surface: string };
 };
 
-const ITEM_WIDTH = 240;
-const TRAVELER_WIDTH = 110;
+const ITEM_WIDTH = layoutMetrics.PackingListMatrix_ITEM_WIDTH;
+const TRAVELER_WIDTH = layoutMetrics.PackingListMatrix_TRAVELER_WIDTH;
 
 /**
  * Web freezes the header row and item-name column with native CSS
@@ -45,66 +48,40 @@ const TRAVELER_WIDTH = 110;
  * exactly what caused the header to keep scrolling off screen.
  */
 const PackingListMatrixWeb: React.FC<Props> = ({ items, travelers, onToggle, disabled, colors }) => {
+  const _styleTheme = useStyleTheme();
   return (
     <View
-      style={toWebStyle(styles.webScroll, {
-        overflow: 'auto',
-        position: 'relative',
-        maxHeight: '70vh',
-        backgroundColor: colors.surface,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: colors.border,
-      })}
+      style={toWebStyle(styles(_styleTheme).webScroll, themeStyle('components_PackingListMatrix_1', { colors: colors, StyleSheet: StyleSheet }, _styleTheme))}
       testID="packing-matrix-web-scroll"
     >
-      <View style={toWebStyle(styles.horizontalRow, {
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-        backgroundColor: colors.backgroundAlt,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      })}>
+      <View style={toWebStyle(styles(_styleTheme).horizontalRow, themeStyle('components_PackingListMatrix_2', { colors: colors }, _styleTheme))}>
         <View
-          style={toWebStyle({ ...styles.itemHeader, backgroundColor: colors.backgroundAlt, borderColor: colors.border }, {
-            position: 'sticky',
-            top: 0,
-            left: 0,
-            zIndex: 4,
-          })}
+          style={toWebStyle(themeStyle('components_PackingListMatrix_3', { styles: styles(_styleTheme), colors: colors }, _styleTheme), themeStyle('components_PackingListMatrix_4', {  }, _styleTheme))}
           testID="packing-matrix-web-corner"
         >
-          <Text style={[styles.headerText, { color: colors.text }]}>Item</Text>
+          <Text style={[styles(_styleTheme).headerText, themeStyle('components_PackingListMatrix_5', { colors: colors }, _styleTheme)]}>Item</Text>
         </View>
         {travelers.map((traveler) => (
           <View
             key={traveler.id}
-            style={toWebStyle({ ...styles.travelerHeader, backgroundColor: colors.backgroundAlt, borderColor: colors.border }, {
-              position: 'sticky',
-              top: 0,
-              zIndex: 3,
-            })}
+            style={toWebStyle(themeStyle('components_PackingListMatrix_6', { styles: styles(_styleTheme), colors: colors }, _styleTheme), themeStyle('components_PackingListMatrix_7', {  }, _styleTheme))}
             testID={`packing-matrix-web-header-${traveler.id}`}
           >
-            <Text numberOfLines={1} style={[styles.headerText, { color: colors.text }]}>{traveler.displayName || traveler.name}</Text>
+            <Text numberOfLines={1} style={[styles(_styleTheme).headerText, themeStyle('components_PackingListMatrix_8', { colors: colors }, _styleTheme)]}>{traveler.displayName || traveler.name}</Text>
           </View>
         ))}
       </View>
       {items.map((item) => (
-        <View key={item.id} style={styles.horizontalRow}>
+        <View key={item.id} style={styles(_styleTheme).horizontalRow}>
           <View
-            style={toWebStyle({ ...styles.itemCell, ...(item.isCategory ? styles.sectionCell : {}), borderColor: colors.border, backgroundColor: item.isCategory ? colors.backgroundAlt : colors.surface }, {
-              position: 'sticky',
-              left: 0,
-              zIndex: 2,
-            })}
+            style={toWebStyle(themeStyle('components_PackingListMatrix_9', { styles: styles(_styleTheme), item: item, colors: colors }, _styleTheme), themeStyle('components_PackingListMatrix_10', {  }, _styleTheme))}
             testID={`packing-matrix-web-item-${item.id}`}
           >
-            <Text style={[styles.itemText, item.isCategory ? styles.sectionText : null, { color: colors.text }]}>{item.label}</Text>
+            <Text style={[styles(_styleTheme).itemText, item.isCategory ? styles(_styleTheme).sectionText : null, themeStyle('components_PackingListMatrix_11', { colors: colors }, _styleTheme)]}>{item.label}</Text>
           </View>
           {travelers.map((traveler) => {
             if (item.isCategory) {
-              return <View key={`${item.id}-${traveler.id}`} style={[styles.checkCell, styles.sectionCell, { borderColor: colors.border, backgroundColor: colors.backgroundAlt }]} />;
+              return <View key={`${item.id}-${traveler.id}`} style={[styles(_styleTheme).checkCell, styles(_styleTheme).sectionCell, themeStyle('components_PackingListMatrix_12', { colors: colors }, _styleTheme)]} />;
             }
             const checked = item.packedBy?.includes(traveler.id) ?? false;
             return (
@@ -113,9 +90,9 @@ const PackingListMatrixWeb: React.FC<Props> = ({ items, travelers, onToggle, dis
                 testID={`packing-check-${item.id}-${traveler.id}`}
                 disabled={disabled || !onToggle}
                 onPress={() => onToggle?.(item, traveler)}
-                style={[styles.checkCell, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                style={[styles(_styleTheme).checkCell, themeStyle('components_PackingListMatrix_13', { colors: colors }, _styleTheme)]}
               >
-                <Text style={[styles.checkText, { color: checked ? colors.success : colors.textMuted }]}>{checked ? '✓' : ''}</Text>
+                <Text style={[styles(_styleTheme).checkText, themeStyle('components_PackingListMatrix_14', { checked: checked, colors: colors }, _styleTheme)]}>{checked ? '✓' : ''}</Text>
               </Pressable>
             );
           })}
@@ -147,30 +124,31 @@ const PackingListMatrixWeb: React.FC<Props> = ({ items, travelers, onToggle, dis
  * list matters more than a frozen column that wasn't reliably reachable.
  */
 const PackingListMatrixNative: React.FC<Props> = ({ items, travelers, onToggle, disabled, colors }) => {
+  const _styleTheme = useStyleTheme();
   const tableWidth = ITEM_WIDTH + travelers.length * TRAVELER_WIDTH;
   return (
-    <View style={[styles.root, { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]}>
-      <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator style={styles.nativeHorizontalScroll}>
-        <View style={{ width: tableWidth }}>
-          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator stickyHeaderIndices={[0]} style={styles.nativeVerticalScroll}>
-            <View style={[styles.horizontalRow, { backgroundColor: colors.backgroundAlt, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-              <View style={[styles.itemHeader, { backgroundColor: colors.backgroundAlt, borderColor: colors.border }]}>
-                <Text style={[styles.headerText, { color: colors.text }]}>Item</Text>
+    <View style={[styles(_styleTheme).root, themeStyle('components_PackingListMatrix_15', { StyleSheet: StyleSheet, colors: colors }, _styleTheme)]}>
+      <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator style={styles(_styleTheme).nativeHorizontalScroll}>
+        <View style={themeStyle('components_PackingListMatrix_16', { tableWidth: tableWidth }, _styleTheme)}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator stickyHeaderIndices={[0]} style={styles(_styleTheme).nativeVerticalScroll}>
+            <View style={[styles(_styleTheme).horizontalRow, themeStyle('components_PackingListMatrix_17', { colors: colors }, _styleTheme)]}>
+              <View style={[styles(_styleTheme).itemHeader, themeStyle('components_PackingListMatrix_18', { colors: colors }, _styleTheme)]}>
+                <Text style={[styles(_styleTheme).headerText, themeStyle('components_PackingListMatrix_19', { colors: colors }, _styleTheme)]}>Item</Text>
               </View>
               {travelers.map((traveler) => (
-                <View key={traveler.id} style={[styles.travelerHeader, { backgroundColor: colors.backgroundAlt, borderColor: colors.border }]}>
-                  <Text numberOfLines={1} style={[styles.headerText, { color: colors.text }]}>{traveler.displayName || traveler.name}</Text>
+                <View key={traveler.id} style={[styles(_styleTheme).travelerHeader, themeStyle('components_PackingListMatrix_20', { colors: colors }, _styleTheme)]}>
+                  <Text numberOfLines={1} style={[styles(_styleTheme).headerText, themeStyle('components_PackingListMatrix_21', { colors: colors }, _styleTheme)]}>{traveler.displayName || traveler.name}</Text>
                 </View>
               ))}
             </View>
             {items.map((item) => (
-              <View key={item.id} style={styles.horizontalRow}>
-                <View style={[styles.itemCell, item.isCategory ? styles.sectionCell : null, { borderColor: colors.border, backgroundColor: item.isCategory ? colors.backgroundAlt : colors.surface }]}>
-                  <Text style={[styles.itemText, item.isCategory ? styles.sectionText : null, { color: colors.text }]}>{item.label}</Text>
+              <View key={item.id} style={styles(_styleTheme).horizontalRow}>
+                <View style={[styles(_styleTheme).itemCell, item.isCategory ? styles(_styleTheme).sectionCell : null, themeStyle('components_PackingListMatrix_22', { colors: colors, item: item }, _styleTheme)]}>
+                  <Text style={[styles(_styleTheme).itemText, item.isCategory ? styles(_styleTheme).sectionText : null, themeStyle('components_PackingListMatrix_23', { colors: colors }, _styleTheme)]}>{item.label}</Text>
                 </View>
                 {travelers.map((traveler) => {
                   if (item.isCategory) {
-                    return <View key={`${item.id}-${traveler.id}`} style={[styles.checkCell, styles.sectionCell, { borderColor: colors.border, backgroundColor: colors.backgroundAlt }]} />;
+                    return <View key={`${item.id}-${traveler.id}`} style={[styles(_styleTheme).checkCell, styles(_styleTheme).sectionCell, themeStyle('components_PackingListMatrix_24', { colors: colors }, _styleTheme)]} />;
                   }
                   const checked = item.packedBy?.includes(traveler.id) ?? false;
                   return (
@@ -179,9 +157,9 @@ const PackingListMatrixNative: React.FC<Props> = ({ items, travelers, onToggle, 
                       testID={`packing-check-${item.id}-${traveler.id}`}
                       disabled={disabled || !onToggle}
                       onPress={() => onToggle?.(item, traveler)}
-                      style={[styles.checkCell, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                      style={[styles(_styleTheme).checkCell, themeStyle('components_PackingListMatrix_25', { colors: colors }, _styleTheme)]}
                     >
-                      <Text style={[styles.checkText, { color: checked ? colors.success : colors.textMuted }]}>{checked ? '✓' : ''}</Text>
+                      <Text style={[styles(_styleTheme).checkText, themeStyle('components_PackingListMatrix_26', { checked: checked, colors: colors }, _styleTheme)]}>{checked ? '✓' : ''}</Text>
                     </Pressable>
                   );
                 })}
@@ -196,28 +174,6 @@ const PackingListMatrixNative: React.FC<Props> = ({ items, travelers, onToggle, 
 
 const PackingListMatrix: React.FC<Props> = (props) => (Platform.OS === 'web' ? <PackingListMatrixWeb {...props} /> : <PackingListMatrixNative {...props} />);
 
-const styles = StyleSheet.create({
-  root: { minHeight: 100 },
-  webScroll: { width: '100%', maxWidth: '100%' },
-  nativeHorizontalScroll: { width: '100%' },
-  nativeVerticalScroll: { maxHeight: MATRIX_MAX_HEIGHT },
-  // Deliberately no `minWidth: '100%'` here. A row's width should be exactly
-  // its real columns (item column + one per traveler) so header and body
-  // rows always measure identically -- forcing every row to additionally
-  // fill the scroll viewport's full width (which can be much wider than the
-  // real columns when a trip has only one or two travelers) left a stretch
-  // of background-colored blank space trailing after the last real column,
-  // which read as a spurious extra "blank column".
-  horizontalRow: { flexDirection: 'row' },
-  itemHeader: { width: ITEM_WIDTH, justifyContent: 'center', paddingHorizontal: 10, borderWidth: StyleSheet.hairlineWidth },
-  travelerHeader: { width: TRAVELER_WIDTH, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 8, borderWidth: StyleSheet.hairlineWidth },
-  headerText: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  itemCell: { width: ITEM_WIDTH, minHeight: 48, justifyContent: 'center', paddingHorizontal: 10, borderWidth: StyleSheet.hairlineWidth },
-  itemText: { fontSize: 14 },
-  checkCell: { width: TRAVELER_WIDTH, minHeight: 48, justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth },
-  sectionCell: { minHeight: 40, paddingVertical: 8, borderTopWidth: 2 },
-  sectionText: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
-  checkText: { fontSize: 20, fontWeight: '700' },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_PackingListMatrix_27', { StyleSheet: StyleSheet, MATRIX_MAX_HEIGHT: MATRIX_MAX_HEIGHT, ITEM_WIDTH: ITEM_WIDTH, TRAVELER_WIDTH: TRAVELER_WIDTH }, _theme);
 
 export default PackingListMatrix;

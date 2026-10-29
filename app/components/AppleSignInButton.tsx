@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import AppleLogo from './AppleLogo';
@@ -24,8 +26,9 @@ const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
   label = 'Sign in with Apple',
   testID,
 }) => {
+  const _styleTheme = useStyleTheme();
   const isDark = mode === 'dark';
-  const foreground = isDark ? '#FFFFFF' : '#000000';
+  const foreground = isDark ? themeStyle('components_AppleSignInButton_4', {  }, _styleTheme) : themeStyle('components_AppleSignInButton_5', {  }, _styleTheme);
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -33,28 +36,13 @@ const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
       accessibilityLabel={label}
       testID={testID}
       activeOpacity={0.85}
-      style={{
-        height: 40,
-        borderRadius: 4,
-        backgroundColor: isDark ? '#000000' : '#FFFFFF',
-        borderWidth: isDark ? 0 : 1,
-        borderColor: '#000000',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 12,
-        width: '100%',
-      }}
+      style={themeStyle('components_AppleSignInButton_1', { isDark: isDark }, _styleTheme)}
     >
-      <View style={{ width: 18, height: 18, marginRight: 10 }}>
+      <View style={themeStyle('components_AppleSignInButton_2', {  }, _styleTheme)}>
         <AppleLogo size={18} color={foreground} />
       </View>
       <Text
-        style={{
-          color: foreground,
-          fontSize: 14,
-          fontWeight: '500',
-        }}
+        style={themeStyle('components_AppleSignInButton_3', { foreground: foreground }, _styleTheme)}
       >
         {label}
       </Text>

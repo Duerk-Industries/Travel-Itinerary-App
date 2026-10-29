@@ -1,5 +1,8 @@
 import { randomUUID } from 'crypto';
 import { getDb, ensureUserInTrip } from '../db.firebase';
+import { hasTripStarted, tripGoLiveDate } from '../utils/blogGoLive';
+import { blogMediaRepository } from './repository';
+import { isFeatureEnabled } from '../services/entitlementService';
 
 type PublicationState = 'pending_consent' | 'public' | 'revoked' | 'expired';
 
@@ -151,6 +154,7 @@ export const autoPublishFirebase = async (tripId: string, actorUserId: string, o
   if (latest && (!options.force || latest.data.state === 'public' || latest.data.state === 'pending_consent')) return false;
   const trip = await db.collection('trips').doc(tripId).get();
   if (!trip.exists) return false;
+  if (!hasTripStarted((trip.data() as any)?.startDate)) return false;
   const members = await db.collection('group_members').where('groupId', '==', String((trip.data() as any)?.groupId ?? '')).get();
   // Guests without an account are ignored; only account holders are age-checked.
   const active = members.docs.map((doc) => doc.data() as any).filter((member) => member.removedAt == null && member.userId);
@@ -166,6 +170,42 @@ export const autoPublishFirebase = async (tripId: string, actorUserId: string, o
   const actor = await db.collection('users').doc(actorUserId).get();
   await upsertAlias(tripId, actorUserId, slug((actor.data() as any)?.username ?? actorUserId), slug((trip.data() as any)?.name ?? 'trip'), true);
   return true;
+};
+
+/** Mirrors GET /:tripId/blog/publication/readiness in routes/blogPublicationRoutes.ts. */
+export const getPublicationReadinessFirebase = async (tripId: string, userId: string): Promise<any> => {
+  if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized');
+  const db = getDb();
+  const [blog, latest, trip, eligibility, self] = await Promise.all([
+    db.collection('trip_blogs').doc(tripId).get(),
+    findEpoch(tripId),
+    db.collection('trips').doc(tripId).get(),
+    eligibleAdults(tripId),
+    db.collection('users').doc(userId).get(),
+  ]);
+  const members = await db.collection('group_members').where('groupId', '==', String((trip.data() as any)?.groupId ?? '')).get();
+  const memberIds = [...new Set(members.docs.map((doc) => doc.data() as any).filter((m) => m.removedAt == null && m.userId).map((m) => String(m.userId)))];
+  const users = await Promise.all(memberIds.map((id) => db.collection('users').doc(id).get()));
+  const privateDefaultCount = users.filter((u) => (u.data() as any)?.blogDefaultPublic === false).length;
+  let altTextIssues: Array<{ assetId: string; dayDate: string }> = [];
+  if (await isFeatureEnabled('trip_blog_alt_text')) altTextIssues = await blogMediaRepository().listPublicationAccessibilityIssues(userId, tripId);
+  const selfData = self.data() as any;
+  const optedOut = (blog.data() as any)?.publicOptOut === true;
+  const underAge = Math.max(0, memberIds.length - eligibility.adults.length - eligibility.missingBirthDate);
+  const startDate = (trip.data() as any)?.startDate;
+  return {
+    state: latest?.data?.state ?? 'private',
+    optedOut,
+    tripStarted: hasTripStarted(startDate),
+    goLiveDate: tripGoLiveDate(startDate),
+    missingBirthDate: eligibility.missingBirthDate,
+    selfMissingBirthDate: !(selfData?.dateOfBirth ?? selfData?.date_of_birth),
+    underAge,
+    privateDefaultCount,
+    altTextIssues: altTextIssues.slice(0, 50),
+    altTextIssueCount: altTextIssues.length,
+    ready: !optedOut && eligibility.missingBirthDate === 0 && underAge === 0 && privateDefaultCount === 0 && altTextIssues.length === 0 && memberIds.length > 0,
+  };
 };
 
 export const getCanonicalPublicPathFirebase = async (tripId: string): Promise<string | null> => {
@@ -208,9 +248,21 @@ export const getPublicBlogFirebase = async (usernameSlug: string, tripSlug: stri
   if (aliasData.redirectUntil && new Date(aliasData.redirectUntil).getTime() <= Date.now()) return null;
   const epoch = await findEpoch(String(aliasData.tripId));
   if (!epoch || epoch.data.state !== 'public') return null;
-  const blog = await db.collection('trip_blogs').doc(String(aliasData.tripId)).get();
-  if (!blog.exists) return null;
-  const blogData = blog.data() as any;
+  return loadPublicBlogDocumentFirebase(String(aliasData.tripId));
+};
+
+/**
+ * The public projection of a trip's blog (audience 'public' only), without checking that it has been
+ * published. getPublicBlogFirebase calls it after confirming publication; the traveler-only preview
+ * calls it directly so a blog can be seen exactly as the public would before it goes live.
+ */
+export const loadPublicBlogDocumentFirebase = async (tripId: string): Promise<any | null> => {
+  const db = getDb();
+  const blog = await db.collection('trip_blogs').doc(tripId).get();
+  const tripDoc = blog.exists ? null : await db.collection('trips').doc(tripId).get();
+  if (!blog.exists && !tripDoc?.exists) return null;
+  const blogData = (blog.exists ? blog.data() : { title: (tripDoc?.data() as any)?.name ?? 'Trip Blog' }) as any;
+  const aliasData = { tripId };
   const [daysSnap, itemsSnap, mediaSnap] = await Promise.all([
     db.collection('blog_days').where('tripId', '==', String(aliasData.tripId)).get(),
     db.collection('blog_items').where('tripId', '==', String(aliasData.tripId)).get(),
@@ -239,7 +291,8 @@ export const getPublicBlogFirebase = async (usernameSlug: string, tripSlug: stri
       .sort((a, b) => String(a.sortKey ?? '').localeCompare(String(b.sortKey ?? '')));
     return { localDate: String(day.localDate), headline: day.headline ?? null, summary: day.summary ?? null, items };
   }).sort((a, b) => a.localDate.localeCompare(b.localDate));
-  return { title: blogData.title ?? '', subtitle: blogData.subtitle ?? null, introduction: blogData.introduction ?? null, contentRevision: Number(blogData.contentRevision ?? 0), visibilityEpoch: Number(blogData.visibilityEpoch ?? 0), indexingEnabled: blogData.indexingEnabled !== false, days };
+  const tripPhotos = (itemsByDay.get('') ?? []).filter((item) => item.mediaKind === 'photo').sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)));
+  return { tripPhotos, title: blogData.title ?? '', subtitle: blogData.subtitle ?? null, introduction: blogData.introduction ?? null, contentRevision: Number(blogData.contentRevision ?? 0), visibilityEpoch: Number(blogData.visibilityEpoch ?? 0), indexingEnabled: blogData.indexingEnabled !== false, days };
 };
 
 export const listPublicBlogSitemapFirebase = async (): Promise<Array<{ username_slug: string; trip_slug: string; updated_at: string }>> => {

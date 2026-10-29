@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import GoogleLogo from './GoogleLogo';
@@ -24,6 +26,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   label = 'Sign in with Google',
   testID,
 }) => {
+  const _styleTheme = useStyleTheme();
   const isDark = mode === 'dark';
   return (
     <TouchableOpacity
@@ -32,28 +35,13 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       accessibilityLabel={label}
       testID={testID}
       activeOpacity={0.85}
-      style={{
-        height: 40,
-        borderRadius: 4,
-        backgroundColor: isDark ? '#131314' : '#FFFFFF',
-        borderWidth: isDark ? 0 : 1,
-        borderColor: '#747775',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 12,
-        width: '100%',
-      }}
+      style={themeStyle('components_GoogleSignInButton_1', { isDark: isDark }, _styleTheme)}
     >
-      <View style={{ width: 18, height: 18, marginRight: 10 }}>
+      <View style={themeStyle('components_GoogleSignInButton_2', {  }, _styleTheme)}>
         <GoogleLogo size={18} />
       </View>
       <Text
-        style={{
-          color: isDark ? '#E3E3E3' : '#1F1F1F',
-          fontSize: 14,
-          fontWeight: '500',
-        }}
+        style={themeStyle('components_GoogleSignInButton_3', { isDark: isDark }, _styleTheme)}
       >
         {label}
       </Text>

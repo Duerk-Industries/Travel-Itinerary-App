@@ -26,7 +26,7 @@ const blogBody = {
     items: [{ id: 'item-1', kindKey: 'core.text', body: 'A day worth reading', audience: 'travelers', updateVersion: 1 }] }],
 };
 
-const mount = (readOnly: boolean, features: Record<string, boolean>, options: { theme?: any; blog?: any; facts?: any[] } = {}) => {
+const mount = (readOnly: boolean, features: Record<string, boolean>, options: { theme?: any; blog?: any; facts?: any[]; tripEndDate?: string | null } = {}) => {
   (global as any).fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.includes('/blog/publication/status')) return jsonResponse({}, 404);
@@ -35,7 +35,7 @@ const mount = (readOnly: boolean, features: Record<string, boolean>, options: { 
     if ((init?.method ?? 'GET') === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) return jsonResponse(options.blog ?? blogBody);
     return jsonResponse({}, 404);
   });
-  return render(<TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={tripId} styles={styles} theme={options.theme ?? { colors: {} }} readOnly={readOnly} />);
+  return render(<TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={tripId} tripEndDate={options.tripEndDate ?? null} styles={styles} theme={options.theme ?? { colors: {} }} readOnly={readOnly} />);
 };
 
 describe('TripBlogTab — "Blog tools" drawer visibility', () => {
@@ -95,4 +95,17 @@ describe('TripBlogTab — "Blog tools" drawer visibility', () => {
     expect(mergedStyle(screen.getByTestId('blog-edit-toggle').props.style).backgroundColor).toBe(surfaceMuted);
     expect(mergedStyle(screen.getByText('Done editing').props.style).color).toBe(text);
   });
+});
+
+describe('Relive this trip availability', () => {
+  it.each([[-1, true], [0, false], [1, false], [null, false]] as const)(
+    'only shows after the final trip day (end offset %s)', async (offset, visible) => {
+      const date = new Date();
+      if (offset != null) date.setDate(date.getDate() + offset);
+      const end = offset == null ? null : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      const screen = mount(false, { trip_blog_recap: true }, { tripEndDate: end });
+      await screen.findByTestId('blog-edit-toggle');
+      await waitFor(() => expect(Boolean(screen.queryByTestId('trip-blog-build-recap'))).toBe(visible));
+    },
+  );
 });

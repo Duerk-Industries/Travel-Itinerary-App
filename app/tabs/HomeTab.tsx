@@ -1,10 +1,14 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import Modal from '../components/KeyboardAwareModal';
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
 import Skeleton from '../components/Skeleton';
 import { useImageSource } from '../utils/imageSource';
+import BannerPicturePicker from '../components/BannerPicturePicker';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import Icon, { type IconName } from '../components/Icon';
 
@@ -20,6 +24,7 @@ type Trip = {
 };
 
 type HomeTabProps = {
+  readOnly?: boolean;
   backendUrl: string;
   headers: Record<string, string>;
   activeTripId: string | null;
@@ -34,9 +39,6 @@ type HomeTabProps = {
   onSelectTrip: (tripId: string) => void;
   onSelectFollowedTrip: (tripId: string) => void;
   onNavigate: (page: string) => void;
-  onFollowTrip: (inviteCode: string) => Promise<string | null>;
-  onOpenShareTrip?: () => void;
-  canOpenShareTrip?: boolean;
   onDeleteTrip?: (trip: { id: string; name: string }) => void;
   disabledPages?: Set<string>;
   hiddenPages?: Set<string>;
@@ -55,6 +57,7 @@ const formatTripDuration = (trip?: Trip | null): string | null => {
 };
 
 const HomeTab: React.FC<HomeTabProps> = ({
+  readOnly = false,
   backendUrl,
   headers,
   activeTripId,
@@ -67,26 +70,33 @@ const HomeTab: React.FC<HomeTabProps> = ({
   onSelectTrip,
   onSelectFollowedTrip,
   onNavigate,
-  onFollowTrip,
-  onOpenShareTrip = () => {},
-  canOpenShareTrip = true,
   onDeleteTrip,
   disabledPages,
   hiddenPages,
   featureCoverPhotoFallbackV2 = true,
 }) => {
+  const _styleTheme = useStyleTheme();
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 680;
   const isCompactLayout = viewportWidth < 520;
   const heroHeight = Math.max(200, Math.min(320, viewportWidth * 0.42));
+  const [picturePickerOpen, setPicturePickerOpen] = useState(false);
+  const [customPicture, setCustomPicture] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    setCustomPicture(null);
+    if (activeTripId) fetch(`${backendUrl}/api/trips/${activeTripId}/blog?limit=1`, { headers }).then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      if (active) setCustomPicture(data.tripCover?.primaryUrl || data.tripCover?.thumbnailUrl || null);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [activeTripId, backendUrl, headers]);
   const [heroImage, setHeroImage] = useState<string | null>(null);
   const [heroLoading, setHeroLoading] = useState<boolean>(false);
   const [showTripPicker, setShowTripPicker] = useState(false);
   const [showNoTripsDialog, setShowNoTripsDialog] = useState(false);
-  const [showFollowDialog, setShowFollowDialog] = useState(false);
-  const [followCodeInput, setFollowCodeInput] = useState('');
-  const [followCodeError, setFollowCodeError] = useState('');
-  const [followSubmitting, setFollowSubmitting] = useState(false);
+
 
   const activeTrip = useMemo(
     () => activeTripOverride ?? trips.find((t) => t.id === activeTripId) ?? null,
@@ -154,11 +164,11 @@ const HomeTab: React.FC<HomeTabProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heroFetchKey, backendUrl]);
 
-  const heroImageSource = useImageSource(heroImage);
+  const heroImageSource = useImageSource(customPicture || heroImage);
 
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
-  const navIconColor = (StyleSheet.flatten(styles.homeNavLabel)?.color as string | undefined) ?? '#0A0A0A';
+  const navIconColor = (StyleSheet.flatten(styles.homeNavLabel)?.color as string | undefined) ?? themeStyle('tabs_HomeTab_19', {  }, _styleTheme);
   const regularUserHiddenHomePages = new Set(['trips', 'account', 'following']);
   // Ingest (manual upload + forwarded-mailbox import) is Premium/Pro only, same as the
   // server-side tier check in ingestionRoutes.ts/ingestionWebhookRoutes.ts — Free users
@@ -186,110 +196,31 @@ const HomeTab: React.FC<HomeTabProps> = ({
     .filter((item) => item.key !== 'ingest' || canAccessIngest)
     .filter((item) => !hiddenPages?.has(item.key));
 
-  const submitFollowCode = async () => {
-    const code = followCodeInput.trim();
-    if (!code) {
-      setFollowCodeError('Enter a follow code');
-      return;
-    }
-    setFollowSubmitting(true);
-    setFollowCodeError('');
-    const error = await onFollowTrip(code);
-    setFollowSubmitting(false);
-    if (error) {
-      setFollowCodeError(error);
-      return;
-    }
-    setFollowCodeInput('');
-    setShowFollowDialog(false);
-  };
 
   return (
-    <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
+    <View style={[styles.card, themeStyle('tabs_HomeTab_1', {  }, _styleTheme)]}>
       <ScrollView
-        style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={[styles.homeScrollContent, { flexGrow: 1 }]}
+        style={themeStyle('tabs_HomeTab_2', {  }, _styleTheme)}
+        contentContainerStyle={[styles.homeScrollContent, themeStyle('tabs_HomeTab_3', {  }, _styleTheme)]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         nestedScrollEnabled
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', gap: 8 }]}>
-          <Text style={[styles.homeTitle, { flexShrink: 1, minWidth: 0 }]}>Your trip</Text>
-          <View
-            style={[
-              styles.row,
-              {
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: 8,
-                flex: 1,
-                minWidth: 0,
-                marginBottom: 0,
-              },
-            ]}
-          >
-            {!hiddenPages?.has('create-trip') ? (
-              <Pressable
-                testID="home-create-trip-button"
-                style={({ pressed }: { pressed: boolean }) => [
-                  styles.button,
-                  styles.smallButton,
-                  pressed && styles.homeNavButtonPressed,
-                ]}
-                onPress={() => onNavigate('create-trip')}
-              >
-                <Text style={styles.buttonText}>+ Create Trip</Text>
-              </Pressable>
-            ) : null}
-            {!hiddenPages?.has('follow') ? (
-              <Pressable
-                testID="home-follow-trip-button"
-                style={({ pressed }: { pressed: boolean }) => [
-                  styles.button,
-                  styles.smallButton,
-                  pressed && styles.homeNavButtonPressed,
-                ]}
-                onPress={() => {
-                  setFollowCodeError('');
-                  setShowFollowDialog(true);
-                }}
-              >
-                <Text style={styles.buttonText}>Follow Trip</Text>
-              </Pressable>
-            ) : null}
-            {canOpenShareTrip ? (
-              <Pressable
-                testID="home-share-trip-button"
-                style={({ pressed }: { pressed: boolean }) => [
-                  styles.button,
-                  styles.smallButton,
-                  pressed && styles.homeNavButtonPressed,
-                ]}
-                onPress={onOpenShareTrip}
-              >
-                <Text style={styles.buttonText}>Share</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
         <Pressable
           testID="home-hero-card"
           style={({ pressed }: { pressed: boolean }) => [
             styles.homeHeroCard,
-            { height: heroHeight },
+            themeStyle('tabs_HomeTab_7', { heroHeight: heroHeight }, _styleTheme),
             pressed && styles.homeHeroCardPressed,
           ]}
-          onPress={() => {
-            if (hasTripsToSelect) {
-              setShowTripPicker(true);
-              return;
-            }
-            setShowNoTripsDialog(true);
-          }}
+          accessibilityRole="button"
+          accessibilityLabel="Change trip picture"
+          disabled={readOnly || !activeTripId}
+          onPress={() => setPicturePickerOpen(true)}
         >
-          {heroImage ? (
+          {customPicture || heroImage ? (
             <Image style={styles.homeHeroImage} source={heroImageSource} resizeMode="cover" />
           ) : heroLoading ? (
             <Skeleton style={styles.homeHeroImage} testID="home-hero-skeleton" />
@@ -302,28 +233,33 @@ const HomeTab: React.FC<HomeTabProps> = ({
           <View
             style={[
               styles.homeHeroTextWrap,
-              isCompactLayout && { left: 14, right: 14, bottom: 54, paddingRight: 0 },
+              isCompactLayout && themeStyle('tabs_HomeTab_8', {  }, _styleTheme),
             ]}
           >
             {heroSubtitle ? (
-              <Text style={[styles.homeHeroSubtitle, isCompactLayout && { fontSize: 14 }]}>{heroSubtitle}</Text>
+              <Text style={[styles.homeHeroSubtitle, isCompactLayout && themeStyle('tabs_HomeTab_9', {  }, _styleTheme)]}>{heroSubtitle}</Text>
             ) : null}
             <Text
-              style={[styles.homeHeroTitle, isCompactLayout && { fontSize: 25, lineHeight: 30 }]}
+              style={[styles.homeHeroTitle, isCompactLayout && themeStyle('tabs_HomeTab_10', {  }, _styleTheme)]}
               numberOfLines={isCompactLayout ? 3 : 2}
               ellipsizeMode="tail"
             >
               {heroTitle}
             </Text>
           </View>
-          <View
-            style={[styles.homeHeroChangeTripBadge, { pointerEvents: 'none' }, isCompactLayout && { left: 14, right: 'auto', bottom: 12 }]}
+          {!readOnly && activeTripId ? <View
+            style={[styles.homeHeroChangeTripBadge, themeStyle('tabs_HomeTab_11', {  }, _styleTheme), isCompactLayout && themeStyle('tabs_HomeTab_12', {  }, _styleTheme)]}
           >
-            <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>
-          </View>
+            <Text style={styles.homeHeroChangeTripText}>Click to Change Picture</Text>
+          </View> : null}
         </Pressable>
 
         <View style={styles.homeNavList}>
+          <Pressable accessibilityRole="link" testID="home-all-trips" onPress={() => onNavigate('all-trips')} style={styles.homeNavButton}>
+            <Text style={styles.homeNavIcon}>🧳</Text>
+            <Text style={styles.homeNavLabel}>Change or Create Trip</Text>
+            <Text style={styles.homeNavArrow}>{'>'}</Text>
+          </Pressable>
           {navItems.map((item) => (
             <Pressable
               key={item.key}
@@ -442,7 +378,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                 <Text style={styles.homeModalTitle}>Create a trip first</Text>
               </View>
               <Text style={styles.homeModalRowMeta}>A trip needs to be created before you can select one.</Text>
-              <View style={[styles.row, { justifyContent: 'flex-end', marginTop: 16 }]}>
+              <View style={[styles.row, themeStyle('tabs_HomeTab_13', {  }, _styleTheme)]}>
                 <Pressable
                   testID="home-no-trips-create"
                   style={({ pressed }: { pressed: boolean }) => [
@@ -462,7 +398,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                   style={({ pressed }: { pressed: boolean }) => [
                     styles.button,
                     styles.smallButton,
-                    { marginLeft: 8 },
+                    themeStyle('tabs_HomeTab_14', {  }, _styleTheme),
                     pressed && styles.homeNavButtonPressed,
                   ]}
                   onPress={() => setShowNoTripsDialog(false)}
@@ -475,63 +411,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
         </Modal>
       ) : null}
 
-      {showFollowDialog ? (
-        <Modal transparent animationType="fade" visible onRequestClose={() => setShowFollowDialog(false)}>
-          <View style={styles.homeModalOverlay} testID="home-follow-dialog">
-            <View style={styles.homeModalCard}>
-              <View style={styles.homeModalHeader}>
-                <Text style={styles.homeModalTitle}>Follow Trip</Text>
-                <Pressable
-                  onPress={() => setShowFollowDialog(false)}
-                  style={({ pressed }: { pressed: boolean }) => [styles.homeModalClose, pressed && styles.homeModalClosePressed]}
-                >
-                  <Text style={styles.homeModalCloseText}>✕</Text>
-                </Pressable>
-              </View>
-              <Text style={styles.homeModalRowMeta}>Enter a follow code to add a shared trip.</Text>
-              <TextInput
-                testID="home-follow-code-input"
-                style={[styles.input, { marginTop: 12 }]}
-                placeholder="Follow code"
-                autoCapitalize="characters"
-                autoCorrect={false}
-                value={followCodeInput}
-                onChangeText={(text: string) => {
-                  setFollowCodeInput(text);
-                  if (followCodeError) setFollowCodeError('');
-                }}
-              />
-              {followCodeError ? <Text style={[styles.homeModalRowMeta, { marginTop: 8 }]}>{followCodeError}</Text> : null}
-              <View style={[styles.row, { justifyContent: 'flex-end', marginTop: 16 }]}>
-                <Pressable
-                  testID="home-follow-cancel"
-                  style={({ pressed }: { pressed: boolean }) => [
-                    styles.button,
-                    styles.smallButton,
-                    styles.dangerButton,
-                    pressed && styles.homeNavButtonPressed,
-                  ]}
-                  onPress={() => setShowFollowDialog(false)}
-                >
-                  <Text style={styles.dangerButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  testID="home-follow-submit"
-                  style={({ pressed }: { pressed: boolean }) => [
-                    styles.button,
-                    styles.smallButton,
-                    { marginLeft: 8 },
-                    pressed && styles.homeNavButtonPressed,
-                  ]}
-                  onPress={() => void submitFollowCode()}
-                >
-                  <Text style={styles.buttonText}>{followSubmitting ? 'Following...' : 'Follow Trip'}</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      ) : null}
+      {activeTripId && !readOnly ? <BannerPicturePicker visible={picturePickerOpen} backendUrl={backendUrl} headers={headers} tripId={activeTripId} styles={styles} onClose={() => setPicturePickerOpen(false)} onSaved={setCustomPicture} /> : null}
     </View>
   );
 };

@@ -54,9 +54,9 @@ test.describe('Create Trip Flow', () => {
     await page.waitForLoadState('networkidle');
     await page.getByText('Next').click();
 
-    // Steps 4–8: Itinerary, Flight Details, Accommodation Details, Activities,
-    // Rental Cars — skipped for this happy-path test.
-    for (const label of ['Itinerary', 'Flight Details', 'Accommodation Details', 'Activities', 'Rental Cars']) {
+    // Steps 4–9: Itinerary, Flight Details, Accommodation Details, Activities,
+    // Rental Cars, Ground Transfers — skipped for this happy-path test.
+    for (const label of ['Itinerary', 'Flight Details', 'Accommodation Details', 'Activities', 'Rental Cars', 'Ground Transfers']) {
       await expect(page.getByText(label, { exact: true })).toBeVisible();
       await page.waitForLoadState('networkidle');
       // Itinerary gates "Next" behind an explicit Yes/No AI-generation choice.

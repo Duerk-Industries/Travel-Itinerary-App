@@ -709,6 +709,7 @@ export const initDb = async (): Promise<void> => {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS created_by UUID;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS description TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS notes TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination TEXT;`);
@@ -1056,6 +1057,8 @@ export const initDb = async (): Promise<void> => {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE tours ALTER COLUMN date DROP NOT NULL;`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS near_lodging_id UUID REFERENCES lodgings(id) ON DELETE SET NULL;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS booked_on TEXT;`);
@@ -2949,7 +2952,8 @@ export const insertFlight = async (
 ): Promise<Flight> => {
   const p = getPool();
 
-  const normalizeCode = (code?: string | null) => (code ? code.toUpperCase() : null);
+  // Only an airport code (three-letter IATA code) is upper-cased; a place name such as "Tokyo Station" keeps its case.
+  const normalizeCode = (code?: string | null) => (code ? (/^[A-Za-z]{3}$/.test(code.trim()) ? code.trim().toUpperCase() : code) : null);
   const departureCode = normalizeCode(flight.departureLocation ?? flight.departureAirportCode);
   const arrivalCode = normalizeCode(flight.arrivalLocation ?? flight.arrivalAirportCode);
   const layoverCode = normalizeCode(flight.layoverLocation ?? flight.layoverLocationCode);
@@ -3072,7 +3076,8 @@ export const updateFlight = async (
 ): Promise<Flight> => {
   const p = getPool();
   const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
-  const normalizeCode = (code?: string | null) => (code ? code.toUpperCase() : null);
+  // Only an airport code (three-letter IATA code) is upper-cased; a place name such as "Tokyo Station" keeps its case.
+  const normalizeCode = (code?: string | null) => (code ? (/^[A-Za-z]{3}$/.test(code.trim()) ? code.trim().toUpperCase() : code) : null);
   const departureCode = normalizeCode(updates.departureLocation ?? updates.departureAirportCode);
   const arrivalCode = normalizeCode(updates.arrivalLocation ?? updates.arrivalAirportCode);
   const layoverCode = normalizeCode(updates.layoverLocation ?? updates.layoverLocationCode);
@@ -4114,7 +4119,7 @@ export const updateTripDetails = async (
          currency = COALESCE($11, currency),
          must_see_attractions = COALESCE($12::jsonb, must_see_attractions)
      WHERE id = $6
-     RETURNING id,
+     RETURNING created_by as "createdBy", id,
        group_id as "groupId",
        name,
        description,
@@ -4813,7 +4818,8 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
       tu.trip_id as "tripId",
       tu.status,
       COALESCE(NULLIF(tu.activity_type, ''), 'Tour') as "activityType",
-      to_char(tu.date, 'YYYY-MM-DD') as date,
+      COALESCE(to_char(tu.date, 'YYYY-MM-DD'), '') as date,
+      tu.near_lodging_id as "nearLodgingId",
       tu.name,
       tu.start_location as "startLocation",
       tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition", tu.day_order_pinned as "dayOrderPinned",
@@ -4859,7 +4865,8 @@ export const getActivityById = async (id: string): Promise<Activity | null> => {
       tu.trip_id as "tripId",
       tu.status,
       COALESCE(NULLIF(tu.activity_type, ''), 'Tour') as "activityType",
-      to_char(tu.date, 'YYYY-MM-DD') as date,
+      COALESCE(to_char(tu.date, 'YYYY-MM-DD'), '') as date,
+      tu.near_lodging_id as "nearLodgingId",
       tu.name,
       tu.start_location as "startLocation",
       tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition", tu.day_order_pinned as "dayOrderPinned",
@@ -4896,9 +4903,9 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
   const { rows } = await p.query<Activity>(
     `
     INSERT INTO tours (
-      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, notes, paid_by, traveler_ids
+      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, notes, paid_by, traveler_ids, near_lodging_id
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
     )
     RETURNING
       id,
@@ -4906,7 +4913,8 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       trip_id as "tripId",
       status,
       COALESCE(NULLIF(activity_type, ''), 'Tour') as "activityType",
-      to_char(date, 'YYYY-MM-DD') as date,
+      COALESCE(to_char(date, 'YYYY-MM-DD'), '') as date,
+      near_lodging_id as "nearLodgingId",
       name,
       start_location as "startLocation",
       lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition", day_order_pinned as "dayOrderPinned",
@@ -4927,7 +4935,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       activity.tripId,
       activity.status,
       activity.activityType ?? 'Tour',
-      activity.date,
+      activity.date || null,
       activity.name,
       activity.startLocation,
       activity.startTime,
@@ -4939,6 +4947,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       activity.notes ?? '',
       paidBy,
       travelerIds,
+      activity.nearLodgingId ?? null,
     ]
   );
   const row = rows[0];
@@ -5022,9 +5031,10 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
     SET
       status = COALESCE($3, status),
       activity_type = COALESCE($4, activity_type),
-      day_position = CASE WHEN $5 IS NOT NULL AND $5::date <> date THEN NULL ELSE day_position END,
-      day_order_pinned = CASE WHEN $5 IS NOT NULL AND $5::date <> date THEN FALSE ELSE day_order_pinned END,
-      date = COALESCE($5, date),
+      day_position = CASE WHEN $18 AND ($5::date <> date OR ($5 IS NULL AND date IS NOT NULL) OR ($5 IS NOT NULL AND date IS NULL)) THEN NULL ELSE day_position END,
+      day_order_pinned = CASE WHEN $18 AND ($5::date <> date OR ($5 IS NULL AND date IS NOT NULL) OR ($5 IS NOT NULL AND date IS NULL)) THEN FALSE ELSE day_order_pinned END,
+      date = CASE WHEN $18 THEN $5::date ELSE date END,
+      near_lodging_id = CASE WHEN $20 THEN $19::uuid ELSE near_lodging_id END,
       name = COALESCE($6, name),
       lat = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lat END,
       lng = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lng END,
@@ -5046,7 +5056,8 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       trip_id as "tripId",
       status,
       COALESCE(NULLIF(activity_type, ''), 'Tour') as "activityType",
-      to_char(date, 'YYYY-MM-DD') as date,
+      COALESCE(to_char(date, 'YYYY-MM-DD'), '') as date,
+      near_lodging_id as "nearLodgingId",
       name,
       start_location as "startLocation",
       lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition", day_order_pinned as "dayOrderPinned",
@@ -5066,7 +5077,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       current.tripId,
       activity.status ?? null,
       activity.activityType ?? null,
-      activity.date ?? null,
+      activity.date || null,
       activity.name ?? null,
       activity.startLocation ?? null,
       activity.startTime ?? null,
@@ -5079,6 +5090,9 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       paidBy ?? null,
       travelerIds ?? null,
       hasFreeCancelBy,
+      activity.date !== undefined,
+      activity.nearLodgingId ?? null,
+      activity.nearLodgingId !== undefined,
     ]
   );
   if (!rows.length) return null;
@@ -5561,6 +5575,7 @@ export const listExpenses = async (userId: string, tripId?: string | null): Prom
              to_char(e.exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
              COALESCE(e.payer_ids, '[]'::jsonb) as "payerIds",
              COALESCE(e.for_ids, '[]'::jsonb) as "forIds",
+             e.for_shares as "forShares",
              e.source_type as "sourceType",
              e.source_id as "sourceId",
              e.vendor,
@@ -5616,6 +5631,7 @@ export const insertExpense = async (expense: {
   exchangeRateDate?: string | null;
   payerIds?: string[];
   forIds?: string[];
+  forShares?: Record<string, number> | null;
   sourceType?: string | null;
   sourceId?: string | null;
   vendor?: string | null;
@@ -5636,9 +5652,9 @@ export const insertExpense = async (expense: {
     `
       INSERT INTO expenses (
         id, trip_id, group_id, user_id, expense_date, category, amount, currency, amount_in_trip_currency, exchange_rate_to_trip_currency, exchange_rate_date,
-        payer_ids, for_ids, source_type, source_id, vendor, notes, client_operation_id
+        payer_ids, for_ids, source_type, source_id, vendor, notes, client_operation_id, for_shares
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18, $19::jsonb
       )
       RETURNING
         id,
@@ -5654,6 +5670,7 @@ export const insertExpense = async (expense: {
         to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
         COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
         COALESCE(for_ids, '[]'::jsonb) as "forIds",
+        for_shares as "forShares",
         source_type as "sourceType",
         source_id as "sourceId",
         vendor,
@@ -5679,6 +5696,7 @@ export const insertExpense = async (expense: {
       expense.vendor ?? null,
       expense.notes ?? null,
       expense.clientOperationId ?? null,
+      expense.forShares ? JSON.stringify(expense.forShares) : null,
     ]
   );
   const row = rows[0] as any;
@@ -5706,6 +5724,7 @@ const getExpenseByClientOperation = async (clientOperationId: string): Promise<a
              to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
              COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
              COALESCE(for_ids, '[]'::jsonb) as "forIds",
+             for_shares as "forShares",
              source_type as "sourceType",
              source_id as "sourceId",
              vendor,
@@ -5758,6 +5777,7 @@ export const updateExpense = async (
     exchangeRateDate?: string | null;
     payerIds?: string[];
     forIds?: string[];
+    forShares?: Record<string, number> | null;
     vendor?: string | null;
     notes?: string | null;
   }
@@ -5776,7 +5796,8 @@ export const updateExpense = async (
           payer_ids = $11::jsonb,
           for_ids = $12::jsonb,
           vendor = $13,
-          notes = $14
+          notes = $14,
+          for_shares = $15::jsonb
       WHERE id = $1
         AND trip_id = $2
         AND source_type IS NULL
@@ -5794,6 +5815,7 @@ export const updateExpense = async (
                 to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
                 COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
                 COALESCE(for_ids, '[]'::jsonb) as "forIds",
+                for_shares as "forShares",
                 source_type as "sourceType",
                 source_id as "sourceId",
                 vendor,
@@ -5815,6 +5837,7 @@ export const updateExpense = async (
       JSON.stringify(expense.forIds ?? []),
       expense.vendor ?? null,
       expense.notes ?? null,
+      expense.forShares ? JSON.stringify(expense.forShares) : null,
     ]
   );
   const row = rows[0] as any;
@@ -5891,6 +5914,7 @@ export const upsertExpenseForSource = async (expense: {
         to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
         COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
         COALESCE(for_ids, '[]'::jsonb) as "forIds",
+        for_shares as "forShares",
         source_type as "sourceType",
         source_id as "sourceId",
         vendor,
@@ -6699,6 +6723,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
   if (process.env.USE_IN_MEMORY_DB === '1') {
     const { rows } = await p.query(
        `SELECT t.id,
+              t.created_by as "createdBy",
               t.group_id as "groupId",
               t.name,
               t.description,
@@ -6727,6 +6752,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
   }
   const { rows } = await p.query(
     `SELECT t.id,
+              t.created_by as "createdBy",
             t.group_id as "groupId",
             t.name,
             t.description,
@@ -6799,9 +6825,9 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by, must_see_attractions)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-     RETURNING id,
+    `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by, must_see_attractions, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+     RETURNING created_by as "createdBy", id,
                group_id as "groupId",
                name,
                description,
@@ -6833,6 +6859,7 @@ export const createTrip = async (
       details?.currency ?? 'USD',
       {},
       JSON.stringify(Array.isArray(details?.mustSeeAttractions) ? details?.mustSeeAttractions : []),
+      userId,
     ]
   );
   await ensureTripPackingListWithRunner(p, id);
@@ -6918,7 +6945,7 @@ export const updateTripGroup = async (userId: string, tripId: string, newGroupId
     `UPDATE trips
      SET group_id = $1
      WHERE id = $2
-     RETURNING id,
+     RETURNING created_by as "createdBy", id,
        group_id as "groupId",
        name,
        description,
@@ -7071,9 +7098,9 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const tripId = randomUUID();
     const { rows } = await client.query<Trip>(
-      `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, must_see_attractions)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-       RETURNING id,
+      `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, must_see_attractions, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+       RETURNING created_by as "createdBy", id,
                  group_id as "groupId",
                  name,
                  description,
@@ -7103,6 +7130,7 @@ export const createTripWithGroupAndMembers = async (payload: {
         payload.durationDays ?? null,
         payload.currency ?? 'USD',
         JSON.stringify(Array.isArray(payload.mustSeeAttractions) ? payload.mustSeeAttractions : []),
+        payload.ownerId,
       ]
     );
 
@@ -9310,7 +9338,7 @@ export const getTripGroupId = async (tripId: string): Promise<string | null> => 
 export const getTripById = async (tripId: string): Promise<Trip | null> => {
   const p = getPool();
   const { rows } = await p.query<Trip>(
-    `SELECT id,
+    `SELECT created_by as "createdBy", id,
             group_id as "groupId",
             name,
             description,
@@ -13993,4 +14021,193 @@ export const listLegacyBlogMapArtifacts = async (afterPath='',limit=100): Promis
 export const deleteLegacyBlogMapArtifact = async (row:import('./types').LegacyBlogMapArtifact): Promise<boolean> => {
   const result = await getPool().query('DELETE FROM blog_day_map_artifacts WHERE trip_id=$1 AND day_date=$2 AND points_hash=$3 AND gcs_path=$4 RETURNING trip_id',[row.tripId,row.dayDate,row.pointsHash,row.path]);
   return result.rows.length === 1;
+};
+
+// --- Expense receipt images ------------------------------------------------------------------
+// The image bytes are in object storage; expense_receipts records where. Every read is scoped to
+// the caller's trip membership, the same rule listExpenses uses.
+export type ExpenseReceiptRecord = { expenseId: string; tripId: string; objectKey: string; contentType: string };
+
+/** The trip an expense belongs to, or null when it does not exist or the user is not in that trip's group. */
+export const getExpenseTripForUser = async (expenseId: string, userId: string): Promise<{ tripId: string } | null> => {
+  const { rows } = await getPool().query<{ tripId: string }>(
+    `SELECT e.trip_id::text AS "tripId" FROM expenses e JOIN trips t ON t.id = e.trip_id
+     WHERE e.id = $1 AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $2)`,
+    [expenseId, userId]
+  );
+  return rows[0] ? { tripId: String(rows[0].tripId) } : null;
+};
+
+export const getExpenseReceipt = async (expenseId: string, userId: string): Promise<ExpenseReceiptRecord | null> => {
+  if (!(await getExpenseTripForUser(expenseId, userId))) return null;
+  const { rows } = await getPool().query(
+    `SELECT expense_id::text AS "expenseId", trip_id::text AS "tripId", object_key AS "objectKey", content_type AS "contentType"
+     FROM expense_receipts WHERE expense_id = $1`,
+    [expenseId]
+  );
+  return rows[0] ?? null;
+};
+
+export const setExpenseReceipt = async (receipt: ExpenseReceiptRecord & { uploadedBy: string }): Promise<void> => {
+  const p = getPool();
+  const updated = await p.query(
+    `UPDATE expense_receipts SET object_key = $2, content_type = $3, uploaded_by = $4, created_at = NOW() WHERE expense_id = $1`,
+    [receipt.expenseId, receipt.objectKey, receipt.contentType, receipt.uploadedBy]
+  );
+  if (updated.rowCount) return;
+  await p.query(
+    `INSERT INTO expense_receipts (expense_id, trip_id, object_key, content_type, uploaded_by) VALUES ($1, $2, $3, $4, $5)`,
+    [receipt.expenseId, receipt.tripId, receipt.objectKey, receipt.contentType, receipt.uploadedBy]
+  );
+};
+
+export const deleteExpenseReceipt = async (expenseId: string): Promise<void> => {
+  await getPool().query(`DELETE FROM expense_receipts WHERE expense_id = $1`, [expenseId]);
+};
+
+/** Ids of the trip's expenses that have a receipt image, for the list indicator. */
+export const listExpenseIdsWithReceipt = async (userId: string, tripId: string): Promise<string[]> => {
+  const { rows } = await getPool().query<{ expenseId: string }>(
+    `SELECT r.expense_id::text AS "expenseId" FROM expense_receipts r JOIN trips t ON t.id = r.trip_id
+     WHERE r.trip_id = $1 AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $2)`,
+    [tripId, userId]
+  );
+  return rows.map((row) => String(row.expenseId));
+};
+
+// --- Itinerary templates ---------------------------------------------------------------------
+// The catalogue row for a seeded template: which destinations it is offered for. The itinerary
+// itself stays in the seed file (see services/tripTemplateService.ts). `enabled` is the switch an
+// admin can flip; seeding never re-enables a template that was switched off.
+export type TripTemplateRecord = {
+  id: string;
+  title: string;
+  summary: string;
+  days: number;
+  route: string;
+  imageQuery: string;
+  countries: string[];
+  cities: string[];
+  highlights: string[];
+  contentHash: string;
+  enabled: boolean;
+  sortOrder: number;
+};
+
+const TRIP_TEMPLATE_SELECT = `SELECT id, title, summary, days, route, image_query AS "imageQuery",
+  COALESCE(countries, '[]'::jsonb) AS countries, COALESCE(cities, '[]'::jsonb) AS cities,
+  COALESCE(highlights, '[]'::jsonb) AS highlights, content_hash AS "contentHash", enabled, sort_order AS "sortOrder"
+  FROM trip_templates`;
+
+export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {
+  const p = getPool();
+  // `enabled` is deliberately not updated: it belongs to the admin once the row exists.
+  const updated = await p.query(
+    `UPDATE trip_templates SET title = $2, summary = $3, days = $4, route = $5, image_query = $6,
+       countries = $7::jsonb, cities = $8::jsonb, highlights = $9::jsonb, content_hash = $10, sort_order = $11, updated_at = NOW()
+     WHERE id = $1`,
+    [template.id, template.title, template.summary, template.days, template.route, template.imageQuery,
+      JSON.stringify(template.countries), JSON.stringify(template.cities), JSON.stringify(template.highlights), template.contentHash, template.sortOrder]
+  );
+  if (updated.rowCount) return;
+  await p.query(
+    `INSERT INTO trip_templates (id, title, summary, days, route, image_query, countries, cities, highlights, content_hash, enabled, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11, $12)`,
+    [template.id, template.title, template.summary, template.days, template.route, template.imageQuery,
+      JSON.stringify(template.countries), JSON.stringify(template.cities), JSON.stringify(template.highlights), template.contentHash, template.enabled, template.sortOrder]
+  );
+};
+
+export type EstimatedItemType = 'activity' | 'lodging' | 'transfer';
+export type EstimatedItem = { type: EstimatedItemType; id: string };
+
+export const addTripEstimatedItems = async (tripId: string, items: EstimatedItem[]): Promise<void> => {
+  const p = getPool();
+  for (const item of items) {
+    // pg-mem cannot ON CONFLICT with INSERT...SELECT, and a repeat is harmless, so a duplicate key is ignored.
+    try {
+      await p.query('INSERT INTO trip_estimated_items (trip_id, item_type, item_id) VALUES ($1, $2, $3)', [tripId, item.type, item.id]);
+    } catch {
+      /* already marked */
+    }
+  }
+};
+
+export const listTripEstimatedItems = async (tripId: string): Promise<EstimatedItem[]> => {
+  const { rows } = await getPool().query('SELECT item_type, item_id FROM trip_estimated_items WHERE trip_id = $1', [tripId]);
+  return rows.map((row: any) => ({ type: row.item_type as EstimatedItemType, id: String(row.item_id) }));
+};
+
+export const removeTripEstimatedItem = async (type: EstimatedItemType, itemId: string): Promise<void> => {
+  await getPool().query('DELETE FROM trip_estimated_items WHERE item_type = $1 AND item_id = $2', [type, itemId]);
+};
+
+export const clearTripEstimatedItems = async (tripId: string): Promise<void> => {
+  await getPool().query('DELETE FROM trip_estimated_items WHERE trip_id = $1', [tripId]);
+};
+
+// --- Imported itinerary templates ------------------------------------------------------------
+// What an admin imported from a bundle: whole templates plus the shared place/destination entries
+// (descriptions and pictures). The payload is validated again when it is read back.
+export type TripTemplateImportKind = 'template' | 'place' | 'destination';
+export type TripTemplateImportRecord = {
+  kind: TripTemplateImportKind;
+  key: string;
+  payload: unknown;
+  contentHash: string;
+  importedBy: string | null;
+  updatedAt: string;
+};
+
+export const listTripTemplateImports = async (): Promise<TripTemplateImportRecord[]> => {
+  const { rows } = await getPool().query('SELECT kind, item_key, payload, content_hash, imported_by, updated_at FROM trip_template_imports ORDER BY kind, item_key');
+  return rows.map((row: any) => ({
+    kind: row.kind as TripTemplateImportKind,
+    key: String(row.item_key),
+    payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload,
+    contentHash: String(row.content_hash ?? ''),
+    importedBy: row.imported_by ? String(row.imported_by) : null,
+    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at ?? ''),
+  }));
+};
+
+export const upsertTripTemplateImport = async (record: Omit<TripTemplateImportRecord, 'updatedAt'>): Promise<void> => {
+  const p = getPool();
+  const updated = await p.query(
+    'UPDATE trip_template_imports SET payload = $3::jsonb, content_hash = $4, imported_by = $5, updated_at = NOW() WHERE kind = $1 AND item_key = $2',
+    [record.kind, record.key, JSON.stringify(record.payload), record.contentHash, record.importedBy]
+  );
+  if (updated.rowCount) return;
+  await p.query(
+    'INSERT INTO trip_template_imports (kind, item_key, payload, content_hash, imported_by) VALUES ($1, $2, $3::jsonb, $4, $5)',
+    [record.kind, record.key, JSON.stringify(record.payload), record.contentHash, record.importedBy]
+  );
+};
+
+export const deleteTripTemplateImport = async (kind: TripTemplateImportKind, key: string): Promise<boolean> => {
+  const result = await getPool().query('DELETE FROM trip_template_imports WHERE kind = $1 AND item_key = $2', [kind, key]);
+  return Boolean(result.rowCount);
+};
+
+export const dismissActivitySuggestion = async (tripId: string, userId: string, key: string): Promise<void> => {
+  // pg-mem cannot ON CONFLICT with INSERT...SELECT, and a repeat is harmless, so a duplicate key is ignored.
+  try {
+    await getPool().query('INSERT INTO trip_dismissed_suggestions (trip_id, user_id, suggestion_key) VALUES ($1, $2, $3)', [tripId, userId, key]);
+  } catch {
+    /* already dismissed */
+  }
+};
+
+export const listDismissedActivitySuggestions = async (tripId: string, userId: string): Promise<string[]> => {
+  const { rows } = await getPool().query('SELECT suggestion_key FROM trip_dismissed_suggestions WHERE trip_id = $1 AND user_id = $2', [tripId, userId]);
+  return rows.map((row: any) => String(row.suggestion_key));
+};
+
+export const restoreDismissedActivitySuggestions = async (tripId: string, userId: string): Promise<void> => {
+  await getPool().query('DELETE FROM trip_dismissed_suggestions WHERE trip_id = $1 AND user_id = $2', [tripId, userId]);
+};
+
+export const listTripTemplates = async (options: { enabledOnly?: boolean } = {}): Promise<TripTemplateRecord[]> => {
+  const { rows } = await getPool().query(`${TRIP_TEMPLATE_SELECT}${options.enabledOnly ? ' WHERE enabled = TRUE' : ''} ORDER BY sort_order, id`);
+  return rows.map((row: any) => ({ ...row, days: Number(row.days), sortOrder: Number(row.sortOrder) }));
 };

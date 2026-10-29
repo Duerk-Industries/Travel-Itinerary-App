@@ -37,6 +37,7 @@ export const createActivityDto = z.object({
   status: optionalString,
   activityType: optionalString,
   date: optionalString,
+  nearLodgingId: optionalString,
   name: optionalString,
   startLocation: optionalString,
   startTime: optionalString,
@@ -64,6 +65,7 @@ export const updateActivityDto = z.object({
   status: patchField(z.string()),
   activityType: patchField(z.string()),
   date: patchField(z.string()),
+  nearLodgingId: patchField(z.string()),
   name: patchField(z.string()),
   startLocation: patchField(z.string()),
   startTime: patchField(z.string()),
@@ -101,34 +103,6 @@ export const bulkActivitiesDto = z
     }
   });
 export type BulkActivitiesDto = z.infer<typeof bulkActivitiesDto>;
-
-export const importActivitiesDto = z.object({
-  tripId: z.uuid('tripId must be a UUID.'),
-  importId: z.uuid('importId must be a UUID.'),
-  rows: z.array(z.object({
-    sourceRow: z.number().int().positive(),
-    action: z.enum(['create', 'update']),
-    existingId: z.string().trim().optional(),
-    expectedFingerprint: z.string().optional(),
-    fields: z.record(z.string(), z.unknown()),
-  }).strict()).min(1).max(150),
-}).strict().superRefine((value, ctx) => {
-  const allowed = new Set(['status', 'activityType', 'date', 'name', 'startLocation', 'startTime', 'duration', 'cost', 'freeCancelBy', 'bookedOn', 'reference', 'notes', 'paidBy', 'travelerIds']);
-  const sourceRows = new Set<number>();
-  const updateIds = new Set<string>();
-  value.rows.forEach((row, index) => {
-    if (sourceRows.has(row.sourceRow)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['rows', index, 'sourceRow'], message: 'sourceRow values must be unique.' });
-    sourceRows.add(row.sourceRow);
-    if (row.action === 'update' && row.existingId) {
-      if (updateIds.has(row.existingId)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['rows', index, 'existingId'], message: 'An update target may appear only once.' });
-      updateIds.add(row.existingId);
-    }
-    Object.keys(row.fields).forEach((key) => {
-      if (!allowed.has(key)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['rows', index, 'fields', key], message: `Unknown import field: ${key}.` });
-    });
-  });
-});
-export type ImportActivitiesDto = z.infer<typeof importActivitiesDto>;
 
 // ---------------------------------------------------------------------------
 // POST /api/activities/:id/vote and /api/activities/:id/rating

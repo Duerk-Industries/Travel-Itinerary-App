@@ -7,20 +7,12 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { OverviewTab, dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
+import PayerSelect from '../components/PayerSelect';
 import LodgingDialog from '../components/LodgingDialog';
 import { FlightDetailsDialog, GroundTransferDetailsDialog } from '../components/TransferDetailsDialog';
 import { FlightEditingForm, GroundTransferEditingForm } from '../components/TransferEditingForm';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-
-// OverviewTab mounts TripsLikeThis, whose 30s refresh interval keeps Jest alive after the run
-// unless every tree is unmounted, so record each render and unmount it after the test.
-const mountedTrees: ReturnType<typeof renderer.create>[] = [];
-const renderTracked = (element: React.ReactElement) => {
-  const tree = renderer.create(element);
-  mountedTrees.push(tree);
-  return tree;
-};
 
 const baseTrip = {
   id: 'trip-1',
@@ -59,7 +51,14 @@ const baseProps = {
 const findByText = (root: any, label: string) =>
   root.findAll((node: any) => node.type === 'Text' && node.props.children === label).slice(-1)[0];
 
+// The header actions live in a dropdown; open it when the label is not on screen yet.
+const openActionsMenu = (root: any) => {
+  const toggle = root.findAll((node: any) => node.props?.testID === 'overview-actions-menu' && node.props?.onPress)[0];
+  if (toggle && !root.findAll((node: any) => node.props?.testID === 'overview-actions-menu-panel').length) toggle.props.onPress();
+};
+
 const pressByText = (root: any, label: string) => {
+  if (!findByText(root, label)) openActionsMenu(root);
   const textNode = findByText(root, label);
   if (!textNode || !textNode.parent?.props.onPress) {
     throw new Error(`Button with label "${label}" not found.`);
@@ -114,6 +113,13 @@ const pressByTextContains = (root: any, text: string) => {
   throw new Error(`Button with text containing "${text}" not found.`);
 };
 
+const mountedTrees: ReturnType<typeof renderer.create>[] = [];
+const createOverview = (element: React.ReactElement) => {
+  const tree = renderer.create(element);
+  mountedTrees.push(tree);
+  return tree;
+};
+
 describe('Overview edit controls', () => {
   beforeEach(() => {
     (global as any).fetch = jest.fn(async (url: string, options?: any) => {
@@ -127,18 +133,19 @@ describe('Overview edit controls', () => {
     });
   });
 
-  afterEach(() => {
-    act(() => { mountedTrees.splice(0).forEach((tree) => tree.unmount()); });
-    jest.resetAllMocks();
+  afterEach(async () => {
+    await act(async () => { mountedTrees.splice(0).forEach((tree) => tree.unmount()); });
+    jest.clearAllMocks();
   });
 
   test('save applies changes via PATCH', async () => {
     let tree: any;
     await act(async () => {
-      tree = renderTracked(<OverviewTab {...baseProps} />);
+      tree = createOverview(<OverviewTab {...baseProps} />);
     });
     const root = tree!.root;
 
+    await act(async () => { if (!findByText(root, 'Edit')) openActionsMenu(root); });
     act(() => {
       pressByText(root, 'Edit');
     });
@@ -164,10 +171,11 @@ describe('Overview edit controls', () => {
   test('cancel discards changes without PATCH', async () => {
     let tree: any;
     await act(async () => {
-      tree = renderTracked(<OverviewTab {...baseProps} />);
+      tree = createOverview(<OverviewTab {...baseProps} />);
     });
     const root = tree!.root;
 
+    await act(async () => { if (!findByText(root, 'Edit')) openActionsMenu(root); });
     act(() => {
       pressByText(root, 'Edit');
     });
@@ -198,7 +206,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderTracked(
+      tree = createOverview(
         <OverviewTab
           {...baseProps}
           trip={{ ...baseTrip, currency: 'USD' } as any}
@@ -209,6 +217,7 @@ describe('Overview edit controls', () => {
     });
     const root = tree!.root;
 
+    await act(async () => { if (!findByText(root, 'Edit')) openActionsMenu(root); });
     act(() => {
       pressByText(root, 'Edit');
     });
@@ -274,10 +283,13 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderTracked(<OverviewTab {...baseProps} />);
+      tree = createOverview(<OverviewTab {...baseProps} />);
     });
     const root = tree!.root;
 
+    act(() => {
+      openActionsMenu(root);
+    });
     act(() => {
       const editNode = findByText(root, 'Edit');
       if (!editNode?.parent?.props.onPress) {
@@ -287,7 +299,7 @@ describe('Overview edit controls', () => {
     });
 
     act(() => {
-      const addTravelerNode = findByText(root, '+ Add');
+      const addTravelerNode = findByText(root, '+ Add traveler');
       if (!addTravelerNode?.parent?.props.onPress) {
         throw new Error('Add Traveler button not found.');
       }
@@ -346,10 +358,11 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderTracked(<OverviewTab {...baseProps} attendees={attendees} />);
+      tree = createOverview(<OverviewTab {...baseProps} attendees={attendees} />);
     });
     const root = tree!.root;
 
+    await act(async () => { if (!findByText(root, 'Edit')) openActionsMenu(root); });
     act(() => {
       pressByText(root, 'Edit');
     });
@@ -404,7 +417,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderTracked(
+      tree = createOverview(
         <OverviewTab
           {...baseProps}
           attendees={attendees}
@@ -415,6 +428,7 @@ describe('Overview edit controls', () => {
     });
     const root = tree!.root;
 
+    await act(async () => { if (!findByText(root, 'Edit')) openActionsMenu(root); });
     act(() => {
       pressByText(root, 'Edit');
     });
@@ -425,7 +439,7 @@ describe('Overview edit controls', () => {
 
     const lodgingDialog = root.findByType(LodgingDialog);
     act(() => {
-      pressByTextContainsWithin(lodgingDialog, 'Jane Doe');
+      lodgingDialog.findByType(PayerSelect).props.onChange(['member-2']);
     });
 
     await act(async () => {
@@ -439,7 +453,7 @@ describe('Overview edit controls', () => {
     const options = lodgingCall[1];
     expect(options.method).toBe('PUT');
     const payload = JSON.parse(options.body);
-    expect(payload.paidBy).toEqual(['member-1', 'member-2']);
+    expect(payload.paidBy).toEqual(['member-2']);
   });
 
   test('saves lodging opened from its overview details dialog and returns to view mode', async () => {
@@ -472,7 +486,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderTracked(
+      tree = createOverview(
         <OverviewTab
           {...baseProps}
           lodgings={[lodging] as any}
@@ -490,20 +504,20 @@ describe('Overview edit controls', () => {
     });
     expect(root.findByProps({ testID: 'lodging-overview-details' })).toBeTruthy();
 
+    await act(async () => { if (!findByText(root, 'Edit')) openActionsMenu(root); });
     act(() => {
       pressByText(root, 'Edit');
     });
     expect(root.findAllByType(LodgingDialog)).toHaveLength(1);
-    // Item editing is modal; the overview's normal view controls remain visible
-    // underneath instead of switching the whole page into edit mode.
-    expect(findByText(root, 'Edit')).toBeTruthy();
+    // Item editing stays on the selected day instead of switching to the overview editor.
+    expect(root.findByProps({ testID: 'day-details-back' })).toBeTruthy();
 
     await act(async () => {
       pressByTextWithin(root.findByType(LodgingDialog), 'Save');
     });
 
     expect(root.findAllByType(LodgingDialog)).toHaveLength(0);
-    expect(findByText(root, 'Edit')).toBeTruthy();
+    expect(root.findByProps({ testID: 'day-details-back' })).toBeTruthy();
     expect(baseProps.onLodgingDataChanged).toHaveBeenCalled();
   });
 
@@ -542,7 +556,7 @@ describe('Overview edit controls', () => {
 
     let tree: any;
     await act(async () => {
-      tree = renderTracked(
+      tree = createOverview(
         <OverviewTab
           {...baseProps}
           flights={[flight] as any}
@@ -561,6 +575,7 @@ describe('Overview edit controls', () => {
     const ground = expectedType !== 'Flight';
     expect(root.findAllByType(ground ? GroundTransferDetailsDialog : FlightDetailsDialog)).toHaveLength(1);
     expect(root.findAllByType(ground ? FlightDetailsDialog : GroundTransferDetailsDialog)).toHaveLength(0);
+    await act(async () => { if (!findByText(root, 'Edit')) openActionsMenu(root); });
     act(() => {
       pressByText(root, 'Edit');
     });

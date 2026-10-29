@@ -1,3 +1,5 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { AppState, Linking, TouchableOpacity, View } from 'react-native';
 import { ThemedText as Text } from './ThemedText';
@@ -7,6 +9,7 @@ import type { PublicTripInspiration, SharedActivityTemplate } from '../../server
 export default function TripsLikeThis({ tripId, date, backendUrl, headers, onAdded }: {
   tripId: string; date: string; backendUrl: string; headers: Record<string, string>; onAdded: () => void;
 }) {
+  const _styleTheme = useStyleTheme();
   const scope = `${backendUrl}:${JSON.stringify(headers)}:${tripId}:${date}`;
   const current = useRef(scope); current.current = scope;
   useEffect(() => () => { if (current.current === scope) current.current = ''; }, [scope]);
@@ -82,22 +85,22 @@ export default function TripsLikeThis({ tripId, date, backendUrl, headers, onAdd
   };
   const sharedTrips = result?.scope === scope ? result.trips.filter(source => source.activities?.length > 0) : [];
   if (enabledScope !== scope || !sharedTrips.length) return null;
-  return <View accessibilityLabel="Trips like this" style={{ padding: 12, gap: 10 }}>
-    <Text style={{ fontSize: 18, fontWeight: '700' }}>Trips like this</Text>
+  return <View accessibilityLabel="Trips like this" style={themeStyle('components_TripsLikeThis_1', {  }, _styleTheme)}>
+    <Text style={themeStyle('components_TripsLikeThis_2', {  }, _styleTheme)}>Trips like this</Text>
     <Text tone="muted">Ideas shared by public blogs visiting the same destination. Copies are proposed activities; check current opening hours and availability.</Text>
     {notice?.scope === scope && <Text accessibilityRole="alert" accessibilityLiveRegion="polite">{notice.text}</Text>}
-    {sharedTrips.map(source => <View key={`${source.username}/${source.tripSlug}`} style={{ gap: 8 }}>
-      <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(`${backendUrl}${source.sourcePath}`)} style={{ minHeight: 44 }}><Text tone="link" style={{ fontWeight: '700' }}>{source.title} · Source blog</Text></TouchableOpacity>
+    {sharedTrips.map(source => <View key={`${source.username}/${source.tripSlug}`} style={themeStyle('components_TripsLikeThis_3', {  }, _styleTheme)}>
+      <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(`${backendUrl}${source.sourcePath}`)} style={themeStyle('components_TripsLikeThis_4', {  }, _styleTheme)}><Text tone="link" style={themeStyle('components_TripsLikeThis_5', {  }, _styleTheme)}>{source.title} · Source blog</Text></TouchableOpacity>
       {source.activities.map(activity => {
         const identity = `${scope}:${source.username}/${source.tripSlug}/${activity.id}`;
-        return <View key={activity.id} style={{ gap: 4 }}><Text>{activity.name} · {activity.activityType} · about {activity.duration}</Text>
-          {activity.sourceUrl && <TouchableOpacity accessibilityRole="link" style={{ minHeight: 44 }} onPress={() => void Linking.openURL(activity.sourceUrl!)}><Text tone="link">Catalog source</Text></TouchableOpacity>}
-          <TouchableOpacity accessibilityRole="button" disabled={pending === identity} style={{ minHeight: 44 }}
+        return <View key={activity.id} style={themeStyle('components_TripsLikeThis_6', {  }, _styleTheme)}><Text>{activity.name} · {activity.activityType} · about {activity.duration}</Text>
+          {activity.sourceUrl && <TouchableOpacity accessibilityRole="link" style={themeStyle('components_TripsLikeThis_7', {  }, _styleTheme)} onPress={() => void Linking.openURL(activity.sourceUrl!)}><Text tone="link">Catalog source</Text></TouchableOpacity>}
+          <TouchableOpacity accessibilityRole="button" disabled={pending === identity} style={themeStyle('components_TripsLikeThis_8', {  }, _styleTheme)}
             onPress={() => void (added[identity] ? undo(identity) : copy(source, activity))}>
             <Text tone="link">{pending === identity ? 'Saving…' : added[identity] ? 'Added · Undo' : `Copy to ${date}`}</Text>
           </TouchableOpacity></View>;
       })}
     </View>)}
-    <TouchableOpacity accessibilityRole="button" onPress={() => void load(scope)} style={{ minHeight: 44 }}><Text tone="link">Refresh shared trips</Text></TouchableOpacity>
+    <TouchableOpacity accessibilityRole="button" onPress={() => void load(scope)} style={themeStyle('components_TripsLikeThis_9', {  }, _styleTheme)}><Text tone="link">Refresh shared trips</Text></TouchableOpacity>
   </View>;
 }

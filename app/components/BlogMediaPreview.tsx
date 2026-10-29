@@ -1,4 +1,7 @@
 // @ts-nocheck
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+// @ts-nocheck
 // Shared by app/tabs/tripBlog.tsx and the day-gallery/lightbox components — pulled out of
 // tripBlog.tsx (which re-exports both names for backward compatibility) so the gallery/lightbox
 // components can import it without a circular tabs<->components import.
@@ -20,6 +23,7 @@ export const resolveMediaAspectRatio = (width, height) => {
 // tile in a row must line up regardless of each photo's own aspect ratio. Omitting it keeps every
 // existing caller (the lightbox, standalone item media) rendering exactly as before.
 export const BlogMediaPreview = ({ item, backgroundColor, tileHeight = null }) => {
+  const _styleTheme = useStyleTheme();
   const [aspectRatio, setAspectRatio] = useState(null);
   const mediaUrl = item.primaryUrl || item.thumbnailUrl;
   const isTile = tileHeight != null;
@@ -37,15 +41,7 @@ export const BlogMediaPreview = ({ item, backgroundColor, tileHeight = null }) =
         muted: isTile,
         playsInline: true,
         preload: 'metadata',
-        style: {
-          display: 'block',
-          width: '100%',
-          height: isTile ? tileHeight : 'auto',
-          maxWidth: '100%',
-          borderRadius: 8,
-          backgroundColor,
-          objectFit: isTile ? 'cover' : undefined,
-        },
+        style: themeStyle('components_BlogMediaPreview_1', { isTile: isTile, tileHeight: tileHeight, backgroundColor: backgroundColor }, _styleTheme),
       });
     }
     // Native (iOS/Android): previously fell through to <Image> below, which tried to decode a
@@ -61,13 +57,13 @@ export const BlogMediaPreview = ({ item, backgroundColor, tileHeight = null }) =
         src: mediaUrl,
         controls: true,
         preload: 'metadata',
-        style: { width: '100%' },
+        style: themeStyle('components_BlogMediaPreview_2', {  }, _styleTheme),
       });
     }
     return (
-      <View style={{ padding: 12, borderRadius: 8, backgroundColor }}>
-        <TouchableOpacity accessibilityRole="button" disabled={!mediaUrl} onPress={() => mediaUrl && Linking.openURL(mediaUrl)} style={{ minHeight: 44, justifyContent: 'center' }}>
-          <Text style={{ fontWeight: '700' }}>▶ Play voice note</Text>
+      <View style={themeStyle('components_BlogMediaPreview_3', { backgroundColor: backgroundColor }, _styleTheme)}>
+        <TouchableOpacity accessibilityRole="button" disabled={!mediaUrl} onPress={() => mediaUrl && Linking.openURL(mediaUrl)} style={themeStyle('components_BlogMediaPreview_4', {  }, _styleTheme)}>
+          <Text style={themeStyle('components_BlogMediaPreview_5', {  }, _styleTheme)}>▶ Play voice note</Text>
         </TouchableOpacity>
       </View>
     );
@@ -77,17 +73,7 @@ export const BlogMediaPreview = ({ item, backgroundColor, tileHeight = null }) =
     <Image
       testID="blog-media-photo"
       source={{ uri: mediaUrl }}
-      style={isTile ? {
-        width: '100%',
-        height: tileHeight,
-        borderRadius: 8,
-        backgroundColor,
-      } : {
-        width: '100%',
-        ...(aspectRatio ? { aspectRatio } : { height: 200 }),
-        borderRadius: 8,
-        backgroundColor,
-      }}
+      style={isTile ? themeStyle('components_BlogMediaPreview_6', { tileHeight: tileHeight, backgroundColor: backgroundColor }, _styleTheme) : themeStyle('components_BlogMediaPreview_7', { aspectRatio: aspectRatio, backgroundColor: backgroundColor }, _styleTheme)}
       resizeMode={isTile ? 'cover' : 'contain'}
       onLoad={(event) => {
         const source = event?.nativeEvent?.source;

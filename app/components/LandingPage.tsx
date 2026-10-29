@@ -1,6 +1,9 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { gradientFill, type AppTheme } from '../theme/theme';
+
 import GoogleSignInButton from './GoogleSignInButton';
 import AppleSignInButton from './AppleSignInButton';
 
@@ -26,11 +29,7 @@ type SampleDay = {
 
 // Static, clearly-labeled sample data — this is a product preview, never real
 // trip content, so the copy and the day badges both make that explicit.
-const SAMPLE_DAYS: SampleDay[] = [
-  { label: 'Day 1', title: 'Arrive in Seattle', subtitle: 'Pike Place Market · check in to hotel', color: '#2F6690' },
-  { label: 'Day 2', title: 'Olympic National Park', subtitle: 'Hurricane Ridge · Sol Duc Falls Trail', color: '#3A7D63' },
-  { label: 'Day 3', title: 'Hoh Rainforest', subtitle: 'Ruby Beach · sunset drive back', color: '#8A6D3B' },
-];
+const SAMPLE_DAYS = (_theme: import('../theme/theme').AppTheme): SampleDay[] => themeStyle('components_LandingPage_54', {  }, _theme);
 
 // Enumerated so the homepage fully describes app functionality, not just a
 // one-line tagline — a stated requirement for Google OAuth consent-screen
@@ -105,7 +104,7 @@ const SemanticHeading: React.FC<SemanticHeadingProps> = ({ level, children, styl
  * separate so this page never has to reproduce Google's branded button.
  */
 const LandingPage: React.FC<LandingPageProps> = ({
-  theme,
+  theme: _providedTheme,
   logoSource,
   backendUrl,
   onLogin,
@@ -114,6 +113,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
   onLoginWithApple,
   appleOAuthEnabled,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { colors, typography, spacing } = theme;
 
   const openLegal = (path: string) => {
@@ -123,84 +124,56 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <ScrollView
-      style={{ flex: 1, width: '100%', backgroundColor: colors.background }}
-      contentContainerStyle={{ alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl }}
+      style={themeStyle('components_LandingPage_1', { colors: colors }, (theme ?? _styleTheme))}
+      contentContainerStyle={themeStyle('components_LandingPage_2', { spacing: spacing }, (theme ?? _styleTheme))}
       testID="landing-page"
     >
       {/* 1. PRIMARY BRAND IDENTIFICATION - Must match GCP App Name exactly */}
-      <View style={{ width: '100%', maxWidth: 800, alignItems: 'center', marginTop: spacing.xl }}>
+      <View style={themeStyle('components_LandingPage_3', { spacing: spacing }, (theme ?? _styleTheme))}>
         <Image
           source={logoSource}
-          style={{ width: 80, height: 80, marginBottom: spacing.sm }}
+          style={themeStyle('components_LandingPage_4', { spacing: spacing }, (theme ?? _styleTheme))}
           accessibilityLabel="WanderBunnies Logo"
         />
         <SemanticHeading
           level={1}
-          style={{
-            fontSize: typography.display,
-            fontWeight: typography.weightBold,
-            color: colors.text,
-            textAlign: 'center',
-            marginBottom: 4,
-          }}
+          style={themeStyle('components_LandingPage_5', { typography: typography, colors: colors }, (theme ?? _styleTheme))}
         >
           WanderBunnies
         </SemanticHeading>
         <Text
-          style={{
-            fontSize: typography.h2,
-            fontWeight: typography.weightMedium,
-            color: colors.textMuted,
-            textAlign: 'center',
-            marginBottom: spacing.lg,
-          }}
+          style={themeStyle('components_LandingPage_6', { typography: typography, colors: colors, spacing: spacing }, (theme ?? _styleTheme))}
         >
           Collaborative Itinerary & Expense Management
         </Text>
 
         {/* 2. FUNCTIONAL PURPOSE STATEMENT - Describes mechanical operation for reviewers */}
-        <View style={{ backgroundColor: colors.surface, padding: 20, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl }}>
+        <View style={themeStyle('components_LandingPage_7', { colors: colors, spacing: spacing }, (theme ?? _styleTheme))}>
           <Text
-            style={{
-              fontSize: typography.body,
-              color: colors.text,
-              textAlign: 'center',
-              lineHeight: 24,
-            }}
+            style={themeStyle('components_LandingPage_8', { typography: typography, colors: colors }, (theme ?? _styleTheme))}
           >
             WanderBunnies is a collaborative trip-planning app that helps friends, families and travel groups create
             shared itineraries, organize flights and lodging, track expenses, and maintain packing lists. The application
-            integrates with <Text style={{ fontWeight: 'bold' }}>Google APIs</Text> to provide secure authentication.
+            integrates with <Text style={themeStyle('components_LandingPage_9', {  }, (theme ?? _styleTheme))}>Google APIs</Text> to provide secure authentication.
           </Text>
         </View>
 
         <View
-          style={{
-            width: '100%',
-            maxWidth: 420,
-            gap: spacing.md,
-          }}
+          style={themeStyle('components_LandingPage_10', { spacing: spacing }, (theme ?? _styleTheme))}
         >
           <GoogleSignInButton onPress={onLoginWithGoogle} testID="landing-google-signin" />
           {onLoginWithApple && appleOAuthEnabled ? (
             <AppleSignInButton onPress={onLoginWithApple} testID="landing-apple-signin" />
           ) : null}
 
-          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          <View style={themeStyle('components_LandingPage_11', { spacing: spacing }, (theme ?? _styleTheme))}>
             <TouchableOpacity
               onPress={onCreateAccount}
               accessibilityRole="button"
               testID="landing-create-account"
-              style={{
-                flex: 1,
-                backgroundColor: colors.cta,
-                ...gradientFill(theme.gradients.cta),
-                paddingVertical: spacing.md,
-                borderRadius: 8,
-                alignItems: 'center',
-              }}
+              style={themeStyle('components_LandingPage_12', { colors: colors, spacing: spacing }, (theme ?? _styleTheme))}
             >
-              <Text style={{ color: colors.onCta, fontWeight: typography.weightBold, fontSize: typography.body }}>
+              <Text style={themeStyle('components_LandingPage_13', { typography: typography }, (theme ?? _styleTheme))}>
                 Create Account
               </Text>
             </TouchableOpacity>
@@ -208,31 +181,23 @@ const LandingPage: React.FC<LandingPageProps> = ({
               onPress={onLogin}
               accessibilityRole="button"
               testID="landing-login"
-              style={{
-                flex: 1,
-                backgroundColor: colors.surfaceMuted,
-                borderWidth: 1,
-                borderColor: colors.border,
-                paddingVertical: spacing.md,
-                borderRadius: 8,
-                alignItems: 'center',
-              }}
+              style={themeStyle('components_LandingPage_14', { colors: colors, spacing: spacing }, (theme ?? _styleTheme))}
             >
-              <Text style={{ color: colors.text, fontWeight: typography.weightBold, fontSize: typography.body }}>
+              <Text style={themeStyle('components_LandingPage_15', { colors: colors, typography: typography }, (theme ?? _styleTheme))}>
                 Log In
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={{ alignSelf: 'stretch', marginTop: spacing.xxl, gap: 16 }}>
-          <SemanticHeading level={2} style={{ fontSize: typography.h3, fontWeight: typography.weightBold, color: colors.text }}>
+        <View style={themeStyle('components_LandingPage_16', { spacing: spacing }, (theme ?? _styleTheme))}>
+          <SemanticHeading level={2} style={themeStyle('components_LandingPage_17', { typography: typography, colors: colors }, (theme ?? _styleTheme))}>
             Core Application Features
           </SemanticHeading>
           {FEATURES.map((feature) => (
-            <View key={feature} style={{ flexDirection: 'row', gap: 12, backgroundColor: colors.surface, padding: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
-              <Text style={{ color: colors.link, fontSize: typography.h3, fontWeight: 'bold' }}>{'✓'}</Text>
-              <Text style={{ color: colors.text, fontSize: typography.small, flex: 1, lineHeight: 20 }}>{feature}</Text>
+            <View key={feature} style={themeStyle('components_LandingPage_18', { colors: colors }, (theme ?? _styleTheme))}>
+              <Text style={themeStyle('components_LandingPage_19', { colors: colors, typography: typography }, (theme ?? _styleTheme))}>{'✓'}</Text>
+              <Text style={themeStyle('components_LandingPage_20', { colors: colors, typography: typography }, (theme ?? _styleTheme))}>{feature}</Text>
             </View>
           ))}
         </View>
@@ -240,63 +205,48 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* 3. TRANSPARENCY SECTION - Explicitly links app features to Google Scopes */}
       <View
-        style={{
-          width: '100%',
-          maxWidth: 800,
-          marginTop: spacing.xxl,
-          padding: spacing.xl,
-          borderRadius: 12,
-          backgroundColor: colors.surface,
-          borderWidth: 1,
-          borderColor: colors.border,
-        }}
+        style={themeStyle('components_LandingPage_21', { spacing: spacing, colors: colors }, (theme ?? _styleTheme))}
         testID="landing-data-use"
       >
         <SemanticHeading
           level={2}
-          style={{
-            fontSize: typography.h3,
-            fontWeight: typography.weightBold,
-            color: colors.text,
-            marginBottom: spacing.md,
-            textAlign: 'center',
-          }}
+          style={themeStyle('components_LandingPage_22', { typography: typography, colors: colors, spacing: spacing }, (theme ?? _styleTheme))}
         >
           Google User Data Disclosure
         </SemanticHeading>
-        <Text style={{ fontSize: typography.small, color: colors.textMuted, marginBottom: 16, lineHeight: 22 }}>
+        <Text style={themeStyle('components_LandingPage_23', { typography: typography, colors: colors }, (theme ?? _styleTheme))}>
           WanderBunnies requests specific permissions from your Google Account to provide its core functionality.
           We adhere to the{' '}
           <PublicLink
             href="https://developers.google.com/terms/api-services-user-data-policy"
             onPress={() => Linking.openURL('https://developers.google.com/terms/api-services-user-data-policy')}
-            style={{ fontWeight: 'bold', textDecorationLine: 'underline' }}
+            style={themeStyle('components_LandingPage_24', {  }, (theme ?? _styleTheme))}
           >
             Google API Services User Data Policy
           </PublicLink>, including Limited Use requirements.
         </Text>
 
-        <View style={{ gap: 12 }}>
-          <View style={{ backgroundColor: colors.surfaceMuted, padding: 12, borderRadius: 8 }}>
-            <Text style={{ fontSize: typography.small, color: colors.textMuted, lineHeight: 20 }}>
-              <Text style={{ fontWeight: 'bold', color: colors.text }}>Google Identity:</Text> We use your Google profile (name and email) to uniquely identify you within your travel groups and to provide a secure, password-less sign-in experience.
+        <View style={themeStyle('components_LandingPage_25', {  }, (theme ?? _styleTheme))}>
+          <View style={themeStyle('components_LandingPage_26', { colors: colors }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('components_LandingPage_27', { typography: typography, colors: colors }, (theme ?? _styleTheme))}>
+              <Text style={themeStyle('components_LandingPage_28', { colors: colors }, (theme ?? _styleTheme))}>Google Identity:</Text> We use your Google profile (name and email) to uniquely identify you within your travel groups and to provide a secure, password-less sign-in experience.
             </Text>
           </View>
 
-          <View style={{ backgroundColor: colors.surfaceMuted, padding: 12, borderRadius: 8 }}>
-            <Text style={{ fontSize: typography.small, color: colors.textMuted, lineHeight: 20 }}>
-              <Text style={{ fontWeight: 'bold', color: colors.text }}>Data Privacy:</Text> Your Google data is used exclusively for the features you authorize. We do not sell your data, use it for advertising, or allow any third-party access except as required to provide the service.
+          <View style={themeStyle('components_LandingPage_29', { colors: colors }, (theme ?? _styleTheme))}>
+            <Text style={themeStyle('components_LandingPage_30', { typography: typography, colors: colors }, (theme ?? _styleTheme))}>
+              <Text style={themeStyle('components_LandingPage_31', { colors: colors }, (theme ?? _styleTheme))}>Data Privacy:</Text> Your Google data is used exclusively for the features you authorize. We do not sell your data, use it for advertising, or allow any third-party access except as required to provide the service.
             </Text>
           </View>
         </View>
 
-        <View style={{ marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
-          <Text style={{ fontSize: typography.small, color: colors.textMuted, textAlign: 'center' }}>
+        <View style={themeStyle('components_LandingPage_32', { spacing: spacing, colors: colors }, (theme ?? _styleTheme))}>
+          <Text style={themeStyle('components_LandingPage_33', { typography: typography, colors: colors }, (theme ?? _styleTheme))}>
             Full details are available in our{' '}
             <PublicLink
               href={PUBLIC_PRIVACY_URL}
               onPress={() => openLegal('privacy.html')}
-              style={{ fontWeight: 'bold', textDecorationLine: 'underline' }}
+              style={themeStyle('components_LandingPage_34', {  }, (theme ?? _styleTheme))}
             >
               Privacy Policy
             </PublicLink>.
@@ -304,49 +254,31 @@ const LandingPage: React.FC<LandingPageProps> = ({
         </View>
       </View>
 
-      <View style={{ width: '100%', maxWidth: 800, marginTop: spacing.xxl }}>
+      <View style={themeStyle('components_LandingPage_35', { spacing: spacing }, (theme ?? _styleTheme))}>
         <SemanticHeading
           level={2}
-          style={{
-            fontSize: typography.h3,
-            fontWeight: typography.weightBold,
-            color: colors.text,
-            marginBottom: spacing.sm,
-          }}
+          style={themeStyle('components_LandingPage_36', { typography: typography, colors: colors, spacing: spacing }, (theme ?? _styleTheme))}
         >
           Visual Itinerary Preview
         </SemanticHeading>
-        <View style={{ gap: spacing.md }}>
-          {SAMPLE_DAYS.map((day) => (
+        <View style={themeStyle('components_LandingPage_37', { spacing: spacing }, (theme ?? _styleTheme))}>
+          {SAMPLE_DAYS((theme ?? _styleTheme)).map((day) => (
             <View
               key={day.label}
-              style={{
-                height: 140,
-                borderRadius: 12,
-                backgroundColor: day.color,
-                padding: spacing.md,
-                justifyContent: 'space-between',
-                overflow: 'hidden',
-              }}
+              style={themeStyle('components_LandingPage_38', { day: day, spacing: spacing }, (theme ?? _styleTheme))}
             >
               <View
-                style={{
-                  alignSelf: 'flex-start',
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(15, 23, 42, 0.55)',
-                }}
+                style={themeStyle('components_LandingPage_39', {  }, (theme ?? _styleTheme))}
               >
-                <Text style={{ color: '#fff', fontSize: typography.caption, fontWeight: typography.weightSemibold }}>
+                <Text style={themeStyle('components_LandingPage_40', { typography: typography }, (theme ?? _styleTheme))}>
                   {day.label.toUpperCase()}
                 </Text>
               </View>
               <View>
-                <Text style={{ color: '#fff', fontSize: typography.h3, fontWeight: typography.weightBold }}>
+                <Text style={themeStyle('components_LandingPage_41', { typography: typography }, (theme ?? _styleTheme))}>
                   {day.title}
                 </Text>
-                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: typography.small, marginTop: 2 }}>
+                <Text style={themeStyle('components_LandingPage_42', { typography: typography }, (theme ?? _styleTheme))}>
                   {day.subtitle}
                 </Text>
               </View>
@@ -354,57 +286,52 @@ const LandingPage: React.FC<LandingPageProps> = ({
           ))}
         </View>
         <Text
-          style={{
-            fontSize: typography.caption,
-            color: colors.textMuted,
-            textAlign: 'center',
-            marginTop: spacing.sm,
-          }}
+          style={themeStyle('components_LandingPage_43', { typography: typography, colors: colors, spacing: spacing }, (theme ?? _styleTheme))}
         >
           This is a sample itinerary preview. Log in to create your own custom trip plan.
         </Text>
       </View>
 
-      <View style={{ marginTop: spacing.xxl, alignItems: 'center', width: '100%', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.xl }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
+      <View style={themeStyle('components_LandingPage_44', { spacing: spacing, colors: colors }, (theme ?? _styleTheme))}>
+        <View style={themeStyle('components_LandingPage_45', {  }, (theme ?? _styleTheme))}>
           <PublicLink
             href={PUBLIC_PRIVACY_URL}
             onPress={() => openLegal('privacy.html')}
             testID="landing-privacy-link"
-            style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
+            style={themeStyle('components_LandingPage_46', { typography: typography, colors: colors }, (theme ?? _styleTheme))}
           >
             Privacy Policy
           </PublicLink>
-          <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
+          <Text style={themeStyle('components_LandingPage_47', { typography: typography, colors: colors }, (theme ?? _styleTheme))}>·</Text>
           <PublicLink
             href={PUBLIC_TERMS_URL}
             onPress={() => openLegal('terms.html')}
             testID="landing-terms-link"
-            style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
+            style={themeStyle('components_LandingPage_48', { typography: typography, colors: colors }, (theme ?? _styleTheme))}
           >
             Terms of Service
           </PublicLink>
-          <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
+          <Text style={themeStyle('components_LandingPage_49', { typography: typography, colors: colors }, (theme ?? _styleTheme))}>·</Text>
           <PublicLink
             href={PUBLIC_COOKIES_URL}
             onPress={() => openLegal('cookies.html')}
-            style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
+            style={themeStyle('components_LandingPage_50', { typography: typography, colors: colors }, (theme ?? _styleTheme))}
           >
             Cookie Policy
           </PublicLink>
-          <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
+          <Text style={themeStyle('components_LandingPage_51', { typography: typography, colors: colors }, (theme ?? _styleTheme))}>·</Text>
           <PublicLink
             href={PUBLIC_PRIVACY_CHOICES_URL}
             onPress={() => openLegal('privacy-choices.html')}
             testID="landing-privacy-choices-link"
-            style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
+            style={themeStyle('components_LandingPage_52', { typography: typography, colors: colors }, (theme ?? _styleTheme))}
           >
             Your Privacy Choices
           </PublicLink>
         </View>
 
         {/* 4. CONTROLLER IDENTIFICATION - Aligns with Privacy Policy data controller */}
-        <Text style={{ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.lg, textAlign: 'center' }}>
+        <Text style={themeStyle('components_LandingPage_53', { typography: typography, colors: colors, spacing: spacing }, (theme ?? _styleTheme))}>
           &copy; 2026 WanderBunnies · Owned and operated by Tristan Duerk, all rights reserved
         </Text>
       </View>

@@ -15,7 +15,7 @@ const tierConfig = (() => {
 })();
 
 const includedForTier = (tier: string): number => Number(tierConfig.tiers?.[tier]?.includedBytes ?? tierConfig.tiers?.free?.includedBytes ?? 0);
-const dateString = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
+const dateString = (value: unknown): string => value == null ? '' : new Date(String(value)).toISOString().slice(0, 10);
 const mapSummary = (row: any): BlogStorageSummary => {
   const includedBytes = Number(row.included_bytes ?? 0);
   const purchasedBytes = Number(row.purchased_bytes ?? 0);
@@ -63,7 +63,7 @@ export const getMediaAuthoringContext = async (userId: string, tripId: string, a
        FROM blog_media_assets a
        JOIN blog_item_assets ia ON ia.asset_id = a.id
        JOIN blog_items i ON i.id = ia.item_id
-       JOIN blog_days d ON d.id = i.blog_day_id
+       LEFT JOIN blog_days d ON d.id = i.blog_day_id
       WHERE a.id = $1 AND a.trip_id = $2 AND a.state <> 'deleted' AND i.deleted_at IS NULL LIMIT 1`,
     [assetId, tripId]
   );
@@ -98,7 +98,7 @@ export const listPublicationAccessibilityIssues = async (userId: string, tripId:
     `SELECT a.id, d.local_date FROM blog_media_assets a
        JOIN blog_item_assets ia ON ia.asset_id = a.id
        JOIN blog_items i ON i.id = ia.item_id
-       JOIN blog_days d ON d.id = i.blog_day_id
+       LEFT JOIN blog_days d ON d.id = i.blog_day_id
       WHERE a.trip_id = $1 AND a.state = 'ready' AND a.media_kind_key = 'photo'
         AND i.deleted_at IS NULL AND i.audience = 'public'
         AND COALESCE(a.is_decorative, FALSE) = FALSE AND NULLIF(TRIM(COALESCE(a.alt_text, '')), '') IS NULL
@@ -128,6 +128,7 @@ const ensureMediaDays = async (tripId: string): Promise<void> => {
 export const initUpload = async (userId: string, input: BlogUploadInitInput): Promise<BlogUploadInitResult> => {
   const access = await ensureUserInTrip(input.tripId, userId);
   if (!access) throw new Error('Not authorized to edit this trip');
+  if (input.tripCover && (input.mediaKind !== 'photo' || input.galleryItemId)) throw new Error('Trip covers must be standalone photos');
   const existing = await queryBlog<any>('SELECT * FROM blog_media_assets WHERE source_ref = $1 AND uploader_user_id = $2 LIMIT 1', [input.idempotencyKey, userId]);
   if (existing.rows[0]) {
     const existingObjectKey = String(existing.rows[0].object_key ?? '');
@@ -152,7 +153,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   if (input.galleryItemId) {
     const gallery = await queryBlog<any>(
       `SELECT i.blog_day_id, i.deleted_at, i.kind_key, d.local_date
-       FROM blog_items i JOIN blog_days d ON d.id = i.blog_day_id
+       FROM blog_items i LEFT JOIN blog_days d ON d.id = i.blog_day_id
        WHERE i.id = $1 AND i.trip_id = $2`,
       [input.galleryItemId, input.tripId]
     );
@@ -172,7 +173,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   const assetId = randomUUID();
   const blogItemId = input.galleryItemId ?? randomUUID();
   let day: { id: string; local_date?: string } | undefined = galleryDay ? { id: galleryDay.id } : undefined;
-  if (!input.galleryItemId) {
+  if (!input.galleryItemId && !input.tripCover) {
     await ensureMediaDays(input.tripId);
     const dayRows = await queryBlog<{ id: string; local_date: string }>('SELECT id, local_date FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [input.tripId]);
     day = dayRows.rows.find((row) => dateString(row.local_date) === input.dayDate);
@@ -203,7 +204,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     await queryBlog(
       `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id)
        VALUES ($1, $2, $3, $4, 1, 'public', $5, $6, $6)`,
-      [blogItemId, input.tripId, day!.id, `media.${input.mediaKind}`, `${Date.now().toString().padStart(16, '0')}-${blogItemId}`, userId]
+      [blogItemId, input.tripId, day?.id ?? null, `media.${input.mediaKind}`, `${Date.now().toString().padStart(16, '0')}-${blogItemId}`, userId]
     );
   }
   await queryBlog(
@@ -216,7 +217,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   await queryBlog('INSERT INTO blog_item_assets (item_id, asset_id, position, role) VALUES ($1, $2, $3, $4)', [blogItemId, assetId, position, role]);
   const row = await queryBlog<any>(
     `SELECT a.*, i.id AS blog_item_id, i.kind_key, ia.position, d.local_date, FALSE AS is_highlight
-     FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
+     FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id LEFT JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
     [assetId]
   );
   const uploadUrl = audioUploadUrl ?? await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
@@ -274,7 +275,7 @@ export const completeUpload = async (userId: string, assetId: string, physicalBy
     );
     const updated = await client.query<any>(
       `SELECT a.*, i.id AS blog_item_id, i.kind_key, ia.position, d.local_date, FALSE AS is_highlight
-       FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
+       FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id LEFT JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
       [assetId]
     );
     return mapAsset(updated.rows[0]);
@@ -295,7 +296,7 @@ export const listMedia = async (userId: string, tripId: string): Promise<BlogMed
   if (!access) throw new Error('Not authorized to view this trip');
   const rows = await queryBlog<any>(
     `SELECT a.*, i.id AS blog_item_id, i.kind_key, ia.position, d.local_date, FALSE AS is_highlight
-     FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id
+     FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id LEFT JOIN blog_days d ON d.id = i.blog_day_id
      WHERE a.trip_id = $1 AND a.state <> 'deleted' AND i.deleted_at IS NULL ORDER BY d.local_date ASC, i.sort_key ASC, ia.position ASC`,
     [tripId]
   );
@@ -361,7 +362,7 @@ export const hideExpiredMediaForUser = async (userId: string, inactiveAt = new D
 export const listGraceMedia = async (userId: string): Promise<BlogMediaAsset[]> => {
   const rows = await queryBlog<any>(
     `SELECT a.*, i.id AS blog_item_id, d.local_date, FALSE AS is_highlight
-     FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id
+     FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id LEFT JOIN blog_days d ON d.id = i.blog_day_id
      WHERE a.storage_account_user_id = $1 AND a.state = 'grace_hidden' ORDER BY a.hidden_at ASC`,
     [userId]
   );

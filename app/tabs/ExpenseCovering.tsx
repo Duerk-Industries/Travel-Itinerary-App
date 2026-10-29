@@ -1,7 +1,10 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
-import type { AppTheme } from '../theme/theme';
+
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -33,8 +36,10 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
   formatMemberName,
   saveCoveredBy,
   styles,
-  theme,
+  theme: _providedTheme,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const textColor = theme?.colors.text ?? styles.cellText?.color;
   const activeMembers = groupMembers.filter((member) => member.status !== 'removed');
 
@@ -60,24 +65,26 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
           { label: 'No one', value: '' },
           ...activeMembers
             .filter((m) => m.id !== member.id && !wouldCreateCycle(member.id, m.id))
-            .map((coveringMember) => ({ label: formatMemberName(coveringMember), value: coveringMember.id })),
+            .map((coveringMember) => ({ label: formatMemberName(coveringMember), value: coveringMember.id }))
+            .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true })),
         ];
         return (
         <View
           key={`cover-for-${member.id}`}
-          style={[styles.row, { alignItems: 'flex-start' }]}
+          style={[styles.row, themeStyle('tabs_ExpenseCovering_1', {  }, (theme ?? _styleTheme))]}
           testID={`covering-row-${member.id}`}
         >
-          <Text style={[styles.cellText, textColor ? { color: textColor } : null, { flex: 1, minWidth: 0, paddingTop: 10 }]}>
+          <Text style={[styles.cellText, textColor ? themeStyle('tabs_ExpenseCovering_2', { textColor: textColor }, (theme ?? _styleTheme)) : null, themeStyle('tabs_ExpenseCovering_3', {  }, (theme ?? _styleTheme))]}>
             {formatMemberName(member)} is covered by:
           </Text>
           <SelectField
+            testID={`covering-select-${member.id}`}
             styles={styles}
             value={coveredBy[member.id] ?? ''}
             options={options}
             placeholder="No one"
             title={`${formatMemberName(member)} covered by`}
-            style={{ flex: 1, minWidth: 150 }}
+            style={themeStyle('tabs_ExpenseCovering_4', {  }, (theme ?? _styleTheme))}
             onChange={(value) => {
               if (!value) {
                 setCoveredBy((previous) => {
@@ -92,7 +99,7 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
           />
         </View>
       )})}
-        <TouchableOpacity style={[styles.button, {marginTop: 12}]} onPress={saveCoveredBy} testID="covering-save">
+        <TouchableOpacity style={[styles.button, themeStyle('tabs_ExpenseCovering_5', {  }, (theme ?? _styleTheme))]} onPress={saveCoveredBy} testID="covering-save">
           <Text style={styles.buttonText}>Save Covering Rules</Text>
       </TouchableOpacity>
     </View>

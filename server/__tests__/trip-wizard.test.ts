@@ -7,6 +7,7 @@ import { registerAndLoginWebUser, cleanupTestUsersByEmail } from './helpers';
 
 describe('Trip wizard flow', () => {
   let token: string;
+  let creatorId: string;
   const owner = { email: 'wizard-owner@example.com', firstName: 'Wizard', lastName: 'Owner', password: 'testtest' };
 
   beforeAll(async () => {
@@ -16,6 +17,7 @@ describe('Trip wizard flow', () => {
 
     const login = await registerAndLoginWebUser(owner);
     token = login.token;
+    creatorId = login.userId;
   });
 
   afterAll(async () => {
@@ -42,6 +44,9 @@ describe('Trip wizard flow', () => {
       .expect(201);
 
     expect(create.body.trip).toBeTruthy();
+    expect(create.body.trip.createdBy).toBe(creatorId);
+    const listed = await request(app).get('/api/trips').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(listed.body.find((trip: { id: string }) => trip.id === create.body.trip.id).createdBy).toBe(creatorId);
     expect(create.body.trip.locationIds).toEqual(['paris-abc123', 'london-def456']);
     expect(create.body.trip.mustSeeAttractions).toEqual(['Eiffel Tower', 'Louvre Museum']);
     expect(create.body.invites.length).toBe(1);
@@ -68,6 +73,25 @@ describe('Trip wizard flow', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ participants: [{ firstName: 'Sam', lastName: 'Name' }] })
       .expect(400);
+  });
+
+  it('creates and reloads an unscheduled trip with a duration and no invented dates', async () => {
+    const created = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Someday Trip', durationDays: 7, participants: [] }).expect(201);
+    const trip = created.body.trip;
+    expect(trip.durationDays).toBe(7);
+    expect(trip.startDate).toBeNull();
+    expect(trip.endDate).toBeNull();
+    expect(trip.startMonth).toBeNull();
+    expect(trip.startYear).toBeNull();
+    const loaded = await request(app).get(`/api/trips/${trip.id}`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(loaded.body.durationDays).toBe(7);
+    expect(loaded.body.startDate).toBeNull();
+  });
+
+  it.each([0, -2, 1.5, 'invalid'])('rejects an invalid unscheduled trip length: %s', async (durationDays) => {
+    await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Invalid length', durationDays }).expect(400);
   });
 
   it('requires participant names', async () => {

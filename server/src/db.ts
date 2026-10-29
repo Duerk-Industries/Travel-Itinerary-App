@@ -411,6 +411,16 @@ export const deleteExpense = async (...args: Parameters<ReturnType<typeof adapte
   adapter().deleteExpense(...args);
 export const deleteExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpenseForSource']>) =>
   adapter().deleteExpenseForSource(...args);
+export const getExpenseTripForUser = async (...args: Parameters<ReturnType<typeof adapter>['getExpenseTripForUser']>) =>
+  adapter().getExpenseTripForUser(...args);
+export const getExpenseReceipt = async (...args: Parameters<ReturnType<typeof adapter>['getExpenseReceipt']>) =>
+  adapter().getExpenseReceipt(...args);
+export const setExpenseReceipt = async (...args: Parameters<ReturnType<typeof adapter>['setExpenseReceipt']>) =>
+  adapter().setExpenseReceipt(...args);
+export const deleteExpenseReceipt = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpenseReceipt']>) =>
+  adapter().deleteExpenseReceipt(...args);
+export const listExpenseIdsWithReceipt = async (...args: Parameters<ReturnType<typeof adapter>['listExpenseIdsWithReceipt']>) =>
+  adapter().listExpenseIdsWithReceipt(...args);
 export const listTripPayments = async (...args: Parameters<ReturnType<typeof adapter>['listTripPayments']>) =>
   adapter().listTripPayments(...args);
 export const insertTripPayment = async (...args: Parameters<ReturnType<typeof adapter>['insertTripPayment']>) =>
@@ -844,3 +854,31 @@ export const claimApiSpendReservation = async (...args: Parameters<ReturnType<ty
 
 export const listLegacyBlogMapArtifacts = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyBlogMapArtifacts']>) => adapter().listLegacyBlogMapArtifacts(...args);
 export const deleteLegacyBlogMapArtifact = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyBlogMapArtifact']>) => adapter().deleteLegacyBlogMapArtifact(...args);
+
+export type { TripTemplateRecord } from './db.postgres';
+export const upsertTripTemplate = async (...args: Parameters<ReturnType<typeof adapter>['upsertTripTemplate']>) =>
+  adapter().upsertTripTemplate(...args);
+export type { TripTemplateImportKind, TripTemplateImportRecord } from './db.postgres';
+export const listTripTemplateImports = async (...args: Parameters<ReturnType<typeof adapter>['listTripTemplateImports']>) =>
+  adapter().listTripTemplateImports(...args);
+export const upsertTripTemplateImport = async (...args: Parameters<ReturnType<typeof adapter>['upsertTripTemplateImport']>) =>
+  adapter().upsertTripTemplateImport(...args);
+export const deleteTripTemplateImport = async (...args: Parameters<ReturnType<typeof adapter>['deleteTripTemplateImport']>) =>
+  adapter().deleteTripTemplateImport(...args);
+export const listTripTemplates = async (...args: Parameters<ReturnType<typeof adapter>['listTripTemplates']>) =>
+  adapter().listTripTemplates(...args);
+export type { EstimatedItem, EstimatedItemType } from './db.postgres';
+export const addTripEstimatedItems = async (...args: Parameters<ReturnType<typeof adapter>['addTripEstimatedItems']>) =>
+  adapter().addTripEstimatedItems(...args);
+export const listTripEstimatedItems = async (...args: Parameters<ReturnType<typeof adapter>['listTripEstimatedItems']>) =>
+  adapter().listTripEstimatedItems(...args);
+export const removeTripEstimatedItem = async (...args: Parameters<ReturnType<typeof adapter>['removeTripEstimatedItem']>) =>
+  adapter().removeTripEstimatedItem(...args);
+export const clearTripEstimatedItems = async (...args: Parameters<ReturnType<typeof adapter>['clearTripEstimatedItems']>) =>
+  adapter().clearTripEstimatedItems(...args);
+export const dismissActivitySuggestion = async (...args: Parameters<ReturnType<typeof adapter>['dismissActivitySuggestion']>) =>
+  adapter().dismissActivitySuggestion(...args);
+export const listDismissedActivitySuggestions = async (...args: Parameters<ReturnType<typeof adapter>['listDismissedActivitySuggestions']>) =>
+  adapter().listDismissedActivitySuggestions(...args);
+export const restoreDismissedActivitySuggestions = async (...args: Parameters<ReturnType<typeof adapter>['restoreDismissedActivitySuggestions']>) =>
+  adapter().restoreDismissedActivitySuggestions(...args);

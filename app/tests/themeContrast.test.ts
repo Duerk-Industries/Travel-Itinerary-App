@@ -34,6 +34,12 @@ describe.each(['light', 'dark'] as const)('%s theme text contrast', (mode) => {
   });
 });
 
+it('uses a readable neutral link color in light mode', () => {
+  const light = getAppTheme('light', 'light');
+  expect(light.colors.link).toBe(light.colors.text);
+  expect(ratio(linkTextColor(light), light.colors.surface)).toBeGreaterThanOrEqual(AA);
+});
+
 describe.each(['light', 'dark'] as const)('%s theme buttons', (mode) => {
   const theme = getAppTheme(mode, mode);
 

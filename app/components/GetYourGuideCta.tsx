@@ -1,3 +1,6 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import {
@@ -10,7 +13,7 @@ import {
   type GetYourGuideClientDescriptor,
 } from '../utils/getYourGuideLinks';
 import type { GetYourGuideTravelerContext } from '../utils/getYourGuideEligibility';
-import type { AppTheme } from '../theme/theme';
+
 
 export type GetYourGuideCtaProps = {
   backendUrl: string;
@@ -42,9 +45,11 @@ export const GetYourGuideCta: React.FC<GetYourGuideCtaProps> = ({
   context,
   featureEnabled,
   testID,
-  theme,
+  theme: _providedTheme,
   numberOfLines,
 }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [descriptor, setDescriptor] = useState<GetYourGuideClientDescriptor | null>(null);
 
   useEffect(() => {
@@ -77,7 +82,7 @@ export const GetYourGuideCta: React.FC<GetYourGuideCtaProps> = ({
   if (!descriptor) return null;
   const label = getGetYourGuideCtaLabel(activity.name, activity.activityType);
   return (
-    <View testID={testID ?? `getyourguide-cta-${activity.id}`} style={{ marginTop: 4 }}>
+    <View testID={testID ?? `getyourguide-cta-${activity.id}`} style={themeStyle('components_GetYourGuideCta_1', {  }, (theme ?? _styleTheme))}>
       <TouchableOpacity
         accessibilityRole="link"
         accessibilityLabel={label}
@@ -86,9 +91,9 @@ export const GetYourGuideCta: React.FC<GetYourGuideCtaProps> = ({
         }}
         testID={`${testID ?? `getyourguide-cta-${activity.id}`}-link`}
       >
-        <Text numberOfLines={numberOfLines} style={{ color: theme?.colors.link ?? '#2563eb', textDecorationLine: 'underline' }}>{label}</Text>
+        <Text numberOfLines={numberOfLines} style={themeStyle('components_GetYourGuideCta_2', { theme: theme }, (theme ?? _styleTheme))}>{label}</Text>
       </TouchableOpacity>
-      <Text accessibilityRole="text" style={{ fontSize: 11, opacity: 0.75, color: theme?.colors.textMuted }}>
+      <Text accessibilityRole="text" style={themeStyle('components_GetYourGuideCta_3', { theme: theme }, (theme ?? _styleTheme))}>
         {GETYOURGUIDE_DISCLOSURE_TEXT}
       </Text>
     </View>

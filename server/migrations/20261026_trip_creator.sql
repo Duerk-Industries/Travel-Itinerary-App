@@ -1,0 +1,1 @@
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS created_by UUID;

@@ -301,6 +301,7 @@ export const buildOverviewRows = (params: {
   }
 
   for (const tour of tours) {
+    if (!tour.date) continue;
     const date = tour.date;
     const bucket = ensureBucket(getDayLabelForDate(date), date || 'Date TBD');
     bucket.items.push({

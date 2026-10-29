@@ -1,6 +1,9 @@
+import { themeStyle } from '../theme/theme';
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import DropdownOptionButton from './DropdownOptionButton';
+import Modal from './KeyboardAwareModal';
 
 export type SelectFieldOption = {
   label: string;
@@ -34,6 +37,7 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
   testID,
   disabled,
 }) => {
+  const _styleTheme = useStyleTheme();
   const [open, setOpen] = useState(false);
   const selectedLabel = useMemo(
     () => options.find((option) => option.value === value)?.label ?? placeholder,
@@ -56,14 +60,7 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
     // Native HTML controls do not inherit React Native's Text styles.  Always
     // provide the same themed foreground/background/border as the shared
     // input style so selects remain readable in either appearance mode.
-    const themedWebStyle = {
-      ...(styles.input ?? {}),
-      ...(webStyle ?? {}),
-      color: webStyle?.color ?? styles.cellText?.color ?? styles.input?.color,
-      backgroundColor: webStyle?.backgroundColor ?? styles.input?.backgroundColor,
-      borderColor: webStyle?.borderColor ?? styles.input?.borderColor,
-      colorScheme: styles.input?.backgroundColor === '#161616' ? 'dark' : undefined,
-    };
+    const themedWebStyle = themeStyle('components_SelectField_1', { styles: styles, webStyle: webStyle }, _styleTheme);
     return (
       <select
         style={themedWebStyle}
@@ -73,11 +70,11 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
         data-testid={testID}
         onChange={(event) => onChange(event.currentTarget.value)}
       >
-        <option value="" style={{ color: themedWebStyle.color, backgroundColor: themedWebStyle.backgroundColor }}>
+        {!options.some(option => option.value === '') ? <option value="" style={themeStyle('components_SelectField_2', { themedWebStyle: themedWebStyle }, _styleTheme)}>
           {placeholder}
-        </option>
+        </option> : null}
         {options.map((option) => (
-          <option key={option.value} value={option.value} style={{ color: themedWebStyle.color, backgroundColor: themedWebStyle.backgroundColor }}>
+          <option key={option.value} value={option.value} style={themeStyle('components_SelectField_3', { themedWebStyle: themedWebStyle }, _styleTheme)}>
             {option.label}
           </option>
         ))}
@@ -100,26 +97,52 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
           <Text style={styles.selectCaret}>v</Text>
         </View>
       </TouchableOpacity>
-      {open ? (
-        <View style={[styles.dropdownList, listStyle]}>
-          <ScrollView
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator
-            contentContainerStyle={{ flexGrow: 1 }}
-          >
-            {options.map((option) => (
-              <DropdownOptionButton
-                key={option.value}
-                styles={styles}
-                onPress={() => selectValue(option.value)}
-                accessibilityLabel={`Select ${option.label}`}
+      {open && !disabled ? (
+        <Modal transparent visible animationType="fade" onRequestClose={() => setOpen(false)}>
+          <View style={themeStyle('components_SelectField_4', {  }, _styleTheme)}>
+            <TouchableOpacity
+              style={themeStyle('components_SelectField_5', {  }, _styleTheme)}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss options"
+              onPress={() => setOpen(false)}
+            />
+            <View
+              testID={testID ? `${testID}-options` : undefined}
+              accessibilityViewIsModal
+              accessibilityLabel={title ?? placeholder}
+              style={[
+                themeStyle('components_SelectField_6', { styles: styles }, _styleTheme),
+                themeStyle('components_SelectField_7', { styles: styles }, _styleTheme),
+              ]}
+            >
+              <Text accessibilityRole="header" style={[styles.cellText, themeStyle('components_SelectField_8', {  }, _styleTheme)]}>{title ?? placeholder}</Text>
+              <ScrollView
+                // Inline dropdown positioning must not escape the modal's bounds.
+                style={[listStyle, themeStyle('components_SelectField_9', {  }, _styleTheme)]}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+                contentContainerStyle={themeStyle('components_SelectField_10', {  }, _styleTheme)}
               >
-                <Text style={styles.cellText}>{option.label}</Text>
-              </DropdownOptionButton>
-            ))}
-          </ScrollView>
-        </View>
+                {options.map((option) => (
+                  <DropdownOptionButton
+                    key={option.value}
+                    styles={styles}
+                    onPress={() => selectValue(option.value)}
+                    accessibilityLabel={`Select ${option.label}`}
+                    testID={testID ? `${testID}-option-${option.value || 'none'}` : undefined}
+                    selected={option.value === value}
+                  >
+                    <Text style={styles.cellText}>{option.label}</Text>
+                  </DropdownOptionButton>
+                ))}
+              </ScrollView>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cancel selection" onPress={() => setOpen(false)} style={themeStyle('components_SelectField_11', {  }, _styleTheme)}>
+                <Text style={styles.cellText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       ) : null}
     </View>
   );

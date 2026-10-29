@@ -1,6 +1,10 @@
+import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
+
+import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import type { AppTheme } from '../theme/theme';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Modal from './KeyboardAwareModal';
+
 
 export type NoteSubmit = {
   day: number;
@@ -16,7 +20,9 @@ export type NoteInputDialogProps = {
   theme?: AppTheme;
 };
 
-const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, onSubmit, onCancel, theme }) => {
+const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, onSubmit, onCancel, theme: _providedTheme }) => {
+  const _styleTheme = useStyleTheme();
+  const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [error, setError] = useState('');
@@ -49,30 +55,30 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
-      <Pressable style={styles.overlay} onPress={handleCancel} testID="note-dialog-overlay">
+      <Pressable style={styles((theme ?? _styleTheme)).overlay} onPress={handleCancel} testID="note-dialog-overlay">
         <Pressable
-          style={[styles.dialog, colors && { backgroundColor: colors.surface }]}
+          style={[styles((theme ?? _styleTheme)).dialog, colors && themeStyle('components_NoteInputDialog_1', { colors: colors }, (theme ?? _styleTheme))]}
           onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
           accessibilityRole={'dialog' as any}
           accessibilityLabel="Add a note"
           testID="note-dialog"
         >
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }} showsVerticalScrollIndicator>
-          <Text style={[styles.title, colors && { color: colors.text }]}>Add a note</Text>
-          <Text style={[styles.label, colors && { color: colors.textMuted }]}>Title</Text>
+          <ScrollView style={themeStyle('dialogScroll', {}, (theme ?? _styleTheme))} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={themeStyle('components_NoteInputDialog_2', {  }, (theme ?? _styleTheme))} showsVerticalScrollIndicator>
+          <Text style={[styles((theme ?? _styleTheme)).title, colors && themeStyle('components_NoteInputDialog_3', { colors: colors }, (theme ?? _styleTheme))]}>Add a note</Text>
+          <Text style={[styles((theme ?? _styleTheme)).label, colors && themeStyle('components_NoteInputDialog_4', { colors: colors }, (theme ?? _styleTheme))]}>Title</Text>
           <TextInput
             testID="note-dialog-title"
-            style={[styles.input, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+            style={[styles((theme ?? _styleTheme)).input, colors && themeStyle('components_NoteInputDialog_5', { colors: colors }, (theme ?? _styleTheme))]}
             placeholderTextColor={colors?.textMuted}
             value={title}
             onChangeText={setTitle}
             placeholder="Short label"
             autoFocus
           />
-          <Text style={[styles.label, colors && { color: colors.textMuted }]}>Body</Text>
+          <Text style={[styles((theme ?? _styleTheme)).label, colors && themeStyle('components_NoteInputDialog_6', { colors: colors }, (theme ?? _styleTheme))]}>Body</Text>
           <TextInput
             testID="note-dialog-body"
-            style={[styles.input, styles.textarea, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+            style={[styles((theme ?? _styleTheme)).input, styles((theme ?? _styleTheme)).textarea, colors && themeStyle('components_NoteInputDialog_7', { colors: colors }, (theme ?? _styleTheme))]}
             placeholderTextColor={colors?.textMuted}
             value={body}
             onChangeText={setBody}
@@ -80,13 +86,13 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
             multiline
             numberOfLines={5}
           />
-          {error ? <Text style={[styles.error, theme?.mode === 'dark' && { color: '#FFB4AB' }]}>{error}</Text> : null}
-          <View style={styles.actions}>
-            <Pressable testID="note-dialog-cancel" style={styles.btnGhost} onPress={handleCancel}>
-              <Text style={[styles.btnGhostText, colors && { color: colors.textMuted }]}>Cancel</Text>
+          {error ? <Text style={[styles((theme ?? _styleTheme)).error, theme?.mode === 'dark' && themeStyle('components_NoteInputDialog_8', {  }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+          <View style={styles((theme ?? _styleTheme)).actions}>
+            <Pressable testID="note-dialog-cancel" style={styles((theme ?? _styleTheme)).btnGhost} onPress={handleCancel}>
+              <Text style={[styles((theme ?? _styleTheme)).btnGhostText, colors && themeStyle('components_NoteInputDialog_9', { colors: colors }, (theme ?? _styleTheme))]}>Cancel</Text>
             </Pressable>
-            <Pressable testID="note-dialog-submit" style={styles.btnPrimary} onPress={handleSubmit}>
-              <Text style={styles.btnPrimaryText}>Add note</Text>
+            <Pressable testID="note-dialog-submit" style={styles((theme ?? _styleTheme)).btnPrimary} onPress={handleSubmit}>
+              <Text style={styles((theme ?? _styleTheme)).btnPrimaryText}>Add note</Text>
             </Pressable>
           </View>
           </ScrollView>
@@ -96,22 +102,6 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  dialog: { width: '100%', maxWidth: 460, maxHeight: '100%', backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 8 },
-  title: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  label: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 4 },
-  input: {
-    borderWidth: 1, borderColor: '#d1d5db', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8,
-    fontSize: 14, color: '#111827', backgroundColor: '#fff',
-  },
-  textarea: { minHeight: 110, textAlignVertical: 'top' },
-  error: { color: '#dc2626', fontSize: 12, marginTop: 4 },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
-  btnGhost: { paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
-  btnGhostText: { color: '#374151', fontWeight: '600' },
-  btnPrimary: { backgroundColor: '#141414', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
-  btnPrimaryText: { color: '#fff', fontWeight: '700' },
-});
+const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_NoteInputDialog_10', { StyleSheet: StyleSheet }, _theme);
 
 export default NoteInputDialog;

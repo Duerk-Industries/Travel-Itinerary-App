@@ -59,6 +59,24 @@ flags:
   activity_lodging_csv_export:
     enabled: true
     description: "Enable canonical CSV exports for Activities and Lodging"
+  ground_transfer_csv_import:
+    enabled: false
+    description: "Enable reviewed CSV imports for ground transfers (train, bus, ferry, transit, private); also needs activity_lodging_csv_import. Off until released"
+  ground_transfer_csv_export:
+    enabled: false
+    description: "Enable CSV export of ground transfers; also needs csv_export. Off until released"
+  car_rental_csv_import:
+    enabled: false
+    description: "Enable reviewed CSV imports for car rentals; also needs activity_lodging_csv_import. Off until released"
+  car_rental_csv_export:
+    enabled: false
+    description: "Enable CSV export of car rentals; also needs csv_export. Off until released"
+  day_plan_csv_import:
+    enabled: false
+    description: "Enable reviewed CSV imports for day-plan items (notes, checklists, places); also needs activity_lodging_csv_import. Off until released"
+  day_plan_csv_export:
+    enabled: false
+    description: "Enable CSV export of day-plan items; also needs csv_export. Off until released"
   car_rentals:
     enabled: true
     description: "Enable car rental booking integration"
@@ -215,6 +233,9 @@ flags:
   trip_blog_search:
     enabled: true
     description: "C8 — visibility-aware, bounded private blog search UI and API"
+  trip_templates:
+    enabled: true
+    description: "Offer seeded itinerary templates for the destination a traveler chose in the Create Trip wizard; free for every tier"
   trip_blog_places:
     enabled: true
     description: "C6 — traveler-only places index derived from existing trip records without reverse geocoding"

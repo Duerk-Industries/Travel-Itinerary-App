@@ -18,6 +18,7 @@ export type WizardSaveResult = {
   failures: string[];
   fatal?: string;
   carRentals?: CarRental[];
+  lodgingIds?: Record<string, string>;
 };
 
 const normalizeLookupKey = (value?: string | null): string => String(value ?? '').trim().toLowerCase();
@@ -189,6 +190,7 @@ export const saveWizardLodgings = async (params: {
     const fallbackPayerId = activeMembers[0]?.id ?? members[0]?.id ?? null;
     const failures: string[] = [];
 
+    const lodgingIds: Record<string, string> = {};
     for (const lodging of wizardLodgings) {
       const rawPaidBy = Array.isArray((lodging as any).paidBy) ? (lodging as any).paidBy : [];
       const rawTravelerIds = Array.isArray((lodging as any).travelerIds)
@@ -235,10 +237,13 @@ export const saveWizardLodgings = async (params: {
       if (!saveRes.ok) {
         const errData = await saveRes.json().catch(() => ({}));
         failures.push(errData.error || 'Failed to save lodging');
+      } else {
+        const saved = await saveRes.json().catch(() => ({}));
+        if (saved.id) lodgingIds[lodging.id] = String(saved.id);
       }
     }
 
-    return { ok: failures.length === 0, failures };
+    return { ok: failures.length === 0, failures, lodgingIds };
   } catch {
     return { ok: false, failures: [], fatal: 'Trip created, but lodging could not be saved.' };
   }
