@@ -76,6 +76,16 @@ describe('activity suggestions', () => {
     expect(getByText('Thousands of vermilion gates.')).toBeTruthy();
   });
 
+  test('lists the sentence, and opens the editor with the paragraph as the notes when the stop has one', async () => {
+    mockSuggestions([suggestion('a', 'First place', { details: 'A longer paragraph about the gates, their history and how to visit them.' })]);
+    const { findByTestId, getByTestId, getByText, queryByText, getByPlaceholderText } = renderTab();
+    await findByTestId('activity-suggestion-a');
+    expect(getByText('Thousands of vermilion gates.')).toBeTruthy();
+    expect(queryByText(/longer paragraph/)).toBeNull();
+    fireEvent.press(getByTestId('activity-suggestion-optional-a'));
+    expect(getByPlaceholderText('Description').props.value).toBe('A longer paragraph about the gates, their history and how to visit them.');
+  });
+
   test('Add to a day opens the editor, and Dismiss removes the suggestion', async () => {
     mockSuggestions([suggestion('a', 'First place'), suggestion('b', 'Second place')]);
     const { findByTestId, getByTestId, queryByTestId } = renderTab();

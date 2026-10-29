@@ -1,6 +1,6 @@
 import { listActivities, listDismissedActivitySuggestions, listLodgings } from '../db';
 import { baseForDay, loadSeedTemplates } from './tripTemplateService';
-import { getTemplatePlace, toPublicImage, type PublicTemplateImage } from './tripTemplateMedia';
+import { getTemplatePlace, placeNotesText, toPublicImage, type PublicTemplateImage } from './tripTemplateMedia';
 import { isoDay } from './tripDateShiftService';
 
 // Activities from the templates, offered on the Activities page for the days the traveler is in the
@@ -15,7 +15,10 @@ export type ActivitySuggestion = {
   startTime: string;
   duration: string;
   startLocation: string;
+  /** The one-sentence version, shown while the suggestion is on offer. */
   description: string;
+  /** The paragraph that becomes the activity's notes once it is added (the sentence again when the stop has no paragraph). */
+  details: string;
   image: PublicTemplateImage | null;
   bookAhead: boolean;
   /** Days of the trip spent in this activity's city, earliest first. */
@@ -117,7 +120,7 @@ const suggestionsFor = (lodgings: any[], activities: any[]): ActivitySuggestion[
       const place = getTemplatePlace(activity.place);
       suggestions.push({
         key, name: activity.name, city, activityType: activity.type || 'Other', startTime: clock(activity.time), duration: activity.duration,
-        startLocation: activity.where, description: place?.description ?? '', image: toPublicImage(place?.image) ?? null,
+        startLocation: activity.where, description: place?.description ?? '', details: placeNotesText(place), image: toPublicImage(place?.image) ?? null,
         bookAhead: Boolean(activity.book), dates,
       });
     }

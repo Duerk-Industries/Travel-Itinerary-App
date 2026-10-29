@@ -9,25 +9,48 @@ You work **outside the app**. Your only output is **one JSON file** (a "bundle")
 ## 1. How a person uses these instructions
 
 1. Give an LLM this whole document, plus `example-bundle.json` (a complete valid bundle) and, if you have it, `schema.json` (the same format as JSON Schema).
-2. Tell it what you want. For example:
+2. Tell it what you want. **The only thing you must give it is a destination.** For example:
 
-   > Using the instructions, write 3 itineraries for **Portugal**: 5 days Lisbon only, 8 days Lisbon + Porto, and 10 days Lisbon, Porto and the Algarve. Relaxed pace, food and history. Return the bundle JSON only.
+   > Using the instructions, create itineraries for **Scotland**.
+
+   The LLM then researches the destination and decides which itineraries to write (section 2). You may add anything that narrows it down, and it will use that to choose which source itineraries to draw on: a length ("7 and 10 days"), a time of year ("September"), a pace ("relaxed"), interests ("food and history"), cities or a region ("Highlands only"), or how travelers arrive. For example:
+
+   > Using the instructions, create itineraries for **Portugal**: relaxed pace, food and history, around 5 to 10 days, in spring.
 
 3. To **change an existing itinerary**, first download the current templates from *Admin → Itinerary templates → Download templates*, give that file to the LLM, and ask for the change. Keep each template's `id` the same and it will be imported as an *update*; a new `id` is imported as a *new* template.
 4. Save the LLM's JSON as a `.json` file and import it from *Admin → Itinerary templates → Import*. The app first shows a **preview** (new / updated / unchanged, plus any errors to fix) and only saves when the whole file is acceptable. If there are errors, paste the error list back to the LLM and ask it to return the corrected full file.
 
-## 2. What to ask before writing
+## 2. How to decide what to write
 
-If the request does not say, ask (or state your assumption at the very top of your reply, outside the JSON):
+The request may be as short as a destination. **Do not stop to ask questions**: work out what is missing, make reasonable assumptions, and list them at the top of your reply (outside the JSON). Ask only if there is no destination, or it is so ambiguous you cannot tell which place is meant.
 
-- **Destination(s)** and which cities to visit.
-- **Length** in days (2 to 21 is typical; the app allows up to 60). Day 1 is the arrival day and the last day is the departure day.
-- **Time of year** (affects what is open, weather, daylight).
-- **Pace and interests** (relaxed / balanced / packed; food, history, nature, family, nightlife, …).
-- **How they arrive and leave** (airport or station), if relevant.
-- Whether this **updates** an existing template (use its `id`) or is **new**.
+What the request can contain, and the default when it does not:
+
+| Input | If not given |
+|---|---|
+| **Destination** (a country or region). Required. | Ask. |
+| **Length** in days (2 to 21 is typical; the app allows up to 60). Day 1 is arrival, the last day is departure. | Use the lengths that are most common among the sources (step 3 below). |
+| **Time of year** (affects what is open, weather, daylight). | Write for the main travel season of the destination, and say which. |
+| **Pace and interests.** Pace is relaxed, balanced or fast. Interests come from the fixed list in section 4.6 (history and art map to `culture`, nature and hiking to `outdoors`; there is no tag for family). | Whatever the most common itineraries do; tag it honestly (section 4.6). |
+| **Cities or region to cover**, and **how travelers arrive and leave** (airport or station). | The most common bases and entry points among the sources. |
+| Whether this **updates** an existing template (use its `id`) or is **new**. | New. |
 
 Do not ask about prices: templates carry no costs.
+
+### 2.1 Method: combine the common itineraries into generic ones
+
+Do these steps in order. The aim is **generic itineraries that reflect what most good itineraries for the destination have in common**, not a rewrite of any one of them.
+
+1. **Find the sources.** Identify the ten most useful and widely used travel sites and guides that publish itineraries for the destination: for example guidebook publishers, the official tourism board, and major travel publications and trip-planning sites. Prefer well-established ones with named, sample itineraries by length. If you can browse, open their itineraries for this destination. **If you cannot browse, say so at the top of your reply and work from what you reliably know**; do not pretend to have read pages you have not.
+2. **Tabulate them.** For every source itinerary you use, note its length in days, its bases (where the traveler sleeps), its route, its stops, and its pace. Keep this note short; it is for your own reasoning and for the summary in step 7.
+3. **Find what recurs.** Count which lengths appear most often, which route shapes (the order of bases) appear most often, and which stops are included by most itineraries for each route.
+4. **Choose the set.** Create itineraries for the **most common lengths and routes**, usually 4 to 8 templates, never more than 12. Several templates of the **same length are fine when their destinations (bases) differ**, and several **lengths are fine when the destinations are the same**; but no two templates may have both the same length and the same bases. Cover the destination's main regions rather than five variations of one trip.
+5. **Apply what the admin asked for.** If the request gives a length, a time of year, a pace, interests or a region, use it to **choose and weight the source itineraries** you combine: keep the ones that fit, give them more weight, and drop the rest. Reflect it in the result: the template's `pace` and `interests`, the stops chosen, and seasonal advice (leave out what is closed or unpleasant in that season, or say "check opening days" in `notes`).
+6. **Combine, then write it generically.** For each template, keep the stops and transfers that most of the relevant source itineraries share, put them in a sensible geographic order, and space them at a realistic pace (section 5). Drop one-off, trendy or promotional items. Then write the whole thing **in your own words**, with no source's name, wording or branding in the text. Facts (a place exists, how long a train takes) are fine to reuse; sentences, a source's distinctive list of stops in its exact order, and its descriptions are not. If a template would end up matching a single source almost exactly, blend in more of the others or change the route.
+7. **Fill in everything, not only the plan.** For every template and every place, write the descriptions and assign the tags as this document describes: each place needs `description` and `details` (4.5) and `interests` and `mobility` (4.6), and each template needs `pace` and `interests`. Leave a `details` as `""`, or a tag out, only when you cannot do it without guessing; do not guess to fill a gap.
+8. **Say what you did, briefly, above the JSON:** which sources you used (or that you could not browse), which lengths and routes recurred, which itineraries you created and why those, and any assumptions. Keep it to a short list; it is for the administrator and is not imported.
+
+In `sources`, list only the publishers and sites you actually used or know well enough to have used; never invent a site, title or link.
 
 ## 3. Output rules
 
@@ -70,7 +93,9 @@ Do not ask about prices: templates carry no costs.
 | `highlights` | string[] | 3 to 6 short highlights for the card (a few words each). |
 | `destinationKeys` | string[] | Keys of the destination entries in `media.destinations` that describe this trip: the country first, then cities (`"portugal"`, `"portugal/lisbon"`). |
 | `hero` | string | The destination key whose first picture should be the card picture (one of `destinationKeys`). |
-| `sources` | string[] | Where you got the facts (guidebook names, official tourism sites). For maintainers; not shown. Be honest; leave empty rather than invent. |
+| `sources` | string[] | Where you got the facts (guidebook names, official tourism sites). **Internal: for maintainers only, never shown to travelers or copied into a trip**, so keep source names out of every other field. Be honest; leave empty rather than invent. |
+| `pace` | string | Optional. How full the days are: `"R"` relaxed, `"B"` balanced, `"F"` fast. Internal tag, never shown to travelers (4.6). |
+| `interests` | string[] | Optional. What the whole plan is about, from the fixed list in 4.6. Internal tag, never shown. |
 | `stays` | object[] | See 4.2. |
 | `activities` | object[] | See 4.3. |
 | `legs` | object[] | See 4.4. |
@@ -130,7 +155,14 @@ Do not ask about prices: templates carry no costs.
 `media.places[key]` for every distinct `place` key you used:
 
 ```json
-"portugal/belem-tower": { "name": "Belém Tower", "description": "A fortified riverside tower from the 1500s ...", "image": null }
+"portugal/belem-tower": {
+  "name": "Belém Tower",
+  "description": "A small fortified tower on the Tagus riverbank that once guarded the city's harbour.",
+  "details": "A paragraph of 3 to 5 sentences ...",
+  "interests": ["culture", "iconic_landmarks", "photography"],
+  "mobility": "M",
+  "image": null
+}
 ```
 
 `media.destinations[key]` for the country and each city:
@@ -139,11 +171,26 @@ Do not ask about prices: templates carry no costs.
 "portugal/lisbon": { "name": "Lisbon", "description": "A hilly riverside capital of tiled façades, trams and ...", "images": [] }
 ```
 
-- `description`: **one or two sentences (under 300 characters)** saying what the place *is* and why people go. Written by you, in your own words. This sentence is shown to travelers and becomes the first line of the activity's notes.
+- `description`: **one sentence (under 300 characters)** saying what the place *is* and why people go. Written by you, in your own words. This is the short version: travelers see it while the stop is only being offered (suggestions, the "Add activity" menu, the template preview).
+- `details`: **one paragraph of 3 to 5 sentences (under 1,000 characters)**, the full version of the same description. Once the stop is added to a trip it becomes the first line of the activity's notes, so it is also what the traveler's trip export shows. Same rules as everywhere: original words, nothing you are unsure of, no prices, no opening hours or ticket rules unless you are certain (otherwise say "check opening days"), no links. Say what the place is, a little of its background that is well documented, and one practical thing about visiting. It must agree with `description` and add to it, not repeat it. Leave `""` if you cannot write it without guessing; the app then uses the sentence. `details` requires a `description`.
+- `interests` and `mobility`: internal tags for the stop (see 4.6). Optional, never shown to travelers.
 - **Pictures: leave `"image": null` and `"images": []`.** Pictures are added later by a maintainer who can check licenses. Only include a picture if you can open the Wikimedia Commons file page and confirm it is **public domain or CC0**; then the object must be complete and truthful:
   `{ "url": "https://upload.wikimedia.org/...", "width": 960, "height": 720, "title": "File:...", "pageUrl": "https://commons.wikimedia.org/wiki/File:...", "license": "CC0", "author": "Name" }`.
   The app rejects any other host or license, so a guess breaks the import.
 - Destination keys: `country` (`portugal`) or `country/city` (`portugal/lisbon`), lowercase ASCII with hyphens.
+
+### 4.6 Internal tags: `pace`, `interests`, `mobility`
+
+These describe the template and each stop so the app can match them to a traveler's preferences. **They are never shown to travelers, and they are never copied into a trip or its export.** They use the same fixed vocabulary as the app's AI itinerary generator, so use these exact values and no others (anything else is rejected). All of them are optional: leave a tag out rather than guess.
+
+| Tag | Where | Values |
+|---|---|---|
+| `pace` | template | `R` relaxed (few stops, long breaks), `B` balanced, `F` fast (many stops, little slack) |
+| `interests` | template and each place | any of `outdoors`, `adventure`, `culture`, `food`, `nightlife`, `relax`, `photography`, `authentic_local`, `iconic_landmarks` |
+| `mobility` | each place | `L`, `M` or `H`: the mobility a traveler needs for this stop (`L` = easy, mostly flat or step-free; `M` = some steps, hills or longer walks; `H` = steep, long or uneven) |
+
+- Tag a stop from what it is and what you wrote about it (a castle on a hill with steps is `M`; a park path you described as steep is `H`). Do not tag from reputation alone.
+- Use two to four interests for a stop, and the few that define the plan for the template (usually 3 to 5). Match the pace to what was asked and to how full the days actually are.
 
 ## 5. What makes a good itinerary
 
@@ -164,6 +211,7 @@ Do not ask about prices: templates carry no costs.
 **Accuracy and honesty**
 - If you are not sure of a fact (hours, travel time, whether a transfer exists), **leave it vague or leave it out**; never invent. A wrong "9 minutes by metro" is worse than "short metro ride".
 - Do not copy sentences from guidebooks, Wikipedia, Tripadvisor or blogs. Write original text. List real sources in `sources`.
+- The paragraph in `details` is longer, so it is easier to slip: do not add a date, a number, a name or a claim to fill it out. A shorter paragraph of things you are sure of is better than a longer one with a guess in it.
 - Neutral, plain English. No hype ("must-see!!!"), no second-person pressure.
 
 ## 6. Self-check before you answer
@@ -181,7 +229,10 @@ Go through this list and fix anything that fails **before** replying:
 9. Every non-empty `place` is `country/slug`, and has an entry in `media.places`; every `destinationKeys` item and `hero` has an entry in `media.destinations`; `hero` is one of `destinationKeys`.
 10. Every base in `stays` appears in `cities`; city names are English and written plainly.
 11. There is an arrival leg on day 0, a leg for every move between bases, and a departure leg on the last day.
-12. Descriptions are original, one or two sentences, and contain no prices or links.
+12. Descriptions are original, one sentence, and contain no prices or links. Each `details` is one paragraph, agrees with its description, and states nothing you are unsure of (or is `""`).
+12a. `pace`, `interests` and `mobility` use only the values in 4.6, and every template and place has them (unless you truly cannot say).
+12b. No two templates share both length and bases; the set follows the most common lengths and routes you found, and any length, season, pace, interests or region the request gave.
+12c. Nothing is copied from a source: no sentences, no source names in descriptions, no list that reproduces one source's itinerary.
 13. All pictures are `null` / `[]` unless you verified a public-domain or CC0 Commons file.
 14. The reply contains one JSON code block that is valid JSON.
 

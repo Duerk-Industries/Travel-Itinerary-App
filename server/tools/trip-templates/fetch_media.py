@@ -203,10 +203,24 @@ def cmd_build(pack, cache: str, out: str) -> None:
                 break
         return result
 
+    # The paragraph and the internal tags are not generated here: they come from an imported bundle (or a hand edit),
+    # so a rebuild keeps whatever the existing file already holds for the same place.
+    previous = {}
+    if os.path.exists(out):
+        try:
+            previous = json.load(open(out, encoding="utf-8")).get("places", {})
+        except (OSError, ValueError):
+            previous = {}
+    kept_fields = ("details", "interests", "mobility")
+
     places, destinations = {}, {}
     for key, (name, _q, desc) in pack.PLACES.items():
         image = pick(f"place:{pack.PREFIX}/{key}")
-        places[f"{pack.PREFIX}/{key}"] = {"name": name, "description": desc, "image": image[0] if image else None}
+        entry = {"name": name, "description": desc}
+        old = previous.get(f"{pack.PREFIX}/{key}", {})
+        entry.update({field: old[field] for field in kept_fields if field in old})
+        entry["image"] = image[0] if image else None
+        places[f"{pack.PREFIX}/{key}"] = entry
     for key, (name, _q, desc, count) in pack.DESTINATIONS.items():
         ckey = f"dest:{pack.PREFIX}/{key}" if key != pack.PREFIX else f"dest:{pack.PREFIX}"
         destinations[key if key == pack.PREFIX else f"{pack.PREFIX}/{key}"] = {"name": name, "description": desc, "images": pick(ckey, count)}

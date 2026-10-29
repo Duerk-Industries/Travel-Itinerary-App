@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { deleteTripTemplateImport, listTripTemplates, upsertTripTemplateImport } from '../db';
 import { logInfo } from '../logger';
 import {
+  MAX_PLACE_DETAILS,
+  TEMPLATE_INTERESTS,
   getTemplateDestination,
   getTemplatePlace,
   templateDestinationSchema,
@@ -71,7 +73,7 @@ const formatZodIssues = (error: z.ZodError): string[] =>
   error.issues.map((issue) => `${issue.path.length ? issue.path.join('.') : '(template)'}: ${issue.message}`);
 
 /** Whether a place or destination key has an entry, in this bundle or already in the app. */
-type MediaLookup = { place: (key: string) => boolean; destination: (key: string) => boolean };
+type MediaLookup = { place: (key: string) => boolean; destination: (key: string) => boolean; placeEntry?: (key: string) => TemplatePlace | null };
 
 export const checkTemplate = (plan: TemplatePlan, media: MediaLookup): TemplateIssues => {
   const errors: string[] = [];
@@ -98,6 +100,19 @@ export const checkTemplate = (plan: TemplatePlan, media: MediaLookup): TemplateI
       else if (!media.place(activity.place)) warnings.push(`${at}.place: no description or picture entry for "${activity.place}"; add it under media.places.`);
     } else warnings.push(`${at}.place: empty, so "${activity.name}" will have no shared description or picture.`);
   });
+  // The internal tags and the paragraph are optional, so a gap is one summary line rather than a line per stop.
+  if (!plan.pace) warnings.push('pace: not set; it is an optional internal tag, R (relaxed), B (balanced) or F (fast).');
+  if (!plan.interests?.length) warnings.push(`interests: not set; it is an optional internal tag, any of ${TEMPLATE_INTERESTS.join(', ')}.`);
+  if (media.placeEntry) {
+    const entries = [...new Set(plan.activities.map((activity) => activity.place).filter(Boolean))].flatMap((key) => {
+      const entry = media.placeEntry!(key);
+      return entry ? [{ key, entry }] : [];
+    });
+    const withoutDetails = entries.filter(({ entry }) => !entry.details.trim()).length;
+    const withoutInterests = entries.filter(({ entry }) => !entry.interests.length).length;
+    if (withoutDetails) warnings.push(`media.places: ${withoutDetails} of ${entries.length} places have no "details" paragraph yet, so travelers get the one-sentence description in their notes.`);
+    if (withoutInterests) warnings.push(`media.places: ${withoutInterests} of ${entries.length} places have no "interests" yet.`);
+  }
   const perDay = new Map<number, number>();
   plan.activities.forEach((activity) => perDay.set(activity.day, (perDay.get(activity.day) ?? 0) + 1));
   perDay.forEach((count, day) => { if (count > 6) warnings.push(`Day ${day} has ${count} activities; more than 6 is rarely realistic.`); });
@@ -184,7 +199,7 @@ export const prepareBundle = (input: unknown): PreparedBundle => {
   const acceptedPlaces = new Map<string, TemplatePlace>();
   const acceptedDestinations = new Map<string, TemplateDestination>();
 
-  const readMedia = <T extends { name: string; description: string }>(
+  const readMedia = <T extends { name: string; description: string; details?: string }>(
     kind: 'places' | 'destinations', schema: z.ZodType<T>, keyPattern: RegExp, images: (entry: T) => Array<{ url: string; license: string } | null>,
     accepted: Map<string, T>, current: (key: string) => T | null, out: Array<{ key: string; entry: T; status: 'added' | 'updated' }>,
   ) => {
@@ -197,7 +212,9 @@ export const prepareBundle = (input: unknown): PreparedBundle => {
       if (!parsed.success) { counts[kind].rejected.push({ key, error: formatZodIssues(parsed.error).join('; ') }); continue; }
       const imageError = images(parsed.data).map(checkImage).find(Boolean);
       if (imageError) { counts[kind].rejected.push({ key, error: imageError }); continue; }
-      if (parsed.data.description.length > 600) { counts[kind].rejected.push({ key, error: 'description is longer than 600 characters; keep it to one or two sentences.' }); continue; }
+      if (parsed.data.description.length > 600) { counts[kind].rejected.push({ key, error: 'description is longer than 600 characters; keep it to one sentence.' }); continue; }
+      if ((parsed.data.details ?? '').length > MAX_PLACE_DETAILS) { counts[kind].rejected.push({ key, error: `details is longer than ${MAX_PLACE_DETAILS} characters; keep it to one short paragraph.` }); continue; }
+      if (parsed.data.details?.trim() && !parsed.data.description.trim()) { counts[kind].rejected.push({ key, error: 'details needs the one-sentence description as well; travelers see that sentence before the stop is added.' }); continue; }
       accepted.set(key, parsed.data);
       const existing = current(key);
       if (existing && same(existing, parsed.data)) counts[kind].unchanged += 1;
@@ -209,6 +226,7 @@ export const prepareBundle = (input: unknown): PreparedBundle => {
 
   const lookup: MediaLookup = {
     place: (key) => acceptedPlaces.has(key) || Boolean(getTemplatePlace(key)),
+    placeEntry: (key) => acceptedPlaces.get(key) ?? getTemplatePlace(key),
     destination: (key) => acceptedDestinations.has(key) || Boolean(getTemplateDestination(key)),
   };
   const current = new Map(loadSeedTemplates().map((template) => [template.id, withoutHash(template)] as const));

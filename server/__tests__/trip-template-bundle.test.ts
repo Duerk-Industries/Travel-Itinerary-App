@@ -14,7 +14,7 @@ import {
   prepareBundle,
 } from '../src/services/tripTemplateBundle';
 import { clearTripTemplateCacheForTests, loadSeedTemplates, syncTripTemplatesFromSeed } from '../src/services/tripTemplateService';
-import { clearTripTemplateMediaCacheForTests } from '../src/services/tripTemplateMedia';
+import { TEMPLATE_INTERESTS, TEMPLATE_MOBILITIES, TEMPLATE_PACES, clearTripTemplateMediaCacheForTests } from '../src/services/tripTemplateMedia';
 import { makeAdminUser, registerAndLoginWebUser } from './helpers';
 
 const authoringDir = path.resolve(__dirname, '../data/trip-template-authoring');
@@ -34,7 +34,7 @@ describe('authoring materials', () => {
 
   it('give the LLM the same vocabulary the importer enforces', () => {
     const instructions = fs.readFileSync(path.join(authoringDir, 'INSTRUCTIONS.md'), 'utf8');
-    for (const value of [...TEMPLATE_ACTIVITY_TYPES, ...TEMPLATE_TRANSFER_TYPES, BUNDLE_FORMAT]) expect(instructions).toContain(value);
+    for (const value of [...TEMPLATE_ACTIVITY_TYPES, ...TEMPLATE_TRANSFER_TYPES, ...TEMPLATE_INTERESTS, ...TEMPLATE_PACES, ...TEMPLATE_MOBILITIES, BUNDLE_FORMAT]) expect(instructions).toContain(value);
     const types = fs.readFileSync(path.resolve(__dirname, '../src/types.ts'), 'utf8');
     const union = types.match(/export type ActivityType =([^;]+);/)![1];
     expect([...union.matchAll(/'([^']+)'/g)].map((match) => match[1]).sort()).toEqual([...TEMPLATE_ACTIVITY_TYPES].sort());
@@ -111,6 +111,7 @@ describe('checking a bundle', () => {
     expect(tryImage({ url: 'https://example.com/a.jpg' }).media.places.rejected[0].error).toMatch(/wikimedia/);
     expect(tryImage({ url: 'http://upload.wikimedia.org/a.jpg' }).media.places.rejected[0].error).toMatch(/https/);
     expect(tryImage({}, 'x'.repeat(601)).media.places.rejected[0].error).toMatch(/600 characters/);
+    expect(tryImage({}, 'x'.repeat(601)).media.places.rejected[0].error).toMatch(/one sentence/);
     const bad = readExample();
     bad.media.places['Not A Key'] = { name: 'x', description: 'x', image: null };
     expect(prepareBundle(bad).report.media.places.rejected[0].key).toBe('Not A Key');

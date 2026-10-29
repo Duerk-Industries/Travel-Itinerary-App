@@ -283,7 +283,10 @@ export type ActivitySuggestion = {
   startTime: string;
   duration: string;
   startLocation: string;
+  /** The one-sentence version, shown while the suggestion is on offer. */
   description: string;
+  /** The paragraph that becomes the activity's notes once it is added; absent from an older server, which sends only the sentence. */
+  details?: string;
   image: { url: string; credit: string } | null;
   bookAhead: boolean;
   dates: string[];
@@ -538,7 +541,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       startLocation: suggestion.startLocation,
       startTime: suggestion.startTime,
       duration: suggestion.duration,
-      notes: suggestion.description,
+      notes: suggestion.details || suggestion.description,
       travelerIds: activeMembers.map((m) => m.id),
     };
     if (defaultPayerId) base.paidBy = [defaultPayerId];

@@ -1051,6 +1051,18 @@ More detail.` }));
       expect(getByPlaceholderText('Activity name').props.value).toBe('Old Town walk');
       expect(getByPlaceholderText('Description').props.value).toBe('Old Town walk is worth a visit.');
     });
+
+    test('offers the sentence in the menu, and fills the editor with the paragraph when the stop has one', async () => {
+      mockSuggestions([{ ...suggestion('a', 'Old Town walk'), details: 'Old Town walk is a longer paragraph about the district, its history and how to visit.' }]);
+      const { findByTestId, findByText, queryByText, getByPlaceholderText } = await renderOverview(<OverviewTab {...withAuth} />);
+      fireEvent.press(await findByTestId('overview-day-card-2'));
+      fireEvent.press(await findByTestId('day-details-add-activity-button'));
+      expect(await findByText('Old Town walk is worth a visit.')).toBeTruthy();
+      expect(queryByText(/longer paragraph/)).toBeNull();
+      fireEvent.press(await findByTestId('add-item-suggested-a'));
+      expect(await findByTestId('activity-form-modal')).toBeTruthy();
+      expect(getByPlaceholderText('Description').props.value).toBe('Old Town walk is a longer paragraph about the district, its history and how to visit.');
+    });
   });
 
   test('shows traveler names when flights differ', async () => {

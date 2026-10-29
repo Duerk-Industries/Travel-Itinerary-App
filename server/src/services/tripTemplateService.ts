@@ -20,7 +20,8 @@ import { logError, logInfo } from '../logger';
 import { resolveRuntimeDataPath } from '../utils/runtimeDataPath';
 import { getLocationOptionsByIds } from './locationServices';
 import {
-  getTemplateDestination, getTemplatePlace, setImportedTemplateMedia, templateDestinationSchema, templatePlaceSchema, toPublicImage,
+  getTemplateDestination, getTemplatePlace, placeNotesText, setImportedTemplateMedia, templateDestinationSchema, templateInterestsSchema,
+  templatePaceSchema, templatePlaceSchema, toPublicImage,
   type PublicTemplateImage, type TemplateDestination, type TemplatePlace,
 } from './tripTemplateMedia';
 
@@ -49,6 +50,9 @@ export const templatePlanSchema = z.object({
   hero: z.string().default(''),
   /** Where the plan was researched, for whoever maintains it; the app never shows these. */
   sources: z.array(z.string()).default([]),
+  /** How full the days are (R relaxed, B balanced, F fast) and what the plan is about. Internal: never sent to travelers. */
+  pace: templatePaceSchema.optional(),
+  interests: templateInterestsSchema.optional(),
   stays: z.array(z.object({
     base: z.string(), hotel: z.string(), start: z.number().int().min(0), nights: z.number().int().min(1), area: z.string().default(''),
     breakfast: z.boolean().default(false), dinner: z.boolean().default(false),
@@ -296,7 +300,7 @@ export const populateTripFromTemplate = async (params: { userId: string; tripId:
     const created: any = await insertActivity({
       userId, tripId, status: activity.book ? NEEDS_BOOKING : 'Proposed', activityType: (activity.type || 'Other') as any, date: dateOf(activity.day), name: activity.name,
       startLocation: activity.where, startTime: clock(activity.time), duration: activity.duration, cost: 0, freeCancelBy: null, bookedOn: '', reference: '',
-      notes: [getTemplatePlace(activity.place)?.description, activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n'), paidBy: [], travelerIds,
+      notes: [placeNotesText(getTemplatePlace(activity.place)), activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n'), paidBy: [], travelerIds,
     } as any);
     suggested.push({ type: 'activity', id: String(created.id) });
   }
@@ -365,7 +369,7 @@ export const populateUndatedTripFromTemplate = async (params: { userId: string; 
     notes += 1;
   }
   for (const activity of template.activities) {
-    await add(activity.day, { time: activity.time, kind: 'activity', title: activity.name, body: [getTemplatePlace(activity.place)?.description ?? '', activity.duration ? `Duration: ${activity.duration}.` : '', activity.where ? `Address: ${activity.where}` : '', activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n') });
+    await add(activity.day, { time: activity.time, kind: 'activity', title: activity.name, body: [placeNotesText(getTemplatePlace(activity.place)), activity.duration ? `Duration: ${activity.duration}.` : '', activity.where ? `Address: ${activity.where}` : '', activity.notes, activity.book ? bookAheadNote(activity.book) : ''].filter(Boolean).join('\n') });
   }
   for (const leg of template.legs) {
     const parts = [`${leg.from} to ${leg.to}${leg.carrier ? ` by ${leg.carrier}` : ''}. Travel time about ${durationText(leg.minutes)}.`];

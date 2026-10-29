@@ -986,7 +986,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       startLocation: suggestion.startLocation,
       startTime: suggestion.startTime,
       duration: suggestion.duration,
-      notes: suggestion.description,
+      notes: suggestion.details || suggestion.description,
       travelerIds: overviewTravelerIds,
       paidBy: defaultPayerId ? [defaultPayerId] : [],
     };
