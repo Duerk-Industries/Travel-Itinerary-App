@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { TripTemplatesSection } from '../components/admin/TripTemplatesSection';
 import { ThemeProvider } from '../theme/ThemeContext';
 import { getAppTheme, themeStyle } from '../theme/theme';
@@ -92,6 +92,36 @@ describe('TripTemplatesSection', () => {
       'http://api.test/api/admin/trip-templates/export', 'http://api.test/api/admin/trip-templates/export?ids=japan-t01',
     ]));
     expect((shareTextFile as jest.Mock).mock.calls[4]).toEqual(['japan-t01.json', '{"format":"wanderbunnies.trip-templates"}', { mimeType: 'application/json' }]);
+  });
+
+  it('groups the templates by destination, shortest trip first, and downloads one destination at a time', async () => {
+    const ui = mount();
+    await ui.findByText('Lisbon in 4 days');
+    const japan = within(ui.getByTestId('trip-templates-group-japan'));
+    expect(ui.getByText('▾ Japan')).toBeTruthy();
+    expect(ui.getByText('▾ Portugal')).toBeTruthy();
+    expect(japan.getByText('2 templates')).toBeTruthy();
+    expect(within(ui.getByTestId('trip-templates-group-portugal')).getByText('1 template')).toBeTruthy();
+    // Japan lists its 7-day template before its 10-day one, and not Portugal's.
+    const rows = japan.getAllByTestId(/^trip-templates-row-/).map((row) => row.props.testID);
+    expect(rows).toEqual(['trip-templates-row-japan-t01', 'trip-templates-row-japan-t02']);
+
+    fireEvent.press(ui.getByTestId('trip-templates-download-group-japan'));
+    await waitFor(() => expect(shareTextFile).toHaveBeenCalledTimes(1));
+    expect(calls.map((call) => call.url)).toContain('http://api.test/api/admin/trip-templates/export?ids=japan-t01,japan-t02');
+    expect((shareTextFile as jest.Mock).mock.calls[0][0]).toMatch(/^wanderbunnies-templates-japan-\d{4}-\d{2}-\d{2}\.json$/);
+  });
+
+  it('collapses and expands a destination without losing its download button', async () => {
+    const ui = mount();
+    await ui.findByText('Lisbon in 4 days');
+    fireEvent.press(ui.getByTestId('trip-templates-group-toggle-japan'));
+    expect(ui.queryByTestId('trip-templates-row-japan-t01')).toBeNull();
+    expect(ui.getByText('▸ Japan')).toBeTruthy();
+    expect(ui.getByTestId('trip-templates-download-group-japan')).toBeTruthy();
+    expect(ui.getByTestId('trip-templates-row-portugal-lisbon-4d')).toBeTruthy();
+    fireEvent.press(ui.getByTestId('trip-templates-group-toggle-japan'));
+    expect(ui.getByTestId('trip-templates-row-japan-t01')).toBeTruthy();
   });
 
   it('checks a chosen file first, shows what would change, and only then imports it', async () => {

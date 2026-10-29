@@ -55,6 +55,16 @@ describe('destinationQuery', () => {
     expect(query.get('maxDays')).toBeNull();
     expect(new URLSearchParams(destinationQuery([{ id: 'country:japan', name: 'Japan', sourceType: 'country' }], 7)).get('maxDays')).toBe('7');
   });
+
+  it('sends a city or region at its own level, never as its whole country', () => {
+    const query = new URLSearchParams(destinationQuery([
+      { id: 'city:boston', name: 'Boston', sourceType: 'city', countryName: 'United States', stateName: 'Massachusetts' },
+      { id: 'state:california', name: 'California', sourceType: 'state', countryName: 'United States' },
+    ]));
+    expect(query.get('countries')).toBeNull();
+    expect(query.get('regions')).toBe('Massachusetts,California');
+    expect(query.get('cities')).toBe('Boston');
+  });
 });
 
 describe('TripTemplatePicker', () => {

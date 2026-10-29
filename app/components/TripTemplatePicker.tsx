@@ -4,7 +4,7 @@ import Modal from './KeyboardAwareModal';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 
-type PickerLocation = { id: string; name: string; sourceType?: string; countryName?: string };
+type PickerLocation = { id: string; name: string; sourceType?: string; countryName?: string; stateName?: string };
 
 type TemplateImage = { url: string; width: number; height: number; credit: string; pageUrl: string };
 
@@ -49,18 +49,27 @@ const endDateFor = (startDate: string, days: number): string => {
   return d.toISOString().slice(0, 10);
 };
 
-/** Names the destination search results carry, which is how the server matches templates to what was chosen. */
+/**
+ * Names the destination search results carry, by level, which is how the server matches templates to what was chosen:
+ * a country asks for that country's templates, a state or region for templates that cover it, and a city for templates
+ * that visit it (or cover its state). A city or region does not stand for its whole country.
+ */
 export const destinationQuery = (locations: PickerLocation[], maxDays?: number | null): string => {
   const countries = new Set<string>();
+  const regions = new Set<string>();
   const cities = new Set<string>();
   for (const location of locations) {
     if (location.sourceType === 'country') countries.add(location.name);
-    else if (location.countryName) countries.add(location.countryName);
-    if (location.sourceType === 'city' || location.sourceType === 'destination') cities.add(location.name);
+    else if (location.sourceType === 'state') regions.add(location.name);
+    else {
+      cities.add(location.name);
+      if (location.stateName) regions.add(location.stateName);
+    }
   }
   const params = new URLSearchParams();
   params.set('locationIds', locations.map((location) => location.id).join(','));
   if (countries.size) params.set('countries', [...countries].join(','));
+  if (regions.size) params.set('regions', [...regions].join(','));
   if (cities.size) params.set('cities', [...cities].join(','));
   if (maxDays && maxDays > 0) params.set('maxDays', String(Math.floor(maxDays)));
   return params.toString();

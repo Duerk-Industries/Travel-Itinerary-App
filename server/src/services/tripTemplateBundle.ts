@@ -101,6 +101,7 @@ export const checkTemplate = (plan: TemplatePlan, media: MediaLookup): TemplateI
     } else warnings.push(`${at}.place: empty, so "${activity.name}" will have no shared description or picture.`);
   });
   // The internal tags and the paragraph are optional, so a gap is one summary line rather than a line per stop.
+  if (!plan.regions?.length) warnings.push('regions: not set; list the states, provinces or nations the trip is mostly in (California, Scotland), so travelers who pick one are offered this template.');
   if (!plan.pace) warnings.push('pace: not set; it is an optional internal tag, R (relaxed), B (balanced) or F (fast).');
   if (!plan.interests?.length) warnings.push(`interests: not set; it is an optional internal tag, any of ${TEMPLATE_INTERESTS.join(', ')}.`);
   if (media.placeEntry) {

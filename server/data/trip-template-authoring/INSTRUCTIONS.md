@@ -87,8 +87,9 @@ In `sources`, list only the publishers and sites you actually used or know well 
 | `days` | integer | Total days **including arrival day and departure day**. 1–60. |
 | `route` | string | The route in one line: `Lisbon > Porto (Sintra day trip)`. |
 | `arrive` / `depart` | string | Where the traveler most likely arrives / leaves, e.g. `Lisbon (LIS)`. May be empty. |
-| `countries` | string[] | At least one, English names (`"Portugal"`). The first is the main country. Used to decide which travelers are offered the template. |
-| `cities` | string[] | Every city the traveler sleeps in or visits as a base, in English, without country (`"Lisbon"`). |
+| `countries` | string[] | At least one, English names of **sovereign countries** as the app's destination list has them (`"Portugal"`). The first is the main country and the one the admin screen groups by. A traveler who picks the whole country is offered the template. Scotland, England, Wales and Northern Ireland are listed under `"United Kingdom"`: use that here and put them in `regions`. |
+| `regions` | string[] | Optional but recommended. The states, provinces or nations the trip spends most of its time in (`"California"`, `"Scotland"`, `"Hokkaido"`), as a traveler would search for them. A traveler who picks one of these, or a city inside one, is offered the template. Leave out regions the trip only passes through. |
+| `cities` | string[] | Every city the traveler sleeps in or visits as a base, in English, without country (`"Lisbon"`). A traveler who picks one of these cities is offered the template. |
 | `imageQuery` | string | A short image-search phrase for a fallback card picture, e.g. `Lisbon Portugal tram`. |
 | `highlights` | string[] | 3 to 6 short highlights for the card (a few words each). |
 | `destinationKeys` | string[] | Keys of the destination entries in `media.destinations` that describe this trip: the country first, then cities (`"portugal"`, `"portugal/lisbon"`). |

@@ -42,6 +42,45 @@ describe('templatesForDestinations', () => {
     expect(templatesForDestinations(lengths, japan, 5)).toEqual([]);
   });
 
+  it('offers a Scotland template to someone who picked Scotland, which the destination list files under the United Kingdom', () => {
+    const uk = [record('sc', ['Scotland'], ['Edinburgh']), record('uk', ['United Kingdom'], ['London']), ...rows];
+    expect(templatesForDestinations(uk, { countries: ['united kingdom'], cities: [] }).map((t) => t.id).sort()).toEqual(['sc', 'uk']);
+    expect(templatesForDestinations(uk, { countries: [], regions: ['scotland'], cities: [] }).map((t) => t.id)).toEqual(['sc']);
+    expect(templatesForDestinations(uk, { countries: ['france'], cities: [] }).map((t) => t.id)).toEqual(['fr']);
+  });
+
+  describe('by place, anywhere in the world', () => {
+    const regionsById: Record<string, string[]> = { ca: ['California'], ne: ['Massachusetts', 'Vermont'], hok: ['Hokkaido'] };
+    const world = [
+      record('ca', ['United States'], ['San Francisco', 'Los Angeles', 'San Diego']),
+      record('ne', ['United States'], ['Boston', 'Burlington']),
+      record('hok', ['Japan'], ['Sapporo']),
+      record('plain', ['United States'], ['Chicago']),
+    ];
+    const ids = (selected: Parameters<typeof templatesForDestinations>[1]) => templatesForDestinations(world, selected, null, (t) => regionsById[t.id] ?? []).map((t) => t.id).sort();
+
+    it('offers only templates that cover a chosen region, not every template in its country', () => {
+      expect(ids({ countries: [], regions: ['california'], cities: [] })).toEqual(['ca']);
+      expect(ids({ countries: [], regions: ['hokkaido'], cities: [] })).toEqual(['hok']);
+      expect(ids({ countries: [], regions: ['texas'], cities: [] })).toEqual([]);
+    });
+
+    it('offers templates that visit a chosen city, or cover its state, but not unrelated ones in the same country', () => {
+      expect(ids({ countries: [], regions: ['massachusetts'], cities: ['boston'] })).toEqual(['ne']);
+      expect(ids({ countries: [], regions: [], cities: ['san francisco'] })).toEqual(['ca']);
+      // A city whose region the template covers, even though the template does not list the city.
+      expect(ids({ countries: [], regions: ['vermont'], cities: ['stowe'] })).toEqual(['ne']);
+      expect(ids({ countries: [], regions: [], cities: ['chicago'] })).toEqual(['plain']);
+      expect(ids({ countries: [], regions: [], cities: ['miami'] })).toEqual([]);
+    });
+
+    it('still offers every template of a chosen country, and puts the most specific match first', () => {
+      expect(ids({ countries: ['united states'], regions: [], cities: [] })).toEqual(['ca', 'ne', 'plain']);
+      const ranked = templatesForDestinations(world, { countries: ['united states'], regions: ['california'], cities: ['san diego'] }, null, (t) => regionsById[t.id] ?? []).map((t) => t.id);
+      expect(ranked[0]).toBe('ca');
+    });
+  });
+
   it('puts templates that visit a chosen city first', () => {
     const more = [...rows, record('jp2', ['Japan'], ['Osaka'])];
     expect(templatesForDestinations(more, { countries: ['japan'], cities: ['osaka'] }).map((t) => t.id)).toEqual(['jp2', 'jp']);

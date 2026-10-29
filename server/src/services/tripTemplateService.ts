@@ -51,6 +51,8 @@ export const templatePlanSchema = z.object({
   /** Where the plan was researched, for whoever maintains it; the app never shows these. */
   sources: z.array(z.string()).default([]),
   /** How full the days are (R relaxed, B balanced, F fast) and what the plan is about. Internal: never sent to travelers. */
+  /** States, provinces or nations (California, Scotland, Hokkaido) the trip is mostly in, so a traveler who picks one is offered it. */
+  regions: z.array(z.string()).optional(),
   pace: templatePaceSchema.optional(),
   interests: templateInterestsSchema.optional(),
   stays: z.array(z.object({
@@ -176,49 +178,85 @@ export const syncTripTemplatesFromSeed = async (): Promise<number> => {
 
 const normalize = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
-export type SelectedDestinations = { countries: string[]; cities: string[] };
+/** What the traveler picked, by level: whole countries, states/provinces/regions, and cities or destinations. */
+export type SelectedDestinations = { countries: string[]; regions?: string[]; cities: string[] };
 
 /**
- * The countries and cities a traveler chose, from the location ids the wizard holds plus the names
- * its search results carried (destination results are not in the country/state dataset).
+ * The places a traveler chose, from the location ids the wizard holds plus the names its search results carried
+ * (destination results are not in the country/state dataset). A city or region does not stand for its whole country:
+ * choosing Boston asks for Boston templates, not every United States template. A city does bring its own state or
+ * province, so a template that covers that region is offered too.
  */
-export const resolveSelectedDestinations = async (input: { locationIds?: string[]; countries?: string[]; cities?: string[] }): Promise<SelectedDestinations> => {
+export const resolveSelectedDestinations = async (input: { locationIds?: string[]; countries?: string[]; regions?: string[]; cities?: string[] }): Promise<SelectedDestinations> => {
   const countries = new Set<string>((input.countries ?? []).map(normalize).filter(Boolean));
+  const regions = new Set<string>((input.regions ?? []).map(normalize).filter(Boolean));
   const cities = new Set<string>((input.cities ?? []).map(normalize).filter(Boolean));
   const ids = (input.locationIds ?? []).filter(Boolean).slice(0, 25);
   if (ids.length) {
     const options = await getLocationOptionsByIds(ids).catch(() => []);
     for (const option of options) {
       if (option.sourceType === 'country') countries.add(normalize(option.name));
-      else if (option.countryName) countries.add(normalize(option.countryName));
+      else if (option.sourceType === 'state') regions.add(normalize(option.name));
+      else {
+        cities.add(normalize(option.name));
+        if (option.stateName) regions.add(normalize(option.stateName));
+      }
     }
   }
-  return { countries: [...countries], cities: [...cities] };
+  return { countries: [...countries], regions: [...regions], cities: [...cities] };
 };
 
-/** A template is offered only for a destination it covers: a chosen country it is in, or a city it visits. */
-export const templatesForDestinations = (templates: TripTemplateRecord[], selected: SelectedDestinations, maxDays?: number | null): Array<TripTemplateRecord & { matchedCities: string[] }> => {
-  if (!selected.countries.length && !selected.cities.length) return [];
+/**
+ * The destination list files Scotland, England, Wales and Northern Ireland as regions of the United Kingdom, so a traveler
+ * who picks the country is asking about them too. A template written with one of them as its country still matches.
+ */
+export const UK_NATIONS = ['scotland', 'england', 'wales', 'northern ireland'];
+const templateCountryNames = (template: Pick<TripTemplateRecord, 'countries'>): string[] => {
+  const names = template.countries.map(normalize);
+  return names.some((name) => UK_NATIONS.includes(name)) ? [...names, 'united kingdom'] : names;
+};
+
+/**
+ * A template is offered when it covers something the traveler picked, at the level they picked it:
+ *  - a country they chose is one of the template's countries;
+ *  - a region they chose (California) is one of the template's regions, a city it visits, or a UK nation it is for;
+ *  - a city they chose (Boston) is a city the template visits, or lies in a region the template covers.
+ * Templates that match a city or region come before ones that only match a country.
+ */
+export const templatesForDestinations = (
+  templates: TripTemplateRecord[],
+  selected: SelectedDestinations,
+  maxDays?: number | null,
+  regionsOf: (template: TripTemplateRecord) => string[] = () => [],
+): Array<TripTemplateRecord & { matchedCities: string[] }> => {
+  const selectedRegions = selected.regions ?? [];
+  if (!selected.countries.length && !selectedRegions.length && !selected.cities.length) return [];
   // A template longer than the trip would not fit it; with no known trip length, length is not a filter.
   const fits = (template: TripTemplateRecord) => !(maxDays && maxDays > 0) || template.days <= maxDays;
   const result = templates
     .filter(fits)
     .map((template) => {
-      const countryMatch = template.countries.some((country) => selected.countries.includes(normalize(country)));
+      const countryNames = templateCountryNames(template);
+      const regionNames = regionsOf(template).map(normalize);
+      const cityNames = template.cities.map(normalize);
+      const nationNames = countryNames.filter((name) => UK_NATIONS.includes(name));
+      const countryMatch = countryNames.some((country) => selected.countries.includes(country));
+      const regionPool = new Set([...regionNames, ...nationNames, ...cityNames]);
+      const matchedRegions = selectedRegions.filter((region) => regionPool.has(region));
       const matchedCities = template.cities.filter((city) => selected.cities.includes(normalize(city)));
-      return { template, matched: countryMatch || matchedCities.length > 0, matchedCities };
+      return { template, matched: countryMatch || matchedRegions.length > 0 || matchedCities.length > 0, matchedCities, specificity: matchedCities.length * 2 + matchedRegions.length };
     })
     .filter((entry) => entry.matched);
-  // Templates that visit a city the traveler picked first, then the catalogue order.
-  result.sort((a, b) => b.matchedCities.length - a.matchedCities.length);
+  // Templates that visit a place the traveler picked first, then the catalogue order.
+  result.sort((a, b) => b.specificity - a.specificity);
   return result.map((entry) => ({ ...entry.template, matchedCities: entry.matchedCities }));
 };
 
 export const listOfferedTemplates = async (selected: SelectedDestinations, maxDays?: number | null) => {
   const records = await listTripTemplates({ enabledOnly: true });
-  const known = new Set(loadSeedTemplates().map((template) => template.id));
+  const seeds = new Map(loadSeedTemplates().map((template) => [template.id, template] as const));
   // A catalogue row whose seed file is gone cannot be created, so it is never offered.
-  return templatesForDestinations(records.filter((record) => known.has(record.id)), selected, maxDays);
+  return templatesForDestinations(records.filter((record) => seeds.has(record.id)), selected, maxDays, (record) => seeds.get(record.id)?.regions ?? []);
 };
 
 // ------------------------------------------------------------------------ preview

@@ -46,7 +46,7 @@ router.use(async (req, res, next) => {
 // What is on offer for the destinations the traveler picked. Nothing selected, or nothing aligned, is an empty list.
 router.get('/', async (req, res) => {
   try {
-    const selected = await resolveSelectedDestinations({ locationIds: csv(req.query.locationIds), countries: csv(req.query.countries), cities: csv(req.query.cities) });
+    const selected = await resolveSelectedDestinations({ locationIds: csv(req.query.locationIds), countries: csv(req.query.countries), regions: csv(req.query.regions), cities: csv(req.query.cities) });
     const maxDays = Number(req.query.maxDays);
     const offered = await listOfferedTemplates(selected, Number.isSafeInteger(maxDays) && maxDays > 0 ? maxDays : null);
     res.json({

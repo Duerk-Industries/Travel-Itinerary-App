@@ -6,7 +6,7 @@ Templates are free for every tier. The `trip_templates` feature flag (default on
 
 ## What a traveler sees
 
-- **Only aligned templates.** Nothing is offered until a destination is chosen, and only templates whose country matches a chosen country (or country of a chosen city) appear. Templates that visit a chosen city sort first.
+- **Only aligned templates, at the level picked.** Nothing is offered until a destination is chosen. A chosen **country** offers templates for that country; a chosen **state, province or region** (California, Scotland) offers templates that list it in `regions`, visit a city by that name, or (for a UK nation) are written for it; a chosen **city** (Boston) offers templates that visit it or whose `regions` include the city's state. A city or region does not stand for its whole country, so Boston does not bring up a California template. Templates that match a city or region sort before ones that only match the country. `regions` is optional, but a template without it is only found by country or city.
 - **Pictures where available.** Each card asks the existing `/api/itinerary/images` endpoint for `imageQuery`; a card with no picture is plain text.
 - **Everything is a suggestion.** Activities and transfers arrive as `Proposed`, or `Needs Booking` where the plan says to book ahead. Hotels are placeholders ("Hotel in Kyoto") that carry the `Choose your hotel` feature tag. The lodging list shows "Choose your hotel" until the stay is edited and saved, which removes the tag.
 - **Transfer tips become day notes.** A stored transfer has no notes field, so the route, travel time, tips and booking advice for each leg are added as a Note on that day of the itinerary.

@@ -1,7 +1,7 @@
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../../theme/ThemeContext';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { pickTextFile, shareTextFile } from '../../utils/dataTransferPlatform';
 
@@ -60,6 +60,7 @@ export const TripTemplatesSection: React.FC<Props> = ({ backendUrl, headers, the
   const [checkedText, setCheckedText] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const canImport = Boolean(report?.ok && !report.applied && checkedText === text && !busy);
 
   const loadTemplates = useCallback(async () => {
@@ -86,6 +87,19 @@ export const TripTemplatesSection: React.FC<Props> = ({ backendUrl, headers, the
     }
   };
   const stamp = new Date().toISOString().slice(0, 10);
+  // By destination: the template's main country (the first one listed), alphabetical, shortest trips first.
+  const groups = useMemo(() => {
+    const byDestination = new Map<string, AdminTemplate[]>();
+    for (const template of templates) {
+      const destination = template.countries[0] || 'Other';
+      byDestination.set(destination, [...(byDestination.get(destination) ?? []), template]);
+    }
+    return [...byDestination.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([destination, items]) => ({ destination, items: [...items].sort((a, b) => a.days - b.days || a.title.localeCompare(b.title)) }));
+  }, [templates]);
+  const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'templates';
+
 
   const send = async (bundleText: string, dryRun: boolean): Promise<ImportReport | null> => {
     let bundle: unknown;
@@ -244,38 +258,67 @@ export const TripTemplatesSection: React.FC<Props> = ({ backendUrl, headers, the
 
       <View style={s.card}>
         <Text style={s.cardTitle}>3. Templates in the app</Text>
-        <Text style={s.helper}>Download them all (or one) to improve with an LLM, then import the result: a template keeps its id, so it is updated in place.</Text>
+        <Text style={s.helper}>Download them all, by destination, or one at a time to improve with an LLM, then import the result: a template keeps its id, so it is updated in place.</Text>
         <View style={s.row}>
           <TouchableOpacity testID="trip-templates-download-all" accessibilityRole="button" style={s.button} onPress={() => void download('/export', `wanderbunnies-templates-${stamp}.json`, 'application/json')}>
             <Text style={s.buttonText}>Download all templates</Text>
           </TouchableOpacity>
         </View>
         {listError ? <Text style={s.errorText}>{listError}</Text> : null}
-        {templates.map((template) => (
-          <View key={template.id} testID={`trip-templates-row-${template.id}`} style={s.resultRow}>
-            <Text style={s.resultTitle}>{template.title}</Text>
-            <Text style={s.mutedText}>{template.id} · {template.days} days · {template.countries.join(', ')} · {template.activityCount} activities · {SOURCE_LABEL[template.source]}{template.enabled ? '' : ' · switched off'}</Text>
-            <View style={s.row}>
-              <TouchableOpacity testID={`trip-templates-download-${template.id}`} accessibilityRole="button" style={s.outlineButton} onPress={() => void download(`/export?ids=${encodeURIComponent(template.id)}`, `${template.id}.json`, 'application/json')}>
-                <Text style={s.outlineButtonText}>Download</Text>
-              </TouchableOpacity>
-              {template.source !== 'bundled' ? (confirmRemove === template.id ? (
-                <>
-                  <TouchableOpacity testID={`trip-templates-remove-confirm-${template.id}`} accessibilityRole="button" style={s.dangerButton} onPress={() => void removeImport(template.id)} disabled={busy}>
-                    <Text style={s.dangerButtonText}>Confirm remove</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity accessibilityRole="button" style={s.outlineButton} onPress={() => setConfirmRemove(null)}>
-                    <Text style={s.outlineButtonText}>Keep</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity testID={`trip-templates-remove-${template.id}`} accessibilityRole="button" style={s.outlineButton} onPress={() => setConfirmRemove(template.id)}>
-                  <Text style={s.outlineButtonText}>{template.source === 'imported-override' ? 'Restore built-in' : 'Remove'}</Text>
+        {groups.map(({ destination, items }) => {
+          const key = slug(destination);
+          const open = !collapsed[destination];
+          return (
+            <View key={destination} testID={`trip-templates-group-${key}`} style={s.group}>
+              <View style={s.groupHeader}>
+                <TouchableOpacity
+                  testID={`trip-templates-group-toggle-${key}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: open }}
+                  accessibilityLabel={`${open ? 'Hide' : 'Show'} ${destination} templates`}
+                  style={s.groupTitleButton}
+                  onPress={() => setCollapsed((prev) => ({ ...prev, [destination]: open }))}
+                >
+                  <Text style={s.groupTitle}>{open ? '▾' : '▸'} {destination}</Text>
+                  <Text style={s.mutedText}>{items.length} template{items.length === 1 ? '' : 's'}</Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  testID={`trip-templates-download-group-${key}`}
+                  accessibilityRole="button"
+                  style={s.button}
+                  onPress={() => void download(`/export?ids=${items.map((item) => encodeURIComponent(item.id)).join(',')}`, `wanderbunnies-templates-${key}-${stamp}.json`, 'application/json')}
+                >
+                  <Text style={s.buttonText}>Download all {destination}</Text>
+                </TouchableOpacity>
+              </View>
+              {open ? items.map((template) => (
+              <View key={template.id} testID={`trip-templates-row-${template.id}`} style={s.resultRow}>
+                <Text style={s.resultTitle}>{template.title}</Text>
+                <Text style={s.mutedText}>{template.id} · {template.days} days · {template.countries.join(', ')} · {template.activityCount} activities · {SOURCE_LABEL[template.source]}{template.enabled ? '' : ' · switched off'}</Text>
+                <View style={s.row}>
+                  <TouchableOpacity testID={`trip-templates-download-${template.id}`} accessibilityRole="button" style={s.outlineButton} onPress={() => void download(`/export?ids=${encodeURIComponent(template.id)}`, `${template.id}.json`, 'application/json')}>
+                    <Text style={s.outlineButtonText}>Download</Text>
+                  </TouchableOpacity>
+                  {template.source !== 'bundled' ? (confirmRemove === template.id ? (
+                    <>
+                      <TouchableOpacity testID={`trip-templates-remove-confirm-${template.id}`} accessibilityRole="button" style={s.dangerButton} onPress={() => void removeImport(template.id)} disabled={busy}>
+                        <Text style={s.dangerButtonText}>Confirm remove</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity accessibilityRole="button" style={s.outlineButton} onPress={() => setConfirmRemove(null)}>
+                        <Text style={s.outlineButtonText}>Keep</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <TouchableOpacity testID={`trip-templates-remove-${template.id}`} accessibilityRole="button" style={s.outlineButton} onPress={() => setConfirmRemove(template.id)}>
+                      <Text style={s.outlineButtonText}>{template.source === 'imported-override' ? 'Restore built-in' : 'Remove'}</Text>
+                    </TouchableOpacity>
+                  )) : null}
+                </View>
+              </View>
               )) : null}
             </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );
