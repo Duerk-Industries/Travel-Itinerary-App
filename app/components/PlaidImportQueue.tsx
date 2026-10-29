@@ -103,7 +103,7 @@ const PlaidImportQueue: React.FC<PlaidImportQueueProps> = ({
   };
 
   return (
-    <DialogShell
+    <DialogShell scrollable={false}
       styles={styles}
       title="Import Expenses"
       visible={true}

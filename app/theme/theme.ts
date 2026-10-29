@@ -7651,7 +7651,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: (theme ?? getAppTheme('light', 'light')).colors.scrim,
+    backgroundColor: 'rgba(0,0,0,0.25)',
   }),
   homeHeroTextWrap: ({
     position: 'absolute',
@@ -8294,7 +8294,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: (theme ?? getAppTheme('light', 'light')).colors.scrim,
+    backgroundColor: 'rgba(0,0,0,0.25)',
   }),
   dayHeroBadge: ({
     position: 'absolute',

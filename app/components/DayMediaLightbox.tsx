@@ -81,7 +81,7 @@ const DayMediaLightbox = ({
   const expandedItem = expandedIndex != null ? items[expandedIndex] : null;
 
   return (
-    <DialogShell
+    <DialogShell scrollable={false}
       visible={visible}
       title={dayDate ? `Photos & videos — ${dayDate}` : 'Photos & videos'}
       styles={styles}

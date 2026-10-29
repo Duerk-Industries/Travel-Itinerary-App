@@ -43,7 +43,7 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
   if (!props.visible) return null;
 
   return (
-    <DialogShell
+    <DialogShell scrollable={false}
       visible={props.visible}
       title={props.title}
       styles={props.styles}
