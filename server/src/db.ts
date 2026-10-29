@@ -858,6 +858,13 @@ export const deleteLegacyBlogMapArtifact = async (...args: Parameters<ReturnType
 export type { TripTemplateRecord } from './db.postgres';
 export const upsertTripTemplate = async (...args: Parameters<ReturnType<typeof adapter>['upsertTripTemplate']>) =>
   adapter().upsertTripTemplate(...args);
+export type { TripTemplateImportKind, TripTemplateImportRecord } from './db.postgres';
+export const listTripTemplateImports = async (...args: Parameters<ReturnType<typeof adapter>['listTripTemplateImports']>) =>
+  adapter().listTripTemplateImports(...args);
+export const upsertTripTemplateImport = async (...args: Parameters<ReturnType<typeof adapter>['upsertTripTemplateImport']>) =>
+  adapter().upsertTripTemplateImport(...args);
+export const deleteTripTemplateImport = async (...args: Parameters<ReturnType<typeof adapter>['deleteTripTemplateImport']>) =>
+  adapter().deleteTripTemplateImport(...args);
 export const listTripTemplates = async (...args: Parameters<ReturnType<typeof adapter>['listTripTemplates']>) =>
   adapter().listTripTemplates(...args);
 export type { EstimatedItem, EstimatedItemType } from './db.postgres';

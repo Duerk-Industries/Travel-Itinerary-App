@@ -10,7 +10,7 @@ import { resolveRuntimeDataPath } from '../utils/runtimeDataPath';
 // A picture is a thumbnail URL plus its credit (the file's own public-domain or CC0 declaration on
 // Wikimedia Commons); no image bytes ship with the app.
 
-const imageSchema = z.object({
+export const templateImageSchema = z.object({
   url: z.string().url(),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
@@ -20,13 +20,16 @@ const imageSchema = z.object({
   author: z.string().default('Unknown'),
 });
 
+export const templatePlaceSchema = z.object({ name: z.string(), description: z.string().default(''), image: templateImageSchema.nullable().default(null) });
+export const templateDestinationSchema = z.object({ name: z.string(), description: z.string().default(''), images: z.array(templateImageSchema).default([]) });
+
 const mediaFileSchema = z.object({
   schemaVersion: z.literal(1),
-  places: z.record(z.string(), z.object({ name: z.string(), description: z.string().default(''), image: imageSchema.nullable().default(null) })).default({}),
-  destinations: z.record(z.string(), z.object({ name: z.string(), description: z.string().default(''), images: z.array(imageSchema).default([]) })).default({}),
+  places: z.record(z.string(), templatePlaceSchema).default({}),
+  destinations: z.record(z.string(), templateDestinationSchema).default({}),
 });
 
-export type TemplateImage = z.infer<typeof imageSchema>;
+export type TemplateImage = z.infer<typeof templateImageSchema>;
 export type TemplatePlace = { name: string; description: string; image: TemplateImage | null };
 export type TemplateDestination = { name: string; description: string; images: TemplateImage[] };
 
@@ -38,7 +41,7 @@ export const toPublicImage = (image: TemplateImage | null | undefined): PublicTe
 
 let cache: { places: Map<string, TemplatePlace>; destinations: Map<string, TemplateDestination> } | null = null;
 
-export const clearTripTemplateMediaCacheForTests = (): void => { cache = null; };
+export const clearTripTemplateMediaCacheForTests = (): void => { cache = null; importedPlaces = new Map(); importedDestinations = new Map(); };
 
 const loadMedia = () => {
   if (cache) return cache;
@@ -60,5 +63,14 @@ const loadMedia = () => {
   return cache;
 };
 
-export const getTemplatePlace = (key: string | undefined | null): TemplatePlace | null => (key ? loadMedia().places.get(key) ?? null : null);
-export const getTemplateDestination = (key: string | undefined | null): TemplateDestination | null => (key ? loadMedia().destinations.get(key) ?? null : null);
+// Entries an admin imported (see tripTemplateBundle.ts). They win over the catalogue files, key by key.
+let importedPlaces = new Map<string, TemplatePlace>();
+let importedDestinations = new Map<string, TemplateDestination>();
+
+export const setImportedTemplateMedia = (places: Map<string, TemplatePlace>, destinations: Map<string, TemplateDestination>): void => {
+  importedPlaces = places;
+  importedDestinations = destinations;
+};
+
+export const getTemplatePlace = (key: string | undefined | null): TemplatePlace | null => (key ? importedPlaces.get(key) ?? loadMedia().places.get(key) ?? null : null);
+export const getTemplateDestination = (key: string | undefined | null): TemplateDestination | null => (key ? importedDestinations.get(key) ?? loadMedia().destinations.get(key) ?? null : null);

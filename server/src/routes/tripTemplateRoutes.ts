@@ -13,6 +13,7 @@ import {
   listOfferedTemplates,
   populateTripFromTemplate,
   populateUndatedTripFromTemplate,
+  refreshImportedTemplates,
   resolveSelectedDestinations,
   templateDestinations,
   templateEndDate,
@@ -37,6 +38,8 @@ router.use(async (req, res, next) => {
     res.status(404).json({ error: 'Templates are not available.' });
     return;
   }
+  // Templates an admin imported may have been saved by another server instance; this re-reads them at most once a minute.
+  await refreshImportedTemplates();
   next();
 });
 

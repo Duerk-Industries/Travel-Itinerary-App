@@ -9979,6 +9979,52 @@ export const clearTripEstimatedItems = async (tripId: string): Promise<void> => 
   await batch.commit();
 };
 
+// Mirrors the Postgres trip_template_imports table: one document per imported template or shared
+// place/destination entry. Keys contain "/", which a document id cannot, so they are URI-encoded.
+export type TripTemplateImportKind = 'template' | 'place' | 'destination';
+export type TripTemplateImportRecord = {
+  kind: TripTemplateImportKind;
+  key: string;
+  payload: unknown;
+  contentHash: string;
+  importedBy: string | null;
+  updatedAt: string;
+};
+
+const tripTemplateImportDocId = (kind: TripTemplateImportKind, key: string): string => `${kind}_${encodeURIComponent(key)}`;
+
+export const listTripTemplateImports = async (): Promise<TripTemplateImportRecord[]> => {
+  const snap = await getDb().collection('trip_template_imports').get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data() as any;
+      return {
+        kind: data.kind as TripTemplateImportKind,
+        key: String(data.key ?? ''),
+        // Stored as a JSON string: a template is deeply nested and Firestore limits nesting and document size.
+        payload: typeof data.payload === 'string' ? JSON.parse(data.payload) : data.payload,
+        contentHash: String(data.contentHash ?? ''),
+        importedBy: data.importedBy ? String(data.importedBy) : null,
+        updatedAt: String(data.updatedAt ?? ''),
+      } as TripTemplateImportRecord;
+    })
+    .sort((a, b) => a.kind.localeCompare(b.kind) || a.key.localeCompare(b.key));
+};
+
+export const upsertTripTemplateImport = async (record: Omit<TripTemplateImportRecord, 'updatedAt'>): Promise<void> => {
+  await getDb().collection('trip_template_imports').doc(tripTemplateImportDocId(record.kind, record.key)).set({
+    kind: record.kind, key: record.key, payload: JSON.stringify(record.payload), contentHash: record.contentHash, importedBy: record.importedBy, updatedAt: nowIso(),
+  });
+};
+
+export const deleteTripTemplateImport = async (kind: TripTemplateImportKind, key: string): Promise<boolean> => {
+  const ref = getDb().collection('trip_template_imports').doc(tripTemplateImportDocId(kind, key));
+  const existing = await ref.get();
+  if (!existing.exists) return false;
+  await ref.delete();
+  return true;
+};
+
 // Mirrors the Postgres trip_dismissed_suggestions table. Keys contain "/", which a document id cannot, so they are URI-encoded.
 export const dismissActivitySuggestion = async (tripId: string, userId: string, key: string): Promise<void> => {
   await getDb().collection('trip_dismissed_suggestions').doc(`${tripId}_${userId}_${encodeURIComponent(key)}`).set({ tripId, userId, suggestionKey: key, createdAt: nowIso() });

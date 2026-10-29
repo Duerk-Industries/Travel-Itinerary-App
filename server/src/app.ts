@@ -11,6 +11,7 @@ import transferRoutes from './routes/transferRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
 import tripRoutes from './routes/tripRoutes';
 import tripTemplateRoutes from './routes/tripTemplateRoutes';
+import adminTripTemplateRoutes from './routes/adminTripTemplateRoutes';
 import itineraryRoutes from './routes/itineraryRoutes';
 import itineraryDataRoutes from './routes/itineraryDataRoutes';
 import traitRoutes from './routes/traitRoutes';
@@ -159,6 +160,8 @@ app.use((req, res, next) => {
   cors(corsOptions)(req, res, next);
 });
 app.use('/api', dataTransferRoutes);
+// Template bundles are large, so this router brings its own (admin-only) JSON parser and goes first.
+app.use('/api/admin/trip-templates', adminTripTemplateRoutes);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

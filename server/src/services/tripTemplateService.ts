@@ -10,6 +10,7 @@ import {
   insertFlight,
   insertLodging,
   listGroupMembers,
+  listTripTemplateImports,
   listTripTemplates,
   upsertTripTemplate,
   type TripTemplateRecord,
@@ -18,14 +19,18 @@ import {
 import { logError, logInfo } from '../logger';
 import { resolveRuntimeDataPath } from '../utils/runtimeDataPath';
 import { getLocationOptionsByIds } from './locationServices';
-import { getTemplateDestination, getTemplatePlace, toPublicImage, type PublicTemplateImage } from './tripTemplateMedia';
+import {
+  getTemplateDestination, getTemplatePlace, setImportedTemplateMedia, templateDestinationSchema, templatePlaceSchema, toPublicImage,
+  type PublicTemplateImage, type TemplateDestination, type TemplatePlace,
+} from './tripTemplateMedia';
 
 // A template is seed data in the repo (server/data/trip-templates/*.json, written by
 // server/tools/trip-templates/generate.py): a day-offset plan with day 0 as the arrival day. The
 // trip_templates table holds the catalogue row that associates it with destinations; the plan
 // itself is always read from the seed file, so a corrected file takes effect on deploy.
 
-const seedSchema = z.object({
+/** One template as stored in a seed file and as carried in an import bundle. */
+export const templatePlanSchema = z.object({
   schemaVersion: z.literal(1),
   id: z.string().min(1).max(80),
   title: z.string().min(1),
@@ -42,6 +47,8 @@ const seedSchema = z.object({
   destinationKeys: z.array(z.string()).default([]),
   /** The destination whose first picture is the card's. */
   hero: z.string().default(''),
+  /** Where the plan was researched, for whoever maintains it; the app never shows these. */
+  sources: z.array(z.string()).default([]),
   stays: z.array(z.object({
     base: z.string(), hotel: z.string(), start: z.number().int().min(0), nights: z.number().int().min(1), area: z.string().default(''),
     breakfast: z.boolean().default(false), dinner: z.boolean().default(false),
@@ -57,17 +64,26 @@ const seedSchema = z.object({
     minutes: z.number().int().min(0), carrier: z.string().default(''), notes: z.string().default(''), book: z.string().default(''),
   })),
 });
-export type SeedTemplate = z.infer<typeof seedSchema> & { contentHash: string };
+export type TemplatePlan = z.infer<typeof templatePlanSchema>;
+export type SeedTemplate = TemplatePlan & { contentHash: string };
 
 /** Shown on a lodging card until the traveler picks their own hotel. */
 export const CHOOSE_HOTEL_FEATURE = 'Choose your hotel';
 const NEEDS_BOOKING = 'Needs Booking';
 
 let seedCache: SeedTemplate[] | null = null;
+// Templates an admin imported, read from the database. They are added to the seed files, and replace a seed file's
+// template with the same id, so a corrected plan goes live without a deploy.
+let importedTemplates: SeedTemplate[] = [];
+let importedLoadedAt = 0;
+const IMPORTED_REFRESH_MS = 60_000;
 
-export const clearTripTemplateCacheForTests = (): void => { seedCache = null; };
+export const clearTripTemplateCacheForTests = (): void => { seedCache = null; importedTemplates = []; importedLoadedAt = 0; };
 
-export const loadSeedTemplates = (): SeedTemplate[] => {
+export const hashTemplatePlan = (plan: TemplatePlan): string => createHash('sha256').update(JSON.stringify(plan)).digest('hex');
+
+/** The templates that ship in the repo, before anything imported is applied. */
+export const loadBundledTemplates = (): SeedTemplate[] => {
   if (seedCache) return seedCache;
   const dir = resolveRuntimeDataPath('trip-templates', process.env.TRIP_TEMPLATES_DIR);
   const loaded: SeedTemplate[] = [];
@@ -75,7 +91,7 @@ export const loadSeedTemplates = (): SeedTemplate[] => {
   for (const name of files) {
     try {
       const raw = fs.readFileSync(path.join(dir, name), 'utf8');
-      const parsed = seedSchema.parse(JSON.parse(raw));
+      const parsed = templatePlanSchema.parse(JSON.parse(raw));
       loaded.push({ ...parsed, contentHash: createHash('sha256').update(raw).digest('hex') });
     } catch (err) {
       // One bad file must not take the other templates, or startup, down with it.
@@ -86,10 +102,59 @@ export const loadSeedTemplates = (): SeedTemplate[] => {
   return loaded;
 };
 
+/** Every template in use: the bundled ones, with imported ones added and overriding by id. */
+export const loadSeedTemplates = (): SeedTemplate[] => {
+  const bundled = loadBundledTemplates();
+  if (!importedTemplates.length) return bundled;
+  const replaced = new Set(importedTemplates.map((template) => template.id));
+  return [...bundled.filter((template) => !replaced.has(template.id)), ...importedTemplates];
+};
+
 export const getSeedTemplate = (id: string): SeedTemplate | null => loadSeedTemplates().find((template) => template.id === id) ?? null;
+
+export type TemplateSource = 'bundled' | 'imported' | 'imported-override';
+export const templateSource = (id: string): TemplateSource => {
+  const imported = importedTemplates.some((template) => template.id === id);
+  if (!imported) return 'bundled';
+  return loadBundledTemplates().some((template) => template.id === id) ? 'imported-override' : 'imported';
+};
+
+/**
+ * Reads what admins imported from the database into memory. Called at startup, after an import, and (at most once a
+ * minute) when templates are requested, so every server instance picks up an import soon after it is made. An entry
+ * that no longer validates is logged and skipped, never fatal.
+ */
+export const refreshImportedTemplates = async (force = false): Promise<void> => {
+  if (!force && Date.now() - importedLoadedAt < IMPORTED_REFRESH_MS) return;
+  importedLoadedAt = Date.now();
+  try {
+    const rows = await listTripTemplateImports();
+    const templates: SeedTemplate[] = [];
+    const places = new Map<string, TemplatePlace>();
+    const destinations = new Map<string, TemplateDestination>();
+    for (const row of rows) {
+      try {
+        if (row.kind === 'template') {
+          const plan = templatePlanSchema.parse(row.payload);
+          templates.push({ ...plan, contentHash: row.contentHash || hashTemplatePlan(plan) });
+        } else if (row.kind === 'place') places.set(row.key, templatePlaceSchema.parse(row.payload));
+        else if (row.kind === 'destination') destinations.set(row.key, templateDestinationSchema.parse(row.payload));
+      } catch (err) {
+        logError(`[trip-templates] ignoring invalid imported ${row.kind} ${row.key}`, err);
+      }
+    }
+    importedTemplates = templates;
+    setImportedTemplateMedia(places, destinations);
+  } catch (err) {
+    // The bundled templates still work; try again on the next request.
+    importedLoadedAt = 0;
+    logError('[trip-templates] could not read imported templates', err);
+  }
+};
 
 /** Writes the catalogue rows for every seed file. Safe to run on every start; an admin's `enabled` is kept. */
 export const syncTripTemplatesFromSeed = async (): Promise<number> => {
+  await refreshImportedTemplates(true);
   const templates = loadSeedTemplates();
   let order = 0;
   for (const template of templates) {

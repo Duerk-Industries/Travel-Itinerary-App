@@ -277,7 +277,9 @@ export type AuditAction =
   | 'DEPLOY_ROLLBACK'
   | 'DEPLOY_TEARDOWN'
   | 'BLOG_COMMENT_HIDDEN'
-  | 'BLOG_COMMENT_UNHIDDEN';
+  | 'BLOG_COMMENT_UNHIDDEN'
+  | 'TRIP_TEMPLATES_IMPORTED'
+  | 'TRIP_TEMPLATE_IMPORT_REMOVED';
 
 export interface AuditLogEntry {
   id: string;

@@ -14146,6 +14146,49 @@ export const clearTripEstimatedItems = async (tripId: string): Promise<void> => 
   await getPool().query('DELETE FROM trip_estimated_items WHERE trip_id = $1', [tripId]);
 };
 
+// --- Imported itinerary templates ------------------------------------------------------------
+// What an admin imported from a bundle: whole templates plus the shared place/destination entries
+// (descriptions and pictures). The payload is validated again when it is read back.
+export type TripTemplateImportKind = 'template' | 'place' | 'destination';
+export type TripTemplateImportRecord = {
+  kind: TripTemplateImportKind;
+  key: string;
+  payload: unknown;
+  contentHash: string;
+  importedBy: string | null;
+  updatedAt: string;
+};
+
+export const listTripTemplateImports = async (): Promise<TripTemplateImportRecord[]> => {
+  const { rows } = await getPool().query('SELECT kind, item_key, payload, content_hash, imported_by, updated_at FROM trip_template_imports ORDER BY kind, item_key');
+  return rows.map((row: any) => ({
+    kind: row.kind as TripTemplateImportKind,
+    key: String(row.item_key),
+    payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload,
+    contentHash: String(row.content_hash ?? ''),
+    importedBy: row.imported_by ? String(row.imported_by) : null,
+    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at ?? ''),
+  }));
+};
+
+export const upsertTripTemplateImport = async (record: Omit<TripTemplateImportRecord, 'updatedAt'>): Promise<void> => {
+  const p = getPool();
+  const updated = await p.query(
+    'UPDATE trip_template_imports SET payload = $3::jsonb, content_hash = $4, imported_by = $5, updated_at = NOW() WHERE kind = $1 AND item_key = $2',
+    [record.kind, record.key, JSON.stringify(record.payload), record.contentHash, record.importedBy]
+  );
+  if (updated.rowCount) return;
+  await p.query(
+    'INSERT INTO trip_template_imports (kind, item_key, payload, content_hash, imported_by) VALUES ($1, $2, $3::jsonb, $4, $5)',
+    [record.kind, record.key, JSON.stringify(record.payload), record.contentHash, record.importedBy]
+  );
+};
+
+export const deleteTripTemplateImport = async (kind: TripTemplateImportKind, key: string): Promise<boolean> => {
+  const result = await getPool().query('DELETE FROM trip_template_imports WHERE kind = $1 AND item_key = $2', [kind, key]);
+  return Boolean(result.rowCount);
+};
+
 export const dismissActivitySuggestion = async (tripId: string, userId: string, key: string): Promise<void> => {
   // pg-mem cannot ON CONFLICT with INSERT...SELECT, and a repeat is harmless, so a duplicate key is ignored.
   try {

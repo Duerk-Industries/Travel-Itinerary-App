@@ -30,6 +30,28 @@ The Activities page lists them with **Add to specific day**, **Add as optional**
 
 The itinerary's **Add activity** menu (on a day) offers the same ideas for that day: `?date=YYYY-MM-DD` narrows the list to activities in the city the day's lodging puts the traveler in, soonest first. The menu shows the trip's optional activities first, then suggestions below **Add a new activity**, and never more than four in all. Each shows its picture and a one-sentence description; the response's `activityMedia` (by activity id) supplies both for optional activities that match a template activity, and otherwise the activity's own first note line is used. Choosing a suggestion opens the usual editor filled in for that day.
 
+## Writing templates with an LLM, and importing them
+
+Sample itineraries can be written outside the app and put live without a deploy. The unit of exchange is a **bundle**: one JSON file holding any number of templates plus the shared place/destination descriptions they use (format `wanderbunnies.trip-templates`, version 1). Each template inside is exactly a seed file, so a bundle can also be unpacked into `server/data/trip-templates/`.
+
+**Admin → Itinerary Templates** is the whole workflow:
+
+1. **Download instructions** (`INSTRUCTIONS.md`), the **example** (`example-bundle.json`) and, optionally, the **schema** (JSON Schema). Give them to an LLM with a request such as "write three itineraries for Portugal: 5 days Lisbon, 8 days Lisbon + Porto, 10 days with the Algarve". The instructions cover the field rules, realism rules, how to write original descriptions, and a self-check list; the files live in `server/data/trip-template-authoring/`.
+2. **Import.** Choose the file the LLM produced (or paste it) and press **Check**. Nothing is saved yet: the report lists each template as *new*, *updated* or *unchanged* and spells out every problem (`activities.4.day: 9 is after the last day (6)`), so the list can be pasted back to the LLM for a corrected file. **Import** is enabled only for a file that passed the check, and nothing is saved unless the *whole* file is acceptable. Warnings (for example a place with no description yet) never block.
+3. **Improve what is live.** *Download all templates* (or one) returns the live templates in the same bundle shape. Give it to an LLM with a change request and import the result. A template keeps its `id`, so it is **updated in place**; a new `id` adds a template. Importing a built-in template's id replaces it, and **Restore built-in** removes the replacement.
+
+What the checker enforces beyond the shape: the stays tile the trip and their nights equal `days - 1`, every `day` is within the trip, activity types and transfer types come from the allowed lists, times are `HH:MM`, place keys look like `country/place`, and a picture is accepted only as `upload.wikimedia.org`/`thumb.wikimedia.org` with a public-domain or CC0 license (the LLM is told to leave pictures empty and let a maintainer add them with the picture tool).
+
+Where imports live: the `trip_template_imports` table / Firestore collection (`kind` is `template`, `place` or `destination`), read on top of the seed files and re-read at most once a minute, so every server instance picks an import up shortly after it is made. An import with the same id as a seed file wins over it; description entries win key by key. Deleting the import brings the built-in version back. Imports are audited (`TRIP_TEMPLATES_IMPORTED`, `TRIP_TEMPLATE_IMPORT_REMOVED`).
+
+Admin API (all under `/api/admin/trip-templates`, admins only):
+
+- `GET /`: the live templates with their source (`bundled`, `imported`, `imported-override`).
+- `GET /export?ids=a,b`: the bundle download (all templates without `ids`).
+- `POST /import`: `{ bundle, dryRun }`; `dryRun` defaults to true, so a body without `dryRun: false` only reports. Up to 15 MB (this router has its own JSON parser ahead of the app-wide 100 kb one).
+- `DELETE /imported/:id`: removes an imported template.
+- `GET /authoring/instructions`, `/authoring/example`, `/authoring/schema`: the downloads for the LLM.
+
 ## Where the data lives
 
 | What | Where |
@@ -39,6 +61,8 @@ The itinerary's **Add activity** menu (on a day) offers the same ideas for that 
 | `enabled` | Database only. Seeding never re-enables a template that was switched off |
 | Descriptions and pictures | `server/data/trip-templates/media/<pack>.json`, shared by every template |
 | Generator | `server/tools/trip-templates/` |
+| Imported templates and descriptions | `trip_template_imports` table / Firestore collection, written by the admin import and read on top of the seed files |
+| LLM instructions, example bundle | `server/data/trip-template-authoring/` |
 
 The seed JSON is validated on load (`tripTemplateService.ts`); an invalid file is logged and skipped, never fatal. A catalogue row whose seed file has gone is never offered.
 
