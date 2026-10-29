@@ -138,7 +138,7 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
   };
 
   return (
-    <DialogShell
+    <DialogShell scrollable={false}
       visible={visible}
       title="Record Payment"
       styles={styles}

@@ -152,7 +152,7 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
   };
 
   return (
-    <DialogShell visible title="Send to WanderBunnies" styles={styles} onClose={close} useNativeModal cardStyle={themeStyle('components_IncomingShareModal_3', {  }, (theme ?? _styleTheme))}>
+    <DialogShell scrollable={false} visible title="Send to WanderBunnies" styles={styles} onClose={close} useNativeModal cardStyle={themeStyle('components_IncomingShareModal_3', {  }, (theme ?? _styleTheme))}>
       <ScrollView style={themeStyle('components_IncomingShareModal_4', {  }, (theme ?? _styleTheme))}>
         <Text style={themeStyle('components_IncomingShareModal_5', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
           {files.length} {files.length === 1 ? 'item' : 'items'} shared from your device.

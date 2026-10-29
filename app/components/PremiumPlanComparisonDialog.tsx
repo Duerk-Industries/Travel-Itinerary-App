@@ -186,7 +186,7 @@ const PremiumPlanComparisonDialog: React.FC<PremiumPlanComparisonDialogProps> = 
   const checkoutDisabled = loadingPlans || Boolean(actionPlan);
 
   return (
-    <DialogShell
+    <DialogShell scrollable={false}
       visible={visible}
       title="Compare plans"
       message="Choose the plan that fits your trip planning needs."
