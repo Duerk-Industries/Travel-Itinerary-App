@@ -1,0 +1,3302 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Opus 5), combining Lonely Planet, japan-guide.com and JNTO itineraries for Japan",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "japan-tokyo-5d",
+      "title": "Tokyo in 5 Days",
+      "summary": "A single-base first visit to Tokyo, working through the temple quarter, the palace gardens and the neon districts, with one day trip into the mountains at Nikko.",
+      "days": 5,
+      "route": "Tokyo (Nikko day trip)",
+      "arrive": "Tokyo (HND or NRT)",
+      "depart": "Tokyo (HND or NRT)",
+      "countries": [
+        "Japan"
+      ],
+      "regions": [
+        "Tokyo",
+        "Tochigi"
+      ],
+      "cities": [
+        "Tokyo",
+        "Nikko"
+      ],
+      "imageQuery": "Tokyo Japan Shibuya crossing night",
+      "highlights": [
+        "Senso-ji Temple",
+        "Shibuya Crossing",
+        "Tsukiji Outer Market",
+        "Nikko day trip",
+        "Shinjuku izakaya"
+      ],
+      "destinationKeys": [
+        "japan",
+        "japan/tokyo",
+        "japan/tochigi",
+        "japan/nikko"
+      ],
+      "hero": "japan/tokyo",
+      "sources": [
+        "Lonely Planet",
+        "japan-guide.com",
+        "Japan National Tourism Organization (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tokyo",
+          "hotel": "Hotel in Tokyo",
+          "start": 0,
+          "nights": 4,
+          "area": "Shinjuku, Shibuya or near Tokyo Station: all on the JR Yamanote loop, which reaches most of the city",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Shibuya Crossing",
+          "notes": "The crowd is at its heaviest in the early evening; one of the overlooking cafes gives a view without standing in it.",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/shibuya-crossing"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Izakaya dinner in Shinjuku",
+          "notes": "Order a few small dishes at a time rather than all at once; some counters seat only a handful of people.",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-izakaya-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Senso-ji Temple",
+          "notes": "Go at opening to see the approach lane before the stalls and crowds fill it.",
+          "where": "Asakusa, Tokyo",
+          "book": "",
+          "place": "japan/senso-ji"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Tokyo National Museum",
+          "notes": "The Japanese Gallery alone is enough for a first visit; check opening days, as it closes one day a week.",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-national-museum"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Ueno Park",
+          "notes": "A level walk between the museums; the pond at the south end is the quieter corner.",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/ueno-park"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Akihabara",
+          "notes": "Shops stack a different speciality on each floor, so it is worth going up rather than along.",
+          "where": "Akihabara, Tokyo",
+          "book": "",
+          "place": "japan/akihabara"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Nikko: Tosho-gu and the shrine complex",
+          "notes": "Take an early train, as the journey is long each way; the site spreads over a wooded hillside with a lot of steps.",
+          "where": "Nikko, Tochigi",
+          "book": "",
+          "place": "japan/nikko-toshogu"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Tsukiji Outer Market",
+          "notes": "Go early: many stalls shut by the early afternoon, and some close on Sundays and holidays.",
+          "where": "Tsukiji, Tokyo",
+          "book": "",
+          "place": "japan/tsukiji-outer-market"
+        },
+        {
+          "day": 3,
+          "type": "Open Access",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Imperial Palace East Gardens",
+          "notes": "Free to enter with no ticket needed, but closed on certain days of the week, so check before setting out.",
+          "where": "Chiyoda, Tokyo",
+          "book": "",
+          "place": "japan/imperial-palace-east-gardens"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Meiji Jingu",
+          "notes": "A long but level gravel approach through planted forest; walk to the sides of the central path rather than down the middle.",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/meiji-jingu"
+        },
+        {
+          "day": 3,
+          "type": "Shopping",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Harajuku and Takeshita Street",
+          "notes": "A short walk from the shrine's southern exit; Omotesando nearby is the calmer alternative at weekends.",
+          "where": "Harajuku, Tokyo",
+          "book": "",
+          "place": "japan/harajuku-takeshita"
+        },
+        {
+          "day": 3,
+          "type": "Open Access",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Tokyo Metropolitan Government Building observatory",
+          "notes": "Free entry; only one tower is usually open and each closes on a set day.",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-government-observatory"
+        },
+        {
+          "day": 4,
+          "type": "Open Access",
+          "time": "09:30",
+          "duration": "1h",
+          "name": "Ueno Park",
+          "notes": "A level last walk near the station side of the city; keep an eye on the time for the airport transfer.",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/ueno-park"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Tokyo Haneda or Narita Airport",
+          "to": "Tokyo hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Airport express train, monorail or limousine bus",
+          "notes": "Narita is much further out than Haneda; from either, an airport express into the city is simpler with luggage than changing trains.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Tokyo Asakusa Station",
+          "to": "Nikko Station",
+          "time": "07:30",
+          "minutes": 140,
+          "carrier": "Tobu limited express, or JR via Utsunomiya",
+          "notes": "Reserved limited express seats are worth having on a morning train in high season.",
+          "book": "Yes - limited express seats are reserved and sell out on peak mornings"
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Nikko Station",
+          "to": "Tokyo Asakusa Station",
+          "time": "17:00",
+          "minutes": 140,
+          "carrier": "Tobu limited express",
+          "notes": "Check the last useful departure when you arrive, as evening services thin out.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Tokyo hotel area",
+          "to": "Tokyo Haneda or Narita Airport",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Airport express train, monorail or limousine bus",
+          "notes": "Allow three hours before an international flight, more from Narita at peak times.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "japan-golden-route-7d",
+      "title": "Tokyo, Kyoto and Osaka in 7 Days",
+      "summary": "The shortest sensible version of Japan's classic first-visit route, taking in Tokyo's districts, Kyoto's temples and Osaka's street food, all linked by shinkansen.",
+      "days": 7,
+      "route": "Tokyo > Kyoto > Osaka",
+      "arrive": "Tokyo (HND or NRT)",
+      "depart": "Osaka (KIX)",
+      "countries": [
+        "Japan"
+      ],
+      "regions": [
+        "Tokyo",
+        "Kyoto",
+        "Osaka"
+      ],
+      "cities": [
+        "Tokyo",
+        "Kyoto",
+        "Osaka"
+      ],
+      "imageQuery": "Kyoto Japan torii gates temple",
+      "highlights": [
+        "Senso-ji Temple",
+        "Fushimi Inari gates",
+        "Kiyomizu-dera",
+        "Gion lanes",
+        "Dotonbori street food"
+      ],
+      "destinationKeys": [
+        "japan",
+        "japan/tokyo",
+        "japan/kyoto",
+        "japan/osaka"
+      ],
+      "hero": "japan/kyoto",
+      "sources": [
+        "Lonely Planet",
+        "japan-guide.com",
+        "Japan National Tourism Organization (official tourism site)"
+      ],
+      "pace": "F",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tokyo",
+          "hotel": "Hotel in Tokyo",
+          "start": 0,
+          "nights": 3,
+          "area": "Shinjuku, Shibuya or near Tokyo Station, all on the JR Yamanote loop",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kyoto",
+          "hotel": "Hotel in Kyoto",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Kyoto Station or in Higashiyama: the station for transfers, Higashiyama to walk to the eastern temples",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Osaka",
+          "hotel": "Hotel in Osaka",
+          "start": 5,
+          "nights": 1,
+          "area": "Namba or Umeda: Namba for the food and nightlife, Umeda for transport",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Shibuya Crossing",
+          "notes": "An easy first stop straight off the Yamanote loop while adjusting to the time difference.",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/shibuya-crossing"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Izakaya dinner in Shinjuku",
+          "notes": "",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-izakaya-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Senso-ji Temple",
+          "notes": "Go at opening to see the approach lane before the crowds.",
+          "where": "Asakusa, Tokyo",
+          "book": "",
+          "place": "japan/senso-ji"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "11:30",
+          "duration": "2h",
+          "name": "Imperial Palace East Gardens",
+          "notes": "Closed on certain days of the week; the stone base of the old keep can be climbed for a view over the lawns.",
+          "where": "Chiyoda, Tokyo",
+          "book": "",
+          "place": "japan/imperial-palace-east-gardens"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Meiji Jingu",
+          "notes": "The forest approach is level but long.",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/meiji-jingu"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Harajuku and Takeshita Street",
+          "notes": "A short walk from the shrine's southern exit.",
+          "where": "Harajuku, Tokyo",
+          "book": "",
+          "place": "japan/harajuku-takeshita"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Tsukiji Outer Market",
+          "notes": "Many stalls shut by the early afternoon, so go first thing.",
+          "where": "Tsukiji, Tokyo",
+          "book": "",
+          "place": "japan/tsukiji-outer-market"
+        },
+        {
+          "day": 2,
+          "type": "Shopping",
+          "time": "11:30",
+          "duration": "2h",
+          "name": "Akihabara",
+          "notes": "",
+          "where": "Akihabara, Tokyo",
+          "book": "",
+          "place": "japan/akihabara"
+        },
+        {
+          "day": 2,
+          "type": "Open Access",
+          "time": "18:00",
+          "duration": "1h",
+          "name": "Tokyo Metropolitan Government Building observatory",
+          "notes": "Free; on very clear winter evenings Mount Fuji is visible to the west.",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-government-observatory"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Fushimi Inari Taisha",
+          "notes": "Arrive in the afternoon after the shinkansen; the grounds stay open after dark, and the gate tunnels thin out as you climb.",
+          "where": "Fushimi, Kyoto",
+          "book": "",
+          "place": "japan/fushimi-inari"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Gion",
+          "notes": "Best after dark when the lanterns are lit; signs in some lanes ask visitors not to photograph performers.",
+          "where": "Gion, Kyoto",
+          "book": "",
+          "place": "japan/gion-district"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Kiyomizu-dera",
+          "notes": "Opens early, which is the only reliable way to see the veranda without a crowd; the approach through Higashiyama is steep.",
+          "where": "Higashiyama, Kyoto",
+          "book": "",
+          "place": "japan/kiyomizu-dera"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Nishiki Market",
+          "notes": "Eating while walking is discouraged; most stalls provide a place to stand and eat.",
+          "where": "Nakagyo, Kyoto",
+          "book": "",
+          "place": "japan/nishiki-market"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "Kinkaku-ji",
+          "notes": "The route around the pond is one-way, so the visit is short.",
+          "where": "Kita, Kyoto",
+          "book": "",
+          "place": "japan/kinkaku-ji"
+        },
+        {
+          "day": 4,
+          "type": "Open Access",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Arashiyama bamboo grove",
+          "notes": "The grove path itself takes minutes; combine it with the temple garden and the river bridge.",
+          "where": "Arashiyama, Kyoto",
+          "book": "",
+          "place": "japan/arashiyama-bamboo-grove"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Osaka Castle",
+          "notes": "The park, moats and stone walls are free; the climb from the gates up to the keep is steady.",
+          "where": "Chuo, Osaka",
+          "book": "",
+          "place": "japan/osaka-castle"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Kuromon Ichiba Market",
+          "notes": "Seafood is grilled to order at the stalls; some shut in the later afternoon.",
+          "where": "Nipponbashi, Osaka",
+          "book": "",
+          "place": "japan/kuromon-market"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Dotonbori",
+          "notes": "At its most striking after dark; the walkway on the far bank gives a view of the signs across the water.",
+          "where": "Dotonbori, Osaka",
+          "book": "",
+          "place": "japan/dotonbori"
+        },
+        {
+          "day": 6,
+          "type": "Open Access",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "Umeda Sky Building",
+          "notes": "The rooftop deck is open to the air and may close in bad weather; keep an eye on the time for the airport transfer.",
+          "where": "Umeda, Osaka",
+          "book": "",
+          "place": "japan/umeda-sky-building"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Tokyo Haneda or Narita Airport",
+          "to": "Tokyo hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Airport express train, monorail or limousine bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Tokyo Station",
+          "to": "Kyoto Station",
+          "time": "11:00",
+          "minutes": 165,
+          "carrier": "Tokaido Shinkansen",
+          "notes": "Nozomi services are the fastest but are not covered by the nationwide rail pass; Hikari is the pass-friendly alternative and only slightly slower.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Kyoto Station",
+          "to": "Osaka Station",
+          "time": "09:30",
+          "minutes": 45,
+          "carrier": "JR special rapid service",
+          "notes": "Frequent trains all day; no reservation needed for this short hop.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Osaka hotel area",
+          "to": "Kansai International Airport (KIX)",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Haruka limited express or Nankai rapid",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "japan-golden-route-hakone-10d",
+      "title": "Tokyo, Hakone, Kyoto and Osaka in 10 Days",
+      "summary": "The classic route at a comfortable pace, breaking the run between Tokyo and Kyoto with a hot spring night at Hakone and allowing a day trip to Nara.",
+      "days": 10,
+      "route": "Tokyo > Hakone > Kyoto (Nara day trip) > Osaka",
+      "arrive": "Tokyo (HND or NRT)",
+      "depart": "Osaka (KIX)",
+      "countries": [
+        "Japan"
+      ],
+      "regions": [
+        "Tokyo",
+        "Kanagawa",
+        "Kyoto",
+        "Nara",
+        "Osaka"
+      ],
+      "cities": [
+        "Tokyo",
+        "Hakone",
+        "Kyoto",
+        "Nara",
+        "Osaka"
+      ],
+      "imageQuery": "Hakone Japan Mount Fuji lake torii",
+      "highlights": [
+        "Senso-ji Temple",
+        "Hakone onsen",
+        "Fushimi Inari gates",
+        "Nara deer and Todai-ji",
+        "Dotonbori street food"
+      ],
+      "destinationKeys": [
+        "japan",
+        "japan/tokyo",
+        "japan/kanagawa",
+        "japan/hakone",
+        "japan/kyoto",
+        "japan/nara",
+        "japan/osaka"
+      ],
+      "hero": "japan/hakone",
+      "sources": [
+        "Lonely Planet",
+        "japan-guide.com",
+        "Japan National Tourism Organization (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "relax",
+        "food",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Tokyo",
+          "hotel": "Hotel in Tokyo",
+          "start": 0,
+          "nights": 3,
+          "area": "Shinjuku, Shibuya or near Tokyo Station, all on the JR Yamanote loop",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hakone",
+          "hotel": "Ryokan in Hakone",
+          "start": 3,
+          "nights": 1,
+          "area": "Hakone-Yumoto or Gora: a hot spring inn with its own baths is the point of stopping here",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kyoto",
+          "hotel": "Hotel in Kyoto",
+          "start": 4,
+          "nights": 4,
+          "area": "Near Kyoto Station or in Higashiyama",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Osaka",
+          "hotel": "Hotel in Osaka",
+          "start": 8,
+          "nights": 1,
+          "area": "Namba or Umeda",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Shibuya Crossing",
+          "notes": "",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/shibuya-crossing"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Izakaya dinner in Shinjuku",
+          "notes": "",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-izakaya-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Senso-ji Temple",
+          "notes": "Go at opening to see the approach lane before the crowds.",
+          "where": "Asakusa, Tokyo",
+          "book": "",
+          "place": "japan/senso-ji"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Tokyo National Museum",
+          "notes": "Check opening days, as it closes one day a week.",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-national-museum"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Ueno Park",
+          "notes": "",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/ueno-park"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Akihabara",
+          "notes": "",
+          "where": "Akihabara, Tokyo",
+          "book": "",
+          "place": "japan/akihabara"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Tsukiji Outer Market",
+          "notes": "Many stalls shut by the early afternoon.",
+          "where": "Tsukiji, Tokyo",
+          "book": "",
+          "place": "japan/tsukiji-outer-market"
+        },
+        {
+          "day": 2,
+          "type": "Open Access",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Imperial Palace East Gardens",
+          "notes": "Closed on certain days of the week.",
+          "where": "Chiyoda, Tokyo",
+          "book": "",
+          "place": "japan/imperial-palace-east-gardens"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Meiji Jingu",
+          "notes": "",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/meiji-jingu"
+        },
+        {
+          "day": 2,
+          "type": "Shopping",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Harajuku and Takeshita Street",
+          "notes": "",
+          "where": "Harajuku, Tokyo",
+          "book": "",
+          "place": "japan/harajuku-takeshita"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Hakone Open-Air Museum",
+          "notes": "Sculpture set on open terraced hillside, so it suits a dry afternoon; paths slope and include steps.",
+          "where": "Hakone, Kanagawa",
+          "book": "",
+          "place": "japan/hakone-open-air-museum"
+        },
+        {
+          "day": 3,
+          "type": "Spa/Wellness",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Hakone onsen bathing",
+          "notes": "Bathing is unclothed after washing at a seated shower; some establishments restrict entry for visible tattoos, so check in advance.",
+          "where": "Hakone, Kanagawa",
+          "book": "",
+          "place": "japan/hakone-onsen"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "1.5h",
+          "name": "Lake Ashi cruise",
+          "notes": "Clear mornings give the best chance of Mount Fuji beyond the far shore, though cloud over the mountain is common.",
+          "where": "Lake Ashi, Hakone",
+          "book": "",
+          "place": "japan/lake-ashi-cruise"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Owakudani",
+          "notes": "Trails and sometimes the ropeway close when volcanic gas levels rise, so check conditions on the day.",
+          "where": "Owakudani, Hakone",
+          "book": "",
+          "place": "japan/owakudani"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "2.5h",
+          "name": "Fushimi Inari Taisha",
+          "notes": "Open around the clock; an early start is the only way to photograph the first gate tunnels without crowds.",
+          "where": "Fushimi, Kyoto",
+          "book": "",
+          "place": "japan/fushimi-inari"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "12:00",
+          "duration": "2h",
+          "name": "Kiyomizu-dera",
+          "notes": "The approach through the Higashiyama lanes is steep but lined with pottery and sweet shops.",
+          "where": "Higashiyama, Kyoto",
+          "book": "",
+          "place": "japan/kiyomizu-dera"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Gion",
+          "notes": "Best after dark when the lanterns are lit.",
+          "where": "Gion, Kyoto",
+          "book": "",
+          "place": "japan/gion-district"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "1h",
+          "name": "Kinkaku-ji",
+          "notes": "Opens early and the circuit is one-way, so it works well as a first stop.",
+          "where": "Kita, Kyoto",
+          "book": "",
+          "place": "japan/kinkaku-ji"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Ryoan-ji",
+          "notes": "A short walk or bus from Kinkaku-ji; visitors sit on the veranda to look at the rock garden.",
+          "where": "Ukyo, Kyoto",
+          "book": "",
+          "place": "japan/ryoan-ji"
+        },
+        {
+          "day": 6,
+          "type": "Open Access",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "Arashiyama bamboo grove",
+          "notes": "Combine the grove with the temple garden and the river bridge to make a half day of it.",
+          "where": "Arashiyama, Kyoto",
+          "book": "",
+          "place": "japan/arashiyama-bamboo-grove"
+        },
+        {
+          "day": 6,
+          "type": "Class",
+          "time": "16:30",
+          "duration": "1h",
+          "name": "Kyoto tea ceremony",
+          "notes": "Sessions run about an hour and explain the sequence as it happens; ask in advance if sitting on tatami is a problem.",
+          "where": "Central Kyoto",
+          "book": "Yes - small group sessions need booking ahead",
+          "place": "japan/kyoto-tea-ceremony"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Nara: Todai-ji and Nara Park",
+          "notes": "An easy train from Kyoto; the deer in the park are wild and will push for food, so keep children close.",
+          "where": "Nara",
+          "book": "",
+          "place": "japan/nara-todai-ji"
+        },
+        {
+          "day": 7,
+          "type": "Open Access",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "Nara Park",
+          "notes": "Broad and level, linking Todai-ji with the shrines at the eastern end.",
+          "where": "Nara",
+          "book": "",
+          "place": "japan/nara-deer-park"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2h",
+          "name": "Osaka Castle",
+          "notes": "The park and stone walls are free and are the better part of the visit for many people.",
+          "where": "Chuo, Osaka",
+          "book": "",
+          "place": "japan/osaka-castle"
+        },
+        {
+          "day": 8,
+          "type": "Food & Drink",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Kuromon Ichiba Market",
+          "notes": "",
+          "where": "Nipponbashi, Osaka",
+          "book": "",
+          "place": "japan/kuromon-market"
+        },
+        {
+          "day": 8,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Dotonbori",
+          "notes": "Takoyaki and okonomiyaki stalls are the local specialities.",
+          "where": "Dotonbori, Osaka",
+          "book": "",
+          "place": "japan/dotonbori"
+        },
+        {
+          "day": 9,
+          "type": "Open Access",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "Umeda Sky Building",
+          "notes": "The rooftop deck is open to the air and may close in bad weather.",
+          "where": "Umeda, Osaka",
+          "book": "",
+          "place": "japan/umeda-sky-building"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Tokyo Haneda or Narita Airport",
+          "to": "Tokyo hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Airport express train, monorail or limousine bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Tokyo Shinjuku Station",
+          "to": "Hakone-Yumoto",
+          "time": "10:30",
+          "minutes": 95,
+          "carrier": "Odakyu Romancecar",
+          "notes": "The Romancecar runs direct from Shinjuku; seats are reserved. A Hakone area pass covers the local ropeway, boats and buses.",
+          "book": "Yes - Romancecar seats are reserved"
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Hakone (Odawara Station)",
+          "to": "Kyoto Station",
+          "time": "13:00",
+          "minutes": 150,
+          "carrier": "Tokaido Shinkansen from Odawara",
+          "notes": "Local Hakone transport connects back to Odawara, which is on the shinkansen line, so there is no need to return to Tokyo.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Kyoto Station",
+          "to": "Nara Station",
+          "time": "08:30",
+          "minutes": 50,
+          "carrier": "JR Nara line rapid, or Kintetsu limited express",
+          "notes": "The Kintetsu station sits closer to the park than the JR one.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Nara Station",
+          "to": "Kyoto Station",
+          "time": "16:30",
+          "minutes": 50,
+          "carrier": "JR Nara line rapid, or Kintetsu",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Kyoto Station",
+          "to": "Osaka Station",
+          "time": "09:30",
+          "minutes": 45,
+          "carrier": "JR special rapid service",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Osaka hotel area",
+          "to": "Kansai International Airport (KIX)",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Haruka limited express or Nankai rapid",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "japan-tokyo-kyoto-hiroshima-10d",
+      "title": "Tokyo, Kyoto and Hiroshima in 10 Days",
+      "summary": "A history-led alternative to the usual route, trading Osaka for Hiroshima and the island shrine of Miyajima, with a coastal day trip from Tokyo.",
+      "days": 10,
+      "route": "Tokyo (Kamakura day trip) > Kyoto > Hiroshima",
+      "arrive": "Tokyo (HND or NRT)",
+      "depart": "Hiroshima (HIJ), or Osaka (KIX) by rail",
+      "countries": [
+        "Japan"
+      ],
+      "regions": [
+        "Tokyo",
+        "Kanagawa",
+        "Kyoto",
+        "Hiroshima"
+      ],
+      "cities": [
+        "Tokyo",
+        "Kamakura",
+        "Kyoto",
+        "Hiroshima"
+      ],
+      "imageQuery": "Miyajima Japan floating torii gate",
+      "highlights": [
+        "Senso-ji Temple",
+        "Kamakura Great Buddha",
+        "Fushimi Inari gates",
+        "Hiroshima Peace Park",
+        "Miyajima torii"
+      ],
+      "destinationKeys": [
+        "japan",
+        "japan/tokyo",
+        "japan/kanagawa",
+        "japan/kamakura",
+        "japan/kyoto",
+        "japan/hiroshima"
+      ],
+      "hero": "japan/hiroshima",
+      "sources": [
+        "Lonely Planet",
+        "japan-guide.com",
+        "Japan National Tourism Organization (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Tokyo",
+          "hotel": "Hotel in Tokyo",
+          "start": 0,
+          "nights": 4,
+          "area": "Shinjuku, Shibuya or near Tokyo Station, all on the JR Yamanote loop",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kyoto",
+          "hotel": "Hotel in Kyoto",
+          "start": 4,
+          "nights": 3,
+          "area": "Near Kyoto Station or in Higashiyama",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hiroshima",
+          "hotel": "Hotel in Hiroshima",
+          "start": 7,
+          "nights": 2,
+          "area": "Near the Peace Park or Hiroshima Station, both close to the tram network",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Shibuya Crossing",
+          "notes": "",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/shibuya-crossing"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Izakaya dinner in Shinjuku",
+          "notes": "",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-izakaya-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Senso-ji Temple",
+          "notes": "Go at opening to see the approach lane before the crowds.",
+          "where": "Asakusa, Tokyo",
+          "book": "",
+          "place": "japan/senso-ji"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Tokyo National Museum",
+          "notes": "Check opening days, as it closes one day a week.",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-national-museum"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Ueno Park",
+          "notes": "",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/ueno-park"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Akihabara",
+          "notes": "",
+          "where": "Akihabara, Tokyo",
+          "book": "",
+          "place": "japan/akihabara"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Kamakura: Great Buddha and the temples",
+          "notes": "An easy train south from Tokyo; several temple approaches involve steps and short hill climbs, and the beach is a short walk from the station.",
+          "where": "Kamakura, Kanagawa",
+          "book": "",
+          "place": "japan/kamakura"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Tsukiji Outer Market",
+          "notes": "Many stalls shut by the early afternoon, and some close on Sundays and holidays.",
+          "where": "Tsukiji, Tokyo",
+          "book": "",
+          "place": "japan/tsukiji-outer-market"
+        },
+        {
+          "day": 3,
+          "type": "Open Access",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Imperial Palace East Gardens",
+          "notes": "Closed on certain days of the week.",
+          "where": "Chiyoda, Tokyo",
+          "book": "",
+          "place": "japan/imperial-palace-east-gardens"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Meiji Jingu",
+          "notes": "",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/meiji-jingu"
+        },
+        {
+          "day": 3,
+          "type": "Open Access",
+          "time": "18:00",
+          "duration": "1h",
+          "name": "Tokyo Metropolitan Government Building observatory",
+          "notes": "Free; on very clear winter evenings Mount Fuji is visible to the west.",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-government-observatory"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Fushimi Inari Taisha",
+          "notes": "Arrive in the afternoon after the shinkansen; the grounds stay open after dark.",
+          "where": "Fushimi, Kyoto",
+          "book": "",
+          "place": "japan/fushimi-inari"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Gion",
+          "notes": "Best after dark when the lanterns are lit; signs in some lanes ask visitors not to photograph performers.",
+          "where": "Gion, Kyoto",
+          "book": "",
+          "place": "japan/gion-district"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Kiyomizu-dera",
+          "notes": "Opens early, which is the only reliable way to see the veranda without a crowd.",
+          "where": "Higashiyama, Kyoto",
+          "book": "",
+          "place": "japan/kiyomizu-dera"
+        },
+        {
+          "day": 5,
+          "type": "Open Access",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Philosopher's Path",
+          "notes": "A level canal-side walk linking several eastern temples, each ticketed separately; busiest for a few weeks during blossom season.",
+          "where": "Higashiyama, Kyoto",
+          "book": "",
+          "place": "japan/philosophers-path"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "13:30",
+          "duration": "1.5h",
+          "name": "Nishiki Market",
+          "notes": "Eating while walking is discouraged; most stalls provide a place to stand and eat.",
+          "where": "Nakagyo, Kyoto",
+          "book": "",
+          "place": "japan/nishiki-market"
+        },
+        {
+          "day": 5,
+          "type": "Class",
+          "time": "16:00",
+          "duration": "1h",
+          "name": "Kyoto tea ceremony",
+          "notes": "Sessions run about an hour; ask in advance if sitting on tatami is a problem.",
+          "where": "Central Kyoto",
+          "book": "Yes - small group sessions need booking ahead",
+          "place": "japan/kyoto-tea-ceremony"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "1h",
+          "name": "Kinkaku-ji",
+          "notes": "Opens early and the circuit is one-way, so it works well as a first stop.",
+          "where": "Kita, Kyoto",
+          "book": "",
+          "place": "japan/kinkaku-ji"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Ryoan-ji",
+          "notes": "A short walk or bus from Kinkaku-ji.",
+          "where": "Ukyo, Kyoto",
+          "book": "",
+          "place": "japan/ryoan-ji"
+        },
+        {
+          "day": 6,
+          "type": "Open Access",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "Arashiyama bamboo grove",
+          "notes": "Combine the grove with the temple garden and the river bridge.",
+          "where": "Arashiyama, Kyoto",
+          "book": "",
+          "place": "japan/arashiyama-bamboo-grove"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Hiroshima Peace Memorial Park",
+          "notes": "Allow two hours or more between the museum and the memorials; the museum is direct about what happened and many visitors find it difficult.",
+          "where": "Naka, Hiroshima",
+          "book": "",
+          "place": "japan/hiroshima-peace-park"
+        },
+        {
+          "day": 7,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Hiroshima-style okonomiyaki",
+          "notes": "Cooked on a hotplate set into the counter and eaten straight from it; several city-centre buildings hold floors of small competing counters.",
+          "where": "Naka, Hiroshima",
+          "book": "",
+          "place": "japan/hiroshima-okonomiyaki"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Miyajima and Itsukushima Shrine",
+          "notes": "Check the tide before going: at high water the shrine and gate appear to float, at low water you can walk out to the gate.",
+          "where": "Miyajima, Hiroshima",
+          "book": "",
+          "place": "japan/miyajima-itsukushima"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "Hiroshima Peace Memorial Park",
+          "notes": "A short last walk past the A-Bomb Dome before the transfer.",
+          "where": "Naka, Hiroshima",
+          "book": "",
+          "place": "japan/hiroshima-peace-park"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Tokyo Haneda or Narita Airport",
+          "to": "Tokyo hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Airport express train, monorail or limousine bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Tokyo Station",
+          "to": "Kamakura Station",
+          "time": "08:30",
+          "minutes": 60,
+          "carrier": "JR Yokosuka line",
+          "notes": "Direct trains run regularly; no reservation needed.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Kamakura Station",
+          "to": "Tokyo Station",
+          "time": "16:30",
+          "minutes": 60,
+          "carrier": "JR Yokosuka line",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Tokyo Station",
+          "to": "Kyoto Station",
+          "time": "11:30",
+          "minutes": 165,
+          "carrier": "Tokaido Shinkansen",
+          "notes": "Hikari services are covered by the nationwide rail pass; Nozomi is faster but is not.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Kyoto Station",
+          "to": "Hiroshima Station",
+          "time": "11:00",
+          "minutes": 110,
+          "carrier": "Sanyo Shinkansen",
+          "notes": "A straightforward run west; trams from Hiroshima Station reach the Peace Park in about fifteen minutes.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Hiroshima",
+          "to": "Miyajima",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "JR Sanyo line then Miyajima ferry",
+          "notes": "Train to Miyajimaguchi, then a short ferry; the JR ferry is covered by the nationwide rail pass.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Miyajima",
+          "to": "Hiroshima",
+          "time": "16:00",
+          "minutes": 60,
+          "carrier": "Miyajima ferry then JR Sanyo line",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Hiroshima hotel area",
+          "to": "Hiroshima Airport, or Hiroshima Station for rail to Osaka",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport limousine bus, or tram to the station",
+          "notes": "Hiroshima Airport has limited long-haul service, so many travelers return by shinkansen to Osaka or Tokyo to fly home.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "japan-golden-route-hiroshima-14d",
+      "title": "Tokyo, Hakone, Kyoto, Hiroshima and Osaka in 14 Days",
+      "summary": "The full first-visit circuit at an unhurried pace: Tokyo, a hot spring night at Hakone, four nights of Kyoto temples with a Nara day trip, then Hiroshima and Osaka.",
+      "days": 14,
+      "route": "Tokyo > Hakone > Kyoto (Nara day trip) > Hiroshima > Osaka",
+      "arrive": "Tokyo (HND or NRT)",
+      "depart": "Osaka (KIX)",
+      "countries": [
+        "Japan"
+      ],
+      "regions": [
+        "Tokyo",
+        "Kanagawa",
+        "Kyoto",
+        "Nara",
+        "Hiroshima",
+        "Osaka"
+      ],
+      "cities": [
+        "Tokyo",
+        "Hakone",
+        "Kyoto",
+        "Nara",
+        "Hiroshima",
+        "Osaka",
+        "Kamakura"
+      ],
+      "imageQuery": "Japan temple Mount Fuji shinkansen",
+      "highlights": [
+        "Senso-ji Temple",
+        "Hakone onsen",
+        "Fushimi Inari gates",
+        "Hiroshima Peace Park",
+        "Miyajima torii",
+        "Dotonbori"
+      ],
+      "destinationKeys": [
+        "japan",
+        "japan/tokyo",
+        "japan/kanagawa",
+        "japan/hakone",
+        "japan/kyoto",
+        "japan/nara",
+        "japan/hiroshima",
+        "japan/osaka",
+        "japan/kamakura"
+      ],
+      "hero": "japan/kyoto",
+      "sources": [
+        "Lonely Planet",
+        "japan-guide.com",
+        "Japan National Tourism Organization (official tourism site)"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tokyo",
+          "hotel": "Hotel in Tokyo",
+          "start": 0,
+          "nights": 4,
+          "area": "Shinjuku, Shibuya or near Tokyo Station, all on the JR Yamanote loop",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hakone",
+          "hotel": "Ryokan in Hakone",
+          "start": 4,
+          "nights": 1,
+          "area": "Hakone-Yumoto or Gora: a hot spring inn with its own baths",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kyoto",
+          "hotel": "Hotel in Kyoto",
+          "start": 5,
+          "nights": 4,
+          "area": "Near Kyoto Station or in Higashiyama",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hiroshima",
+          "hotel": "Hotel in Hiroshima",
+          "start": 9,
+          "nights": 2,
+          "area": "Near the Peace Park or Hiroshima Station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Osaka",
+          "hotel": "Hotel in Osaka",
+          "start": 11,
+          "nights": 2,
+          "area": "Namba or Umeda",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Shibuya Crossing",
+          "notes": "",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/shibuya-crossing"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Izakaya dinner in Shinjuku",
+          "notes": "",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-izakaya-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Senso-ji Temple",
+          "notes": "Go at opening to see the approach lane before the crowds.",
+          "where": "Asakusa, Tokyo",
+          "book": "",
+          "place": "japan/senso-ji"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Tokyo National Museum",
+          "notes": "Check opening days, as it closes one day a week.",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-national-museum"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Ueno Park",
+          "notes": "",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/ueno-park"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Akihabara",
+          "notes": "",
+          "where": "Akihabara, Tokyo",
+          "book": "",
+          "place": "japan/akihabara"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Tsukiji Outer Market",
+          "notes": "Many stalls shut by the early afternoon.",
+          "where": "Tsukiji, Tokyo",
+          "book": "",
+          "place": "japan/tsukiji-outer-market"
+        },
+        {
+          "day": 2,
+          "type": "Open Access",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Imperial Palace East Gardens",
+          "notes": "Closed on certain days of the week.",
+          "where": "Chiyoda, Tokyo",
+          "book": "",
+          "place": "japan/imperial-palace-east-gardens"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Meiji Jingu",
+          "notes": "",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/meiji-jingu"
+        },
+        {
+          "day": 2,
+          "type": "Shopping",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Harajuku and Takeshita Street",
+          "notes": "",
+          "where": "Harajuku, Tokyo",
+          "book": "",
+          "place": "japan/harajuku-takeshita"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Kamakura: Great Buddha and the temples",
+          "notes": "A coastal break from the city; several temple approaches involve steps and short hill climbs.",
+          "where": "Kamakura, Kanagawa",
+          "book": "",
+          "place": "japan/kamakura"
+        },
+        {
+          "day": 3,
+          "type": "Open Access",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Tokyo Metropolitan Government Building observatory",
+          "notes": "Free entry; a good last look at the city before leaving Tokyo.",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-government-observatory"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Hakone Open-Air Museum",
+          "notes": "Sculpture set on open terraced hillside, so it suits a dry afternoon.",
+          "where": "Hakone, Kanagawa",
+          "book": "",
+          "place": "japan/hakone-open-air-museum"
+        },
+        {
+          "day": 4,
+          "type": "Spa/Wellness",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Hakone onsen bathing",
+          "notes": "Bathing is unclothed after washing at a seated shower; some establishments restrict entry for visible tattoos.",
+          "where": "Hakone, Kanagawa",
+          "book": "",
+          "place": "japan/hakone-onsen"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "08:00",
+          "duration": "1h",
+          "name": "Mount Fuji viewpoint",
+          "notes": "Clear early mornings in the cooler months give the best chance; cloud covers the mountain often, so treat any view as luck.",
+          "where": "Hakone, Kanagawa",
+          "book": "",
+          "place": "japan/mount-fuji-view"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Lake Ashi cruise",
+          "notes": "The torii gate of Hakone Shrine stands in the water near the Moto-Hakone landing.",
+          "where": "Lake Ashi, Hakone",
+          "book": "",
+          "place": "japan/lake-ashi-cruise"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Owakudani",
+          "notes": "Trails and sometimes the ropeway close when volcanic gas levels rise, so check conditions on the day.",
+          "where": "Owakudani, Hakone",
+          "book": "",
+          "place": "japan/owakudani"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "2.5h",
+          "name": "Fushimi Inari Taisha",
+          "notes": "Open around the clock; the full circuit to the summit takes two to three hours and climbs steadily on steps.",
+          "where": "Fushimi, Kyoto",
+          "book": "",
+          "place": "japan/fushimi-inari"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "12:00",
+          "duration": "2h",
+          "name": "Kiyomizu-dera",
+          "notes": "The approach through the Higashiyama lanes is steep but lined with pottery and sweet shops.",
+          "where": "Higashiyama, Kyoto",
+          "book": "",
+          "place": "japan/kiyomizu-dera"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Gion",
+          "notes": "Best after dark when the lanterns are lit.",
+          "where": "Gion, Kyoto",
+          "book": "",
+          "place": "japan/gion-district"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "1h",
+          "name": "Kinkaku-ji",
+          "notes": "Opens early and the circuit is one-way.",
+          "where": "Kita, Kyoto",
+          "book": "",
+          "place": "japan/kinkaku-ji"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Ryoan-ji",
+          "notes": "A short walk or bus from Kinkaku-ji.",
+          "where": "Ukyo, Kyoto",
+          "book": "",
+          "place": "japan/ryoan-ji"
+        },
+        {
+          "day": 7,
+          "type": "Open Access",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "Arashiyama bamboo grove",
+          "notes": "Combine the grove with the temple garden and the river bridge.",
+          "where": "Arashiyama, Kyoto",
+          "book": "",
+          "place": "japan/arashiyama-bamboo-grove"
+        },
+        {
+          "day": 7,
+          "type": "Class",
+          "time": "16:30",
+          "duration": "1h",
+          "name": "Kyoto tea ceremony",
+          "notes": "Sessions run about an hour; ask in advance if sitting on tatami is a problem.",
+          "where": "Central Kyoto",
+          "book": "Yes - small group sessions need booking ahead",
+          "place": "japan/kyoto-tea-ceremony"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Nara: Todai-ji and Nara Park",
+          "notes": "The deer in the park are wild and will push for food, so keep children close.",
+          "where": "Nara",
+          "book": "",
+          "place": "japan/nara-todai-ji"
+        },
+        {
+          "day": 8,
+          "type": "Open Access",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "Nara Park",
+          "notes": "Broad and level, linking Todai-ji with the shrines at the eastern end.",
+          "where": "Nara",
+          "book": "",
+          "place": "japan/nara-deer-park"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Hiroshima Peace Memorial Park",
+          "notes": "Allow two hours or more; the museum is direct about what happened and many visitors find it difficult.",
+          "where": "Naka, Hiroshima",
+          "book": "",
+          "place": "japan/hiroshima-peace-park"
+        },
+        {
+          "day": 9,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Hiroshima-style okonomiyaki",
+          "notes": "Layered rather than mixed, with noodles pressed in; cooked on the counter hotplate in front of you.",
+          "where": "Naka, Hiroshima",
+          "book": "",
+          "place": "japan/hiroshima-okonomiyaki"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Miyajima and Itsukushima Shrine",
+          "notes": "Check the tide: at high water the shrine and gate appear to float, at low water you can walk out to the gate. A ropeway and trails climb Mount Misen above the village.",
+          "where": "Miyajima, Hiroshima",
+          "book": "",
+          "place": "japan/miyajima-itsukushima"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Osaka Castle",
+          "notes": "The park and stone walls are free and are the better part of the visit for many people.",
+          "where": "Chuo, Osaka",
+          "book": "",
+          "place": "japan/osaka-castle"
+        },
+        {
+          "day": 11,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Dotonbori",
+          "notes": "At its most striking after dark; the walkway on the far bank gives a view of the signs across the water.",
+          "where": "Dotonbori, Osaka",
+          "book": "",
+          "place": "japan/dotonbori"
+        },
+        {
+          "day": 12,
+          "type": "Food & Drink",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Kuromon Ichiba Market",
+          "notes": "Mornings are liveliest; some stalls shut in the later afternoon.",
+          "where": "Nipponbashi, Osaka",
+          "book": "",
+          "place": "japan/kuromon-market"
+        },
+        {
+          "day": 12,
+          "type": "Open Access",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Umeda Sky Building",
+          "notes": "Popular around sunset, when the city lights come on; the deck is outdoors and may close in bad weather.",
+          "where": "Umeda, Osaka",
+          "book": "",
+          "place": "japan/umeda-sky-building"
+        },
+        {
+          "day": 13,
+          "type": "Food & Drink",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "Kuromon Ichiba Market",
+          "notes": "A short last stop for breakfast near Namba before the airport transfer.",
+          "where": "Nipponbashi, Osaka",
+          "book": "",
+          "place": "japan/kuromon-market"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Tokyo Haneda or Narita Airport",
+          "to": "Tokyo hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Airport express train, monorail or limousine bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Tokyo Station",
+          "to": "Kamakura Station",
+          "time": "08:30",
+          "minutes": 60,
+          "carrier": "JR Yokosuka line",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Kamakura Station",
+          "to": "Tokyo Station",
+          "time": "16:30",
+          "minutes": 60,
+          "carrier": "JR Yokosuka line",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Tokyo Shinjuku Station",
+          "to": "Hakone-Yumoto",
+          "time": "10:30",
+          "minutes": 95,
+          "carrier": "Odakyu Romancecar",
+          "notes": "A Hakone area pass covers the local ropeway, boats and buses.",
+          "book": "Yes - Romancecar seats are reserved"
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Hakone (Odawara Station)",
+          "to": "Kyoto Station",
+          "time": "14:00",
+          "minutes": 150,
+          "carrier": "Tokaido Shinkansen from Odawara",
+          "notes": "Local Hakone transport connects back to Odawara on the shinkansen line, so there is no need to return to Tokyo.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Kyoto Station",
+          "to": "Nara Station",
+          "time": "08:30",
+          "minutes": 50,
+          "carrier": "JR Nara line rapid, or Kintetsu limited express",
+          "notes": "The Kintetsu station sits closer to the park.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Nara Station",
+          "to": "Kyoto Station",
+          "time": "16:30",
+          "minutes": 50,
+          "carrier": "JR Nara line rapid, or Kintetsu",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Kyoto Station",
+          "to": "Hiroshima Station",
+          "time": "11:00",
+          "minutes": 110,
+          "carrier": "Sanyo Shinkansen",
+          "notes": "Trams from Hiroshima Station reach the Peace Park in about fifteen minutes.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Hiroshima",
+          "to": "Miyajima",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "JR Sanyo line then Miyajima ferry",
+          "notes": "The JR ferry is covered by the nationwide rail pass.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Miyajima",
+          "to": "Hiroshima",
+          "time": "16:00",
+          "minutes": 60,
+          "carrier": "Miyajima ferry then JR Sanyo line",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Hiroshima Station",
+          "to": "Osaka Station",
+          "time": "10:00",
+          "minutes": 100,
+          "carrier": "Sanyo Shinkansen to Shin-Osaka, then local",
+          "notes": "Shin-Osaka is the shinkansen station; a short local hop reaches Osaka Station and the Namba area.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Public Transit",
+          "from": "Osaka hotel area",
+          "to": "Kansai International Airport (KIX)",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Haruka limited express or Nankai rapid",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "japan-alps-kanazawa-takayama-14d",
+      "title": "Tokyo, Kanazawa, Takayama, Kyoto and Osaka in 14 Days",
+      "summary": "A two-week route that leaves the main corridor for the Japanese Alps, adding Kanazawa's gardens and the mountain town of Takayama before rejoining Kyoto and Osaka.",
+      "days": 14,
+      "route": "Tokyo > Kanazawa > Takayama (Shirakawa-go) > Kyoto > Osaka",
+      "arrive": "Tokyo (HND or NRT)",
+      "depart": "Osaka (KIX)",
+      "countries": [
+        "Japan"
+      ],
+      "regions": [
+        "Tokyo",
+        "Ishikawa",
+        "Gifu",
+        "Kyoto",
+        "Osaka",
+        "Kanagawa"
+      ],
+      "cities": [
+        "Tokyo",
+        "Kanazawa",
+        "Takayama",
+        "Kyoto",
+        "Osaka",
+        "Kamakura"
+      ],
+      "imageQuery": "Shirakawa-go Japan thatched farmhouses snow",
+      "highlights": [
+        "Senso-ji Temple",
+        "Kenroku-en garden",
+        "Takayama old town",
+        "Shirakawa-go farmhouses",
+        "Fushimi Inari gates"
+      ],
+      "destinationKeys": [
+        "japan",
+        "japan/tokyo",
+        "japan/ishikawa",
+        "japan/kanazawa",
+        "japan/gifu",
+        "japan/takayama",
+        "japan/kyoto",
+        "japan/osaka",
+        "japan/kanagawa",
+        "japan/kamakura"
+      ],
+      "hero": "japan/takayama",
+      "sources": [
+        "Lonely Planet",
+        "japan-guide.com",
+        "Japan National Tourism Organization (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "outdoors",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tokyo",
+          "hotel": "Hotel in Tokyo",
+          "start": 0,
+          "nights": 4,
+          "area": "Shinjuku, Shibuya or near Tokyo Station, all on the JR Yamanote loop",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kanazawa",
+          "hotel": "Hotel in Kanazawa",
+          "start": 4,
+          "nights": 2,
+          "area": "Near Kanazawa Station or Korinbo: the station for transfers, Korinbo to walk to the garden and teahouse districts",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Takayama",
+          "hotel": "Ryokan in Takayama",
+          "start": 6,
+          "nights": 2,
+          "area": "Near the old town, which is small enough to cross on foot",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kyoto",
+          "hotel": "Hotel in Kyoto",
+          "start": 8,
+          "nights": 3,
+          "area": "Near Kyoto Station or in Higashiyama",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Osaka",
+          "hotel": "Hotel in Osaka",
+          "start": 11,
+          "nights": 2,
+          "area": "Namba or Umeda",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Shibuya Crossing",
+          "notes": "",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/shibuya-crossing"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Izakaya dinner in Shinjuku",
+          "notes": "",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-izakaya-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Senso-ji Temple",
+          "notes": "Go at opening to see the approach lane before the crowds.",
+          "where": "Asakusa, Tokyo",
+          "book": "",
+          "place": "japan/senso-ji"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Tokyo National Museum",
+          "notes": "Check opening days, as it closes one day a week.",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-national-museum"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Ueno Park",
+          "notes": "",
+          "where": "Ueno, Tokyo",
+          "book": "",
+          "place": "japan/ueno-park"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Akihabara",
+          "notes": "",
+          "where": "Akihabara, Tokyo",
+          "book": "",
+          "place": "japan/akihabara"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Tsukiji Outer Market",
+          "notes": "Many stalls shut by the early afternoon.",
+          "where": "Tsukiji, Tokyo",
+          "book": "",
+          "place": "japan/tsukiji-outer-market"
+        },
+        {
+          "day": 2,
+          "type": "Open Access",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Imperial Palace East Gardens",
+          "notes": "Closed on certain days of the week.",
+          "where": "Chiyoda, Tokyo",
+          "book": "",
+          "place": "japan/imperial-palace-east-gardens"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Meiji Jingu",
+          "notes": "",
+          "where": "Shibuya, Tokyo",
+          "book": "",
+          "place": "japan/meiji-jingu"
+        },
+        {
+          "day": 2,
+          "type": "Shopping",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Harajuku and Takeshita Street",
+          "notes": "",
+          "where": "Harajuku, Tokyo",
+          "book": "",
+          "place": "japan/harajuku-takeshita"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Kamakura: Great Buddha and the temples",
+          "notes": "A coastal break from the city before heading inland.",
+          "where": "Kamakura, Kanagawa",
+          "book": "",
+          "place": "japan/kamakura"
+        },
+        {
+          "day": 3,
+          "type": "Open Access",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Tokyo Metropolitan Government Building observatory",
+          "notes": "Free entry; a good last look at the city before leaving Tokyo.",
+          "where": "Shinjuku, Tokyo",
+          "book": "",
+          "place": "japan/tokyo-government-observatory"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Kenroku-en",
+          "notes": "Paths wind over gravel with slopes and steps; in winter the pines are rigged with rope supports against the snow.",
+          "where": "Kanazawa, Ishikawa",
+          "book": "",
+          "place": "japan/kenroku-en"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "21st Century Museum of Contemporary Art",
+          "notes": "Directly across from the garden; part of the building is free to walk through and the galleries are ticketed.",
+          "where": "Kanazawa, Ishikawa",
+          "book": "",
+          "place": "japan/kanazawa-21st-century-museum"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "08:30",
+          "duration": "1.5h",
+          "name": "Omicho Market",
+          "notes": "Mornings are busiest; several upstairs restaurants serve seafood rice bowls made from the stalls below.",
+          "where": "Kanazawa, Ishikawa",
+          "book": "",
+          "place": "japan/omicho-market"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Higashi Chaya District",
+          "notes": "A few teahouses are open as museums; their interiors involve steep, narrow stairs.",
+          "where": "Kanazawa, Ishikawa",
+          "book": "",
+          "place": "japan/higashi-chaya"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Takayama old town",
+          "notes": "Narrow, flat streets of dark timber merchant houses; some shops and sake breweries close relatively early.",
+          "where": "Sanmachi, Takayama",
+          "book": "",
+          "place": "japan/takayama-old-town"
+        },
+        {
+          "day": 7,
+          "type": "Food & Drink",
+          "time": "07:30",
+          "duration": "1.5h",
+          "name": "Takayama morning market",
+          "notes": "Runs in the morning only and winds down well before midday, so an early start is necessary.",
+          "where": "Miyagawa riverside, Takayama",
+          "book": "",
+          "place": "japan/takayama-morning-market"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Shirakawa-go",
+          "notes": "Reached by bus from Takayama; the path up to the valley viewpoint climbs, and several farmhouses are open as museums.",
+          "where": "Shirakawa-go, Gifu",
+          "book": "Yes - buses are reserved and fill up in peak season",
+          "place": "japan/shirakawa-go"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Fushimi Inari Taisha",
+          "notes": "Arrive in the late afternoon after the long rail day; the grounds stay open after dark and are far quieter then.",
+          "where": "Fushimi, Kyoto",
+          "book": "",
+          "place": "japan/fushimi-inari"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Kiyomizu-dera",
+          "notes": "Opens early, which is the only reliable way to see the veranda without a crowd.",
+          "where": "Higashiyama, Kyoto",
+          "book": "",
+          "place": "japan/kiyomizu-dera"
+        },
+        {
+          "day": 9,
+          "type": "Open Access",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Philosopher's Path",
+          "notes": "A level canal-side walk linking several eastern temples, each ticketed separately.",
+          "where": "Higashiyama, Kyoto",
+          "book": "",
+          "place": "japan/philosophers-path"
+        },
+        {
+          "day": 9,
+          "type": "Food & Drink",
+          "time": "13:30",
+          "duration": "1.5h",
+          "name": "Nishiki Market",
+          "notes": "Eating while walking is discouraged; most stalls provide a place to stand and eat.",
+          "where": "Nakagyo, Kyoto",
+          "book": "",
+          "place": "japan/nishiki-market"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Gion",
+          "notes": "Best after dark when the lanterns are lit.",
+          "where": "Gion, Kyoto",
+          "book": "",
+          "place": "japan/gion-district"
+        },
+        {
+          "day": 10,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "1h",
+          "name": "Kinkaku-ji",
+          "notes": "Opens early and the circuit is one-way.",
+          "where": "Kita, Kyoto",
+          "book": "",
+          "place": "japan/kinkaku-ji"
+        },
+        {
+          "day": 10,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Ryoan-ji",
+          "notes": "A short walk or bus from Kinkaku-ji.",
+          "where": "Ukyo, Kyoto",
+          "book": "",
+          "place": "japan/ryoan-ji"
+        },
+        {
+          "day": 10,
+          "type": "Open Access",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "Arashiyama bamboo grove",
+          "notes": "Combine the grove with the temple garden and the river bridge.",
+          "where": "Arashiyama, Kyoto",
+          "book": "",
+          "place": "japan/arashiyama-bamboo-grove"
+        },
+        {
+          "day": 10,
+          "type": "Class",
+          "time": "16:30",
+          "duration": "1h",
+          "name": "Kyoto tea ceremony",
+          "notes": "Sessions run about an hour; ask in advance if sitting on tatami is a problem.",
+          "where": "Central Kyoto",
+          "book": "Yes - small group sessions need booking ahead",
+          "place": "japan/kyoto-tea-ceremony"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Osaka Castle",
+          "notes": "The park and stone walls are free and are the better part of the visit for many people.",
+          "where": "Chuo, Osaka",
+          "book": "",
+          "place": "japan/osaka-castle"
+        },
+        {
+          "day": 11,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Dotonbori",
+          "notes": "At its most striking after dark.",
+          "where": "Dotonbori, Osaka",
+          "book": "",
+          "place": "japan/dotonbori"
+        },
+        {
+          "day": 12,
+          "type": "Food & Drink",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Kuromon Ichiba Market",
+          "notes": "Seafood is grilled to order at the stalls.",
+          "where": "Nipponbashi, Osaka",
+          "book": "",
+          "place": "japan/kuromon-market"
+        },
+        {
+          "day": 12,
+          "type": "Open Access",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Umeda Sky Building",
+          "notes": "Popular around sunset; the deck is outdoors and may close in bad weather.",
+          "where": "Umeda, Osaka",
+          "book": "",
+          "place": "japan/umeda-sky-building"
+        },
+        {
+          "day": 13,
+          "type": "Food & Drink",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "Kuromon Ichiba Market",
+          "notes": "A short last stop for breakfast near Namba before the airport transfer.",
+          "where": "Nipponbashi, Osaka",
+          "book": "",
+          "place": "japan/kuromon-market"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Tokyo Haneda or Narita Airport",
+          "to": "Tokyo hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Airport express train, monorail or limousine bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Tokyo Station",
+          "to": "Kamakura Station",
+          "time": "08:30",
+          "minutes": 60,
+          "carrier": "JR Yokosuka line",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Kamakura Station",
+          "to": "Tokyo Station",
+          "time": "16:30",
+          "minutes": 60,
+          "carrier": "JR Yokosuka line",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Tokyo Station",
+          "to": "Kanazawa Station",
+          "time": "10:00",
+          "minutes": 165,
+          "carrier": "Hokuriku Shinkansen",
+          "notes": "A direct run north-west; the garden and teahouse districts are a short bus ride from the station.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Kanazawa Station",
+          "to": "Takayama Station",
+          "time": "11:00",
+          "minutes": 150,
+          "carrier": "Nohi or Hokutetsu express bus",
+          "notes": "The bus is the direct link; the rail alternative is slower and involves changes. Seats are reserved.",
+          "book": "Yes - express bus seats are reserved and fill up in peak season"
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Takayama Station",
+          "to": "Shirakawa-go",
+          "time": "09:30",
+          "minutes": 50,
+          "carrier": "Nohi express bus",
+          "notes": "",
+          "book": "Yes - buses are reserved and fill up in peak season"
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Shirakawa-go",
+          "to": "Takayama Station",
+          "time": "15:30",
+          "minutes": 50,
+          "carrier": "Nohi express bus",
+          "notes": "Check the last useful return bus when you arrive.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Takayama Station",
+          "to": "Kyoto Station",
+          "time": "10:30",
+          "minutes": 270,
+          "carrier": "JR Hida limited express to Nagoya, then Tokaido Shinkansen",
+          "notes": "A long day on trains with one change at Nagoya; the Hida runs through river gorge scenery worth a window seat.",
+          "book": "Yes - Hida limited express seats are reserved"
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Kyoto Station",
+          "to": "Osaka Station",
+          "time": "10:30",
+          "minutes": 45,
+          "carrier": "JR special rapid service",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Public Transit",
+          "from": "Osaka hotel area",
+          "to": "Kansai International Airport (KIX)",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Haruka limited express or Nankai rapid",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "japan/senso-ji": {
+        "name": "Senso-ji Temple",
+        "description": "Tokyo's oldest Buddhist temple, approached through a gate and a long lane of souvenir and snack stalls in Asakusa.",
+        "details": "Senso-ji stands in Asakusa and is the oldest Buddhist temple in Tokyo, dedicated to the bodhisattva Kannon. Visitors reach the main hall through the Kaminarimon gate and then Nakamise-dori, a covered lane of stalls selling snacks and souvenirs that has operated in some form for centuries. The present buildings are post-war reconstructions, the originals having been destroyed in the Second World War. The grounds are flat and open to the public, and early morning is the quietest time to see them.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/tokyo-national-museum": {
+        "name": "Tokyo National Museum",
+        "description": "Japan's oldest and largest museum, holding the national collection of Japanese art and archaeology in Ueno Park.",
+        "details": "Founded in the 1870s, the Tokyo National Museum holds the largest collection of Japanese art and archaeological material in the country, spread across several buildings in Ueno Park. The Honkan, or Japanese Gallery, is the one most visitors concentrate on, moving chronologically through sculpture, ceramics, textiles, swords and screen painting. Some of the most fragile items rotate in and out of display, so the exact objects on show change through the year. Check opening days, as the museum closes one day a week.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/ueno-park": {
+        "name": "Ueno Park",
+        "description": "A large public park in central Tokyo holding several of the city's major museums, a shrine and a pond covered in lotus.",
+        "details": "Ueno Park occupies land that was once temple grounds and became one of Japan's first public parks in the 1870s. It now contains a cluster of major cultural institutions, a zoo, several shrines and Shinobazu Pond, whose southern basin fills with lotus in summer. The park is among Tokyo's best-known places to see cherry blossom, which makes it extremely busy for a few weeks in spring. Paths are broad and mostly level, so it works well as a connecting walk between museums.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/akihabara": {
+        "name": "Akihabara",
+        "description": "A Tokyo district of electronics retailers, game arcades and shops devoted to anime, manga and collectibles.",
+        "details": "Akihabara grew up as a post-war market for radio parts and electrical goods and is still known as an electronics district, though much of its retail has shifted toward anime, manga, games and collectibles. Multi-storey shops stack a different speciality on each floor, and arcades along the main street stay open late. The main avenue is closed to traffic on Sunday afternoons in some periods, which makes browsing easier. It is flat to walk but involves a lot of stairs and lifts inside the buildings.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/shibuya-crossing": {
+        "name": "Shibuya Crossing",
+        "description": "A large scramble intersection outside Shibuya Station where pedestrians cross from every direction at once.",
+        "details": "Shibuya Crossing is a scramble intersection where traffic halts in all directions and pedestrians cross diagonally as well as straight, beneath large video screens on the surrounding buildings. It is busiest in the early evening and after rain, when umbrellas make the crowd more photogenic. Several cafes and walkways overlooking the junction offer a view from above without standing in the crowd. The nearby Hachiko statue, a common meeting point, is on the station side of the crossing.",
+        "interests": [
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/tokyo-izakaya-dinner": {
+        "name": "Izakaya dinner in Shinjuku",
+        "description": "An evening of small dishes and drinks in one of the narrow lantern-lit alleys of bars behind Shinjuku Station.",
+        "details": "An izakaya is a Japanese pub where the food arrives as a run of small shared dishes rather than separate courses, ordered through the evening alongside beer, sake or shochu. Several lanes behind Shinjuku Station are lined with very small counter bars seating only a handful of people each, which gives the area its reputation. Some venues have picture menus or English menus and others do not, so it is worth checking at the door. Seats are often cramped and some bars levy a small cover charge.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/meiji-jingu": {
+        "name": "Meiji Jingu",
+        "description": "A Shinto shrine set in a dense planted forest in central Tokyo, approached under tall wooden torii gates.",
+        "details": "Meiji Jingu is a Shinto shrine dedicated to Emperor Meiji and Empress Shoken, reached along gravel paths through a forest of trees donated from across Japan when the shrine was established in the early twentieth century. The present buildings are a post-war reconstruction. The surrounding woodland makes the site noticeably quieter than the surrounding districts, despite sitting between Harajuku and Shinjuku. The approach is long but level, and visitors are asked to walk to the sides of the central path rather than down the middle.",
+        "interests": [
+          "culture",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/harajuku-takeshita": {
+        "name": "Harajuku and Takeshita Street",
+        "description": "A narrow pedestrian shopping street in Harajuku known for youth fashion, crepe stands and dense weekend crowds.",
+        "details": "Takeshita Street runs a few hundred metres from Harajuku Station and is lined with small shops selling youth fashion, accessories and street food, crepes in particular. It is narrow and becomes very crowded at weekends and on school holidays. The wider Harajuku area includes the quieter, more expensive boutiques of Omotesando a short walk south, which makes a calmer contrast. The street itself is flat, though moving through the crowd can be slow.",
+        "interests": [
+          "culture",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/tokyo-government-observatory": {
+        "name": "Tokyo Metropolitan Government Building observatory",
+        "description": "A free observation deck high in the twin-towered government building in Shinjuku, with wide views across the city.",
+        "details": "The Tokyo Metropolitan Government Building has observation decks near the top of both of its towers, reached by a dedicated lift from the ground floor, and entry is free. The view takes in the Shinjuku skyline and, on exceptionally clear days in the cooler months, Mount Fuji to the west. Because it costs nothing it is a common alternative to the paid observation decks elsewhere in the city. Only one tower is usually open at a time, and each closes on a set day, so check before going.",
+        "interests": [
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/tsukiji-outer-market": {
+        "name": "Tsukiji Outer Market",
+        "description": "A grid of lanes near the former wholesale fish market, lined with stalls selling seafood, produce and kitchen knives.",
+        "details": "The wholesale fish auction moved away from Tsukiji to Toyosu in 2018, but the outer market of retail stalls and small restaurants stayed, and it remains a working food market. Lanes are lined with vendors selling seafood, tamagoyaki, produce, dried goods and kitchen knives, with many stalls geared to eating on the spot. It is busiest in the morning and a good number of stalls shut by early afternoon, so it suits an early start. The lanes are flat but narrow and crowded, and some vendors close on Sundays and holidays.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/imperial-palace-east-gardens": {
+        "name": "Imperial Palace East Gardens",
+        "description": "The publicly accessible gardens of the Imperial Palace in central Tokyo, built within the stone walls and moats of the former Edo Castle.",
+        "details": "The East Gardens occupy part of the inner grounds of the Imperial Palace, on the site of the keep of Edo Castle, the seat of the Tokugawa shoguns. The castle tower itself is gone, but its massive stone base survives and can be climbed for a view over the lawns, along with surviving gates, guardhouses and moats. Entry is free and no ticket is needed, though the gardens close on certain days of the week. Paths are gravel with some slopes and steps up to the keep base.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/nikko-toshogu": {
+        "name": "Nikko and Tosho-gu",
+        "description": "A mountain town north of Tokyo whose lavishly decorated shrine complex is set among tall cedars.",
+        "details": "Nikko sits in the mountains of Tochigi Prefecture and is best known for Tosho-gu, the shrine complex enshrining Tokugawa Ieyasu, founder of the Edo shogunate. Its buildings are unusually elaborate for Japanese religious architecture, covered in carving, gilding and colour, and the shrines and temples of the area are collectively a UNESCO World Heritage Site. The site is spread over a wooded hillside with a good many steps between buildings. It makes a long but manageable day trip from Tokyo by train.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/kamakura": {
+        "name": "Kamakura",
+        "description": "A coastal town south of Tokyo, once Japan's seat of government, with a large bronze Buddha and many temples.",
+        "details": "Kamakura was the political centre of Japan from the late twelfth century for around 150 years, and the temples and shrines founded in that period are still the reason most people visit. The best known single sight is the Great Buddha, a bronze figure over ten metres tall that has stood in the open since the hall around it was destroyed centuries ago. Hase-dera and Tsurugaoka Hachimangu are usually combined with it, and the beach is a short walk from the station. Some temple approaches involve steps and short hill climbs.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/hakone-open-air-museum": {
+        "name": "Hakone Open-Air Museum",
+        "description": "A hillside sculpture park in Hakone where modern works are set outdoors against a backdrop of mountains.",
+        "details": "The Hakone Open-Air Museum places a large collection of modern and contemporary sculpture across terraced lawns and woodland on a hillside, so the works are seen against the surrounding mountains rather than gallery walls. Several indoor pavilions hold smaller pieces, including a dedicated Picasso collection. A foot bath fed by hot spring water sits within the grounds. Paths between the outdoor works slope and include steps, and the whole site is exposed to the weather, so it suits a dry day better.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/lake-ashi-cruise": {
+        "name": "Lake Ashi cruise",
+        "description": "A boat crossing of the caldera lake at Hakone, with views toward Mount Fuji in clear weather.",
+        "details": "Lake Ashi fills part of the caldera of the Hakone volcano, and sightseeing boats cross between landings at Togendai, Hakone-machi and Moto-Hakone. On clear days Mount Fuji rises beyond the far shore, though cloud over the mountain is common and the view cannot be relied on. The torii gate of Hakone Shrine stands in the water near Moto-Hakone and is visible from the boats. The crossing is short and the boats are a normal part of the Hakone loop rather than a separate excursion.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/owakudani": {
+        "name": "Owakudani",
+        "description": "An active volcanic valley above Hakone, with steaming sulphur vents reached by ropeway.",
+        "details": "Owakudani is a valley of sulphur vents and hot springs created by an eruption of the Hakone volcano, reached by the ropeway that runs across the hills above Lake Ashi. Steam rises continuously from the slopes and the smell of sulphur is strong. Because the area is volcanically active, walking trails and sometimes the ropeway itself close when gas levels rise, so check conditions before planning around it. The viewing area near the ropeway station is paved and short, with steeper paths beyond it.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/hakone-onsen": {
+        "name": "Hakone onsen bathing",
+        "description": "A soak in one of Hakone's hot spring baths, fed by the volcanic water the area has been known for since the Edo period.",
+        "details": "Hakone has drawn bathers to its hot springs since the Edo period, when it was a stop on the highway between Edo and Kyoto, and most inns in the area have their own baths. Bathing is done unclothed after washing at a seated shower station, and baths are usually separated by sex. Some establishments restrict entry for visible tattoos, so it is worth checking in advance. Many inns open their baths to non-staying visitors during set hours.",
+        "interests": [
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/mount-fuji-view": {
+        "name": "Mount Fuji viewpoint",
+        "description": "A clear-weather view of Japan's highest mountain, a near-symmetrical volcanic cone that is often hidden by cloud.",
+        "details": "Mount Fuji is the highest mountain in Japan and an active volcano whose almost symmetrical cone has been a subject of Japanese art for centuries; it is listed by UNESCO as a cultural site rather than a natural one. The summit carries snow for much of the year and is clearest in the cooler months, when dry air improves the odds of seeing it. Cloud frequently covers the mountain even in otherwise fine weather, so any view is a matter of luck. Early morning generally gives the best chance.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/fushimi-inari": {
+        "name": "Fushimi Inari Taisha",
+        "description": "A Shinto shrine south of Kyoto whose paths climb a wooded hillside beneath thousands of closely spaced vermilion torii gates.",
+        "details": "Fushimi Inari Taisha is the head shrine of Inari, associated with rice, prosperity and business, and fox statues appear throughout the grounds as Inari's messengers. Trails behind the main buildings climb Mount Inari through long tunnels of vermilion torii gates, each donated by an individual or company whose name is inscribed on it. The full circuit to the summit takes two to three hours and climbs steadily on steps; the busiest gate sections are in the first stretch. The grounds are open around the clock, so early morning and evening are much quieter.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "japan/kiyomizu-dera": {
+        "name": "Kiyomizu-dera",
+        "description": "A hillside Buddhist temple in eastern Kyoto, with a broad wooden veranda projecting out over the slope below.",
+        "details": "Kiyomizu-dera was founded in the late eighth century on a hillside in eastern Kyoto and takes its name from the spring that runs through the grounds. Its main hall is built out over the slope on a frame of tall wooden pillars assembled without nails, giving a wide veranda that looks back over the city. The approach climbs through the lanes of Higashiyama, lined with pottery and sweet shops, and is steep in places. The temple opens early, which is the easiest way to avoid the heaviest crowds.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/gion-district": {
+        "name": "Gion",
+        "description": "Kyoto's best-known entertainment district, a grid of wooden machiya townhouses, teahouses and lantern-lit lanes.",
+        "details": "Gion developed to serve travellers to Yasaka Shrine and became the centre of Kyoto's geiko and maiko tradition, which continues in its teahouses today. The lanes of Hanamikoji and Shirakawa retain rows of wooden machiya frontages, and the area is at its most atmospheric after dark when the lanterns are lit. Performers seen hurrying between appointments are at work, and several lanes now carry signs asking visitors not to photograph them or block the way. The streets are flat but the paving is uneven in places.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/nishiki-market": {
+        "name": "Nishiki Market",
+        "description": "A long covered market arcade in central Kyoto selling the city's pickles, tofu, sweets and seafood.",
+        "details": "Nishiki Market runs for several blocks as a narrow covered arcade through central Kyoto, with well over a hundred stalls, many of them long-established family businesses specialising in a single product. Kyoto pickles, tofu, dashi, sweets, knives and seafood are the things it is best known for. Eating while walking is discouraged by the market's own signage, and many stalls provide a spot to stand and eat instead. The arcade is flat and sheltered, and busiest around the middle of the day.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/kinkaku-ji": {
+        "name": "Kinkaku-ji",
+        "description": "A Zen temple pavilion in north-west Kyoto whose upper floors are covered in gold leaf and reflected in the pond before it.",
+        "details": "Kinkaku-ji began as a shogun's retirement villa in the late fourteenth century and became a Zen temple after his death. Its three-storey pavilion has the upper two floors covered in gold leaf and stands at the edge of a pond laid out so that the building is reflected in the water. The present structure is a 1950s reconstruction, the earlier one having been destroyed by arson. A one-way path leads around the pond and through the garden, so the visit is short and the route does not allow doubling back.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/ryoan-ji": {
+        "name": "Ryoan-ji",
+        "description": "A Zen temple in north-west Kyoto known for a dry rock garden of fifteen stones set in raked gravel.",
+        "details": "Ryoan-ji is a Zen temple whose dry garden is the best known example of the karesansui style, in which gravel, rock and moss stand in for water and landscape. Fifteen stones are arranged in groups within a walled rectangle of raked gravel, positioned so that not all of them can be seen at once from any single point on the viewing veranda. Who designed it, and when, is not settled. Visitors sit on the wooden veranda to look at the garden, and the adjoining pond garden is quieter than the main attraction.",
+        "interests": [
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/arashiyama-bamboo-grove": {
+        "name": "Arashiyama bamboo grove",
+        "description": "A walled path through tall stands of bamboo in western Kyoto, beside the temple gardens and river of the Arashiyama district.",
+        "details": "The bamboo grove at Arashiyama is a short, level path running between dense walls of tall bamboo, on the edge of the grounds of Tenryu-ji temple. The walk itself takes only a few minutes, so most visitors combine it with Tenryu-ji's garden, the Togetsukyo bridge over the Katsura river and the surrounding streets. It is one of the busiest spots in Kyoto in daylight, and early morning is the only reliable way to see it without crowds. The path is flat and surfaced.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/kyoto-tea-ceremony": {
+        "name": "Kyoto tea ceremony",
+        "description": "A guided introduction to the Japanese tea ceremony, in which matcha is prepared and served according to a set form.",
+        "details": "The Japanese tea ceremony is a formalised way of preparing and serving powdered green tea in which the movements, utensils and setting are all prescribed, and which developed its present form in Kyoto from the sixteenth century. Sessions aimed at visitors usually last around an hour, explain the sequence as it happens and let guests whisk a bowl themselves. A small sweet is served first to offset the bitterness of the tea. Many venues involve sitting on tatami, though some provide chairs if asked in advance.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/philosophers-path": {
+        "name": "Philosopher's Path",
+        "description": "A canal-side walking path in eastern Kyoto linking several temples, lined with cherry trees.",
+        "details": "The Philosopher's Path follows a canal for around two kilometres through the hills of eastern Kyoto, taking its name from a professor who is said to have walked it daily. Cherry trees line much of the route, which makes it one of the busier spots in the city during the short blossom season and quiet for most of the rest of the year. It connects a string of temples including Ginkaku-ji at the northern end and Nanzen-ji toward the south. The path is level and paved, and the temples along it each charge separately.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/nara-todai-ji": {
+        "name": "Todai-ji",
+        "description": "A Buddhist temple in Nara housing one of the world's largest bronze Buddha figures in a vast wooden hall.",
+        "details": "Todai-ji was founded in the eighth century, when Nara was the capital, and its Great Buddha Hall holds a seated bronze Daibutsu around fifteen metres tall. The present hall is an early eighteenth-century rebuilding and is still among the largest wooden buildings anywhere, though smaller than the original. The temple is part of the group of Nara monuments listed by UNESCO. The hall is approached across broad gravel courtyards through the Nandaimon gate, and the route is level with a few steps at the entrances.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/nara-deer-park": {
+        "name": "Nara Park",
+        "description": "A large park in central Nara where wild sika deer move freely among the temples and visitors.",
+        "details": "Nara Park surrounds the city's main temples and is home to several hundred wild sika deer, which have lived there for centuries and were historically protected as messengers of the local shrine. Vendors sell crackers made for feeding them, and the deer approach visitors readily as a result. They are wild animals and can push or nip when food is involved, so children are worth keeping close. The park is broad, level and easy to cross on foot between Todai-ji and Kasuga Taisha.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/osaka-castle": {
+        "name": "Osaka Castle",
+        "description": "A reconstructed castle keep on a stone-walled island of moats in central Osaka, surrounded by a public park.",
+        "details": "Osaka Castle was built in the late sixteenth century by Toyotomi Hideyoshi and was central to the wars that unified Japan; the keep standing today is a 1930s concrete reconstruction on the original stone base. Inside, it works as a museum on the castle's history, with a viewing floor at the top. The surrounding park, moats and massive cut-stone walls are free to walk and are the better part of the visit for many people. The approach from the park gates to the keep involves a steady climb and steps.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/dotonbori": {
+        "name": "Dotonbori",
+        "description": "A canal-side strip in Osaka crowded with illuminated signs, street food stalls and restaurants.",
+        "details": "Dotonbori runs along a canal in central Osaka and is the city's best-known eating and nightlife strip, lined with large illuminated and mechanical signs that restaurants have competed over for decades. Takoyaki and okonomiyaki stalls are the local specialities most associated with it. It is at its most striking after dark, when the signs are lit and reflected in the water, and the riverside walkway gives a view of the strip from the opposite bank. The area is flat but extremely crowded in the evenings.",
+        "interests": [
+          "food",
+          "nightlife",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/kuromon-market": {
+        "name": "Kuromon Ichiba Market",
+        "description": "A covered market arcade in central Osaka selling seafood, fruit and prepared food, much of it cooked to order.",
+        "details": "Kuromon Ichiba is a covered market arcade of a few hundred metres in central Osaka, long used by local restaurants for supplies and now equally geared to visitors eating on the spot. Stalls sell seafood, including scallops and crab grilled to order, along with fruit, pickles and prepared dishes. Mornings are the liveliest time and some stalls shut in the later afternoon. The arcade is flat and covered, which makes it a reasonable option in poor weather.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/umeda-sky-building": {
+        "name": "Umeda Sky Building",
+        "description": "Twin Osaka towers joined at the top by an open-air rooftop walkway and observation deck.",
+        "details": "The Umeda Sky Building is a pair of towers in northern Osaka linked near the top by a bridge section carrying an open-air rooftop deck, reached by an escalator that crosses the gap between them. The deck circles the roof in the open rather than behind glass, which makes for an unobstructed view across the city. It is popular around sunset, when the city lights come on. Because the top deck is outdoors it can be cold and windy, and it may close in bad weather.",
+        "interests": [
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/hiroshima-peace-park": {
+        "name": "Hiroshima Peace Memorial Park",
+        "description": "A memorial park on the site destroyed by the 1945 atomic bombing, holding the preserved ruin of the A-Bomb Dome and a museum.",
+        "details": "The Peace Memorial Park occupies ground at the centre of the area destroyed by the atomic bombing of Hiroshima in August 1945. The skeletal remains of the former Industrial Promotion Hall, known as the A-Bomb Dome, have been stabilised and left as they were and are a UNESCO World Heritage Site. The Peace Memorial Museum sets out the events and their human consequences in direct terms, and many visitors find it difficult. The park is flat and open, and allowing two hours or more for the museum and the memorials is reasonable.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/miyajima-itsukushima": {
+        "name": "Miyajima and Itsukushima Shrine",
+        "description": "An island off Hiroshima whose shrine and vermilion torii gate stand in the sea, cut off and revealed by the tide.",
+        "details": "Miyajima, formally Itsukushima, is an island in the Seto Inland Sea reached by a short ferry from near Hiroshima. Itsukushima Shrine is built out over the water on piles, with its vermilion torii gate standing offshore, so the setting changes completely between high tide, when both appear to float, and low tide, when the gate can be walked out to. The island and shrine are a UNESCO World Heritage Site. Wild deer roam the village, and a ropeway and walking trails climb Mount Misen above it.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/hiroshima-okonomiyaki": {
+        "name": "Hiroshima-style okonomiyaki",
+        "description": "The local version of okonomiyaki, layered rather than mixed, with noodles pressed between batter, cabbage and egg.",
+        "details": "Okonomiyaki is a savoury pancake cooked on a griddle, and the Hiroshima style differs from the Osaka one by layering the ingredients instead of mixing them into the batter, with a nest of fried noodles and a thin omelette pressed on top. It is usually cooked in front of diners on a hotplate set into the counter and eaten straight from it. Buildings in the city centre house floors of small competing okonomiyaki counters. Seating is usually at the griddle, which gets warm.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/kenroku-en": {
+        "name": "Kenroku-en",
+        "description": "A large landscape garden in Kanazawa, laid out over two centuries by the ruling Maeda family.",
+        "details": "Kenroku-en adjoins Kanazawa Castle and was developed by the Maeda clan across roughly two centuries before opening to the public in the 1870s. It is a strolling garden built around ponds, streams, bridges and carefully framed viewpoints, and it is conventionally counted among the three most celebrated gardens in Japan. In winter, rope supports are rigged from poles to protect the branches of its pines from snow, which is one of the garden's best-known sights. Paths wind and include slopes, gravel and steps.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/higashi-chaya": {
+        "name": "Higashi Chaya District",
+        "description": "A preserved quarter of Kanazawa with rows of wooden teahouses, some open to visitors as museums.",
+        "details": "Higashi Chaya is the largest of Kanazawa's surviving teahouse districts, a grid of streets lined with two-storey wooden buildings whose slatted lattice fronts are characteristic of the type. A few of the teahouses are open as museums, showing the upstairs rooms where guests were entertained. Several shops in the district work in gold leaf, which Kanazawa has long produced in quantity. The streets are flat but the paving is uneven, and the teahouse interiors involve steep, narrow stairs.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "japan/omicho-market": {
+        "name": "Omicho Market",
+        "description": "Kanazawa's main covered market, trading in seafood from the Sea of Japan since the Edo period.",
+        "details": "Omicho has been Kanazawa's main food market since the Edo period and remains a working one, with aisles of fishmongers, greengrocers and small restaurants under a covered roof. Seafood from the Sea of Japan is what it is known for, crab in the winter months in particular, and several upstairs restaurants serve seafood rice bowls made from the stalls below. Mornings are busiest and some stalls close early in the afternoon. The aisles are flat but narrow.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/kanazawa-21st-century-museum": {
+        "name": "21st Century Museum of Contemporary Art",
+        "description": "A circular, glass-walled contemporary art museum in central Kanazawa with several permanent installation works.",
+        "details": "The 21st Century Museum of Contemporary Art occupies a low circular building walled in glass, designed so that it has no single front entrance and can be entered from any side. Part of the building is free to walk through and the exhibition galleries are ticketed. Several commissioned installations are permanent fixtures, the best known being a swimming pool piece that appears to hold water when viewed from above. It sits directly across from Kenroku-en, so the two combine easily. The building is level throughout.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/takayama-old-town": {
+        "name": "Takayama old town",
+        "description": "A grid of preserved Edo-period merchant streets in the mountain town of Takayama, with dark wooden shopfronts and sake breweries.",
+        "details": "Takayama sits in the mountains of Gifu Prefecture and its Sanmachi district preserves several streets of Edo-period merchant houses, built in dark timber with deep eaves and lattice fronts. Some are open as museums and others still trade, including a number of long-established sake breweries that hang a cedar ball above the door when the new season's sake is ready. The streets are narrow, flat and easy to walk. Many shops and breweries close relatively early in the evening.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/takayama-morning-market": {
+        "name": "Takayama morning market",
+        "description": "An open-air morning market along the river in Takayama, selling local produce, pickles and crafts.",
+        "details": "Takayama holds open-air morning markets that have run for centuries, one strung along the bank of the Miyagawa river and another in front of Jinya, the former government house. Stalls sell local vegetables, pickles, miso, dried goods and small crafts, many of them run by growers from the surrounding valleys. The markets operate in the morning only and begin winding down well before midday, so an early start is necessary. The riverside path is flat and open to the weather.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "japan/shirakawa-go": {
+        "name": "Shirakawa-go",
+        "description": "A valley village of steeply thatched farmhouses in the mountains of Gifu, built to shed heavy winter snow.",
+        "details": "Shirakawa-go lies in a mountain valley where houses were built in the gassho-zukuri style, with very steep thatched roofs pitched to shed the region's heavy snowfall, and some of the surviving farmhouses are several centuries old. The village, together with nearby Gokayama, is a UNESCO World Heritage Site, and a number of the houses are open to visitors as museums. A viewpoint on the slope above the village looks down over the whole valley. It is reached by bus from Takayama or Kanazawa, and the path to the viewpoint climbs.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "japan": {
+        "name": "Japan",
+        "description": "An island country pairing dense, fast-moving cities with temple towns, mountain hot springs and one of the world's best rail networks.",
+        "images": []
+      },
+      "japan/tokyo": {
+        "name": "Tokyo",
+        "description": "Japan's vast capital, a cluster of distinct districts running from temple quarters and palace gardens to neon crossings and electronics arcades.",
+        "images": []
+      },
+      "japan/kyoto": {
+        "name": "Kyoto",
+        "description": "The former imperial capital, holding much of Japan's surviving temple and garden architecture along with its teahouse districts.",
+        "images": []
+      },
+      "japan/osaka": {
+        "name": "Osaka",
+        "description": "A direct, food-driven port city known for street eating, a reconstructed castle and a blunter character than Tokyo or Kyoto.",
+        "images": []
+      },
+      "japan/nara": {
+        "name": "Nara",
+        "description": "Japan's eighth-century capital, with a giant bronze Buddha, early temples and a park where wild deer roam freely.",
+        "images": []
+      },
+      "japan/kanagawa": {
+        "name": "Kanagawa",
+        "description": "The prefecture south-west of Tokyo, taking in the port of Yokohama, the temple town of Kamakura and the hot springs of Hakone.",
+        "images": []
+      },
+      "japan/kamakura": {
+        "name": "Kamakura",
+        "description": "A coastal town south of Tokyo, briefly Japan's seat of government, now visited for its temples, great bronze Buddha and beaches.",
+        "images": []
+      },
+      "japan/tochigi": {
+        "name": "Tochigi",
+        "description": "A prefecture north of Tokyo of mountains, hot springs and shrine towns, most visited for Nikko.",
+        "images": []
+      },
+      "japan/nikko": {
+        "name": "Nikko",
+        "description": "A mountain town north of Tokyo whose elaborately decorated shrines and temples sit among tall cedar forest.",
+        "images": []
+      },
+      "japan/hakone": {
+        "name": "Hakone",
+        "description": "A hot spring area in the caldera of a volcano south-west of Tokyo, with a lake, sulphur vents and Mount Fuji views in clear weather.",
+        "images": []
+      },
+      "japan/hiroshima": {
+        "name": "Hiroshima",
+        "description": "A rebuilt city on the Seto Inland Sea, centred on the memorial park marking the 1945 atomic bombing and the island shrine of Miyajima.",
+        "images": []
+      },
+      "japan/gifu": {
+        "name": "Gifu",
+        "description": "A mountainous central prefecture of old merchant towns, thatched farmhouse villages and hot springs in the Japanese Alps.",
+        "images": []
+      },
+      "japan/takayama": {
+        "name": "Takayama",
+        "description": "A mountain town in Gifu with preserved Edo-period merchant streets, morning markets and long-established sake breweries.",
+        "images": []
+      },
+      "japan/ishikawa": {
+        "name": "Ishikawa",
+        "description": "A prefecture on the Sea of Japan coast, known for the gardens and craft traditions of its castle town, Kanazawa.",
+        "images": []
+      },
+      "japan/kanazawa": {
+        "name": "Kanazawa",
+        "description": "A former castle town on the Sea of Japan, with one of the country's most celebrated gardens, preserved teahouse districts and a seafood market.",
+        "images": []
+      }
+    }
+  }
+}
