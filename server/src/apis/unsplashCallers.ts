@@ -1,6 +1,6 @@
 import { getApiCacheSetting } from '../config/apiLimits';
 import { createTtlCache } from '../utils/ttlCache';
-import { getUnsplashRandomPhoto, searchUnsplashPhotos } from './unsplashApi';
+import { getUnsplashRandomPhoto, searchUnsplashPhotos, type UnsplashSearchResult } from './unsplashApi';
 import { logInfo } from '../logger';
 import { ApiLimitExceededError } from './usageLimiter';
 
@@ -17,10 +17,57 @@ const itineraryVariantQueries: Record<ItineraryImageVariant, string> = {
   outdoors: 'nature outdoors',
 };
 
-const firstRegularUrl = (data: Awaited<ReturnType<typeof searchUnsplashPhotos>>): string | null => {
-  const url = data?.results?.[0]?.urls?.regular;
+type SearchResults = Awaited<ReturnType<typeof searchUnsplashPhotos>>;
+type PickResult = (data: SearchResults) => string | null;
+
+const regularUrl = (result: UnsplashSearchResult | undefined): string | null => {
+  const url = result?.urls?.regular;
   return typeof url === 'string' && url.trim().length > 0 ? url : null;
 };
+
+const firstRegularUrl: PickResult = (data) => regularUrl(data?.results?.[0]);
+
+const foldText = (value: string): string =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+// The place a photo must mention: the first comma segment of the destination
+// ("Lisbon" from "Lisbon, Portugal"), so a photo merely tagged with the country
+// doesn't count as the city.
+const destinationPhrase = (locationName: string): string => foldText(String(locationName ?? '').split(',')[0] ?? '');
+
+const resultMentions = (result: UnsplashSearchResult, phrase: string): boolean => {
+  if (!phrase) return false;
+  const text = foldText([
+    result.description,
+    result.alt_description,
+    result.location?.name,
+    result.location?.city,
+    result.location?.country,
+    ...(result.tags ?? []).map((tag) => tag?.title),
+  ].filter(Boolean).join(' '));
+  return ` ${text} `.includes(` ${phrase} `);
+};
+
+// Unsplash ranks a themed query like "Lisbon culture landmarks" largely on the theme words,
+// so its top hit can be another city's landmark (the Louvre on a Lisbon day). Only accept a
+// result whose description, location or tags actually name the destination.
+// `offset` spreads the day themes across different photos when several qualify, so a plain
+// destination search used as the fallback doesn't give every day the same top photo.
+const pickMentioning = (locationName: string, fallbackToAny: boolean, offset = 0): PickResult => (data) => {
+  const phrase = destinationPhrase(locationName);
+  const usable = (data?.results ?? []).filter((result) => regularUrl(result));
+  const matches = usable.filter((result) => resultMentions(result, phrase));
+  const pool = matches.length ? matches : fallbackToAny ? usable : [];
+  return pool.length ? regularUrl(pool[offset % pool.length]) : null;
+};
+
+const ITINERARY_SEARCH_PAGE_SIZE = 10;
+const ITINERARY_VARIANT_ORDER: readonly ItineraryImageVariant[] = ['culture', 'food', 'outdoors'];
 
 const getUrlLookupTtlMs = (): number => {
   const raw = getApiCacheSetting('unsplash', 'urlLookupTtlMs');
@@ -59,7 +106,8 @@ export const clearUnsplashUrlCache = (): void => {
 const fetchUnsplashImage = async (
   caller: string,
   accessKey: string,
-  locationName: string
+  locationName: string,
+  options: { perPage?: number; pick?: PickResult; cacheKeySuffix?: string } = {}
 ): Promise<string | null> => {
   const trimmedQuery = String(locationName ?? '').trim();
   // Empty queries short-circuit before the cache so a one-off bad input
@@ -70,7 +118,7 @@ const fetchUnsplashImage = async (
   if (blockedUntil > Date.now()) return null;
   if (blockedUntil) blockedCallerUntil.delete(caller);
 
-  const key = buildKey(caller, trimmedQuery);
+  const key = buildKey(caller, trimmedQuery) + (options.cacheKeySuffix ?? '');
   return urlLookupCache.getOrFetch(
     key,
     async () => {
@@ -80,7 +128,7 @@ const fetchUnsplashImage = async (
           caller,
           accessKey,
           query: trimmedQuery,
-          perPage: 1,
+          perPage: options.perPage ?? 1,
           orientation: 'landscape',
         });
       } catch (error) {
@@ -91,7 +139,7 @@ const fetchUnsplashImage = async (
         }
         throw error;
       }
-      const url = firstRegularUrl(data);
+      const url = (options.pick ?? firstRegularUrl)(data);
       if (!url) {
         logInfo(`[unsplash] no landscape photo returned for caller=${caller} query="${trimmedQuery}"`);
       }
@@ -113,16 +161,29 @@ export const fetchUnsplashImageForLocation = async (
 ): Promise<string | null> =>
   fetchUnsplashImage(UNSPLASH_CALLER_IMAGE_SERVICE_LOCATION, accessKey, locationName);
 
+// Try the themed query first, keeping only a photo that names the destination. If none does,
+// search the destination alone, which reliably returns photos of the place itself.
 export const fetchUnsplashImageForItinerary = async (
   accessKey: string,
   locationName: string,
   variant?: ItineraryImageVariant
-): Promise<string | null> =>
-  fetchUnsplashImage(
-    UNSPLASH_CALLER_IMAGE_SERVICE_ITINERARY,
-    accessKey,
-    variant ? `${locationName} ${itineraryVariantQueries[variant]}` : locationName
-  );
+): Promise<string | null> => {
+  if (variant) {
+    const themed = await fetchUnsplashImage(
+      UNSPLASH_CALLER_IMAGE_SERVICE_ITINERARY,
+      accessKey,
+      `${locationName} ${itineraryVariantQueries[variant]}`,
+      { perPage: ITINERARY_SEARCH_PAGE_SIZE, pick: pickMentioning(locationName, false) }
+    );
+    if (themed) return themed;
+  }
+  const offset = variant ? ITINERARY_VARIANT_ORDER.indexOf(variant) : 0;
+  return fetchUnsplashImage(UNSPLASH_CALLER_IMAGE_SERVICE_ITINERARY, accessKey, locationName, {
+    perPage: ITINERARY_SEARCH_PAGE_SIZE,
+    pick: pickMentioning(locationName, true, offset),
+    cacheKeySuffix: variant ? `#${variant}` : undefined,
+  });
+};
 
 export const fetchUnsplashImageForGooglePlaceFallback = async (
   accessKey: string,

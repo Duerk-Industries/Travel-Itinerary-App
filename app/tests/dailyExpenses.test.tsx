@@ -121,6 +121,19 @@ describe('DailyExpensesTab', () => {
     expect(getByText('Cafe Nero')).toBeTruthy();
   });
 
+  it('opens the add-expense form on its own when the phone Add menu asks, once', () => {
+    const onAutoOpenAddHandled = jest.fn();
+    const { getByText } = render(
+      <DailyExpensesTab
+        backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+        groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1"
+        styles={styles} costTrackingAllowed autoOpenAdd onAutoOpenAddHandled={onAutoOpenAddHandled}
+      />
+    );
+    expect(getByText('EUR')).toBeTruthy();
+    expect(onAutoOpenAddHandled).toHaveBeenCalledTimes(1);
+  });
+
   it('has a Settle Up button that opens the Balances page, and omits it when the viewer cannot open it', () => {
     const common = {
       backendUrl: 'http://example.test', theme, headers: {}, jsonHeaders: {}, trip, groupMembers, expenses,

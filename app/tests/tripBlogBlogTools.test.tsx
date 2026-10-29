@@ -7,6 +7,7 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import TripBlogTab from '../tabs/tripBlog';
+import { getAppTheme } from '../theme/theme';
 
 const styles: Record<string, any> = { card: {}, sectionTitle: {}, button: {}, buttonText: {} };
 const backendUrl = 'https://wanderbunnies.test';
@@ -82,14 +83,13 @@ describe('TripBlogTab — "Blog tools" drawer visibility', () => {
     expect(screen.getByTestId('blog-day-fact-2026-09-01-weather')).toBeTruthy();
   });
 
-  it.each([
-    ['light', '#111827', '#F2F5F7'],
-    ['dark', '#E6ECEF', '#1C2B3A'],
-  ])('uses readable edit-button text in %s mode', async (_mode, text, surfaceMuted) => {
-    const screen = mount(false, {}, { theme: { colors: { text, surfaceMuted, cta: '#F59E0B' } } });
+  it.each(['light', 'dark'] as const)('uses readable edit-button text in %s mode', async (mode) => {
+    const theme = getAppTheme(mode, mode);
+    const { text, surfaceMuted } = theme.colors;
+    const screen = mount(false, {}, { theme });
     const toggle = await screen.findByTestId('blog-edit-toggle');
-    expect(mergedStyle(toggle.props.style).backgroundColor).toBe('#F59E0B');
-    expect(mergedStyle(screen.getByText('Edit blog').props.style).color).toBe('#0B1726');
+    expect(mergedStyle(toggle.props.style).backgroundColor).toBe(theme.colors.cta);
+    expect(mergedStyle(screen.getByText('Edit blog').props.style).color).toBe(theme.colors.onCta);
     fireEvent.press(toggle);
     await waitFor(() => expect(screen.getByText('Done editing')).toBeTruthy());
     expect(mergedStyle(screen.getByTestId('blog-edit-toggle').props.style).backgroundColor).toBe(surfaceMuted);

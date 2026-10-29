@@ -434,8 +434,11 @@ export const normalizeFlightFromApi = (f: any): Flight => ({
     : Array.isArray(f.passengerIds)
       ? f.passengerIds
       : [],
-  departure_date: f.departure_date ?? f.departureDate ?? '',
-  arrival_date: f.arrival_date ?? f.arrivalDate ?? null,
+  // Plain YYYY-MM-DD; a full timestamp (Postgres/in-memory DATE columns) would otherwise be
+  // read in local time and land on the previous day in US time zones.
+  departure_date: normalizeDateString(f.departure_date ?? f.departureDate ?? ''),
+  departureDate: normalizeDateString(f.departureDate ?? f.departure_date ?? ''),
+  arrival_date: (f.arrival_date ?? f.arrivalDate) ? normalizeDateString(f.arrival_date ?? f.arrivalDate) : null,
   departure_location: f.departure_location ?? f.departureLocation ?? '',
   arrival_location: f.arrival_location ?? f.arrivalLocation ?? '',
   layover_location: f.layover_location ?? f.layoverLocation ?? '',
@@ -459,7 +462,7 @@ export const normalizeFlightFromApi = (f: any): Flight => ({
     : Array.isArray(f.paidBy)
       ? f.paidBy
       : [],
-  arrivalDate: f.arrival_date ?? f.arrivalDate ?? null,
+  arrivalDate: (f.arrival_date ?? f.arrivalDate) ? normalizeDateString(f.arrival_date ?? f.arrivalDate) : null,
 });
 
 export const fetchFlightsForTrip = async ({

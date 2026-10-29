@@ -21,6 +21,8 @@ const isLoopbackHostname = (value: string): boolean => /^(localhost|127\.0\.0\.1
 const getWebLoopbackHostname = (value: string): string =>
   /^(localhost|::1)$/i.test(value.trim()) ? '127.0.0.1' : value;
 
+const isFirebasePreviewHostname = (value: string): boolean => /^[a-z0-9-]+--[a-z0-9-]+\.web\.app$/i.test(value.trim());
+
 const stripTrailingSlash = (value: string): string => value.replace(/\/$/, '');
 
 const normalizeBackendUrl = (raw: string, defaultProtocol: 'http' | 'https'): string => {
@@ -82,6 +84,13 @@ export const resolveBackendUrl = ({
         return remappedLoopbackBackend;
       }
       return `${protocol}//${getWebLoopbackHostname(hostname)}:4000`;
+    }
+
+    // Firebase Hosting preview channels (`<site>--<channel>.web.app`) proxy /api to the same
+    // Cloud Run service as production, so use the preview's own origin. Calling the configured
+    // production domain from there is cross-origin and blocked by the API's CORS allowlist.
+    if (isFirebasePreviewHostname(hostname)) {
+      return browserOrigin;
     }
 
     if (configuredBackend) {

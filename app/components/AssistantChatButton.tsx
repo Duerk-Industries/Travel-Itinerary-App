@@ -13,23 +13,29 @@ import { shadowStyle } from '../utils/shadowStyle';
  * doesn't collide with the trip group-chat FAB.
  */
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
+import { useFloatingInset } from '../contexts/FloatingInsetContext';
+import Icon from './Icon';
 
 interface Props {
   onPress: () => void;
 }
 
-const AssistantChatButton: React.FC<Props> = ({ onPress }) => { const _styleTheme = useStyleTheme(); return ((
+const AssistantChatButton: React.FC<Props> = ({ onPress }) => {
+  const _styleTheme = useStyleTheme();
+  const floatingInset = useFloatingInset();
+  return (
   <TouchableOpacity
     onPress={onPress}
-    style={styles(_styleTheme).fab}
+    style={[styles(_styleTheme).fab, floatingInset ? themeStyle('components_AssistantChatButton_2', { floatingInset: floatingInset }, _styleTheme) : null]}
     testID="assistant-chat-fab"
     accessibilityRole="button"
     accessibilityLabel="Open the app guide assistant"
   >
-    <Text style={styles(_styleTheme).icon} accessibilityElementsHidden importantForAccessibility="no">✨</Text>
+    <Icon name="sparkle" color={themeStyle('components_AssistantChatButton_3', {  }, _styleTheme)} size={24} />
   </TouchableOpacity>
-)); };
+  );
+};
 
 const styles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_AssistantChatButton_1', { StyleSheet: StyleSheet, shadowStyle: shadowStyle }, _theme);
 

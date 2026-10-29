@@ -53,6 +53,14 @@ export type AppTheme = {
     onSelected: string;
     onSurface: string;
   };
+  /**
+   * Soft two-stop gradients for the monochrome look: `cta` for primary buttons, `hero` for
+   * banners and photo-less cards. Each is [top, bottom]; `cta`'s average is close to `colors.cta`.
+   */
+  gradients: {
+    cta: [string, string];
+    hero: [string, string];
+  };
   typography: {
     display: number;
     h1: number;
@@ -98,6 +106,8 @@ export const hitSlop = {
 
 const lightTheme: AppTheme = {
   mode: 'light',
+  // Monochrome: white surfaces, near-black ink, and soft graphite gradients for emphasis.
+  // Semantic colors (success / warning / error / info) keep their hues.
   colors: {
     background: '#FFFFFF', // Previously #FAFCFD
     backgroundAlt: '#F5F5F5', // Previously #F2F5F7
@@ -147,6 +157,10 @@ const lightTheme: AppTheme = {
     onSelected: '#FFFFFF',
     onSurface: '#0A0A0A', // Previously #111827
   },
+  gradients: {
+    cta: ['#2B2B2B', '#050505'],
+    hero: ['#3A3A3A', '#0A0A0A'],
+  },
   typography: {
     display: 44,
     h1: 32,
@@ -165,6 +179,7 @@ const lightTheme: AppTheme = {
 
 const darkTheme: AppTheme = {
   mode: 'dark',
+  // Monochrome dark: true-black ground, graphite surfaces, and white for emphasis.
   colors: {
     background: '#000000', // Previously #0B1726
     backgroundAlt: '#111111', // Previously #1C2B3A
@@ -214,6 +229,10 @@ const darkTheme: AppTheme = {
     onSelected: '#0A0A0A', // Previously #0B1726
     onSurface: '#F5F5F5', // Previously #E6ECEF
   },
+  gradients: {
+    cta: ['#FFFFFF', '#D9D9D9'],
+    hero: ['#2E2E2E', '#0A0A0A'],
+  },
   typography: lightTheme.typography,
   spacing: lightTheme.spacing,
 };
@@ -236,6 +255,22 @@ const ctaGradientStyle = (theme: AppTheme) => ({
   [Platform.OS === 'web' ? 'backgroundImage' : 'experimental_backgroundImage']:
     `linear-gradient(180deg, ${theme.colors.ctaGradientStart}, ${theme.colors.ctaGradientEnd})`,
 });
+
+/**
+ * Style that paints a vertical two-stop gradient behind a view, on top of its solid
+ * `backgroundColor` (which stays the fallback where gradients aren't supported). Web uses CSS;
+ * native uses React Native's `experimental_backgroundImage` (new architecture).
+ */
+export const gradientFill = ([top, bottom]: [string, string]): Record<string, string> => {
+  const css = `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)`;
+  return Platform.OS === 'web' ? { backgroundImage: css } : { experimental_backgroundImage: css };
+};
+
+/**
+ * Background for buttons whose label is fixed white (admin tools): the main button color in
+ * light mode, and graphite in dark mode, where the main button color is near-white.
+ */
+export const whiteLabelButtonColor = (theme: AppTheme): string => (theme.mode === 'dark' ? '#333333' : theme.colors.cta);
 
 export const getAppTheme = (
   appearancePreference: AppearancePreference,
@@ -280,6 +315,7 @@ const styleFactories = {
   tabs_allTrips_layout5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 12 }),
   tabs_createTripWizard_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexWrap: 'wrap', gap: 8 }),
   tabs_overview_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }),
+  tabs_overview_layout4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%' }),
   tabs_overview_layout2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ justifyContent: 'space-between', alignItems: 'center', width: '100%' }),
   tabs_overview_layout3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginLeft: 'auto' }),
   tabs_tripBlog_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', height: 280, borderRadius: 16, marginBottom: 16 }),
@@ -340,6 +376,7 @@ const styleFactories = {
   App_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ alignSelf: 'flex-start', marginTop: 24 }),
   // App.tsx
   App_13: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.linkText, fontWeight: theme.typography.weightSemibold }),
+  App_14: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexShrink: 1, minWidth: 0 }),
   // AppEntry.js
   AppEntry_1: (_theme: AppTheme, { StyleSheet, Platform, StatusBar }: ThemeStyleValues): any => (StyleSheet.create({
   safeArea: {
@@ -579,6 +616,8 @@ const styleFactories = {
 })),
   // components/AddToCalendarButton.tsx
   components_AddToCalendarButton_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexShrink: 1 }),
+  components_AddToCalendarButton_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingHorizontal: 10, minWidth: 40, alignItems: 'center' }),
+  components_AddToCalendarButton_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 16 }),
   // components/admin/aiOps/AiOperationsSection.tsx
   components_admin_aiOps_AiOperationsSection_1: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ color: theme.colors.textMuted }),
   // components/admin/aiOps/AiOperationsSection.tsx
@@ -1016,8 +1055,8 @@ const styleFactories = {
       borderColor: _theme.colors.transparent,
     },
     pickerRowSelected: {
-      borderColor: _theme.colors.premiumBorder,
-      backgroundColor: theme?.mode === 'dark' ? _theme.colors.premiumAction : _theme.colors.surfaceMuted,
+      borderColor: _theme.colors.text,
+      backgroundColor: theme?.mode === 'dark' ? _theme.colors.accentAction : _theme.colors.surfaceMuted,
     },
     pickerRowTitle: {
       color: theme?.colors.text ?? _theme.colors.text,
@@ -1050,7 +1089,7 @@ const styleFactories = {
       fontSize: 14,
     },
     confirmButton: {
-      backgroundColor: _theme.colors.premiumAction,
+      backgroundColor: _theme.colors.accentAction,
     },
     confirmButtonText: {
       color: _theme.colors.onAccent,
@@ -1067,7 +1106,7 @@ const styleFactories = {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: _theme.colors.premiumAction,
+    backgroundColor: _theme.colors.accentAction,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
@@ -1083,6 +1122,8 @@ const styleFactories = {
     height: 56,
     borderRadius: 28,
     ...ctaGradientStyle(_theme), // Previously premiumAction
+    borderWidth: 1,
+    borderColor: _theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
@@ -1093,6 +1134,8 @@ const styleFactories = {
     fontSize: 24,
   },
 })),
+  components_AssistantChatButton_2: (_theme: AppTheme, { floatingInset }: ThemeStyleValues): any => ({ bottom: 24 + floatingInset }),
+  components_AssistantChatButton_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onCta),
   // components/AssistantChatPanel.tsx
   components_AssistantChatPanel_1: (_theme: AppTheme, { getResponsivePanelWidth, PANEL_HEIGHT }: ThemeStyleValues): any => ({ width: getResponsivePanelWidth(), height: PANEL_HEIGHT }),
   // components/AssistantChatPanel.tsx
@@ -1132,7 +1175,7 @@ const styleFactories = {
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: _theme.colors.premiumAction,
+    backgroundColor: _theme.colors.accentAction,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -1192,7 +1235,7 @@ const styleFactories = {
   },
   primaryButton: {
     marginTop: 4,
-    backgroundColor: _theme.colors.premiumAction,
+    backgroundColor: _theme.colors.accentAction,
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -1211,7 +1254,7 @@ const styleFactories = {
   },
   progressFill: {
     height: '100%',
-    backgroundColor: _theme.colors.premiumAction,
+    backgroundColor: _theme.colors.accentAction,
   },
   messageList: {
     padding: 10,
@@ -1237,7 +1280,7 @@ const styleFactories = {
     justifyContent: 'center',
   },
   ownBubble: {
-    backgroundColor: _theme.colors.premiumAction,
+    backgroundColor: _theme.colors.accentAction,
     borderBottomRightRadius: 4,
   },
   otherBubble: {
@@ -1274,7 +1317,7 @@ const styleFactories = {
   },
   sendBtn: {
     marginLeft: 8,
-    backgroundColor: _theme.colors.premiumAction,
+    backgroundColor: _theme.colors.accentAction,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -1505,7 +1548,7 @@ const styleFactories = {
   // components/BlogContributorStrip.tsx
   components_BlogContributorStrip_8: (_theme: AppTheme, { mutedColor }: ThemeStyleValues): any => ({ color: mutedColor, fontSize: 12 }),
   // components/BlogContributorStrip.tsx
-  components_BlogContributorStrip_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.premiumText, fontSize: 11, fontWeight: '700' }),
+  components_BlogContributorStrip_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.text, fontSize: 11, fontWeight: '700' }),
   // components/BlogContributorStrip.tsx
   components_BlogContributorStrip_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/BlogDayStarterCard.tsx
@@ -1626,11 +1669,140 @@ const styleFactories = {
   // components/BlogKeepsakeButton.tsx
   components_BlogKeepsakeButton_16: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.text, fontWeight: '600' }),
   // components/BlogKeepsakeButton.tsx
-  components_BlogKeepsakeButton_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: _theme.colors.dangerAction }),
+  components_BlogKeepsakeButton_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: _theme.colors.cta }),
   // components/BlogKeepsakeButton.tsx
-  components_BlogKeepsakeButton_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onAccent, fontWeight: '700' }),
+  components_BlogKeepsakeButton_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onCta, fontWeight: '700' }),
   // components/BlogKeepsakeButton.tsx
   components_BlogKeepsakeButton_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
+  // components/BottomTabBar.tsx
+  components_BottomTabBar_1: (_theme: AppTheme, { StyleSheet, BOTTOM_TAB_BAR_HEIGHT }: ThemeStyleValues): any => (StyleSheet.create({
+    bar: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      width: '100%',
+      minHeight: BOTTOM_TAB_BAR_HEIGHT,
+      paddingTop: 6,
+      paddingHorizontal: 8,
+      borderTopWidth: 1,
+      backgroundColor: _theme.mode === 'dark' ? '#0A0A0A' : _theme.colors.surface,
+      borderTopColor: _theme.colors.border,
+    },
+    tab: {
+      flex: 1,
+      minHeight: 48,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 3,
+    },
+    iconPill: {
+      width: 52,
+      height: 30,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    label: {
+      fontSize: 11,
+    },
+    addLabel: {
+      fontSize: 11,
+      color: _theme.colors.text,
+      fontWeight: '600',
+    },
+    addButton: {
+      width: 56,
+      height: 56,
+      marginTop: -26,
+      borderRadius: 28,
+      borderWidth: 3,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderColor: _theme.mode === 'dark' ? '#0A0A0A' : _theme.colors.surface,
+      ...ctaGradientStyle(_theme),
+    },
+    scrim: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: _theme.colors.scrim,
+    },
+    sheet: {
+      position: 'absolute',
+      left: 8,
+      right: 8,
+      borderRadius: 26,
+      borderWidth: 1,
+      paddingTop: 10,
+      paddingHorizontal: 18,
+      paddingBottom: 20,
+      gap: 4,
+      backgroundColor: _theme.colors.surface,
+      borderColor: _theme.colors.border,
+    },
+    grabber: {
+      alignSelf: 'center',
+      width: 40,
+      height: 4,
+      borderRadius: 999,
+      marginBottom: 8,
+      backgroundColor: _theme.colors.border,
+    },
+    sheetTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: _theme.colors.text,
+    },
+    sheetSubtitle: {
+      fontSize: 14,
+      marginBottom: 10,
+      color: _theme.colors.textMuted,
+    },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    option: {
+      flexBasis: '30%',
+      flexGrow: 1,
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 16,
+      paddingHorizontal: 6,
+      borderRadius: 16,
+      borderWidth: 1,
+      backgroundColor: _theme.colors.surfaceMuted,
+      borderColor: _theme.colors.border,
+    },
+    optionLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: _theme.colors.text,
+    },
+    cancel: {
+      marginTop: 12,
+      minHeight: 44,
+      borderRadius: 12,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderColor: _theme.colors.border,
+    },
+    cancelText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: _theme.colors.text,
+    },
+  })),
+  components_BottomTabBar_2: (_theme: AppTheme, { bottomInset }: ThemeStyleValues): any => ({ paddingBottom: 6 + bottomInset }),
+  components_BottomTabBar_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ backgroundColor: _theme.mode === 'dark' ? '#262626' : '#EFEFEF' }),
+  components_BottomTabBar_4: (_theme: AppTheme, { active }: ThemeStyleValues): any => ({ color: active ? _theme.colors.text : _theme.colors.textMuted, fontWeight: active ? '700' : '500' }),
+  components_BottomTabBar_5: (_theme: AppTheme, { active }: ThemeStyleValues): any => (active ? _theme.colors.text : _theme.colors.textMuted),
+  components_BottomTabBar_6: (_theme: AppTheme, { bottomInset }: ThemeStyleValues): any => ({ bottom: bottomInset + 12 }),
+  components_BottomTabBar_7: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onCta),
+  components_BottomTabBar_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // components/BlogMediaMetadataEditor.tsx
   components_BlogMediaMetadataEditor_1: (_theme: AppTheme, { borderColor, backgroundColor }: ThemeStyleValues): any => ({ marginTop: 10, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor }),
   // components/BlogMediaMetadataEditor.tsx
@@ -1855,6 +2027,8 @@ const styleFactories = {
     height: 56,
     borderRadius: 28,
     ...ctaGradientStyle(_theme), // Previously accentSurface
+    borderWidth: 1,
+    borderColor: _theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
@@ -1884,6 +2058,8 @@ const styleFactories = {
     fontWeight: '700',
   },
 })),
+  components_ChatButton_2: (_theme: AppTheme, { floatingInset }: ThemeStyleValues): any => ({ bottom: 24 + floatingInset }),
+  components_ChatButton_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.onCta),
   // components/ChatPanel.tsx
   components_ChatPanel_1: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: theme?.colors.textMuted ?? _theme.colors.surfaceMuted }),
   // components/ChatPanel.tsx
@@ -2193,7 +2369,7 @@ const styleFactories = {
   // components/CsvTransferControls.tsx
   components_CsvTransferControls_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 44, justifyContent: 'center' }),
   // components/CsvTransferControls.tsx
-  components_CsvTransferControls_12: (_theme: AppTheme, { styles, colors }: ThemeStyleValues): any => ({ color: styles.outlineButton ? colors.text : _theme.colors.text }),
+  components_CsvTransferControls_12: (_theme: AppTheme, { styles, colors }: ThemeStyleValues): any => ({ color: styles.outlineButton ? colors.text : _theme.colors.onCta }),
   // components/CsvTransferControls.tsx
   components_CsvTransferControls_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 44, justifyContent: 'center' }),
   // components/DateField.tsx
@@ -2233,7 +2409,7 @@ const styleFactories = {
   // components/DayMediaGallery.tsx
   components_DayMediaGallery_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4, pointerEvents: 'box-none' }),
   // components/DayMediaGallery.tsx
-  components_DayMediaGallery_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.dangerAction, borderRadius: 14, paddingVertical: 4, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 3 }),
+  components_DayMediaGallery_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.surface, borderRadius: 14, paddingVertical: 4, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 3 }),
   // components/DayMediaGallery.tsx
   components_DayMediaGallery_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 12 }),
   // components/DayMediaGallery.tsx
@@ -2365,7 +2541,7 @@ const styleFactories = {
   // dangerAction/dangerAction, accentSurface/accentSurface, surfaceMuted/surfaceMuted, successAction/successAction.
   components_DestinationPlaceholderCard_6: (_theme: AppTheme, {  }: ThemeStyleValues): any => ([
     ['#0A0A0A', '#3A3A3A'], ['#141414', '#4A4A4A'], ['#1C1C1C', '#525252'],
-    ['#242424', '#5A5A5A'], ['#2C2C2C', '#626262'], ['#343434', '#6A6A6A'],
+    ['#0F0F0F', '#2E2E2E'], ['#181818', '#5C5C5C'], ['#111111', '#424242'],
   ]),
   // components/DestinationPlaceholderCard.tsx
   components_DestinationPlaceholderCard_7: (_theme: AppTheme, { Platform }: ThemeStyleValues): any => (Platform.OS === 'web'
@@ -2687,7 +2863,7 @@ const styleFactories = {
   // components/LandingPage.tsx
   components_LandingPage_12: (_theme: AppTheme, { colors, spacing }: ThemeStyleValues): any => ({
                 flex: 1,
-                backgroundColor: colors.cta,
+                ...ctaGradientStyle(_theme),
                 paddingVertical: spacing.md,
                 borderRadius: 8,
                 alignItems: 'center',
@@ -2841,7 +3017,7 @@ const styleFactories = {
   },
 })),
   // components/LazyTabFallback.tsx
-  components_LazyTabFallback_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
+  components_LazyTabFallback_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/LocationSelector.tsx
   components_LocationSelector_1: (_theme: AppTheme, { activeDropdownZIndex }: ThemeStyleValues): any => ({ position: 'relative', zIndex: activeDropdownZIndex }),
   // components/LocationSelector.tsx
@@ -2877,9 +3053,9 @@ const styleFactories = {
   // components/LocationSelector.tsx
   components_LocationSelector_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexWrap: 'wrap', gap: 8, marginTop: 8 }),
   // components/LocationSelector.tsx
-  components_LocationSelector_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
+  components_LocationSelector_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/LocationSelector.tsx
-  components_LocationSelector_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
+  components_LocationSelector_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/LodgingDetailsDialog.tsx
   components_LodgingDetailsDialog_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', maxHeight: '95%' }),
   // components/LodgingDetailsDialog.tsx
@@ -3112,7 +3288,7 @@ const styleFactories = {
   // components/MustSeeAttractionSelector.tsx
   components_MustSeeAttractionSelector_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexWrap: 'wrap', gap: 8, marginTop: 8 }),
   // components/MustSeeAttractionSelector.tsx
-  components_MustSeeAttractionSelector_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
+  components_MustSeeAttractionSelector_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/NativeDatePickerSheet.tsx
   components_NativeDatePickerSheet_1: (_theme: AppTheme, { theme, isDark }: ThemeStyleValues): any => ({
     surface: theme?.colors.surface ?? (isDark ? _theme.colors.surfaceMuted : _theme.colors.surface),
@@ -3563,7 +3739,7 @@ const styleFactories = {
               borderRadius: 14, paddingVertical: 4, paddingHorizontal: 9, marginRight: 6,
             }),
   // components/PhotoFirstComposer.tsx
-  components_PhotoFirstComposer_3: (_theme: AppTheme, { active, textColor }: ThemeStyleValues): any => ({ color: active ? _theme.colors.text : textColor, fontSize: 12 }),
+  components_PhotoFirstComposer_3: (_theme: AppTheme, { active, textColor }: ThemeStyleValues): any => ({ color: active ? _theme.colors.onCta : textColor, fontSize: 12 }),
   // components/PhotoFirstComposer.tsx
   components_PhotoFirstComposer_4: (_theme: AppTheme, { borderColor }: ThemeStyleValues): any => ({ borderTopWidth: 1, borderTopColor: borderColor, paddingVertical: 8, flexDirection: 'row' }),
   // components/PhotoFirstComposer.tsx
@@ -3721,7 +3897,7 @@ const styleFactories = {
   dropdownOptionHelper: { fontSize: 11, color: _theme.colors.text, marginTop: 2 },
 })),
   // components/PlacePickerDialog.tsx
-  components_PlacePickerDialog_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.linkText),
+  components_PlacePickerDialog_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted),
   // components/PlaidImportQueue.tsx
   components_PlaidImportQueue_1: (_theme: AppTheme, { spacing }: ThemeStyleValues): any => ({ padding: spacing.xl }),
   // components/PlaidImportQueue.tsx
@@ -4269,11 +4445,11 @@ const styleFactories = {
   // components/SaveTripOffline.tsx
   components_SaveTripOffline_1: (_theme: AppTheme, { controller }: ThemeStyleValues): any => ({ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8, opacity: controller.disabled ? 0.5 : 1 }),
   // components/SaveTripOffline.tsx
-  components_SaveTripOffline_2: (_theme: AppTheme, { colors }: ThemeStyleValues): any => ({ backgroundColor: colors?.cta ?? _theme.colors.dangerAction, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 }),
+  components_SaveTripOffline_2: (_theme: AppTheme, { colors }: ThemeStyleValues): any => ({ backgroundColor: colors?.cta ?? _theme.colors.cta, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 }),
   // components/SaveTripOffline.tsx
   components_SaveTripOffline_3: (_theme: AppTheme, { colors }: ThemeStyleValues): any => ({ backgroundColor: colors?.surfaceMuted ?? _theme.colors.surfaceMuted, borderWidth: 1, borderColor: colors?.border ?? _theme.colors.border, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 44 }),
   // components/SaveTripOffline.tsx
-  components_SaveTripOffline_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.text, fontWeight: '700' as const }),
+  components_SaveTripOffline_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onCta, fontWeight: '700' as const }),
   // components/SaveTripOffline.tsx
   components_SaveTripOffline_5: (_theme: AppTheme, { colors }: ThemeStyleValues): any => ({ color: colors?.text ?? _theme.colors.text, fontWeight: '700' as const }),
   // components/SaveTripOffline.tsx
@@ -4758,6 +4934,7 @@ const styleFactories = {
   legalLink: { fontSize: 14, fontWeight: '600' },
   copyright: { fontSize: 12, marginTop: 4 },
 })),
+  tabs_account_24: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 16, minHeight: 44, justifyContent: 'center' }),
   // tabs/AccountProfileManagement.tsx
   tabs_AccountProfileManagement_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({
     airportFieldWrap: {
@@ -5880,7 +6057,7 @@ const styleFactories = {
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_16: (_theme: AppTheme, { dateModeSelected, theme }: ThemeStyleValues): any => ({
                     backgroundColor: dateModeSelected === 'range' ? _theme.colors.selectedSurface : (theme?.colors.surface ?? _theme.colors.surface),
-                    borderColor: _theme.colors.accentBorder,
+                    borderColor: _theme.colors.text,
                     borderWidth: 1,
                     paddingVertical: 8,
                     paddingHorizontal: 12,
@@ -5894,7 +6071,7 @@ const styleFactories = {
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_19: (_theme: AppTheme, { dateModeSelected, theme }: ThemeStyleValues): any => ({
                     backgroundColor: dateModeSelected === 'month' ? _theme.colors.selectedSurface : (theme?.colors.surface ?? _theme.colors.surface),
-                    borderColor: _theme.colors.accentBorder,
+                    borderColor: _theme.colors.text,
                     borderWidth: 1,
                     paddingVertical: 8,
                     paddingHorizontal: 12,
@@ -6171,7 +6348,7 @@ const styleFactories = {
   // tabs/follow.tsx
   tabs_follow_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontWeight: '700' }),
   // tabs/following.tsx
-  tabs_following_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ borderColor: _theme.colors.accentBorder, borderWidth: 1 }),
+  tabs_following_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ borderColor: _theme.colors.textMuted, borderWidth: 1 }),
   // tabs/following.tsx
   tabs_following_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 6 }),
   // tabs/following.tsx
@@ -6249,6 +6426,7 @@ const styleFactories = {
   tabs_HomeTab_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ justifyContent: 'flex-end', marginTop: 16 }),
   // tabs/HomeTab.tsx
   tabs_HomeTab_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginLeft: 8 }),
+  tabs_HomeTab_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
   // tabs/ingestion.tsx
   tabs_ingestion_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, minWidth: 220 }),
   // tabs/ingestion.tsx
@@ -6625,6 +6803,16 @@ const styleFactories = {
   tabs_overview_95: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', gap: 8, marginTop: 8 }),
   // tabs/overview.tsx
   tabs_overview_96: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.textMuted), // Previously linkText
+  tabs_overview_97: (_theme: AppTheme, { isPhoneLayout }: ThemeStyleValues): any => ({ flexDirection: isPhoneLayout ? 'column' : 'row', gap: 12, marginTop: 4 }),
+  tabs_overview_98: (_theme: AppTheme, { isPhoneLayout }: ThemeStyleValues): any => (isPhoneLayout ? { gap: 4 } : { gap: 4, flex: 1, maxWidth: 220 }),
+  tabs_overview_99: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'column', alignItems: 'stretch', gap: 8 }),
+  tabs_overview_100: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ gap: 4 }),
+  tabs_overview_101: (_theme: AppTheme, { isPhoneLayout }: ThemeStyleValues): any => ({ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, ...(isPhoneLayout ? {} : { flexShrink: 0 }) }),
+  tabs_overview_102: (_theme: AppTheme, { isPhoneLayout }: ThemeStyleValues): any => ([{ marginTop: 4, fontWeight: '600' }, isPhoneLayout ? { fontSize: 12 } : null]),
+  tabs_overview_103: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 }),
+  tabs_overview_104: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingVertical: 6, gap: 2 }),
+  tabs_overview_105: (_theme: AppTheme, { lodgingThumbnailSize }: ThemeStyleValues): any => ({ fontSize: Math.round(lodgingThumbnailSize * 0.42) }),
+  tabs_overview_106: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ fontWeight: '700', color: theme ? linkTextColor(theme) : undefined }),
   // tabs/traits.tsx
   tabs_traits_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10 }),
   // tabs/traits.tsx
@@ -6821,7 +7009,7 @@ const styleFactories = {
   // tabs/tripBlog.tsx
   tabs_tripBlog_48: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingVertical: 6, paddingHorizontal: 10, minWidth: 160 }),
   // tabs/tripBlog.tsx
-  tabs_tripBlog_49: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.accentSurface, alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12 }),
+  tabs_tripBlog_49: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12 }),
   // tabs/tripBlog.tsx
   tabs_tripBlog_50: (_theme: AppTheme, { canEdit, theme, surfaceColor, borderColor }: ThemeStyleValues): any => ({
               marginBottom: 20,
@@ -6884,7 +7072,7 @@ const styleFactories = {
   // tabs/tripBlog.tsx
   tabs_tripBlog_73: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 12 }),
   // tabs/tripBlog.tsx
-  tabs_tripBlog_74: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingVertical: 4, paddingHorizontal: 8, backgroundColor: _theme.colors.accentSurface }),
+  tabs_tripBlog_74: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingVertical: 4, paddingHorizontal: 8 }),
   // tabs/tripBlog.tsx
   tabs_tripBlog_75: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 12 }),
   // tabs/tripBlog.tsx
@@ -7106,7 +7294,7 @@ const styleFactories = {
   // tabs/tripBlog.tsx
   tabs_tripBlog_184: (_theme: AppTheme, { mutedColor }: ThemeStyleValues): any => ({ color: mutedColor, marginBottom: 20 }),
   // tabs/tripBlog.tsx
-  tabs_tripBlog_185: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10, backgroundColor: _theme.colors.accentAction }),
+  tabs_tripBlog_185: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10 }),
   // tabs/tripBlog.tsx
   tabs_tripBlog_186: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onAccent }),
   // tabs/tripBlog.tsx
@@ -7519,8 +7707,8 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
   }),
   homeNavIcon: ({
     width: 24,
-    textAlign: 'center',
-    fontSize: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   }),
   homeNavLabel: ({
     flex: 1,
@@ -7714,7 +7902,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
   button: ({
     ...ctaGradientStyle(theme),
     padding: 10,
-    borderRadius: 6,
+    borderRadius: 8,
     alignItems: 'center',
   }),
   buttonText: ({
@@ -8086,8 +8274,14 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     width: '100%',
     height: '100%',
   }),
+  // Fills the whole day card like a photo would (dayHeroImage). As a plain flex child it only
+  // spanned part of the card, leaving strips at the sides on phones.
   dayHeroImageFallback: ({
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: (theme ?? getAppTheme('light', 'light')).colors.surfaceMuted,
   }),
   dayHeroOverlay: ({

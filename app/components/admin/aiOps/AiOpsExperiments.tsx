@@ -6,6 +6,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
 import type { AiAbTestMetric, AiExperiment } from './types';
+import { whiteLabelButtonColor } from '../../../theme/theme';
 
 const latestMetricsByVariant = (metrics: AiAbTestMetric[], experimentId: string) => {
   const latest = new Map<string, AiAbTestMetric>();

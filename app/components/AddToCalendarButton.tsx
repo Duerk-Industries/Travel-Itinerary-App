@@ -6,20 +6,27 @@ import { CalendarPreferenceContext } from '../contexts/CalendarPreferenceContext
 import type { CalendarEvent } from '../utils/calendarEvents';
 import { openCalendar } from '../utils/openCalendar';
 
-export default function AddToCalendarButton({ event, styles }: { event: CalendarEvent | null; styles: Record<string, any> }) {
+// `compact` renders an icon-only button for lists where every row has one (the itinerary day view),
+// so a long day doesn't repeat the full "Add to calendar" label on every line.
+export default function AddToCalendarButton({ event, styles, compact = false }: { event: CalendarEvent | null; styles: Record<string, any>; compact?: boolean }) {
   const _styleTheme = useStyleTheme();
   const preference = useContext(CalendarPreferenceContext);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   if (!event) return null;
   return <View style={themeStyle('components_AddToCalendarButton_1', {  }, _styleTheme)}>
-    <TouchableOpacity style={styles.button} accessibilityRole="button" accessibilityLabel="Add to calendar"
+    <TouchableOpacity style={compact ? [styles.button, themeStyle('components_AddToCalendarButton_2', {  }, _styleTheme)] : styles.button}
+      accessibilityRole="button" accessibilityLabel="Add to calendar"
       disabled={busy} onPress={async () => {
         setError(null); setBusy(true);
         try { await openCalendar(event, preference); }
         catch { setError('Unable to open calendar. Please try again.'); }
         finally { setBusy(false); }
-      }}><Text style={styles.buttonText}>{busy ? 'Opening calendar…' : 'Add to calendar'}</Text></TouchableOpacity>
+      }}>
+      {compact
+        ? <Text style={[styles.buttonText, themeStyle('components_AddToCalendarButton_3', {  }, _styleTheme)]}>{busy ? '…' : '📅'}</Text>
+        : <Text style={styles.buttonText}>{busy ? 'Opening calendar…' : 'Add to calendar'}</Text>}
+    </TouchableOpacity>
     {error ? <Text accessibilityRole="alert" style={styles.helperText}>{error}</Text> : null}
   </View>;
 }

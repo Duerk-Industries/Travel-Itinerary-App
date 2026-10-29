@@ -75,6 +75,7 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import AvatarStack from '../components/AvatarStack';
+import { formatStayRange, stayDayNote } from '../utils/stayDates';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import ActivityEditForm from '../components/ActivityEditForm';
 import CarRentalEditForm from '../components/CarRentalEditForm';
@@ -267,6 +268,9 @@ type OverviewTabProps = {
   openLodgingDetails: (lodging: Lodging) => void;
   theme?: AppTheme;
   readOnly?: boolean;
+  /** One-shot request from the phone Add menu: open this item type's add form, then call onAutoOpenAddHandled. */
+  autoOpenAdd?: 'flight' | 'lodging' | 'activity' | null;
+  onAutoOpenAddHandled?: () => void;
   featureStandardizedItemDialogs?: boolean;
   // Kill switch for the designed gradient placeholder shown in place of a
   // missing day/trip cover photo (implementation-plan-ux-remediation.md,
@@ -320,6 +324,32 @@ type DetailModalState = {
   sections: DetailSection[];
   kind?: 'flight' | 'lodging' | 'activity';
   item?: Flight | Lodging | Tour;
+};
+
+// Short labels for a transfer's route, shared by the day card subtitle and the day view. Prefers a
+// real code (EWR, LIS); ground transfers keep station names in the code field, so those fall back
+// to the place name minus "(Fujikyu Railway)"-style detail. Icon follows the transfer type.
+export const describeTransferRoute = (flight: {
+  departure_airport_code?: string | null;
+  arrival_airport_code?: string | null;
+  departure_location?: string | null;
+  arrival_location?: string | null;
+  transfer_type?: string | null;
+  transferType?: string | null;
+}): { icon: string; from: string; to: string; fullFrom: string; fullTo: string } => {
+  const shortPlace = (code?: string | null, location?: string | null) => {
+    const c = String(code ?? '').trim();
+    if (/^[A-Z0-9]{3,4}$/.test(c)) return c;
+    return String(c || location || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  };
+  const type = normalizeTransferType(flight.transfer_type || flight.transferType);
+  return {
+    icon: type === 'Flight' ? '✈' : type === 'Public Transit' ? '🚆' : type === 'Private Transfer' ? '🚗' : '➜',
+    from: shortPlace(flight.departure_airport_code, flight.departure_location),
+    to: shortPlace(flight.arrival_airport_code, flight.arrival_location),
+    fullFrom: String(flight.departure_location || flight.departure_airport_code || '').trim(),
+    fullTo: String(flight.arrival_location || flight.arrival_airport_code || '').trim(),
+  };
 };
 
 export const dedupeAttendees = (
@@ -461,6 +491,11 @@ export const isWithinOverviewWeatherWindow = (
 /** The day's optional activities plus template suggestions offered in the "Add activity" menu, in all. */
 const MAX_POPOVER_ACTIVITIES = 4;
 
+const localTodayIso = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   backendUrl,
   headers,
@@ -503,6 +538,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   openLodgingDetails,
   theme: _providedTheme,
   readOnly = false,
+  autoOpenAdd = null,
+  onAutoOpenAddHandled,
   featureStandardizedItemDialogs = false,
   featureCoverPhotoFallbackV2 = true,
   featureItineraryReactions = true,
@@ -518,6 +555,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
+  const tripDateCellStyle = themeStyle('tabs_overview_98', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme));
   const isTabletLayout = viewportWidth >= 700 && viewportWidth < 1100;
   const dayHeroHeight = Math.max(190, Math.min(300, viewportWidth * (isPhoneLayout ? 0.52 : 0.3)));
   const lodgingThumbnailSize = isPhoneLayout ? 64 : isTabletLayout ? 72 : 80;
@@ -2151,6 +2189,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setAddPopoverOpen(true);
   };
 
+  // The phone Add menu opens the same add form as a day's "+ Add X" chip, for today when
+  // the trip is under way and otherwise for its first day.
+  useEffect(() => {
+    if (!autoOpenAdd) return;
+    if (readOnly) { onAutoOpenAddHandled?.(); return; }
+    if (!trip) return;
+    const today = localTodayIso();
+    const inTrip = overviewStartDate && overviewEndDate && today >= overviewStartDate && today <= overviewEndDate;
+    const dateIso = inTrip ? today : (overviewStartDate ?? today);
+    onAutoOpenAddHandled?.();
+    if (autoOpenAdd === 'flight') addFlightForDay(dateIso);
+    else if (autoOpenAdd === 'lodging') addLodgingForDay(dateIso);
+    else addTourForDay(dateIso);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenAdd, readOnly, trip?.id, overviewStartDate, overviewEndDate]);
+
   const addRentalForDay = (dateIso: string) => {
     if (readOnly) return;
     setEditingRentalId(null);
@@ -2487,32 +2541,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return parts.length > 1 ? parts[1] : trimmed;
   };
 
-  // Priority mirrors the day title rule: activities beat the transfer, which
-  // beats lodging, so a lodging stay no longer masks a day that has activities
-  // (or at least a transfer) happening on it. Empty when nothing is known, so
-  // titles read "Train to Sintra" rather than a placeholder "Trip Day - Train to Sintra".
-  const buildDayStartLocation = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[] }) => {
-    if (!info) return tripLocationLabel || '';
-    const tour = info.tours[0];
-    if (tour) return (tour.startLocation ? shortenLocationToCity(tour.startLocation) : '') || tour.name || tripLocationLabel || '';
+  // Day card titles are the day's plan (buildDaySummary). Travel logistics go in a short subtitle
+  // instead of a title prefix: repeating the hotel name, or an all-caps airport name, on every
+  // day made titles long and hard to scan on phones.
+  const buildDaySubtitle = (
+    info: { flights: Flight[]; lodgings: Lodging[] } | undefined,
+    date: string,
+  ): string | null => {
+    if (!info) return null;
     const flight = info.flights[0];
-    if (flight) return (flight.departure_location ? shortenLocationToCity(flight.departure_location) : '') || flight.departure_airport_code || tripLocationLabel || '';
-    const lodging = info.lodgings[0];
-    if (lodging) return lodging.name || tripLocationLabel || '';
-    const rental = info.rentals[0];
-    if (rental) return (rental.pickupLocation ? shortenLocationToCity(rental.pickupLocation) : '') || rental.vendor || tripLocationLabel || '';
-    return tripLocationLabel || '';
-  };
-
-  // startLocation and summary can end up describing the same activity (e.g. a
-  // day with only a tour and no flight/lodging) — collapse them instead of
-  // showing the same text twice, joined by " - ".
-  const buildHeroTitle = (startLocation: string, summary: string) => {
-    const parts = [startLocation, summary].filter(Boolean);
-    if (parts.length === 2 && parts[0].trim().toLowerCase() === parts[1].trim().toLowerCase()) {
-      return parts[0];
+    if (flight) {
+      const { icon, from, to } = describeTransferRoute(flight);
+      if (from && to) return `${icon} ${from} → ${to}`;
     }
-    return parts.join(' - ');
+    const day = normalizeDateString(date ?? '');
+    const checkIn = info.lodgings.find((lodging) => normalizeDateString(lodging.checkInDate) === day);
+    if (checkIn?.name) return `🏨 Check in: ${checkIn.name}`;
+    return null;
   };
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
@@ -2863,7 +2908,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         activeDayInfo?.index ?? (activeDayCard ? dayCards.findIndex((card) => card.date === activeDayCard.date) + 1 : null);
       const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
 
-      const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
+      const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string, subtitle?: string | null) => {
         const img = blogDayImages[card.date] ?? dayImages[card.date];
         const weather = dayWeather[card.date];
         const weatherLabel =
@@ -2883,7 +2928,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             {img ? (
               <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
             ) : featureCoverPhotoFallbackV2 ? (
-              <DestinationPlaceholderCard title={card.location || title} style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-placeholder`} />
+              <DestinationPlaceholderCard title={card.location || title} style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-placeholder`} showLabel={false} />
             ) : (
               <View style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-fallback-legacy`} />
             )}
@@ -2910,6 +2955,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               >
                 {title}
               </Text>
+              {subtitle ? (
+                <Text
+                  testID={`${testID || 'day-hero'}-subtitle`}
+                  style={[styles.dayHeroAction, themeStyle('tabs_overview_102', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))]}
+                  numberOfLines={1}
+                >
+                  {subtitle}
+                </Text>
+              ) : null}
               {showAction ? (
                 <Text style={[styles.dayHeroAction, isPhoneLayout ? themeStyle('tabs_overview_21', {  }, (theme ?? _styleTheme)) : null]}>View details</Text>
               ) : null}
@@ -2924,9 +2978,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       };
 
       if (selectedDay && activeDayCard && activeDayInfo) {
-        const startLocation = buildDayStartLocation(activeDayInfo);
-        const summary = buildDaySummary(activeDayInfo);
-        const heroTitle = buildHeroTitle(startLocation, summary);
+        const heroTitle = buildDaySummary(activeDayInfo);
+        const heroSubtitle = buildDaySubtitle(activeDayInfo, activeDayCard.date);
         const narrativeLines = buildDayNarrative(activeDayInfo, activeDayCard.date);
         const flightsForDay = activeDayInfo.flights;
         // Same order the day map letters its pins in: an explicit saved position first, then start time.
@@ -2936,8 +2989,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const renderDayDetail = (d: ItineraryDetail) => {
           const isActivity = !d.kind || d.kind === 'activity';
           return (
-            <View key={d.id} style={[styles.dayInfoRow, themeStyle('tabs_overview_35', {  }, (theme ?? _styleTheme))]}>
-              <View style={themeStyle('tabs_overview_36', {  }, (theme ?? _styleTheme))}>
+            <View key={d.id} testID={`day-details-item-${d.id}`} style={[styles.dayInfoRow, isPhoneLayout ? themeStyle('tabs_overview_99', {  }, (theme ?? _styleTheme)) : themeStyle('tabs_overview_35', {  }, (theme ?? _styleTheme))]}>
+              <View style={isPhoneLayout ? themeStyle('tabs_overview_100', {  }, (theme ?? _styleTheme)) : themeStyle('tabs_overview_36', {  }, (theme ?? _styleTheme))}>
                 {d.kind === 'place' ? (
                   <View>
                     <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
@@ -2994,31 +3047,33 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.dayInfoRoute}>{d.activity}</Text>
                 )}
               </View>
-              {d.time && !isUnscheduled ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} /> : null}
-              {isActivity ? (
-                <View style={themeStyle('tabs_overview_44', {  }, (theme ?? _styleTheme))}>
-                  <ReactionBar
-                    detailId={d.id}
-                    summary={d.reactions ?? emptyReactionSummary}
-                    canReact={featureItineraryReactions}
-                    onCast={castReactionForDetail}
-                    onClear={clearReactionForDetail}
-                    theme={theme}
-                  />
-                </View>
-              ) : null}
-              {isEditingDayItems ? (
-                <TouchableOpacity
-                  testID={`day-details-delete-${d.id}`}
-                  accessibilityRole="button"
-                  accessibilityLabel="Delete item"
-                  onPress={() => deleteDetail(d.id)}
-                  style={styles.detailDeleteButton}
-                  hitSlop={themeStyle('tabs_overview_45', {  }, (theme ?? _styleTheme))}
-                >
-                  <Text style={styles.detailDeleteButtonText}>×</Text>
-                </TouchableOpacity>
-              ) : null}
+              <View testID={`day-details-item-actions-${d.id}`} style={themeStyle('tabs_overview_101', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}>
+                {d.time && !isUnscheduled ? <AddToCalendarButton event={makeCalendarEvent({ id: `itinerary-${d.id}`, title: d.activity, date: activeDayCard.date, time: d.time })} styles={styles} compact /> : null}
+                {isActivity ? (
+                  <View style={themeStyle('tabs_overview_44', {  }, (theme ?? _styleTheme))}>
+                    <ReactionBar
+                      detailId={d.id}
+                      summary={d.reactions ?? emptyReactionSummary}
+                      canReact={featureItineraryReactions}
+                      onCast={castReactionForDetail}
+                      onClear={clearReactionForDetail}
+                      theme={theme}
+                    />
+                  </View>
+                ) : null}
+                {isEditingDayItems ? (
+                  <TouchableOpacity
+                    testID={`day-details-delete-${d.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete item"
+                    onPress={() => deleteDetail(d.id)}
+                    style={styles.detailDeleteButton}
+                    hitSlop={themeStyle('tabs_overview_45', {  }, (theme ?? _styleTheme))}
+                  >
+                    <Text style={styles.detailDeleteButtonText}>×</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
           );
         };
@@ -3075,7 +3130,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
               {renderDayBar(selectedDay)}
-              {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
+              {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero', heroSubtitle)}
               {dayMapPoints.length && !isUnscheduled ? (
                 <TripDayMap key={activeDayCard.date} onOpenChange={open => setVisibleMapDate(open ? activeDayCard.date : null)} tripId={trip.id} dayDate={activeDayCard.date} points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
               ) : null}
@@ -3096,24 +3151,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <View style={styles.dayInfoCard}>
                   <Text style={styles.sectionTitle}>Your transfer</Text>
                   {flightsForDay.map((flight) => {
-                    const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
-                    const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
+                    const route = describeTransferRoute(flight);
+                    const showFullNames = (route.fullFrom && route.fullFrom !== route.from) || (route.fullTo && route.fullTo !== route.to);
+                    const carrierLine = [flight.carrier, flight.flight_number].filter(Boolean).join(' ');
                     const passengers =
                       Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
                         ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
                         : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
+                    // Stacked rather than side by side: long airport/station names used to push the
+                    // route off the card and hide the times on phones.
                     return (
-                      <View key={flight.id} style={styles.dayInfoRow}>
+                      <View key={flight.id} style={themeStyle('tabs_overview_104', {  }, (theme ?? _styleTheme))} testID={`day-details-transfer-row-${flight.id}`}>
                         <TouchableOpacity
                           testID={`day-details-transfer-${flight.id}`}
                           accessibilityRole="link"
                           onPress={() => setSelectedFlight(flight)}
                         >
-                          <Text style={[styles.dayInfoRoute, styles.linkText, themeStyle('tabs_overview_25', {  }, (theme ?? _styleTheme))]}>{`${dep} → ${arr}`}</Text>
+                          <Text style={[styles.dayInfoRoute, styles.linkText, themeStyle('tabs_overview_25', {  }, (theme ?? _styleTheme))]}>
+                            {`${route.icon} ${route.from || 'Departure'} → ${route.to || 'Arrival'}`}
+                          </Text>
                         </TouchableOpacity>
-                        <Text style={styles.helperText}>{`${flight.departure_time || '--:--'} / ${
-                          flight.arrival_time || '--:--'
-                        }`}</Text>
+                        {showFullNames ? (
+                          <Text style={styles.helperText}>{`${route.fullFrom || route.from} → ${route.fullTo || route.to}`}</Text>
+                        ) : null}
+                        <Text style={styles.helperText}>
+                          {`${flight.departure_time || '--:--'} → ${flight.arrival_time || '--:--'}${carrierLine ? ` · ${carrierLine}` : ''}`}
+                        </Text>
                         {showFlightNames && passengers ? <Text style={styles.helperText}>Travelers: {passengers}</Text> : null}
                       </View>
                     );
@@ -3266,15 +3329,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           />
                         ) : (
                           <View
+                            testID={`day-details-lodging-placeholder-${lodging.id}`}
                             style={[
                               styles.lodgingImageFallback,
                               themeStyle('tabs_overview_30', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme)),
                             ]}
-                          />
+                          >
+                            <Text style={themeStyle('tabs_overview_105', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme))}>🏨</Text>
+                          </View>
                         )}
                         <View style={styles.dayInfoText}>
                           <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
-                          <Text style={styles.helperText}>{`${lodging.checkInDate} → ${lodging.checkOutDate}`}</Text>
+                          <Text style={styles.helperText}>{formatStayRange(lodging.checkInDate, lodging.checkOutDate)}</Text>
+                          {stayDayNote(lodging.checkInDate, lodging.checkOutDate, activeDayCard.date) ? (
+                            <Text style={[styles.helperText, themeStyle('tabs_overview_106', { theme: theme }, (theme ?? _styleTheme))]}>
+                              {stayDayNote(lodging.checkInDate, lodging.checkOutDate, activeDayCard.date)}
+                            </Text>
+                          ) : null}
                           {showLodgingNames && participants ? (
                             <Text style={styles.helperText}>Travelers: {participants}</Text>
                           ) : null}
@@ -3303,34 +3374,35 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
               {!readOnly ? (
                 <View testID="day-details-add-actions" style={[themeStyle('tabs_overview_47', {}, (theme ?? _styleTheme)), themeStyle('tabs_overview_layout1', {  }, (theme ?? _styleTheme))]}>
+                  <Text style={[styles.helperText, themeStyle('tabs_overview_layout4', {  }, (theme ?? _styleTheme))]}>Add to this day</Text>
                   <TouchableOpacity testID="day-details-add-flight-button" accessibilityRole="button" accessibilityLabel="Add flight to this day"
-                    style={styles.dayInfoButton} onPress={() => addFlightForDay(activeDayCard.date)}>
-                    <Text style={styles.dayInfoButtonText}>+ Add flight</Text>
+                    style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addFlightForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add flight</Text>
                   </TouchableOpacity>
                   <TouchableOpacity testID="day-details-add-transfer-button" accessibilityRole="button" accessibilityLabel="Add ground transfer to this day"
-                    style={styles.dayInfoButton} onPress={() => addFlightForDay(activeDayCard.date, 'Public Transit')}>
-                    <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
+                    style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addFlightForDay(activeDayCard.date, 'Public Transit')}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add transfer</Text>
                   </TouchableOpacity>
                   <TouchableOpacity testID="day-details-add-accommodation-button" accessibilityRole="button" accessibilityLabel="Add accommodation to this day"
-                    style={styles.dayInfoButton} onPress={() => addLodgingForDay(activeDayCard.date)}>
-                    <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
+                    style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addLodgingForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add accommodation</Text>
                   </TouchableOpacity>
                   <TouchableOpacity testID="day-details-add-rental-button" accessibilityRole="button" accessibilityLabel="Add rental car to this day"
-                    style={styles.dayInfoButton} onPress={() => addRentalForDay(activeDayCard.date)}>
-                    <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
+                    style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addRentalForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add rental car</Text>
                   </TouchableOpacity>
                   {!toursForDay.length && !locationDetails.length ? <TouchableOpacity testID="day-details-add-activity-button" accessibilityRole="button"
-                    accessibilityLabel="Add activity to this day" style={styles.dayInfoButton} onPress={() => addTourForDay(activeDayCard.date)}>
-                    <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
+                    accessibilityLabel="Add activity to this day" style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addTourForDay(activeDayCard.date)}>
+                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add activity</Text>
                   </TouchableOpacity> : null}
                   {featureItineraryItemKinds ? <>
                     <TouchableOpacity testID="day-details-add-note-button" accessibilityRole="button" accessibilityLabel="Add note to this day"
-                      style={styles.dayInfoButton} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('note'); }}>
-                      <Text style={styles.dayInfoButtonText}>+ Add note</Text>
+                      style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('note'); }}>
+                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add note</Text>
                     </TouchableOpacity>
                     <TouchableOpacity testID="day-details-add-checklist-button" accessibilityRole="button" accessibilityLabel="Add checklist to this day"
-                      style={styles.dayInfoButton} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('checklist'); }}>
-                      <Text style={styles.dayInfoButtonText}>+ Add checklist</Text>
+                      style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('checklist'); }}>
+                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add checklist</Text>
                     </TouchableOpacity>
                   </> : null}
                 </View>
@@ -3447,12 +3519,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <View style={wholeTripView ? undefined : themeStyle('tabs_overview_54', {  }, (theme ?? _styleTheme))}>
             {(wholeTripView ? [] : dayCards).map((card, idx) => {
               const info = dayDataByDate.get(card.date);
-              const startLocation = buildDayStartLocation(info);
-              const summary = buildDaySummary(info);
-              const heroTitle = buildHeroTitle(startLocation, summary);
+              const heroTitle = buildDaySummary(info);
+              const heroSubtitle = buildDaySubtitle(info, card.date);
               return (
                 <View key={card.date}>
-                  {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`)}
+                  {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`, heroSubtitle)}
                 </View>
               );
             })}
@@ -3571,27 +3642,30 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
             {dateDraft.mode === 'range' ? (
               <>
-                <View style={[styles.row, themeStyle('tabs_overview_64', {  }, (theme ?? _styleTheme))]}>
-                  <DateField
-                    value={dateDraft.startDate}
-                    onChange={(startDate) => setDateDraft((prev) => ({ ...prev, startDate }))}
-                    styles={styles}
-                    theme={theme}
-                    style={themeStyle('tabs_overview_65', {  }, (theme ?? _styleTheme))}
-                    testID="overview-trip-start-date"
-                    accessibilityLabel="Start date"
-                  />
-                </View>
-                <View style={[styles.row, themeStyle('tabs_overview_66', {  }, (theme ?? _styleTheme))]}>
-                  <DateField
-                    value={dateDraft.endDate}
-                    onChange={(endDate) => setDateDraft((prev) => ({ ...prev, endDate }))}
-                    styles={styles}
-                    theme={theme}
-                    style={themeStyle('tabs_overview_67', {  }, (theme ?? _styleTheme))}
-                    testID="overview-trip-end-date"
-                    accessibilityLabel="End date"
-                  />
+                {/* Labeled Start / End fields: stacked full width on phones, side by side otherwise. */}
+                <View testID="overview-trip-date-range" style={themeStyle('tabs_overview_97', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}>
+                  <View style={tripDateCellStyle}>
+                    <Text style={styles.helperText}>Start</Text>
+                    <DateField
+                      value={dateDraft.startDate}
+                      onChange={(startDate) => setDateDraft((prev) => ({ ...prev, startDate }))}
+                      styles={styles}
+                      theme={theme}
+                      testID="overview-trip-start-date"
+                      accessibilityLabel="Start date"
+                    />
+                  </View>
+                  <View style={tripDateCellStyle}>
+                    <Text style={styles.helperText}>End</Text>
+                    <DateField
+                      value={dateDraft.endDate}
+                      onChange={(endDate) => setDateDraft((prev) => ({ ...prev, endDate }))}
+                      styles={styles}
+                      theme={theme}
+                      testID="overview-trip-end-date"
+                      accessibilityLabel="End date"
+                    />
+                  </View>
                 </View>
               </>
             ) : (

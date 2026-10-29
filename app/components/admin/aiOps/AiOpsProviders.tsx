@@ -6,6 +6,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
 import type { AiProviderCertification, AiProviderFeatureConfig, AiProviderOption } from './types';
+import { whiteLabelButtonColor } from '../../../theme/theme';
 
 export const AiOpsProviders: React.FC<{
   theme: AppTheme;

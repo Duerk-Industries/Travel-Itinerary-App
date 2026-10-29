@@ -6,6 +6,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { aiOpsStyles, cardStyle } from './shared';
 import type { AiAnalyticsMetric } from './types';
+import { whiteLabelButtonColor } from '../../../theme/theme';
 
 export const AiOpsParserQuality: React.FC<{
   theme: AppTheme;

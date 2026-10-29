@@ -89,7 +89,17 @@ import {
   loadStoredAppearancePreference,
   persistAppearancePreference,
 } from './utils/appearancePreference';
+import BottomTabBar, { BOTTOM_TAB_BAR_HEIGHT, type AddOption, type AddOptionKey } from './components/BottomTabBar';
 
+const ADD_OPTION_PAGE: Record<AddOptionKey, Page> = {
+  expense: 'expenses',
+  blog: 'blog',
+  activity: 'overview',
+  flight: 'overview',
+  lodging: 'overview',
+  import: 'ingest',
+};
+import { FloatingInsetContext } from './contexts/FloatingInsetContext';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -605,6 +615,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // Set when the traveler taps the evening trip reminder notification — tells TripBlogTab to open
   // the add-photos flow once it's mounted and ready. See tripReminderNotifications.ts.
   const [autoOpenAddPhotos, setAutoOpenAddPhotos] = useState(false);
+  // One-shot requests from the phone Add menu, cleared by the tab once it opens the form.
+  const [pendingExpenseAdd, setPendingExpenseAdd] = useState(false);
+  const [pendingItineraryAdd, setPendingItineraryAdd] = useState<'flight' | 'lodging' | 'activity' | null>(null);
   const [autoOpenActivityCapture, setAutoOpenActivityCapture] = useState<{ date: string; tags: string[] } | null>(null);
   const [activityRecapTarget, setActivityRecapTarget] = useState<ActivityRecapTarget | null>(null);
   const [pendingActivityRecap, setPendingActivityRecap] = useState<{ tripId: string; activityId: string } | null>(null);
@@ -3347,7 +3360,31 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     </View>
   );
 
+  // Phone navigation: Home · Itinerary · (+ Add) · Blog · Profile at the bottom of the screen.
+  const showBottomTabs = Boolean(userToken) && isPhoneLayout && activePage !== 'create-trip';
+  const canAddToTrip = Boolean(activeTripId) && !isFollowingMode && !offlineReadOnly;
+  const canImportConfirmations = userRole === 'admin' || accountProfile.tierKey === 'premium' || accountProfile.tierKey === 'pro';
+  const bottomTabAddOptions: AddOption[] = canAddToTrip
+    ? ([
+        { key: 'expense', label: 'Expense', icon: 'expense' },
+        { key: 'blog', label: 'Blog post', icon: 'blog' },
+        { key: 'activity', label: 'Activity', icon: 'activity' },
+        { key: 'flight', label: 'Flight', icon: 'flight' },
+        { key: 'lodging', label: 'Lodging', icon: 'lodging' },
+        ...(canImportConfirmations ? [{ key: 'import', label: 'Import email', icon: 'import' }] : []),
+      ] as AddOption[]).filter((option) => !hiddenPages.has(ADD_OPTION_PAGE[option.key]))
+    : [];
+  // Each option opens its add form directly: flights, lodging and activities use the
+  // itinerary's add forms (the same ones as a day's "+ Add" chips).
+  const handleChooseAdd = (key: AddOptionKey) => {
+    if (key === 'expense') setPendingExpenseAdd(true);
+    else if (key === 'blog') setAutoOpenAddPhotos(true);
+    else if (key === 'flight' || key === 'lodging' || key === 'activity') setPendingItineraryAdd(key);
+    requestPageChange(ADD_OPTION_PAGE[key]);
+  };
+
   const mainWorkspace = (
+    <FloatingInsetContext.Provider value={showBottomTabs ? BOTTOM_TAB_BAR_HEIGHT : 0}>
     <PresenceProvider activeTripId={activeTripId} userToken={userToken}>
       <ChatProvider activeTripId={activeTripId} userToken={userToken}>
     <KeyboardViewport testID="app-keyboard-viewport">
@@ -3363,9 +3400,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           if (!discarded) { setPendingLogoutError("Couldn't remove the saved expenses. You're still signed in; try again or keep them on this device."); return; }
           setPendingLogoutVisible(false); logout();
         }} />
-      <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
-        <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
-          {userToken && activePage !== 'home' ? (
+      <View style={[styles.topBar, isNarrowLayout && !showBottomTabs && styles.topBarStacked]}>
+        <View style={[styles.topBarLeft, isNarrowLayout && !showBottomTabs && styles.topBarLeftNarrow, showBottomTabs && themeStyle('App_14', {  }, _styleTheme)]}>
+          {userToken && activePage !== 'home' && !showBottomTabs ? (
             <TouchableOpacity
               style={styles.homeButton}
               onPress={() => requestPageChange('home')}
@@ -3407,8 +3444,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </Text>
         </View>
         {userToken ? (
-          <View style={[styles.topRightWrapper, isNarrowLayout && styles.topRightWrapperNarrow]}>
-            <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
+          <View style={[styles.topRightWrapper, isNarrowLayout && !showBottomTabs && styles.topRightWrapperNarrow]}>
+            <View style={[styles.topRight, isNarrowLayout && !showBottomTabs && styles.topRightNarrow]}>
               <OfflineSaveButton controller={offlineSave} theme={theme} />
               {!offlineReadOnly && <NotificationInbox backendUrl={backendUrl} token={userToken} openNotificationId={pendingNotificationId} onOpenHandled={() => setPendingNotificationId(null)} onOpen={target => {
                 if (target.tripId) setActiveTripId(target.tripId);
@@ -3430,7 +3467,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
                   </TouchableOpacity>
                 </View>
-              ) : (
+              ) : showBottomTabs ? null : (
                 // Phone layout drops the full name pill (and presence avatars) to
                 // save top-bar width, but previously dropped the *only* way to
                 // reach Account settings with it — 'account' is deliberately left
@@ -3454,13 +3491,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   <Text style={styles.buttonText}>Admin</Text>
                 </TouchableOpacity>
               ) : null}
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                onPress={requestLogout}
-                testID="topbar-logout"
-              >
-                <Text style={styles.buttonText}>Logout</Text>
-              </TouchableOpacity>
+              {/* On phones, Log out lives on the Profile tab's Account page. */}
+              {!showBottomTabs ? (
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, styles.topBarActionButton]}
+                  onPress={requestLogout}
+                  testID="topbar-logout"
+                >
+                  <Text style={styles.buttonText}>Logout</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
         ) : null}
@@ -3605,6 +3645,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'expenses'
             ? renderSharedPageScroll(
                 <DailyExpensesTab
+                  autoOpenAdd={pendingExpenseAdd}
+                  onAutoOpenAddHandled={() => setPendingExpenseAdd(false)}
                   theme={theme}
                   backendUrl={backendUrl}
                   headers={headers}
@@ -3760,6 +3802,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ? renderSharedPageScroll(
                 <AccountTab
                   backendUrl={backendUrl}
+                  onLogout={showBottomTabs ? requestLogout : undefined}
                   privacy={privacy}
                   userToken={userToken}
                   activePage={activePage}
@@ -4110,6 +4153,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ? renderBoundedPage(
               <View style={themeStyle('App_layout1', {  }, _styleTheme)}>
                 <OverviewTab
+                  autoOpenAdd={pendingItineraryAdd}
+                  onAutoOpenAddHandled={() => setPendingItineraryAdd(null)}
                   featureDayPlanCsvImport={featureDayPlanCsvImport}
                   featureDayPlanCsvExport={featureDayPlanCsvExport}
                   onOpenShareTrip={activeTrip?.id && !isFollowingMode ? handleOpenShareTrip : undefined}
@@ -4490,6 +4535,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onOpenMap={openMaps}
         />
       ) : null}
+      {showBottomTabs ? (
+        <BottomTabBar
+          theme={theme}
+          activePage={activePage}
+          leftTabs={[{ page: 'home', label: 'Home', icon: 'home' }, { page: 'overview', label: 'Itinerary', icon: 'itinerary' }]}
+          rightTabs={[{ page: 'blog', label: 'Blog', icon: 'blog' }, { page: 'account', label: 'Profile', icon: 'profile' }]}
+          addOptions={bottomTabAddOptions}
+          addTitle={activeTrip?.name ? `Add to ${activeTrip.name}` : 'Add to trip'}
+          onNavigate={(page) => requestPageChange(page as Page)}
+          onChooseAdd={handleChooseAdd}
+        />
+      ) : null}
       <ChatOverlay
         userToken={userToken}
         activeTripId={activeTripId}
@@ -4514,6 +4571,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     </KeyboardViewport>
       </ChatProvider>
     </PresenceProvider>
+    </FloatingInsetContext.Provider>
   );
 
   const renderAdminScreen = (section: AdminSectionRoute) => (

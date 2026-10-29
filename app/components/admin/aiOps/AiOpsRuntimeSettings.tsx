@@ -6,6 +6,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
 import type { AiRuntimeSetting } from './types';
+import { whiteLabelButtonColor } from '../../../theme/theme';
 
 export const AiOpsRuntimeSettings: React.FC<{
   theme: AppTheme;

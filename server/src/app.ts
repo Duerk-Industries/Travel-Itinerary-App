@@ -118,6 +118,10 @@ const getAllowedOrigins = () => {
   }
   origins.add(webUrl);
   origins.add('https://wander-bunnies.com');
+  // Firebase Hosting PR preview channels (`<site>--<channel>.web.app`). They proxy /api to this
+  // service, and the browser still sends their Origin on POSTs (e.g. login), so they must be
+  // allowed. Only this project's site, which only repo collaborators can deploy channels to.
+  origins.add(/^https:\/\/travel-itinerary-app-483623--[a-z0-9-]+\.web\.app$/);
   const allowlist = getEnvValue('AUTH_REDIRECT_URI_ALLOWLIST') || '';
   allowlist.split(/[;,]/).forEach(origin => {
     const trimmed = origin.trim();
@@ -142,7 +146,8 @@ const corsOptions: cors.CorsOptions = {
         return callback(null, true);
       }
     }
-    return callback(new Error(`The CORS policy for this site does not allow access from the specified Origin: ${origin}`));
+    // 403 rather than the error handler's default 500, so a blocked site reads as "not allowed".
+    return callback(Object.assign(new Error(`The CORS policy for this site does not allow access from the specified Origin: ${origin}`), { status: 403 }));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   // Every non-safelisted header the web app sends must be listed, or the browser blocks the request at its

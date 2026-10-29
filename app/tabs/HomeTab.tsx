@@ -1,7 +1,7 @@
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Modal from '../components/KeyboardAwareModal';
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -10,6 +10,7 @@ import Skeleton from '../components/Skeleton';
 import { useImageSource } from '../utils/imageSource';
 import BannerPicturePicker from '../components/BannerPicturePicker';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
+import Icon, { type IconName } from '../components/Icon';
 
 type Trip = {
   id: string;
@@ -167,6 +168,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
 
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
+  const navIconColor = (StyleSheet.flatten(styles.homeNavLabel)?.color as string | undefined) ?? themeStyle('tabs_HomeTab_19', {  }, _styleTheme);
   const regularUserHiddenHomePages = new Set(['trips', 'account', 'following']);
   // Ingest (manual upload + forwarded-mailbox import) is Premium/Pro only, same as the
   // server-side tier check in ingestionRoutes.ts/ingestionWebhookRoutes.ts — Free users
@@ -176,19 +178,20 @@ const HomeTab: React.FC<HomeTabProps> = ({
   const canAccessIngest = userRole === 'admin' || userTier === 'premium' || userTier === 'pro';
   const hasTripsToSelect = sortedTrips.length > 0 || followedTrips.length > 0;
 
-  const navItems = [
-    { key: 'overview', label: 'Itinerary', icon: '🧭' },
-    { key: 'blog', label: 'Trip Blog', icon: '📖' },
-    { key: 'flights', label: 'Flights', icon: '✈️' },
-    { key: 'lodging', label: 'Lodging', icon: '🏨' },
-    { key: 'tours', label: 'Activities', icon: '🎟️' },
-    { key: 'ground-transfers', label: 'Ground Transfers', icon: '🚌' },
-    { key: 'car', label: 'Car Rentals', icon: '🚗' },
-    { key: 'expenses', label: 'Daily Expenses', icon: '🧾' },
-    { key: 'cost', label: 'Cost Report', icon: '💵' },
-    { key: 'packing', label: 'Packing', icon: '✓' },
-    { key: 'ingest', label: 'Import Travel Confirmations', icon: '📥' },
-  ]
+  const navItemDefs: Array<{ key: string; label: string; icon: IconName }> = [
+    { key: 'overview', label: 'Itinerary', icon: 'itinerary' },
+    { key: 'blog', label: 'Trip Blog', icon: 'blog' },
+    { key: 'flights', label: 'Flights', icon: 'flight' },
+    { key: 'lodging', label: 'Lodging', icon: 'lodging' },
+    { key: 'tours', label: 'Activities', icon: 'activity' },
+    { key: 'ground-transfers', label: 'Ground Transfers', icon: 'transfer' },
+    { key: 'car', label: 'Car Rentals', icon: 'car' },
+    { key: 'expenses', label: 'Daily Expenses', icon: 'expense' },
+    { key: 'cost', label: 'Cost Report', icon: 'report' },
+    { key: 'packing', label: 'Packing', icon: 'packing' },
+    { key: 'ingest', label: 'Import Travel Confirmations', icon: 'import' },
+  ];
+  const navItems = navItemDefs
     .filter((item) => userRole === 'admin' || !regularUserHiddenHomePages.has(item.key))
     .filter((item) => item.key !== 'ingest' || canAccessIngest)
     .filter((item) => !hiddenPages?.has(item.key));
@@ -222,7 +225,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
           ) : heroLoading ? (
             <Skeleton style={styles.homeHeroImage} testID="home-hero-skeleton" />
           ) : featureCoverPhotoFallbackV2 ? (
-            <DestinationPlaceholderCard title={heroTitle} style={styles.homeHeroFallback} testID="home-hero-placeholder" />
+            <DestinationPlaceholderCard title={heroTitle} style={styles.homeHeroFallback} testID="home-hero-placeholder" showLabel={false} />
           ) : (
             <View style={styles.homeHeroFallback} testID="home-hero-fallback-legacy" />
           )}
@@ -269,7 +272,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
               onPress={() => onNavigate(item.key)}
               disabled={disabledPages?.has(item.key)}
             >
-              <Text style={styles.homeNavIcon}>{item.icon}</Text>
+              <View style={styles.homeNavIcon}><Icon name={item.icon} color={navIconColor} size={22} /></View>
               <Text style={styles.homeNavLabel}>{item.label}</Text>
               <Text style={styles.homeNavArrow}>{'>'}</Text>
             </Pressable>

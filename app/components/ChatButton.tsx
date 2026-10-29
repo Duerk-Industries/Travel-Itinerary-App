@@ -7,6 +7,8 @@ import { shadowStyle } from '../utils/shadowStyle';
  */
 import React from 'react';
 import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import { useFloatingInset } from '../contexts/FloatingInsetContext';
+import Icon from './Icon';
 
 interface Props {
   onPress: () => void;
@@ -15,6 +17,7 @@ interface Props {
 
 const ChatButton: React.FC<Props> = ({ onPress, unreadCount }) => {
   const _styleTheme = useStyleTheme();
+  const floatingInset = useFloatingInset();
   const accessibilityLabel =
     unreadCount > 0
       ? `Open trip chat, ${unreadCount > 99 ? 'over 99' : unreadCount} unread`
@@ -22,12 +25,12 @@ const ChatButton: React.FC<Props> = ({ onPress, unreadCount }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={styles(_styleTheme).fab}
+      style={[styles(_styleTheme).fab, floatingInset ? themeStyle('components_ChatButton_2', { floatingInset: floatingInset }, _styleTheme) : null]}
       testID="chat-fab"
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <Text style={styles(_styleTheme).icon} accessibilityElementsHidden importantForAccessibility="no">💬</Text>
+      <Icon name="chat" color={themeStyle('components_ChatButton_3', {  }, _styleTheme)} size={24} />
       {unreadCount > 0 && (
         <View style={styles(_styleTheme).badge} testID="chat-unread-badge" accessibilityElementsHidden importantForAccessibility="no">
           <Text style={styles(_styleTheme).badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>

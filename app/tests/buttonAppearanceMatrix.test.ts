@@ -35,7 +35,6 @@ it.each(['web', 'ios', 'android'] as const)('keeps composed action styles readab
       ['components_PlaidLinkButton_1', 'components_PlaidLinkButton_2'],
       ['components_RetryableErrorBanner_3', 'components_RetryableErrorBanner_4'],
       ['tabs_AdminTab_304', 'tabs_AdminTab_305'],
-      ['tabs_tripBlog_185', 'tabs_tripBlog_186'],
     ];
     for (const [bg, fg] of pairs) readable(bg, themeStyle(fg, values, theme).color, themeStyle(bg, values, theme).backgroundColor);
     for (const key of ['components_ChatPanel_3', 'components_AssistantChatPanel_4'] as const) {
