@@ -1,0 +1,2439 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Opus 5), combining Rick Steves, Lonely Planet and VisitScotland itineraries for Scotland",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "scotland-edinburgh-city-4d",
+      "title": "Edinburgh in 4 Days",
+      "summary": "A short, walkable city break built around Edinburgh's castle, Old Town and best viewpoint, with a day trip to the university town of St Andrews.",
+      "days": 4,
+      "route": "Edinburgh (St Andrews day trip)",
+      "arrive": "Edinburgh (EDI)",
+      "depart": "Edinburgh (EDI)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "Scotland"
+      ],
+      "cities": [
+        "Edinburgh",
+        "St Andrews"
+      ],
+      "imageQuery": "Edinburgh Scotland castle skyline",
+      "highlights": [
+        "Edinburgh Castle",
+        "Royal Mile",
+        "Arthur's Seat",
+        "St Andrews day trip",
+        "Whisky tasting"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/scotland",
+        "united-kingdom/edinburgh",
+        "united-kingdom/st-andrews"
+      ],
+      "hero": "united-kingdom/edinburgh",
+      "sources": [
+        "Rick Steves (ricksteves.com)",
+        "Lonely Planet",
+        "VisitScotland (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Edinburgh",
+          "hotel": "Hotel in Edinburgh",
+          "start": 0,
+          "nights": 3,
+          "area": "Old Town or New Town: walkable to the castle, Royal Mile and main sights",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "The Royal Mile",
+          "notes": "Walk down from the castle esplanade to Holyroodhouse, detouring into a few closes along the way.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/royal-mile"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Traditional dinner in the Old Town",
+          "notes": "Haggis, venison and other Scottish staples are on most Old Town menus; book ahead on a Friday or Saturday.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/old-town-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Edinburgh Castle",
+          "notes": "Go at opening to beat the crowds; the Crown Room and St Margaret's Chapel are the highlights.",
+          "where": "Castlehill, Edinburgh",
+          "book": "Yes - timed tickets online avoid a long queue",
+          "place": "united-kingdom/edinburgh-castle"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "National Museum of Scotland",
+          "notes": "Free entry; the Victorian entrance hall and the rooftop terrace are worth a look even on a quick visit.",
+          "where": "Chambers Street, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/national-museum-scotland"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Arthur's Seat",
+          "notes": "The direct path climbs steadily over grass and rock; wear shoes with grip and bring a layer for the wind at the top.",
+          "where": "Holyrood Park, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/arthurs-seat"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "St Andrews day trip",
+          "notes": "Trains run to Leuchars with a short connecting bus, or take a direct coach; walk the cathedral ruins and the Old Course before heading back.",
+          "where": "St Andrews, Fife",
+          "book": "",
+          "place": "united-kingdom/st-andrews"
+        },
+        {
+          "day": 2,
+          "type": "Nightlife",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Traditional music session",
+          "notes": "Several Old Town pubs host live folk music most nights; arrive early for a seat near the musicians.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/ceilidh-night"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Dean Village and Stockbridge walk",
+          "notes": "A quiet riverside walk away from the crowds; keep an eye on the time for the airport transfer.",
+          "where": "Dean Village, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/dean-village"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Edinburgh Airport (EDI)",
+          "to": "Edinburgh hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Tram or Airlink bus",
+          "notes": "Both run from outside arrivals into the city centre; a taxi is a fair backup with luggage.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Edinburgh",
+          "to": "St Andrews",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Train to Leuchars plus connecting bus, or direct coach",
+          "notes": "Coaches run a few times a day in high season; check the timetable the day before.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "St Andrews",
+          "to": "Edinburgh",
+          "time": "17:30",
+          "minutes": 90,
+          "carrier": "Train via Leuchars, or coach",
+          "notes": "Allow time to spare before the evening entertainment.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Edinburgh hotel area",
+          "to": "Edinburgh Airport (EDI)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Tram or Airlink bus",
+          "notes": "Leave at least two and a half hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "scotland-edinburgh-skye-5d",
+      "title": "Edinburgh, Glen Coe and the Isle of Skye in 5 Days",
+      "summary": "A fast-paced first taste of the Highlands: two nights in Edinburgh, a scenic drive through Glen Coe, and two nights among Skye's best-known landscapes.",
+      "days": 5,
+      "route": "Edinburgh > Glen Coe > Isle of Skye > Glasgow",
+      "arrive": "Edinburgh (EDI)",
+      "depart": "Glasgow (GLA)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "Scotland"
+      ],
+      "cities": [
+        "Edinburgh",
+        "Isle of Skye"
+      ],
+      "imageQuery": "Isle of Skye Scotland landscape",
+      "highlights": [
+        "Edinburgh Castle",
+        "Glen Coe",
+        "Old Man of Storr",
+        "Fairy Pools",
+        "Portree harbour"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/scotland",
+        "united-kingdom/edinburgh",
+        "united-kingdom/isle-of-skye"
+      ],
+      "hero": "united-kingdom/isle-of-skye",
+      "sources": [
+        "Rick Steves (ricksteves.com)",
+        "Lonely Planet",
+        "VisitScotland (official tourism site)"
+      ],
+      "pace": "F",
+      "interests": [
+        "outdoors",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Edinburgh",
+          "hotel": "Hotel in Edinburgh",
+          "start": 0,
+          "nights": 2,
+          "area": "Old Town or New Town, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Isle of Skye",
+          "hotel": "Hotel on the Isle of Skye",
+          "start": 2,
+          "nights": 2,
+          "area": "Portree or nearby Trotternish: central for the island's best-known sights",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "The Royal Mile",
+          "notes": "A first evening wander from the castle esplanade down toward Holyroodhouse.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/royal-mile"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Traditional dinner in the Old Town",
+          "notes": "",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/old-town-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Edinburgh Castle",
+          "notes": "Go at opening; the Crown Room draws the longest queues by mid-morning.",
+          "where": "Castlehill, Edinburgh",
+          "book": "Yes - timed tickets online avoid a long queue",
+          "place": "united-kingdom/edinburgh-castle"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "12:00",
+          "duration": "1.5h",
+          "name": "Arthur's Seat",
+          "notes": "The direct path climbs steadily; wear shoes with grip.",
+          "where": "Holyrood Park, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/arthurs-seat"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "National Museum of Scotland",
+          "notes": "Free entry; a good wind-down after the climb.",
+          "where": "Chambers Street, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/national-museum-scotland"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Glen Coe viewpoint",
+          "notes": "A roadside stop below the Three Sisters ridge; the NTS visitor centre has a cafe and toilets.",
+          "where": "Glen Coe",
+          "book": "",
+          "place": "united-kingdom/glencoe-viewpoint"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Eilean Donan Castle",
+          "notes": "A brief stop on a tidal islet; check ahead whether the interior is open that day.",
+          "where": "Dornie, near Kyle of Lochalsh",
+          "book": "",
+          "place": "united-kingdom/eilean-donan-castle"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "The Old Man of Storr",
+          "notes": "The upper section is steep; go early to beat the crowds and the midday light.",
+          "where": "Trotternish, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/old-man-of-storr"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "The Fairy Pools",
+          "notes": "The road to the car park gets busy; go earlier or later in the day if possible.",
+          "where": "Glen Brittle, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/fairy-pools"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Seafood dinner in Portree",
+          "notes": "",
+          "where": "Portree, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/portree-seafood"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "45m",
+          "name": "Loch Lomond viewpoint",
+          "notes": "A short stop at Luss or Balloch; good for stretching legs midway to Glasgow.",
+          "where": "Loch Lomond",
+          "book": "",
+          "place": "united-kingdom/loch-lomond"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Edinburgh Airport (EDI)",
+          "to": "Edinburgh hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Tram or Airlink bus",
+          "notes": "A taxi is a fair backup with luggage.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Edinburgh",
+          "to": "Isle of Skye (Portree area)",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "Rental car via Glen Coe, Fort William and the Skye Bridge",
+          "notes": "A long day of driving; the stops at Glen Coe and Eilean Donan break it up, so leave Edinburgh early.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Isle of Skye",
+          "to": "Glasgow Airport (GLA)",
+          "time": "09:00",
+          "minutes": 300,
+          "carrier": "Rental car via Glen Coe and Loch Lomond",
+          "notes": "Allow a full day for this drive and keep a generous buffer before the flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "scotland-highlands-skye-7d",
+      "title": "Classic Highlands and Isle of Skye in 7 Days",
+      "summary": "The most common first Highlands loop: Edinburgh, a dramatic drive through Glen Coe to the Isle of Skye, then Loch Ness and Inverness.",
+      "days": 7,
+      "route": "Edinburgh > Glen Coe > Isle of Skye > Loch Ness & Inverness",
+      "arrive": "Edinburgh (EDI)",
+      "depart": "Inverness (INV)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "Scotland"
+      ],
+      "cities": [
+        "Edinburgh",
+        "Isle of Skye",
+        "Inverness"
+      ],
+      "imageQuery": "Isle of Skye mountains and loch",
+      "highlights": [
+        "Edinburgh Castle",
+        "Glen Coe",
+        "Old Man of Storr",
+        "Loch Ness",
+        "Culloden Battlefield"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/scotland",
+        "united-kingdom/edinburgh",
+        "united-kingdom/isle-of-skye",
+        "united-kingdom/inverness"
+      ],
+      "hero": "united-kingdom/isle-of-skye",
+      "sources": [
+        "Rick Steves (ricksteves.com)",
+        "Lonely Planet",
+        "VisitScotland (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "iconic_landmarks",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Edinburgh",
+          "hotel": "Hotel in Edinburgh",
+          "start": 0,
+          "nights": 2,
+          "area": "Old Town or New Town, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Isle of Skye",
+          "hotel": "Hotel on the Isle of Skye",
+          "start": 2,
+          "nights": 2,
+          "area": "Portree or nearby Trotternish",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Inverness",
+          "hotel": "Hotel in Inverness",
+          "start": 4,
+          "nights": 2,
+          "area": "City centre, near the river and a short walk to the castle",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "The Royal Mile",
+          "notes": "A first evening wander from the castle esplanade down toward Holyroodhouse.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/royal-mile"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Traditional dinner in the Old Town",
+          "notes": "",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/old-town-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Edinburgh Castle",
+          "notes": "Go at opening; the queue grows by mid-morning.",
+          "where": "Castlehill, Edinburgh",
+          "book": "Yes - timed tickets online avoid a long queue",
+          "place": "united-kingdom/edinburgh-castle"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "12:00",
+          "duration": "1.5h",
+          "name": "Arthur's Seat",
+          "notes": "The direct path climbs steadily; wear shoes with grip.",
+          "where": "Holyrood Park, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/arthurs-seat"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "National Museum of Scotland",
+          "notes": "Free entry.",
+          "where": "Chambers Street, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/national-museum-scotland"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Glen Coe viewpoint",
+          "notes": "A roadside stop below the Three Sisters ridge.",
+          "where": "Glen Coe",
+          "book": "",
+          "place": "united-kingdom/glencoe-viewpoint"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Eilean Donan Castle",
+          "notes": "Check ahead whether the interior is open that day.",
+          "where": "Dornie, near Kyle of Lochalsh",
+          "book": "",
+          "place": "united-kingdom/eilean-donan-castle"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "The Old Man of Storr",
+          "notes": "The upper section is steep and can be busy; go early.",
+          "where": "Trotternish, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/old-man-of-storr"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "The Quiraing",
+          "notes": "The base path gives the main views without the full ridge walk.",
+          "where": "Staffin, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/quiraing"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Portree",
+          "notes": "An evening stroll around the harbour before dinner.",
+          "where": "Portree, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/portree"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Urquhart Castle on Loch Ness",
+          "notes": "A common stop on the drive along the loch's western shore.",
+          "where": "Loch Ness",
+          "book": "Yes - online tickets can save time in the summer queue",
+          "place": "united-kingdom/loch-ness-urquhart-castle"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Culloden Battlefield",
+          "notes": "A quiet, moor-top site; allow time for both the centre and the field.",
+          "where": "Culloden, near Inverness",
+          "book": "",
+          "place": "united-kingdom/culloden-battlefield"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "Inverness town centre",
+          "notes": "A compact riverside walk; the castle is best seen from outside.",
+          "where": "Inverness",
+          "book": "",
+          "place": "united-kingdom/inverness-town"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "1h",
+          "name": "Loch Ness boat cruise",
+          "notes": "Cruises run most weather; check ahead in winter.",
+          "where": "Inverness or Drumnadrochit",
+          "book": "Yes - popular sailings can sell out in summer",
+          "place": "united-kingdom/loch-ness-cruise"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Edinburgh Airport (EDI)",
+          "to": "Edinburgh hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Tram or Airlink bus",
+          "notes": "A taxi is a fair backup with luggage.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Edinburgh",
+          "to": "Isle of Skye (Portree area)",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "Rental car via Glen Coe, Fort William and the Skye Bridge",
+          "notes": "A long day of driving; leave Edinburgh early.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Isle of Skye",
+          "to": "Inverness",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Rental car via Invermoriston and the shore of Loch Ness",
+          "notes": "Stop at Urquhart Castle en route.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Inverness hotel area",
+          "to": "Inverness Airport (INV)",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or rental car drop-off",
+          "notes": "Leave at least two hours before a domestic or short-haul flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "scotland-east-coast-cairngorms-7d",
+      "title": "East Coast and Cairngorms in 7 Days",
+      "summary": "A gentler route up Scotland's east side, pairing Edinburgh with the university town of St Andrews, Dundee's waterfront, and whisky country around Pitlochry and the Cairngorms, before finishing at Loch Ness and Inverness.",
+      "days": 7,
+      "route": "Edinburgh > St Andrews & Dundee > Pitlochry & Cairngorms > Loch Ness & Inverness",
+      "arrive": "Edinburgh (EDI)",
+      "depart": "Inverness (INV)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "Scotland"
+      ],
+      "cities": [
+        "Edinburgh",
+        "Pitlochry",
+        "Inverness"
+      ],
+      "imageQuery": "Scottish Highlands river valley Pitlochry",
+      "highlights": [
+        "Edinburgh Castle",
+        "St Andrews cathedral ruins",
+        "V&A Dundee",
+        "Whisky distillery tour",
+        "Loch Ness"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/scotland",
+        "united-kingdom/edinburgh",
+        "united-kingdom/pitlochry",
+        "united-kingdom/inverness"
+      ],
+      "hero": "united-kingdom/edinburgh",
+      "sources": [
+        "Rick Steves (ricksteves.com)",
+        "Lonely Planet",
+        "VisitScotland (official tourism site)"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "food",
+        "authentic_local",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Edinburgh",
+          "hotel": "Hotel in Edinburgh",
+          "start": 0,
+          "nights": 2,
+          "area": "Old Town or New Town, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pitlochry",
+          "hotel": "Hotel in Pitlochry",
+          "start": 2,
+          "nights": 2,
+          "area": "Walkable town centre, near the river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Inverness",
+          "hotel": "Hotel in Inverness",
+          "start": 4,
+          "nights": 2,
+          "area": "City centre, near the river",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "The Royal Mile",
+          "notes": "A first evening wander from the castle esplanade down toward Holyroodhouse.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/royal-mile"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Traditional dinner in the Old Town",
+          "notes": "",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/old-town-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Edinburgh Castle",
+          "notes": "Go at opening; the queue grows by mid-morning.",
+          "where": "Castlehill, Edinburgh",
+          "book": "Yes - timed tickets online avoid a long queue",
+          "place": "united-kingdom/edinburgh-castle"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "12:00",
+          "duration": "1.5h",
+          "name": "Arthur's Seat",
+          "notes": "The direct path climbs steadily; wear shoes with grip.",
+          "where": "Holyrood Park, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/arthurs-seat"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "National Museum of Scotland",
+          "notes": "Free entry.",
+          "where": "Chambers Street, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/national-museum-scotland"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "St Andrews old town and cathedral ruins",
+          "notes": "Walk the cathedral ruins and the Old Course before continuing north.",
+          "where": "St Andrews, Fife",
+          "book": "",
+          "place": "united-kingdom/st-andrews"
+        },
+        {
+          "day": 2,
+          "type": "Open Access",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "V&A Dundee",
+          "notes": "The Scottish Design Galleries are free; allow an hour or two.",
+          "where": "Dundee waterfront",
+          "book": "",
+          "place": "united-kingdom/dundee-v-and-a"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Blair Castle",
+          "notes": "Allow time for the walled gardens as well as the house.",
+          "where": "near Pitlochry",
+          "book": "",
+          "place": "united-kingdom/blair-castle"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1h",
+          "name": "Queen's View, Loch Tummel",
+          "notes": "An easy, level stop with a view toward Schiehallion.",
+          "where": "Loch Tummel, near Pitlochry",
+          "book": "",
+          "place": "united-kingdom/queens-view"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "A Speyside whisky distillery tour",
+          "notes": "Non-drinkers are normally still welcome to join the tour.",
+          "where": "Speyside",
+          "book": "Yes - tours have limited group sizes",
+          "place": "united-kingdom/speyside-distillery"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1h",
+          "name": "Pitlochry town and riverside walk",
+          "notes": "The dam and fish ladder are a short walk from the main street.",
+          "where": "Pitlochry",
+          "book": "",
+          "place": "united-kingdom/pitlochry-town"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Culloden Battlefield",
+          "notes": "A quiet, moor-top site; allow time for both the centre and the field.",
+          "where": "Culloden, near Inverness",
+          "book": "",
+          "place": "united-kingdom/culloden-battlefield"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "Inverness town centre",
+          "notes": "A compact riverside walk.",
+          "where": "Inverness",
+          "book": "",
+          "place": "united-kingdom/inverness-town"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "1h",
+          "name": "Loch Ness boat cruise",
+          "notes": "Check ahead in winter.",
+          "where": "Inverness or Drumnadrochit",
+          "book": "Yes - popular sailings can sell out in summer",
+          "place": "united-kingdom/loch-ness-cruise"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Edinburgh Airport (EDI)",
+          "to": "Edinburgh hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Tram or Airlink bus",
+          "notes": "A taxi is a fair backup with luggage.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Edinburgh",
+          "to": "St Andrews",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "St Andrews",
+          "to": "Dundee",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Dundee",
+          "to": "Pitlochry",
+          "time": "15:30",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Pitlochry",
+          "to": "Inverness",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car via Aviemore and the Cairngorms",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Inverness hotel area",
+          "to": "Inverness Airport (INV)",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or rental car drop-off",
+          "notes": "Leave at least two hours before a domestic or short-haul flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "scotland-highlands-grand-loop-10d",
+      "title": "Edinburgh, Glasgow and the Highlands in 10 Days",
+      "summary": "A comfortable first grand tour: Edinburgh, the west Highlands around Oban, the Isle of Skye, Loch Ness and Inverness, finishing in Glasgow.",
+      "days": 10,
+      "route": "Edinburgh > Oban & Glen Coe > Isle of Skye > Loch Ness & Inverness > Glasgow",
+      "arrive": "Edinburgh (EDI)",
+      "depart": "Glasgow (GLA)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "Scotland"
+      ],
+      "cities": [
+        "Edinburgh",
+        "Oban",
+        "Isle of Skye",
+        "Inverness",
+        "Glasgow"
+      ],
+      "imageQuery": "Scotland Highlands Glen Coe road trip",
+      "highlights": [
+        "Edinburgh Castle",
+        "Glen Coe",
+        "Old Man of Storr",
+        "Loch Ness",
+        "Glasgow architecture"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/scotland",
+        "united-kingdom/edinburgh",
+        "united-kingdom/oban",
+        "united-kingdom/isle-of-skye",
+        "united-kingdom/inverness",
+        "united-kingdom/glasgow"
+      ],
+      "hero": "united-kingdom/isle-of-skye",
+      "sources": [
+        "Rick Steves (ricksteves.com)",
+        "Lonely Planet",
+        "VisitScotland (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "iconic_landmarks",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Edinburgh",
+          "hotel": "Hotel in Edinburgh",
+          "start": 0,
+          "nights": 3,
+          "area": "Old Town or New Town, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oban",
+          "hotel": "Hotel in Oban",
+          "start": 3,
+          "nights": 1,
+          "area": "Near the seafront and harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Isle of Skye",
+          "hotel": "Hotel on the Isle of Skye",
+          "start": 4,
+          "nights": 3,
+          "area": "Portree or nearby Trotternish",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Inverness",
+          "hotel": "Hotel in Inverness",
+          "start": 7,
+          "nights": 1,
+          "area": "City centre, near the river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Glasgow",
+          "hotel": "Hotel in Glasgow",
+          "start": 8,
+          "nights": 1,
+          "area": "City centre or West End",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "The Royal Mile",
+          "notes": "A first evening wander from the castle esplanade down toward Holyroodhouse.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/royal-mile"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Traditional dinner in the Old Town",
+          "notes": "",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/old-town-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Edinburgh Castle",
+          "notes": "Go at opening; the queue grows by mid-morning.",
+          "where": "Castlehill, Edinburgh",
+          "book": "Yes - timed tickets online avoid a long queue",
+          "place": "united-kingdom/edinburgh-castle"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "12:00",
+          "duration": "1.5h",
+          "name": "Arthur's Seat",
+          "notes": "The direct path climbs steadily; wear shoes with grip.",
+          "where": "Holyrood Park, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/arthurs-seat"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "National Museum of Scotland",
+          "notes": "Free entry.",
+          "where": "Chambers Street, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/national-museum-scotland"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Dean Village and Stockbridge walk",
+          "notes": "A quieter contrast to the Old Town.",
+          "where": "Dean Village, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/dean-village"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "A Scotch whisky tasting experience",
+          "notes": "A guided tasting flight is a good introduction before heading into whisky country.",
+          "where": "Edinburgh",
+          "book": "",
+          "place": "united-kingdom/edinburgh-whisky-tasting"
+        },
+        {
+          "day": 2,
+          "type": "Nightlife",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Traditional music session",
+          "notes": "Several Old Town pubs host live folk music most nights.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/ceilidh-night"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "45m",
+          "name": "Loch Lomond viewpoint",
+          "notes": "A short stop at Luss or Balloch on the way west.",
+          "where": "Loch Lomond",
+          "book": "",
+          "place": "united-kingdom/loch-lomond"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1h",
+          "name": "Oban seafront and McCaig's Tower",
+          "notes": "The climb to the tower is steady but not technical, and gives a wide view over the bay.",
+          "where": "Oban",
+          "book": "",
+          "place": "united-kingdom/oban-seafront"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Oban Distillery tour",
+          "notes": "Tour times and group sizes are limited in season.",
+          "where": "Oban town centre",
+          "book": "Yes - tours have limited group sizes",
+          "place": "united-kingdom/oban-distillery"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "45m",
+          "name": "Glenfinnan Viaduct",
+          "notes": "A short, moderate climb to the main viewpoint above the curve of track.",
+          "where": "Glenfinnan",
+          "book": "",
+          "place": "united-kingdom/glenfinnan-viaduct"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Eilean Donan Castle",
+          "notes": "Check ahead whether the interior is open that day.",
+          "where": "Dornie, near Kyle of Lochalsh",
+          "book": "",
+          "place": "united-kingdom/eilean-donan-castle"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "The Old Man of Storr",
+          "notes": "The upper section is steep and can be busy; go early.",
+          "where": "Trotternish, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/old-man-of-storr"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "The Quiraing",
+          "notes": "The base path gives the main views without the full ridge walk.",
+          "where": "Staffin, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/quiraing"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Portree",
+          "notes": "An evening stroll around the harbour before dinner.",
+          "where": "Portree, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/portree"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "The Fairy Pools",
+          "notes": "The road to the car park gets busy; go earlier or later in the day.",
+          "where": "Glen Brittle, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/fairy-pools"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Neist Point",
+          "notes": "A steep path down to the lighthouse with a climb back up; good for seabirds and, sometimes, whales or dolphins.",
+          "where": "Glendale, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/neist-point"
+        },
+        {
+          "day": 6,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Seafood dinner in Portree",
+          "notes": "",
+          "where": "Portree, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/portree-seafood"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Urquhart Castle on Loch Ness",
+          "notes": "A common stop on the drive along the loch's western shore.",
+          "where": "Loch Ness",
+          "book": "Yes - online tickets can save time in the summer queue",
+          "place": "united-kingdom/loch-ness-urquhart-castle"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Culloden Battlefield",
+          "notes": "A quiet, moor-top site; see this before the drive south.",
+          "where": "Culloden, near Inverness",
+          "book": "",
+          "place": "united-kingdom/culloden-battlefield"
+        },
+        {
+          "day": 8,
+          "type": "Open Access",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Kelvingrove Art Gallery and Museum",
+          "notes": "Free entry; the grand central hall is worth a look on its own.",
+          "where": "West End, Glasgow",
+          "book": "",
+          "place": "united-kingdom/glasgow-kelvingrove"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Mackintosh architecture walk",
+          "notes": "Check current opening status, as some buildings have been closed for restoration in recent years.",
+          "where": "Glasgow city centre and West End",
+          "book": "",
+          "place": "united-kingdom/glasgow-mackintosh"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Edinburgh Airport (EDI)",
+          "to": "Edinburgh hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Tram or Airlink bus",
+          "notes": "A taxi is a fair backup with luggage.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Edinburgh",
+          "to": "Oban",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car via Loch Lomond",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Oban",
+          "to": "Isle of Skye (Portree area)",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car via Glen Coe, Fort William, Glenfinnan and the Skye Bridge",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Isle of Skye",
+          "to": "Inverness",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Rental car via Invermoriston and the shore of Loch Ness",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Inverness",
+          "to": "Glasgow",
+          "time": "11:30",
+          "minutes": 180,
+          "carrier": "Rental car",
+          "notes": "A direct drive south after the morning at Culloden.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Glasgow hotel area",
+          "to": "Glasgow Airport (GLA)",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or rental car drop-off",
+          "notes": "Leave at least two and a half hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "scotland-grand-tour-14d",
+      "title": "Grand Tour of Scotland in 14 Days",
+      "summary": "A full circuit for a longer trip: Edinburgh and Glasgow, the west coast and the islands of Mull and Iona, the Isle of Skye, Loch Ness and Inverness, and Highland Perthshire around Pitlochry.",
+      "days": 14,
+      "route": "Edinburgh > Glasgow > Oban (Mull & Iona) > Glen Coe & Isle of Skye > Loch Ness & Inverness > Pitlochry & Cairngorms",
+      "arrive": "Edinburgh (EDI)",
+      "depart": "Edinburgh (EDI)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "Scotland"
+      ],
+      "cities": [
+        "Edinburgh",
+        "Glasgow",
+        "Oban",
+        "Isle of Skye",
+        "Inverness",
+        "Pitlochry"
+      ],
+      "imageQuery": "Scotland Highlands castle loch panorama",
+      "highlights": [
+        "Edinburgh Castle",
+        "Mull & Iona day trip",
+        "Isle of Skye",
+        "Loch Ness",
+        "Highland Perthshire castles"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/scotland",
+        "united-kingdom/edinburgh",
+        "united-kingdom/glasgow",
+        "united-kingdom/oban",
+        "united-kingdom/isle-of-skye",
+        "united-kingdom/inverness",
+        "united-kingdom/pitlochry"
+      ],
+      "hero": "united-kingdom/edinburgh",
+      "sources": [
+        "Rick Steves (ricksteves.com)",
+        "Lonely Planet",
+        "VisitScotland (official tourism site)"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Edinburgh",
+          "hotel": "Hotel in Edinburgh",
+          "start": 0,
+          "nights": 3,
+          "area": "Old Town or New Town, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Glasgow",
+          "hotel": "Hotel in Glasgow",
+          "start": 3,
+          "nights": 1,
+          "area": "City centre or West End",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oban",
+          "hotel": "Hotel in Oban",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the seafront and harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Isle of Skye",
+          "hotel": "Hotel on the Isle of Skye",
+          "start": 6,
+          "nights": 3,
+          "area": "Portree or nearby Trotternish",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Inverness",
+          "hotel": "Hotel in Inverness",
+          "start": 9,
+          "nights": 2,
+          "area": "City centre, near the river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pitlochry",
+          "hotel": "Hotel in Pitlochry",
+          "start": 11,
+          "nights": 2,
+          "area": "Walkable town centre, near the river",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "The Royal Mile",
+          "notes": "Walk down from the castle esplanade toward Holyroodhouse.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/royal-mile"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Traditional dinner in the Old Town",
+          "notes": "",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/old-town-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Edinburgh Castle",
+          "notes": "Go at opening; the queue grows by mid-morning.",
+          "where": "Castlehill, Edinburgh",
+          "book": "Yes - timed tickets online avoid a long queue",
+          "place": "united-kingdom/edinburgh-castle"
+        },
+        {
+          "day": 1,
+          "type": "Open Access",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "National Museum of Scotland",
+          "notes": "Free entry; the rooftop terrace has a view over the Old Town roofline.",
+          "where": "Chambers Street, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/national-museum-scotland"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Arthur's Seat",
+          "notes": "The direct path climbs steadily; wear shoes with grip and bring a layer for the wind at the top.",
+          "where": "Holyrood Park, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/arthurs-seat"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Dean Village and Stockbridge walk",
+          "notes": "A quieter contrast to the Old Town.",
+          "where": "Dean Village, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/dean-village"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "A Scotch whisky tasting experience",
+          "notes": "A guided tasting flight is a good introduction before heading into whisky country later in the trip.",
+          "where": "Edinburgh",
+          "book": "",
+          "place": "united-kingdom/edinburgh-whisky-tasting"
+        },
+        {
+          "day": 2,
+          "type": "Nightlife",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Traditional music session",
+          "notes": "Several Old Town pubs host live folk music most nights.",
+          "where": "Old Town, Edinburgh",
+          "book": "",
+          "place": "united-kingdom/ceilidh-night"
+        },
+        {
+          "day": 3,
+          "type": "Open Access",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Kelvingrove Art Gallery and Museum",
+          "notes": "Free entry; the grand central hall is worth a look on its own.",
+          "where": "West End, Glasgow",
+          "book": "",
+          "place": "united-kingdom/glasgow-kelvingrove"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Mackintosh architecture walk",
+          "notes": "Check current opening status, as some buildings have been closed for restoration in recent years.",
+          "where": "Glasgow city centre and West End",
+          "book": "",
+          "place": "united-kingdom/glasgow-mackintosh"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "45m",
+          "name": "Loch Lomond viewpoint",
+          "notes": "A short stop at Luss or Balloch on the way west.",
+          "where": "Loch Lomond",
+          "book": "",
+          "place": "united-kingdom/loch-lomond"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1h",
+          "name": "Oban seafront and McCaig's Tower",
+          "notes": "The climb to the tower is steady but not technical.",
+          "where": "Oban",
+          "book": "",
+          "place": "united-kingdom/oban-seafront"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Oban Distillery tour",
+          "notes": "Tour times and group sizes are limited in season.",
+          "where": "Oban town centre",
+          "book": "Yes - tours have limited group sizes",
+          "place": "united-kingdom/oban-distillery"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "9h",
+          "name": "Mull and Iona day trip",
+          "notes": "A ferry to Mull, a drive across the island, and a short ferry to Iona to see the abbey; this makes a full day out from Oban.",
+          "where": "Isle of Mull and Isle of Iona",
+          "book": "",
+          "place": "united-kingdom/iona-abbey"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Seafood dinner in Oban",
+          "notes": "",
+          "where": "Oban harbourfront",
+          "book": "",
+          "place": "united-kingdom/oban-seafood"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "1h",
+          "name": "Glen Coe viewpoint",
+          "notes": "A roadside stop below the Three Sisters ridge.",
+          "where": "Glen Coe",
+          "book": "",
+          "place": "united-kingdom/glencoe-viewpoint"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "45m",
+          "name": "Glenfinnan Viaduct",
+          "notes": "A short, moderate climb to the main viewpoint above the curve of track.",
+          "where": "Glenfinnan",
+          "book": "",
+          "place": "united-kingdom/glenfinnan-viaduct"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Eilean Donan Castle",
+          "notes": "Check ahead whether the interior is open that day.",
+          "where": "Dornie, near Kyle of Lochalsh",
+          "book": "",
+          "place": "united-kingdom/eilean-donan-castle"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "The Old Man of Storr",
+          "notes": "The upper section is steep and can be busy; go early.",
+          "where": "Trotternish, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/old-man-of-storr"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "The Quiraing",
+          "notes": "The base path gives the main views without the full ridge walk.",
+          "where": "Staffin, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/quiraing"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Portree",
+          "notes": "An evening stroll around the harbour before dinner.",
+          "where": "Portree, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/portree"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "The Fairy Pools",
+          "notes": "The road to the car park gets busy; go earlier or later in the day.",
+          "where": "Glen Brittle, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/fairy-pools"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Neist Point",
+          "notes": "A steep path down to the lighthouse with a climb back up.",
+          "where": "Glendale, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/neist-point"
+        },
+        {
+          "day": 8,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Seafood dinner in Portree",
+          "notes": "",
+          "where": "Portree, Isle of Skye",
+          "book": "",
+          "place": "united-kingdom/portree-seafood"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Urquhart Castle on Loch Ness",
+          "notes": "A common stop on the drive along the loch's western shore.",
+          "where": "Loch Ness",
+          "book": "Yes - online tickets can save time in the summer queue",
+          "place": "united-kingdom/loch-ness-urquhart-castle"
+        },
+        {
+          "day": 10,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Culloden Battlefield",
+          "notes": "A quiet, moor-top site; allow time for both the centre and the field.",
+          "where": "Culloden, near Inverness",
+          "book": "",
+          "place": "united-kingdom/culloden-battlefield"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "Inverness town centre",
+          "notes": "A compact riverside walk.",
+          "where": "Inverness",
+          "book": "",
+          "place": "united-kingdom/inverness-town"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "1h",
+          "name": "Loch Ness boat cruise",
+          "notes": "Check ahead in winter.",
+          "where": "Inverness or Drumnadrochit",
+          "book": "Yes - popular sailings can sell out in summer",
+          "place": "united-kingdom/loch-ness-cruise"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "A Speyside whisky distillery tour",
+          "notes": "A short detour on the way south through the Cairngorms; non-drinkers are normally still welcome to join.",
+          "where": "Speyside",
+          "book": "Yes - tours have limited group sizes",
+          "place": "united-kingdom/speyside-distillery"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Blair Castle",
+          "notes": "Allow time for the walled gardens as well as the house.",
+          "where": "near Pitlochry",
+          "book": "",
+          "place": "united-kingdom/blair-castle"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Queen's View, Loch Tummel",
+          "notes": "An easy, level stop with a view toward Schiehallion.",
+          "where": "Loch Tummel, near Pitlochry",
+          "book": "",
+          "place": "united-kingdom/queens-view"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1h",
+          "name": "Pitlochry town and riverside walk",
+          "notes": "The dam and fish ladder are a short walk from the main street.",
+          "where": "Pitlochry",
+          "book": "",
+          "place": "united-kingdom/pitlochry-town"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Edinburgh Airport (EDI)",
+          "to": "Edinburgh hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Tram or Airlink bus",
+          "notes": "A taxi is a fair backup with luggage.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Edinburgh",
+          "to": "Glasgow",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "ScotRail train",
+          "notes": "Frequent direct trains; no need to book a fixed train in advance.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Glasgow",
+          "to": "Oban",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car via Loch Lomond",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Oban",
+          "to": "Iona",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Ferry to Craignure on Mull, a road crossing of Mull, then a short ferry to Iona",
+          "notes": "Check the ferry timetable the day before.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Iona",
+          "to": "Oban",
+          "time": "17:00",
+          "minutes": 150,
+          "carrier": "Return by the same ferries and road crossing",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Oban",
+          "to": "Isle of Skye (Portree area)",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car via Glen Coe, Fort William, Glenfinnan and the Skye Bridge",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Isle of Skye",
+          "to": "Inverness",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Rental car via Invermoriston and the shore of Loch Ness",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Inverness",
+          "to": "Pitlochry",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Rental car via Aviemore and the Cairngorms",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Pitlochry hotel area",
+          "to": "Edinburgh Airport (EDI)",
+          "time": "",
+          "minutes": 100,
+          "carrier": "Rental car",
+          "notes": "Leave at least three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "united-kingdom/royal-mile": {
+        "name": "The Royal Mile",
+        "description": "The sloping main street of Edinburgh's Old Town, running from the castle down to the former royal palace.",
+        "details": "The Royal Mile links Edinburgh Castle at the top of the Old Town to the Palace of Holyroodhouse at the bottom, taking in the High Kirk of St Giles and a web of narrow closes that drop away on either side. Street performers and shops line the route, especially in summer, and the closes are worth a short detour for a quieter view of the Old Town's tightly packed tenements. The street is cobbled and slopes steadily, so comfortable shoes help.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/edinburgh-castle": {
+        "name": "Edinburgh Castle",
+        "description": "A fortress on an ancient volcanic rock above the city, home to the Scottish crown jewels and the Stone of Destiny.",
+        "details": "Edinburgh Castle sits on Castle Rock, a defensible position used since at least the Iron Age, and the buildings on the summit today span several centuries. Highlights include the Crown Room, which holds the Honours of Scotland, St Margaret's Chapel, and the One O'Clock Gun. The approach up the Esplanade and into the castle involves slopes, cobbles and some stairs, and it gets busy around midday. Check opening days before visiting, as hours vary by season.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/national-museum-scotland": {
+        "name": "National Museum of Scotland",
+        "description": "A large free museum covering Scottish history and world cultures in a Victorian building on Chambers Street.",
+        "details": "The museum traces Scotland's story from its geology and early peoples through to the industrial era, alongside separate galleries on natural history, world cultures and design. The original Victorian entrance hall, with its glass roof and cast-iron galleries, is worth a look on its own. Entry to the permanent galleries is free, and the rooftop terrace gives a view over the Old Town roofline. It is large enough to need a few hours if you want to see more than the highlights.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/arthurs-seat": {
+        "name": "Arthur's Seat",
+        "description": "An extinct volcano in Holyrood Park that gives the best panoramic view over Edinburgh.",
+        "details": "Arthur's Seat rises above Holyrood Park at the eastern edge of the Old Town and is the highest point in Edinburgh. Several paths lead to the summit; the most direct climbs steadily over grass and rock and takes most walkers under an hour each way. The top is exposed and often windy, so a light layer helps even on a mild day, and the ground can be slippery after rain. The reward is a wide view over the city, the Firth of Forth and the surrounding hills.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "united-kingdom/st-andrews": {
+        "name": "St Andrews old town and cathedral ruins",
+        "description": "A small university and golf town on Fife's coast, with the ruins of Scotland's largest medieval cathedral.",
+        "details": "St Andrews grew up around its cathedral, once the largest church in Scotland, which was abandoned after the Reformation and now stands as a roofless ruin above the harbour. The town is also closely tied to the history of golf, with the Old Course running along the edge of the links, and a compact university quarter of stone lanes. The cathedral grounds and the nearby castle ruins sit on a bluff above the sea, with some uneven ground and steps. It makes a manageable day trip from Edinburgh by train and bus or by car.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/dean-village": {
+        "name": "Dean Village and Stockbridge",
+        "description": "A former milling village on the Water of Leith, now a quiet residential corner a short walk from the New Town.",
+        "details": "Dean Village sits in a steep little valley on the Water of Leith, where tall former granary buildings and a row of houses line the water below street level. A riverside path connects it to Stockbridge, a neighbourhood of independent shops and cafes, and on to the Royal Botanic Garden further north. The paths involve some steps and slopes down into the valley. It is a quieter contrast to the Old Town and a pleasant morning walk.",
+        "interests": [
+          "photography",
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/old-town-dinner": {
+        "name": "Traditional dinner in Edinburgh's Old Town",
+        "description": "A sit-down dinner of Scottish staples such as haggis or venison in one of the Old Town's restaurants.",
+        "details": "",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/ceilidh-night": {
+        "name": "Traditional music session in an Edinburgh pub",
+        "description": "An evening of live folk music, and in some venues a ceilidh dance, in one of the Old Town's pubs.",
+        "details": "",
+        "interests": [
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/edinburgh-whisky-tasting": {
+        "name": "A Scotch whisky tasting experience",
+        "description": "A guided tasting of several Scotch whiskies, usually with an explanation of the regions and how they differ.",
+        "details": "",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/glencoe-viewpoint": {
+        "name": "Glen Coe viewpoint",
+        "description": "A mountain-ringed glen on the road north, framed by steep peaks including the Three Sisters.",
+        "details": "Glen Coe cuts through some of the most dramatic mountain scenery on the road between the Central Belt and the west Highlands, with the ridge known as the Three Sisters rising steeply on one side of the valley floor. A National Trust for Scotland visitor centre and a roadside viewpoint make it easy to stop for photos without a long detour. The glen is also the start of several serious hill walks, though those need proper gear and are a separate outing from a roadside stop. Weather on the mountains changes quickly, so the view can differ hour to hour.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/eilean-donan-castle": {
+        "name": "Eilean Donan Castle",
+        "description": "A restored castle on a small tidal island where three lochs meet, among the most photographed in Scotland.",
+        "details": "Eilean Donan stands on its own islet at the point where Loch Duich, Loch Long and Loch Alsh come together, reached by a short stone footbridge from the shore. The present buildings are largely an early-20th-century reconstruction of a much older stronghold that was destroyed in the 18th century. It is usually visited as a brief stop on the drive between the Central Belt or Fort William and Skye rather than a half-day outing. Check opening days and hours for the interior before counting on going inside.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/old-man-of-storr": {
+        "name": "The Old Man of Storr",
+        "description": "A distinctive rock pinnacle on a hillside above Skye's east coast, reached by a popular waymarked path.",
+        "details": "The Old Man of Storr is the tallest of several rock pinnacles below the Storr hill, formed from landslipped basalt and visible from much of the surrounding coast. A clear path climbs from the car park through forest and then open hillside to a viewpoint beneath the pinnacles, typically taking around an hour and a half round trip at a steady pace. The path is popular and can be busy, and the upper section is steep and can be wet or windy. Good footwear and a weatherproof layer are worth having even on a clear morning.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "united-kingdom/quiraing": {
+        "name": "The Quiraing",
+        "description": "A landslipped ridge on the Trotternish peninsula with pinnacles, cliffs and a rolling plateau used for grazing.",
+        "details": "The Quiraing is part of the same Trotternish landslip as the Old Man of Storr, further north, where towers of rock and green plateaus sit below a long escarpment. A path along the base of the cliffs gives views of the main features without needing the full ridge walk, which is longer and more exposed. The narrow road up to the car park has passing places and can be busy in season. Weather on the ridge changes quickly, so check conditions before setting out.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "united-kingdom/fairy-pools": {
+        "name": "The Fairy Pools",
+        "description": "A series of clear waterfalls and plunge pools below the Black Cuillin, reached by a streamside path.",
+        "details": "The Fairy Pools sit in Glen Brittle beneath the Black Cuillin, where a river drops through a chain of small waterfalls into pools of strikingly clear water. A path follows the stream from the car park, with the best pools roughly 20 to 30 minutes' walk in, and some visitors swim despite the cold. The ground near the water is uneven and can be slippery, and the single-track road to the car park gets busy in summer. The surrounding Cuillin peaks are often in cloud, so do not count on a clear view of them.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/neist-point": {
+        "name": "Neist Point",
+        "description": "A lighthouse on Skye's westernmost headland, reached by a path along dramatic sea cliffs.",
+        "details": "Neist Point is a narrow headland at the far west of Skye, with a working lighthouse at its tip and sheer cliffs dropping to the sea on either side. A paved but steep path leads down from the car park to the lighthouse, with a climb back up on the return. It is a reliable spot to look for seabirds, and sometimes whales or dolphins offshore, especially around dusk. The car park and path can be exposed to wind, so a windproof layer is worth carrying.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/portree": {
+        "name": "Portree",
+        "description": "Skye's main town, built around a small harbour lined with brightly painted buildings.",
+        "details": "Portree grew up around its sheltered harbour on the island's east coast and remains Skye's largest settlement, though still modest in size. The row of coloured buildings along the harbour front is the most photographed spot, and the surrounding streets hold most of the island's shops and restaurants. It is a convenient base for exploring the Trotternish peninsula to the north, and a pleasant place for an evening meal after a day on the hills. Parking in the centre can be tight in peak season.",
+        "interests": [
+          "photography",
+          "authentic_local",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/portree-seafood": {
+        "name": "Seafood dinner in Portree",
+        "description": "A dinner of local shellfish or fish landed nearby, served at one of the harbourside restaurants.",
+        "details": "",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/loch-ness-urquhart-castle": {
+        "name": "Urquhart Castle on Loch Ness",
+        "description": "The ruins of one of Scotland's largest castles, on a headland overlooking Loch Ness.",
+        "details": "Urquhart Castle occupies a promontory on the western shore of Loch Ness and was, before its decline, one of the largest strongholds in the country, changing hands repeatedly during the medieval wars of independence. What survives today is substantially ruined, but the setting above the loch is the main draw, and a visitor centre explains the castle's history. It is a common stop on a drive along the loch's western shore or on a Loch Ness cruise. The grounds include slopes and uneven stone underfoot.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/culloden-battlefield": {
+        "name": "Culloden Battlefield",
+        "description": "The moor east of Inverness where the last major battle on British soil was fought in 1746.",
+        "details": "Culloden was the final battle of the Jacobite rising, fought on the moor in April 1746 and ending in defeat for the Jacobite forces within under an hour. The National Trust for Scotland visitor centre sets out the events leading up to the battle and the clans involved, and marked paths cross the moor itself, with flags showing where each side stood. It is a sobering, open site rather than a dramatic one, and most visitors spend one to two hours between the centre and the field. The paths are mostly flat but can be muddy.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/inverness-town": {
+        "name": "Inverness town centre",
+        "description": "The Highland capital's compact centre along the River Ness, below a red sandstone castle.",
+        "details": "Inverness sits where the River Ness flows into the Moray Firth, and its centre is small enough to cover on foot in an afternoon, with a pedestrianised high street and a riverside path on both banks. The Victorian castle on the hill above the river is still in use as a courthouse and is best seen from outside. It functions mainly as the practical base for the surrounding Highlands rather than a sight in itself, with a cathedral, a museum and a cluster of independent shops. The riverside paths are flat and easy walking.",
+        "interests": [
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/loch-ness-cruise": {
+        "name": "Loch Ness boat cruise",
+        "description": "A cruise on Scotland's largest loch by volume, past Urquhart Castle and the surrounding hills.",
+        "details": "Loch Ness stretches for over twenty miles along the Great Glen and is best known for its monster legend, though most visitors come for the scenery and the chance to see Urquhart Castle from the water. Cruises typically run from Inverness or from Drumnadrochit and take around an hour, with commentary on the loch's history and depth. The loch is deep and dark year-round, so the water itself looks much the same regardless of season. Boats generally run in most weather, but check ahead in winter.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/dundee-v-and-a": {
+        "name": "V&A Dundee",
+        "description": "Scotland's design museum on Dundee's waterfront, in a building shaped like a ship's hull.",
+        "details": "V&A Dundee opened on the regenerated waterfront near where the RRS Discovery is docked, and its angular concrete form was designed to evoke the cliffs of Scotland's coastline. The Scottish Design Galleries, its permanent collection, are free to enter and cover furniture, fashion and everyday objects designed in Scotland, while a separate gallery hosts changing exhibitions that usually carry a charge. It sits within walking distance of the city's rail station, making it an easy stop between Edinburgh and the Highlands. Allow an hour or two for the free galleries alone.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/blair-castle": {
+        "name": "Blair Castle",
+        "description": "A whitewashed castle near Pitlochry, seat of the Dukes of Atholl for centuries, set in its own parkland.",
+        "details": "Blair Castle has been home to the Atholl family for centuries, and its rooms range from a medieval great hall to Georgian and Victorian interiors furnished with family portraits, arms and taxidermy. The grounds include walled gardens and parkland with waymarked walks. It is a short drive north of Pitlochry and makes a half-day visit including the gardens. Check opening days, as the castle keeps shorter hours outside the main season.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/queens-view": {
+        "name": "Queen's View, Loch Tummel",
+        "description": "A well-known viewpoint over Loch Tummel towards the mountain Schiehallion, near Pitlochry.",
+        "details": "Queen's View looks west along Loch Tummel to the distinctive conical shape of Schiehallion in the distance, and takes its name from a visit by Queen Victoria, though the outlook was already well known before then. A visitor centre and a short path lead to the main viewing point, with longer waymarked trails continuing into the surrounding forest for those with more time. It is an easy stop on a drive through Highland Perthshire rather than a destination in itself. The main viewpoint is level and accessible.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/pitlochry-town": {
+        "name": "Pitlochry town and riverside walk",
+        "description": "A small Highland Perthshire town on the River Tummel, with a dam, salmon ladder and a gentle riverside path.",
+        "details": "Pitlochry grew as a Victorian spa town after the railway arrived and keeps a tidy main street of shops alongside the River Tummel. A path leads from the town to the dam and fish ladder, where salmon can sometimes be seen when migrating upstream, and on into the woods on the opposite bank. The town is also known for its festival theatre and for nearby whisky distilleries. The riverside paths are flat and well maintained.",
+        "interests": [
+          "authentic_local",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/speyside-distillery": {
+        "name": "A Speyside whisky distillery tour",
+        "description": "A guided tour and tasting at one of the long-established malt whisky distilleries around the Spey valley.",
+        "details": "Speyside holds the largest concentration of malt whisky distilleries in Scotland, many of them long-established and open for tours that walk through malting, mashing, distillation and maturation before a tasting. Tour length and depth vary by distillery, from a short standard tour to longer tastings that go through several expressions. Photography inside the working areas is sometimes restricted, so check on arrival. Non-drinkers are normally still welcome to join the tour itself.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/glasgow-kelvingrove": {
+        "name": "Kelvingrove Art Gallery and Museum",
+        "description": "A free museum in a grand sandstone building in the West End, covering art, natural history and Glasgow's past.",
+        "details": "Kelvingrove opened in 1901 and remains one of Scotland's most visited museums, its galleries ranging from Dutch and Scottish painting to arms and armour, taxidermy and the story of the city itself. The building sits in Kelvingrove Park on the edge of Glasgow's West End, a short walk from the university and a cluster of cafes and independent shops. Entry to the permanent collection is free. The grand central hall alone is worth a look even on a short visit.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/glasgow-mackintosh": {
+        "name": "Mackintosh architecture walk",
+        "description": "A self-guided look at Glasgow's Art Nouveau buildings designed by Charles Rennie Mackintosh.",
+        "details": "Charles Rennie Mackintosh left his mark across Glasgow in the early 1900s, and several of his buildings, including the Glasgow School of Art facade and the Willow Tea Rooms, can be seen on a walk through the city centre. Some interiors are open to visitors on a paid basis, including a tea room still run along the lines of Mackintosh's original design. The sites are spread across a reasonable walking distance in the city centre and West End. Check current opening status, since some buildings have been closed for restoration in recent years.",
+        "interests": [
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/oban-seafront": {
+        "name": "Oban seafront and McCaig's Tower",
+        "description": "A harbour town promenade below an unfinished Victorian folly modelled on the Colosseum.",
+        "details": "Oban's curved seafront looks out over the bay to the islands of Kerrera and Mull, with ferries coming and going from the harbour through the day. Above the town, McCaig's Tower is an unfinished Victorian folly built to resemble Rome's Colosseum, reached by a short uphill walk and giving a wide view over the bay. The town itself is small enough to cross on foot, with seafood stalls near the harbour. The climb to the tower is steady but not technical.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/oban-distillery": {
+        "name": "Oban Distillery tour",
+        "description": "A tour and tasting at one of Scotland's oldest licensed whisky distilleries, in the centre of Oban.",
+        "details": "Oban Distillery has operated in the centre of the town since the late 18th century, predating much of the town's growth around it, and tours take in the small-scale production process before a tasting. Being in the town centre rather than out in the countryside, it is an easy stop on foot between the harbour and the seafront. Tour times and group sizes are limited, so booking ahead is worth it in season. Non-drinkers are normally still welcome to join the tour.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/oban-seafood": {
+        "name": "Seafood dinner in Oban",
+        "description": "A dinner built around local shellfish and fish, landed at the harbour the town is built around.",
+        "details": "",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/iona-abbey": {
+        "name": "Iona Abbey",
+        "description": "A restored medieval abbey on the small island of Iona, reached by ferry from Mull, and a centre of early Christianity in Scotland.",
+        "details": "Iona has been a centre of Christian worship since St Columba founded a monastery there in the 6th century, and the present abbey, restored in the early 20th century, stands on the site of that early community. The island is reached by a short ferry from Fionnphort on Mull, itself a drive across Mull from the Oban ferry. Early carved crosses and a burial ground linked to early Scottish kings add to the site's history. The crossing and onward drive make this most of a full day out from Oban.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/loch-lomond": {
+        "name": "Loch Lomond viewpoint",
+        "description": "Scotland's largest loch by surface area, with wooded islands and a popular shoreline stop near Luss or Balloch.",
+        "details": "Loch Lomond lies within Scotland's first national park and is dotted with wooded islands, popularly viewed from the shoreline village of Luss or from Balloch at its southern end. The loch is a common stop on the drive north from Glasgow towards Oban or the west Highlands, with cafes and short lochside paths at the main villages. Boat trips run from several points for a closer look at the islands. It is an easy, mostly level stop rather than a long outing.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/glenfinnan-viaduct": {
+        "name": "Glenfinnan Viaduct",
+        "description": "A curved railway viaduct made famous by the Harry Potter films, viewed from a hillside above Loch Shiel.",
+        "details": "The viaduct carries the West Highland railway in a long curve above Glenfinnan, and its steam-hauled service across it became widely known after appearing in the Harry Potter films. A signposted path climbs a short way up the hillside opposite to the main viewpoint, which also looks down Loch Shiel to a monument marking a Jacobite landing. Train times for anyone hoping to see a train cross should be checked locally, as schedules vary by season. The viewpoint path involves a short, moderate climb.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "united-kingdom": {
+        "name": "United Kingdom",
+        "description": "An island nation of four constituent countries, pairing historic cities and castles with coastline, moorland and mountain scenery.",
+        "images": []
+      },
+      "united-kingdom/scotland": {
+        "name": "Scotland",
+        "description": "A country of lochs, mountains, castles and whisky distilleries, easily combined by train and scenic drives between a historic capital and the wild Highlands.",
+        "images": []
+      },
+      "united-kingdom/edinburgh": {
+        "name": "Edinburgh",
+        "description": "A compact hilltop capital of a medieval Old Town, a Georgian New Town, and a castle that overlooks both.",
+        "images": []
+      },
+      "united-kingdom/isle-of-skye": {
+        "name": "Isle of Skye",
+        "description": "A mountainous Hebridean island of jagged ridgelines, sea cliffs and single-track roads, reached by bridge from the mainland.",
+        "images": []
+      },
+      "united-kingdom/inverness": {
+        "name": "Inverness",
+        "description": "The gateway city to the Highlands, set where the River Ness meets the Moray Firth and a short drive from Loch Ness.",
+        "images": []
+      },
+      "united-kingdom/glasgow": {
+        "name": "Glasgow",
+        "description": "Scotland's largest city, known for Victorian and Art Nouveau architecture, museums and a lively music scene.",
+        "images": []
+      },
+      "united-kingdom/oban": {
+        "name": "Oban",
+        "description": "A harbour town on the west coast, the ferry gateway to the Inner Hebrides and known for its seafood and whisky.",
+        "images": []
+      },
+      "united-kingdom/pitlochry": {
+        "name": "Pitlochry",
+        "description": "A small Highland Perthshire town on the River Tummel, used as a base for castles, distilleries and gentle hill walks.",
+        "images": []
+      },
+      "united-kingdom/st-andrews": {
+        "name": "St Andrews",
+        "description": "A small university and golf town on the Fife coast, with the ruins of the largest medieval cathedral in Scotland above its harbour.",
+        "images": []
+      }
+    }
+  }
+}
