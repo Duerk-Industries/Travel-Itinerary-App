@@ -25,7 +25,7 @@ it.each(['web', 'ios', 'android'] as const)('keeps composed action styles readab
     for (const [bg, fg] of [['button', 'buttonText'], ['secondaryButton', 'secondaryButtonText'], ['dangerButton', 'dangerButtonText']] as const) {
       const composed = { ...shared.button, ...shared[bg] };
       readable(bg, shared[fg].color!, composed.backgroundColor!);
-      if (bg !== 'button') expect(composed[platform === 'web' ? 'backgroundImage' : 'experimental_backgroundImage' as keyof typeof composed]).toEqual(platform === 'web' ? 'none' : []);
+      if (bg !== 'button') expect((composed as Record<string, unknown>)[platform === 'web' ? 'backgroundImage' : 'experimental_backgroundImage']).toEqual(platform === 'web' ? 'none' : []);
     }
     for (const endpoint of [theme.colors.ctaGradientStart, theme.colors.ctaGradientEnd]) readable('CTA gradient endpoint', theme.colors.onCta, endpoint);
     const pairs: [ThemeStyleName, ThemeStyleName][] = [

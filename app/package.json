@@ -70,6 +70,7 @@
     "expo": "~54.0.37",
     "expo-age-range": "~0.2.1",
     "expo-apple-authentication": "~8.0.8",
+    "expo-asset": "~12.0.14",
     "expo-audio": "~1.1.1",
     "expo-calendar": "~15.0.8",
     "expo-clipboard": "~8.0.8",

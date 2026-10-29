@@ -57,7 +57,7 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
 
   if (!visible) return null;
   return (
-    <DialogShell
+    <DialogShell scrollable={false}
       visible={visible}
       title={`${kind[0].toUpperCase()}${kind.slice(1)} details`}
       styles={styles}
