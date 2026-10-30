@@ -38,6 +38,7 @@ coverage
 logs
 *example*
 !scripts/deploy.config.example
+!server/data/trip-template-authoring/example-bundle.json
 .gradle
 server/.gradle
 firestore-debug.log
