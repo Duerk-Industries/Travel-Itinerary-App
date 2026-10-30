@@ -1,0 +1,3615 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, Lonely Planet and KimKim itineraries for Iceland",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "iceland-reykjavik-golden-circle-4d",
+      "title": "Reykjavik and the Golden Circle in 4 Days",
+      "summary": "A short Iceland introduction: the Blue Lagoon on arrival, the capital, the Golden Circle and a whale-watching trip from the Old Harbour.",
+      "days": 4,
+      "route": "Reykjavik (Golden Circle, Blue Lagoon)",
+      "arrive": "Keflavik (KEF)",
+      "depart": "Keflavik (KEF)",
+      "countries": [
+        "Iceland"
+      ],
+      "regions": [
+        "Capital Region",
+        "South Iceland"
+      ],
+      "cities": [
+        "Reykjavik",
+        "Golden Circle"
+      ],
+      "imageQuery": "Iceland Gullfoss waterfall Golden Circle",
+      "highlights": [
+        "Blue Lagoon",
+        "Golden Circle",
+        "Whale watching",
+        "Hallgrimskirkja",
+        "Harpa"
+      ],
+      "destinationKeys": [
+        "iceland",
+        "iceland/capital-region",
+        "iceland/reykjavik",
+        "iceland/south-iceland",
+        "iceland/golden-circle"
+      ],
+      "hero": "iceland/golden-circle",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "KimKim itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "relax",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Reykjavik",
+          "hotel": "Hotel in Reykjavik",
+          "start": 0,
+          "nights": 3,
+          "area": "Central Reykjavik near Laugavegur: walkable to the sights, cafes and restaurants, with car parking on the edges",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Spa/Wellness",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Blue Lagoon",
+          "notes": "Book a timed ticket; a shower before entering is compulsory. Check the lagoon's status first, as volcanic activity nearby has caused temporary closures.",
+          "where": "Grindavik, Reykjanes",
+          "book": "Yes - timed tickets sell out",
+          "place": "iceland/blue-lagoon"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Hallgrimskirkja",
+          "notes": "The tower lift gives a good first view of the city; it may close during services.",
+          "where": "Reykjavik",
+          "book": "",
+          "place": "iceland/hallgrimskirkja"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Thingvellir National Park",
+          "notes": "A flat path runs along the rift wall; it can be icy in winter.",
+          "where": "Thingvellir, South Iceland",
+          "book": "",
+          "place": "iceland/thingvellir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "12:15",
+          "duration": "1h",
+          "name": "Geysir geothermal area",
+          "notes": "Strokkur erupts every few minutes; stay behind the barriers, as the water is scalding.",
+          "where": "Haukadalur, South Iceland",
+          "book": "",
+          "place": "iceland/geysir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Gullfoss",
+          "notes": "Bring waterproofs; the lower path may be closed in winter.",
+          "where": "Gullfoss, South Iceland",
+          "book": "",
+          "place": "iceland/gullfoss"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Whale-watching from Reykjavik",
+          "notes": "Warm overalls are provided on most boats; sightings are never guaranteed, and many operators offer a second trip free.",
+          "where": "Old Harbour, Reykjavik",
+          "book": "Yes - trips fill up in summer",
+          "place": "iceland/reykjavik-whale-watching"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Harpa and the Reykjavik seafront",
+          "notes": "A flat walk; the wind off the bay is strong.",
+          "where": "Harbour, Reykjavik",
+          "book": "",
+          "place": "iceland/harpa-seafront"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Icelandic dinner in Reykjavik",
+          "notes": "Book ahead at weekends and in summer.",
+          "where": "Reykjavik",
+          "book": "",
+          "place": "iceland/reykjavik-dinner"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Keflavik Airport (KEF)",
+          "to": "Blue Lagoon",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Shuttle or rental car",
+          "notes": "Many flights arrive early in the morning, which suits a lagoon visit; luggage storage is available at the lagoon.",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Blue Lagoon",
+          "to": "Reykjavik hotel area",
+          "time": "12:30",
+          "minutes": 50,
+          "carrier": "Shuttle coach or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Reykjavik hotel area",
+          "to": "Thingvellir",
+          "time": "08:45",
+          "minutes": 45,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Thingvellir",
+          "to": "Geysir",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Geysir",
+          "to": "Gullfoss",
+          "time": "13:15",
+          "minutes": 10,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Gullfoss",
+          "to": "Reykjavik hotel area",
+          "time": "14:45",
+          "minutes": 100,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Reykjavik hotel area",
+          "to": "Keflavik Airport (KEF)",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Flybus coach or rental car",
+          "notes": "Allow time for the 50-minute transfer; flights from Keflavik often leave early in the morning.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "iceland-golden-circle-south-coast-5d",
+      "title": "Golden Circle and South Coast in 5 Days",
+      "summary": "The classic short route: the Blue Lagoon, the Golden Circle, and two nights on the south coast among waterfalls, black beaches and glaciers.",
+      "days": 5,
+      "route": "Reykjavik (Golden Circle) > Vik (South Coast)",
+      "arrive": "Keflavik (KEF)",
+      "depart": "Keflavik (KEF)",
+      "countries": [
+        "Iceland"
+      ],
+      "regions": [
+        "Capital Region",
+        "South Iceland"
+      ],
+      "cities": [
+        "Reykjavik",
+        "Golden Circle",
+        "Vik"
+      ],
+      "imageQuery": "Iceland Skogafoss waterfall South Coast",
+      "highlights": [
+        "Golden Circle",
+        "Skogafoss",
+        "Reynisfjara black sand beach",
+        "Glacier walk",
+        "Blue Lagoon"
+      ],
+      "destinationKeys": [
+        "iceland",
+        "iceland/capital-region",
+        "iceland/reykjavik",
+        "iceland/south-iceland",
+        "iceland/golden-circle",
+        "iceland/vik"
+      ],
+      "hero": "iceland/vik",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "KimKim itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "adventure",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Reykjavik",
+          "hotel": "Hotel in Reykjavik",
+          "start": 0,
+          "nights": 2,
+          "area": "Central Reykjavik near Laugavegur: walkable to the sights, cafes and restaurants, with car parking on the edges",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Vik",
+          "hotel": "Hotel in Vik",
+          "start": 2,
+          "nights": 2,
+          "area": "In or just outside Vik, close to the black beach and the village restaurants",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Spa/Wellness",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Blue Lagoon",
+          "notes": "Book a timed ticket; a shower before entering is compulsory. Check the lagoon's status first, as volcanic activity nearby has caused temporary closures.",
+          "where": "Grindavik, Reykjanes",
+          "book": "Yes - timed tickets sell out",
+          "place": "iceland/blue-lagoon"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Hallgrimskirkja",
+          "notes": "The tower lift gives a good first view of the city; it may close during services.",
+          "where": "Reykjavik",
+          "book": "",
+          "place": "iceland/hallgrimskirkja"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Thingvellir National Park",
+          "notes": "A flat path runs along the rift wall; it can be icy in winter.",
+          "where": "Thingvellir, South Iceland",
+          "book": "",
+          "place": "iceland/thingvellir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "12:15",
+          "duration": "1h",
+          "name": "Geysir geothermal area",
+          "notes": "Strokkur erupts every few minutes; stay behind the barriers, as the water is scalding.",
+          "where": "Haukadalur, South Iceland",
+          "book": "",
+          "place": "iceland/geysir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Gullfoss",
+          "notes": "Bring waterproofs; the lower path may be closed in winter.",
+          "where": "Gullfoss, South Iceland",
+          "book": "",
+          "place": "iceland/gullfoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Seljalandsfoss",
+          "notes": "Wear waterproofs and shoes with grip to walk behind the falls; the path closes in icy conditions.",
+          "where": "Seljalandsfoss, South Iceland",
+          "book": "",
+          "place": "iceland/seljalandsfoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1h",
+          "name": "Skogafoss",
+          "notes": "The stairway to the top is steep; spray soaks the base.",
+          "where": "Skogafoss, South Iceland",
+          "book": "",
+          "place": "iceland/skogafoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1h",
+          "name": "Dyrholaey",
+          "notes": "Parts are closed in early summer to protect nesting birds; the cliff top is windy.",
+          "where": "Dyrholaey, near Vik",
+          "book": "",
+          "place": "iceland/dyrholaey"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Solheimajokull glacier walk",
+          "notes": "Crampons and axes are provided; the walk needs reasonable fitness and sturdy boots, and is cancelled in poor weather.",
+          "where": "Solheimajokull, South Iceland",
+          "book": "Yes - guided walks run to a schedule and fill up",
+          "place": "iceland/solheimajokull-glacier-walk"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Reynisfjara black sand beach",
+          "notes": "Never turn your back on the sea or stand near the water: unpredictable waves have killed visitors.",
+          "where": "Reynisfjara, near Vik",
+          "book": "",
+          "place": "iceland/reynisfjara"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Keflavik Airport (KEF)",
+          "to": "Blue Lagoon",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Shuttle or rental car",
+          "notes": "Many flights arrive early in the morning, which suits a lagoon visit; luggage storage is available at the lagoon.",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Blue Lagoon",
+          "to": "Reykjavik hotel area",
+          "time": "12:30",
+          "minutes": 50,
+          "carrier": "Shuttle coach or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Reykjavik hotel area",
+          "to": "Thingvellir",
+          "time": "08:45",
+          "minutes": 45,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Thingvellir",
+          "to": "Geysir",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Geysir",
+          "to": "Gullfoss",
+          "time": "13:15",
+          "minutes": 10,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Gullfoss",
+          "to": "Reykjavik hotel area",
+          "time": "14:45",
+          "minutes": 100,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Reykjavik hotel area",
+          "to": "Seljalandsfoss",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Seljalandsfoss",
+          "to": "Skogafoss",
+          "time": "11:45",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Skogafoss",
+          "to": "Vik",
+          "time": "14:30",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Vik",
+          "to": "Solheimajokull",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Solheimajokull",
+          "to": "Vik",
+          "time": "13:15",
+          "minutes": 25,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Vik",
+          "to": "Keflavik Airport (KEF)",
+          "time": "",
+          "minutes": 190,
+          "carrier": "Rental car",
+          "notes": "Allow about three hours and book a flight in the afternoon or later; check road conditions before leaving.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "iceland-south-coast-glacier-lagoon-7d",
+      "title": "South Coast and Glacier Lagoon in 7 Days",
+      "summary": "The Golden Circle plus the south coast as far as Jokulsarlon, with two nights in Hofn before driving back to Reykjavik.",
+      "days": 7,
+      "route": "Reykjavik (Golden Circle) > Vik > Hofn (Jokulsarlon) > Reykjavik",
+      "arrive": "Keflavik (KEF)",
+      "depart": "Keflavik (KEF)",
+      "countries": [
+        "Iceland"
+      ],
+      "regions": [
+        "Capital Region",
+        "South Iceland"
+      ],
+      "cities": [
+        "Reykjavik",
+        "Golden Circle",
+        "Vik",
+        "Skaftafell",
+        "Jokulsarlon",
+        "Hofn"
+      ],
+      "imageQuery": "Jokulsarlon glacier lagoon icebergs Iceland",
+      "highlights": [
+        "Golden Circle",
+        "Skogafoss",
+        "Jokulsarlon glacier lagoon",
+        "Diamond Beach",
+        "Vestrahorn"
+      ],
+      "destinationKeys": [
+        "iceland",
+        "iceland/capital-region",
+        "iceland/reykjavik",
+        "iceland/south-iceland",
+        "iceland/golden-circle",
+        "iceland/vik",
+        "iceland/skaftafell",
+        "iceland/jokulsarlon",
+        "iceland/hofn"
+      ],
+      "hero": "iceland/jokulsarlon",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "KimKim itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "adventure",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Reykjavik",
+          "hotel": "Hotel in Reykjavik",
+          "start": 0,
+          "nights": 2,
+          "area": "Central Reykjavik near Laugavegur: walkable to the sights, cafes and restaurants, with car parking on the edges",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Vik",
+          "hotel": "Hotel in Vik",
+          "start": 2,
+          "nights": 1,
+          "area": "In or just outside Vik, close to the black beach and the village restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hofn",
+          "hotel": "Hotel in Hofn",
+          "start": 3,
+          "nights": 2,
+          "area": "In Hofn or on a nearby farm, with views toward the glacier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Reykjavik",
+          "hotel": "Hotel in Reykjavik",
+          "start": 5,
+          "nights": 1,
+          "area": "Central Reykjavik near Laugavegur: walkable to the sights, cafes and restaurants, with car parking on the edges",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Spa/Wellness",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Blue Lagoon",
+          "notes": "Book a timed ticket; a shower before entering is compulsory. Check the lagoon's status first, as volcanic activity nearby has caused temporary closures.",
+          "where": "Grindavik, Reykjanes",
+          "book": "Yes - timed tickets sell out",
+          "place": "iceland/blue-lagoon"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Hallgrimskirkja",
+          "notes": "The tower lift gives a good first view of the city; it may close during services.",
+          "where": "Reykjavik",
+          "book": "",
+          "place": "iceland/hallgrimskirkja"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Thingvellir National Park",
+          "notes": "A flat path runs along the rift wall; it can be icy in winter.",
+          "where": "Thingvellir, South Iceland",
+          "book": "",
+          "place": "iceland/thingvellir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "12:15",
+          "duration": "1h",
+          "name": "Geysir geothermal area",
+          "notes": "Strokkur erupts every few minutes; stay behind the barriers, as the water is scalding.",
+          "where": "Haukadalur, South Iceland",
+          "book": "",
+          "place": "iceland/geysir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Gullfoss",
+          "notes": "Bring waterproofs; the lower path may be closed in winter.",
+          "where": "Gullfoss, South Iceland",
+          "book": "",
+          "place": "iceland/gullfoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Seljalandsfoss",
+          "notes": "Wear waterproofs and shoes with grip to walk behind the falls; the path closes in icy conditions.",
+          "where": "Seljalandsfoss, South Iceland",
+          "book": "",
+          "place": "iceland/seljalandsfoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1h",
+          "name": "Skogafoss",
+          "notes": "The stairway to the top is steep; spray soaks the base.",
+          "where": "Skogafoss, South Iceland",
+          "book": "",
+          "place": "iceland/skogafoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1h",
+          "name": "Dyrholaey",
+          "notes": "Parts are closed in early summer to protect nesting birds; the cliff top is windy.",
+          "where": "Dyrholaey, near Vik",
+          "book": "",
+          "place": "iceland/dyrholaey"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:45",
+          "duration": "1.5h",
+          "name": "Skaftafell and Svartifoss",
+          "notes": "The path climbs steadily and can be icy in winter; the basalt-framed waterfall is the reward.",
+          "where": "Skaftafell, Vatnajokull National Park",
+          "book": "",
+          "place": "iceland/skaftafell-svartifoss"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:45",
+          "duration": "1.5h",
+          "name": "Jokulsarlon glacier lagoon",
+          "notes": "Boat tours run mainly in the warmer months; early morning and evening are quietest.",
+          "where": "Jokulsarlon",
+          "book": "",
+          "place": "iceland/jokulsarlon"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "0.75h",
+          "name": "Diamond Beach",
+          "notes": "Keep well back from the surf and never climb on the ice.",
+          "where": "Breidamerkursandur",
+          "book": "",
+          "place": "iceland/diamond-beach"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Langoustine dinner in Hofn",
+          "notes": "Book or arrive by seven, as kitchens in the small town close early outside summer.",
+          "where": "Hofn",
+          "book": "",
+          "place": "iceland/hofn-langoustine"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Vestrahorn and Stokksnes",
+          "notes": "A small access fee is charged; the wind is strong and carries sand.",
+          "where": "Stokksnes, near Hofn",
+          "book": "",
+          "place": "iceland/vestrahorn"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Reynisfjara black sand beach",
+          "notes": "Never turn your back on the sea or stand near the water: unpredictable waves have killed visitors.",
+          "where": "Reynisfjara, near Vik",
+          "book": "",
+          "place": "iceland/reynisfjara"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Icelandic dinner in Reykjavik",
+          "notes": "Book ahead at weekends and in summer.",
+          "where": "Reykjavik",
+          "book": "",
+          "place": "iceland/reykjavik-dinner"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Keflavik Airport (KEF)",
+          "to": "Blue Lagoon",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Shuttle or rental car",
+          "notes": "Many flights arrive early in the morning, which suits a lagoon visit; luggage storage is available at the lagoon.",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Blue Lagoon",
+          "to": "Reykjavik hotel area",
+          "time": "12:30",
+          "minutes": 50,
+          "carrier": "Shuttle coach or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Reykjavik hotel area",
+          "to": "Thingvellir",
+          "time": "08:45",
+          "minutes": 45,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Thingvellir",
+          "to": "Geysir",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Geysir",
+          "to": "Gullfoss",
+          "time": "13:15",
+          "minutes": 10,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Gullfoss",
+          "to": "Reykjavik hotel area",
+          "time": "14:45",
+          "minutes": 100,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Reykjavik hotel area",
+          "to": "Seljalandsfoss",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Seljalandsfoss",
+          "to": "Skogafoss",
+          "time": "11:45",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Skogafoss",
+          "to": "Vik",
+          "time": "14:30",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Vik",
+          "to": "Skaftafell",
+          "time": "07:45",
+          "minutes": 105,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Skaftafell",
+          "to": "Jokulsarlon",
+          "time": "11:30",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Jokulsarlon",
+          "to": "Hofn",
+          "time": "15:30",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hofn",
+          "to": "Stokksnes",
+          "time": "09:05",
+          "minutes": 20,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Stokksnes",
+          "to": "Hofn",
+          "time": "11:15",
+          "minutes": 20,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Hofn",
+          "to": "Vik",
+          "time": "08:30",
+          "minutes": 225,
+          "carrier": "Rental car",
+          "notes": "A long driving day; fuel up when you can in the south-east.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Vik",
+          "to": "Reykjavik hotel area",
+          "time": "15:00",
+          "minutes": 150,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Reykjavik hotel area",
+          "to": "Keflavik Airport (KEF)",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Flybus coach or rental car",
+          "notes": "Allow time for the 50-minute transfer; flights from Keflavik often leave early in the morning.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "iceland-ring-road-7d",
+      "title": "The Ring Road in 7 Days",
+      "summary": "The whole island by road in a week, with a night in each of six bases and drives of between two and five hours a day.",
+      "days": 7,
+      "route": "Vik > Hofn > Egilsstadir > Myvatn > Akureyri > Borgarnes",
+      "arrive": "Keflavik (KEF)",
+      "depart": "Keflavik (KEF)",
+      "countries": [
+        "Iceland"
+      ],
+      "regions": [
+        "South Iceland",
+        "East Iceland",
+        "North Iceland",
+        "West Iceland"
+      ],
+      "cities": [
+        "Vik",
+        "Skaftafell",
+        "Jokulsarlon",
+        "Hofn",
+        "Egilsstadir",
+        "Myvatn",
+        "Akureyri",
+        "Borgarnes"
+      ],
+      "imageQuery": "Iceland Ring Road Dettifoss Myvatn landscape",
+      "highlights": [
+        "Skogafoss",
+        "Jokulsarlon glacier lagoon",
+        "Hengifoss",
+        "Dettifoss",
+        "Myvatn Nature Baths",
+        "Godafoss"
+      ],
+      "destinationKeys": [
+        "iceland",
+        "iceland/south-iceland",
+        "iceland/vik",
+        "iceland/skaftafell",
+        "iceland/jokulsarlon",
+        "iceland/hofn",
+        "iceland/east-iceland",
+        "iceland/egilsstadir",
+        "iceland/north-iceland",
+        "iceland/myvatn",
+        "iceland/akureyri",
+        "iceland/west-iceland",
+        "iceland/borgarnes"
+      ],
+      "hero": "iceland/myvatn",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "KimKim itinerary library"
+      ],
+      "pace": "F",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Vik",
+          "hotel": "Hotel in Vik",
+          "start": 0,
+          "nights": 1,
+          "area": "In or just outside Vik, close to the black beach and the village restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hofn",
+          "hotel": "Hotel in Hofn",
+          "start": 1,
+          "nights": 1,
+          "area": "In Hofn or on a nearby farm, with views toward the glacier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Egilsstadir",
+          "hotel": "Hotel in Egilsstadir",
+          "start": 2,
+          "nights": 1,
+          "area": "In Egilsstadir or at a lakeside guesthouse nearby",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Myvatn",
+          "hotel": "Hotel in Myvatn",
+          "start": 3,
+          "nights": 1,
+          "area": "Around Lake Myvatn at Reykjahlid, close to the baths and the lava fields",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Akureyri",
+          "hotel": "Hotel in Akureyri",
+          "start": 4,
+          "nights": 1,
+          "area": "Central Akureyri, near the church and the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Borgarnes",
+          "hotel": "Hotel in Borgarnes",
+          "start": 5,
+          "nights": 1,
+          "area": "In or near Borgarnes, an easy base before returning to Reykjavik",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "10:45",
+          "duration": "1h",
+          "name": "Seljalandsfoss",
+          "notes": "Wear waterproofs and shoes with grip to walk behind the falls.",
+          "where": "Seljalandsfoss, South Iceland",
+          "book": "",
+          "place": "iceland/seljalandsfoss"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "12:45",
+          "duration": "1h",
+          "name": "Skogafoss",
+          "notes": "The stairway to the top is steep; spray soaks the base.",
+          "where": "Skogafoss, South Iceland",
+          "book": "",
+          "place": "iceland/skogafoss"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Reynisfjara black sand beach",
+          "notes": "Never turn your back on the sea or stand near the water: unpredictable waves have killed visitors.",
+          "where": "Reynisfjara, near Vik",
+          "book": "",
+          "place": "iceland/reynisfjara"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "09:45",
+          "duration": "1.5h",
+          "name": "Skaftafell and Svartifoss",
+          "notes": "The path climbs steadily and can be icy in winter; the basalt-framed waterfall is the reward.",
+          "where": "Skaftafell, Vatnajokull National Park",
+          "book": "",
+          "place": "iceland/skaftafell-svartifoss"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "12:45",
+          "duration": "1.5h",
+          "name": "Jokulsarlon glacier lagoon",
+          "notes": "Boat tours run mainly in the warmer months; early morning and evening are quietest.",
+          "where": "Jokulsarlon",
+          "book": "",
+          "place": "iceland/jokulsarlon"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "0.75h",
+          "name": "Diamond Beach",
+          "notes": "Keep well back from the surf and never climb on the ice.",
+          "where": "Breidamerkursandur",
+          "book": "",
+          "place": "iceland/diamond-beach"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Langoustine dinner in Hofn",
+          "notes": "Book or arrive by seven, as kitchens in the small town close early outside summer.",
+          "where": "Hofn",
+          "book": "",
+          "place": "iceland/hofn-langoustine"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Vestrahorn and Stokksnes",
+          "notes": "A small access fee is charged; the wind is strong and carries sand.",
+          "where": "Stokksnes, near Hofn",
+          "book": "",
+          "place": "iceland/vestrahorn"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:15",
+          "duration": "3.5h",
+          "name": "East Fjords coastal drive",
+          "notes": "Fuel and services are sparse; fog and wind can reduce visibility.",
+          "where": "East Fjords",
+          "book": "",
+          "place": "iceland/east-fjords-drive"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "15:45",
+          "duration": "2.5h",
+          "name": "Hengifoss",
+          "notes": "A steep trail past Litlanesfoss; wet and slippery in places.",
+          "where": "Lagarfljot, East Iceland",
+          "book": "",
+          "place": "iceland/hengifoss"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:45",
+          "duration": "1h",
+          "name": "Dettifoss",
+          "notes": "Take the paved western road; the eastern gravel road is rougher and both are closed in winter. Paths near the falls are slippery.",
+          "where": "Jokulsargljufur, North Iceland",
+          "book": "",
+          "place": "iceland/dettifoss"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Hverir geothermal area",
+          "notes": "Keep to the marked paths; the ground is dangerously hot and the sulphur smell is strong.",
+          "where": "Namaskard, North Iceland",
+          "book": "",
+          "place": "iceland/hverir-geothermal"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Dimmuborgir and the Myvatn craters",
+          "notes": "Summer midges are a nuisance around the lake, so bring a head net.",
+          "where": "Lake Myvatn, North Iceland",
+          "book": "",
+          "place": "iceland/myvatn-lava-craters"
+        },
+        {
+          "day": 3,
+          "type": "Spa/Wellness",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Myvatn Nature Baths",
+          "notes": "Book a timed ticket in high season; a shower before entering is required.",
+          "where": "Reykjahlid, North Iceland",
+          "book": "Yes - timed tickets sell out in season",
+          "place": "iceland/myvatn-nature-baths"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:45",
+          "duration": "1h",
+          "name": "Godafoss",
+          "notes": "Paths on both banks can be icy in winter.",
+          "where": "Skjalfandafljot, North Iceland",
+          "book": "",
+          "place": "iceland/godafoss"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Akureyri",
+          "notes": "The church sits on a hill above the town; the botanical garden is a short walk.",
+          "where": "Akureyri",
+          "book": "",
+          "place": "iceland/akureyri"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Hraunfossar and Barnafoss",
+          "notes": "Boardwalks and platforms make it easy; stop at Deildartunguhver hot spring on the way.",
+          "where": "Hvita river, West Iceland",
+          "book": "",
+          "place": "iceland/hraunfossar"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Keflavik Airport (KEF)",
+          "to": "Seljalandsfoss",
+          "time": "08:30",
+          "minutes": 130,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Seljalandsfoss",
+          "to": "Skogafoss",
+          "time": "12:15",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Skogafoss",
+          "to": "Vik",
+          "time": "14:30",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Vik",
+          "to": "Skaftafell",
+          "time": "07:45",
+          "minutes": 105,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Skaftafell",
+          "to": "Jokulsarlon",
+          "time": "11:30",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Jokulsarlon",
+          "to": "Hofn",
+          "time": "15:30",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Hofn",
+          "to": "Stokksnes",
+          "time": "08:30",
+          "minutes": 20,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Stokksnes",
+          "to": "Egilsstadir",
+          "time": "10:45",
+          "minutes": 240,
+          "carrier": "Rental car",
+          "notes": "The road follows the fjords and winds through headlands; allow extra time for photographs.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Egilsstadir",
+          "to": "Hengifoss",
+          "time": "15:15",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Hengifoss",
+          "to": "Egilsstadir",
+          "time": "18:15",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Egilsstadir",
+          "to": "Dettifoss",
+          "time": "08:30",
+          "minutes": 130,
+          "carrier": "Rental car",
+          "notes": "The road is closed in winter, when the Ring Road via Modrudalur is the only option.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Dettifoss",
+          "to": "Myvatn",
+          "time": "11:45",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Myvatn",
+          "to": "Godafoss",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Godafoss",
+          "to": "Akureyri",
+          "time": "10:30",
+          "minutes": 50,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Akureyri",
+          "to": "Hraunfossar",
+          "time": "08:30",
+          "minutes": 285,
+          "carrier": "Rental car",
+          "notes": "A long drive across the north-west; fuel up in Blonduos.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Hraunfossar",
+          "to": "Borgarnes",
+          "time": "14:30",
+          "minutes": 50,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Borgarnes",
+          "to": "Keflavik Airport (KEF)",
+          "time": "",
+          "minutes": 105,
+          "carrier": "Rental car",
+          "notes": "Leave early if your flight is in the morning.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "iceland-ring-road-snaefellsnes-10d",
+      "title": "The Ring Road and Snaefellsnes in 10 Days",
+      "summary": "The full loop with the Golden Circle at the start and Snaefellsnes at the end, with two nights in Akureyri for Myvatn, Godafoss and whale watching.",
+      "days": 10,
+      "route": "Reykjavik (Golden Circle) > Vik > Hofn > Egilsstadir > Akureyri (Myvatn) > Stykkisholmur (Snaefellsnes) > Reykjavik",
+      "arrive": "Keflavik (KEF)",
+      "depart": "Keflavik (KEF)",
+      "countries": [
+        "Iceland"
+      ],
+      "regions": [
+        "Capital Region",
+        "South Iceland",
+        "East Iceland",
+        "North Iceland",
+        "West Iceland"
+      ],
+      "cities": [
+        "Reykjavik",
+        "Golden Circle",
+        "Vik",
+        "Skaftafell",
+        "Jokulsarlon",
+        "Hofn",
+        "Egilsstadir",
+        "Myvatn",
+        "Akureyri",
+        "Husavik",
+        "Snaefellsnes",
+        "Stykkisholmur"
+      ],
+      "imageQuery": "Kirkjufell mountain Snaefellsnes Iceland",
+      "highlights": [
+        "Golden Circle",
+        "Jokulsarlon glacier lagoon",
+        "Dettifoss",
+        "Whale watching at Husavik",
+        "Kirkjufell"
+      ],
+      "destinationKeys": [
+        "iceland",
+        "iceland/capital-region",
+        "iceland/reykjavik",
+        "iceland/south-iceland",
+        "iceland/golden-circle",
+        "iceland/vik",
+        "iceland/skaftafell",
+        "iceland/jokulsarlon",
+        "iceland/hofn",
+        "iceland/east-iceland",
+        "iceland/egilsstadir",
+        "iceland/north-iceland",
+        "iceland/myvatn",
+        "iceland/akureyri",
+        "iceland/husavik",
+        "iceland/west-iceland",
+        "iceland/snaefellsnes",
+        "iceland/stykkisholmur"
+      ],
+      "hero": "iceland/snaefellsnes",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "KimKim itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "iconic_landmarks",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Reykjavik",
+          "hotel": "Hotel in Reykjavik",
+          "start": 0,
+          "nights": 2,
+          "area": "Central Reykjavik near Laugavegur: walkable to the sights, cafes and restaurants, with car parking on the edges",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Vik",
+          "hotel": "Hotel in Vik",
+          "start": 2,
+          "nights": 1,
+          "area": "In or just outside Vik, close to the black beach and the village restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hofn",
+          "hotel": "Hotel in Hofn",
+          "start": 3,
+          "nights": 1,
+          "area": "In Hofn or on a nearby farm, with views toward the glacier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Egilsstadir",
+          "hotel": "Hotel in Egilsstadir",
+          "start": 4,
+          "nights": 1,
+          "area": "In Egilsstadir or at a lakeside guesthouse nearby",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Akureyri",
+          "hotel": "Hotel in Akureyri",
+          "start": 5,
+          "nights": 2,
+          "area": "Central Akureyri, near the church and the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Stykkisholmur",
+          "hotel": "Hotel in Stykkisholmur",
+          "start": 7,
+          "nights": 1,
+          "area": "In Stykkisholmur near the harbour; guesthouses fill up in summer",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Reykjavik",
+          "hotel": "Hotel in Reykjavik",
+          "start": 8,
+          "nights": 1,
+          "area": "Central Reykjavik near Laugavegur: walkable to the sights, cafes and restaurants, with car parking on the edges",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Spa/Wellness",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Blue Lagoon",
+          "notes": "Book a timed ticket; a shower before entering is compulsory. Check the lagoon's status first, as volcanic activity nearby has caused temporary closures.",
+          "where": "Grindavik, Reykjanes",
+          "book": "Yes - timed tickets sell out",
+          "place": "iceland/blue-lagoon"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Hallgrimskirkja",
+          "notes": "The tower lift gives a good first view of the city; it may close during services.",
+          "where": "Reykjavik",
+          "book": "",
+          "place": "iceland/hallgrimskirkja"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Thingvellir National Park",
+          "notes": "A flat path runs along the rift wall; it can be icy in winter.",
+          "where": "Thingvellir, South Iceland",
+          "book": "",
+          "place": "iceland/thingvellir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "12:15",
+          "duration": "1h",
+          "name": "Geysir geothermal area",
+          "notes": "Strokkur erupts every few minutes; stay behind the barriers, as the water is scalding.",
+          "where": "Haukadalur, South Iceland",
+          "book": "",
+          "place": "iceland/geysir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Gullfoss",
+          "notes": "Bring waterproofs; the lower path may be closed in winter.",
+          "where": "Gullfoss, South Iceland",
+          "book": "",
+          "place": "iceland/gullfoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Seljalandsfoss",
+          "notes": "Wear waterproofs and shoes with grip to walk behind the falls; the path closes in icy conditions.",
+          "where": "Seljalandsfoss, South Iceland",
+          "book": "",
+          "place": "iceland/seljalandsfoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1h",
+          "name": "Skogafoss",
+          "notes": "The stairway to the top is steep; spray soaks the base.",
+          "where": "Skogafoss, South Iceland",
+          "book": "",
+          "place": "iceland/skogafoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1h",
+          "name": "Dyrholaey",
+          "notes": "Parts are closed in early summer to protect nesting birds; the cliff top is windy.",
+          "where": "Dyrholaey, near Vik",
+          "book": "",
+          "place": "iceland/dyrholaey"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:45",
+          "duration": "1.5h",
+          "name": "Skaftafell and Svartifoss",
+          "notes": "The path climbs steadily and can be icy in winter; the basalt-framed waterfall is the reward.",
+          "where": "Skaftafell, Vatnajokull National Park",
+          "book": "",
+          "place": "iceland/skaftafell-svartifoss"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:45",
+          "duration": "1.5h",
+          "name": "Jokulsarlon glacier lagoon",
+          "notes": "Boat tours run mainly in the warmer months; early morning and evening are quietest.",
+          "where": "Jokulsarlon",
+          "book": "",
+          "place": "iceland/jokulsarlon"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "0.75h",
+          "name": "Diamond Beach",
+          "notes": "Keep well back from the surf and never climb on the ice.",
+          "where": "Breidamerkursandur",
+          "book": "",
+          "place": "iceland/diamond-beach"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Langoustine dinner in Hofn",
+          "notes": "Book or arrive by seven, as kitchens in the small town close early outside summer.",
+          "where": "Hofn",
+          "book": "",
+          "place": "iceland/hofn-langoustine"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Vestrahorn and Stokksnes",
+          "notes": "A small access fee is charged; the wind carries sand.",
+          "where": "Stokksnes, near Hofn",
+          "book": "",
+          "place": "iceland/vestrahorn"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:15",
+          "duration": "3.5h",
+          "name": "East Fjords coastal drive",
+          "notes": "Fuel and services are sparse; fog and wind can reduce visibility.",
+          "where": "East Fjords",
+          "book": "",
+          "place": "iceland/east-fjords-drive"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "15:45",
+          "duration": "2.5h",
+          "name": "Hengifoss",
+          "notes": "A steep trail past Litlanesfoss; wet and slippery in places.",
+          "where": "Lagarfljot, East Iceland",
+          "book": "",
+          "place": "iceland/hengifoss"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:45",
+          "duration": "1h",
+          "name": "Dettifoss",
+          "notes": "Take the paved western road; paths near the falls are slippery.",
+          "where": "Jokulsargljufur, North Iceland",
+          "book": "",
+          "place": "iceland/dettifoss"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Hverir geothermal area",
+          "notes": "Keep to the marked paths; the ground is dangerously hot.",
+          "where": "Namaskard, North Iceland",
+          "book": "",
+          "place": "iceland/hverir-geothermal"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Dimmuborgir and the Myvatn craters",
+          "notes": "Summer midges are a nuisance around the lake, so bring a head net.",
+          "where": "Lake Myvatn, North Iceland",
+          "book": "",
+          "place": "iceland/myvatn-lava-craters"
+        },
+        {
+          "day": 5,
+          "type": "Spa/Wellness",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Myvatn Nature Baths",
+          "notes": "Book a timed ticket in high season.",
+          "where": "Reykjahlid, North Iceland",
+          "book": "Yes - timed tickets sell out in season",
+          "place": "iceland/myvatn-nature-baths"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Whale-watching from Husavik",
+          "notes": "Warm overalls are provided; summer trips have a high success rate for humpbacks.",
+          "where": "Husavik, North Iceland",
+          "book": "Yes - trips fill up in summer",
+          "place": "iceland/husavik-whale-watching"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Godafoss",
+          "notes": "Paths on both banks can be icy in winter.",
+          "where": "Skjalfandafljot, North Iceland",
+          "book": "",
+          "place": "iceland/godafoss"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Akureyri",
+          "notes": "The church sits on a hill above the town; cafes line the pedestrian street.",
+          "where": "Akureyri",
+          "book": "",
+          "place": "iceland/akureyri"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "14:45",
+          "duration": "1.5h",
+          "name": "Stykkisholmur",
+          "notes": "Climb the small island viewpoint of Sugandisey for a view over the harbour.",
+          "where": "Stykkisholmur",
+          "book": "",
+          "place": "iceland/stykkisholmur"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Kirkjufell",
+          "notes": "Best in the evening light; do not attempt the climb.",
+          "where": "Grundarfjordur, Snaefellsnes",
+          "book": "",
+          "place": "iceland/kirkjufell"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "10:00",
+          "duration": "1.5h",
+          "name": "Arnarstapi to Hellnar coastal walk",
+          "notes": "Wind and spray can be strong; both villages have a cafe.",
+          "where": "Arnarstapi, Snaefellsnes",
+          "book": "",
+          "place": "iceland/arnarstapi-hellnar"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "12:15",
+          "duration": "1h",
+          "name": "Djupalonssandur",
+          "notes": "Keep away from the water; do not take pebbles from the beach.",
+          "where": "Djupalonssandur, Snaefellsnes",
+          "book": "",
+          "place": "iceland/djupalonssandur"
+        },
+        {
+          "day": 8,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Icelandic dinner in Reykjavik",
+          "notes": "Book ahead at weekends and in summer.",
+          "where": "Reykjavik",
+          "book": "",
+          "place": "iceland/reykjavik-dinner"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Keflavik Airport (KEF)",
+          "to": "Blue Lagoon",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Shuttle or rental car",
+          "notes": "Many flights arrive early in the morning, which suits a lagoon visit; luggage storage is available at the lagoon.",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Blue Lagoon",
+          "to": "Reykjavik hotel area",
+          "time": "12:30",
+          "minutes": 50,
+          "carrier": "Shuttle coach or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Reykjavik hotel area",
+          "to": "Thingvellir",
+          "time": "08:45",
+          "minutes": 45,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Thingvellir",
+          "to": "Geysir",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Geysir",
+          "to": "Gullfoss",
+          "time": "13:15",
+          "minutes": 10,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Gullfoss",
+          "to": "Reykjavik hotel area",
+          "time": "14:45",
+          "minutes": 100,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Reykjavik hotel area",
+          "to": "Seljalandsfoss",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Seljalandsfoss",
+          "to": "Skogafoss",
+          "time": "11:45",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Skogafoss",
+          "to": "Vik",
+          "time": "14:30",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Vik",
+          "to": "Skaftafell",
+          "time": "07:45",
+          "minutes": 105,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Skaftafell",
+          "to": "Jokulsarlon",
+          "time": "11:30",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Jokulsarlon",
+          "to": "Hofn",
+          "time": "15:30",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hofn",
+          "to": "Stokksnes",
+          "time": "08:30",
+          "minutes": 20,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Stokksnes",
+          "to": "Egilsstadir",
+          "time": "10:45",
+          "minutes": 240,
+          "carrier": "Rental car",
+          "notes": "The road follows the fjords and winds through headlands.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Egilsstadir",
+          "to": "Hengifoss",
+          "time": "15:15",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hengifoss",
+          "to": "Egilsstadir",
+          "time": "18:15",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Egilsstadir",
+          "to": "Dettifoss",
+          "time": "08:30",
+          "minutes": 130,
+          "carrier": "Rental car",
+          "notes": "The road is closed in winter, when the Ring Road via Modrudalur is the only option.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Dettifoss",
+          "to": "Myvatn",
+          "time": "11:45",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Myvatn",
+          "to": "Akureyri",
+          "time": "18:45",
+          "minutes": 75,
+          "carrier": "Rental car",
+          "notes": "A long day; in winter, shorten the Myvatn stops to get in before dark.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Akureyri",
+          "to": "Husavik",
+          "time": "08:30",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Husavik",
+          "to": "Godafoss",
+          "time": "13:30",
+          "minutes": 50,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Godafoss",
+          "to": "Akureyri",
+          "time": "15:45",
+          "minutes": 50,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Akureyri",
+          "to": "Stykkisholmur",
+          "time": "08:30",
+          "minutes": 315,
+          "carrier": "Rental car",
+          "notes": "A long drive across the north-west.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Stykkisholmur",
+          "to": "Kirkjufell",
+          "time": "16:45",
+          "minutes": 45,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Kirkjufell",
+          "to": "Stykkisholmur",
+          "time": "19:00",
+          "minutes": 45,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Stykkisholmur",
+          "to": "Arnarstapi",
+          "time": "08:30",
+          "minutes": 75,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Arnarstapi",
+          "to": "Djupalonssandur",
+          "time": "11:45",
+          "minutes": 20,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Djupalonssandur",
+          "to": "Reykjavik hotel area",
+          "time": "13:45",
+          "minutes": 180,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Reykjavik hotel area",
+          "to": "Keflavik Airport (KEF)",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Flybus coach or rental car",
+          "notes": "Allow time for the 50-minute transfer; flights from Keflavik often leave early in the morning.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "iceland-full-ring-road-14d",
+      "title": "The Full Ring Road in 14 Days",
+      "summary": "The whole island at an unhurried pace, with extra nights in Hofn, Seydisfjordur, Akureyri and Snaefellsnes so the drives are broken up by real stops.",
+      "days": 14,
+      "route": "Reykjavik > Vik > Hofn > Seydisfjordur > Myvatn > Akureyri > Stykkisholmur > Reykjavik",
+      "arrive": "Keflavik (KEF)",
+      "depart": "Keflavik (KEF)",
+      "countries": [
+        "Iceland"
+      ],
+      "regions": [
+        "Capital Region",
+        "South Iceland",
+        "East Iceland",
+        "North Iceland",
+        "West Iceland"
+      ],
+      "cities": [
+        "Reykjavik",
+        "Golden Circle",
+        "Vik",
+        "Skaftafell",
+        "Jokulsarlon",
+        "Hofn",
+        "Seydisfjordur",
+        "Egilsstadir",
+        "Myvatn",
+        "Akureyri",
+        "Husavik",
+        "Snaefellsnes",
+        "Stykkisholmur"
+      ],
+      "imageQuery": "Seydisfjordur Iceland rainbow street blue church",
+      "highlights": [
+        "Skaftafell glacier hike",
+        "Seydisfjordur",
+        "Dettifoss",
+        "Myvatn Nature Baths",
+        "Husavik whales",
+        "Snaefellsnes"
+      ],
+      "destinationKeys": [
+        "iceland",
+        "iceland/capital-region",
+        "iceland/reykjavik",
+        "iceland/south-iceland",
+        "iceland/golden-circle",
+        "iceland/vik",
+        "iceland/skaftafell",
+        "iceland/jokulsarlon",
+        "iceland/hofn",
+        "iceland/east-iceland",
+        "iceland/seydisfjordur",
+        "iceland/egilsstadir",
+        "iceland/north-iceland",
+        "iceland/myvatn",
+        "iceland/akureyri",
+        "iceland/husavik",
+        "iceland/west-iceland",
+        "iceland/snaefellsnes",
+        "iceland/stykkisholmur"
+      ],
+      "hero": "iceland/seydisfjordur",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "KimKim itinerary library"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "relax",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Reykjavik",
+          "hotel": "Hotel in Reykjavik",
+          "start": 0,
+          "nights": 2,
+          "area": "Central Reykjavik near Laugavegur: walkable to the sights, cafes and restaurants, with car parking on the edges",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Vik",
+          "hotel": "Hotel in Vik",
+          "start": 2,
+          "nights": 1,
+          "area": "In or just outside Vik, close to the black beach and the village restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hofn",
+          "hotel": "Hotel in Hofn",
+          "start": 3,
+          "nights": 2,
+          "area": "In Hofn or on a nearby farm, with views toward the glacier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Seydisfjordur",
+          "hotel": "Guesthouse in Seydisfjordur",
+          "start": 5,
+          "nights": 2,
+          "area": "In the village centre of Seydisfjordur, close to the cafes and the painted street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Myvatn",
+          "hotel": "Hotel in Myvatn",
+          "start": 7,
+          "nights": 1,
+          "area": "Around Lake Myvatn at Reykjahlid, close to the baths and the lava fields",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Akureyri",
+          "hotel": "Hotel in Akureyri",
+          "start": 8,
+          "nights": 2,
+          "area": "Central Akureyri, near the church and the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Stykkisholmur",
+          "hotel": "Hotel in Stykkisholmur",
+          "start": 10,
+          "nights": 2,
+          "area": "In Stykkisholmur near the harbour; guesthouses fill up in summer",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Reykjavik",
+          "hotel": "Hotel in Reykjavik",
+          "start": 12,
+          "nights": 1,
+          "area": "Central Reykjavik near Laugavegur: walkable to the sights, cafes and restaurants, with car parking on the edges",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Spa/Wellness",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Blue Lagoon",
+          "notes": "Book a timed ticket; a shower before entering is compulsory. Check the lagoon's status first, as volcanic activity nearby has caused temporary closures.",
+          "where": "Grindavik, Reykjanes",
+          "book": "Yes - timed tickets sell out",
+          "place": "iceland/blue-lagoon"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Hallgrimskirkja",
+          "notes": "The tower lift gives a good first view of the city; it may close during services.",
+          "where": "Reykjavik",
+          "book": "",
+          "place": "iceland/hallgrimskirkja"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Thingvellir National Park",
+          "notes": "A flat path runs along the rift wall; it can be icy in winter.",
+          "where": "Thingvellir, South Iceland",
+          "book": "",
+          "place": "iceland/thingvellir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "12:15",
+          "duration": "1h",
+          "name": "Geysir geothermal area",
+          "notes": "Strokkur erupts every few minutes; stay behind the barriers, as the water is scalding.",
+          "where": "Haukadalur, South Iceland",
+          "book": "",
+          "place": "iceland/geysir"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Gullfoss",
+          "notes": "Bring waterproofs; the lower path may be closed in winter.",
+          "where": "Gullfoss, South Iceland",
+          "book": "",
+          "place": "iceland/gullfoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Seljalandsfoss",
+          "notes": "Wear waterproofs and shoes with grip to walk behind the falls; the path closes in icy conditions.",
+          "where": "Seljalandsfoss, South Iceland",
+          "book": "",
+          "place": "iceland/seljalandsfoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1h",
+          "name": "Skogafoss",
+          "notes": "The stairway to the top is steep; spray soaks the base.",
+          "where": "Skogafoss, South Iceland",
+          "book": "",
+          "place": "iceland/skogafoss"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1h",
+          "name": "Dyrholaey",
+          "notes": "Parts are closed in early summer to protect nesting birds; the cliff top is windy.",
+          "where": "Dyrholaey, near Vik",
+          "book": "",
+          "place": "iceland/dyrholaey"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Glacier hike at Skaftafell",
+          "notes": "Crampons and axes are provided; good boots and fitness are needed, and tours are cancelled in bad weather.",
+          "where": "Skaftafell, Vatnajokull National Park",
+          "book": "Yes - guided hikes are limited and fill up",
+          "place": "iceland/skaftafell-glacier-hike"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:15",
+          "duration": "1.5h",
+          "name": "Jokulsarlon glacier lagoon",
+          "notes": "Boat tours run mainly in the warmer months.",
+          "where": "Jokulsarlon",
+          "book": "",
+          "place": "iceland/jokulsarlon"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "0.75h",
+          "name": "Diamond Beach",
+          "notes": "Keep well back from the surf and never climb on the ice.",
+          "where": "Breidamerkursandur",
+          "book": "",
+          "place": "iceland/diamond-beach"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Langoustine dinner in Hofn",
+          "notes": "Book or arrive by seven-thirty; kitchens in the small town close early outside summer.",
+          "where": "Hofn",
+          "book": "",
+          "place": "iceland/hofn-langoustine"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Vestrahorn and Stokksnes",
+          "notes": "A small access fee is charged; the wind is strong and carries sand.",
+          "where": "Stokksnes, near Hofn",
+          "book": "",
+          "place": "iceland/vestrahorn"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "08:15",
+          "duration": "3.5h",
+          "name": "East Fjords coastal drive",
+          "notes": "Fuel and services are sparse; fog and wind can reduce visibility.",
+          "where": "East Fjords",
+          "book": "",
+          "place": "iceland/east-fjords-drive"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Seydisfjordur",
+          "notes": "The Fjardarheidi pass can be snowy and closed in winter.",
+          "where": "Seydisfjordur, East Iceland",
+          "book": "",
+          "place": "iceland/seydisfjordur"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "09:45",
+          "duration": "2.5h",
+          "name": "Hengifoss",
+          "notes": "A steep trail past Litlanesfoss; wet and slippery in places.",
+          "where": "Lagarfljot, East Iceland",
+          "book": "",
+          "place": "iceland/hengifoss"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Seydisfjordur",
+          "notes": "Walk the rainbow street to the blue church and browse the village studios.",
+          "where": "Seydisfjordur, East Iceland",
+          "book": "",
+          "place": "iceland/seydisfjordur"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "10:45",
+          "duration": "1h",
+          "name": "Dettifoss",
+          "notes": "Take the paved western road; the eastern gravel road is rougher and both are closed in winter. Paths near the falls are slippery.",
+          "where": "Jokulsargljufur, North Iceland",
+          "book": "",
+          "place": "iceland/dettifoss"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Hverir geothermal area",
+          "notes": "Keep to the marked paths; the ground is dangerously hot and the sulphur smell is strong.",
+          "where": "Namaskard, North Iceland",
+          "book": "",
+          "place": "iceland/hverir-geothermal"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Dimmuborgir and the Myvatn craters",
+          "notes": "Summer midges are a nuisance around the lake, so bring a head net.",
+          "where": "Lake Myvatn, North Iceland",
+          "book": "",
+          "place": "iceland/myvatn-lava-craters"
+        },
+        {
+          "day": 7,
+          "type": "Spa/Wellness",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Myvatn Nature Baths",
+          "notes": "Book a timed ticket in high season; a shower before entering is required.",
+          "where": "Reykjahlid, North Iceland",
+          "book": "Yes - timed tickets sell out in season",
+          "place": "iceland/myvatn-nature-baths"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "09:45",
+          "duration": "1h",
+          "name": "Godafoss",
+          "notes": "Paths on both banks can be icy in winter.",
+          "where": "Skjalfandafljot, North Iceland",
+          "book": "",
+          "place": "iceland/godafoss"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Akureyri",
+          "notes": "The church sits on a hill above the town; the botanical garden is a short walk.",
+          "where": "Akureyri",
+          "book": "",
+          "place": "iceland/akureyri"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Whale-watching from Husavik",
+          "notes": "Warm overalls are provided; summer trips have a high success rate for humpbacks.",
+          "where": "Husavik, North Iceland",
+          "book": "Yes - trips fill up in summer",
+          "place": "iceland/husavik-whale-watching"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "14:45",
+          "duration": "1.5h",
+          "name": "Stykkisholmur",
+          "notes": "Climb the small island viewpoint of Sugandisey for a view over the harbour.",
+          "where": "Stykkisholmur",
+          "book": "",
+          "place": "iceland/stykkisholmur"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Kirkjufell",
+          "notes": "Best in the evening light; do not attempt the climb.",
+          "where": "Grundarfjordur, Snaefellsnes",
+          "book": "",
+          "place": "iceland/kirkjufell"
+        },
+        {
+          "day": 11,
+          "type": "Hike",
+          "time": "10:00",
+          "duration": "1.5h",
+          "name": "Arnarstapi to Hellnar coastal walk",
+          "notes": "Wind and spray can be strong; both villages have a cafe.",
+          "where": "Arnarstapi, Snaefellsnes",
+          "book": "",
+          "place": "iceland/arnarstapi-hellnar"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "12:15",
+          "duration": "1h",
+          "name": "Djupalonssandur",
+          "notes": "Keep away from the water; do not take pebbles from the beach.",
+          "where": "Djupalonssandur, Snaefellsnes",
+          "book": "",
+          "place": "iceland/djupalonssandur"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Harpa and the Reykjavik seafront",
+          "notes": "A flat walk; the wind off the bay is strong.",
+          "where": "Harbour, Reykjavik",
+          "book": "",
+          "place": "iceland/harpa-seafront"
+        },
+        {
+          "day": 12,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Icelandic dinner in Reykjavik",
+          "notes": "A last dinner of lamb or fish; book ahead at weekends.",
+          "where": "Reykjavik",
+          "book": "",
+          "place": "iceland/reykjavik-dinner"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Keflavik Airport (KEF)",
+          "to": "Blue Lagoon",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Shuttle or rental car",
+          "notes": "Many flights arrive early in the morning, which suits a lagoon visit; luggage storage is available at the lagoon.",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Blue Lagoon",
+          "to": "Reykjavik hotel area",
+          "time": "12:30",
+          "minutes": 50,
+          "carrier": "Shuttle coach or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Reykjavik hotel area",
+          "to": "Thingvellir",
+          "time": "08:45",
+          "minutes": 45,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Thingvellir",
+          "to": "Geysir",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Geysir",
+          "to": "Gullfoss",
+          "time": "13:15",
+          "minutes": 10,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Gullfoss",
+          "to": "Reykjavik hotel area",
+          "time": "14:45",
+          "minutes": 100,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Reykjavik hotel area",
+          "to": "Seljalandsfoss",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Seljalandsfoss",
+          "to": "Skogafoss",
+          "time": "11:45",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Skogafoss",
+          "to": "Vik",
+          "time": "14:30",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Vik",
+          "to": "Skaftafell",
+          "time": "07:45",
+          "minutes": 105,
+          "carrier": "Rental car",
+          "notes": "Check the road and weather services before driving, particularly in winter when conditions change quickly and some roads close.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Skaftafell",
+          "to": "Jokulsarlon",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Jokulsarlon",
+          "to": "Hofn",
+          "time": "18:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hofn",
+          "to": "Stokksnes",
+          "time": "09:05",
+          "minutes": 20,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Stokksnes",
+          "to": "Hofn",
+          "time": "11:15",
+          "minutes": 20,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Hofn",
+          "to": "Egilsstadir",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Rental car",
+          "notes": "The road follows the fjords; plan stops in the small villages on the way.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Egilsstadir",
+          "to": "Seydisfjordur",
+          "time": "13:15",
+          "minutes": 30,
+          "carrier": "Rental car",
+          "notes": "The road crosses the Fjardarheidi pass, which can be snowy in winter.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Seydisfjordur",
+          "to": "Hengifoss",
+          "time": "08:30",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Hengifoss",
+          "to": "Seydisfjordur",
+          "time": "13:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Seydisfjordur",
+          "to": "Dettifoss",
+          "time": "07:45",
+          "minutes": 160,
+          "carrier": "Rental car",
+          "notes": "The road to Dettifoss is closed in winter.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Dettifoss",
+          "to": "Myvatn",
+          "time": "12:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Myvatn",
+          "to": "Godafoss",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Godafoss",
+          "to": "Akureyri",
+          "time": "11:00",
+          "minutes": 50,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Akureyri",
+          "to": "Husavik",
+          "time": "08:30",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Husavik",
+          "to": "Akureyri",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Akureyri",
+          "to": "Stykkisholmur",
+          "time": "08:30",
+          "minutes": 315,
+          "carrier": "Rental car",
+          "notes": "A long drive across the north-west.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Stykkisholmur",
+          "to": "Kirkjufell",
+          "time": "16:45",
+          "minutes": 45,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Kirkjufell",
+          "to": "Stykkisholmur",
+          "time": "19:00",
+          "minutes": 45,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Stykkisholmur",
+          "to": "Arnarstapi",
+          "time": "08:30",
+          "minutes": 75,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Arnarstapi",
+          "to": "Djupalonssandur",
+          "time": "11:45",
+          "minutes": 20,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Djupalonssandur",
+          "to": "Stykkisholmur",
+          "time": "13:30",
+          "minutes": 95,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Stykkisholmur",
+          "to": "Reykjavik hotel area",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Public Transit",
+          "from": "Reykjavik hotel area",
+          "to": "Keflavik Airport (KEF)",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Flybus coach or rental car",
+          "notes": "Allow time for the 50-minute transfer; flights from Keflavik often leave early in the morning.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "iceland/blue-lagoon": {
+        "name": "Blue Lagoon",
+        "description": "A milky-blue geothermal pool in a black lava field near the airport, a popular first or last stop for the trip.",
+        "details": "The Blue Lagoon is a man-made lagoon fed by the outflow of a nearby geothermal power plant, with silica-rich water that stays warm even in winter. It lies about twenty minutes from Keflavik Airport and is a popular way to start or end a trip. Entry is by timed ticket, so booking ahead is essential, and a shower before entering is compulsory. Volcanic activity on the Reykjanes peninsula has caused temporary closures in recent years, so check its current status before building a plan around it.",
+        "interests": [
+          "relax",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/hallgrimskirkja": {
+        "name": "Hallgrímskirkja",
+        "description": "Reykjavik's tall concrete church, shaped like basalt columns, with a tower lift to a view over the colourful rooftops.",
+        "details": "Hallgrímskirkja was designed by the architect Guðjón Samúelsson and its stepped, columnar form recalls the basalt formations found around Iceland. Construction began in 1945 and took more than forty years. A lift runs up the tower to an observation deck with views across the city, harbour and mountains. The church is an active place of worship, so the tower may close during services, and a statue of Leif Erikson stands outside.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/harpa-seafront": {
+        "name": "Harpa and the Reykjavik seafront",
+        "description": "A glass-fronted concert hall on the harbour and a sculpture of a steel ship, linked by a walk along the shore.",
+        "details": "Harpa opened in 2011 and is known for its honeycomb glass facade, designed with the artist Ólafur Eliasson, which shifts in colour with the light. The Sun Voyager, a steel sculpture of a boat frame by the shore, is a short walk away and faces the sea and mountains across the bay. The seafront path is flat and pleasant for an evening stroll, and the wind off the water can be strong and cold even in summer.",
+        "interests": [
+          "photography",
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/reykjavik-whale-watching": {
+        "name": "Whale-watching from Reykjavik",
+        "description": "A boat trip from the Old Harbour into Faxaflói bay to look for minke whales, humpbacks, dolphins and seabirds.",
+        "details": "Boats leave from the Old Harbour on trips lasting around three hours into Faxaflói bay, where minke whales, white-beaked dolphins and, in summer, humpback whales are regularly seen. Sightings are never guaranteed, and many operators offer another trip free if nothing is seen. Warm outer layers are provided by most boats because it is cold on the water even in summer. People prone to seasickness should take precautions, as the bay can be rough.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/reykjavik-dinner": {
+        "name": "Icelandic dinner in Reykjavik",
+        "description": "A meal of local lamb, fresh fish and fish stew in a downtown restaurant.",
+        "details": "Iceland's restaurant scene draws on very fresh fish, free-range lamb and dairy, and traditional dishes such as fish stew, grilled lamb and skyr desserts are standard menu items. Most places have English menus and are used to visitors. Booking ahead is wise at weekends and in summer. Restaurants are generally more expensive than in mainland Europe, so many visitors balance them with simpler meals.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/thingvellir": {
+        "name": "Thingvellir National Park",
+        "description": "A rift valley where the North American and Eurasian plates are pulling apart, and the site of Iceland's medieval parliament.",
+        "details": "Thingvellir is a UNESCO World Heritage Site and the place where the Icelandic parliament, the Althing, first met in 930. The park lies in a rift valley between two tectonic plates, which can be seen as cliffs and fissures running through the lava plain, and a path leads along the base of the main rift wall. A clear-watered lake lies beside it. The paths are flat or gently sloped, and in winter they can be icy.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/geysir": {
+        "name": "Geysir geothermal area",
+        "description": "A field of hot springs and fumaroles where the Strokkur geyser erupts every few minutes.",
+        "details": "The Geysir area gave its name to all geysers, though the original Great Geysir erupts rarely now. Its neighbour Strokkur shoots a column of water some twenty metres into the air every five to ten minutes, which makes it easy to watch. The ground is hot and scalding, so keep to the marked paths and barriers. A smell of sulphur hangs over the area, and the site is free to enter.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/gullfoss": {
+        "name": "Gullfoss",
+        "description": "The Golden Falls, a two-tier waterfall on the Hvítá river dropping into a narrow canyon.",
+        "details": "Gullfoss is one of Iceland's best-known waterfalls, where the Hvítá river drops in two steps before plunging into a deep canyon. Paths lead to viewpoints at different levels, including one close to the upper falls where the spray soaks visitors. In winter, ice makes the paths slippery and parts may be closed. Waterproofs are worth carrying all year.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/seljalandsfoss": {
+        "name": "Seljalandsfoss",
+        "description": "A tall waterfall on the south coast that visitors can walk behind on a path in the cliff.",
+        "details": "Seljalandsfoss drops about sixty metres from a cliff above the coastal plain, and a path allows walkers to go behind the falling water. The path is wet and slippery, and is closed in icy conditions, so waterproofs and shoes with grip are needed. A short walk along the cliff leads to Gljúfrabúi, a smaller waterfall hidden in a narrow canyon. It is right beside the Ring Road and very easy to reach.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/skogafoss": {
+        "name": "Skógafoss",
+        "description": "A broad sixty-metre waterfall with a staircase up to a viewing platform at the top.",
+        "details": "Skógafoss is a wide curtain of water falling about sixty metres over an old sea cliff, and often shows a rainbow on sunny days. A staircase on the side climbs to a platform above the falls, from where the Fimmvörðuháls hiking trail continues up the river. It is a short walk from the car park. Spray can drench the area at the base, and the steps are slippery in winter.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/dyrholaey": {
+        "name": "Dyrhólaey",
+        "description": "A high headland with a sea arch and lighthouse, and a good place to see puffins in summer.",
+        "details": "Dyrhólaey is a promontory over the south coast with a large rock arch and a lighthouse on top, giving views along the black sand beaches in both directions. Puffins nest on the cliffs in summer. Parts of the area are closed in the early nesting season, usually from mid-May to late June, to protect the birds. The top is reached by a rough road and is very windy.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/reynisfjara": {
+        "name": "Reynisfjara black sand beach",
+        "description": "A beach of black volcanic sand with basalt columns and rock stacks standing in the surf near Vík.",
+        "details": "Reynisfjara is known for its black sand, a cave framed by basalt columns and the Reynisdrangar sea stacks offshore. It is also dangerous: unpredictable waves, known as sneaker waves, surge far up the beach without warning and have killed visitors. Keep well back from the water, never turn your back on the sea and heed the warning signs. Even so, it is one of the most striking places on the south coast.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/solheimajokull-glacier-walk": {
+        "name": "Sólheimajökull glacier walk",
+        "description": "A guided walk on the ice of an outlet glacier of Mýrdalsjökull, with crampons and an ice axe.",
+        "details": "Sólheimajökull is an outlet glacier near the Ring Road that retreats noticeably year by year. Guided walks provide crampons, ice axes and helmets and lead small groups across the ice, past crevasses and meltwater channels. The walks are easy but need reasonable fitness and sturdy hiking boots. Tours depend on conditions and are cancelled in poor weather.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "iceland/skaftafell-svartifoss": {
+        "name": "Skaftafell and Svartifoss",
+        "description": "A walk in Vatnajökull National Park to a waterfall framed by hexagonal basalt columns.",
+        "details": "Skaftafell is part of Vatnajökull National Park and has marked trails through birch scrub and heath beneath glaciers. The most popular is the walk of about an hour and a half return to Svartifoss, a waterfall that drops over a curved wall of dark basalt columns. The path climbs steadily and can be icy in winter. The visitor centre has maps and information about conditions.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "iceland/skaftafell-glacier-hike": {
+        "name": "Glacier hike at Skaftafell",
+        "description": "A guided walk on a tongue of Vatnajökull, Europe's largest ice cap by volume.",
+        "details": "Guided glacier hikes in the Skaftafell area take small groups onto an outlet glacier of Vatnajökull, wearing crampons and carrying ice axes. The ice is full of crevasses, blue ice and meltwater streams, and guides explain how the glacier changes. Tours last around three to four hours and need good boots and fitness. They are cancelled in bad weather, so allow a spare day if you can.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "iceland/jokulsarlon": {
+        "name": "Jökulsárlón glacier lagoon",
+        "description": "A lagoon filled with floating icebergs calved from the Breiðamerkurjökull glacier, draining to the sea.",
+        "details": "Jökulsárlón is a deep lagoon where icebergs break from the glacier edge and drift slowly toward a narrow channel to the Atlantic. Seals often rest on the ice, and the icebergs vary from white to deep blue. Boat tours across the lagoon run mainly in the warmer months. The stretch of shore is popular, so it is busy at midday and quietest in the early morning and evening.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/diamond-beach": {
+        "name": "Diamond Beach",
+        "description": "A black sand beach across the road from Jökulsárlón, scattered with chunks of ice washed up by the surf.",
+        "details": "Diamond Beach lies where the channel from Jökulsárlón meets the sea, and pieces of ice from the lagoon wash up on the black sand, glittering as they melt. It is best at sunrise or sunset when the light catches the ice. The sea here is dangerous with strong currents and large waves, so keep well back from the water and never climb onto the ice. The beach is free to visit.",
+        "interests": [
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/hofn-langoustine": {
+        "name": "Langoustine dinner in Höfn",
+        "description": "A meal of Icelandic langoustine, the small lobster for which the fishing town of Höfn is known.",
+        "details": "Höfn is a harbour town on the south-east coast with a reputation for langoustine, sometimes called Icelandic lobster, caught offshore and served grilled, in soup or on pasta. Several restaurants near the harbour specialise in it. The town is small and kitchens may close earlier than in Reykjavik, particularly outside summer, so book or arrive by seven. A langoustine festival is held in summer.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/vestrahorn": {
+        "name": "Vestrahorn and Stokksnes",
+        "description": "A jagged mountain rising behind black sand dunes and a shallow bay on a peninsula near Höfn.",
+        "details": "Vestrahorn is a dramatic mountain of dark gabbro on the Stokksnes peninsula, rising above rippling black sand dunes and a tidal beach. It is one of the most photographed views in the south-east, particularly at low tide when the wet sand reflects the peak. The land is private and a small access fee is charged at the entrance. The wind is often strong and carries sand.",
+        "interests": [
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/east-fjords-drive": {
+        "name": "East Fjords coastal drive",
+        "description": "A scenic drive along the road that winds in and out of the steep fjords of eastern Iceland.",
+        "details": "Between Höfn and Egilsstaðir, the road follows the east coast, running along fjord shores and crossing headlands past small fishing villages such as Djúpivogur. Mountains rise steeply from the water and there are few other cars. The drive is long, and fuel and services are sparse, so fill the tank when you can. Fog and wind can reduce visibility and winter conditions can close the mountain passes.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/seydisfjordur": {
+        "name": "Seyðisfjörður",
+        "description": "A small town at the head of a long fjord, with brightly coloured wooden houses and a church at the end of a rainbow-painted street.",
+        "details": "Seyðisfjörður sits at the end of a narrow fjord reached by a mountain road over the Fjarðarheiði pass, which is often snowy and sometimes closed in winter. The town has well-preserved timber houses, a blue church at the end of a rainbow-painted street, a lively arts community and waterfalls on the slopes above it. It is also the port for the car ferry from Denmark. It is a quiet, atmospheric spot with a few cafes.",
+        "interests": [
+          "photography",
+          "authentic_local",
+          "relax",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/hengifoss": {
+        "name": "Hengifoss",
+        "description": "A tall waterfall in the east with red clay bands in the rock behind it, reached by a steep walk.",
+        "details": "Hengifoss drops some 128 metres, one of the highest waterfalls in the country, over cliffs with distinct red layers of clay between dark basalt. The trail from the car park climbs steadily for about two and a half kilometres, passing the smaller Litlanesfoss, which is framed by basalt columns. It takes around two and a half hours return and can be wet and slippery. It lies near Lagarfljót lake, not far from Egilsstaðir.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "iceland/dettifoss": {
+        "name": "Dettifoss",
+        "description": "The most powerful waterfall in Europe by volume, thundering into a canyon in the north-east.",
+        "details": "Dettifoss is a hundred metres wide and drops forty-four metres into the Jökulsárgljúfur canyon, with a thunderous roar and clouds of spray. It can be reached from the western side by a paved road, or the eastern side by a gravel road, which has a better view but is rougher. Both roads are closed in winter. Paths near the falls are slippery, and there are steep drops with few barriers.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/hverir-geothermal": {
+        "name": "Hverir geothermal area",
+        "description": "A barren field of bubbling mud pots and steaming vents on the way to Mývatn, smelling strongly of sulphur.",
+        "details": "Hverir, also called Námaskarð, is a geothermal field of orange, yellow and grey ground with boiling mud pots and hissing fumaroles. The sulphur smell is strong and the ground is dangerously hot, so keep to the marked paths and barriers. It is a short stop near the Ring Road, and very striking in low light. The surface is soft in places.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/myvatn-lava-craters": {
+        "name": "Dimmuborgir and the Mývatn craters",
+        "description": "A field of twisted lava formations and rows of small pseudocraters beside the shallow lake of Mývatn.",
+        "details": "Lake Mývatn lies in a volcanic area and is surrounded by unusual landforms, including Dimmuborgir, a maze of lava pillars and arches whose name means dark castles, and the pseudocraters at Skútustaðir, formed by gas explosions in cooling lava. Marked trails lead through both. In summer, swarms of midges are a nuisance around the lake, and a head net helps. Birdlife on the lake is rich.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/myvatn-nature-baths": {
+        "name": "Mývatn Nature Baths",
+        "description": "A geothermal lagoon in the north with milky blue water, less crowded than its southern counterpart.",
+        "details": "The Mývatn Nature Baths are filled with warm mineral water from a nearby borehole and have views over the lava landscape. It is smaller and generally quieter than the Blue Lagoon. Entry is by timed ticket, which is worth booking ahead in the high season. Showers before entering are required, and the evening is a good time to go after a day of driving.",
+        "interests": [
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/godafoss": {
+        "name": "Goðafoss",
+        "description": "The Waterfall of the Gods, a horseshoe-shaped fall on the Skjálfandafljót river, linked to Iceland's conversion to Christianity.",
+        "details": "Goðafoss is a wide, curved waterfall around twelve metres high, easy to reach from a car park next to the Ring Road. It takes its name from the story that, when Iceland adopted Christianity around the year 1000, a chieftain threw statues of the old gods into the falls. Paths lead to viewpoints on both banks. The paths can be icy in winter.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/husavik-whale-watching": {
+        "name": "Whale-watching from Húsavík",
+        "description": "A boat trip from the small northern town of Húsavík, where humpback whales are seen on most summer trips.",
+        "details": "Húsavík lies on Skjálfandi bay and is regarded as Iceland's whale-watching capital, with high success rates for humpbacks, minkes and dolphins on summer trips. Some tours use restored wooden fishing boats, and warm overalls are provided. Trips last about three hours, and the town has a whale museum. Cold winds are common even in summer, so wear layers.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/akureyri": {
+        "name": "Akureyri",
+        "description": "Iceland's northern capital at the head of a long fjord, with a hilltop church, a botanical garden and a relaxed cafe scene.",
+        "details": "Akureyri is the second-largest urban area outside the Reykjavik region and sits beneath snow-capped mountains at the end of the Eyjafjörður fjord. The Akureyrarkirkja church, designed by the same architect as Hallgrímskirkja, overlooks the town from a hill. The botanical garden is among the world's northernmost, and traffic lights in the town centre are shaped like hearts. It is a pleasant town for walking, cafes and the surrounding scenery.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/kirkjufell": {
+        "name": "Kirkjufell",
+        "description": "A cone-shaped mountain on the Snæfellsnes peninsula that is among the most photographed in Iceland, beside a small waterfall.",
+        "details": "Kirkjufell, whose name means church mountain, is a 463-metre peak that rises steeply from the shore near Grundarfjörður, with Kirkjufellsfoss, a small waterfall, in the foreground. It is much photographed, particularly in the evening and under the northern lights in winter. The viewing area is easily accessible from the road. The climb to the summit is steep and dangerous and not recommended.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/arnarstapi-hellnar": {
+        "name": "Arnarstapi to Hellnar coastal walk",
+        "description": "A path of a few kilometres along basalt cliffs and lava between two small fishing villages on the Snæfellsnes coast.",
+        "details": "A well-marked path runs for around two and a half kilometres between the tiny villages of Arnarstapi and Hellnar, along sea cliffs of basalt columns, arches and lava formations, with large colonies of nesting seabirds in summer. It is mostly flat and takes about an hour each way. Wind and spray can be strong, so waterproofs help. Both villages have a cafe.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/djupalonssandur": {
+        "name": "Djúpalónssandur",
+        "description": "A black pebble beach strewn with rusted remains of a shipwreck and old stones once used to test fishermen's strength.",
+        "details": "Djúpalónssandur lies at the foot of the Snæfellsjökull glacier, reached by a short path through a lava gap. The beach has smooth black pebbles, the rusting remains of a trawler wrecked in 1948, and four lifting stones used to test the strength of fishermen hoping to be hired. Waves are strong and dangerous, so keep away from the water. Taking pebbles is discouraged to protect the site.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "iceland/stykkisholmur": {
+        "name": "Stykkishólmur",
+        "description": "A harbour town on the Snæfellsnes peninsula with colourful old wooden houses, a lighthouse hill and views over Breiðafjörður.",
+        "details": "Stykkishólmur is one of the prettiest towns in the west, with painted wooden houses, a working harbour and a small island viewpoint, Súgandisey, reached by a short climb. It is also the port for the ferry across Breiðafjörður to the Westfjords. The Norwegian House museum shows life in the nineteenth century. It is a relaxed place for a night after the long drive from the north.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "iceland/hraunfossar": {
+        "name": "Hraunfossar and Barnafoss",
+        "description": "Waterfalls that seep out of the edge of a lava field and pour into the Hvítá river in west Iceland.",
+        "details": "Hraunfossar are an unusual series of waterfalls that emerge from under the edge of an old lava field and flow into the Hvítá river over a distance of several hundred metres. Barnafoss, a short walk upriver, is a narrow cascade through a rocky channel. The area is easily reached by boardwalk and viewing platforms. Nearby, Deildartunguhver is the highest-flow hot spring in Europe, which makes a good stop on the way.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "iceland": {
+        "name": "Iceland",
+        "description": "An island of waterfalls, glaciers, black sand beaches and geothermal pools, best seen on a self-drive loop.",
+        "images": []
+      },
+      "iceland/capital-region": {
+        "name": "Capital Region",
+        "description": "The area around Reykjavik, which holds about two-thirds of the country's people and the international airport nearby.",
+        "images": []
+      },
+      "iceland/reykjavik": {
+        "name": "Reykjavik",
+        "description": "The world's northernmost capital, a small colourful city of cafes, museums and a harbour, and the base for day trips.",
+        "images": []
+      },
+      "iceland/south-iceland": {
+        "name": "South Iceland",
+        "description": "The region of the Golden Circle and the south coast, with waterfalls, black beaches and glacier tongues.",
+        "images": []
+      },
+      "iceland/golden-circle": {
+        "name": "Golden Circle",
+        "description": "A loop east of Reykjavik linking Thingvellir National Park, the Geysir geothermal area and Gullfoss waterfall.",
+        "images": []
+      },
+      "iceland/vik": {
+        "name": "Vik",
+        "description": "The southernmost village in Iceland, beside the black sand beach of Reynisfjara and a base for the south coast.",
+        "images": []
+      },
+      "iceland/skaftafell": {
+        "name": "Skaftafell",
+        "description": "A part of Vatnajökull National Park with hiking trails, the Svartifoss waterfall and guided glacier walks.",
+        "images": []
+      },
+      "iceland/jokulsarlon": {
+        "name": "Jokulsarlon",
+        "description": "A glacier lagoon of floating icebergs on the south-east coast, beside the ice-strewn Diamond Beach.",
+        "images": []
+      },
+      "iceland/hofn": {
+        "name": "Hofn",
+        "description": "A harbour town in the south-east known for langoustine and views of the Vatnajökull glacier.",
+        "images": []
+      },
+      "iceland/east-iceland": {
+        "name": "East Iceland",
+        "description": "A quiet region of fjords, small fishing villages and mountains, with the town of Egilsstaðir at its centre.",
+        "images": []
+      },
+      "iceland/egilsstadir": {
+        "name": "Egilsstadir",
+        "description": "The largest town in the east, beside Lagarfljót lake, and a base for the Hengifoss waterfall and Seyðisfjörður.",
+        "images": []
+      },
+      "iceland/seydisfjordur": {
+        "name": "Seydisfjordur",
+        "description": "A small arts town at the head of a long fjord, with a rainbow street and a ferry link to Denmark.",
+        "images": []
+      },
+      "iceland/north-iceland": {
+        "name": "North Iceland",
+        "description": "The region of Akureyri, Lake Mývatn, waterfalls and whale watching, with a wild, volcanic landscape.",
+        "images": []
+      },
+      "iceland/myvatn": {
+        "name": "Myvatn",
+        "description": "A shallow volcanic lake in the north surrounded by lava fields, craters, mud pots and geothermal baths.",
+        "images": []
+      },
+      "iceland/akureyri": {
+        "name": "Akureyri",
+        "description": "Iceland's northern capital at the head of the Eyjafjörður fjord, with a botanical garden and a hilltop church.",
+        "images": []
+      },
+      "iceland/husavik": {
+        "name": "Husavik",
+        "description": "A small town on Skjálfandi bay that is the whale-watching capital of Iceland.",
+        "images": []
+      },
+      "iceland/west-iceland": {
+        "name": "West Iceland",
+        "description": "A region of lava fields, waterfalls and the Snæfellsnes peninsula, within a few hours of Reykjavik.",
+        "images": []
+      },
+      "iceland/snaefellsnes": {
+        "name": "Snaefellsnes",
+        "description": "A peninsula in the west sometimes called Iceland in miniature, with a glacier-capped volcano, black beaches and a photogenic mountain.",
+        "images": []
+      },
+      "iceland/stykkisholmur": {
+        "name": "Stykkisholmur",
+        "description": "A pretty harbour town on Snæfellsnes with painted wooden houses and a ferry to the Westfjords.",
+        "images": []
+      },
+      "iceland/borgarnes": {
+        "name": "Borgarnes",
+        "description": "A small town on a fjord north of Reykjavik, handy as a stop and a base for the Hraunfossar waterfalls.",
+        "images": []
+      }
+    }
+  }
+}

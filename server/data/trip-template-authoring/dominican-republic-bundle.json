@@ -1,0 +1,1156 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, Punta Cana Travel Blog, KimKim and TourRadar itineraries for the Dominican Republic",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "dominican-republic-santo-domingo-punta-cana-5d",
+      "title": "Santo Domingo and Punta Cana in 5 Days",
+      "summary": "Colonial history followed by beach days.",
+      "days": 5,
+      "route": "Santo Domingo > Punta Cana",
+      "arrive": "Santo Domingo (SDQ)",
+      "depart": "Punta Cana (PUJ)",
+      "countries": [
+        "Dominican Republic"
+      ],
+      "regions": [],
+      "cities": [
+        "Santo Domingo",
+        "Punta Cana"
+      ],
+      "imageQuery": "Punta Cana beach palms",
+      "highlights": [
+        "Zona Colonial",
+        "Bavaro beach",
+        "Los Tres Ojos"
+      ],
+      "destinationKeys": [
+        "dominican-republic",
+        "dominican-republic/santo-domingo",
+        "dominican-republic/punta-cana"
+      ],
+      "hero": "dominican-republic/punta-cana",
+      "sources": [
+        "Rough Guides",
+        "Punta Cana Travel Blog",
+        "KimKim",
+        "TourRadar",
+        "Stippl"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "relax",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Santo Domingo",
+          "hotel": "Hotel in Santo Domingo",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside the Zona Colonial, so you can walk to most sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Punta Cana",
+          "hotel": "Resort in Punta Cana",
+          "start": 2,
+          "nights": 2,
+          "area": "On or near Bavaro Beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Los Tres Ojos caves",
+          "notes": "Steps can be slippery when wet.",
+          "where": "Santo Domingo",
+          "book": "",
+          "place": "dominican-republic/los-tres-ojos"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Zona Colonial walking tour",
+          "notes": "Go early, because it is hot and humid by afternoon.",
+          "where": "Santo Domingo",
+          "book": "",
+          "place": "dominican-republic/zona-colonial"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Bavaro beach day",
+          "notes": "Public beach; bring sun protection.",
+          "where": "Punta Cana",
+          "book": "",
+          "place": "dominican-republic/punta-cana-beaches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Las Americas Airport (SDQ)",
+          "to": "Santo Domingo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Santo Domingo",
+          "to": "Punta Cana",
+          "time": "10:00",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "The toll road is fast; allow time.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Punta Cana resort",
+          "to": "Punta Cana Airport (PUJ)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "dominican-republic-santo-domingo-punta-cana-7d",
+      "title": "Dominican Republic Beach and History in 7 Days",
+      "summary": "Santo Domingo then four beach nights with a day on Saona Island.",
+      "days": 7,
+      "route": "Santo Domingo > Punta Cana",
+      "arrive": "Santo Domingo (SDQ)",
+      "depart": "Punta Cana (PUJ)",
+      "countries": [
+        "Dominican Republic"
+      ],
+      "regions": [],
+      "cities": [
+        "Santo Domingo",
+        "Punta Cana"
+      ],
+      "imageQuery": "Saona Island natural pool",
+      "highlights": [
+        "Zona Colonial",
+        "Saona Island",
+        "Altos de Chavon",
+        "Bavaro beach"
+      ],
+      "destinationKeys": [
+        "dominican-republic",
+        "dominican-republic/santo-domingo",
+        "dominican-republic/punta-cana"
+      ],
+      "hero": "dominican-republic/santo-domingo",
+      "sources": [
+        "Rough Guides",
+        "Punta Cana Travel Blog",
+        "KimKim",
+        "TourRadar",
+        "Stippl"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Santo Domingo",
+          "hotel": "Hotel in Santo Domingo",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside the Zona Colonial, so you can walk to most sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Punta Cana",
+          "hotel": "Resort in Punta Cana",
+          "start": 2,
+          "nights": 4,
+          "area": "On or near Bavaro Beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Los Tres Ojos caves",
+          "notes": "Steps can be slippery when wet.",
+          "where": "Santo Domingo",
+          "book": "",
+          "place": "dominican-republic/los-tres-ojos"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Zona Colonial walking tour",
+          "notes": "Go early, because it is hot and humid by afternoon.",
+          "where": "Santo Domingo",
+          "book": "",
+          "place": "dominican-republic/zona-colonial"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Saona Island day trip",
+          "notes": "Ask what is included; weekends are crowded.",
+          "where": "Saona Island",
+          "book": "Yes - book a boat tour",
+          "place": "dominican-republic/saona-island"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Altos de Chavon and La Romana",
+          "notes": "Often combined with a cigar factory visit.",
+          "where": "La Romana",
+          "book": "",
+          "place": "dominican-republic/altos-de-chavon"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Bavaro beach day",
+          "notes": "Public beach; bring sun protection.",
+          "where": "Punta Cana",
+          "book": "",
+          "place": "dominican-republic/punta-cana-beaches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Las Americas Airport (SDQ)",
+          "to": "Santo Domingo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Santo Domingo",
+          "to": "Punta Cana",
+          "time": "10:00",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Punta Cana resort",
+          "to": "Punta Cana Airport (PUJ)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "dominican-republic-sd-samana-punta-cana-8d",
+      "title": "Santo Domingo, Samana and Punta Cana in 8 Days",
+      "summary": "Colonial city, the Samana Peninsula and a beach finale.",
+      "days": 8,
+      "route": "Santo Domingo > Samana > Punta Cana",
+      "arrive": "Santo Domingo (SDQ)",
+      "depart": "Punta Cana (PUJ)",
+      "countries": [
+        "Dominican Republic"
+      ],
+      "regions": [],
+      "cities": [
+        "Santo Domingo",
+        "Samana",
+        "Punta Cana"
+      ],
+      "imageQuery": "Samana peninsula beach",
+      "highlights": [
+        "Zona Colonial",
+        "El Limon waterfall",
+        "Samana whales",
+        "Saona Island"
+      ],
+      "destinationKeys": [
+        "dominican-republic",
+        "dominican-republic/santo-domingo",
+        "dominican-republic/samana",
+        "dominican-republic/punta-cana"
+      ],
+      "hero": "dominican-republic/samana",
+      "sources": [
+        "Rough Guides",
+        "Punta Cana Travel Blog",
+        "KimKim",
+        "TourRadar",
+        "Stippl"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "relax",
+        "adventure",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Santo Domingo",
+          "hotel": "Hotel in Santo Domingo",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside the Zona Colonial, so you can walk to most sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Samana",
+          "hotel": "Hotel in Samana",
+          "start": 2,
+          "nights": 3,
+          "area": "In Las Terrenas, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Punta Cana",
+          "hotel": "Resort in Punta Cana",
+          "start": 5,
+          "nights": 2,
+          "area": "On or near Bavaro Beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Zona Colonial walking tour",
+          "notes": "Go early, because it is hot and humid by afternoon.",
+          "where": "Santo Domingo",
+          "book": "",
+          "place": "dominican-republic/zona-colonial"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Las Terrenas beach time",
+          "notes": "A quiet beach afternoon.",
+          "where": "Las Terrenas",
+          "book": "",
+          "place": "dominican-republic/las-terrenas-beach"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Whale watching or Los Haitises boat trip",
+          "notes": "Whales are present mid-January to mid-March.",
+          "where": "Samana Bay",
+          "book": "Yes - book a boat",
+          "place": "dominican-republic/samana-whales"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "El Limon waterfall ride",
+          "notes": "A guide is required; the trail is slippery.",
+          "where": "Samana",
+          "book": "Yes - book horses and a guide",
+          "place": "dominican-republic/el-limon-waterfall"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Saona Island day trip",
+          "notes": "Ask what is included; weekends are crowded.",
+          "where": "Saona Island",
+          "book": "Yes - book a boat tour",
+          "place": "dominican-republic/saona-island"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "3h",
+          "name": "Bavaro beach day",
+          "notes": "Public beach; bring sun protection.",
+          "where": "Punta Cana",
+          "book": "",
+          "place": "dominican-republic/punta-cana-beaches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Las Americas Airport (SDQ)",
+          "to": "Santo Domingo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Santo Domingo",
+          "to": "Samana",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "Takes the new highway to the peninsula.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Samana",
+          "to": "Punta Cana",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Punta Cana resort",
+          "to": "Punta Cana Airport (PUJ)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "dominican-republic-mountains-north-samana-10d",
+      "title": "Mountains, North Coast and Samana in 10 Days",
+      "summary": "Colonial capital, Jarabacoa, Cabarete and a long stay on the Samana Peninsula.",
+      "days": 10,
+      "route": "Santo Domingo > Jarabacoa > Cabarete > Samana",
+      "arrive": "Santo Domingo (SDQ)",
+      "depart": "Samana (AZS)",
+      "countries": [
+        "Dominican Republic"
+      ],
+      "regions": [],
+      "cities": [
+        "Santo Domingo",
+        "Jarabacoa",
+        "Cabarete",
+        "Samana"
+      ],
+      "imageQuery": "Jarabacoa waterfall",
+      "highlights": [
+        "Zona Colonial",
+        "Jarabacoa rafting",
+        "27 Charcos",
+        "Cabarete kitesurf",
+        "Samana whales"
+      ],
+      "destinationKeys": [
+        "dominican-republic",
+        "dominican-republic/santo-domingo",
+        "dominican-republic/jarabacoa",
+        "dominican-republic/cabarete",
+        "dominican-republic/samana"
+      ],
+      "hero": "dominican-republic/jarabacoa",
+      "sources": [
+        "Rough Guides",
+        "Punta Cana Travel Blog",
+        "KimKim",
+        "TourRadar",
+        "Stippl"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Santo Domingo",
+          "hotel": "Hotel in Santo Domingo",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside the Zona Colonial, so you can walk to most sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jarabacoa",
+          "hotel": "Lodge in Jarabacoa",
+          "start": 2,
+          "nights": 2,
+          "area": "In Jarabacoa town or a mountain lodge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cabarete",
+          "hotel": "Hotel in Cabarete",
+          "start": 4,
+          "nights": 2,
+          "area": "On or near Cabarete beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Samana",
+          "hotel": "Hotel in Samana",
+          "start": 6,
+          "nights": 3,
+          "area": "In Las Terrenas, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Zona Colonial walking tour",
+          "notes": "Go early, because it is hot and humid by afternoon.",
+          "where": "Santo Domingo",
+          "book": "",
+          "place": "dominican-republic/zona-colonial"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Jarabacoa waterfalls and rafting",
+          "notes": "Choose rafting or a waterfall hike.",
+          "where": "Jarabacoa",
+          "book": "Yes - book rafting",
+          "place": "dominican-republic/jarabacoa-adventures"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Puerto Plata cable car and Amber Museum",
+          "notes": "Choose a clear day for the view.",
+          "where": "Puerto Plata",
+          "book": "",
+          "place": "dominican-republic/puerto-plata-cable-car"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "27 Charcos waterfall jumping",
+          "notes": "Needs a good level of fitness.",
+          "where": "Damajagua",
+          "book": "Yes - book the guided circuit",
+          "place": "dominican-republic/27-charcos"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Cabarete kitesurf or surf lesson",
+          "notes": "Winds are strongest in the afternoon.",
+          "where": "Cabarete",
+          "book": "Yes - book a lesson",
+          "place": "dominican-republic/cabarete"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Las Terrenas beach time",
+          "notes": "A quiet beach afternoon.",
+          "where": "Las Terrenas",
+          "book": "",
+          "place": "dominican-republic/las-terrenas-beach"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Whale watching or Los Haitises boat trip",
+          "notes": "Whales are present mid-January to mid-March.",
+          "where": "Samana Bay",
+          "book": "Yes - book a boat",
+          "place": "dominican-republic/samana-whales"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "El Limon waterfall ride",
+          "notes": "A guide is required; the trail is slippery.",
+          "where": "Samana",
+          "book": "Yes - book horses and a guide",
+          "place": "dominican-republic/el-limon-waterfall"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Las Americas Airport (SDQ)",
+          "to": "Santo Domingo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Santo Domingo",
+          "to": "Jarabacoa",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "Stop at the Jimenoa falls on the way.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Jarabacoa",
+          "to": "Cabarete",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "Cross the mountains via Santiago.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Cabarete",
+          "to": "Samana",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Samana hotel",
+          "to": "El Catey Airport (AZS)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "dominican-republic-complete-12d",
+      "title": "Complete Dominican Republic in 12 Days",
+      "summary": "History, mountains, the north coast, Samana and a beach finish at Punta Cana.",
+      "days": 12,
+      "route": "Santo Domingo > Jarabacoa > Cabarete > Samana > Punta Cana",
+      "arrive": "Santo Domingo (SDQ)",
+      "depart": "Punta Cana (PUJ)",
+      "countries": [
+        "Dominican Republic"
+      ],
+      "regions": [],
+      "cities": [
+        "Santo Domingo",
+        "Jarabacoa",
+        "Cabarete",
+        "Samana",
+        "Punta Cana"
+      ],
+      "imageQuery": "Dominican Republic Caribbean beach",
+      "highlights": [
+        "Zona Colonial",
+        "Jarabacoa",
+        "Cabarete",
+        "Samana whales",
+        "Saona Island",
+        "Altos de Chavon"
+      ],
+      "destinationKeys": [
+        "dominican-republic",
+        "dominican-republic/santo-domingo",
+        "dominican-republic/jarabacoa",
+        "dominican-republic/cabarete",
+        "dominican-republic/samana",
+        "dominican-republic/punta-cana"
+      ],
+      "hero": "dominican-republic/cabarete",
+      "sources": [
+        "Rough Guides",
+        "Punta Cana Travel Blog",
+        "KimKim",
+        "TourRadar",
+        "Stippl"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Santo Domingo",
+          "hotel": "Hotel in Santo Domingo",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside the Zona Colonial, so you can walk to most sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jarabacoa",
+          "hotel": "Lodge in Jarabacoa",
+          "start": 2,
+          "nights": 2,
+          "area": "In Jarabacoa town or a mountain lodge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cabarete",
+          "hotel": "Hotel in Cabarete",
+          "start": 4,
+          "nights": 2,
+          "area": "On or near Cabarete beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Samana",
+          "hotel": "Hotel in Samana",
+          "start": 6,
+          "nights": 3,
+          "area": "In Las Terrenas, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Punta Cana",
+          "hotel": "Resort in Punta Cana",
+          "start": 9,
+          "nights": 2,
+          "area": "On or near Bavaro Beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Zona Colonial walking tour",
+          "notes": "Go early, because it is hot and humid by afternoon.",
+          "where": "Santo Domingo",
+          "book": "",
+          "place": "dominican-republic/zona-colonial"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Jarabacoa waterfalls and rafting",
+          "notes": "Choose rafting or a waterfall hike.",
+          "where": "Jarabacoa",
+          "book": "Yes - book rafting",
+          "place": "dominican-republic/jarabacoa-adventures"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "27 Charcos waterfall jumping",
+          "notes": "Needs a good level of fitness.",
+          "where": "Damajagua",
+          "book": "Yes - book the guided circuit",
+          "place": "dominican-republic/27-charcos"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Cabarete kitesurf or surf lesson",
+          "notes": "Winds are strongest in the afternoon.",
+          "where": "Cabarete",
+          "book": "Yes - book a lesson",
+          "place": "dominican-republic/cabarete"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Whale watching or Los Haitises boat trip",
+          "notes": "Whales are present mid-January to mid-March.",
+          "where": "Samana Bay",
+          "book": "Yes - book a boat",
+          "place": "dominican-republic/samana-whales"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Las Terrenas beach time",
+          "notes": "A quiet beach afternoon.",
+          "where": "Las Terrenas",
+          "book": "",
+          "place": "dominican-republic/las-terrenas-beach"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "El Limon waterfall ride",
+          "notes": "A guide is required; the trail is slippery.",
+          "where": "Samana",
+          "book": "Yes - book horses and a guide",
+          "place": "dominican-republic/el-limon-waterfall"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Saona Island day trip",
+          "notes": "Ask what is included; weekends are crowded.",
+          "where": "Saona Island",
+          "book": "Yes - book a boat tour",
+          "place": "dominican-republic/saona-island"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Las Americas Airport (SDQ)",
+          "to": "Santo Domingo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Santo Domingo",
+          "to": "Jarabacoa",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Jarabacoa",
+          "to": "Cabarete",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Cabarete",
+          "to": "Samana",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Samana",
+          "to": "Punta Cana",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Punta Cana resort",
+          "to": "Punta Cana Airport (PUJ)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "dominican-republic/zona-colonial": {
+        "name": "Zona Colonial, Santo Domingo",
+        "description": "The oldest European settlement in the Americas, a UNESCO site of plazas, churches and fortresses.",
+        "details": "The Zona Colonial has the first cathedral, the first street (Calle Las Damas) and the Alcazar de Colon, the palace of Diego Columbus. The area is compact and walkable. Evenings are lively with live music and restaurants. Go in the morning, because it is hot and humid by afternoon.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "dominican-republic/los-tres-ojos": {
+        "name": "Los Tres Ojos caves",
+        "description": "A series of limestone caves with turquoise lagoons on the edge of Santo Domingo.",
+        "details": "Los Tres Ojos is a park of sinkholes and lakes, reached by stairs and a small raft. It is a short stop of an hour, close to the airport road. The steps can be slippery when wet.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "dominican-republic/jarabacoa-adventures": {
+        "name": "Jarabacoa waterfalls and rafting",
+        "description": "A mountain town of cool air, waterfalls, river rafting and horse riding.",
+        "details": "Jarabacoa sits at about 500 metres in the central mountains and is known for the Jimenoa waterfalls, white-water rafting on the Yaque del Norte and coffee. The temperature is far cooler than on the coast. Day trips can include a canyoning option.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "dominican-republic/27-charcos": {
+        "name": "27 Charcos de Damajagua",
+        "description": "Waterfall jumping and sliding in a gorge near Puerto Plata.",
+        "details": "The 27 Charcos is a river canyon with natural pools. Guided groups hike up and slide or jump back down. Helmets and life jackets are provided. Physical effort and a head for heights are needed. The route runs in groups of varying difficulty.",
+        "interests": [
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "dominican-republic/puerto-plata-cable-car": {
+        "name": "Puerto Plata cable car and Amber Museum",
+        "description": "A cable car above the port to a statue of Christ, and a museum of Dominican amber.",
+        "details": "The cable car climbs Mount Isabel de Torres for a view of the coast and a botanical garden. The Amber World Museum in the old town shows Dominican amber with insects trapped inside. The area is a gateway to the north coast.",
+        "interests": [
+          "photography",
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "dominican-republic/cabarete": {
+        "name": "Cabarete kitesurfing and beach",
+        "description": "A beach town known as a world kitesurfing capital, with waves and a laid-back scene.",
+        "details": "Cabarete has steady winds all year, especially in the afternoon. Schools offer lessons for kitesurfing, windsurfing and surfing. The beach has beach bars, and the nearby Playa Encuentro has surf.",
+        "interests": [
+          "adventure",
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "dominican-republic/samana-whales": {
+        "name": "Samana whale watching or Los Haitises",
+        "description": "Humpback whales in Samana Bay from January to March, and mangrove national park trips the rest of the year.",
+        "details": "From mid-January to mid-March thousands of humpback whales gather in Samana Bay to breed, and boat tours give close views. At other times, boats tour Los Haitises, a national park of mangroves, caves and limestone islets. Choose an operator that follows whale-watching rules.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "dominican-republic/el-limon-waterfall": {
+        "name": "El Limon waterfall",
+        "description": "A 50-metre waterfall reached by horseback ride or hike through the Samana hills.",
+        "details": "The ride to El Limon takes about 30 minutes on horseback from the trailhead, then a short walk down to the falls, with a swimming pool at the base. It is slippery, and a guide is required. Go early.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "dominican-republic/las-terrenas-beach": {
+        "name": "Las Terrenas and Playa Bonita",
+        "description": "A relaxed beach town on the Samana Peninsula, with French-influenced cafes and palm-lined sand.",
+        "details": "Las Terrenas has long beaches, seafood restaurants and boutique hotels. Playa Bonita and Playa Cosón are quieter beaches nearby. The pace is slow, and it is a place to unwind between activities.",
+        "interests": [
+          "relax",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "dominican-republic/saona-island": {
+        "name": "Saona Island",
+        "description": "A protected island of white sand and natural pools off the south-east coast, a day trip from Punta Cana.",
+        "details": "Saona Island is part of a national park, reached by speedboat or catamaran. The day includes a stop at a natural pool with starfish and a beach lunch. Weekends are crowded, and some tours are party-focused, so ask what is included.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "dominican-republic/punta-cana-beaches": {
+        "name": "Punta Cana beaches",
+        "description": "A long coast of white-sand beaches, with sea and resort life.",
+        "details": "Punta Cana is the main resort area with Bavaro Beach, which has calm water and palm trees. Beaches are public, though many resorts occupy the sand. It is best for a few days of relaxation at the end of a trip.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "dominican-republic/altos-de-chavon": {
+        "name": "Altos de Chavon",
+        "description": "A recreated sixteenth-century Mediterranean artists village above the Chavon River.",
+        "details": "Altos de Chavon sits on a clifftop near La Romana with cobbled streets, an amphitheatre and galleries. It is a pleasant half-day trip from Punta Cana, often combined with Catalina Island or a visit to a cigar factory.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "dominican-republic": {
+        "name": "Dominican Republic",
+        "description": "A Caribbean country of colonial streets, mountain towns, whale bays and beaches.",
+        "images": []
+      },
+      "dominican-republic/santo-domingo": {
+        "name": "Santo Domingo",
+        "description": "The capital with the oldest colonial city in the Americas.",
+        "images": []
+      },
+      "dominican-republic/jarabacoa": {
+        "name": "Jarabacoa",
+        "description": "A cool mountain town for waterfalls and rafting.",
+        "images": []
+      },
+      "dominican-republic/cabarete": {
+        "name": "Cabarete",
+        "description": "A north-coast beach town for kitesurfing and water sports.",
+        "images": []
+      },
+      "dominican-republic/samana": {
+        "name": "Samana",
+        "description": "A peninsula of palm beaches and whale-watching in winter.",
+        "images": []
+      },
+      "dominican-republic/punta-cana": {
+        "name": "Punta Cana",
+        "description": "The east-coast resort area of white-sand beaches.",
+        "images": []
+      }
+    }
+  }
+}

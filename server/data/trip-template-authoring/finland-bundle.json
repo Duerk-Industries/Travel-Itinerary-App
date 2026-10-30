@@ -1,0 +1,1182 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim, The World Was Here First and Take Your Backpack itineraries for Finland",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "finland-helsinki-4d",
+      "title": "Helsinki City Break in 4 Days",
+      "summary": "Harbour, sea fortress, sauna and design.",
+      "days": 4,
+      "route": "Helsinki",
+      "arrive": "Helsinki (HEL)",
+      "depart": "Helsinki (HEL)",
+      "countries": [
+        "Finland"
+      ],
+      "regions": [],
+      "cities": [
+        "Helsinki"
+      ],
+      "imageQuery": "Helsinki Cathedral Senate Square",
+      "highlights": [
+        "Senate Square",
+        "Suomenlinna",
+        "Public sauna",
+        "Design District"
+      ],
+      "destinationKeys": [
+        "finland",
+        "finland/helsinki"
+      ],
+      "hero": "finland/helsinki",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "The World Was Here First",
+        "Take Your Backpack",
+        "Travellocal"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Helsinki",
+          "hotel": "Hotel in Helsinki",
+          "start": 0,
+          "nights": 3,
+          "area": "In Kamppi, Kluuvi or Punavuori; central, walkable and close to trams",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Senate Square, Helsinki Cathedral and market",
+          "notes": "Compact and flat; the harbour market is good for lunch.",
+          "where": "Helsinki",
+          "book": "",
+          "place": "finland/helsinki-center"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Suomenlinna sea fortress",
+          "notes": "Ferry from Market Square; bring a layer.",
+          "where": "Suomenlinna, Helsinki",
+          "book": "",
+          "place": "finland/suomenlinna"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Public sauna and Design District",
+          "notes": "Check swimsuit rules; book evening sauna sessions.",
+          "where": "Helsinki",
+          "book": "Yes - book the sauna",
+          "place": "finland/sauna-design"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Nuuksio National Park or Porvoo old town",
+          "notes": "Choose forest trails or the wooden town by weather.",
+          "where": "Nuuksio or Porvoo",
+          "book": "",
+          "place": "finland/nuuksio-porvoo"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Helsinki Airport (HEL)",
+          "to": "Helsinki hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Helsinki hotel area",
+          "to": "Helsinki Airport (HEL)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Airport train, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "finland-helsinki-turku-5d",
+      "title": "Helsinki and Turku in 5 Days",
+      "summary": "The capital and the old capital, linked by train.",
+      "days": 5,
+      "route": "Helsinki > Turku",
+      "arrive": "Helsinki (HEL)",
+      "depart": "Helsinki (HEL)",
+      "countries": [
+        "Finland"
+      ],
+      "regions": [],
+      "cities": [
+        "Helsinki",
+        "Turku"
+      ],
+      "imageQuery": "Turku castle Finland",
+      "highlights": [
+        "Senate Square",
+        "Suomenlinna",
+        "Turku Castle",
+        "Sauna"
+      ],
+      "destinationKeys": [
+        "finland",
+        "finland/helsinki",
+        "finland/turku"
+      ],
+      "hero": "finland/turku",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "The World Was Here First",
+        "Take Your Backpack",
+        "Travellocal"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Helsinki",
+          "hotel": "Hotel in Helsinki",
+          "start": 0,
+          "nights": 2,
+          "area": "In Kamppi, Kluuvi or Punavuori; central, walkable and close to trams",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Turku",
+          "hotel": "Hotel in Turku",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the river and cathedral in Turku centre",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Senate Square, Helsinki Cathedral and market",
+          "notes": "Compact and flat; the harbour market is good for lunch.",
+          "where": "Helsinki",
+          "book": "",
+          "place": "finland/helsinki-center"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Suomenlinna sea fortress",
+          "notes": "Ferry from Market Square; bring a layer.",
+          "where": "Suomenlinna, Helsinki",
+          "book": "",
+          "place": "finland/suomenlinna"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Public sauna and Design District",
+          "notes": "Check swimsuit rules; book evening sauna sessions.",
+          "where": "Helsinki",
+          "book": "Yes - book the sauna",
+          "place": "finland/sauna-design"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3.5h",
+          "name": "Turku Castle and river promenade",
+          "notes": "Dates from the 13th century.",
+          "where": "Turku",
+          "book": "",
+          "place": "finland/turku-castle"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Helsinki Airport (HEL)",
+          "to": "Helsinki hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Helsinki",
+          "to": "Turku",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "VR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Turku",
+          "to": "Helsinki Airport (HEL)",
+          "time": "10:00",
+          "minutes": 130,
+          "carrier": "VR train",
+          "notes": "Change in Helsinki for the airport train.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "finland-helsinki-lapland-7d",
+      "title": "Helsinki and Lapland in 7 Days",
+      "summary": "Three days in the capital and three in Arctic Lapland (huskies, reindeer, aurora).",
+      "days": 7,
+      "route": "Helsinki > Rovaniemi",
+      "arrive": "Helsinki (HEL)",
+      "depart": "Rovaniemi (RVN)",
+      "countries": [
+        "Finland"
+      ],
+      "regions": [
+        "Lapland"
+      ],
+      "cities": [
+        "Helsinki",
+        "Rovaniemi"
+      ],
+      "imageQuery": "Lapland northern lights Finland",
+      "highlights": [
+        "Suomenlinna",
+        "Santa Claus Village",
+        "Husky safari",
+        "Northern lights"
+      ],
+      "destinationKeys": [
+        "finland",
+        "finland/helsinki",
+        "finland/lapland",
+        "finland/rovaniemi"
+      ],
+      "hero": "finland/lapland",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "The World Was Here First",
+        "Take Your Backpack",
+        "Travellocal"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Helsinki",
+          "hotel": "Hotel in Helsinki",
+          "start": 0,
+          "nights": 3,
+          "area": "In Kamppi, Kluuvi or Punavuori; central, walkable and close to trams",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rovaniemi",
+          "hotel": "Lodge in Rovaniemi",
+          "start": 3,
+          "nights": 3,
+          "area": "In central Rovaniemi or near the river; some lodges offer aurora views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Senate Square, Helsinki Cathedral and market",
+          "notes": "Compact and flat; the harbour market is good for lunch.",
+          "where": "Helsinki",
+          "book": "",
+          "place": "finland/helsinki-center"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Public sauna and Design District",
+          "notes": "Check swimsuit rules; book evening sauna sessions.",
+          "where": "Helsinki",
+          "book": "Yes - book the sauna",
+          "place": "finland/sauna-design"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Santa Claus Village and the Arctic Circle",
+          "notes": "Busiest in December; cross the line and send a postcard.",
+          "where": "Rovaniemi",
+          "book": "",
+          "place": "finland/santa-claus-village"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "21:00",
+          "duration": "3h",
+          "name": "Northern lights hunt",
+          "notes": "Best from September to March; midnight sun in June instead.",
+          "where": "Rovaniemi",
+          "book": "Yes - book an evening tour",
+          "place": "finland/northern-lights"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Husky or reindeer safari",
+          "notes": "Warm clothing is usually provided; book ahead in winter.",
+          "where": "Rovaniemi",
+          "book": "Yes - book the safari",
+          "place": "finland/lapland-husky-reindeer"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Arktikum museum or snowmobile outing",
+          "notes": "A museum day or a snow activity depending on the season.",
+          "where": "Rovaniemi",
+          "book": "",
+          "place": "finland/arktikum-snow"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Helsinki Airport (HEL)",
+          "to": "Helsinki hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Helsinki hotel area",
+          "to": "Helsinki Airport (HEL)",
+          "time": "08:30",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Rovaniemi Airport (RVN)",
+          "to": "Rovaniemi lodge",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Rovaniemi lodge",
+          "to": "Rovaniemi Airport (RVN)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "finland-helsinki-turku-tampere-lapland-8d",
+      "title": "Finland South to Lapland in 8 Days",
+      "summary": "Helsinki, Turku, Tampere and a finish in Lapland.",
+      "days": 8,
+      "route": "Helsinki > Turku > Tampere > Rovaniemi",
+      "arrive": "Helsinki (HEL)",
+      "depart": "Rovaniemi (RVN)",
+      "countries": [
+        "Finland"
+      ],
+      "regions": [
+        "Lapland"
+      ],
+      "cities": [
+        "Helsinki",
+        "Turku",
+        "Tampere",
+        "Rovaniemi"
+      ],
+      "imageQuery": "Tampere Finland lake city",
+      "highlights": [
+        "Suomenlinna",
+        "Turku Castle",
+        "Tampere saunas",
+        "Santa Claus Village",
+        "Aurora"
+      ],
+      "destinationKeys": [
+        "finland",
+        "finland/helsinki",
+        "finland/turku",
+        "finland/tampere",
+        "finland/lapland",
+        "finland/rovaniemi"
+      ],
+      "hero": "finland/tampere",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "The World Was Here First",
+        "Take Your Backpack",
+        "Travellocal"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Helsinki",
+          "hotel": "Hotel in Helsinki",
+          "start": 0,
+          "nights": 2,
+          "area": "In Kamppi, Kluuvi or Punavuori; central, walkable and close to trams",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Turku",
+          "hotel": "Hotel in Turku",
+          "start": 2,
+          "nights": 1,
+          "area": "Near the river and cathedral in Turku centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tampere",
+          "hotel": "Hotel in Tampere",
+          "start": 3,
+          "nights": 2,
+          "area": "In central Tampere near the rapids and market hall",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rovaniemi",
+          "hotel": "Lodge in Rovaniemi",
+          "start": 5,
+          "nights": 2,
+          "area": "In central Rovaniemi or near the river; some lodges offer aurora views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Senate Square, Helsinki Cathedral and market",
+          "notes": "Compact and flat; the harbour market is good for lunch.",
+          "where": "Helsinki",
+          "book": "",
+          "place": "finland/helsinki-center"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Suomenlinna sea fortress",
+          "notes": "Ferry from Market Square; bring a layer.",
+          "where": "Suomenlinna, Helsinki",
+          "book": "",
+          "place": "finland/suomenlinna"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Public sauna and Design District",
+          "notes": "Check swimsuit rules; book evening sauna sessions.",
+          "where": "Helsinki",
+          "book": "Yes - book the sauna",
+          "place": "finland/sauna-design"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3.5h",
+          "name": "Turku Castle and river promenade",
+          "notes": "Dates from the 13th century.",
+          "where": "Turku",
+          "book": "",
+          "place": "finland/turku-castle"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Tampere mills, Moomin Museum and Pyynikki tower",
+          "notes": "Try the doughnuts at the tower cafe; end with a public sauna.",
+          "where": "Tampere",
+          "book": "",
+          "place": "finland/tampere"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Santa Claus Village and the Arctic Circle",
+          "notes": "Busiest in December; cross the line and send a postcard.",
+          "where": "Rovaniemi",
+          "book": "",
+          "place": "finland/santa-claus-village"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "21:00",
+          "duration": "3h",
+          "name": "Northern lights hunt",
+          "notes": "Best from September to March; midnight sun in June instead.",
+          "where": "Rovaniemi",
+          "book": "Yes - book an evening tour",
+          "place": "finland/northern-lights"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Husky or reindeer safari",
+          "notes": "Warm clothing is usually provided; book ahead in winter.",
+          "where": "Rovaniemi",
+          "book": "Yes - book the safari",
+          "place": "finland/lapland-husky-reindeer"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Helsinki Airport (HEL)",
+          "to": "Helsinki hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Helsinki",
+          "to": "Turku",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "VR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Turku",
+          "to": "Tampere",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "VR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Tampere hotel",
+          "to": "Tampere Airport (TMP)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Rovaniemi Airport (RVN)",
+          "to": "Rovaniemi lodge",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Rovaniemi lodge",
+          "to": "Rovaniemi Airport (RVN)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "finland-complete-10d",
+      "title": "Complete Finland in 10 Days",
+      "summary": "The south, Lakeland and Lapland: Helsinki, Turku, Tampere, Savonlinna and Rovaniemi.",
+      "days": 10,
+      "route": "Helsinki > Turku > Tampere > Savonlinna > Rovaniemi",
+      "arrive": "Helsinki (HEL)",
+      "depart": "Rovaniemi (RVN)",
+      "countries": [
+        "Finland"
+      ],
+      "regions": [
+        "Lakeland",
+        "Lapland"
+      ],
+      "cities": [
+        "Helsinki",
+        "Turku",
+        "Tampere",
+        "Savonlinna",
+        "Rovaniemi"
+      ],
+      "imageQuery": "Savonlinna Olavinlinna castle",
+      "highlights": [
+        "Suomenlinna",
+        "Tampere",
+        "Olavinlinna Castle",
+        "Husky safari",
+        "Aurora"
+      ],
+      "destinationKeys": [
+        "finland",
+        "finland/helsinki",
+        "finland/turku",
+        "finland/tampere",
+        "finland/lakeland",
+        "finland/savonlinna",
+        "finland/lapland",
+        "finland/rovaniemi"
+      ],
+      "hero": "finland/lakeland",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "The World Was Here First",
+        "Take Your Backpack",
+        "Travellocal"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Helsinki",
+          "hotel": "Hotel in Helsinki",
+          "start": 0,
+          "nights": 3,
+          "area": "In Kamppi, Kluuvi or Punavuori; central, walkable and close to trams",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Turku",
+          "hotel": "Hotel in Turku",
+          "start": 3,
+          "nights": 1,
+          "area": "Near the river and cathedral in Turku centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tampere",
+          "hotel": "Hotel in Tampere",
+          "start": 4,
+          "nights": 2,
+          "area": "In central Tampere near the rapids and market hall",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Savonlinna",
+          "hotel": "Hotel in Savonlinna",
+          "start": 6,
+          "nights": 1,
+          "area": "In Savonlinna near the castle or lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rovaniemi",
+          "hotel": "Lodge in Rovaniemi",
+          "start": 7,
+          "nights": 2,
+          "area": "In central Rovaniemi or near the river; some lodges offer aurora views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Senate Square, Helsinki Cathedral and market",
+          "notes": "Compact and flat; the harbour market is good for lunch.",
+          "where": "Helsinki",
+          "book": "",
+          "place": "finland/helsinki-center"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Public sauna and Design District",
+          "notes": "Check swimsuit rules; book evening sauna sessions.",
+          "where": "Helsinki",
+          "book": "Yes - book the sauna",
+          "place": "finland/sauna-design"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Nuuksio National Park or Porvoo old town",
+          "notes": "Choose forest trails or the wooden town by weather.",
+          "where": "Nuuksio or Porvoo",
+          "book": "",
+          "place": "finland/nuuksio-porvoo"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3.5h",
+          "name": "Turku Castle and river promenade",
+          "notes": "Dates from the 13th century.",
+          "where": "Turku",
+          "book": "",
+          "place": "finland/turku-castle"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Tampere mills, Moomin Museum and Pyynikki tower",
+          "notes": "Try the doughnuts at the tower cafe; end with a public sauna.",
+          "where": "Tampere",
+          "book": "",
+          "place": "finland/tampere"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Olavinlinna Castle and Saimaa cruise",
+          "notes": "Opera festival performances in July.",
+          "where": "Savonlinna",
+          "book": "",
+          "place": "finland/savonlinna"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Santa Claus Village and the Arctic Circle",
+          "notes": "Busiest in December; cross the line and send a postcard.",
+          "where": "Rovaniemi",
+          "book": "",
+          "place": "finland/santa-claus-village"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "21:00",
+          "duration": "3h",
+          "name": "Northern lights hunt",
+          "notes": "Best from September to March; midnight sun in June instead.",
+          "where": "Rovaniemi",
+          "book": "Yes - book an evening tour",
+          "place": "finland/northern-lights"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Husky or reindeer safari",
+          "notes": "Warm clothing is usually provided; book ahead in winter.",
+          "where": "Rovaniemi",
+          "book": "Yes - book the safari",
+          "place": "finland/lapland-husky-reindeer"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Arktikum museum or snowmobile outing",
+          "notes": "A museum day or a snow activity depending on the season.",
+          "where": "Rovaniemi",
+          "book": "",
+          "place": "finland/arktikum-snow"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Helsinki Airport (HEL)",
+          "to": "Helsinki hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Helsinki",
+          "to": "Turku",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "VR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Turku",
+          "to": "Tampere",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "VR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Tampere",
+          "to": "Savonlinna",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "VR train",
+          "notes": "Change at Pieksamaki.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Savonlinna hotel",
+          "to": "Savonlinna Airport (SVL)",
+          "time": "09:00",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Check flight availability; alternatively take the train via Helsinki.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Rovaniemi Airport (RVN)",
+          "to": "Rovaniemi lodge",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Rovaniemi lodge",
+          "to": "Rovaniemi Airport (RVN)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "finland/helsinki-center": {
+        "name": "Helsinki Senate Square, cathedral and market",
+        "description": "The white neoclassical heart of Helsinki, with a harbour market and seafront cafes.",
+        "details": "Senate Square has the Helsinki Cathedral at the top of its steps. The Market Square by the harbour sells salmon soup, berries and crafts, and the Old Market Hall nearby is a good lunch stop. The centre is compact and flat, so walking is easy. Trams cover the rest.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "finland/suomenlinna": {
+        "name": "Suomenlinna sea fortress",
+        "description": "An eighteenth-century island fortress, a short ferry ride from Helsinki, a UNESCO site.",
+        "details": "Suomenlinna spreads over six islands with bastions, tunnels, museums and picnic spots. The ferry from Market Square takes 15 minutes and is included in city transport tickets. Allow half a day, and bring a layer for the sea breeze.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "finland/sauna-design": {
+        "name": "Finnish sauna and design district",
+        "description": "A public sauna by the sea, plus the design shops and cafes of the Design District.",
+        "details": "Sauna is central to Finnish life. Loyly and Allas Sea Pool offer public saunas by the harbour, with sea dips in summer and ice swimming in winter. The Design District has galleries and shops. Check whether swimsuits are required, and book evenings ahead.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "finland/nuuksio-porvoo": {
+        "name": "Nuuksio National Park or Porvoo old town",
+        "description": "Forest lakes close to the capital, or a red-ochre wooden town on the coast.",
+        "details": "Nuuksio is a national park 40 minutes from Helsinki, with marked trails, lakes and berry picking in summer. Porvoo is a 17th-century town with wooden warehouses on the river, about an hour away. Choose one for a day trip depending on the weather.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "finland/turku-castle": {
+        "name": "Turku Castle and the river",
+        "description": "Finland oldest city with a medieval castle, cathedral and riverside restaurants.",
+        "details": "Turku Castle dates from the 13th century and holds a museum of Swedish and Finnish history. The cathedral and the Aura River promenade are close. The archipelago to the south is reached by boat in summer. Turku is two hours by train from Helsinki.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "finland/tampere": {
+        "name": "Tampere museums and sauna capital",
+        "description": "An industrial city turned cultural centre, with museums, lakes and the largest public sauna scene.",
+        "details": "Tampere sits between two lakes and has red-brick mills turned into museums, the Moomin Museum and the Rajaportti sauna, Finland oldest public sauna. The Pyynikki ridge has a tower with doughnuts and a view. Trains from Helsinki take about two hours.",
+        "interests": [
+          "culture",
+          "food",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "finland/savonlinna": {
+        "name": "Savonlinna and Olavinlinna Castle",
+        "description": "A lake town with a medieval castle on the water, known for its summer opera festival.",
+        "details": "Olavinlinna is a 15th-century castle on an island in Lake Saimaa. The Savonlinna Opera Festival fills the courtyard with performances in July. Lake cruises explore the Saimaa archipelago, and the area is the home of the rare Saimaa ringed seal.",
+        "interests": [
+          "culture",
+          "relax",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "finland/santa-claus-village": {
+        "name": "Santa Claus Village and the Arctic Circle",
+        "description": "A village on the Arctic Circle where visitors can meet Santa and cross the line.",
+        "details": "Santa Claus Village in Rovaniemi has a post office with an Arctic Circle postmark, reindeer rides and Santa meeting year-round. It is lively in December and quieter in summer. The Arctic Circle line is marked on the ground.",
+        "interests": [
+          "culture",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "finland/lapland-husky-reindeer": {
+        "name": "Husky and reindeer safari",
+        "description": "A guided sled ride behind huskies or reindeer through snowy forest (or a summer farm visit).",
+        "details": "In winter, huskies pull sleds through forest trails and reindeer farms offer sled rides and stories of the Sami herders. Warm outerwear is provided by most operators. In summer, farms offer walks and farm visits. Book ahead for peak winter dates.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "finland/northern-lights": {
+        "name": "Northern lights hunt or midnight sun",
+        "description": "An evening trip into dark skies to look for the aurora from September to March, or the midnight sun in June.",
+        "details": "The aurora is possible on clear nights from late August to April, with the best chances in the colder months. Guides drive to dark spots away from town and light fires. In summer, the midnight sun allows daylight activity at any hour. Dress in layers, as it is very cold at night.",
+        "interests": [
+          "photography",
+          "adventure",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "finland/arktikum-snow": {
+        "name": "Arktikum museum and snow activities",
+        "description": "A museum about Arctic life and nature, plus snowmobiling and snowshoeing in winter.",
+        "details": "The Arktikum in Rovaniemi explains Arctic nature, Sami culture and the polar environment. In winter, snowmobile safaris, snowshoe walks and ice fishing are popular, and some travellers visit a Sami reindeer herder. In summer there are river cruises and hikes.",
+        "interests": [
+          "culture",
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "finland": {
+        "name": "Finland",
+        "description": "A land of lakes, forests, saunas and the Arctic north.",
+        "images": []
+      },
+      "finland/helsinki": {
+        "name": "Helsinki",
+        "description": "The seaside capital with design, saunas and island fortress.",
+        "images": []
+      },
+      "finland/turku": {
+        "name": "Turku",
+        "description": "The old capital, with a castle and archipelago nearby.",
+        "images": []
+      },
+      "finland/tampere": {
+        "name": "Tampere",
+        "description": "A lakeside city of museums and saunas.",
+        "images": []
+      },
+      "finland/lakeland": {
+        "name": "Lakeland",
+        "description": "The central region of thousands of lakes, including Savonlinna.",
+        "images": []
+      },
+      "finland/savonlinna": {
+        "name": "Savonlinna",
+        "description": "A lake town with a medieval castle.",
+        "images": []
+      },
+      "finland/lapland": {
+        "name": "Lapland",
+        "description": "Finland Arctic north, home of Santa Claus, huskies and the aurora.",
+        "images": []
+      },
+      "finland/rovaniemi": {
+        "name": "Rovaniemi",
+        "description": "The capital of Lapland on the Arctic Circle.",
+        "images": []
+      }
+    }
+  }
+}

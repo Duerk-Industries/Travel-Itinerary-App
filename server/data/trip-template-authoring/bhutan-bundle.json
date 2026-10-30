@@ -1,0 +1,1375 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, TravelStride, On The Go Tours and Intrepid Travel itineraries for Bhutan",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "bhutan-paro-thimphu-5d",
+      "title": "Paro and Thimphu in 5 Days",
+      "summary": "The capital and the airport valley, ending with the hike to the Tiger's Nest.",
+      "days": 5,
+      "route": "Paro > Thimphu",
+      "arrive": "Paro (PBH)",
+      "depart": "Paro (PBH)",
+      "countries": [
+        "Bhutan"
+      ],
+      "regions": [
+        "Paro",
+        "Thimphu"
+      ],
+      "cities": [
+        "Paro",
+        "Thimphu"
+      ],
+      "imageQuery": "Tigers Nest monastery Bhutan",
+      "highlights": [
+        "Tiger's Nest",
+        "Paro Dzong",
+        "Buddha Dordenma",
+        "Tashichho Dzong"
+      ],
+      "destinationKeys": [
+        "bhutan",
+        "bhutan/paro",
+        "bhutan/thimphu"
+      ],
+      "hero": "bhutan/paro",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "On The Go Tours",
+        "Intrepid Travel",
+        "Little Bhutan"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Thimphu",
+          "hotel": "Hotel in Thimphu",
+          "start": 0,
+          "nights": 2,
+          "area": "In central Thimphu, close to the clock tower and craft shops",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Paro",
+          "hotel": "Hotel in Paro",
+          "start": 2,
+          "nights": 2,
+          "area": "In the Paro valley, ideally with a view of the dzong or the mountains",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Motithang Takin Preserve",
+          "notes": "An easy short stop with a view.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/takin-preserve"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Buddha Dordenma and Memorial Chorten",
+          "notes": "Views over the valley; locals circle the chorten clockwise.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/buddha-dordenma"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Tashichho Dzong and weekend market",
+          "notes": "The dzong opens to visitors after office hours; the market runs Friday to Sunday.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/thimphu-tashichho"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Paro Dzong, museum and Kyichu Lhakhang",
+          "notes": "Wear long sleeves and trousers at the dzong.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/paro-dzong-museum"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Kyichu Lhakhang",
+          "notes": "A quiet temple, one of the oldest in the country.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/kyichu-lhakhang"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "6h",
+          "name": "Tiger's Nest (Taktsang) hike",
+          "notes": "Spend a quiet day beforehand to adjust to the altitude; no cameras inside.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/tigers-nest"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paro International Airport (PBH)",
+          "to": "Thimphu hotel",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Pre-arranged driver",
+          "notes": "Visitors must travel with an approved guide and driver.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Thimphu",
+          "to": "Paro",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Paro hotel",
+          "to": "Paro International Airport (PBH)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Pre-arranged driver",
+          "notes": "Allow extra time for international check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bhutan-western-circuit-7d",
+      "title": "Western Bhutan Circuit in 7 Days",
+      "summary": "Paro, Thimphu and Punakha, with the Tiger's Nest as the finale.",
+      "days": 7,
+      "route": "Paro > Thimphu > Punakha",
+      "arrive": "Paro (PBH)",
+      "depart": "Paro (PBH)",
+      "countries": [
+        "Bhutan"
+      ],
+      "regions": [
+        "Paro",
+        "Thimphu",
+        "Punakha"
+      ],
+      "cities": [
+        "Paro",
+        "Thimphu",
+        "Punakha"
+      ],
+      "imageQuery": "Punakha Dzong river Bhutan",
+      "highlights": [
+        "Tiger's Nest",
+        "Punakha Dzong",
+        "Dochula Pass",
+        "Buddha Dordenma"
+      ],
+      "destinationKeys": [
+        "bhutan",
+        "bhutan/paro",
+        "bhutan/thimphu",
+        "bhutan/punakha"
+      ],
+      "hero": "bhutan/punakha",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "On The Go Tours",
+        "Intrepid Travel",
+        "Little Bhutan"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "adventure",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Paro",
+          "hotel": "Hotel in Paro",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Paro valley, ideally with a view of the dzong or the mountains",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Thimphu",
+          "hotel": "Hotel in Thimphu",
+          "start": 2,
+          "nights": 2,
+          "area": "In central Thimphu, close to the clock tower and craft shops",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Punakha",
+          "hotel": "Hotel in Punakha",
+          "start": 4,
+          "nights": 2,
+          "area": "In the Punakha valley, near the river and rice terraces",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "6h",
+          "name": "Tiger's Nest (Taktsang) hike",
+          "notes": "Spend a quiet day beforehand to adjust to the altitude; no cameras inside.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/tigers-nest"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Paro Dzong, museum and Kyichu Lhakhang",
+          "notes": "Wear long sleeves and trousers at the dzong.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/paro-dzong-museum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Kyichu Lhakhang",
+          "notes": "A quiet temple, one of the oldest in the country.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/kyichu-lhakhang"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Buddha Dordenma and Memorial Chorten",
+          "notes": "Views over the valley; locals circle the chorten clockwise.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/buddha-dordenma"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Tashichho Dzong and weekend market",
+          "notes": "The dzong opens to visitors after office hours; the market runs Friday to Sunday.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/thimphu-tashichho"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Dochula Pass 108 chortens",
+          "notes": "Views are best on clear winter mornings; bring a jacket.",
+          "where": "Dochula Pass",
+          "book": "",
+          "place": "bhutan/dochula-pass"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Punakha Dzong",
+          "notes": "The jacaranda trees bloom in spring.",
+          "where": "Punakha",
+          "book": "",
+          "place": "bhutan/punakha-dzong"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Chimi Lhakhang walk and suspension bridge",
+          "notes": "A walk through paddy fields to the fertility temple.",
+          "where": "Punakha",
+          "book": "",
+          "place": "bhutan/chimi-lhakhang"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paro International Airport (PBH)",
+          "to": "Paro hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Pre-arranged driver",
+          "notes": "Visitors must travel with an approved guide and driver.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Paro",
+          "to": "Thimphu",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Thimphu",
+          "to": "Punakha",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "The drive crosses Dochula Pass.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Punakha",
+          "to": "Paro International Airport (PBH)",
+          "time": "07:00",
+          "minutes": 270,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "Long drive; allow a buffer for the flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bhutan-haa-thimphu-punakha-paro-7d",
+      "title": "Haa Valley, Punakha and Paro in 7 Days",
+      "summary": "A different 7-day loop: Thimphu, Punakha, Haa and finally Paro with the Tiger's Nest.",
+      "days": 7,
+      "route": "Thimphu > Punakha > Haa > Paro",
+      "arrive": "Paro (PBH)",
+      "depart": "Paro (PBH)",
+      "countries": [
+        "Bhutan"
+      ],
+      "regions": [
+        "Paro",
+        "Thimphu",
+        "Punakha",
+        "Haa"
+      ],
+      "cities": [
+        "Thimphu",
+        "Punakha",
+        "Haa",
+        "Paro"
+      ],
+      "imageQuery": "Haa Valley Bhutan Chele La",
+      "highlights": [
+        "Haa Valley",
+        "Chele La",
+        "Punakha Dzong",
+        "Tiger's Nest"
+      ],
+      "destinationKeys": [
+        "bhutan",
+        "bhutan/paro",
+        "bhutan/thimphu",
+        "bhutan/punakha",
+        "bhutan/haa"
+      ],
+      "hero": "bhutan/haa",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "On The Go Tours",
+        "Intrepid Travel",
+        "Little Bhutan"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Thimphu",
+          "hotel": "Hotel in Thimphu",
+          "start": 0,
+          "nights": 2,
+          "area": "In central Thimphu, close to the clock tower and craft shops",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Punakha",
+          "hotel": "Hotel in Punakha",
+          "start": 2,
+          "nights": 1,
+          "area": "In the Punakha valley, near the river and rice terraces",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Haa",
+          "hotel": "Guesthouse in Haa",
+          "start": 3,
+          "nights": 1,
+          "area": "In a farmhouse or small hotel in Haa town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Paro",
+          "hotel": "Hotel in Paro",
+          "start": 4,
+          "nights": 2,
+          "area": "In the Paro valley, ideally with a view of the dzong or the mountains",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Buddha Dordenma and Memorial Chorten",
+          "notes": "Views over the valley; locals circle the chorten clockwise.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/buddha-dordenma"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Tashichho Dzong and weekend market",
+          "notes": "The dzong opens to visitors after office hours; the market runs Friday to Sunday.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/thimphu-tashichho"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Dochula Pass 108 chortens",
+          "notes": "Views are best on clear winter mornings; bring a jacket.",
+          "where": "Dochula Pass",
+          "book": "",
+          "place": "bhutan/dochula-pass"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Punakha Dzong",
+          "notes": "The jacaranda trees bloom in spring.",
+          "where": "Punakha",
+          "book": "",
+          "place": "bhutan/punakha-dzong"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Chele La pass",
+          "notes": "The highest motorable pass; it can be cold and windy.",
+          "where": "Haa Valley",
+          "book": "",
+          "place": "bhutan/haa-valley"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "6h",
+          "name": "Tiger's Nest (Taktsang) hike",
+          "notes": "Spend a quiet day beforehand to adjust to the altitude; no cameras inside.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/tigers-nest"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Paro Dzong, museum and Kyichu Lhakhang",
+          "notes": "Wear long sleeves and trousers at the dzong.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/paro-dzong-museum"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Kyichu Lhakhang",
+          "notes": "A quiet temple, one of the oldest in the country.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/kyichu-lhakhang"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paro International Airport (PBH)",
+          "to": "Thimphu hotel",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Pre-arranged driver",
+          "notes": "Visitors must travel with an approved guide and driver.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Thimphu",
+          "to": "Punakha",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Punakha",
+          "to": "Haa",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "A long drive via Thimphu and Paro; consider splitting.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Haa",
+          "to": "Paro",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "Cross Chele La, the highest motorable pass.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Paro hotel",
+          "to": "Paro International Airport (PBH)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Pre-arranged driver",
+          "notes": "Allow extra time for international check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bhutan-central-valleys-9d",
+      "title": "Bhutan with Phobjikha in 9 Days",
+      "summary": "Paro, Thimphu and Punakha, with two nights in the crane valley of Phobjikha.",
+      "days": 9,
+      "route": "Paro > Thimphu > Punakha > Phobjikha",
+      "arrive": "Paro (PBH)",
+      "depart": "Paro (PBH)",
+      "countries": [
+        "Bhutan"
+      ],
+      "regions": [
+        "Paro",
+        "Thimphu",
+        "Punakha",
+        "Wangdue Phodrang"
+      ],
+      "cities": [
+        "Paro",
+        "Thimphu",
+        "Punakha",
+        "Phobjikha"
+      ],
+      "imageQuery": "Phobjikha Valley Gangtey Bhutan",
+      "highlights": [
+        "Tiger's Nest",
+        "Punakha Dzong",
+        "Phobjikha Valley",
+        "Gangtey Monastery"
+      ],
+      "destinationKeys": [
+        "bhutan",
+        "bhutan/paro",
+        "bhutan/thimphu",
+        "bhutan/punakha",
+        "bhutan/wangdue-phodrang",
+        "bhutan/phobjikha"
+      ],
+      "hero": "bhutan/phobjikha",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "On The Go Tours",
+        "Intrepid Travel",
+        "Little Bhutan"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Paro",
+          "hotel": "Hotel in Paro",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Paro valley, ideally with a view of the dzong or the mountains",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Thimphu",
+          "hotel": "Hotel in Thimphu",
+          "start": 2,
+          "nights": 2,
+          "area": "In central Thimphu, close to the clock tower and craft shops",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Punakha",
+          "hotel": "Hotel in Punakha",
+          "start": 4,
+          "nights": 2,
+          "area": "In the Punakha valley, near the river and rice terraces",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Phobjikha",
+          "hotel": "Lodge in Phobjikha",
+          "start": 6,
+          "nights": 2,
+          "area": "In the Phobjikha valley, close to Gangtey Monastery",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "6h",
+          "name": "Tiger's Nest (Taktsang) hike",
+          "notes": "Spend a quiet day beforehand to adjust to the altitude; no cameras inside.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/tigers-nest"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Paro Dzong, museum and Kyichu Lhakhang",
+          "notes": "Wear long sleeves and trousers at the dzong.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/paro-dzong-museum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Kyichu Lhakhang",
+          "notes": "A quiet temple, one of the oldest in the country.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/kyichu-lhakhang"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Motithang Takin Preserve",
+          "notes": "An easy short stop with a view.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/takin-preserve"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Buddha Dordenma and Memorial Chorten",
+          "notes": "Views over the valley; locals circle the chorten clockwise.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/buddha-dordenma"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Tashichho Dzong and weekend market",
+          "notes": "The dzong opens to visitors after office hours; the market runs Friday to Sunday.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/thimphu-tashichho"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Dochula Pass 108 chortens",
+          "notes": "Views are best on clear winter mornings; bring a jacket.",
+          "where": "Dochula Pass",
+          "book": "",
+          "place": "bhutan/dochula-pass"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Punakha Dzong",
+          "notes": "The jacaranda trees bloom in spring.",
+          "where": "Punakha",
+          "book": "",
+          "place": "bhutan/punakha-dzong"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Chimi Lhakhang walk and suspension bridge",
+          "notes": "A walk through paddy fields to the fertility temple.",
+          "where": "Punakha",
+          "book": "",
+          "place": "bhutan/chimi-lhakhang"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Gangtey Monastery and Phobjikha nature trail",
+          "notes": "Cranes are present from late October to March.",
+          "where": "Phobjikha Valley",
+          "book": "",
+          "place": "bhutan/phobjikha"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Phobjikha village walk and crane centre",
+          "notes": "Cranes are present from late October to March.",
+          "where": "Phobjikha Valley",
+          "book": "",
+          "place": "bhutan/phobjikha"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paro International Airport (PBH)",
+          "to": "Paro hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Pre-arranged driver",
+          "notes": "Visitors must travel with an approved guide and driver.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Paro",
+          "to": "Thimphu",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Thimphu",
+          "to": "Punakha",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "The drive crosses Dochula Pass.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Punakha",
+          "to": "Phobjikha",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Phobjikha",
+          "to": "Paro International Airport (PBH)",
+          "time": "06:30",
+          "minutes": 420,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "A long day on mountain roads; arrange an early start.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bhutan-grand-10d",
+      "title": "Bhutan Highlights in 10 Days",
+      "summary": "Haa Valley, Thimphu, Punakha and Phobjikha, ending in Paro with the Tiger's Nest.",
+      "days": 10,
+      "route": "Haa > Thimphu > Punakha > Phobjikha > Paro",
+      "arrive": "Paro (PBH)",
+      "depart": "Paro (PBH)",
+      "countries": [
+        "Bhutan"
+      ],
+      "regions": [
+        "Paro",
+        "Thimphu",
+        "Punakha",
+        "Haa",
+        "Wangdue Phodrang"
+      ],
+      "cities": [
+        "Paro",
+        "Haa",
+        "Thimphu",
+        "Punakha",
+        "Phobjikha"
+      ],
+      "imageQuery": "Bhutan mountains prayer flags",
+      "highlights": [
+        "Haa Valley",
+        "Punakha Dzong",
+        "Gangtey Monastery",
+        "Tiger's Nest",
+        "Dochula Pass"
+      ],
+      "destinationKeys": [
+        "bhutan",
+        "bhutan/paro",
+        "bhutan/haa",
+        "bhutan/thimphu",
+        "bhutan/punakha",
+        "bhutan/wangdue-phodrang",
+        "bhutan/phobjikha"
+      ],
+      "hero": "bhutan/paro",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "On The Go Tours",
+        "Intrepid Travel",
+        "Little Bhutan"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Paro",
+          "hotel": "Hotel in Paro",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Paro valley, ideally with a view of the dzong or the mountains",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Haa",
+          "hotel": "Guesthouse in Haa",
+          "start": 2,
+          "nights": 1,
+          "area": "In a farmhouse or small hotel in Haa town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Thimphu",
+          "hotel": "Hotel in Thimphu",
+          "start": 3,
+          "nights": 2,
+          "area": "In central Thimphu, close to the clock tower and craft shops",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Punakha",
+          "hotel": "Hotel in Punakha",
+          "start": 5,
+          "nights": 2,
+          "area": "In the Punakha valley, near the river and rice terraces",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Phobjikha",
+          "hotel": "Lodge in Phobjikha",
+          "start": 7,
+          "nights": 2,
+          "area": "In the Phobjikha valley, close to Gangtey Monastery",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "6h",
+          "name": "Tiger's Nest (Taktsang) hike",
+          "notes": "Spend a quiet day beforehand to adjust to the altitude; no cameras inside.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/tigers-nest"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Paro Dzong, museum and Kyichu Lhakhang",
+          "notes": "Wear long sleeves and trousers at the dzong.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/paro-dzong-museum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Kyichu Lhakhang",
+          "notes": "A quiet temple, one of the oldest in the country.",
+          "where": "Paro",
+          "book": "",
+          "place": "bhutan/kyichu-lhakhang"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Chele La pass",
+          "notes": "The highest motorable pass; it can be cold and windy.",
+          "where": "Haa Valley",
+          "book": "",
+          "place": "bhutan/haa-valley"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Motithang Takin Preserve",
+          "notes": "An easy short stop with a view.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/takin-preserve"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Buddha Dordenma and Memorial Chorten",
+          "notes": "Views over the valley; locals circle the chorten clockwise.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/buddha-dordenma"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Tashichho Dzong and weekend market",
+          "notes": "The dzong opens to visitors after office hours; the market runs Friday to Sunday.",
+          "where": "Thimphu",
+          "book": "",
+          "place": "bhutan/thimphu-tashichho"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Dochula Pass 108 chortens",
+          "notes": "Views are best on clear winter mornings; bring a jacket.",
+          "where": "Dochula Pass",
+          "book": "",
+          "place": "bhutan/dochula-pass"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Punakha Dzong",
+          "notes": "The jacaranda trees bloom in spring.",
+          "where": "Punakha",
+          "book": "",
+          "place": "bhutan/punakha-dzong"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Chimi Lhakhang walk and suspension bridge",
+          "notes": "A walk through paddy fields to the fertility temple.",
+          "where": "Punakha",
+          "book": "",
+          "place": "bhutan/chimi-lhakhang"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Gangtey Monastery and Phobjikha nature trail",
+          "notes": "Cranes are present from late October to March.",
+          "where": "Phobjikha Valley",
+          "book": "",
+          "place": "bhutan/phobjikha"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paro International Airport (PBH)",
+          "to": "Paro hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Pre-arranged driver",
+          "notes": "Visitors must travel with an approved guide and driver.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Paro",
+          "to": "Haa",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "Cross Chele La, the highest motorable pass.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Haa",
+          "to": "Thimphu",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Thimphu",
+          "to": "Punakha",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "The drive crosses Dochula Pass.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Punakha",
+          "to": "Phobjikha",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Phobjikha",
+          "to": "Paro International Airport (PBH)",
+          "time": "05:30",
+          "minutes": 420,
+          "carrier": "Pre-arranged driver and guide",
+          "notes": "A long day on mountain roads; consider an earlier flight departure.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "bhutan/tigers-nest": {
+        "name": "Tiger's Nest (Paro Taktsang)",
+        "description": "A monastery clinging to a cliff 900 metres above the Paro valley, reached by a steep half-day hike.",
+        "details": "Taktsang is Bhutan most famous landmark. The trail climbs through pine forest to a cafeteria viewpoint and then on to the monastery, taking about two hours up and one and a half down. Interiors are visited with a guide, and cameras and phones are left at the entrance. Pack layers and good shoes, and give yourself a gentle day beforehand to adjust to the altitude.",
+        "interests": [
+          "iconic_landmarks",
+          "adventure",
+          "culture",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "bhutan/paro-dzong-museum": {
+        "name": "Paro Dzong and National Museum",
+        "description": "A fortress monastery beside the river and a museum in a round watchtower above it.",
+        "details": "Rinpung Dzong is a large whitewashed fortress reached by a covered wooden bridge, and houses monastic and administrative offices. The National Museum above it is in a former watchtower, with masks, paintings and artefacts. Wear long sleeves and trousers, and remove your hat at the dzong.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "bhutan/kyichu-lhakhang": {
+        "name": "Kyichu Lhakhang",
+        "description": "One of the oldest temples in Bhutan, said to date to the seventh century.",
+        "details": "Kyichu is a quiet, atmospheric temple with orange trees in the courtyard and a story that it pins down a demoness. Locals walk the prayer wheels and light butter lamps. It is a short drive from Paro and takes less than an hour.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bhutan/buddha-dordenma": {
+        "name": "Buddha Dordenma and Thimphu viewpoints",
+        "description": "A 51-metre golden Buddha statue overlooking the capital valley.",
+        "details": "The Buddha Dordenma sits on a hill above Thimphu with a meditation hall inside the base. Views take in the whole valley. Other viewpoints in the capital include the Memorial Chorten, where locals walk clockwise each morning.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bhutan/thimphu-tashichho": {
+        "name": "Tashichho Dzong and the weekend market",
+        "description": "The seat of government and the central monastery, plus a farmers market at the weekend.",
+        "details": "Tashichho Dzong is open to visitors in the late afternoon after office hours, and it is lit at dusk. The Centenary Farmers Market runs from Friday to Sunday with produce, cheese and handicrafts. The nearby textile museum shows traditional weaving.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bhutan/takin-preserve": {
+        "name": "Motithang Takin Preserve",
+        "description": "A small reserve for the national animal, an odd goat-antelope.",
+        "details": "The takin is a strange creature with a goat head and cow body, said to have been created by the Divine Madman. The reserve is on a hillside above Thimphu and can be done in an hour. It is a good short stop with a view over the town.",
+        "interests": [
+          "outdoors",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bhutan/dochula-pass": {
+        "name": "Dochula Pass",
+        "description": "A 3,100-metre pass between Thimphu and Punakha, with 108 chortens and Himalayan views.",
+        "details": "The pass is marked by a field of 108 memorial stupas and prayer flags, and the Himalayan peaks are visible on a clear day, mostly in winter. Stop for tea and photographs on the drive to Punakha. It can be cold and misty, so bring a jacket.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bhutan/punakha-dzong": {
+        "name": "Punakha Dzong",
+        "description": "A massive fortress at the meeting of two rivers, the former capital and the winter seat of the monk body.",
+        "details": "Punakha Dzong is often called the most beautiful dzong in Bhutan. It sits at the confluence of the Pho Chhu and Mo Chhu rivers and is reached by a wooden bridge. Jacaranda trees bloom in spring. The inner courtyards hold temples, and a guide explains the paintings.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "bhutan/chimi-lhakhang": {
+        "name": "Chimi Lhakhang and Punakha suspension bridge",
+        "description": "A fertility temple reached by a walk through rice fields, and one of the longest suspension bridges in Bhutan.",
+        "details": "Chimi Lhakhang is dedicated to the Divine Madman, Drukpa Kunley, and couples visit to seek blessings. A path through paddies leads to it from a village. The suspension bridge near Punakha Dzong is a long pedestrian crossing with prayer flags.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "bhutan/phobjikha": {
+        "name": "Phobjikha Valley and Gangtey Monastery",
+        "description": "A glacial valley where black-necked cranes spend the winter, with a hillside monastery.",
+        "details": "The Phobjikha valley is wide and open, with farmhouses and pine forest, and cranes arrive from Tibet in late October and leave in March. Gangtey Monastery overlooks the valley, and a nature trail crosses the floor. The valley is cold at night, even outside winter.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "bhutan/haa-valley": {
+        "name": "Haa Valley and Chele La pass",
+        "description": "A remote valley reached over Bhutan highest motorable pass, with farmhouses and temples.",
+        "details": "The Haa Valley was closed to outsiders until recently and remains quiet. The road climbs over Chele La at about 3,800 metres, with prayer flags and views. In the valley are the white and black temples and farmhouse homestays serving local food, often with a hot-stone bath.",
+        "interests": [
+          "authentic_local",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "bhutan": {
+        "name": "Bhutan",
+        "description": "The Himalayan kingdom of monasteries, fortress-monasteries and an emphasis on happiness.",
+        "images": []
+      },
+      "bhutan/paro": {
+        "name": "Paro",
+        "description": "The valley with the only international airport and the Tiger's Nest.",
+        "images": []
+      },
+      "bhutan/thimphu": {
+        "name": "Thimphu",
+        "description": "The low-rise capital of monasteries, markets and a golden Buddha.",
+        "images": []
+      },
+      "bhutan/punakha": {
+        "name": "Punakha",
+        "description": "A warm valley of rice terraces and a river-confluence fortress.",
+        "images": []
+      },
+      "bhutan/wangdue-phodrang": {
+        "name": "Wangdue Phodrang",
+        "description": "The district that includes the Phobjikha valley and its crane habitat.",
+        "images": []
+      },
+      "bhutan/phobjikha": {
+        "name": "Phobjikha",
+        "description": "A broad glacial valley and winter home of black-necked cranes.",
+        "images": []
+      },
+      "bhutan/haa": {
+        "name": "Haa",
+        "description": "A quiet western valley beyond the Chele La pass.",
+        "images": []
+      }
+    }
+  }
+}

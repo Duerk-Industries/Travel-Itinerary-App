@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -133,7 +134,7 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
                     <View style={themeStyle('components_BlogDiscoveryPanel_4', {  }, (theme ?? _styleTheme))}>
                       {([1, -1] as const).map((value) => (
                         <TouchableOpacity key={value} testID={value === 1 ? 'blog-rate-up' : 'blog-rate-down'} accessibilityRole="button" accessibilityState={{ selected: rating?.thumb === value }} accessibilityLabel={value === 1 ? 'Thumbs up' : 'Thumbs down'} onPress={() => setRating((current) => current ? { ...current, thumb: current.thumb === value ? null : value } : current)} style={rating?.thumb === value ? themeStyle('components_BlogDiscoveryPanel_27', { accentColor: accentColor }, (theme ?? _styleTheme)) : themeStyle('components_BlogDiscoveryPanel_26', { borderColor: borderColor }, (theme ?? _styleTheme))}>
-                          <Text style={rating?.thumb === value ? themeStyle('components_BlogDiscoveryPanel_7', {  }, (theme ?? _styleTheme)) : themeStyle('components_BlogDiscoveryPanel_17', { textColor: textColor }, (theme ?? _styleTheme))}>{value === 1 ? '👍' : '👎'}</Text>
+                          <IconText style={rating?.thumb === value ? themeStyle('components_BlogDiscoveryPanel_7', {  }, (theme ?? _styleTheme)) : themeStyle('components_BlogDiscoveryPanel_17', { textColor: textColor }, (theme ?? _styleTheme))}>{value === 1 ? '👍' : '👎'}</IconText>
                         </TouchableOpacity>
                       ))}
                     </View>

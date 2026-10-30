@@ -1,0 +1,1218 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Fora Travel, Globe Guide, Bucketlistly and Danae Explore itineraries for Belize",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "belize-san-ignacio-caye-caulker-5d",
+      "title": "Jungle and Reef in 5 Days",
+      "summary": "Maya ruins and caves around San Ignacio, then a relaxed island with snorkelling.",
+      "days": 5,
+      "route": "San Ignacio > Caye Caulker",
+      "arrive": "Belize City (BZE)",
+      "depart": "Belize City (BZE)",
+      "countries": [
+        "Belize"
+      ],
+      "regions": [
+        "Cayo"
+      ],
+      "cities": [
+        "San Ignacio",
+        "Caye Caulker"
+      ],
+      "imageQuery": "Belize Caye Caulker Split",
+      "highlights": [
+        "Xunantunich",
+        "ATM cave",
+        "Hol Chan snorkelling",
+        "Caye Caulker"
+      ],
+      "destinationKeys": [
+        "belize",
+        "belize/cayo",
+        "belize/san-ignacio",
+        "belize/caye-caulker"
+      ],
+      "hero": "belize/caye-caulker",
+      "sources": [
+        "Fora Travel",
+        "Globe Guide",
+        "Bucketlistly",
+        "Danae Explore",
+        "Maddy Avenue"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "culture",
+        "outdoors",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "San Ignacio",
+          "hotel": "Hotel in San Ignacio",
+          "start": 0,
+          "nights": 2,
+          "area": "In or near San Ignacio town, close to restaurants and tour pick-ups",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Caye Caulker",
+          "hotel": "Hotel in Caye Caulker",
+          "start": 2,
+          "nights": 2,
+          "area": "On Caye Caulker, a short walk from the Split and the main sandy street",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Xunantunich Maya site",
+          "notes": "Cross the hand-cranked ferry; go early before the heat.",
+          "where": "Xunantunich",
+          "book": "",
+          "place": "belize/xunantunich"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Cave tubing",
+          "notes": "Suits families; guides provide lights and life jackets.",
+          "where": "Cayo District",
+          "book": "Yes - book a tubing tour",
+          "place": "belize/cave-tubing"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "The Split and island time",
+          "notes": "Rent a bike or golf cart; sunsets are best on the west side.",
+          "where": "Caye Caulker",
+          "book": "",
+          "place": "belize/caye-caulker-island"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Hol Chan and Shark Ray Alley snorkelling",
+          "notes": "Follow the guide advice and keep your distance from the animals.",
+          "where": "Caye Caulker",
+          "book": "Yes - book snorkel trips",
+          "place": "belize/caye-caulker-snorkel"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Philip Goldson International Airport (BZE)",
+          "to": "San Ignacio hotel",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "San Ignacio",
+          "to": "Belize City water taxi terminal",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "Shuttle or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Other",
+          "from": "Belize City",
+          "to": "Caye Caulker",
+          "time": "11:30",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Other",
+          "from": "Caye Caulker",
+          "to": "Belize City",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Belize City water taxi terminal",
+          "to": "Philip Goldson International Airport (BZE)",
+          "time": "09:15",
+          "minutes": 30,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "belize-san-ignacio-caye-caulker-7d",
+      "title": "Belize Caves, Ruins and Reef in 7 Days",
+      "summary": "Three nights inland for ATM and Caracol, then three on Caye Caulker for the reef and a Blue Hole flight.",
+      "days": 7,
+      "route": "San Ignacio > Caye Caulker",
+      "arrive": "Belize City (BZE)",
+      "depart": "Belize City (BZE)",
+      "countries": [
+        "Belize"
+      ],
+      "regions": [
+        "Cayo"
+      ],
+      "cities": [
+        "San Ignacio",
+        "Caye Caulker"
+      ],
+      "imageQuery": "Great Blue Hole Belize aerial",
+      "highlights": [
+        "ATM cave",
+        "Caracol",
+        "Hol Chan",
+        "Great Blue Hole flight"
+      ],
+      "destinationKeys": [
+        "belize",
+        "belize/cayo",
+        "belize/san-ignacio",
+        "belize/caye-caulker"
+      ],
+      "hero": "belize/cayo",
+      "sources": [
+        "Fora Travel",
+        "Globe Guide",
+        "Bucketlistly",
+        "Danae Explore",
+        "Maddy Avenue"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "San Ignacio",
+          "hotel": "Hotel in San Ignacio",
+          "start": 0,
+          "nights": 3,
+          "area": "In or near San Ignacio town, close to restaurants and tour pick-ups",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Caye Caulker",
+          "hotel": "Hotel in Caye Caulker",
+          "start": 3,
+          "nights": 3,
+          "area": "On Caye Caulker, a short walk from the Split and the main sandy street",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "8h",
+          "name": "ATM cave expedition",
+          "notes": "Needs a licensed guide; no cameras allowed; moderate fitness required.",
+          "where": "Actun Tunichil Muknal",
+          "book": "Yes - book early",
+          "place": "belize/atm-cave"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Xunantunich Maya site",
+          "notes": "Cross the hand-cranked ferry; go early before the heat.",
+          "where": "Xunantunich",
+          "book": "",
+          "place": "belize/xunantunich"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Hol Chan and Shark Ray Alley snorkelling",
+          "notes": "Follow the guide advice and keep your distance from the animals.",
+          "where": "Caye Caulker",
+          "book": "Yes - book snorkel trips",
+          "place": "belize/caye-caulker-snorkel"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "3h",
+          "name": "Great Blue Hole scenic flight",
+          "notes": "Flights depend on weather and need a minimum number of passengers.",
+          "where": "Belize City or Caye Caulker",
+          "book": "Yes - book flights ahead",
+          "place": "belize/great-blue-hole"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "The Split and island time",
+          "notes": "Rent a bike or golf cart; sunsets are best on the west side.",
+          "where": "Caye Caulker",
+          "book": "",
+          "place": "belize/caye-caulker-island"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Philip Goldson International Airport (BZE)",
+          "to": "San Ignacio hotel",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "San Ignacio",
+          "to": "Belize City water taxi terminal",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "Shuttle or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Other",
+          "from": "Belize City",
+          "to": "Caye Caulker",
+          "time": "11:30",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Other",
+          "from": "Caye Caulker",
+          "to": "Belize City",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Belize City water taxi terminal",
+          "to": "Philip Goldson International Airport (BZE)",
+          "time": "09:15",
+          "minutes": 30,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "belize-san-ignacio-placencia-7d",
+      "title": "Belize Jungle and Beach in 7 Days",
+      "summary": "Maya sites and caves around San Ignacio, then a southern beach base at Placencia.",
+      "days": 7,
+      "route": "San Ignacio > Placencia",
+      "arrive": "Belize City (BZE)",
+      "depart": "Belize City (BZE)",
+      "countries": [
+        "Belize"
+      ],
+      "regions": [
+        "Cayo",
+        "Stann Creek"
+      ],
+      "cities": [
+        "San Ignacio",
+        "Placencia"
+      ],
+      "imageQuery": "Placencia Belize beach",
+      "highlights": [
+        "Xunantunich",
+        "Cave tubing",
+        "Blue Hole National Park",
+        "Cockscomb",
+        "Placencia"
+      ],
+      "destinationKeys": [
+        "belize",
+        "belize/cayo",
+        "belize/san-ignacio",
+        "belize/stann-creek",
+        "belize/placencia"
+      ],
+      "hero": "belize/placencia",
+      "sources": [
+        "Fora Travel",
+        "Globe Guide",
+        "Bucketlistly",
+        "Danae Explore",
+        "Maddy Avenue"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "relax",
+        "culture",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "San Ignacio",
+          "hotel": "Hotel in San Ignacio",
+          "start": 0,
+          "nights": 3,
+          "area": "In or near San Ignacio town, close to restaurants and tour pick-ups",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Placencia",
+          "hotel": "Hotel in Placencia",
+          "start": 3,
+          "nights": 3,
+          "area": "On the Placencia peninsula, close to the beach or the village sidewalk",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Xunantunich Maya site",
+          "notes": "Cross the hand-cranked ferry; go early before the heat.",
+          "where": "Xunantunich",
+          "book": "",
+          "place": "belize/xunantunich"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Cave tubing",
+          "notes": "Suits families; guides provide lights and life jackets.",
+          "where": "Cayo District",
+          "book": "Yes - book a tubing tour",
+          "place": "belize/cave-tubing"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Mountain Pine Ridge and Big Rock Falls",
+          "notes": "Dirt roads can be slippery in rain.",
+          "where": "Mountain Pine Ridge",
+          "book": "",
+          "place": "belize/rio-frio-pine-ridge"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "11:30",
+          "duration": "2h",
+          "name": "Blue Hole National Park stop",
+          "notes": "A swim in a cool inland sinkhole on the road south.",
+          "where": "Hummingbird Highway",
+          "book": "",
+          "place": "belize/blue-hole-national-park"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Cockscomb Basin trails and river tubing",
+          "notes": "Bring repellent and water.",
+          "where": "Cockscomb Basin",
+          "book": "",
+          "place": "belize/cockscomb"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Placencia beach and village",
+          "notes": "The sidewalk village has seafood cafes.",
+          "where": "Placencia",
+          "book": "",
+          "place": "belize/placencia"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Philip Goldson International Airport (BZE)",
+          "to": "San Ignacio hotel",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "San Ignacio",
+          "to": "Placencia",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Shuttle or rental car",
+          "notes": "The road passes the Hummingbird Highway and Blue Hole National Park.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Placencia",
+          "to": "Philip Goldson International Airport (BZE)",
+          "time": "07:00",
+          "minutes": 210,
+          "carrier": "Shuttle or rental car",
+          "notes": "Allow a buffer; or take a short domestic flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "belize-cayo-placencia-caye-caulker-10d",
+      "title": "Belize in 10 Days: Jungle, Beach and Reef",
+      "summary": "The classic three-part Belize: San Ignacio, Placencia and Caye Caulker.",
+      "days": 10,
+      "route": "San Ignacio > Placencia > Caye Caulker",
+      "arrive": "Belize City (BZE)",
+      "depart": "Belize City (BZE)",
+      "countries": [
+        "Belize"
+      ],
+      "regions": [
+        "Cayo",
+        "Stann Creek"
+      ],
+      "cities": [
+        "San Ignacio",
+        "Placencia",
+        "Caye Caulker"
+      ],
+      "imageQuery": "Belize Maya ruins and reef",
+      "highlights": [
+        "ATM cave",
+        "Caracol",
+        "Laughing Bird Caye",
+        "Hol Chan",
+        "Great Blue Hole flight"
+      ],
+      "destinationKeys": [
+        "belize",
+        "belize/cayo",
+        "belize/san-ignacio",
+        "belize/stann-creek",
+        "belize/placencia",
+        "belize/caye-caulker"
+      ],
+      "hero": "belize/san-ignacio",
+      "sources": [
+        "Fora Travel",
+        "Globe Guide",
+        "Bucketlistly",
+        "Danae Explore",
+        "Maddy Avenue"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "culture",
+        "outdoors",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "San Ignacio",
+          "hotel": "Hotel in San Ignacio",
+          "start": 0,
+          "nights": 3,
+          "area": "In or near San Ignacio town, close to restaurants and tour pick-ups",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Placencia",
+          "hotel": "Hotel in Placencia",
+          "start": 3,
+          "nights": 3,
+          "area": "On the Placencia peninsula, close to the beach or the village sidewalk",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Caye Caulker",
+          "hotel": "Hotel in Caye Caulker",
+          "start": 6,
+          "nights": 3,
+          "area": "On Caye Caulker, a short walk from the Split and the main sandy street",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "8h",
+          "name": "ATM cave expedition",
+          "notes": "Needs a licensed guide; no cameras allowed; moderate fitness required.",
+          "where": "Actun Tunichil Muknal",
+          "book": "Yes - book early",
+          "place": "belize/atm-cave"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Xunantunich Maya site",
+          "notes": "Cross the hand-cranked ferry; go early before the heat.",
+          "where": "Xunantunich",
+          "book": "",
+          "place": "belize/xunantunich"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "11:30",
+          "duration": "2h",
+          "name": "Blue Hole National Park stop",
+          "notes": "A swim in a cool inland sinkhole on the road south.",
+          "where": "Hummingbird Highway",
+          "book": "",
+          "place": "belize/blue-hole-national-park"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Laughing Bird Caye snorkel trip",
+          "notes": "Whale sharks gather in the spring around the full moon.",
+          "where": "Laughing Bird Caye",
+          "book": "Yes - book a boat trip",
+          "place": "belize/laughing-bird-caye"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Placencia beach and village",
+          "notes": "The sidewalk village has seafood cafes.",
+          "where": "Placencia",
+          "book": "",
+          "place": "belize/placencia"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Hol Chan and Shark Ray Alley snorkelling",
+          "notes": "Follow the guide advice and keep your distance from the animals.",
+          "where": "Caye Caulker",
+          "book": "Yes - book snorkel trips",
+          "place": "belize/caye-caulker-snorkel"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "3h",
+          "name": "Great Blue Hole scenic flight",
+          "notes": "Flights depend on weather and need a minimum number of passengers.",
+          "where": "Belize City or Caye Caulker",
+          "book": "Yes - book flights ahead",
+          "place": "belize/great-blue-hole"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "The Split and island time",
+          "notes": "Rent a bike or golf cart; sunsets are best on the west side.",
+          "where": "Caye Caulker",
+          "book": "",
+          "place": "belize/caye-caulker-island"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Philip Goldson International Airport (BZE)",
+          "to": "San Ignacio hotel",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "San Ignacio",
+          "to": "Placencia",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Shuttle or rental car",
+          "notes": "The road passes Blue Hole National Park.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Placencia",
+          "to": "Belize City water taxi terminal",
+          "time": "07:00",
+          "minutes": 240,
+          "carrier": "Shuttle or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Other",
+          "from": "Belize City",
+          "to": "Caye Caulker",
+          "time": "12:00",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Other",
+          "from": "Caye Caulker",
+          "to": "Belize City",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Belize City water taxi terminal",
+          "to": "Philip Goldson International Airport (BZE)",
+          "time": "09:15",
+          "minutes": 30,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "belize-complete-12d",
+      "title": "Complete Belize in 12 Days",
+      "summary": "Four nights inland with Caracol and Lamanai, Placencia and the southern reef, then the northern cayes.",
+      "days": 12,
+      "route": "San Ignacio > Placencia > Caye Caulker",
+      "arrive": "Belize City (BZE)",
+      "depart": "Belize City (BZE)",
+      "countries": [
+        "Belize"
+      ],
+      "regions": [
+        "Cayo",
+        "Stann Creek"
+      ],
+      "cities": [
+        "San Ignacio",
+        "Placencia",
+        "Caye Caulker"
+      ],
+      "imageQuery": "Caracol Maya pyramid Belize",
+      "highlights": [
+        "Caracol",
+        "ATM cave",
+        "Lamanai",
+        "Cockscomb",
+        "Laughing Bird Caye",
+        "Great Blue Hole"
+      ],
+      "destinationKeys": [
+        "belize",
+        "belize/cayo",
+        "belize/san-ignacio",
+        "belize/stann-creek",
+        "belize/placencia",
+        "belize/caye-caulker"
+      ],
+      "hero": "belize/stann-creek",
+      "sources": [
+        "Fora Travel",
+        "Globe Guide",
+        "Bucketlistly",
+        "Danae Explore",
+        "Maddy Avenue"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "San Ignacio",
+          "hotel": "Hotel in San Ignacio",
+          "start": 0,
+          "nights": 4,
+          "area": "In or near San Ignacio town, close to restaurants and tour pick-ups",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Placencia",
+          "hotel": "Hotel in Placencia",
+          "start": 4,
+          "nights": 4,
+          "area": "On the Placencia peninsula, close to the beach or the village sidewalk",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Caye Caulker",
+          "hotel": "Hotel in Caye Caulker",
+          "start": 8,
+          "nights": 3,
+          "area": "On Caye Caulker, a short walk from the Split and the main sandy street",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Xunantunich Maya site",
+          "notes": "Cross the hand-cranked ferry; go early before the heat.",
+          "where": "Xunantunich",
+          "book": "",
+          "place": "belize/xunantunich"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "8h",
+          "name": "ATM cave expedition",
+          "notes": "Needs a licensed guide; no cameras allowed; moderate fitness required.",
+          "where": "Actun Tunichil Muknal",
+          "book": "Yes - book early",
+          "place": "belize/atm-cave"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "07:00",
+          "duration": "10h",
+          "name": "Caracol Maya site and Rio On pools",
+          "notes": "Roads are unpaved; go with a guide.",
+          "where": "Chiquibul Forest",
+          "book": "Yes - book a guide and transport",
+          "place": "belize/caracol"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "11:30",
+          "duration": "2h",
+          "name": "Blue Hole National Park stop",
+          "notes": "A swim in a cool inland sinkhole on the road south.",
+          "where": "Hummingbird Highway",
+          "book": "",
+          "place": "belize/blue-hole-national-park"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Laughing Bird Caye snorkel trip",
+          "notes": "Whale sharks gather in the spring around the full moon.",
+          "where": "Laughing Bird Caye",
+          "book": "Yes - book a boat trip",
+          "place": "belize/laughing-bird-caye"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Cockscomb Basin trails and river tubing",
+          "notes": "Bring repellent and water.",
+          "where": "Cockscomb Basin",
+          "book": "",
+          "place": "belize/cockscomb"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Placencia beach and village",
+          "notes": "The sidewalk village has seafood cafes.",
+          "where": "Placencia",
+          "book": "",
+          "place": "belize/placencia"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Hol Chan and Shark Ray Alley snorkelling",
+          "notes": "Follow the guide advice and keep your distance from the animals.",
+          "where": "Caye Caulker",
+          "book": "Yes - book snorkel trips",
+          "place": "belize/caye-caulker-snorkel"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "3h",
+          "name": "Great Blue Hole scenic flight",
+          "notes": "Flights depend on weather and need a minimum number of passengers.",
+          "where": "Belize City or Caye Caulker",
+          "book": "Yes - book flights ahead",
+          "place": "belize/great-blue-hole"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "The Split and island time",
+          "notes": "Rent a bike or golf cart; sunsets are best on the west side.",
+          "where": "Caye Caulker",
+          "book": "",
+          "place": "belize/caye-caulker-island"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Philip Goldson International Airport (BZE)",
+          "to": "San Ignacio hotel",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "San Ignacio",
+          "to": "Placencia",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Shuttle or rental car",
+          "notes": "The road passes Blue Hole National Park.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Placencia",
+          "to": "Belize City water taxi terminal",
+          "time": "07:00",
+          "minutes": 240,
+          "carrier": "Shuttle or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Other",
+          "from": "Belize City",
+          "to": "Caye Caulker",
+          "time": "12:00",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Other",
+          "from": "Caye Caulker",
+          "to": "Belize City",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Belize City water taxi terminal",
+          "to": "Philip Goldson International Airport (BZE)",
+          "time": "09:15",
+          "minutes": 30,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "belize/xunantunich": {
+        "name": "Xunantunich Maya site",
+        "description": "A hilltop Maya city near San Ignacio, reached by a hand-cranked ferry, with a climbable pyramid.",
+        "details": "Xunantunich was a major Maya centre, and El Castillo pyramid rises about 40 metres, with a view into Guatemala. The way in includes a small hand-cranked ferry across the Mopan River. Go in the morning, because it gets hot, and bring water. It is about fifteen minutes from San Ignacio.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "belize/atm-cave": {
+        "name": "Actun Tunichil Muknal (ATM) cave",
+        "description": "A guided wade-and-swim cave expedition to a chamber of Maya sacrificial remains.",
+        "details": "ATM involves a jungle hike, wading through the river and swimming into the cave, then climbing to a chamber of ceremonial pottery and skeletons, including the crystal maiden. Only licensed guides may take groups, and cameras are no longer allowed inside. Participants must be reasonably fit and comfortable in water. Book in advance, as numbers are limited.",
+        "interests": [
+          "adventure",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "belize/caracol": {
+        "name": "Caracol Maya site",
+        "description": "The largest Maya site in Belize, deep in the Chiquibul forest, with a pyramid that is the tallest man-made structure in the country.",
+        "details": "Caracol was once larger than present-day Belize City, and Caana is a great temple complex rising above the canopy. The drive from San Ignacio takes two hours on rough roads, often with a stop at Rio On pools and Rio Frio cave. Go with a guide, because road conditions vary with rain.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "belize/cave-tubing": {
+        "name": "Cave tubing",
+        "description": "A float through limestone caves on an inner tube, with a jungle walk to reach the river.",
+        "details": "Cave tubing is a relaxed activity at Nohoch Che'en or Caves Branch, with a short jungle trail carrying the tubes. Guides give headlamps and life jackets. It is wet and suits families and those who prefer an easier option than ATM. Water levels can change after rain.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "belize/caye-caulker-snorkel": {
+        "name": "Hol Chan and Shark Ray Alley snorkelling",
+        "description": "A boat snorkel trip to a marine reserve and a spot where nurse sharks and stingrays gather.",
+        "details": "The Hol Chan Marine Reserve protects coral and fish at a gap in the barrier reef, and Shark Ray Alley is where nurse sharks and southern stingrays swim around the boat. Trips from Caye Caulker last a half day. The animals are used to people, but follow the guide advice and keep your distance.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "belize/great-blue-hole": {
+        "name": "Great Blue Hole",
+        "description": "A huge marine sinkhole in the middle of the Lighthouse Reef atoll, seen by air or on a dive.",
+        "details": "The Great Blue Hole is over 300 metres wide and about 125 metres deep. Most visitors see it from the air on a short scenic flight from Belize City or Caye Caulker, as boat trips are long and snorkelling is limited. Certified divers can descend to see stalactites. Flights depend on weather.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belize/caye-caulker-island": {
+        "name": "Caye Caulker island life",
+        "description": "A small car-free island with sandy lanes, a Split for swimming and relaxed bars.",
+        "details": "Caye Caulker has a Go Slow motto, with golf-cart and bike travel, and a channel called The Split where people swim and sunbathe. Cafes serve lobster in season, from July to February for lobster. Sunsets from the western side are a good evening activity.",
+        "interests": [
+          "relax",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belize/cockscomb": {
+        "name": "Cockscomb Basin Wildlife Sanctuary",
+        "description": "A jaguar reserve with jungle walks, waterfalls and river tubing.",
+        "details": "The reserve was created to protect jaguars, and the cats are rarely seen, though other wildlife and birds are common. Trails lead to waterfalls and viewing towers. Tubing on the South Stann Creek is a gentle option. Bring insect repellent and water.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "belize/placencia": {
+        "name": "Placencia village and beach",
+        "description": "A narrow peninsula with a long sandy beach, a sidewalk village and seafood cafes.",
+        "details": "Placencia has some of the best beaches in mainland Belize, and the main village is built around a sidewalk said to be the narrowest street in the world. Boats leave for the cays and the reef, and the area is a base for manatee and whale shark tours in season. It is calmer than the northern cayes.",
+        "interests": [
+          "relax",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belize/laughing-bird-caye": {
+        "name": "Laughing Bird Caye and the southern reef",
+        "description": "A tiny island in a marine park with calm snorkelling and diving.",
+        "details": "Laughing Bird Caye is a national park and part of the barrier reef system, reached by boat from Placencia. The snorkelling is easy and the water clear in the dry season. Whale sharks gather in the area in spring around the full moon, from March to June.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "belize/rio-frio-pine-ridge": {
+        "name": "Mountain Pine Ridge and Big Rock Falls",
+        "description": "A cool pine highland with waterfalls, caves and swimming holes south of San Ignacio.",
+        "details": "The Mountain Pine Ridge reserve has pine forest, rivers and waterfalls such as Big Rock Falls and the Rio On pools, plus the Rio Frio cave. A guide can combine them with Caracol. Roads are unpaved and can be slippery after rain.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "belize/blue-hole-national-park": {
+        "name": "Blue Hole National Park and St Herman's Cave",
+        "description": "An inland blue hole swimming spot reached by a short walk along the Hummingbird Highway.",
+        "details": "The inland Blue Hole is a cenote with a cool turquoise pool, a short walk from the car park. It is a pleasant stop between San Ignacio and Placencia. St Herman's cave is nearby and can be explored with a headlamp. It is a different place from the offshore Great Blue Hole.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "belize": {
+        "name": "Belize",
+        "description": "A small Caribbean-facing country of Maya ruins, caves, jungle and a barrier reef.",
+        "images": []
+      },
+      "belize/cayo": {
+        "name": "Cayo",
+        "description": "The western jungle district of caves, waterfalls and Maya sites.",
+        "images": []
+      },
+      "belize/san-ignacio": {
+        "name": "San Ignacio",
+        "description": "A lively market town and base for caves, Maya sites and river trips.",
+        "images": []
+      },
+      "belize/stann-creek": {
+        "name": "Stann Creek",
+        "description": "The southern coastal district of Placencia, Hopkins and Cockscomb Basin.",
+        "images": []
+      },
+      "belize/placencia": {
+        "name": "Placencia",
+        "description": "A beach peninsula and village on the Caribbean coast.",
+        "images": []
+      },
+      "belize/caye-caulker": {
+        "name": "Caye Caulker",
+        "description": "A car-free island on the barrier reef, known for snorkelling and relaxed living.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
 // @ts-nocheck
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 
@@ -162,7 +163,7 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
           {files.map((file, index) => (
             <View key={file.path ?? index} style={themeStyle('components_IncomingShareModal_7', { borderColor: borderColor, surfaceColor: surfaceColor }, (theme ?? _styleTheme))}>
               {isVideoMimeType(file.mimeType) ? (
-                <Text style={themeStyle('components_IncomingShareModal_8', {  }, (theme ?? _styleTheme))}>🎬</Text>
+                <IconText style={themeStyle('components_IncomingShareModal_8', {  }, (theme ?? _styleTheme))}>🎬</IconText>
               ) : (
                 <Image source={{ uri: file.path }} style={themeStyle('components_IncomingShareModal_9', {  }, (theme ?? _styleTheme))} resizeMode="cover" />
               )}

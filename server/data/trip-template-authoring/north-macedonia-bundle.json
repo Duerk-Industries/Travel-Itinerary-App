@@ -1,0 +1,1042 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Miss Tourist, Eurail, Take Your Backpack and Travel With Hello itineraries for North Macedonia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "north-macedonia-skopje-ohrid-4d",
+      "title": "Skopje and Ohrid in 4 Days",
+      "summary": "The capital, then the lake town of Ohrid.",
+      "days": 4,
+      "route": "Skopje > Ohrid",
+      "arrive": "Skopje (SKP)",
+      "depart": "Ohrid (OHD)",
+      "countries": [
+        "North Macedonia"
+      ],
+      "regions": [],
+      "cities": [
+        "Skopje",
+        "Ohrid"
+      ],
+      "imageQuery": "Ohrid lake St John Kaneo",
+      "highlights": [
+        "Skopje Old Bazaar",
+        "Ohrid old town",
+        "St John at Kaneo"
+      ],
+      "destinationKeys": [
+        "north-macedonia",
+        "north-macedonia/skopje",
+        "north-macedonia/ohrid"
+      ],
+      "hero": "north-macedonia/ohrid",
+      "sources": [
+        "Miss Tourist",
+        "Eurail",
+        "Take Your Backpack",
+        "Travel With Hello",
+        "MustSeeSpots"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Skopje",
+          "hotel": "Hotel in Skopje",
+          "start": 0,
+          "nights": 1,
+          "area": "Near the Old Bazaar or Macedonia Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ohrid",
+          "hotel": "Hotel in Ohrid",
+          "start": 1,
+          "nights": 2,
+          "area": "In Ohrid old town, near the lake",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Old Bazaar, Stone Bridge and Mother Teresa House",
+          "notes": "A half-day walk through the capital.",
+          "where": "Skopje",
+          "book": "",
+          "place": "north-macedonia/skopje-bazaar"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ohrid old town, St Sophia and Samuel Fortress",
+          "notes": "Walk to St John at Kaneo for the classic view.",
+          "where": "Ohrid",
+          "book": "",
+          "place": "north-macedonia/ohrid-old-town"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Skopje Airport (SKP)",
+          "to": "Skopje hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Skopje",
+          "to": "Ohrid",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Ohrid hotel",
+          "to": "Ohrid Airport (OHD)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "north-macedonia-skopje-ohrid-5d",
+      "title": "Skopje, Matka and Ohrid in 5 Days",
+      "summary": "Capital with Matka Canyon and two nights in Ohrid.",
+      "days": 5,
+      "route": "Skopje > Ohrid",
+      "arrive": "Skopje (SKP)",
+      "depart": "Skopje (SKP)",
+      "countries": [
+        "North Macedonia"
+      ],
+      "regions": [],
+      "cities": [
+        "Skopje",
+        "Ohrid"
+      ],
+      "imageQuery": "Matka Canyon Macedonia",
+      "highlights": [
+        "Old Bazaar",
+        "Matka Canyon",
+        "Ohrid old town",
+        "St Naum"
+      ],
+      "destinationKeys": [
+        "north-macedonia",
+        "north-macedonia/skopje",
+        "north-macedonia/ohrid"
+      ],
+      "hero": "north-macedonia/skopje",
+      "sources": [
+        "Miss Tourist",
+        "Eurail",
+        "Take Your Backpack",
+        "Travel With Hello",
+        "MustSeeSpots"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Skopje",
+          "hotel": "Hotel in Skopje",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the Old Bazaar or Macedonia Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ohrid",
+          "hotel": "Hotel in Ohrid",
+          "start": 2,
+          "nights": 2,
+          "area": "In Ohrid old town, near the lake",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Vodno cable car and Millennium Cross",
+          "notes": "Cool air and views over the city.",
+          "where": "Skopje",
+          "book": "",
+          "place": "north-macedonia/vodno-millennium-cross"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Old Bazaar, Stone Bridge and Mother Teresa House",
+          "notes": "A half-day walk through the capital.",
+          "where": "Skopje",
+          "book": "",
+          "place": "north-macedonia/skopje-bazaar"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Matka Canyon boat and walks",
+          "notes": "Boat to Vrelo Cave; kayaks available.",
+          "where": "Matka Canyon",
+          "book": "",
+          "place": "north-macedonia/matka-canyon"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ohrid old town, St Sophia and Samuel Fortress",
+          "notes": "Walk to St John at Kaneo for the classic view.",
+          "where": "Ohrid",
+          "book": "",
+          "place": "north-macedonia/ohrid-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "St Naum Monastery and the springs",
+          "notes": "Take a boat on the Black Drin.",
+          "where": "St Naum",
+          "book": "",
+          "place": "north-macedonia/st-naum"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Skopje Airport (SKP)",
+          "to": "Skopje hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Skopje",
+          "to": "Ohrid",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Ohrid",
+          "to": "Skopje Airport (SKP)",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "north-macedonia-skopje-ohrid-bitola-7d",
+      "title": "North Macedonia Highlights in 7 Days",
+      "summary": "Skopje, Ohrid and Bitola.",
+      "days": 7,
+      "route": "Skopje > Ohrid > Bitola",
+      "arrive": "Skopje (SKP)",
+      "depart": "Skopje (SKP)",
+      "countries": [
+        "North Macedonia"
+      ],
+      "regions": [],
+      "cities": [
+        "Skopje",
+        "Ohrid",
+        "Bitola"
+      ],
+      "imageQuery": "Bitola Shirok Sokak",
+      "highlights": [
+        "Old Bazaar",
+        "Matka Canyon",
+        "Ohrid",
+        "St Naum",
+        "Bitola"
+      ],
+      "destinationKeys": [
+        "north-macedonia",
+        "north-macedonia/skopje",
+        "north-macedonia/ohrid",
+        "north-macedonia/bitola"
+      ],
+      "hero": "north-macedonia/bitola",
+      "sources": [
+        "Miss Tourist",
+        "Eurail",
+        "Take Your Backpack",
+        "Travel With Hello",
+        "MustSeeSpots"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Skopje",
+          "hotel": "Hotel in Skopje",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the Old Bazaar or Macedonia Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ohrid",
+          "hotel": "Hotel in Ohrid",
+          "start": 2,
+          "nights": 3,
+          "area": "In Ohrid old town, near the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bitola",
+          "hotel": "Hotel in Bitola",
+          "start": 5,
+          "nights": 1,
+          "area": "Near Shirok Sokak in Bitola",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Old Bazaar, Stone Bridge and Mother Teresa House",
+          "notes": "A half-day walk through the capital.",
+          "where": "Skopje",
+          "book": "",
+          "place": "north-macedonia/skopje-bazaar"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Matka Canyon boat and walks",
+          "notes": "Boat to Vrelo Cave; kayaks available.",
+          "where": "Matka Canyon",
+          "book": "",
+          "place": "north-macedonia/matka-canyon"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ohrid old town, St Sophia and Samuel Fortress",
+          "notes": "Walk to St John at Kaneo for the classic view.",
+          "where": "Ohrid",
+          "book": "",
+          "place": "north-macedonia/ohrid-old-town"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "St Naum Monastery and the springs",
+          "notes": "Take a boat on the Black Drin.",
+          "where": "St Naum",
+          "book": "",
+          "place": "north-macedonia/st-naum"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Shirok Sokak and Heraclea Lyncestis",
+          "notes": "Roman mosaics a short walk from the centre.",
+          "where": "Bitola",
+          "book": "",
+          "place": "north-macedonia/bitola"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Skopje Airport (SKP)",
+          "to": "Skopje hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Skopje",
+          "to": "Ohrid",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Ohrid",
+          "to": "Bitola",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Bitola",
+          "to": "Skopje Airport (SKP)",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "north-macedonia-mavrovo-ohrid-bitola-8d",
+      "title": "North Macedonia with Mavrovo in 8 Days",
+      "summary": "Skopje, mountain Mavrovo, Ohrid and Bitola.",
+      "days": 8,
+      "route": "Skopje > Mavrovo > Ohrid > Bitola",
+      "arrive": "Skopje (SKP)",
+      "depart": "Skopje (SKP)",
+      "countries": [
+        "North Macedonia"
+      ],
+      "regions": [],
+      "cities": [
+        "Skopje",
+        "Mavrovo",
+        "Ohrid",
+        "Bitola"
+      ],
+      "imageQuery": "Mavrovo Lake sunken church Macedonia",
+      "highlights": [
+        "Old Bazaar",
+        "Mavrovo",
+        "Ohrid",
+        "St Naum",
+        "Bitola"
+      ],
+      "destinationKeys": [
+        "north-macedonia",
+        "north-macedonia/skopje",
+        "north-macedonia/mavrovo",
+        "north-macedonia/ohrid",
+        "north-macedonia/bitola"
+      ],
+      "hero": "north-macedonia/mavrovo",
+      "sources": [
+        "Miss Tourist",
+        "Eurail",
+        "Take Your Backpack",
+        "Travel With Hello",
+        "MustSeeSpots"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Skopje",
+          "hotel": "Hotel in Skopje",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the Old Bazaar or Macedonia Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mavrovo",
+          "hotel": "Lodge at Mavrovo",
+          "start": 2,
+          "nights": 1,
+          "area": "In a lodge at Mavrovo Lake or in the national park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ohrid",
+          "hotel": "Hotel in Ohrid",
+          "start": 3,
+          "nights": 3,
+          "area": "In Ohrid old town, near the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bitola",
+          "hotel": "Hotel in Bitola",
+          "start": 6,
+          "nights": 1,
+          "area": "Near Shirok Sokak in Bitola",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Old Bazaar, Stone Bridge and Mother Teresa House",
+          "notes": "A half-day walk through the capital.",
+          "where": "Skopje",
+          "book": "",
+          "place": "north-macedonia/skopje-bazaar"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Matka Canyon boat and walks",
+          "notes": "Boat to Vrelo Cave; kayaks available.",
+          "where": "Matka Canyon",
+          "book": "",
+          "place": "north-macedonia/matka-canyon"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Mavrovo Lake and St Jovan Bigorski monastery",
+          "notes": "Walk the lake shore; the monastery has a carved iconostasis.",
+          "where": "Mavrovo",
+          "book": "",
+          "place": "north-macedonia/mavrovo"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ohrid old town, St Sophia and Samuel Fortress",
+          "notes": "Walk to St John at Kaneo for the classic view.",
+          "where": "Ohrid",
+          "book": "",
+          "place": "north-macedonia/ohrid-old-town"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "St Naum Monastery and the springs",
+          "notes": "Take a boat on the Black Drin.",
+          "where": "St Naum",
+          "book": "",
+          "place": "north-macedonia/st-naum"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Shirok Sokak and Heraclea Lyncestis",
+          "notes": "Roman mosaics a short walk from the centre.",
+          "where": "Bitola",
+          "book": "",
+          "place": "north-macedonia/bitola"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Skopje Airport (SKP)",
+          "to": "Skopje hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Skopje",
+          "to": "Mavrovo lodge",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Mavrovo lodge",
+          "to": "Ohrid",
+          "time": "14:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Ohrid",
+          "to": "Bitola",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Bitola",
+          "to": "Skopje Airport (SKP)",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "north-macedonia-complete-10d",
+      "title": "Complete North Macedonia in 10 Days",
+      "summary": "Skopje with Tikves wine, Mavrovo, Ohrid and two nights in Bitola.",
+      "days": 10,
+      "route": "Skopje > Mavrovo > Ohrid > Bitola",
+      "arrive": "Skopje (SKP)",
+      "depart": "Skopje (SKP)",
+      "countries": [
+        "North Macedonia"
+      ],
+      "regions": [],
+      "cities": [
+        "Skopje",
+        "Mavrovo",
+        "Ohrid",
+        "Bitola"
+      ],
+      "imageQuery": "North Macedonia Ohrid lake sunset",
+      "highlights": [
+        "Matka Canyon",
+        "Tikves wine",
+        "Mavrovo",
+        "Ohrid",
+        "St Naum",
+        "Bitola"
+      ],
+      "destinationKeys": [
+        "north-macedonia",
+        "north-macedonia/skopje",
+        "north-macedonia/mavrovo",
+        "north-macedonia/ohrid",
+        "north-macedonia/bitola"
+      ],
+      "hero": "north-macedonia/ohrid",
+      "sources": [
+        "Miss Tourist",
+        "Eurail",
+        "Take Your Backpack",
+        "Travel With Hello",
+        "MustSeeSpots"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Skopje",
+          "hotel": "Hotel in Skopje",
+          "start": 0,
+          "nights": 3,
+          "area": "Near the Old Bazaar or Macedonia Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mavrovo",
+          "hotel": "Lodge at Mavrovo",
+          "start": 3,
+          "nights": 1,
+          "area": "In a lodge at Mavrovo Lake or in the national park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ohrid",
+          "hotel": "Hotel in Ohrid",
+          "start": 4,
+          "nights": 3,
+          "area": "In Ohrid old town, near the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bitola",
+          "hotel": "Hotel in Bitola",
+          "start": 7,
+          "nights": 2,
+          "area": "Near Shirok Sokak in Bitola",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Vodno cable car and Millennium Cross",
+          "notes": "Cool air and views over the city.",
+          "where": "Skopje",
+          "book": "",
+          "place": "north-macedonia/vodno-millennium-cross"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Old Bazaar, Stone Bridge and Mother Teresa House",
+          "notes": "A half-day walk through the capital.",
+          "where": "Skopje",
+          "book": "",
+          "place": "north-macedonia/skopje-bazaar"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Matka Canyon boat and walks",
+          "notes": "Boat to Vrelo Cave; kayaks available.",
+          "where": "Matka Canyon",
+          "book": "",
+          "place": "north-macedonia/matka-canyon"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Tikves wine tasting and Stobi ruins",
+          "notes": "Hire a driver for the tastings.",
+          "where": "Tikves",
+          "book": "Yes - book a driver",
+          "place": "north-macedonia/tikves-wine"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Mavrovo Lake and St Jovan Bigorski monastery",
+          "notes": "Walk the lake shore; the monastery has a carved iconostasis.",
+          "where": "Mavrovo",
+          "book": "",
+          "place": "north-macedonia/mavrovo"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ohrid old town, St Sophia and Samuel Fortress",
+          "notes": "Walk to St John at Kaneo for the classic view.",
+          "where": "Ohrid",
+          "book": "",
+          "place": "north-macedonia/ohrid-old-town"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "St Naum Monastery and the springs",
+          "notes": "Take a boat on the Black Drin.",
+          "where": "St Naum",
+          "book": "",
+          "place": "north-macedonia/st-naum"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "4h",
+          "name": "Shirok Sokak and Heraclea Lyncestis",
+          "notes": "Roman mosaics a short walk from the centre.",
+          "where": "Bitola",
+          "book": "",
+          "place": "north-macedonia/bitola"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Skopje Airport (SKP)",
+          "to": "Skopje hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Skopje",
+          "to": "Mavrovo lodge",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Mavrovo lodge",
+          "to": "Ohrid",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Ohrid",
+          "to": "Bitola",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Bitola",
+          "to": "Skopje Airport (SKP)",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "north-macedonia/skopje-bazaar": {
+        "name": "Skopje Old Bazaar, Stone Bridge and Mother Teresa House",
+        "description": "A big Ottoman bazaar, a stone bridge over the Vardar and the capital quirky monuments.",
+        "details": "Skopje has a large Old Bazaar of mosques and craft shops, and Macedonia Square with many statues. The Stone Bridge links the old and new parts. The Mother Teresa Memorial House celebrates the Skopje-born nun. Plan a half-day on foot.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "north-macedonia/vodno-millennium-cross": {
+        "name": "Vodno mountain and Millennium Cross",
+        "description": "A cable car up a city mountain to a giant cross with views over Skopje.",
+        "details": "A gondola climbs Mount Vodno in minutes to a giant cross and a hillside of walking trails and cafes. Views stretch across the city and Vardar valley. A pleasant cool escape in summer.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "north-macedonia/matka-canyon": {
+        "name": "Matka Canyon",
+        "description": "A green gorge with a lake, small monasteries and caves reached by boat.",
+        "details": "Matka Canyon is 15 kilometres from Skopje, with kayaking, short walks and a boat to Vrelo Cave, among the deepest underwater caves in the world. Medieval monasteries cling to the rocks. It is a half-day trip from Skopje.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "north-macedonia/mavrovo": {
+        "name": "Mavrovo National Park and St Jovan Bigorski",
+        "description": "A mountain lake park with the sunken church, an alpine monastery and skiing in winter.",
+        "details": "Mavrovo Lake has a half-submerged church with its tower rising from the water in dry years, and the park is full of beech forest and trails. St Jovan Bigorski is a monastery with a carved iconostasis. In winter the area is a ski resort.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "north-macedonia/ohrid-old-town": {
+        "name": "Ohrid old town and Samuel Fortress",
+        "description": "A lakeside UNESCO town of churches, Byzantine icons and a hilltop fortress.",
+        "details": "Ohrid has the Church of St Sophia, the Plaosnik excavation and the cliff-edge Church of St John at Kaneo. Samuel Fortress gives views of the lake. The pebble beaches and the boat promenade fill up in summer. Ohrid pearls are sold by the lake.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "north-macedonia/st-naum": {
+        "name": "Monastery of St Naum and the springs",
+        "description": "A monastery at the southern tip of Lake Ohrid, beside a source of crystal water and peacocks.",
+        "details": "St Naum sits on the Albanian border where springs feed the lake. Boats on the Black Drin river drift through clear water. The monastery has frescoes and the tomb of St Naum. A day trip from Ohrid takes about 40 minutes by road.",
+        "interests": [
+          "culture",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "north-macedonia/bitola": {
+        "name": "Bitola Shirok Sokak and Heraclea Lyncestis",
+        "description": "A graceful pedestrian street of consulate-era buildings and Roman ruins with mosaics.",
+        "details": "Bitola was an Ottoman consular town. Shirok Sokak is a pedestrian avenue of cafes and grand buildings. Heraclea Lyncestis is a Roman and Byzantine site with fine floor mosaics, a short walk from the centre.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "north-macedonia/tikves-wine": {
+        "name": "Tikves wine region",
+        "description": "A sunny wine country south of Skopje, producing Vranec reds and white blends.",
+        "details": "Tikves is the largest wine region in the country, with cellars offering tastings of Vranec and Smederevka. A day trip can include the Stobi ruins and Lake Tikves. Hire a driver for tastings.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "north-macedonia": {
+        "name": "North Macedonia",
+        "description": "A Balkan country of lakes, monasteries, bazaars and wine valleys.",
+        "images": []
+      },
+      "north-macedonia/skopje": {
+        "name": "Skopje",
+        "description": "The capital, with an Ottoman bazaar and a mountain above.",
+        "images": []
+      },
+      "north-macedonia/mavrovo": {
+        "name": "Mavrovo",
+        "description": "A mountain park and ski resort.",
+        "images": []
+      },
+      "north-macedonia/ohrid": {
+        "name": "Ohrid",
+        "description": "A lakeside town of churches and beaches.",
+        "images": []
+      },
+      "north-macedonia/bitola": {
+        "name": "Bitola",
+        "description": "An elegant southern town with a pedestrian avenue.",
+        "images": []
+      }
+    }
+  }
+}

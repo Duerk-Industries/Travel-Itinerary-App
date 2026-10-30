@@ -1,4 +1,5 @@
 // @ts-nocheck
+import IconText from './IconText';
 import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 
@@ -168,7 +169,7 @@ const DayMediaLightbox = ({
       ) : (
         <ScrollView style={themeStyle('components_DayMediaLightbox_14', {  }, (theme ?? _styleTheme))}>
           {canRemove ? (
-            <Text style={themeStyle('components_DayMediaLightbox_15', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Tap ✕ on a photo to remove it from this day.</Text>
+            <IconText style={themeStyle('components_DayMediaLightbox_15', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Tap ✕ on a photo to remove it from this day.</IconText>
           ) : null}
           <View style={themeStyle('components_DayMediaLightbox_16', {  }, (theme ?? _styleTheme))}>
             {items.map((item, index) => {
@@ -185,11 +186,11 @@ const DayMediaLightbox = ({
                 style={themeStyle('components_DayMediaLightbox_18', { backgroundColor: backgroundColor, borderColor: borderColor }, (theme ?? _styleTheme))}
               >
                 {item.kindKey === 'media.audio' ? (
-                  <View style={themeStyle('components_DayMediaLightbox_19', {  }, (theme ?? _styleTheme))}><Text style={themeStyle('components_DayMediaLightbox_20', {  }, (theme ?? _styleTheme))}>🎙</Text><Text style={themeStyle('components_DayMediaLightbox_21', { textColor: textColor }, (theme ?? _styleTheme))}>Voice note</Text></View>
+                  <View style={themeStyle('components_DayMediaLightbox_19', {  }, (theme ?? _styleTheme))}><IconText style={themeStyle('components_DayMediaLightbox_20', {  }, (theme ?? _styleTheme))}>🎙</IconText><Text style={themeStyle('components_DayMediaLightbox_21', { textColor: textColor }, (theme ?? _styleTheme))}>Voice note</Text></View>
                 ) : <Image source={{ uri: item.thumbnailUrl || item.primaryUrl }} style={themeStyle('components_DayMediaLightbox_22', {  }, (theme ?? _styleTheme))} resizeMode="cover" />}
                 {item.kindKey === 'media.video' ? (
                   <View style={themeStyle('components_DayMediaLightbox_23', {  }, (theme ?? _styleTheme))}>
-                    <Text style={themeStyle('components_DayMediaLightbox_24', {  }, (theme ?? _styleTheme))}>▶️</Text>
+                    <IconText style={themeStyle('components_DayMediaLightbox_24', {  }, (theme ?? _styleTheme))}>▶️</IconText>
                   </View>
                 ) : null}
                 {canReact && summary && summary.reactionTotal > 0 ? (
@@ -197,7 +198,7 @@ const DayMediaLightbox = ({
                     testID={`day-media-tile-reaction-badge-${item.id}`}
                     style={themeStyle('components_DayMediaLightbox_25', {  }, (theme ?? _styleTheme))}
                   >
-                    <Text style={themeStyle('components_DayMediaLightbox_26', {  }, (theme ?? _styleTheme))}>❤️</Text>
+                    <IconText style={themeStyle('components_DayMediaLightbox_26', {  }, (theme ?? _styleTheme))}>❤️</IconText>
                     <Text style={themeStyle('components_DayMediaLightbox_27', {  }, (theme ?? _styleTheme))}>{summary.reactionTotal}</Text>
                   </View>
                 ) : null}
@@ -211,7 +212,7 @@ const DayMediaLightbox = ({
                   onPress={() => onRemove(item)}
                   style={themeStyle('components_DayMediaLightbox_28', {  }, (theme ?? _styleTheme))}
                 >
-                  <Text style={themeStyle('components_DayMediaLightbox_29', {  }, (theme ?? _styleTheme))}>{removing ? '…' : '✕'}</Text>
+                  <IconText style={themeStyle('components_DayMediaLightbox_29', {  }, (theme ?? _styleTheme))}>{removing ? '…' : '✕'}</IconText>
                 </TouchableOpacity>
               ) : null}
               </View>

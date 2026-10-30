@@ -1,0 +1,969 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining On The Go Tours, Cyprus Mail, The Land of Wanderlust and Fodors Travel Forum itineraries for Cyprus",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "cyprus-paphos-limassol-5d",
+      "title": "Paphos and Limassol in 5 Days",
+      "summary": "Roman mosaics, Aphrodite Rock and a lively seafront.",
+      "days": 5,
+      "route": "Paphos > Limassol",
+      "arrive": "Paphos (PFO)",
+      "depart": "Larnaca (LCA)",
+      "countries": [
+        "Cyprus"
+      ],
+      "regions": [],
+      "cities": [
+        "Paphos",
+        "Limassol"
+      ],
+      "imageQuery": "Paphos mosaics Cyprus",
+      "highlights": [
+        "Paphos mosaics",
+        "Aphrodite Rock",
+        "Kourion",
+        "Limassol old town"
+      ],
+      "destinationKeys": [
+        "cyprus",
+        "cyprus/paphos",
+        "cyprus/limassol"
+      ],
+      "hero": "cyprus/paphos",
+      "sources": [
+        "On The Go Tours",
+        "Cyprus Mail",
+        "The Land of Wanderlust",
+        "Fodors Travel Forum",
+        "Dave Travel Pages"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Paphos",
+          "hotel": "Hotel in Paphos",
+          "start": 0,
+          "nights": 2,
+          "area": "In Kato Paphos near the harbour and archaeological sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Limassol",
+          "hotel": "Hotel in Limassol",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the seafront promenade or the old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Paphos Archaeological Park and harbour",
+          "notes": "Go early before the heat; see the mosaics at the House of Dionysos.",
+          "where": "Paphos",
+          "book": "",
+          "place": "cyprus/paphos-archaeological"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "3h",
+          "name": "Kourion and Aphrodite Rock",
+          "notes": "Stop on the drive between Paphos and Limassol.",
+          "where": "Kourion",
+          "book": "",
+          "place": "cyprus/kourion-petra-tou-romiou"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Limassol old town and marina",
+          "notes": "End with dinner by the marina.",
+          "where": "Limassol",
+          "book": "",
+          "place": "cyprus/limassol-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Limassol old town and marina",
+          "notes": "End with dinner by the marina.",
+          "where": "Limassol",
+          "book": "",
+          "place": "cyprus/limassol-old-town"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paphos Airport (PFO)",
+          "to": "Paphos hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Paphos",
+          "to": "Limassol",
+          "time": "09:30",
+          "minutes": 70,
+          "carrier": "Rental car",
+          "notes": "The coast road passes Aphrodite Rock.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Limassol",
+          "to": "Larnaca Airport (LCA)",
+          "time": "10:00",
+          "minutes": 70,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cyprus-paphos-troodos-limassol-7d",
+      "title": "Cyprus Coast and Mountains in 7 Days",
+      "summary": "Paphos and the Akamas, a mountain night in Troodos, then Limassol.",
+      "days": 7,
+      "route": "Paphos > Troodos > Limassol",
+      "arrive": "Paphos (PFO)",
+      "depart": "Larnaca (LCA)",
+      "countries": [
+        "Cyprus"
+      ],
+      "regions": [],
+      "cities": [
+        "Paphos",
+        "Troodos",
+        "Limassol"
+      ],
+      "imageQuery": "Troodos mountains painted church",
+      "highlights": [
+        "Paphos mosaics",
+        "Blue Lagoon",
+        "Troodos churches",
+        "Limassol"
+      ],
+      "destinationKeys": [
+        "cyprus",
+        "cyprus/paphos",
+        "cyprus/troodos",
+        "cyprus/limassol"
+      ],
+      "hero": "cyprus/troodos",
+      "sources": [
+        "On The Go Tours",
+        "Cyprus Mail",
+        "The Land of Wanderlust",
+        "Fodors Travel Forum",
+        "Dave Travel Pages"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Paphos",
+          "hotel": "Hotel in Paphos",
+          "start": 0,
+          "nights": 3,
+          "area": "In Kato Paphos near the harbour and archaeological sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Troodos",
+          "hotel": "Guesthouse in the Troodos",
+          "start": 3,
+          "nights": 1,
+          "area": "In a mountain village such as Platres or Omodos",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Limassol",
+          "hotel": "Hotel in Limassol",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the seafront promenade or the old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Paphos Archaeological Park and harbour",
+          "notes": "Go early before the heat; see the mosaics at the House of Dionysos.",
+          "where": "Paphos",
+          "book": "",
+          "place": "cyprus/paphos-archaeological"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Akamas Peninsula and Blue Lagoon",
+          "notes": "Boat from Latchi, or hike the Avakas Gorge; take water and sun protection.",
+          "where": "Akamas",
+          "book": "Yes - book a boat trip",
+          "place": "cyprus/akamas-blue-lagoon"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "3h",
+          "name": "Troodos painted churches and Omodos",
+          "notes": "Dress modestly for churches; a few close at midday.",
+          "where": "Troodos",
+          "book": "",
+          "place": "cyprus/troodos-painted-churches"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Caledonia waterfall trail",
+          "notes": "Wear proper footwear; paths can be slippery.",
+          "where": "Troodos",
+          "book": "",
+          "place": "cyprus/troodos-hiking"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Limassol old town and marina",
+          "notes": "End with dinner by the marina.",
+          "where": "Limassol",
+          "book": "",
+          "place": "cyprus/limassol-old-town"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "3h",
+          "name": "Kourion and Aphrodite Rock",
+          "notes": "Stop on the drive between Paphos and Limassol.",
+          "where": "Kourion",
+          "book": "",
+          "place": "cyprus/kourion-petra-tou-romiou"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paphos Airport (PFO)",
+          "to": "Paphos hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Paphos",
+          "to": "Troodos",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Troodos",
+          "to": "Limassol",
+          "time": "12:00",
+          "minutes": 70,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Limassol",
+          "to": "Larnaca Airport (LCA)",
+          "time": "10:00",
+          "minutes": 70,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cyprus-west-to-east-8d",
+      "title": "Cyprus West to East in 8 Days",
+      "summary": "Paphos, Troodos, Limassol and Larnaca with Cape Greco.",
+      "days": 8,
+      "route": "Paphos > Troodos > Limassol > Larnaca",
+      "arrive": "Paphos (PFO)",
+      "depart": "Larnaca (LCA)",
+      "countries": [
+        "Cyprus"
+      ],
+      "regions": [],
+      "cities": [
+        "Paphos",
+        "Troodos",
+        "Limassol",
+        "Larnaca"
+      ],
+      "imageQuery": "Limassol Cyprus sea",
+      "highlights": [
+        "Akamas",
+        "Troodos churches",
+        "Limassol",
+        "Cape Greco",
+        "Larnaca salt lake"
+      ],
+      "destinationKeys": [
+        "cyprus",
+        "cyprus/paphos",
+        "cyprus/troodos",
+        "cyprus/limassol",
+        "cyprus/larnaca"
+      ],
+      "hero": "cyprus/larnaca",
+      "sources": [
+        "On The Go Tours",
+        "Cyprus Mail",
+        "The Land of Wanderlust",
+        "Fodors Travel Forum",
+        "Dave Travel Pages"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "relax",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Paphos",
+          "hotel": "Hotel in Paphos",
+          "start": 0,
+          "nights": 2,
+          "area": "In Kato Paphos near the harbour and archaeological sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Troodos",
+          "hotel": "Guesthouse in the Troodos",
+          "start": 2,
+          "nights": 1,
+          "area": "In a mountain village such as Platres or Omodos",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Limassol",
+          "hotel": "Hotel in Limassol",
+          "start": 3,
+          "nights": 2,
+          "area": "Near the seafront promenade or the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Larnaca",
+          "hotel": "Hotel in Larnaca",
+          "start": 5,
+          "nights": 2,
+          "area": "Along the Finikoudes promenade, with the airport a short drive away",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Paphos Archaeological Park and harbour",
+          "notes": "Go early before the heat; see the mosaics at the House of Dionysos.",
+          "where": "Paphos",
+          "book": "",
+          "place": "cyprus/paphos-archaeological"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "3h",
+          "name": "Troodos painted churches and Omodos",
+          "notes": "Dress modestly for churches; a few close at midday.",
+          "where": "Troodos",
+          "book": "",
+          "place": "cyprus/troodos-painted-churches"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Limassol old town and marina",
+          "notes": "End with dinner by the marina.",
+          "where": "Limassol",
+          "book": "",
+          "place": "cyprus/limassol-old-town"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "3h",
+          "name": "Kourion and Aphrodite Rock",
+          "notes": "Stop on the drive between Paphos and Limassol.",
+          "where": "Kourion",
+          "book": "",
+          "place": "cyprus/kourion-petra-tou-romiou"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Larnaca salt lake and Hala Sultan Tekke",
+          "notes": "Flamingos from about November to March.",
+          "where": "Larnaca",
+          "book": "",
+          "place": "cyprus/larnaca-salt-lake"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Cape Greco and Ayia Napa sea caves",
+          "notes": "A boat trip visits the sea caves; weekends are crowded.",
+          "where": "Cape Greco",
+          "book": "",
+          "place": "cyprus/cape-greco"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paphos Airport (PFO)",
+          "to": "Paphos hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Paphos",
+          "to": "Troodos",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Troodos",
+          "to": "Limassol",
+          "time": "12:00",
+          "minutes": 70,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Limassol",
+          "to": "Larnaca",
+          "time": "10:00",
+          "minutes": 70,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Larnaca hotel area",
+          "to": "Larnaca Airport (LCA)",
+          "time": "11:00",
+          "minutes": 15,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cyprus-complete-10d",
+      "title": "Complete Cyprus in 10 Days",
+      "summary": "Paphos with the Akamas, Troodos, Limassol, Nicosia and Larnaca.",
+      "days": 10,
+      "route": "Paphos > Troodos > Limassol > Nicosia > Larnaca",
+      "arrive": "Paphos (PFO)",
+      "depart": "Larnaca (LCA)",
+      "countries": [
+        "Cyprus"
+      ],
+      "regions": [],
+      "cities": [
+        "Paphos",
+        "Troodos",
+        "Limassol",
+        "Nicosia",
+        "Larnaca"
+      ],
+      "imageQuery": "Nicosia old town Cyprus",
+      "highlights": [
+        "Akamas",
+        "Troodos churches",
+        "Limassol",
+        "Nicosia",
+        "Cape Greco"
+      ],
+      "destinationKeys": [
+        "cyprus",
+        "cyprus/paphos",
+        "cyprus/troodos",
+        "cyprus/limassol",
+        "cyprus/nicosia",
+        "cyprus/larnaca"
+      ],
+      "hero": "cyprus/nicosia",
+      "sources": [
+        "On The Go Tours",
+        "Cyprus Mail",
+        "The Land of Wanderlust",
+        "Fodors Travel Forum",
+        "Dave Travel Pages"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Paphos",
+          "hotel": "Hotel in Paphos",
+          "start": 0,
+          "nights": 3,
+          "area": "In Kato Paphos near the harbour and archaeological sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Troodos",
+          "hotel": "Guesthouse in the Troodos",
+          "start": 3,
+          "nights": 1,
+          "area": "In a mountain village such as Platres or Omodos",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Limassol",
+          "hotel": "Hotel in Limassol",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the seafront promenade or the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nicosia",
+          "hotel": "Hotel in Nicosia",
+          "start": 6,
+          "nights": 1,
+          "area": "Inside the old town walls near Ledra Street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Larnaca",
+          "hotel": "Hotel in Larnaca",
+          "start": 7,
+          "nights": 2,
+          "area": "Along the Finikoudes promenade, with the airport a short drive away",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Paphos Archaeological Park and harbour",
+          "notes": "Go early before the heat; see the mosaics at the House of Dionysos.",
+          "where": "Paphos",
+          "book": "",
+          "place": "cyprus/paphos-archaeological"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Akamas Peninsula and Blue Lagoon",
+          "notes": "Boat from Latchi, or hike the Avakas Gorge; take water and sun protection.",
+          "where": "Akamas",
+          "book": "Yes - book a boat trip",
+          "place": "cyprus/akamas-blue-lagoon"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "3h",
+          "name": "Troodos painted churches and Omodos",
+          "notes": "Dress modestly for churches; a few close at midday.",
+          "where": "Troodos",
+          "book": "",
+          "place": "cyprus/troodos-painted-churches"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Caledonia waterfall trail",
+          "notes": "Wear proper footwear; paths can be slippery.",
+          "where": "Troodos",
+          "book": "",
+          "place": "cyprus/troodos-hiking"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Limassol old town and marina",
+          "notes": "End with dinner by the marina.",
+          "where": "Limassol",
+          "book": "",
+          "place": "cyprus/limassol-old-town"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "3h",
+          "name": "Kourion and Aphrodite Rock",
+          "notes": "Stop on the drive between Paphos and Limassol.",
+          "where": "Kourion",
+          "book": "",
+          "place": "cyprus/kourion-petra-tou-romiou"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Nicosia old town and Green Line crossing",
+          "notes": "Bring ID if you cross at Ledra Street.",
+          "where": "Nicosia",
+          "book": "",
+          "place": "cyprus/nicosia-old-town"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Larnaca salt lake and Hala Sultan Tekke",
+          "notes": "Flamingos from about November to March.",
+          "where": "Larnaca",
+          "book": "",
+          "place": "cyprus/larnaca-salt-lake"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Cape Greco and Ayia Napa sea caves",
+          "notes": "A boat trip visits the sea caves; weekends are crowded.",
+          "where": "Cape Greco",
+          "book": "",
+          "place": "cyprus/cape-greco"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paphos Airport (PFO)",
+          "to": "Paphos hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Paphos",
+          "to": "Troodos",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Troodos",
+          "to": "Limassol",
+          "time": "12:00",
+          "minutes": 70,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Limassol",
+          "to": "Nicosia",
+          "time": "09:00",
+          "minutes": 80,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Nicosia",
+          "to": "Larnaca",
+          "time": "14:00",
+          "minutes": 50,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Larnaca hotel area",
+          "to": "Larnaca Airport (LCA)",
+          "time": "11:00",
+          "minutes": 15,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "cyprus/paphos-archaeological": {
+        "name": "Paphos Archaeological Park and harbour",
+        "description": "Roman villas with mosaics, a medieval fort and a harbour promenade, a UNESCO site.",
+        "details": "Paphos Archaeological Park holds the House of Dionysos and other villas with well-preserved floor mosaics. The harbour has a small fort, restaurants and the Tombs of the Kings nearby. Visit in the morning to avoid the heat.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cyprus/akamas-blue-lagoon": {
+        "name": "Akamas Peninsula and Blue Lagoon",
+        "description": "A wild peninsula of gorges, coves and a turquoise bay reached by boat or 4x4.",
+        "details": "The Akamas is the wildest part of Cyprus. Boats from Latchi run to the Blue Lagoon for swimming and snorkelling, and a hike through the Avakas Gorge takes about an hour. Lara Beach is a nesting site for turtles. Take water and sun protection.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "cyprus/kourion-petra-tou-romiou": {
+        "name": "Kourion and Aphrodite Rock",
+        "description": "A Greco-Roman hillside theatre and the legendary birthplace of Aphrodite on the coast.",
+        "details": "Kourion is a ruined city above the sea with a theatre still used for performances and mosaics. Petra tou Romiou, Aphrodite Rock, lies along the road toward Paphos. Both stops fit on the drive between Paphos and Limassol.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cyprus/limassol-old-town": {
+        "name": "Limassol old town and marina",
+        "description": "A seafront promenade, a castle museum and lively restaurants.",
+        "details": "Limassol has a rebuilt old town with narrow streets, Limassol Castle and the Molos promenade. The marina is a place for dinner. A wine tour to the Commandaria villages is a popular half-day.",
+        "interests": [
+          "food",
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cyprus/troodos-painted-churches": {
+        "name": "Troodos painted churches and villages",
+        "description": "Byzantine churches with frescoes in the pine mountains, a UNESCO group.",
+        "details": "The Troodos has ten painted churches, such as Agios Nikolaos tis Stegis and Panagia Forviotissa at Asinou. Mountain villages such as Omodos make wine and lace. The air is cooler than the coast, and winter may bring snow.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "cyprus/troodos-hiking": {
+        "name": "Troodos nature trails and waterfalls",
+        "description": "Short hikes to the Caledonia and Millomeris waterfalls through forest.",
+        "details": "The Caledonia Trail is about three kilometres to a waterfall, with shaded paths and streams. The Troodos region is also known for its wineries. Wear proper footwear, as paths can be slippery.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "cyprus/nicosia-old-town": {
+        "name": "Nicosia old town and the Green Line",
+        "description": "The last divided capital in Europe, with Venetian walls and the UN buffer zone.",
+        "details": "Nicosia old town sits inside Venetian walls and is divided by the UN Green Line. Visitors can cross at Ledra Street on foot. The Cyprus Museum, Famagusta Gate and the Laiki Geitonia district are highlights. Bring ID for the crossing.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cyprus/larnaca-salt-lake": {
+        "name": "Larnaca salt lake and Hala Sultan Tekke",
+        "description": "A flamingo lake in winter and a mosque beside it, near the airport.",
+        "details": "The Larnaca Salt Lake holds flamingos from about November to March, and the Hala Sultan Tekke is a peaceful mosque beside it. The promenade in town leads to the Church of Saint Lazarus. It is an easy last-day stop near the airport.",
+        "interests": [
+          "relax",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cyprus/cape-greco": {
+        "name": "Cape Greco and Ayia Napa sea caves",
+        "description": "A national forest park of cliffs, sea caves and swimming spots on the east coast.",
+        "details": "Cape Greco has walking trails above blue water, sea caves and cliff-jumping spots. The Ayia Napa and Protaras beaches lie nearby, with Nissi Beach known for lively summers. A boat trip to the sea caves is popular. Weekends can be crowded.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "cyprus": {
+        "name": "Cyprus",
+        "description": "A Mediterranean island of Aphrodite legends, mosaics, mountain monasteries and beaches.",
+        "images": []
+      },
+      "cyprus/paphos": {
+        "name": "Paphos",
+        "description": "A coastal town of Roman mosaics and a harbour fort, close to the wild Akamas.",
+        "images": []
+      },
+      "cyprus/troodos": {
+        "name": "Troodos",
+        "description": "A pine-covered mountain range of painted churches and wine villages.",
+        "images": []
+      },
+      "cyprus/limassol": {
+        "name": "Limassol",
+        "description": "A lively seaside city with a castle, marina and wine tours.",
+        "images": []
+      },
+      "cyprus/nicosia": {
+        "name": "Nicosia",
+        "description": "The divided capital with Venetian walls and museums.",
+        "images": []
+      },
+      "cyprus/larnaca": {
+        "name": "Larnaca",
+        "description": "A beach town with a salt lake, close to the main international airport.",
+        "images": []
+      }
+    }
+  }
+}

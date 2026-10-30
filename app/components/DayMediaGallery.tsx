@@ -1,4 +1,5 @@
 // @ts-nocheck
+import IconText from './IconText';
 import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 
@@ -120,7 +121,7 @@ const DayMediaGallery = ({
               onPress={() => onSetCover(item)}
               style={themeStyle('components_DayMediaGallery_5', {  }, (theme ?? _styleTheme))}
             >
-              <Text style={themeStyle('components_DayMediaGallery_6', {  }, (theme ?? _styleTheme))}>{settingCover ? '…' : '☆'}</Text>
+              <IconText style={themeStyle('components_DayMediaGallery_6', {  }, (theme ?? _styleTheme))}>{settingCover ? '…' : '☆'}</IconText>
             </TouchableOpacity>
           )
         ) : null}
@@ -132,7 +133,7 @@ const DayMediaGallery = ({
             onPress={() => setExpandedMetadataItemId((current) => (current === item.id ? null : item.id))}
             style={themeStyle('components_DayMediaGallery_7', {  }, (theme ?? _styleTheme))}
           >
-            <Text style={themeStyle('components_DayMediaGallery_8', {  }, (theme ?? _styleTheme))}>✎</Text>
+            <IconText style={themeStyle('components_DayMediaGallery_8', {  }, (theme ?? _styleTheme))}>✎</IconText>
           </TouchableOpacity>
         ) : null}
         {canRemove ? (
@@ -144,7 +145,7 @@ const DayMediaGallery = ({
             onPress={() => onRemove(item)}
             style={themeStyle('components_DayMediaGallery_9', {  }, (theme ?? _styleTheme))}
           >
-            <Text style={themeStyle('components_DayMediaGallery_10', {  }, (theme ?? _styleTheme))}>{removing ? '…' : '✕'}</Text>
+            <IconText style={themeStyle('components_DayMediaGallery_10', {  }, (theme ?? _styleTheme))}>{removing ? '…' : '✕'}</IconText>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -170,7 +171,7 @@ const DayMediaGallery = ({
       {editRow(item)}
       {item.assetId === proposedCoverAssetId && item.id !== coverItemId ? (
         <View testID={`day-media-cover-proposal-${item.id}`} style={themeStyle('components_DayMediaGallery_14', {  }, (theme ?? _styleTheme))}>
-          <Text style={themeStyle('components_DayMediaGallery_15', {  }, (theme ?? _styleTheme))}>♥ Most-loved</Text>
+          <IconText style={themeStyle('components_DayMediaGallery_15', {  }, (theme ?? _styleTheme))}>♥ Most-loved</IconText>
         </View>
       ) : null}
     </View>

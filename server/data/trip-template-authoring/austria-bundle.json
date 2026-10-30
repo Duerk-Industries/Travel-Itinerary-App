@@ -1,0 +1,1635 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, Rick Steves, Tourlane and Triptins itineraries for Austria",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "austria-vienna-4d",
+      "title": "Vienna City Break in 4 Days",
+      "summary": "Palaces, art, coffee houses and a night at the opera in the Habsburg capital.",
+      "days": 4,
+      "route": "Vienna",
+      "arrive": "Vienna (VIE)",
+      "depart": "Vienna (VIE)",
+      "countries": [
+        "Austria"
+      ],
+      "regions": [],
+      "cities": [
+        "Vienna"
+      ],
+      "imageQuery": "Vienna Schonbrunn Palace",
+      "highlights": [
+        "Schonbrunn",
+        "Belvedere",
+        "Coffee houses",
+        "State Opera"
+      ],
+      "destinationKeys": [
+        "austria",
+        "austria/vienna"
+      ],
+      "hero": "austria/vienna",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves",
+        "Tourlane",
+        "Triptins",
+        "Omio"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Vienna",
+          "hotel": "Hotel in Vienna",
+          "start": 0,
+          "nights": 3,
+          "area": "Inside the Ring, near the cathedral and U-Bahn; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Vienna inner city and the Ringstrasse",
+          "notes": "Walk from the cathedral to the Hofburg; a tram along the Ring helps.",
+          "where": "Innere Stadt, Vienna",
+          "book": "",
+          "place": "austria/vienna-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Schonbrunn Palace and gardens",
+          "notes": "Buy timed entry ahead; climb to the Gloriette for the view.",
+          "where": "Schonbrunn, Vienna",
+          "book": "Yes - book timed entry",
+          "place": "austria/schonbrunn"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Upper Belvedere and Klimt",
+          "notes": "Allow time in the gardens; timed entry is wise in busy months.",
+          "where": "Belvedere, Vienna",
+          "book": "",
+          "place": "austria/belvedere"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coffee house and Naschmarkt",
+          "notes": "Order a melange and strudel; Saturday is the busiest market day.",
+          "where": "Vienna",
+          "book": "",
+          "place": "austria/vienna-coffeehouse"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "State Opera or classical concert",
+          "notes": "Same-day standing tickets at the Opera are an option; dress smartly.",
+          "where": "Vienna",
+          "book": "Yes - book seats ahead",
+          "place": "austria/vienna-opera-concert"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vienna Airport (VIE)",
+          "to": "Vienna hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Vienna hotel area",
+          "to": "Vienna Airport (VIE)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "austria-vienna-salzburg-5d",
+      "title": "Vienna and Salzburg in 5 Days",
+      "summary": "The two great music cities by train: imperial Vienna then baroque Salzburg.",
+      "days": 5,
+      "route": "Vienna > Salzburg",
+      "arrive": "Vienna (VIE)",
+      "depart": "Salzburg (SZG)",
+      "countries": [
+        "Austria"
+      ],
+      "regions": [
+        "Salzburg"
+      ],
+      "cities": [
+        "Vienna",
+        "Salzburg"
+      ],
+      "imageQuery": "Salzburg old town fortress",
+      "highlights": [
+        "Schonbrunn",
+        "Belvedere",
+        "Salzburg old town",
+        "Hohensalzburg"
+      ],
+      "destinationKeys": [
+        "austria",
+        "austria/vienna",
+        "austria/salzburg"
+      ],
+      "hero": "austria/salzburg",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves",
+        "Tourlane",
+        "Triptins",
+        "Omio"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Vienna",
+          "hotel": "Hotel in Vienna",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside the Ring, near the cathedral and U-Bahn; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Salzburg",
+          "hotel": "Hotel in Salzburg",
+          "start": 2,
+          "nights": 2,
+          "area": "In the old town or just across the river near Mirabell",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Vienna inner city and the Ringstrasse",
+          "notes": "Walk from the cathedral to the Hofburg; a tram along the Ring helps.",
+          "where": "Innere Stadt, Vienna",
+          "book": "",
+          "place": "austria/vienna-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Schonbrunn Palace and gardens",
+          "notes": "Buy timed entry ahead; climb to the Gloriette for the view.",
+          "where": "Schonbrunn, Vienna",
+          "book": "Yes - book timed entry",
+          "place": "austria/schonbrunn"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Upper Belvedere and Klimt",
+          "notes": "Allow time in the gardens; timed entry is wise in busy months.",
+          "where": "Belvedere, Vienna",
+          "book": "",
+          "place": "austria/belvedere"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Salzburg old town and Mozart sites",
+          "notes": "Cover Getreidegasse, the cathedral and Mirabell Gardens on foot.",
+          "where": "Altstadt, Salzburg",
+          "book": "",
+          "place": "austria/salzburg-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Hohensalzburg Fortress",
+          "notes": "Take the funicular up, or walk for exercise; evening concerts are held here.",
+          "where": "Salzburg",
+          "book": "",
+          "place": "austria/hohensalzburg"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vienna Airport (VIE)",
+          "to": "Vienna hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Vienna",
+          "to": "Salzburg",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Train or bus",
+          "notes": "Direct trains run from Wien Hauptbahnhof.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Salzburg hotel area",
+          "to": "Salzburg Airport (SZG)",
+          "time": "10:00",
+          "minutes": 20,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "austria-vienna-salzburg-hallstatt-innsbruck-7d",
+      "title": "Austria Highlights in 7 Days",
+      "summary": "Vienna, Salzburg, Hallstatt and Innsbruck, the classic first-time loop.",
+      "days": 7,
+      "route": "Vienna > Salzburg > Hallstatt > Innsbruck",
+      "arrive": "Vienna (VIE)",
+      "depart": "Innsbruck (INN)",
+      "countries": [
+        "Austria"
+      ],
+      "regions": [
+        "Salzburg",
+        "Upper Austria",
+        "Tyrol"
+      ],
+      "cities": [
+        "Vienna",
+        "Salzburg",
+        "Hallstatt",
+        "Innsbruck"
+      ],
+      "imageQuery": "Hallstatt Austria lake village",
+      "highlights": [
+        "Vienna",
+        "Salzburg",
+        "Hallstatt",
+        "Innsbruck"
+      ],
+      "destinationKeys": [
+        "austria",
+        "austria/vienna",
+        "austria/salzburg",
+        "austria/upper-austria",
+        "austria/hallstatt",
+        "austria/tyrol",
+        "austria/innsbruck"
+      ],
+      "hero": "austria/hallstatt",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves",
+        "Tourlane",
+        "Triptins",
+        "Omio"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "iconic_landmarks",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Vienna",
+          "hotel": "Hotel in Vienna",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside the Ring, near the cathedral and U-Bahn; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Salzburg",
+          "hotel": "Hotel in Salzburg",
+          "start": 2,
+          "nights": 2,
+          "area": "In the old town or just across the river near Mirabell",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hallstatt",
+          "hotel": "Hotel in Hallstatt",
+          "start": 4,
+          "nights": 1,
+          "area": "In Hallstatt village; staying overnight avoids the day-trip crowds",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Innsbruck",
+          "hotel": "Hotel in Innsbruck",
+          "start": 5,
+          "nights": 1,
+          "area": "In the old town or near the Hauptbahnhof",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Vienna inner city and the Ringstrasse",
+          "notes": "Walk from the cathedral to the Hofburg; a tram along the Ring helps.",
+          "where": "Innere Stadt, Vienna",
+          "book": "",
+          "place": "austria/vienna-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Schonbrunn Palace and gardens",
+          "notes": "Buy timed entry ahead; climb to the Gloriette for the view.",
+          "where": "Schonbrunn, Vienna",
+          "book": "Yes - book timed entry",
+          "place": "austria/schonbrunn"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coffee house and Naschmarkt",
+          "notes": "Order a melange and strudel; Saturday is the busiest market day.",
+          "where": "Vienna",
+          "book": "",
+          "place": "austria/vienna-coffeehouse"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Salzburg old town and Mozart sites",
+          "notes": "Cover Getreidegasse, the cathedral and Mirabell Gardens on foot.",
+          "where": "Altstadt, Salzburg",
+          "book": "",
+          "place": "austria/salzburg-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Hohensalzburg Fortress",
+          "notes": "Take the funicular up, or walk for exercise; evening concerts are held here.",
+          "where": "Salzburg",
+          "book": "",
+          "place": "austria/hohensalzburg"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Hallstatt village and lakeside",
+          "notes": "Evening and early morning are far quieter than midday.",
+          "where": "Hallstatt",
+          "book": "",
+          "place": "austria/hallstatt"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Innsbruck old town and Golden Roof",
+          "notes": "The arcaded lanes are best at golden hour.",
+          "where": "Innsbruck",
+          "book": "",
+          "place": "austria/innsbruck-old-town"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vienna Airport (VIE)",
+          "to": "Vienna hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Vienna",
+          "to": "Salzburg",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Train or bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Salzburg",
+          "to": "Hallstatt",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Train or bus",
+          "notes": "Train to Hallstatt station and the short ferry across the lake.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Hallstatt",
+          "to": "Innsbruck",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Train or bus",
+          "notes": "Change in Salzburg or Attnang-Puchheim.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Innsbruck hotel area",
+          "to": "Innsbruck Airport (INN)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "austria-vienna-hallstatt-salzburg-8d",
+      "title": "Vienna, Lakes and Salzburg in 8 Days",
+      "summary": "More time on the Salzkammergut lakes: Vienna, two nights in Hallstatt, then Salzburg.",
+      "days": 8,
+      "route": "Vienna > Hallstatt > Salzburg",
+      "arrive": "Vienna (VIE)",
+      "depart": "Salzburg (SZG)",
+      "countries": [
+        "Austria"
+      ],
+      "regions": [
+        "Upper Austria",
+        "Salzburg"
+      ],
+      "cities": [
+        "Vienna",
+        "Hallstatt",
+        "Salzburg"
+      ],
+      "imageQuery": "Hallstatt lake mountains",
+      "highlights": [
+        "Belvedere",
+        "Hallstatt",
+        "Dachstein",
+        "Salzburg"
+      ],
+      "destinationKeys": [
+        "austria",
+        "austria/vienna",
+        "austria/upper-austria",
+        "austria/hallstatt",
+        "austria/salzburg"
+      ],
+      "hero": "austria/upper-austria",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves",
+        "Tourlane",
+        "Triptins",
+        "Omio"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Vienna",
+          "hotel": "Hotel in Vienna",
+          "start": 0,
+          "nights": 3,
+          "area": "Inside the Ring, near the cathedral and U-Bahn; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hallstatt",
+          "hotel": "Hotel in Hallstatt",
+          "start": 3,
+          "nights": 2,
+          "area": "In Hallstatt village; staying overnight avoids the day-trip crowds",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Salzburg",
+          "hotel": "Hotel in Salzburg",
+          "start": 5,
+          "nights": 2,
+          "area": "In the old town or just across the river near Mirabell",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Vienna inner city and the Ringstrasse",
+          "notes": "Walk from the cathedral to the Hofburg; a tram along the Ring helps.",
+          "where": "Innere Stadt, Vienna",
+          "book": "",
+          "place": "austria/vienna-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Schonbrunn Palace and gardens",
+          "notes": "Buy timed entry ahead; climb to the Gloriette for the view.",
+          "where": "Schonbrunn, Vienna",
+          "book": "Yes - book timed entry",
+          "place": "austria/schonbrunn"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Upper Belvedere and Klimt",
+          "notes": "Allow time in the gardens; timed entry is wise in busy months.",
+          "where": "Belvedere, Vienna",
+          "book": "",
+          "place": "austria/belvedere"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coffee house and Naschmarkt",
+          "notes": "Order a melange and strudel; Saturday is the busiest market day.",
+          "where": "Vienna",
+          "book": "",
+          "place": "austria/vienna-coffeehouse"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "State Opera or classical concert",
+          "notes": "Same-day standing tickets at the Opera are an option; dress smartly.",
+          "where": "Vienna",
+          "book": "Yes - book seats ahead",
+          "place": "austria/vienna-opera-concert"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Salt mine and Skywalk",
+          "notes": "The slide and funicular are weather independent; book in summer.",
+          "where": "Hallstatt",
+          "book": "Yes - book mine tours",
+          "place": "austria/hallstatt-salt-mine"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "14:30",
+          "duration": "3.5h",
+          "name": "Dachstein cable car and ice cave",
+          "notes": "It is cold on the plateau even in July; check the webcam before going.",
+          "where": "Obertraun",
+          "book": "",
+          "place": "austria/dachstein"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Salzburg old town and Mozart sites",
+          "notes": "Cover Getreidegasse, the cathedral and Mirabell Gardens on foot.",
+          "where": "Altstadt, Salzburg",
+          "book": "",
+          "place": "austria/salzburg-old-town"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Sound of Music and lake district tour",
+          "notes": "Includes Mondsee and lake views; times vary by operator.",
+          "where": "Salzburg",
+          "book": "Yes - book the minibus tour",
+          "place": "austria/sound-of-music-tour"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Hohensalzburg Fortress",
+          "notes": "Take the funicular up, or walk for exercise; evening concerts are held here.",
+          "where": "Salzburg",
+          "book": "",
+          "place": "austria/hohensalzburg"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vienna Airport (VIE)",
+          "to": "Vienna hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Vienna",
+          "to": "Hallstatt",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Train or bus",
+          "notes": "Change in Attnang-Puchheim; ferry across the lake.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Hallstatt",
+          "to": "Salzburg",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Train or bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Salzburg hotel area",
+          "to": "Salzburg Airport (SZG)",
+          "time": "10:00",
+          "minutes": 20,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "austria-grand-tour-10d",
+      "title": "Austria Grand Tour in 10 Days",
+      "summary": "Vienna, Salzburg, Hallstatt and Innsbruck, with time for music, lakes and the Alps.",
+      "days": 10,
+      "route": "Vienna > Salzburg > Hallstatt > Innsbruck",
+      "arrive": "Vienna (VIE)",
+      "depart": "Innsbruck (INN)",
+      "countries": [
+        "Austria"
+      ],
+      "regions": [
+        "Salzburg",
+        "Upper Austria",
+        "Tyrol"
+      ],
+      "cities": [
+        "Vienna",
+        "Salzburg",
+        "Hallstatt",
+        "Innsbruck"
+      ],
+      "imageQuery": "Innsbruck Nordkette Alps",
+      "highlights": [
+        "Schonbrunn",
+        "Sound of Music tour",
+        "Hallstatt salt mine",
+        "Nordkette"
+      ],
+      "destinationKeys": [
+        "austria",
+        "austria/vienna",
+        "austria/salzburg",
+        "austria/upper-austria",
+        "austria/hallstatt",
+        "austria/tyrol",
+        "austria/innsbruck"
+      ],
+      "hero": "austria/tyrol",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves",
+        "Tourlane",
+        "Triptins",
+        "Omio"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Vienna",
+          "hotel": "Hotel in Vienna",
+          "start": 0,
+          "nights": 3,
+          "area": "Inside the Ring, near the cathedral and U-Bahn; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Salzburg",
+          "hotel": "Hotel in Salzburg",
+          "start": 3,
+          "nights": 2,
+          "area": "In the old town or just across the river near Mirabell",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hallstatt",
+          "hotel": "Hotel in Hallstatt",
+          "start": 5,
+          "nights": 2,
+          "area": "In Hallstatt village; staying overnight avoids the day-trip crowds",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Innsbruck",
+          "hotel": "Hotel in Innsbruck",
+          "start": 7,
+          "nights": 2,
+          "area": "In the old town or near the Hauptbahnhof",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Vienna inner city and the Ringstrasse",
+          "notes": "Walk from the cathedral to the Hofburg; a tram along the Ring helps.",
+          "where": "Innere Stadt, Vienna",
+          "book": "",
+          "place": "austria/vienna-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Schonbrunn Palace and gardens",
+          "notes": "Buy timed entry ahead; climb to the Gloriette for the view.",
+          "where": "Schonbrunn, Vienna",
+          "book": "Yes - book timed entry",
+          "place": "austria/schonbrunn"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Upper Belvedere and Klimt",
+          "notes": "Allow time in the gardens; timed entry is wise in busy months.",
+          "where": "Belvedere, Vienna",
+          "book": "",
+          "place": "austria/belvedere"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coffee house and Naschmarkt",
+          "notes": "Order a melange and strudel; Saturday is the busiest market day.",
+          "where": "Vienna",
+          "book": "",
+          "place": "austria/vienna-coffeehouse"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "State Opera or classical concert",
+          "notes": "Same-day standing tickets at the Opera are an option; dress smartly.",
+          "where": "Vienna",
+          "book": "Yes - book seats ahead",
+          "place": "austria/vienna-opera-concert"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Salzburg old town and Mozart sites",
+          "notes": "Cover Getreidegasse, the cathedral and Mirabell Gardens on foot.",
+          "where": "Altstadt, Salzburg",
+          "book": "",
+          "place": "austria/salzburg-old-town"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Sound of Music and lake district tour",
+          "notes": "Includes Mondsee and lake views; times vary by operator.",
+          "where": "Salzburg",
+          "book": "Yes - book the minibus tour",
+          "place": "austria/sound-of-music-tour"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Hohensalzburg Fortress",
+          "notes": "Take the funicular up, or walk for exercise; evening concerts are held here.",
+          "where": "Salzburg",
+          "book": "",
+          "place": "austria/hohensalzburg"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Hallstatt village and lakeside",
+          "notes": "Evening and early morning are far quieter than midday.",
+          "where": "Hallstatt",
+          "book": "",
+          "place": "austria/hallstatt"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Salt mine and Skywalk",
+          "notes": "The slide and funicular are weather independent; book in summer.",
+          "where": "Hallstatt",
+          "book": "Yes - book mine tours",
+          "place": "austria/hallstatt-salt-mine"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Innsbruck old town and Golden Roof",
+          "notes": "The arcaded lanes are best at golden hour.",
+          "where": "Innsbruck",
+          "book": "",
+          "place": "austria/innsbruck-old-town"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Nordkette cable car and ridge walk",
+          "notes": "Best in clear weather; bring a jacket.",
+          "where": "Innsbruck",
+          "book": "",
+          "place": "austria/nordkette"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Swarovski Crystal Worlds",
+          "notes": "A good option if it rains; buses run from Innsbruck.",
+          "where": "Wattens",
+          "book": "",
+          "place": "austria/swarovski-wattens"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vienna Airport (VIE)",
+          "to": "Vienna hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Vienna",
+          "to": "Salzburg",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Train or bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Salzburg",
+          "to": "Hallstatt",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Train or bus",
+          "notes": "Train to Hallstatt station and the short ferry across the lake.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Hallstatt",
+          "to": "Innsbruck",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Train or bus",
+          "notes": "Change in Salzburg or Attnang-Puchheim.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Innsbruck hotel area",
+          "to": "Innsbruck Airport (INN)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "austria-danube-alps-12d",
+      "title": "Danube, Lakes and Alps in 12 Days",
+      "summary": "Vienna, a night in the Wachau on the Danube, Salzburg, Hallstatt and Innsbruck at a relaxed pace.",
+      "days": 12,
+      "route": "Vienna > Durnstein > Salzburg > Hallstatt > Innsbruck",
+      "arrive": "Vienna (VIE)",
+      "depart": "Innsbruck (INN)",
+      "countries": [
+        "Austria"
+      ],
+      "regions": [
+        "Lower Austria",
+        "Salzburg",
+        "Upper Austria",
+        "Tyrol"
+      ],
+      "cities": [
+        "Vienna",
+        "Durnstein",
+        "Salzburg",
+        "Hallstatt",
+        "Innsbruck"
+      ],
+      "imageQuery": "Wachau Valley Danube Durnstein",
+      "highlights": [
+        "Wachau Valley",
+        "Melk Abbey",
+        "Salzburg",
+        "Hallstatt",
+        "Dachstein",
+        "Innsbruck"
+      ],
+      "destinationKeys": [
+        "austria",
+        "austria/vienna",
+        "austria/lower-austria",
+        "austria/durnstein",
+        "austria/salzburg",
+        "austria/upper-austria",
+        "austria/hallstatt",
+        "austria/tyrol",
+        "austria/innsbruck"
+      ],
+      "hero": "austria/durnstein",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves",
+        "Tourlane",
+        "Triptins",
+        "Omio"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Vienna",
+          "hotel": "Hotel in Vienna",
+          "start": 0,
+          "nights": 3,
+          "area": "Inside the Ring, near the cathedral and U-Bahn; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Durnstein",
+          "hotel": "Hotel in Durnstein",
+          "start": 3,
+          "nights": 1,
+          "area": "In Durnstein village near the Danube",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Salzburg",
+          "hotel": "Hotel in Salzburg",
+          "start": 4,
+          "nights": 3,
+          "area": "In the old town or just across the river near Mirabell",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hallstatt",
+          "hotel": "Hotel in Hallstatt",
+          "start": 7,
+          "nights": 2,
+          "area": "In Hallstatt village; staying overnight avoids the day-trip crowds",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Innsbruck",
+          "hotel": "Hotel in Innsbruck",
+          "start": 9,
+          "nights": 2,
+          "area": "In the old town or near the Hauptbahnhof",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Vienna inner city and the Ringstrasse",
+          "notes": "Walk from the cathedral to the Hofburg; a tram along the Ring helps.",
+          "where": "Innere Stadt, Vienna",
+          "book": "",
+          "place": "austria/vienna-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Schonbrunn Palace and gardens",
+          "notes": "Buy timed entry ahead; climb to the Gloriette for the view.",
+          "where": "Schonbrunn, Vienna",
+          "book": "Yes - book timed entry",
+          "place": "austria/schonbrunn"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Upper Belvedere and Klimt",
+          "notes": "Allow time in the gardens; timed entry is wise in busy months.",
+          "where": "Belvedere, Vienna",
+          "book": "",
+          "place": "austria/belvedere"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coffee house and Naschmarkt",
+          "notes": "Order a melange and strudel; Saturday is the busiest market day.",
+          "where": "Vienna",
+          "book": "",
+          "place": "austria/vienna-coffeehouse"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "State Opera or classical concert",
+          "notes": "Same-day standing tickets at the Opera are an option; dress smartly.",
+          "where": "Vienna",
+          "book": "Yes - book seats ahead",
+          "place": "austria/vienna-opera-concert"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Wachau Valley and Melk Abbey",
+          "notes": "Take a Danube cruise or cycle path between villages.",
+          "where": "Wachau, Lower Austria",
+          "book": "Yes - book a river cruise",
+          "place": "austria/wachau-valley"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Salzburg old town and Mozart sites",
+          "notes": "Cover Getreidegasse, the cathedral and Mirabell Gardens on foot.",
+          "where": "Altstadt, Salzburg",
+          "book": "",
+          "place": "austria/salzburg-old-town"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Hohensalzburg Fortress",
+          "notes": "Take the funicular up, or walk for exercise; evening concerts are held here.",
+          "where": "Salzburg",
+          "book": "",
+          "place": "austria/hohensalzburg"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Sound of Music and lake district tour",
+          "notes": "Includes Mondsee and lake views; times vary by operator.",
+          "where": "Salzburg",
+          "book": "Yes - book the minibus tour",
+          "place": "austria/sound-of-music-tour"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Hallstatt village and lakeside",
+          "notes": "Evening and early morning are far quieter than midday.",
+          "where": "Hallstatt",
+          "book": "",
+          "place": "austria/hallstatt"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Salt mine and Skywalk",
+          "notes": "The slide and funicular are weather independent; book in summer.",
+          "where": "Hallstatt",
+          "book": "Yes - book mine tours",
+          "place": "austria/hallstatt-salt-mine"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "14:30",
+          "duration": "3.5h",
+          "name": "Dachstein cable car and ice cave",
+          "notes": "It is cold on the plateau even in July; check the webcam before going.",
+          "where": "Obertraun",
+          "book": "",
+          "place": "austria/dachstein"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Innsbruck old town and Golden Roof",
+          "notes": "The arcaded lanes are best at golden hour.",
+          "where": "Innsbruck",
+          "book": "",
+          "place": "austria/innsbruck-old-town"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Nordkette cable car and ridge walk",
+          "notes": "Best in clear weather; bring a jacket.",
+          "where": "Innsbruck",
+          "book": "",
+          "place": "austria/nordkette"
+        },
+        {
+          "day": 10,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Swarovski Crystal Worlds",
+          "notes": "A good option if it rains; buses run from Innsbruck.",
+          "where": "Wattens",
+          "book": "",
+          "place": "austria/swarovski-wattens"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vienna Airport (VIE)",
+          "to": "Vienna hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Vienna",
+          "to": "Durnstein",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Rental car or private transfer",
+          "notes": "Stops at Melk Abbey fit along the way.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Durnstein",
+          "to": "Salzburg",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Train or bus",
+          "notes": "Change at St. Polten and Linz.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Salzburg",
+          "to": "Hallstatt",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Train or bus",
+          "notes": "Train to Hallstatt station and the short ferry across the lake.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Hallstatt",
+          "to": "Innsbruck",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Train or bus",
+          "notes": "Change in Salzburg or Attnang-Puchheim.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Innsbruck hotel area",
+          "to": "Innsbruck Airport (INN)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi, airport train or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "austria/vienna-old-town": {
+        "name": "Vienna Innere Stadt and the Ringstrasse",
+        "description": "The old centre around St. Stephen Cathedral, the Hofburg and the grand ring boulevard.",
+        "details": "The inner city is compact and walkable. St. Stephen Cathedral has a tower with views and a glittering roof, the Hofburg palace complex holds the imperial apartments, and the Ringstrasse circles the centre with the opera house, parliament and museums. A tram ride along the Ring is a cheap overview.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/schonbrunn": {
+        "name": "Schonbrunn Palace and gardens",
+        "description": "The Habsburg summer palace with gilded rooms, a maze and a hilltop Gloriette.",
+        "details": "Schonbrunn has over a thousand rooms, of which about forty are open on tours, including the Hall of Mirrors. The gardens are free to walk and climb to the Gloriette for a view over Vienna. Buy timed tickets ahead in summer, and go early to avoid crowds.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/belvedere": {
+        "name": "Belvedere and Klimt",
+        "description": "Baroque palaces housing Austrian art, including Klimt The Kiss.",
+        "details": "The Upper Belvedere has the world largest Klimt collection, including The Kiss, plus works by Schiele and Kokoschka. The gardens between the two palaces are lovely for a stroll. Allow two hours, and book a timed entry in busy periods.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/vienna-coffeehouse": {
+        "name": "Viennese coffee house and Naschmarkt",
+        "description": "A slow coffee and cake in a historic cafe, plus the long food market on the Wienzeile.",
+        "details": "Viennese coffee house culture is listed by UNESCO. Sit with a melange and a slice of Sachertorte or apple strudel for as long as you like. The nearby Naschmarkt has stalls and restaurants, busiest on Saturdays with a flea market behind it.",
+        "interests": [
+          "food",
+          "culture",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/vienna-opera-concert": {
+        "name": "Vienna State Opera or classical concert",
+        "description": "An evening of music in the city of Mozart and Strauss.",
+        "details": "Vienna offers opera at the State Opera and concerts in the Musikverein and smaller halls, many with palace settings. Standing tickets at the Opera are available on the day and are cheap. Dress smartly. Book ahead for popular dates.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/wachau-valley": {
+        "name": "Wachau Valley and Melk Abbey",
+        "description": "Danube vineyards and apricot orchards, a baroque abbey and the ruined castle at Durnstein.",
+        "details": "The Wachau is a World Heritage landscape along the Danube west of Vienna. Melk Abbey is a baroque monastery with a library and church, and Durnstein is a village of pastel buildings below a castle ruin. A river cruise or cycle ride along the Danube path is the best way to see it. Apricots are in season in July.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/salzburg-old-town": {
+        "name": "Salzburg old town and Mozart",
+        "description": "A baroque old town of squares and churches on the Salzach, the birthplace of Mozart.",
+        "details": "Salzburg altstadt is a UNESCO site, with Getreidegasse, the cathedral, Residenzplatz and Mozart Geburtshaus. It is compact and walkable, with Mirabell Gardens across the river featured in The Sound of Music. A day of wandering with coffee stops suits it well.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/hohensalzburg": {
+        "name": "Hohensalzburg Fortress",
+        "description": "A medieval fortress on a hill above Salzburg, reached by funicular or on foot.",
+        "details": "The fortress is one of the largest medieval castles in Europe, with a museum, state rooms and views over the town and Alps. A funicular climbs from the old town, and a footpath is possible for those who want exercise. Evening concerts are held in the fortress hall.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "austria/sound-of-music-tour": {
+        "name": "Sound of Music locations and lake district",
+        "description": "Film sites around Salzburg and the Salzkammergut lakes, usually by minibus.",
+        "details": "Tours visit the Mirabell Gardens, Leopoldskron palace, the basilica at Mondsee and the lake district scenery used in the film. Fans enjoy the singalong. Tours last about four hours. Independent travellers can do a similar loop by bus.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/hallstatt": {
+        "name": "Hallstatt village and lake",
+        "description": "A postcard village of timber houses on a mountain lake, a UNESCO site.",
+        "details": "Hallstatt sits between the Hallstatter See and steep mountains, with a small square, an old chapel with its Beinhaus, and lake views. It is very busy by day with tour groups, so stay overnight to enjoy the evening and early morning calm. Boat trips cross the lake, and a cable car climbs to the Skywalk.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/hallstatt-salt-mine": {
+        "name": "Hallstatt salt mine and Skywalk",
+        "description": "The world oldest salt mine, reached by funicular, with a miners slide and a mountain viewing platform.",
+        "details": "The salt mine above Hallstatt has been worked for thousands of years. Visitors ride a funicular, put on miners overalls and slide down wooden chutes. The Skywalk platform gives views over the village and lake. Tours need booking in summer.",
+        "interests": [
+          "culture",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "austria/dachstein": {
+        "name": "Dachstein Five Fingers and Ice Cave",
+        "description": "A cable-car trip to a glacier plateau with a platform and an ice cave.",
+        "details": "The Dachstein cable car from Obertraun rises to a plateau with the Five Fingers viewing platform and the Giant Ice Cave. Weather changes fast, and it is cold at the top even in summer, so bring warm clothes. Check the webcam before going.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "austria/innsbruck-old-town": {
+        "name": "Innsbruck old town and Golden Roof",
+        "description": "An alpine city with a medieval centre, a golden balcony and mountains at the end of every street.",
+        "details": "Innsbruck is a compact town in the valley of the Inn, with the Golden Roof, the Hofburg and the cathedral all within a short walk. The old town is arcaded and lively. Nordkette is a short ride away. The city is a good base for the Tyrolean Alps.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "austria/nordkette": {
+        "name": "Nordkette cable car",
+        "description": "A cable car from the centre of Innsbruck to alpine peaks at 2,300 metres.",
+        "details": "The Nordkettenbahn climbs from the old town to the Hafelekar summit in about twenty minutes, with views across the Inn valley and Karwendel range. Trails lead along the ridge, and the architecture of the stations was designed by Zaha Hadid. It is a good half-day in clear weather.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "austria/swarovski-wattens": {
+        "name": "Swarovski Crystal Worlds",
+        "description": "A crystal-themed art space in Wattens, a short ride from Innsbruck.",
+        "details": "Swarovski Kristallwelten is an art and exhibition complex entered through the mouth of a giant, with underground chambers of crystal. It suits a wet day. Buses run from Innsbruck, and a visit takes about two hours.",
+        "interests": [
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "austria": {
+        "name": "Austria",
+        "description": "A land of imperial cities, music, lakes and Alpine peaks.",
+        "images": []
+      },
+      "austria/vienna": {
+        "name": "Vienna",
+        "description": "The Habsburg capital of palaces, coffee houses and classical music.",
+        "images": []
+      },
+      "austria/lower-austria": {
+        "name": "Lower Austria",
+        "description": "The region around Vienna, including the Wachau Valley.",
+        "images": []
+      },
+      "austria/durnstein": {
+        "name": "Durnstein",
+        "description": "A pastel Danube village in the Wachau, below a castle ruin.",
+        "images": []
+      },
+      "austria/salzburg": {
+        "name": "Salzburg",
+        "description": "A baroque city of Mozart under a hilltop fortress.",
+        "images": []
+      },
+      "austria/upper-austria": {
+        "name": "Upper Austria",
+        "description": "The region of the Salzkammergut lakes and Hallstatt.",
+        "images": []
+      },
+      "austria/hallstatt": {
+        "name": "Hallstatt",
+        "description": "A timber-house village on an Alpine lake.",
+        "images": []
+      },
+      "austria/tyrol": {
+        "name": "Tyrol",
+        "description": "The Alpine province of Innsbruck and the mountains.",
+        "images": []
+      },
+      "austria/innsbruck": {
+        "name": "Innsbruck",
+        "description": "An Alpine city of a Golden Roof and cable cars into the mountains.",
+        "images": []
+      }
+    }
+  }
+}

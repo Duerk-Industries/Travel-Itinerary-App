@@ -58,11 +58,13 @@ describe('LodgingTab phone layout', () => {
     const { getByTestId, queryByTestId } = renderTab();
     expect(getByTestId('lodging-cards')).toBeTruthy();
     expect(queryByTestId('lodging-table-horizontal-scroll')).toBeNull();
+    expect(queryByTestId('lodging-add')).toBeNull();
+    expect(queryByTestId('lodging-table-edit')).toBeNull();
   });
 
   it('keeps status badges but hides retired proposal votes', () => {
     const { queryByTestId, queryByText, getByText } = renderTab();
-    expect(getByText('✓ Booked')).toBeTruthy();
+    expect(getByText('Booked')).toBeTruthy();
     expect(queryByTestId('lodging-votes-l1')).toBeNull();
     expect(queryByTestId('lodging-upvoters-l1-u1')).toBeNull();
     expect(queryByText('👍 Vote up')).toBeNull();

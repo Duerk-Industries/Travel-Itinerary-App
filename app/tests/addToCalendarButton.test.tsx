@@ -34,7 +34,7 @@ it('compact mode shows only the calendar icon but keeps the accessible label and
   open.mockResolvedValueOnce(undefined as any);
   const view = render(<AddToCalendarButton event={event} styles={{}} compact />);
   expect(view.queryByText('Add to calendar')).toBeNull();
-  expect(view.getByText('📅')).toBeTruthy();
+  expect(view.getByLabelText('calendar')).toBeTruthy();
   fireEvent.press(view.getByLabelText('Add to calendar'));
   expect(open).toHaveBeenCalledWith(event, expect.anything());
 });

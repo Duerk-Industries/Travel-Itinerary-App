@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -252,7 +253,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
               style={touch}
               onPress={() => setUseLodging((value) => !value)}
             >
-              <Text style={styles.helperText}>{useLodging ? '✓ ' : '○ '}Start and end at your lodging</Text>
+              <IconText style={styles.helperText}>{useLodging ? '✓ ' : '○ '}Start and end at your lodging</IconText>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -345,7 +346,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
                 style={[touch, index === 0 ? themeStyle('components_DayActivitiesOrdering_11', {  }, _styleTheme) : null]}
                 onPress={() => move(activity.id, -1)}
               >
-                <Text style={styles.dayInfoButtonText}>↑</Text>
+                <IconText style={styles.dayInfoButtonText}>↑</IconText>
               </TouchableOpacity>
               <TouchableOpacity
                 testID={`day-order-down-${activity.id}`}
@@ -356,7 +357,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
                 style={[touch, index === ordered.length - 1 ? themeStyle('components_DayActivitiesOrdering_12', {  }, _styleTheme) : null]}
                 onPress={() => move(activity.id, 1)}
               >
-                <Text style={styles.dayInfoButtonText}>↓</Text>
+                <IconText style={styles.dayInfoButtonText}>↓</IconText>
               </TouchableOpacity>
             </View>
           ) : null,

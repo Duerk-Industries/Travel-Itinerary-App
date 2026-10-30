@@ -94,14 +94,14 @@ describe('DailyExpensesTab', () => {
     window.localStorage.clear();
   });
 
-  it('shows trip currency and opens detail modal on non-zero cell', () => {
+  it.each([false, true])('shows trip currency and opens detail modal (timestamp dates: %s)', (timestampDates) => {
     const { getByText, queryByTestId, getByTestId, getAllByText } = render(
       <DailyExpensesTab
         backendUrl="http://example.test"
         theme={theme}
         headers={{}}
         jsonHeaders={{}}
-        trip={trip}
+        trip={timestampDates ? { ...trip, startDate: `${trip.startDate}T00:00:00.000Z`, endDate: `${trip.endDate}T00:00:00.000Z` } : trip}
         groupMembers={groupMembers}
         expenses={expenses}
         setExpenses={() => {}}
@@ -112,7 +112,7 @@ describe('DailyExpensesTab', () => {
       />
     );
 
-    fireEvent.press(getByText('+ Add Expense'));
+    fireEvent.press(getByText('Add Expense'));
     expect(getByText('EUR')).toBeTruthy();
     expect(queryByTestId('expense-detail-modal')).toBeNull();
     fireEvent.press(getAllByText('$12.00')[0]);
@@ -493,7 +493,7 @@ describe('DailyExpensesTab', () => {
         />
       );
 
-      fireEvent.press(getByText('+ Add Expense'));
+      fireEvent.press(getByText('Add Expense'));
       fireEvent.changeText(getByPlaceholderText('Amount'), '18.75');
       fireEvent.changeText(getByPlaceholderText('Description'), 'Flour Bakery');
       expect(() => getByPlaceholderText('Notes')).toThrow();

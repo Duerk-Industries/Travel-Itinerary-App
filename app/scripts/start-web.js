@@ -7,10 +7,14 @@ const loadEnv = (envPath, override = false) => {
   dotenv.config({ path: envPath, override });
 };
 
-loadEnv(path.join(__dirname, '..', '.env'));
-loadEnv(path.join(__dirname, '..', '..', '.env'), true);
-loadEnv(path.join(__dirname, '..', '..', 'server', '.env'), true);
-loadEnv(path.join(__dirname, '..', '..', 'server', '.local_env'), true);
+// Playwright supplies an isolated API URL. Local account configuration must not
+// redirect its browser traffic to a developer's backend or production service.
+if (process.env.E2E_MODE !== '1') {
+  loadEnv(path.join(__dirname, '..', '.env'));
+  loadEnv(path.join(__dirname, '..', '..', '.env'), true);
+  loadEnv(path.join(__dirname, '..', '..', 'server', '.env'), true);
+  loadEnv(path.join(__dirname, '..', '..', 'server', '.local_env'), true);
+}
 
 if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
   const fallback =

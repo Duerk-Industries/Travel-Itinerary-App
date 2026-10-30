@@ -177,6 +177,21 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
 
         // Broadcast to all members of the trip room (including sender)
         io.to(`trip:${tripId}`).emit(SERVER_EVENTS.NEW_MESSAGE, saved);
+        // Closed chat panels do not subscribe to NEW_MESSAGE. Publish the
+        // authoritative unread count to each recipient's sessions as well.
+        try {
+          const viewers = await io.in(`trip:${tripId}`).fetchSockets();
+          const recipients = new Set<string>(viewers.flatMap(viewer => {
+            const id: unknown = viewer.data.user?.id;
+            return typeof id === 'string' && id !== user.id ? [id] : [];
+          }));
+          await Promise.all([...recipients].map(async recipientId => {
+            const count = await countUnreadMessages(tripId, recipientId);
+            io.to(`user:${recipientId}`).emit(SERVER_EVENTS.UNREAD_COUNT, { tripId, count });
+          }));
+        } catch (err) {
+          logError('[chat] unread count refresh failed', err);
+        }
       } catch (err) {
         logError('[chat] addTripMessage error', err);
         socket.emit(SERVER_EVENTS.ERROR, 'Failed to send message');

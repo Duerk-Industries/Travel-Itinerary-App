@@ -1,0 +1,1041 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Adventurous Miriam, Earth Trekkers, Journey Beyond Travel and Places of Juma itineraries for Montenegro",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "montenegro-kotor-4d",
+      "title": "Kotor Bay in 4 Days",
+      "summary": "A fortress climb, Perast and Lovcen.",
+      "days": 4,
+      "route": "Kotor",
+      "arrive": "Tivat (TIV)",
+      "depart": "Tivat (TIV)",
+      "countries": [
+        "Montenegro"
+      ],
+      "regions": [],
+      "cities": [
+        "Kotor"
+      ],
+      "imageQuery": "Kotor Bay Montenegro",
+      "highlights": [
+        "Kotor fortress",
+        "Perast",
+        "Lovcen mausoleum"
+      ],
+      "destinationKeys": [
+        "montenegro",
+        "montenegro/kotor"
+      ],
+      "hero": "montenegro/kotor",
+      "sources": [
+        "Adventurous Miriam",
+        "Earth Trekkers",
+        "Journey Beyond Travel",
+        "Places of Juma",
+        "Sightdoing"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Kotor",
+          "hotel": "Hotel in Kotor",
+          "start": 0,
+          "nights": 3,
+          "area": "In or near Kotor old town, close to the bay",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "2.5h",
+          "name": "Kotor fortress climb and old town",
+          "notes": "Go at sunrise or sunset to avoid the heat and crowds.",
+          "where": "Kotor",
+          "book": "",
+          "place": "montenegro/kotor-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Perast and Our Lady of the Rocks",
+          "notes": "A short boat ride from the village.",
+          "where": "Perast",
+          "book": "",
+          "place": "montenegro/perast-rocks"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Lovcen mausoleum and Cetinje",
+          "notes": "The road has 25 hairpin bends.",
+          "where": "Lovcen",
+          "book": "",
+          "place": "montenegro/lovcen-cetinje"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tivat Airport (TIV)",
+          "to": "Kotor hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kotor hotel",
+          "to": "Tivat Airport (TIV)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "montenegro-kotor-budva-5d",
+      "title": "Kotor and Budva in 5 Days",
+      "summary": "Bay walks, Lovcen and the Riviera beaches.",
+      "days": 5,
+      "route": "Kotor > Budva",
+      "arrive": "Tivat (TIV)",
+      "depart": "Tivat (TIV)",
+      "countries": [
+        "Montenegro"
+      ],
+      "regions": [],
+      "cities": [
+        "Kotor",
+        "Budva"
+      ],
+      "imageQuery": "Sveti Stefan Montenegro",
+      "highlights": [
+        "Kotor fortress",
+        "Perast",
+        "Budva",
+        "Sveti Stefan"
+      ],
+      "destinationKeys": [
+        "montenegro",
+        "montenegro/kotor",
+        "montenegro/budva"
+      ],
+      "hero": "montenegro/budva",
+      "sources": [
+        "Adventurous Miriam",
+        "Earth Trekkers",
+        "Journey Beyond Travel",
+        "Places of Juma",
+        "Sightdoing"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Kotor",
+          "hotel": "Hotel in Kotor",
+          "start": 0,
+          "nights": 2,
+          "area": "In or near Kotor old town, close to the bay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Budva",
+          "hotel": "Hotel in Budva",
+          "start": 2,
+          "nights": 2,
+          "area": "In Budva old town or on the Becici side for the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "2.5h",
+          "name": "Kotor fortress climb and old town",
+          "notes": "Go at sunrise or sunset to avoid the heat and crowds.",
+          "where": "Kotor",
+          "book": "",
+          "place": "montenegro/kotor-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Perast and Our Lady of the Rocks",
+          "notes": "A short boat ride from the village.",
+          "where": "Perast",
+          "book": "",
+          "place": "montenegro/perast-rocks"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Budva old town and Sveti Stefan viewpoint",
+          "notes": "The coast road has many viewpoints.",
+          "where": "Budva",
+          "book": "",
+          "place": "montenegro/budva-sveti-stefan"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Lovcen mausoleum and Cetinje",
+          "notes": "The road has 25 hairpin bends.",
+          "where": "Lovcen",
+          "book": "",
+          "place": "montenegro/lovcen-cetinje"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tivat Airport (TIV)",
+          "to": "Kotor hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Kotor",
+          "to": "Budva",
+          "time": "11:00",
+          "minutes": 35,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Budva hotel",
+          "to": "Tivat Airport (TIV)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "montenegro-kotor-durmitor-budva-7d",
+      "title": "Montenegro Coast and Mountains in 7 Days",
+      "summary": "Kotor, Durmitor and Budva, with Ostrog and Skadar Lake.",
+      "days": 7,
+      "route": "Kotor > Zabljak > Budva",
+      "arrive": "Tivat (TIV)",
+      "depart": "Podgorica (TGD)",
+      "countries": [
+        "Montenegro"
+      ],
+      "regions": [],
+      "cities": [
+        "Kotor",
+        "Zabljak",
+        "Budva"
+      ],
+      "imageQuery": "Durmitor Black Lake Montenegro",
+      "highlights": [
+        "Kotor",
+        "Ostrog Monastery",
+        "Durmitor",
+        "Skadar Lake"
+      ],
+      "destinationKeys": [
+        "montenegro",
+        "montenegro/kotor",
+        "montenegro/zabljak",
+        "montenegro/budva"
+      ],
+      "hero": "montenegro/zabljak",
+      "sources": [
+        "Adventurous Miriam",
+        "Earth Trekkers",
+        "Journey Beyond Travel",
+        "Places of Juma",
+        "Sightdoing"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Kotor",
+          "hotel": "Hotel in Kotor",
+          "start": 0,
+          "nights": 3,
+          "area": "In or near Kotor old town, close to the bay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zabljak",
+          "hotel": "Lodge near Durmitor",
+          "start": 3,
+          "nights": 2,
+          "area": "In Zabljak or a mountain lodge near Durmitor",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Budva",
+          "hotel": "Hotel in Budva",
+          "start": 5,
+          "nights": 1,
+          "area": "In Budva old town or on the Becici side for the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "2.5h",
+          "name": "Kotor fortress climb and old town",
+          "notes": "Go at sunrise or sunset to avoid the heat and crowds.",
+          "where": "Kotor",
+          "book": "",
+          "place": "montenegro/kotor-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Perast and Our Lady of the Rocks",
+          "notes": "A short boat ride from the village.",
+          "where": "Perast",
+          "book": "",
+          "place": "montenegro/perast-rocks"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Lovcen mausoleum and Cetinje",
+          "notes": "The road has 25 hairpin bends.",
+          "where": "Lovcen",
+          "book": "",
+          "place": "montenegro/lovcen-cetinje"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Ostrog Monastery",
+          "notes": "Dress modestly; the road is narrow.",
+          "where": "Ostrog",
+          "book": "",
+          "place": "montenegro/ostrog"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Black Lake and Durmitor hike or Tara rafting",
+          "notes": "Rafting runs May to October; Bobotov Kuk is a summer hike.",
+          "where": "Durmitor",
+          "book": "Yes - book rafting",
+          "place": "montenegro/durmitor-tara"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Skadar Lake boat trip from Virpazar",
+          "notes": "Pelicans appear from spring to autumn.",
+          "where": "Skadar Lake",
+          "book": "",
+          "place": "montenegro/skadar-lake"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tivat Airport (TIV)",
+          "to": "Kotor hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kotor",
+          "to": "Zabljak",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Rental car or private driver",
+          "notes": "The road passes Ostrog Monastery.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Zabljak",
+          "to": "Budva",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car or private driver",
+          "notes": "The route passes Skadar Lake via Podgorica.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Budva",
+          "to": "Podgorica Airport (TGD)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "montenegro-kotor-durmitor-budva-ulcinj-8d",
+      "title": "Montenegro from Bay to Beach in 8 Days",
+      "summary": "Kotor, Durmitor, Budva and Ulcinj.",
+      "days": 8,
+      "route": "Kotor > Zabljak > Budva > Ulcinj",
+      "arrive": "Tivat (TIV)",
+      "depart": "Podgorica (TGD)",
+      "countries": [
+        "Montenegro"
+      ],
+      "regions": [],
+      "cities": [
+        "Kotor",
+        "Zabljak",
+        "Budva",
+        "Ulcinj"
+      ],
+      "imageQuery": "Ulcinj Velika Plaza Montenegro",
+      "highlights": [
+        "Kotor",
+        "Durmitor",
+        "Skadar Lake",
+        "Budva",
+        "Ulcinj"
+      ],
+      "destinationKeys": [
+        "montenegro",
+        "montenegro/kotor",
+        "montenegro/zabljak",
+        "montenegro/budva",
+        "montenegro/ulcinj"
+      ],
+      "hero": "montenegro/ulcinj",
+      "sources": [
+        "Adventurous Miriam",
+        "Earth Trekkers",
+        "Journey Beyond Travel",
+        "Places of Juma",
+        "Sightdoing"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "relax",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Kotor",
+          "hotel": "Hotel in Kotor",
+          "start": 0,
+          "nights": 2,
+          "area": "In or near Kotor old town, close to the bay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zabljak",
+          "hotel": "Lodge near Durmitor",
+          "start": 2,
+          "nights": 2,
+          "area": "In Zabljak or a mountain lodge near Durmitor",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Budva",
+          "hotel": "Hotel in Budva",
+          "start": 4,
+          "nights": 2,
+          "area": "In Budva old town or on the Becici side for the beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ulcinj",
+          "hotel": "Hotel in Ulcinj",
+          "start": 6,
+          "nights": 1,
+          "area": "In Ulcinj old town or by Velika Plaza",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "2.5h",
+          "name": "Kotor fortress climb and old town",
+          "notes": "Go at sunrise or sunset to avoid the heat and crowds.",
+          "where": "Kotor",
+          "book": "",
+          "place": "montenegro/kotor-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Perast and Our Lady of the Rocks",
+          "notes": "A short boat ride from the village.",
+          "where": "Perast",
+          "book": "",
+          "place": "montenegro/perast-rocks"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Ostrog Monastery",
+          "notes": "Dress modestly; the road is narrow.",
+          "where": "Ostrog",
+          "book": "",
+          "place": "montenegro/ostrog"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Black Lake and Durmitor hike or Tara rafting",
+          "notes": "Rafting runs May to October; Bobotov Kuk is a summer hike.",
+          "where": "Durmitor",
+          "book": "Yes - book rafting",
+          "place": "montenegro/durmitor-tara"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Skadar Lake boat trip from Virpazar",
+          "notes": "Pelicans appear from spring to autumn.",
+          "where": "Skadar Lake",
+          "book": "",
+          "place": "montenegro/skadar-lake"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Budva old town and Sveti Stefan viewpoint",
+          "notes": "The coast road has many viewpoints.",
+          "where": "Budva",
+          "book": "",
+          "place": "montenegro/budva-sveti-stefan"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Ulcinj old town and Velika Plaza beach",
+          "notes": "The beach is a long sandy stretch.",
+          "where": "Ulcinj",
+          "book": "",
+          "place": "montenegro/ulcinj"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tivat Airport (TIV)",
+          "to": "Kotor hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Kotor",
+          "to": "Zabljak",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Zabljak",
+          "to": "Budva",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Budva",
+          "to": "Ulcinj",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Ulcinj",
+          "to": "Podgorica Airport (TGD)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "montenegro-complete-10d",
+      "title": "Complete Montenegro in 10 Days",
+      "summary": "Three nights in Kotor, Durmitor, Budva and two in Ulcinj.",
+      "days": 10,
+      "route": "Kotor > Zabljak > Budva > Ulcinj",
+      "arrive": "Tivat (TIV)",
+      "depart": "Podgorica (TGD)",
+      "countries": [
+        "Montenegro"
+      ],
+      "regions": [],
+      "cities": [
+        "Kotor",
+        "Zabljak",
+        "Budva",
+        "Ulcinj"
+      ],
+      "imageQuery": "Montenegro Tara Canyon rafting",
+      "highlights": [
+        "Kotor fortress",
+        "Lovcen",
+        "Tara Canyon",
+        "Skadar Lake",
+        "Sveti Stefan"
+      ],
+      "destinationKeys": [
+        "montenegro",
+        "montenegro/kotor",
+        "montenegro/zabljak",
+        "montenegro/budva",
+        "montenegro/ulcinj"
+      ],
+      "hero": "montenegro/kotor",
+      "sources": [
+        "Adventurous Miriam",
+        "Earth Trekkers",
+        "Journey Beyond Travel",
+        "Places of Juma",
+        "Sightdoing"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "culture",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Kotor",
+          "hotel": "Hotel in Kotor",
+          "start": 0,
+          "nights": 3,
+          "area": "In or near Kotor old town, close to the bay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zabljak",
+          "hotel": "Lodge near Durmitor",
+          "start": 3,
+          "nights": 2,
+          "area": "In Zabljak or a mountain lodge near Durmitor",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Budva",
+          "hotel": "Hotel in Budva",
+          "start": 5,
+          "nights": 2,
+          "area": "In Budva old town or on the Becici side for the beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ulcinj",
+          "hotel": "Hotel in Ulcinj",
+          "start": 7,
+          "nights": 2,
+          "area": "In Ulcinj old town or by Velika Plaza",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "2.5h",
+          "name": "Kotor fortress climb and old town",
+          "notes": "Go at sunrise or sunset to avoid the heat and crowds.",
+          "where": "Kotor",
+          "book": "",
+          "place": "montenegro/kotor-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Perast and Our Lady of the Rocks",
+          "notes": "A short boat ride from the village.",
+          "where": "Perast",
+          "book": "",
+          "place": "montenegro/perast-rocks"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Lovcen mausoleum and Cetinje",
+          "notes": "The road has 25 hairpin bends.",
+          "where": "Lovcen",
+          "book": "",
+          "place": "montenegro/lovcen-cetinje"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Ostrog Monastery",
+          "notes": "Dress modestly; the road is narrow.",
+          "where": "Ostrog",
+          "book": "",
+          "place": "montenegro/ostrog"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Black Lake and Durmitor hike or Tara rafting",
+          "notes": "Rafting runs May to October; Bobotov Kuk is a summer hike.",
+          "where": "Durmitor",
+          "book": "Yes - book rafting",
+          "place": "montenegro/durmitor-tara"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Budva old town and Sveti Stefan viewpoint",
+          "notes": "The coast road has many viewpoints.",
+          "where": "Budva",
+          "book": "",
+          "place": "montenegro/budva-sveti-stefan"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Skadar Lake boat trip from Virpazar",
+          "notes": "Pelicans appear from spring to autumn.",
+          "where": "Skadar Lake",
+          "book": "",
+          "place": "montenegro/skadar-lake"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Ulcinj old town and Velika Plaza beach",
+          "notes": "The beach is a long sandy stretch.",
+          "where": "Ulcinj",
+          "book": "",
+          "place": "montenegro/ulcinj"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tivat Airport (TIV)",
+          "to": "Kotor hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kotor",
+          "to": "Zabljak",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Zabljak",
+          "to": "Budva",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Budva",
+          "to": "Ulcinj",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Ulcinj",
+          "to": "Podgorica Airport (TGD)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "montenegro/kotor-old-town": {
+        "name": "Kotor old town and fortress climb",
+        "description": "A walled medieval town at the end of a fjord-like bay, with a fortress above reached by 1,350 steps.",
+        "details": "Kotor old town is a UNESCO site of lanes, squares and cats. The path up to San Giovanni fortress takes about 45 minutes, and rewards with a view over the bay. Go at sunrise or sunset to avoid the heat and the cruise-ship crowds.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "montenegro/perast-rocks": {
+        "name": "Perast and Our Lady of the Rocks",
+        "description": "A baroque village on the bay and a boat trip to an artificial island with a church.",
+        "details": "Perast has stone palaces along the shore and two small islands. Boats take a few minutes to Our Lady of the Rocks, a church built on a man-made islet, which has a small museum. The village is quiet and a pleasant lunch stop on the bay.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "montenegro/budva-sveti-stefan": {
+        "name": "Budva old town and Sveti Stefan",
+        "description": "A walled coastal town with beaches, and an island village on the Adriatic.",
+        "details": "Budva has a small old town, a citadel and lively beaches and nightlife in summer. Sveti Stefan is a fortified islet joined by a causeway, now a luxury hotel with a pink-sand beach viewed from a lookout. The coast road has many viewpoints.",
+        "interests": [
+          "relax",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "montenegro/lovcen-cetinje": {
+        "name": "Lovcen National Park and Cetinje",
+        "description": "A mountain mausoleum with a huge view, and the old royal capital of Montenegro.",
+        "details": "The Njegos Mausoleum sits on the Lovcen summit at 1,657 metres, reached by 461 steps for a panorama of the whole country. The road up from Kotor has 25 hairpin bends. Cetinje is a quiet old capital with museums and embassies in former mansions.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "montenegro/ostrog": {
+        "name": "Ostrog Monastery",
+        "description": "A cliff-face pilgrimage monastery built into a vertical rock.",
+        "details": "Ostrog is one of the most visited monasteries in the Balkans, white buildings clinging to a cliff 900 metres above the Bjelopavlici plain. Dress modestly, covering shoulders and knees. The road is narrow and steep. Pilgrims climb on foot from the lower monastery.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "montenegro/skadar-lake": {
+        "name": "Skadar Lake and Virpazar",
+        "description": "The largest lake in the Balkans, a national park of pelicans, water lilies and fishing villages.",
+        "details": "Skadar Lake is a freshwater lake shared with Albania. Boats from Virpazar glide through lily fields to monasteries on islets, and the birdlife is rich with pelicans from spring to autumn. Local wine and fish dinners are a highlight.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "montenegro/durmitor-tara": {
+        "name": "Durmitor National Park and Tara Canyon",
+        "description": "A mountain wilderness of glacial lakes and Europe deepest river canyon.",
+        "details": "Durmitor has 18 glacial lakes, including the Black Lake near Zabljak, and peaks such as Bobotov Kuk (hiking is best from July to September). The Tara River Canyon is 1,300 metres deep, with white-water rafting from May to October and a zipline over the gorge.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "montenegro/ulcinj": {
+        "name": "Ulcinj old town and Velika Plaza",
+        "description": "A southern town with Ottoman heritage and a 12-kilometre sand beach.",
+        "details": "Ulcinj has a hilltop old town with a Venetian fort, and the Velika Plaza is a long sandy beach, with kitesurfing at the end. The town has an Albanian-speaking majority and distinct cuisine. It is the quiet end of the Montenegrin coast.",
+        "interests": [
+          "relax",
+          "culture",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "montenegro": {
+        "name": "Montenegro",
+        "description": "A small Balkan country of fjord-like bays, mountains and Venetian coastal towns.",
+        "images": []
+      },
+      "montenegro/kotor": {
+        "name": "Kotor",
+        "description": "A medieval walled town at the head of a bay.",
+        "images": []
+      },
+      "montenegro/budva": {
+        "name": "Budva",
+        "description": "The coastal resort with an old town and beaches.",
+        "images": []
+      },
+      "montenegro/zabljak": {
+        "name": "Zabljak",
+        "description": "A mountain town, gateway to Durmitor National Park.",
+        "images": []
+      },
+      "montenegro/ulcinj": {
+        "name": "Ulcinj",
+        "description": "The southern beach town with Ottoman charm.",
+        "images": []
+      }
+    }
+  }
+}

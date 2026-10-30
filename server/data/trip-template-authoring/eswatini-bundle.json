@@ -1,0 +1,794 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining The Culture Trip, Earth Trekkers, Travel With Hello and MustSeeSpots itineraries for Eswatini",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "eswatini-ezulwini-hlane-4d",
+      "title": "Eswatini Quick Escape in 4 Days",
+      "summary": "Culture and walking safaris in the Ezulwini Valley, then Hlane for big game.",
+      "days": 4,
+      "route": "Ezulwini Valley > Hlane",
+      "arrive": "Johannesburg (JNB)",
+      "depart": "Johannesburg (JNB)",
+      "countries": [
+        "Eswatini"
+      ],
+      "regions": [],
+      "cities": [
+        "Ezulwini Valley",
+        "Hlane"
+      ],
+      "imageQuery": "Hlane Royal National Park rhino",
+      "highlights": [
+        "Mlilwane",
+        "Mantenga village",
+        "Hlane rhinos"
+      ],
+      "destinationKeys": [
+        "eswatini",
+        "eswatini/ezulwini-valley",
+        "eswatini/hlane"
+      ],
+      "hero": "eswatini/hlane",
+      "sources": [
+        "The Culture Trip",
+        "Earth Trekkers",
+        "Travel With Hello",
+        "MustSeeSpots",
+        "African Budget Safaris"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Ezulwini Valley",
+          "hotel": "Hotel in Ezulwini Valley",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Ezulwini Valley close to Mlilwane and the cultural sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hlane",
+          "hotel": "Lodge at Hlane",
+          "start": 2,
+          "nights": 1,
+          "area": "In a rest camp bungalow near the waterhole at Hlane",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Mantenga Cultural Village and falls",
+          "notes": "A dance performance and short walk to the falls.",
+          "where": "Ezulwini Valley",
+          "book": "",
+          "place": "eswatini/mantenga-cultural"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Mlilwane sunset game drive or bike ride",
+          "notes": "No big predators, so you can cycle or walk.",
+          "where": "Mlilwane",
+          "book": "",
+          "place": "eswatini/mlilwane"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Hlane morning game drive",
+          "notes": "Elephants, rhinos and lions are possible.",
+          "where": "Hlane Royal National Park",
+          "book": "",
+          "place": "eswatini/hlane"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "OR Tambo Airport, Johannesburg (JNB)",
+          "to": "Ezulwini Valley lodge",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "Shuttle or rental car",
+          "notes": "The border crossing takes time; have passports and vehicle papers ready.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Ezulwini Valley",
+          "to": "Hlane",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Hlane",
+          "to": "OR Tambo Airport, Johannesburg (JNB)",
+          "time": "09:30",
+          "minutes": 300,
+          "carrier": "Shuttle or rental car",
+          "notes": "Allow time at the border and for the airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "eswatini-ezulwini-hlane-5d",
+      "title": "Eswatini Culture and Wildlife in 5 Days",
+      "summary": "Two nights in Ezulwini, then two nights in Hlane.",
+      "days": 5,
+      "route": "Ezulwini Valley > Hlane",
+      "arrive": "Johannesburg (JNB)",
+      "depart": "Johannesburg (JNB)",
+      "countries": [
+        "Eswatini"
+      ],
+      "regions": [],
+      "cities": [
+        "Ezulwini Valley",
+        "Hlane"
+      ],
+      "imageQuery": "Eswatini Mlilwane zebra",
+      "highlights": [
+        "Mlilwane",
+        "Swazi Candles",
+        "Hlane",
+        "Craft markets"
+      ],
+      "destinationKeys": [
+        "eswatini",
+        "eswatini/ezulwini-valley",
+        "eswatini/hlane"
+      ],
+      "hero": "eswatini/ezulwini-valley",
+      "sources": [
+        "The Culture Trip",
+        "Earth Trekkers",
+        "Travel With Hello",
+        "MustSeeSpots",
+        "African Budget Safaris"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Ezulwini Valley",
+          "hotel": "Hotel in Ezulwini Valley",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Ezulwini Valley close to Mlilwane and the cultural sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hlane",
+          "hotel": "Lodge at Hlane",
+          "start": 2,
+          "nights": 2,
+          "area": "In a rest camp bungalow near the waterhole at Hlane",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Mantenga Cultural Village and falls",
+          "notes": "A dance performance and short walk to the falls.",
+          "where": "Ezulwini Valley",
+          "book": "",
+          "place": "eswatini/mantenga-cultural"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Mlilwane sunset game drive or bike ride",
+          "notes": "No big predators, so you can cycle or walk.",
+          "where": "Mlilwane",
+          "book": "",
+          "place": "eswatini/mlilwane"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Swazi Candles and Malkerns crafts",
+          "notes": "Best on dry days from May to September.",
+          "where": "Malkerns",
+          "book": "",
+          "place": "eswatini/swazi-candles"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Hlane morning game drive",
+          "notes": "Elephants, rhinos and lions are possible.",
+          "where": "Hlane Royal National Park",
+          "book": "",
+          "place": "eswatini/hlane"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "OR Tambo Airport, Johannesburg (JNB)",
+          "to": "Ezulwini Valley lodge",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "Shuttle or rental car",
+          "notes": "The border crossing takes time; have passports and vehicle papers ready.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Ezulwini Valley",
+          "to": "Hlane",
+          "time": "14:30",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hlane",
+          "to": "OR Tambo Airport, Johannesburg (JNB)",
+          "time": "09:30",
+          "minutes": 300,
+          "carrier": "Shuttle or rental car",
+          "notes": "Allow time at the border and for the airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "eswatini-ezulwini-malolotja-hlane-7d",
+      "title": "Eswatini Highlights in 7 Days",
+      "summary": "Valley culture, the Malolotja mountains and Hlane wildlife.",
+      "days": 7,
+      "route": "Ezulwini Valley > Malolotja > Hlane",
+      "arrive": "Johannesburg (JNB)",
+      "depart": "Johannesburg (JNB)",
+      "countries": [
+        "Eswatini"
+      ],
+      "regions": [],
+      "cities": [
+        "Ezulwini Valley",
+        "Malolotja",
+        "Hlane"
+      ],
+      "imageQuery": "Malolotja Nature Reserve Eswatini",
+      "highlights": [
+        "Mantenga village",
+        "Malolotja",
+        "Hlane",
+        "Mlilwane"
+      ],
+      "destinationKeys": [
+        "eswatini",
+        "eswatini/ezulwini-valley",
+        "eswatini/malolotja",
+        "eswatini/hlane"
+      ],
+      "hero": "eswatini/malolotja",
+      "sources": [
+        "The Culture Trip",
+        "Earth Trekkers",
+        "Travel With Hello",
+        "MustSeeSpots",
+        "African Budget Safaris"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Ezulwini Valley",
+          "hotel": "Hotel in Ezulwini Valley",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Ezulwini Valley close to Mlilwane and the cultural sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Malolotja",
+          "hotel": "Camp at Malolotja",
+          "start": 2,
+          "nights": 2,
+          "area": "In a chalet or camp in the reserve; book ahead",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hlane",
+          "hotel": "Lodge at Hlane",
+          "start": 4,
+          "nights": 2,
+          "area": "In a rest camp bungalow near the waterhole at Hlane",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Mantenga Cultural Village and falls",
+          "notes": "A dance performance and short walk to the falls.",
+          "where": "Ezulwini Valley",
+          "book": "",
+          "place": "eswatini/mantenga-cultural"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Mlilwane sunset game drive or bike ride",
+          "notes": "No big predators, so you can cycle or walk.",
+          "where": "Mlilwane",
+          "book": "",
+          "place": "eswatini/mlilwane"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Malolotja waterfall hike or canopy tour",
+          "notes": "Bring layers; it is cooler at altitude.",
+          "where": "Malolotja",
+          "book": "",
+          "place": "eswatini/malolotja"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Hlane morning game drive",
+          "notes": "Elephants, rhinos and lions are possible.",
+          "where": "Hlane Royal National Park",
+          "book": "",
+          "place": "eswatini/hlane"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "OR Tambo Airport, Johannesburg (JNB)",
+          "to": "Ezulwini Valley lodge",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "Shuttle or rental car",
+          "notes": "The border crossing takes time; have passports and vehicle papers ready.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Ezulwini Valley",
+          "to": "Malolotja",
+          "time": "09:30",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Malolotja",
+          "to": "Hlane",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Hlane",
+          "to": "OR Tambo Airport, Johannesburg (JNB)",
+          "time": "09:30",
+          "minutes": 300,
+          "carrier": "Shuttle or rental car",
+          "notes": "Allow time at the border and for the airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "eswatini-complete-9d",
+      "title": "Complete Eswatini in 9 Days",
+      "summary": "Culture, mountains, Hlane and a private rhino reserve.",
+      "days": 9,
+      "route": "Ezulwini Valley > Malolotja > Hlane > Mkhaya",
+      "arrive": "Johannesburg (JNB)",
+      "depart": "Johannesburg (JNB)",
+      "countries": [
+        "Eswatini"
+      ],
+      "regions": [],
+      "cities": [
+        "Ezulwini Valley",
+        "Malolotja",
+        "Hlane",
+        "Mkhaya"
+      ],
+      "imageQuery": "Mkhaya Game Reserve rhino",
+      "highlights": [
+        "Mlilwane",
+        "Swazi Candles",
+        "Malolotja",
+        "Hlane",
+        "Mkhaya rhino safari"
+      ],
+      "destinationKeys": [
+        "eswatini",
+        "eswatini/ezulwini-valley",
+        "eswatini/malolotja",
+        "eswatini/hlane",
+        "eswatini/mkhaya"
+      ],
+      "hero": "eswatini/mkhaya",
+      "sources": [
+        "The Culture Trip",
+        "Earth Trekkers",
+        "Travel With Hello",
+        "MustSeeSpots",
+        "African Budget Safaris"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Ezulwini Valley",
+          "hotel": "Hotel in Ezulwini Valley",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Ezulwini Valley close to Mlilwane and the cultural sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Malolotja",
+          "hotel": "Camp at Malolotja",
+          "start": 2,
+          "nights": 2,
+          "area": "In a chalet or camp in the reserve; book ahead",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hlane",
+          "hotel": "Lodge at Hlane",
+          "start": 4,
+          "nights": 2,
+          "area": "In a rest camp bungalow near the waterhole at Hlane",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mkhaya",
+          "hotel": "Camp at Mkhaya",
+          "start": 6,
+          "nights": 2,
+          "area": "In a stone cottage camp in the reserve; no electricity",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Mantenga Cultural Village and falls",
+          "notes": "A dance performance and short walk to the falls.",
+          "where": "Ezulwini Valley",
+          "book": "",
+          "place": "eswatini/mantenga-cultural"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "13:30",
+          "duration": "2h",
+          "name": "Manzini market and Mbabane craft stalls",
+          "notes": "Haggle politely; buy woven baskets and carvings.",
+          "where": "Manzini",
+          "book": "",
+          "place": "eswatini/swazi-market"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Mlilwane sunset game drive or bike ride",
+          "notes": "No big predators, so you can cycle or walk.",
+          "where": "Mlilwane",
+          "book": "",
+          "place": "eswatini/mlilwane"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Swazi Candles and Malkerns crafts",
+          "notes": "Best on dry days from May to September.",
+          "where": "Malkerns",
+          "book": "",
+          "place": "eswatini/swazi-candles"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Malolotja waterfall hike or canopy tour",
+          "notes": "Bring layers; it is cooler at altitude.",
+          "where": "Malolotja",
+          "book": "",
+          "place": "eswatini/malolotja"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Hlane morning game drive",
+          "notes": "Elephants, rhinos and lions are possible.",
+          "where": "Hlane Royal National Park",
+          "book": "",
+          "place": "eswatini/hlane"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Mkhaya rhino safari",
+          "notes": "Included with the camp stay; book ahead.",
+          "where": "Mkhaya Game Reserve",
+          "book": "Yes - reserve ahead",
+          "place": "eswatini/mkhaya"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "OR Tambo Airport, Johannesburg (JNB)",
+          "to": "Ezulwini Valley lodge",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "Shuttle or rental car",
+          "notes": "The border crossing takes time; have passports and vehicle papers ready.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Ezulwini Valley",
+          "to": "Malolotja",
+          "time": "09:30",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Malolotja",
+          "to": "Hlane",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Hlane",
+          "to": "Mkhaya",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Mkhaya",
+          "to": "OR Tambo Airport, Johannesburg (JNB)",
+          "time": "09:00",
+          "minutes": 360,
+          "carrier": "Shuttle or rental car",
+          "notes": "Allow time at the border and for the airport.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "eswatini/mlilwane": {
+        "name": "Mlilwane Wildlife Sanctuary",
+        "description": "Eswatini first protected area, where you can walk, cycle or ride among zebra, giraffe and hippo.",
+        "details": "Mlilwane has no large predators, so visitors can explore on foot, on mountain bikes and on horseback. A sunset game drive with drinks and a hippo walk are popular. Rest camps have rondavel huts. It is about 30 minutes from Mbabane.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "eswatini/mantenga-cultural": {
+        "name": "Mantenga Cultural Village and falls",
+        "description": "A living museum of Swazi traditions with dance, beehive huts and a nearby waterfall.",
+        "details": "Mantenga recreates a traditional village with dance performances and explanations of customs. A short walk leads to the Mantenga Falls. It lies in the Ezulwini Valley, the heart of the tourism area.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "eswatini/swazi-candles": {
+        "name": "Swazi Candles and Malkerns crafts",
+        "description": "A craft centre where handmade candles, glass and weaving are made in front of you.",
+        "details": "Swazi Candles makes wax animals and patterned candles, and nearby studios produce recycled glass at Ngwenya and baskets in Malkerns. It is a cultural addition rather than a wildlife stop. Best visited May to September on dry days.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "eswatini/malolotja": {
+        "name": "Malolotja Nature Reserve",
+        "description": "A high mountain reserve of waterfalls, trails and a canopy tour, with blue wildebeest and zebra.",
+        "details": "Malolotja has a 95-metre waterfall, hiking trails and a series of ziplines through the forest. Chalets and camps offer a quiet stay. The weather is cooler at altitude, so bring layers. It lies in the north-west near the South African border.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "eswatini/hlane": {
+        "name": "Hlane Royal National Park",
+        "description": "The largest park in Eswatini, with lions, elephants, white rhinos and a waterhole viewing hide.",
+        "details": "Hlane is the main big-game park and has one of the largest white rhino populations. Open vehicle drives and walking safaris are offered, and rest camp bungalows overlook waterholes. The park is hot in summer.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "eswatini/mkhaya": {
+        "name": "Mkhaya Game Reserve",
+        "description": "A private reserve for rhinos, with 4x4 safaris and a rustic stone cottage camp.",
+        "details": "Mkhaya is a conservation reserve for black and white rhino and rare antelope, and visitors are collected by game viewing vehicle. Stays are in a bush camp with no electricity. Prices include meals and activities, and booking ahead is required.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "eswatini/swazi-market": {
+        "name": "Manzini and Mbabane craft markets",
+        "description": "Colourful town markets for fruit, woven goods and textiles.",
+        "details": "The Manzini market is a busy place for produce and everyday goods, and Mbabane has a craft market near the town centre. Haggle politely. The Ezulwini craft centres sell grass baskets and wood carvings.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "eswatini": {
+        "name": "Eswatini",
+        "description": "A small kingdom of mountains, culture and easy wildlife viewing.",
+        "images": []
+      },
+      "eswatini/ezulwini-valley": {
+        "name": "Ezulwini Valley",
+        "description": "The Valley of Heaven, a stretch of lodges, craft markets and cultural sites.",
+        "images": []
+      },
+      "eswatini/malolotja": {
+        "name": "Malolotja",
+        "description": "A mountain nature reserve in the north-west.",
+        "images": []
+      },
+      "eswatini/hlane": {
+        "name": "Hlane",
+        "description": "A royal national park with elephants, rhinos and lions.",
+        "images": []
+      },
+      "eswatini/mkhaya": {
+        "name": "Mkhaya",
+        "description": "A private reserve for rhinos in the lowveld.",
+        "images": []
+      }
+    }
+  }
+}

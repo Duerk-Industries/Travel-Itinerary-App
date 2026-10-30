@@ -1,0 +1,1324 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim, TravelStride and The Globetrotter GP itineraries for Indonesia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "indonesia-bali-ubud-seminyak-7d",
+      "title": "Bali: Ubud and Seminyak in 7 Days",
+      "summary": "Rice terraces and temples, then beaches and sunset.",
+      "days": 7,
+      "route": "Ubud > Seminyak",
+      "arrive": "Bali (DPS)",
+      "depart": "Bali (DPS)",
+      "countries": [
+        "Indonesia"
+      ],
+      "regions": [
+        "Bali"
+      ],
+      "cities": [
+        "Ubud",
+        "Seminyak"
+      ],
+      "imageQuery": "Ubud rice terraces Bali",
+      "highlights": [
+        "Tegalalang rice terraces",
+        "Tirta Empul",
+        "Kecak dance",
+        "Tanah Lot sunset"
+      ],
+      "destinationKeys": [
+        "indonesia",
+        "indonesia/bali",
+        "indonesia/ubud",
+        "indonesia/seminyak"
+      ],
+      "hero": "indonesia/bali",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "TravelStride",
+        "The Globetrotter GP",
+        "Maverick Bird"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "relax",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Ubud",
+          "hotel": "Hotel in Ubud",
+          "start": 0,
+          "nights": 3,
+          "area": "In Ubud, near the Monkey Forest or in a rice-terrace villa",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Seminyak",
+          "hotel": "Hotel in Seminyak",
+          "start": 3,
+          "nights": 3,
+          "area": "In Seminyak or Canggu, a short walk from the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Ubud rice terraces, Tirta Empul and Monkey Forest",
+          "notes": "Wear a sarong at temples; go early.",
+          "where": "Ubud",
+          "book": "",
+          "place": "indonesia/ubud-rice-temples"
+        },
+        {
+          "day": 4,
+          "type": "Concert/Show",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Kecak fire dance at Uluwatu",
+          "notes": "Guard sunglasses from macaques.",
+          "where": "Uluwatu",
+          "book": "",
+          "place": "indonesia/bali-dance-kecak"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Seminyak beach and Tanah Lot sunset",
+          "notes": "Swim between the flags.",
+          "where": "Seminyak",
+          "book": "",
+          "place": "indonesia/bali-beaches-temples"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Seminyak beach and Tanah Lot sunset",
+          "notes": "Swim between the flags.",
+          "where": "Seminyak",
+          "book": "",
+          "place": "indonesia/bali-beaches-temples"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bali Ngurah Rai Airport (DPS)",
+          "to": "Ubud hotel",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Ubud",
+          "to": "Seminyak",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Private car and driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Seminyak hotel",
+          "to": "Bali Ngurah Rai Airport (DPS)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "indonesia-yogyakarta-bali-8d",
+      "title": "Java and Bali in 8 Days",
+      "summary": "Borobudur and Yogyakarta, then Ubud and the Bali coast.",
+      "days": 8,
+      "route": "Yogyakarta > Ubud > Seminyak",
+      "arrive": "Yogyakarta (YIA)",
+      "depart": "Bali (DPS)",
+      "countries": [
+        "Indonesia"
+      ],
+      "regions": [
+        "Bali"
+      ],
+      "cities": [
+        "Yogyakarta",
+        "Ubud",
+        "Seminyak"
+      ],
+      "imageQuery": "Borobudur temple sunrise",
+      "highlights": [
+        "Borobudur",
+        "Prambanan",
+        "Ubud",
+        "Mount Batur",
+        "Kecak dance"
+      ],
+      "destinationKeys": [
+        "indonesia",
+        "indonesia/yogyakarta",
+        "indonesia/bali",
+        "indonesia/ubud",
+        "indonesia/seminyak"
+      ],
+      "hero": "indonesia/yogyakarta",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "TravelStride",
+        "The Globetrotter GP",
+        "Maverick Bird"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Yogyakarta",
+          "hotel": "Hotel in Yogyakarta",
+          "start": 0,
+          "nights": 2,
+          "area": "In Yogyakarta, close to Malioboro or the Kraton",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ubud",
+          "hotel": "Hotel in Ubud",
+          "start": 2,
+          "nights": 3,
+          "area": "In Ubud, near the Monkey Forest or in a rice-terrace villa",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Seminyak",
+          "hotel": "Hotel in Seminyak",
+          "start": 5,
+          "nights": 2,
+          "area": "In Seminyak or Canggu, a short walk from the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Kraton, Taman Sari and Malioboro",
+          "notes": "Stroll the batik quarter, then street food.",
+          "where": "Yogyakarta",
+          "book": "",
+          "place": "indonesia/yogyakarta-kraton"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "04:30",
+          "duration": "9h",
+          "name": "Borobudur sunrise and Prambanan",
+          "notes": "Entry is limited; book ahead.",
+          "where": "Borobudur",
+          "book": "Yes - book sunrise entry",
+          "place": "indonesia/borobudur-prambanan"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Ubud rice terraces, Tirta Empul and Monkey Forest",
+          "notes": "Wear a sarong at temples; go early.",
+          "where": "Ubud",
+          "book": "",
+          "place": "indonesia/ubud-rice-temples"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "02:30",
+          "duration": "7h",
+          "name": "Mount Batur sunrise trek",
+          "notes": "A guide is required; bring a layer.",
+          "where": "Mount Batur",
+          "book": "Yes - book a guided trek",
+          "place": "indonesia/batur-sunrise"
+        },
+        {
+          "day": 6,
+          "type": "Concert/Show",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Kecak fire dance at Uluwatu",
+          "notes": "Guard sunglasses from macaques.",
+          "where": "Uluwatu",
+          "book": "",
+          "place": "indonesia/bali-dance-kecak"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Yogyakarta Airport (YIA)",
+          "to": "Yogyakarta hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Yogyakarta hotel",
+          "to": "Yogyakarta Airport (YIA)",
+          "time": "07:30",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Bali Ngurah Rai Airport (DPS)",
+          "to": "Ubud hotel",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Ubud",
+          "to": "Seminyak",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Private car and driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Seminyak hotel",
+          "to": "Bali Ngurah Rai Airport (DPS)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "indonesia-ubud-gili-seminyak-10d",
+      "title": "Bali and the Gili Islands in 10 Days",
+      "summary": "Ubud with Mount Batur, three nights on Gili Air, then Seminyak.",
+      "days": 10,
+      "route": "Ubud > Gili Air > Seminyak",
+      "arrive": "Bali (DPS)",
+      "depart": "Bali (DPS)",
+      "countries": [
+        "Indonesia"
+      ],
+      "regions": [
+        "Bali",
+        "West Nusa Tenggara"
+      ],
+      "cities": [
+        "Ubud",
+        "Gili Air",
+        "Seminyak"
+      ],
+      "imageQuery": "Gili Air beach turtle",
+      "highlights": [
+        "Ubud rice terraces",
+        "Mount Batur",
+        "Gili turtles",
+        "Nusa Penida",
+        "Kecak dance"
+      ],
+      "destinationKeys": [
+        "indonesia",
+        "indonesia/bali",
+        "indonesia/ubud",
+        "indonesia/west-nusa-tenggara",
+        "indonesia/gili-air",
+        "indonesia/seminyak"
+      ],
+      "hero": "indonesia/gili-air",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "TravelStride",
+        "The Globetrotter GP",
+        "Maverick Bird"
+      ],
+      "pace": "B",
+      "interests": [
+        "relax",
+        "adventure",
+        "culture",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Ubud",
+          "hotel": "Hotel in Ubud",
+          "start": 0,
+          "nights": 4,
+          "area": "In Ubud, near the Monkey Forest or in a rice-terrace villa",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gili Air",
+          "hotel": "Resort on Gili Air",
+          "start": 4,
+          "nights": 3,
+          "area": "On Gili Air near the beach, a short bicycle ride from the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Seminyak",
+          "hotel": "Hotel in Seminyak",
+          "start": 7,
+          "nights": 2,
+          "area": "In Seminyak or Canggu, a short walk from the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Ubud rice terraces, Tirta Empul and Monkey Forest",
+          "notes": "Wear a sarong at temples; go early.",
+          "where": "Ubud",
+          "book": "",
+          "place": "indonesia/ubud-rice-temples"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "02:30",
+          "duration": "7h",
+          "name": "Mount Batur sunrise trek",
+          "notes": "A guide is required; bring a layer.",
+          "where": "Mount Batur",
+          "book": "Yes - book a guided trek",
+          "place": "indonesia/batur-sunrise"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "10h",
+          "name": "Nusa Penida day trip",
+          "notes": "Use a driver for the rough roads; boats can be cancelled.",
+          "where": "Nusa Penida",
+          "book": "Yes - book a boat and driver",
+          "place": "indonesia/nusa-penida"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Turtle snorkelling around Gili Air",
+          "notes": "Keep a respectful distance from turtles.",
+          "where": "Gili Air",
+          "book": "",
+          "place": "indonesia/gili-snorkel"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Beach day and sunset swing",
+          "notes": "Keep a respectful distance from turtles.",
+          "where": "Gili Air",
+          "book": "",
+          "place": "indonesia/gili-snorkel"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Seminyak beach and Tanah Lot sunset",
+          "notes": "Swim between the flags.",
+          "where": "Seminyak",
+          "book": "",
+          "place": "indonesia/bali-beaches-temples"
+        },
+        {
+          "day": 8,
+          "type": "Concert/Show",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Kecak fire dance at Uluwatu",
+          "notes": "Guard sunglasses from macaques.",
+          "where": "Uluwatu",
+          "book": "",
+          "place": "indonesia/bali-dance-kecak"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bali Ngurah Rai Airport (DPS)",
+          "to": "Ubud hotel",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Ubud",
+          "to": "Padang Bai harbour",
+          "time": "07:00",
+          "minutes": 75,
+          "carrier": "Private car and driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Other",
+          "from": "Padang Bai",
+          "to": "Gili Air",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Fast boat",
+          "notes": "Fast boats run in the morning; check sea conditions.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Other",
+          "from": "Gili Air",
+          "to": "Padang Bai",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Fast boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Padang Bai",
+          "to": "Seminyak",
+          "time": "11:30",
+          "minutes": 90,
+          "carrier": "Private car and driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Seminyak hotel",
+          "to": "Bali Ngurah Rai Airport (DPS)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "indonesia-java-bali-komodo-12d",
+      "title": "Java, Bali and Komodo in 12 Days",
+      "summary": "Yogyakarta temples, Ubud, Gili Air and Komodo dragons.",
+      "days": 12,
+      "route": "Yogyakarta > Ubud > Gili Air > Labuan Bajo",
+      "arrive": "Yogyakarta (YIA)",
+      "depart": "Labuan Bajo (LBJ)",
+      "countries": [
+        "Indonesia"
+      ],
+      "regions": [
+        "Bali",
+        "West Nusa Tenggara",
+        "East Nusa Tenggara"
+      ],
+      "cities": [
+        "Yogyakarta",
+        "Ubud",
+        "Gili Air",
+        "Labuan Bajo"
+      ],
+      "imageQuery": "Komodo dragon Indonesia",
+      "highlights": [
+        "Borobudur",
+        "Ubud",
+        "Mount Batur",
+        "Gili turtles",
+        "Komodo dragons"
+      ],
+      "destinationKeys": [
+        "indonesia",
+        "indonesia/yogyakarta",
+        "indonesia/bali",
+        "indonesia/ubud",
+        "indonesia/west-nusa-tenggara",
+        "indonesia/gili-air",
+        "indonesia/east-nusa-tenggara",
+        "indonesia/labuan-bajo"
+      ],
+      "hero": "indonesia/east-nusa-tenggara",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "TravelStride",
+        "The Globetrotter GP",
+        "Maverick Bird"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Yogyakarta",
+          "hotel": "Hotel in Yogyakarta",
+          "start": 0,
+          "nights": 2,
+          "area": "In Yogyakarta, close to Malioboro or the Kraton",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ubud",
+          "hotel": "Hotel in Ubud",
+          "start": 2,
+          "nights": 4,
+          "area": "In Ubud, near the Monkey Forest or in a rice-terrace villa",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gili Air",
+          "hotel": "Resort on Gili Air",
+          "start": 6,
+          "nights": 2,
+          "area": "On Gili Air near the beach, a short bicycle ride from the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Labuan Bajo",
+          "hotel": "Hotel in Labuan Bajo",
+          "start": 8,
+          "nights": 3,
+          "area": "In Labuan Bajo on the harbour hill, for sunset and boat departures",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Kraton, Taman Sari and Malioboro",
+          "notes": "Stroll the batik quarter, then street food.",
+          "where": "Yogyakarta",
+          "book": "",
+          "place": "indonesia/yogyakarta-kraton"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "04:30",
+          "duration": "9h",
+          "name": "Borobudur sunrise and Prambanan",
+          "notes": "Entry is limited; book ahead.",
+          "where": "Borobudur",
+          "book": "Yes - book sunrise entry",
+          "place": "indonesia/borobudur-prambanan"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Ubud rice terraces, Tirta Empul and Monkey Forest",
+          "notes": "Wear a sarong at temples; go early.",
+          "where": "Ubud",
+          "book": "",
+          "place": "indonesia/ubud-rice-temples"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "02:30",
+          "duration": "7h",
+          "name": "Mount Batur sunrise trek",
+          "notes": "A guide is required; bring a layer.",
+          "where": "Mount Batur",
+          "book": "Yes - book a guided trek",
+          "place": "indonesia/batur-sunrise"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Turtle snorkelling around Gili Air",
+          "notes": "Keep a respectful distance from turtles.",
+          "where": "Gili Air",
+          "book": "",
+          "place": "indonesia/gili-snorkel"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "10h",
+          "name": "Komodo National Park boat day",
+          "notes": "Includes dragons, Padar viewpoint and Pink Beach; follow the rangers.",
+          "where": "Komodo National Park",
+          "book": "Yes - book a boat tour",
+          "place": "indonesia/komodo-national-park"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Yogyakarta Airport (YIA)",
+          "to": "Yogyakarta hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Yogyakarta hotel",
+          "to": "Yogyakarta Airport (YIA)",
+          "time": "07:30",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Bali Ngurah Rai Airport (DPS)",
+          "to": "Ubud hotel",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Ubud",
+          "to": "Padang Bai harbour",
+          "time": "07:00",
+          "minutes": 75,
+          "carrier": "Private car and driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Other",
+          "from": "Padang Bai",
+          "to": "Gili Air",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Fast boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Other",
+          "from": "Gili Air",
+          "to": "Bangsal harbour",
+          "time": "07:30",
+          "minutes": 20,
+          "carrier": "Fast boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Bangsal harbour",
+          "to": "Lombok Airport (LOP)",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Labuan Bajo Airport (LBJ)",
+          "to": "Labuan Bajo hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Labuan Bajo hotel",
+          "to": "Labuan Bajo Airport (LBJ)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "indonesia-grand-14d",
+      "title": "Indonesia Grand Tour in 14 Days",
+      "summary": "Yogyakarta and Bromo-style Java culture, Bali, Gili Air and Komodo.",
+      "days": 14,
+      "route": "Yogyakarta > Ubud > Seminyak > Gili Air > Labuan Bajo",
+      "arrive": "Yogyakarta (YIA)",
+      "depart": "Labuan Bajo (LBJ)",
+      "countries": [
+        "Indonesia"
+      ],
+      "regions": [
+        "Bali",
+        "West Nusa Tenggara",
+        "East Nusa Tenggara"
+      ],
+      "cities": [
+        "Yogyakarta",
+        "Ubud",
+        "Seminyak",
+        "Gili Air",
+        "Labuan Bajo"
+      ],
+      "imageQuery": "Indonesia Bali Komodo islands",
+      "highlights": [
+        "Borobudur",
+        "Ubud",
+        "Nusa Penida",
+        "Kecak dance",
+        "Gili Air",
+        "Komodo"
+      ],
+      "destinationKeys": [
+        "indonesia",
+        "indonesia/yogyakarta",
+        "indonesia/bali",
+        "indonesia/ubud",
+        "indonesia/seminyak",
+        "indonesia/west-nusa-tenggara",
+        "indonesia/gili-air",
+        "indonesia/east-nusa-tenggara",
+        "indonesia/labuan-bajo"
+      ],
+      "hero": "indonesia/ubud",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "TravelStride",
+        "The Globetrotter GP",
+        "Maverick Bird"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "adventure",
+        "relax",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Yogyakarta",
+          "hotel": "Hotel in Yogyakarta",
+          "start": 0,
+          "nights": 2,
+          "area": "In Yogyakarta, close to Malioboro or the Kraton",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ubud",
+          "hotel": "Hotel in Ubud",
+          "start": 2,
+          "nights": 4,
+          "area": "In Ubud, near the Monkey Forest or in a rice-terrace villa",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Seminyak",
+          "hotel": "Hotel in Seminyak",
+          "start": 6,
+          "nights": 2,
+          "area": "In Seminyak or Canggu, a short walk from the beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gili Air",
+          "hotel": "Resort on Gili Air",
+          "start": 8,
+          "nights": 2,
+          "area": "On Gili Air near the beach, a short bicycle ride from the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Labuan Bajo",
+          "hotel": "Hotel in Labuan Bajo",
+          "start": 10,
+          "nights": 3,
+          "area": "In Labuan Bajo on the harbour hill, for sunset and boat departures",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Kraton, Taman Sari and Malioboro",
+          "notes": "Stroll the batik quarter, then street food.",
+          "where": "Yogyakarta",
+          "book": "",
+          "place": "indonesia/yogyakarta-kraton"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "04:30",
+          "duration": "9h",
+          "name": "Borobudur sunrise and Prambanan",
+          "notes": "Entry is limited; book ahead.",
+          "where": "Borobudur",
+          "book": "Yes - book sunrise entry",
+          "place": "indonesia/borobudur-prambanan"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Ubud rice terraces, Tirta Empul and Monkey Forest",
+          "notes": "Wear a sarong at temples; go early.",
+          "where": "Ubud",
+          "book": "",
+          "place": "indonesia/ubud-rice-temples"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "02:30",
+          "duration": "7h",
+          "name": "Mount Batur sunrise trek",
+          "notes": "A guide is required; bring a layer.",
+          "where": "Mount Batur",
+          "book": "Yes - book a guided trek",
+          "place": "indonesia/batur-sunrise"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "10h",
+          "name": "Nusa Penida day trip",
+          "notes": "Use a driver for the rough roads; boats can be cancelled.",
+          "where": "Nusa Penida",
+          "book": "Yes - book a boat and driver",
+          "place": "indonesia/nusa-penida"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "4h",
+          "name": "Seminyak beach and Tanah Lot sunset",
+          "notes": "Swim between the flags.",
+          "where": "Seminyak",
+          "book": "",
+          "place": "indonesia/bali-beaches-temples"
+        },
+        {
+          "day": 7,
+          "type": "Concert/Show",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Kecak fire dance at Uluwatu",
+          "notes": "Guard sunglasses from macaques.",
+          "where": "Uluwatu",
+          "book": "",
+          "place": "indonesia/bali-dance-kecak"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Turtle snorkelling around Gili Air",
+          "notes": "Keep a respectful distance from turtles.",
+          "where": "Gili Air",
+          "book": "",
+          "place": "indonesia/gili-snorkel"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "10h",
+          "name": "Komodo National Park boat day",
+          "notes": "Includes dragons, Padar viewpoint and Pink Beach; follow the rangers.",
+          "where": "Komodo National Park",
+          "book": "Yes - book a boat tour",
+          "place": "indonesia/komodo-national-park"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Yogyakarta Airport (YIA)",
+          "to": "Yogyakarta hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Yogyakarta hotel",
+          "to": "Yogyakarta Airport (YIA)",
+          "time": "07:30",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Bali Ngurah Rai Airport (DPS)",
+          "to": "Ubud hotel",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Ubud",
+          "to": "Seminyak",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Private car and driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Seminyak",
+          "to": "Padang Bai harbour",
+          "time": "07:00",
+          "minutes": 100,
+          "carrier": "Private car and driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Other",
+          "from": "Padang Bai",
+          "to": "Gili Air",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Fast boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Other",
+          "from": "Gili Air",
+          "to": "Bangsal harbour",
+          "time": "07:30",
+          "minutes": 20,
+          "carrier": "Fast boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Bangsal harbour",
+          "to": "Lombok Airport (LOP)",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Labuan Bajo Airport (LBJ)",
+          "to": "Labuan Bajo hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Labuan Bajo hotel",
+          "to": "Labuan Bajo Airport (LBJ)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi or pre-booked car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "indonesia/ubud-rice-temples": {
+        "name": "Ubud rice terraces and temples",
+        "description": "Tegalalang terraces, Tirta Empul holy springs and the Sacred Monkey Forest.",
+        "details": "Ubud is the cultural heart of Bali. Tegalalang has stepped rice paddies and jungle swings, Tirta Empul has a purification ritual in spring-fed pools, and the Monkey Forest is a sanctuary of macaques and temples. A sarong is required at temples. Mornings are less crowded.",
+        "interests": [
+          "culture",
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "indonesia/batur-sunrise": {
+        "name": "Mount Batur sunrise trek",
+        "description": "A pre-dawn volcano climb with breakfast cooked by steam at the summit.",
+        "details": "Mount Batur takes about two hours to climb in the dark, arriving for sunrise over the crater lake. Guides are required. The path is rocky and cool, so bring a layer and a headlamp. Trips usually leave Ubud around 2am.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "indonesia/bali-dance-kecak": {
+        "name": "Balinese dance, Kecak at Uluwatu",
+        "description": "A sunset fire dance in a clifftop temple, with chanting by a circle of men.",
+        "details": "The Kecak dance at Uluwatu Temple performs the Ramayana as a chorus of 70 men chant at sunset. Keep sunglasses secure, because macaques steal items. Ubud also stages Legong and Barong dances in the evenings.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "indonesia/bali-beaches-temples": {
+        "name": "Tanah Lot and Seminyak beaches",
+        "description": "A sea temple at sunset and a long surf-lined beach with beach clubs.",
+        "details": "Tanah Lot is a temple on a rock in the sea that is best at sunset, though busy. Seminyak and Canggu have black-sand beaches, surf schools, cafes and sunset bars. Strong currents on some beaches, so swim between the flags.",
+        "interests": [
+          "relax",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "indonesia/nusa-penida": {
+        "name": "Nusa Penida island day trip",
+        "description": "Dramatic cliffs, Kelingking viewpoint and snorkelling with manta rays.",
+        "details": "Nusa Penida is reached by fast boat from Sanur in about 40 minutes. The Kelingking Beach cliff, Angel Billabong and Crystal Bay are popular. Roads are rough, so go with a driver. Sea conditions can cancel boats.",
+        "interests": [
+          "adventure",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "indonesia/yogyakarta-kraton": {
+        "name": "Yogyakarta Kraton and Malioboro",
+        "description": "The sultan palace, the water castle and the busy shopping street of batik and street food.",
+        "details": "Yogyakarta is the cultural heart of Java, with the Kraton, the Taman Sari water castle and a batik quarter. Malioboro Street is lined with stalls and food carts. Gamelan music is performed in the Kraton on certain mornings.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "indonesia/borobudur-prambanan": {
+        "name": "Borobudur sunrise and Prambanan",
+        "description": "The largest Buddhist temple in the world, and a great Hindu temple complex.",
+        "details": "Borobudur rises in tiers of stone with 504 Buddha statues, and sunrise visits from a nearby hotel are the best way to experience it. Prambanan has soaring Hindu towers. A guide helps explain the carvings. The climb to Borobudur levels is limited to protect the stone, with tickets limited.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "indonesia/gili-snorkel": {
+        "name": "Gili Islands snorkelling with turtles",
+        "description": "Car-free islands off Lombok with turtle-filled reefs and sunset bars.",
+        "details": "The Gili islands have no motor vehicles, and transport is by bicycle or horse cart. Gili Air is the quietest, and snorkelling off the beach spots green sea turtles. Fast boats leave from Bali in about 1.5 to 2 hours.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "indonesia/komodo-national-park": {
+        "name": "Komodo National Park",
+        "description": "A boat cruise to see Komodo dragons, pink beach and manta ray reefs.",
+        "details": "Komodo National Park has the only wild Komodo dragons, seen on guided walks led by rangers on Komodo and Rinca islands. Boats continue to Padar for the viewpoint, Pink Beach and manta point for snorkelling. Day trips or liveaboards run from Labuan Bajo. Keep to the rangers instructions.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "indonesia": {
+        "name": "Indonesia",
+        "description": "An archipelago of Hindu Bali, Javanese temples, volcanoes and the dragons of Komodo.",
+        "images": []
+      },
+      "indonesia/bali": {
+        "name": "Bali",
+        "description": "The island of temples, rice terraces, surf and sunsets.",
+        "images": []
+      },
+      "indonesia/ubud": {
+        "name": "Ubud",
+        "description": "The cultural heart of Bali, surrounded by rice terraces.",
+        "images": []
+      },
+      "indonesia/seminyak": {
+        "name": "Seminyak",
+        "description": "A beach town on Bali south-west coast known for sunsets and dining.",
+        "images": []
+      },
+      "indonesia/yogyakarta": {
+        "name": "Yogyakarta",
+        "description": "The cultural capital of Java and base for Borobudur and Prambanan.",
+        "images": []
+      },
+      "indonesia/west-nusa-tenggara": {
+        "name": "West Nusa Tenggara",
+        "description": "The province of Lombok and the Gili Islands.",
+        "images": []
+      },
+      "indonesia/gili-air": {
+        "name": "Gili Air",
+        "description": "A car-free island with turtle snorkelling.",
+        "images": []
+      },
+      "indonesia/east-nusa-tenggara": {
+        "name": "East Nusa Tenggara",
+        "description": "The province of Komodo and Flores.",
+        "images": []
+      },
+      "indonesia/labuan-bajo": {
+        "name": "Labuan Bajo",
+        "description": "The harbour gateway to Komodo National Park.",
+        "images": []
+      }
+    }
+  }
+}

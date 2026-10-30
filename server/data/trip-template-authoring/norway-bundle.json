@@ -1,0 +1,1431 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Outside Suburbia, KimKim, On The Go Tours and Go Ahead Tours itineraries for Norway",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "norway-oslo-bergen-5d",
+      "title": "Oslo and Bergen in 5 Days",
+      "summary": "The capital, the scenic train over the mountains and the fjord city.",
+      "days": 5,
+      "route": "Oslo > Bergen",
+      "arrive": "Oslo (OSL)",
+      "depart": "Bergen (BGO)",
+      "countries": [
+        "Norway"
+      ],
+      "regions": [],
+      "cities": [
+        "Oslo",
+        "Bergen"
+      ],
+      "imageQuery": "Bergen Bryggen harbour Norway",
+      "highlights": [
+        "Oslo Opera House",
+        "Vigeland Park",
+        "Bergensbanen train",
+        "Bryggen"
+      ],
+      "destinationKeys": [
+        "norway",
+        "norway/oslo",
+        "norway/bergen"
+      ],
+      "hero": "norway/bergen",
+      "sources": [
+        "Outside Suburbia",
+        "KimKim",
+        "On The Go Tours",
+        "Go Ahead Tours",
+        "TravelStride"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Oslo",
+          "hotel": "Hotel in Oslo",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Oslo Central Station or the harbour, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bergen",
+          "hotel": "Hotel in Bergen",
+          "start": 2,
+          "nights": 2,
+          "area": "Near Bryggen or the fish market in Bergen",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Opera House, Aker Brygge and Vigeland Park",
+          "notes": "Walk on the Opera roof; Vigeland Park is free.",
+          "where": "Oslo",
+          "book": "",
+          "place": "norway/oslo-opera-vigeland"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bryggen, Floibanen and fish market",
+          "notes": "Pack a rain jacket for Bergen.",
+          "where": "Bergen",
+          "book": "",
+          "place": "norway/bergen-bryggen"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Oslo Airport (OSL)",
+          "to": "Oslo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Flytoget airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Oslo",
+          "to": "Bergen",
+          "time": "08:00",
+          "minutes": 400,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "The Bergen Line runs over the Hardangervidda plateau.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Bergen hotel",
+          "to": "Bergen Airport (BGO)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "norway-oslo-flam-bergen-7d",
+      "title": "Norway in a Nutshell: Oslo, Flam and Bergen in 7 Days",
+      "summary": "Oslo, the Flam Railway with a Naeroyfjord cruise and Bergen.",
+      "days": 7,
+      "route": "Oslo > Flam > Bergen",
+      "arrive": "Oslo (OSL)",
+      "depart": "Bergen (BGO)",
+      "countries": [
+        "Norway"
+      ],
+      "regions": [],
+      "cities": [
+        "Oslo",
+        "Flam",
+        "Bergen"
+      ],
+      "imageQuery": "Flam railway Norway fjord",
+      "highlights": [
+        "Oslo",
+        "Flam Railway",
+        "Naeroyfjord",
+        "Bryggen"
+      ],
+      "destinationKeys": [
+        "norway",
+        "norway/oslo",
+        "norway/flam",
+        "norway/bergen"
+      ],
+      "hero": "norway/flam",
+      "sources": [
+        "Outside Suburbia",
+        "KimKim",
+        "On The Go Tours",
+        "Go Ahead Tours",
+        "TravelStride"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "photography",
+        "outdoors",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Oslo",
+          "hotel": "Hotel in Oslo",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Oslo Central Station or the harbour, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flam",
+          "hotel": "Hotel in Flam",
+          "start": 2,
+          "nights": 1,
+          "area": "In Flam, by the fjord and the railway station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bergen",
+          "hotel": "Hotel in Bergen",
+          "start": 3,
+          "nights": 3,
+          "area": "Near Bryggen or the fish market in Bergen",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Opera House, Aker Brygge and Vigeland Park",
+          "notes": "Walk on the Opera roof; Vigeland Park is free.",
+          "where": "Oslo",
+          "book": "",
+          "place": "norway/oslo-opera-vigeland"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Fram and Viking museums on Bygdoy",
+          "notes": "Ferry from the city hall in summer; check which museums are open.",
+          "where": "Bygdoy, Oslo",
+          "book": "",
+          "place": "norway/viking-fram"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Flam Railway and Naeroyfjord cruise",
+          "notes": "The Flam Railway is steep; a fjord cruise follows.",
+          "where": "Flam",
+          "book": "Yes - book railway and boat",
+          "place": "norway/flam-railway"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bryggen, Floibanen and fish market",
+          "notes": "Pack a rain jacket for Bergen.",
+          "where": "Bergen",
+          "book": "",
+          "place": "norway/bergen-bryggen"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Oslo Airport (OSL)",
+          "to": "Oslo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Flytoget airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Oslo",
+          "to": "Flam",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "Change at Myrdal onto the Flam Railway.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Flam",
+          "to": "Bergen",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "Naeroyfjord boat to Gudvangen then a bus.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Bergen hotel",
+          "to": "Bergen Airport (BGO)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "norway-fjords-alesund-8d",
+      "title": "Norway Fjords in 8 Days",
+      "summary": "Oslo, Flam, Bergen and Alesund with Geirangerfjord.",
+      "days": 8,
+      "route": "Oslo > Flam > Bergen > Alesund",
+      "arrive": "Oslo (OSL)",
+      "depart": "Alesund (AES)",
+      "countries": [
+        "Norway"
+      ],
+      "regions": [],
+      "cities": [
+        "Oslo",
+        "Flam",
+        "Bergen",
+        "Alesund"
+      ],
+      "imageQuery": "Geirangerfjord Norway cruise",
+      "highlights": [
+        "Flam Railway",
+        "Bergen",
+        "Geirangerfjord",
+        "Trollstigen"
+      ],
+      "destinationKeys": [
+        "norway",
+        "norway/oslo",
+        "norway/flam",
+        "norway/bergen",
+        "norway/alesund"
+      ],
+      "hero": "norway/alesund",
+      "sources": [
+        "Outside Suburbia",
+        "KimKim",
+        "On The Go Tours",
+        "Go Ahead Tours",
+        "TravelStride"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "photography",
+        "outdoors",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Oslo",
+          "hotel": "Hotel in Oslo",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Oslo Central Station or the harbour, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flam",
+          "hotel": "Hotel in Flam",
+          "start": 2,
+          "nights": 1,
+          "area": "In Flam, by the fjord and the railway station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bergen",
+          "hotel": "Hotel in Bergen",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Bryggen or the fish market in Bergen",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Alesund",
+          "hotel": "Hotel in Alesund",
+          "start": 5,
+          "nights": 2,
+          "area": "In Alesund town centre, close to the harbour",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Opera House, Aker Brygge and Vigeland Park",
+          "notes": "Walk on the Opera roof; Vigeland Park is free.",
+          "where": "Oslo",
+          "book": "",
+          "place": "norway/oslo-opera-vigeland"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Flam Railway and Naeroyfjord cruise",
+          "notes": "The Flam Railway is steep; a fjord cruise follows.",
+          "where": "Flam",
+          "book": "Yes - book railway and boat",
+          "place": "norway/flam-railway"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bryggen, Floibanen and fish market",
+          "notes": "Pack a rain jacket for Bergen.",
+          "where": "Bergen",
+          "book": "",
+          "place": "norway/bergen-bryggen"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Geirangerfjord cruise and Trollstigen road",
+          "notes": "Trollstigen is open about June to October.",
+          "where": "Geirangerfjord",
+          "book": "Yes - book the fjord cruise",
+          "place": "norway/geirangerfjord"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Oslo Airport (OSL)",
+          "to": "Oslo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Flytoget airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Oslo",
+          "to": "Flam",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Flam",
+          "to": "Bergen",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Bergen hotel",
+          "to": "Bergen Airport (BGO)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Oslo.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Alesund Airport (AES)",
+          "to": "Alesund hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Alesund hotel",
+          "to": "Alesund Airport (AES)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "norway-fjords-arctic-10d",
+      "title": "Fjords and Arctic Norway in 10 Days",
+      "summary": "Oslo, Flam and Bergen, then a flight north to Tromso.",
+      "days": 10,
+      "route": "Oslo > Flam > Bergen > Tromso",
+      "arrive": "Oslo (OSL)",
+      "depart": "Tromso (TOS)",
+      "countries": [
+        "Norway"
+      ],
+      "regions": [],
+      "cities": [
+        "Oslo",
+        "Flam",
+        "Bergen",
+        "Tromso"
+      ],
+      "imageQuery": "Tromso northern lights Norway",
+      "highlights": [
+        "Flam Railway",
+        "Bryggen",
+        "Northern lights",
+        "Dog sledding",
+        "Whale watching"
+      ],
+      "destinationKeys": [
+        "norway",
+        "norway/oslo",
+        "norway/flam",
+        "norway/bergen",
+        "norway/tromso"
+      ],
+      "hero": "norway/tromso",
+      "sources": [
+        "Outside Suburbia",
+        "KimKim",
+        "On The Go Tours",
+        "Go Ahead Tours",
+        "TravelStride"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "photography",
+        "outdoors",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Oslo",
+          "hotel": "Hotel in Oslo",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Oslo Central Station or the harbour, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flam",
+          "hotel": "Hotel in Flam",
+          "start": 2,
+          "nights": 1,
+          "area": "In Flam, by the fjord and the railway station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bergen",
+          "hotel": "Hotel in Bergen",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Bryggen or the fish market in Bergen",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tromso",
+          "hotel": "Hotel in Tromso",
+          "start": 5,
+          "nights": 4,
+          "area": "In central Tromso, with aurora tour pick-ups at the hotel",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Opera House, Aker Brygge and Vigeland Park",
+          "notes": "Walk on the Opera roof; Vigeland Park is free.",
+          "where": "Oslo",
+          "book": "",
+          "place": "norway/oslo-opera-vigeland"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Flam Railway and Naeroyfjord cruise",
+          "notes": "The Flam Railway is steep; a fjord cruise follows.",
+          "where": "Flam",
+          "book": "Yes - book railway and boat",
+          "place": "norway/flam-railway"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bryggen, Floibanen and fish market",
+          "notes": "Pack a rain jacket for Bergen.",
+          "where": "Bergen",
+          "book": "",
+          "place": "norway/bergen-bryggen"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "5h",
+          "name": "Northern lights hunt or midnight sun walk",
+          "notes": "Aurora is September to March; dress very warmly.",
+          "where": "Tromso",
+          "book": "Yes - book an evening tour",
+          "place": "norway/tromso-arctic"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Dog sledding or whale watching",
+          "notes": "Whales from November to January; sleds in winter.",
+          "where": "Tromso",
+          "book": "Yes - book in advance",
+          "place": "norway/tromso-arctic"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "5h",
+          "name": "Northern lights hunt or midnight sun walk",
+          "notes": "Aurora is September to March; dress very warmly.",
+          "where": "Tromso",
+          "book": "Yes - book an evening tour",
+          "place": "norway/tromso-arctic"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Oslo Airport (OSL)",
+          "to": "Oslo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Flytoget airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Oslo",
+          "to": "Flam",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Flam",
+          "to": "Bergen",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Bergen hotel",
+          "to": "Bergen Airport (BGO)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Oslo.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Tromso Airport (TOS)",
+          "to": "Tromso hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Tromso hotel",
+          "to": "Tromso Airport (TOS)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "norway-fjords-alesund-arctic-12d",
+      "title": "Norway Fjords and Arctic in 12 Days",
+      "summary": "Oslo, Flam, Bergen, Alesund and Tromso.",
+      "days": 12,
+      "route": "Oslo > Flam > Bergen > Alesund > Tromso",
+      "arrive": "Oslo (OSL)",
+      "depart": "Tromso (TOS)",
+      "countries": [
+        "Norway"
+      ],
+      "regions": [],
+      "cities": [
+        "Oslo",
+        "Flam",
+        "Bergen",
+        "Alesund",
+        "Tromso"
+      ],
+      "imageQuery": "Norway fjord and Arctic sky",
+      "highlights": [
+        "Flam Railway",
+        "Geirangerfjord",
+        "Preikestolen",
+        "Northern lights",
+        "Whale watching"
+      ],
+      "destinationKeys": [
+        "norway",
+        "norway/oslo",
+        "norway/flam",
+        "norway/bergen",
+        "norway/alesund",
+        "norway/tromso"
+      ],
+      "hero": "norway/alesund",
+      "sources": [
+        "Outside Suburbia",
+        "KimKim",
+        "On The Go Tours",
+        "Go Ahead Tours",
+        "TravelStride"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "photography",
+        "outdoors",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Oslo",
+          "hotel": "Hotel in Oslo",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Oslo Central Station or the harbour, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flam",
+          "hotel": "Hotel in Flam",
+          "start": 2,
+          "nights": 1,
+          "area": "In Flam, by the fjord and the railway station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bergen",
+          "hotel": "Hotel in Bergen",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Bryggen or the fish market in Bergen",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Alesund",
+          "hotel": "Hotel in Alesund",
+          "start": 5,
+          "nights": 2,
+          "area": "In Alesund town centre, close to the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tromso",
+          "hotel": "Hotel in Tromso",
+          "start": 7,
+          "nights": 4,
+          "area": "In central Tromso, with aurora tour pick-ups at the hotel",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Opera House, Aker Brygge and Vigeland Park",
+          "notes": "Walk on the Opera roof; Vigeland Park is free.",
+          "where": "Oslo",
+          "book": "",
+          "place": "norway/oslo-opera-vigeland"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Flam Railway and Naeroyfjord cruise",
+          "notes": "The Flam Railway is steep; a fjord cruise follows.",
+          "where": "Flam",
+          "book": "Yes - book railway and boat",
+          "place": "norway/flam-railway"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bryggen, Floibanen and fish market",
+          "notes": "Pack a rain jacket for Bergen.",
+          "where": "Bergen",
+          "book": "",
+          "place": "norway/bergen-bryggen"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Geirangerfjord cruise and Trollstigen road",
+          "notes": "Trollstigen is open about June to October.",
+          "where": "Geirangerfjord",
+          "book": "Yes - book the fjord cruise",
+          "place": "norway/geirangerfjord"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "5h",
+          "name": "Northern lights hunt or midnight sun walk",
+          "notes": "Aurora is September to March; dress very warmly.",
+          "where": "Tromso",
+          "book": "Yes - book an evening tour",
+          "place": "norway/tromso-arctic"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Dog sledding or whale watching",
+          "notes": "Whales from November to January; sleds in winter.",
+          "where": "Tromso",
+          "book": "Yes - book in advance",
+          "place": "norway/tromso-arctic"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "5h",
+          "name": "Northern lights hunt or midnight sun walk",
+          "notes": "Aurora is September to March; dress very warmly.",
+          "where": "Tromso",
+          "book": "Yes - book an evening tour",
+          "place": "norway/tromso-arctic"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Oslo Airport (OSL)",
+          "to": "Oslo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Flytoget airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Oslo",
+          "to": "Flam",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Flam",
+          "to": "Bergen",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Bergen hotel",
+          "to": "Bergen Airport (BGO)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Alesund Airport (AES)",
+          "to": "Alesund hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Alesund hotel",
+          "to": "Alesund Airport (AES)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Oslo.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Tromso Airport (TOS)",
+          "to": "Tromso hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Tromso hotel",
+          "to": "Tromso Airport (TOS)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "norway-grand-14d",
+      "title": "Grand Norway: Fjords, Arctic and Lofoten in 14 Days",
+      "summary": "Oslo, fjords, Alesund, Tromso and the Lofoten Islands.",
+      "days": 14,
+      "route": "Oslo > Flam > Bergen > Alesund > Tromso > Reine",
+      "arrive": "Oslo (OSL)",
+      "depart": "Leknes (LKN)",
+      "countries": [
+        "Norway"
+      ],
+      "regions": [],
+      "cities": [
+        "Oslo",
+        "Flam",
+        "Bergen",
+        "Alesund",
+        "Tromso",
+        "Reine"
+      ],
+      "imageQuery": "Lofoten Reine red cabins Norway",
+      "highlights": [
+        "Flam Railway",
+        "Geirangerfjord",
+        "Preikestolen",
+        "Tromso aurora",
+        "Lofoten"
+      ],
+      "destinationKeys": [
+        "norway",
+        "norway/oslo",
+        "norway/flam",
+        "norway/bergen",
+        "norway/alesund",
+        "norway/tromso",
+        "norway/reine"
+      ],
+      "hero": "norway/reine",
+      "sources": [
+        "Outside Suburbia",
+        "KimKim",
+        "On The Go Tours",
+        "Go Ahead Tours",
+        "TravelStride"
+      ],
+      "pace": "R",
+      "interests": [
+        "adventure",
+        "photography",
+        "outdoors",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Oslo",
+          "hotel": "Hotel in Oslo",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Oslo Central Station or the harbour, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flam",
+          "hotel": "Hotel in Flam",
+          "start": 2,
+          "nights": 1,
+          "area": "In Flam, by the fjord and the railway station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bergen",
+          "hotel": "Hotel in Bergen",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Bryggen or the fish market in Bergen",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Alesund",
+          "hotel": "Hotel in Alesund",
+          "start": 5,
+          "nights": 2,
+          "area": "In Alesund town centre, close to the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tromso",
+          "hotel": "Hotel in Tromso",
+          "start": 7,
+          "nights": 3,
+          "area": "In central Tromso, with aurora tour pick-ups at the hotel",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Reine",
+          "hotel": "Lodge in Reine",
+          "start": 10,
+          "nights": 3,
+          "area": "In a rorbu fisherman cabin in Reine",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Opera House, Aker Brygge and Vigeland Park",
+          "notes": "Walk on the Opera roof; Vigeland Park is free.",
+          "where": "Oslo",
+          "book": "",
+          "place": "norway/oslo-opera-vigeland"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Flam Railway and Naeroyfjord cruise",
+          "notes": "The Flam Railway is steep; a fjord cruise follows.",
+          "where": "Flam",
+          "book": "Yes - book railway and boat",
+          "place": "norway/flam-railway"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bryggen, Floibanen and fish market",
+          "notes": "Pack a rain jacket for Bergen.",
+          "where": "Bergen",
+          "book": "",
+          "place": "norway/bergen-bryggen"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Geirangerfjord cruise and Trollstigen road",
+          "notes": "Trollstigen is open about June to October.",
+          "where": "Geirangerfjord",
+          "book": "Yes - book the fjord cruise",
+          "place": "norway/geirangerfjord"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "5h",
+          "name": "Northern lights hunt or midnight sun walk",
+          "notes": "Aurora is September to March; dress very warmly.",
+          "where": "Tromso",
+          "book": "Yes - book an evening tour",
+          "place": "norway/tromso-arctic"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Dog sledding or whale watching",
+          "notes": "Whales from November to January; sleds in winter.",
+          "where": "Tromso",
+          "book": "Yes - book in advance",
+          "place": "norway/tromso-arctic"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Reine, Hamnoy and Nusfjord drive",
+          "notes": "A rental car is best; hike Reinebringen if the weather is clear.",
+          "where": "Lofoten",
+          "book": "",
+          "place": "norway/lofoten"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Beaches, Henningsvaer and Reinebringen hike",
+          "notes": "A rental car is best; hike Reinebringen if the weather is clear.",
+          "where": "Lofoten",
+          "book": "",
+          "place": "norway/lofoten"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Oslo Airport (OSL)",
+          "to": "Oslo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Flytoget airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Oslo",
+          "to": "Flam",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Flam",
+          "to": "Bergen",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "Vy train or Flam Railway",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Bergen hotel",
+          "to": "Bergen Airport (BGO)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Alesund Airport (AES)",
+          "to": "Alesund hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Alesund hotel",
+          "to": "Alesund Airport (AES)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Tromso Airport (TOS)",
+          "to": "Tromso hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Tromso hotel",
+          "to": "Tromso Airport (TOS)",
+          "time": "08:30",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Bodo.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Leknes Airport (LKN)",
+          "to": "Reine cabin",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Reine cabin",
+          "to": "Leknes Airport (LKN)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car return",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "norway/oslo-opera-vigeland": {
+        "name": "Oslo Opera House, Vigeland Park and the harbour",
+        "description": "A marble opera house you can walk on, a sculpture park and the waterfront.",
+        "details": "The Oslo Opera House has a sloping roof for walking, and the Aker Brygge waterfront has restaurants. Vigeland Park has more than 200 sculptures by Gustav Vigeland. The Fram and Viking Ship museums on Bygdoy are reached by ferry. Oslo is expensive, so take a city pass.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "norway/viking-fram": {
+        "name": "Viking Ship Museum and Fram Museum",
+        "description": "Original Viking ships and the polar vessel that reached both ends of the earth.",
+        "details": "The Bygdoy peninsula has the Viking Ship Museum (closed for rebuilding in recent years, so check), the Fram Museum with the Arctic exploration ship, and the Kon-Tiki Museum. A ferry crosses from the city hall in summer. Allow three hours.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "norway/flam-railway": {
+        "name": "Flam Railway and Naeroyfjord cruise",
+        "description": "A steep scenic train down to the fjord, and a UNESCO fjord cruise.",
+        "details": "The Flam Railway drops 866 metres over 20 kilometres with waterfalls and tunnels. Boat trips on the Naeroyfjord, a narrow UNESCO-listed arm of the Sognefjord, pass steep walls and villages. The Oslo-Bergen line connects at Myrdal, the Norway in a Nutshell route.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "norway/bergen-bryggen": {
+        "name": "Bergen Bryggen, Floibanen and fish market",
+        "description": "The old Hanseatic wharf, a funicular above the city and a harbour fish market.",
+        "details": "Bryggen is a UNESCO row of wooden buildings on the harbour. The Floibanen funicular climbs to a viewpoint above the city. Fresh seafood is sold at the fish market. Bergen is one of the wettest cities in Europe, so pack a rain jacket.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "norway/geirangerfjord": {
+        "name": "Geirangerfjord, Trollstigen and Alesund",
+        "description": "A cruise past waterfalls in a UNESCO fjord, and a steep mountain road.",
+        "details": "The Geirangerfjord has the Seven Sisters waterfall, and cruises run from May to September. The Trollstigen mountain road has 11 hairpins, open from about June to October. Alesund is an Art Nouveau town on islands, with a viewpoint at Aksla.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "norway/tromso-arctic": {
+        "name": "Tromso Arctic activities and northern lights",
+        "description": "A northern city for aurora hunts, dog sledding, whale watching and Fjellheisen.",
+        "details": "Tromso sits in the aurora oval, with northern lights seen from September to March on clear nights. Winter activities include dog sledding, reindeer visits and whale watching from November to January. In summer the midnight sun allows hikes at any hour. The Fjellheisen cable car gives city views.",
+        "interests": [
+          "adventure",
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "norway/lofoten": {
+        "name": "Lofoten Islands: Reine, Henningsvaer and Nusfjord",
+        "description": "Jagged peaks rising from the sea, red fishing huts and some of the most photogenic villages.",
+        "details": "The Lofoten road links fishing villages such as Reine, Hamnoy and Nusfjord, with beaches at Haukland and Uttakleiv. In winter you can see northern lights and in summer the midnight sun. A rental car is best, and the Reinebringen hike has steps and a big view. Book accommodation early.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "adventure",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "norway": {
+        "name": "Norway",
+        "description": "A country of fjords, mountains, Arctic lights and Viking history.",
+        "images": []
+      },
+      "norway/oslo": {
+        "name": "Oslo",
+        "description": "The harbour capital with museums and parks.",
+        "images": []
+      },
+      "norway/flam": {
+        "name": "Flam",
+        "description": "A fjord village at the end of a famous railway.",
+        "images": []
+      },
+      "norway/bergen": {
+        "name": "Bergen",
+        "description": "A rainy wooden-wharf city and gateway to the fjords.",
+        "images": []
+      },
+      "norway/alesund": {
+        "name": "Alesund",
+        "description": "An Art Nouveau town near the Geirangerfjord.",
+        "images": []
+      },
+      "norway/tromso": {
+        "name": "Tromso",
+        "description": "The Arctic city of aurora and sleds.",
+        "images": []
+      },
+      "norway/reine": {
+        "name": "Reine",
+        "description": "A fishing village in the Lofoten Islands.",
+        "images": []
+      }
+    }
+  }
+}

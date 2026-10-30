@@ -1,0 +1,64 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Example bundle shipped with the authoring instructions",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "example-portugal-lisbon-4d",
+      "title": "Lisbon in 4 days",
+      "summary": "A relaxed first visit to Lisbon: riverside monuments, hilltop viewpoints, one day trip to Sintra and a fado dinner.",
+      "days": 4,
+      "route": "Lisbon (Sintra day trip)",
+      "arrive": "Lisbon (LIS)",
+      "depart": "Lisbon (LIS)",
+      "countries": ["Portugal"],
+      "regions": ["Lisbon"],
+      "cities": ["Lisbon", "Sintra"],
+      "imageQuery": "Lisbon Portugal tram",
+      "highlights": ["Belém monuments", "Alfama viewpoints", "Sintra palaces", "Fado dinner", "Custard tarts"],
+      "destinationKeys": ["portugal", "portugal/lisbon"],
+      "hero": "portugal/lisbon",
+      "sources": ["Visit Portugal (official tourism site)", "Lonely Planet Portugal"],
+      "pace": "R",
+      "interests": ["culture", "food", "iconic_landmarks", "photography"],
+      "stays": [
+        { "base": "Lisbon", "hotel": "Hotel in Lisbon", "start": 0, "nights": 3, "area": "Baixa, Chiado or Príncipe Real: central, walkable and on the metro", "breakfast": false, "dinner": false }
+      ],
+      "activities": [
+        { "day": 0, "type": "Sights & Landmarks", "time": "17:30", "duration": "2h", "name": "Alfama viewpoints at sunset", "notes": "Wander up from the cathedral through the lanes; the Santa Luzia and Portas do Sol terraces face the river.", "where": "Alfama, Lisbon", "book": "", "place": "portugal/alfama-viewpoints" },
+        { "day": 0, "type": "Food & Drink", "time": "20:00", "duration": "2h", "name": "Petiscos dinner in Bairro Alto", "notes": "Share small plates and a glass of vinho verde; the streets get lively after 21:00.", "where": "Bairro Alto, Lisbon", "book": "", "place": "portugal/bairro-alto-petiscos" },
+        { "day": 1, "type": "Ticketed Attraction", "time": "09:00", "duration": "1.5h", "name": "Jerónimos Monastery", "notes": "Go at opening; the cloister is the highlight. Check which day it is closed.", "where": "Belém, Lisbon", "book": "Yes - timed tickets online avoid a long queue", "place": "portugal/jeronimos-monastery" },
+        { "day": 1, "type": "Sights & Landmarks", "time": "11:00", "duration": "1h", "name": "Belém Tower", "notes": "A short riverside walk from the monastery; the exterior and river views are enough if the queue is long.", "where": "Belém, Lisbon", "book": "", "place": "portugal/belem-tower" },
+        { "day": 1, "type": "Food & Drink", "time": "12:30", "duration": "1h", "name": "Custard tarts in Belém", "notes": "Try a pastel de nata warm with cinnamon; there is a queue, but it moves fast.", "where": "Belém, Lisbon", "book": "", "place": "portugal/pasteis-de-belem" },
+        { "day": 1, "type": "Sights & Landmarks", "time": "15:30", "duration": "2h", "name": "Praça do Comércio and Baixa stroll", "notes": "Walk the arcaded square, through the Rua Augusta arch and the grid of streets behind it.", "where": "Baixa, Lisbon", "book": "", "place": "portugal/praca-do-comercio" },
+        { "day": 2, "type": "Day Trip", "time": "09:30", "duration": "7h", "name": "Sintra: Pena Palace and the old town", "notes": "Take the first tour of the palace if you can; the park paths are steep, so wear good shoes.", "where": "Sintra", "book": "Yes - timed palace tickets sell out in season", "place": "portugal/sintra-pena-palace" },
+        { "day": 2, "type": "Nightlife", "time": "20:00", "duration": "3h", "name": "Fado dinner in Alfama", "notes": "Small venues; arrive on time as the singing starts at a fixed hour.", "where": "Alfama, Lisbon", "book": "Yes - small venues fill up", "place": "portugal/fado-alfama" },
+        { "day": 3, "type": "Sights & Landmarks", "time": "09:30", "duration": "2h", "name": "Castelo de São Jorge", "notes": "Hilltop castle with the best all-round view of the city; keep it short before heading to the airport.", "where": "Alfama, Lisbon", "book": "", "place": "portugal/castelo-sao-jorge" }
+      ],
+      "legs": [
+        { "day": 0, "transferType": "Public Transit", "from": "Lisbon Airport (LIS)", "to": "Lisbon hotel area", "time": "", "minutes": 35, "carrier": "Metro Red Line, or taxi", "notes": "The metro station is in the terminal; a taxi to the centre is quick and a fair backup with luggage.", "book": "" },
+        { "day": 2, "transferType": "Public Transit", "from": "Lisbon Rossio Station", "to": "Sintra Station", "time": "08:30", "minutes": 40, "carrier": "CP suburban train", "notes": "Trains run every 20 minutes or so; from Sintra station buses and walkable lanes lead up to the sights.", "book": "" },
+        { "day": 2, "transferType": "Public Transit", "from": "Sintra Station", "to": "Lisbon Rossio Station", "time": "17:00", "minutes": 40, "carrier": "CP suburban train", "notes": "Return in time for the evening dinner.", "book": "" },
+        { "day": 3, "transferType": "Public Transit", "from": "Lisbon hotel area", "to": "Lisbon Airport (LIS)", "time": "", "minutes": 35, "carrier": "Metro Red Line, or taxi", "notes": "Leave at least three hours before an international flight.", "book": "" }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "portugal/alfama-viewpoints": { "name": "Alfama viewpoints", "description": "Terraces above Lisbon's oldest district, where steep lanes open onto views of red roofs and the river.", "details": "Alfama is Lisbon's oldest district, a tangle of steep lanes and stairways that largely came through the 1755 earthquake. Several terraces along its upper edge, including Santa Luzia and Portas do Sol, look over tiled roofs to the Tagus river. Sunset is a popular time to go, so expect company and some climbing on uneven cobbles.", "interests": ["photography", "authentic_local"], "mobility": "M", "image": null },
+      "portugal/bairro-alto-petiscos": { "name": "Petiscos in Bairro Alto", "description": "Small plates and wine in a grid of narrow streets that is quiet by day and lively at night.", "details": "Petiscos are Portuguese small plates meant for sharing, much like tapas. Bairro Alto is a grid of narrow streets on a hill above the centre; it is calm in the daytime and fills with people in the evening, when the bars spill out into the street. Order a few plates to share and ask what the kitchen recommends. Opening hours differ from place to place.", "interests": ["food", "nightlife", "authentic_local"], "mobility": "M", "image": null },
+      "portugal/jeronimos-monastery": { "name": "Jerónimos Monastery", "description": "A 16th-century monastery in Belém with an intricately carved stone cloister.", "details": "Begun in the early 1500s in Belém, the monastery is a showpiece of the ornate Manueline style and is listed, together with the nearby Belém Tower, as a UNESCO World Heritage Site. The two-storey cloister is the part most visitors remember, its stonework carved with maritime and plant motifs. Allow time for the church as well, and check which day of the week the monastery is closed.", "interests": ["culture", "iconic_landmarks"], "mobility": "L", "image": null },
+      "portugal/belem-tower": { "name": "Belém Tower", "description": "A small fortified tower on the Tagus riverbank that once guarded the city's harbour.", "details": "Completed in the early 16th century in the Manueline style, the tower stands at the edge of the Tagus and was part of the defences of Lisbon's river approach. It is small, and the inside is reached by narrow stairs, so many visitors are happy with the exterior and the views along the riverfront. Check ahead whether the interior is open on the day you go.", "interests": ["culture", "iconic_landmarks", "photography"], "mobility": "M", "image": null },
+      "portugal/pasteis-de-belem": { "name": "Custard tarts in Belém", "description": "The home district of the pastel de nata, a warm custard tart with a flaky shell.", "details": "The pastel de nata is a small custard tart in a crisp, flaky shell, often eaten with a dusting of cinnamon. Belém is closely tied to it, and the bakeries there draw a steady queue, though it usually moves quickly. The tarts are best eaten warm, so it is worth eating one on the spot rather than taking it away.", "interests": ["food", "authentic_local"], "mobility": "L", "image": null },
+      "portugal/praca-do-comercio": { "name": "Praça do Comércio", "description": "A broad arcaded square opening onto the river, entered through a triumphal arch from the streets of Baixa.", "details": "This waterfront square was laid out after the 1755 earthquake destroyed the earlier royal quarter on the same spot. Arcaded buildings enclose three sides and the fourth opens onto the Tagus, with an equestrian statue in the middle. The Rua Augusta Arch at the north side leads into the grid of Baixa streets, which is flat and easy to walk, with plenty of cafés for a pause.", "interests": ["iconic_landmarks", "culture"], "mobility": "L", "image": null },
+      "portugal/sintra-pena-palace": { "name": "Sintra and Pena Palace", "description": "A hill town of royal palaces and forest, topped by the brightly coloured Pena Palace.", "details": "Sintra is a hill town west of Lisbon whose palaces, villas and wooded slopes together form a UNESCO-listed cultural landscape. The 19th-century Pena Palace, painted in strong yellows and reds, sits on the highest ridge and is the best known of them. The paths up through the park are steep, the weather on the hill can differ from Lisbon's, and the sights are spread out, so plan on choosing one or two rather than seeing them all.", "interests": ["outdoors", "culture", "photography", "iconic_landmarks"], "mobility": "H", "image": null },
+      "portugal/fado-alfama": { "name": "Fado in Alfama", "description": "An evening of fado, Portugal's melancholy song tradition, in an intimate dining room.", "details": "Fado is a Portuguese song tradition, sung to the accompaniment of the Portuguese guitar and associated above all with Lisbon, where Alfama and Mouraria are its old homes. Its themes are longing and loss, often summed up by the word saudade, and it is on UNESCO's list of intangible cultural heritage. In a small venue the room goes quiet when the singing starts, so arrive on time and keep conversation until the breaks.", "interests": ["culture", "nightlife", "authentic_local"], "mobility": "L", "image": null },
+      "portugal/castelo-sao-jorge": { "name": "Castelo de São Jorge", "description": "A hilltop castle above Alfama with walls and towers to walk and wide views over the city.", "details": "The castle crowns the hill above Alfama, on a site that was fortified long before the present walls, and its ramparts and towers can be walked for views over the rooftops to the river. The approach from the old town is uphill, and the ramparts include steps, so it suits a short visit better than a long one. Go early or late in the day if you want the views with fewer people.", "interests": ["culture", "iconic_landmarks", "photography"], "mobility": "M", "image": null }
+    },
+    "destinations": {
+      "portugal": { "name": "Portugal", "description": "A country of Atlantic coast, tiled towns and long meals, easy to cover by train and short drives.", "images": [] },
+      "portugal/lisbon": { "name": "Lisbon", "description": "A hilly riverside capital of trams, tiled façades, viewpoints and neighbourhoods that each feel different.", "images": [] }
+    }
+  }
+}

@@ -1,0 +1,1377 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining TravelStride, Adventure Life, Rough Guides and traveller forum itineraries for Madagascar",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "madagascar-andasibe-morondava-7d",
+      "title": "Lemurs and Baobabs in 7 Days",
+      "summary": "The indri of Andasibe, then a flight to Morondava for the baobabs.",
+      "days": 7,
+      "route": "Antananarivo > Andasibe > Morondava",
+      "arrive": "Antananarivo (TNR)",
+      "depart": "Morondava (MOQ)",
+      "countries": [
+        "Madagascar"
+      ],
+      "regions": [],
+      "cities": [
+        "Antananarivo",
+        "Andasibe",
+        "Morondava"
+      ],
+      "imageQuery": "Avenue of the Baobabs Madagascar",
+      "highlights": [
+        "Indri lemurs",
+        "Andasibe forest",
+        "Avenue of the Baobabs"
+      ],
+      "destinationKeys": [
+        "madagascar",
+        "madagascar/antananarivo",
+        "madagascar/andasibe",
+        "madagascar/morondava"
+      ],
+      "hero": "madagascar/morondava",
+      "sources": [
+        "Travelstride",
+        "Adventure Life",
+        "Voyageforum",
+        "Sunrise Travel",
+        "Rough Guides"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Antananarivo",
+          "hotel": "Hotel in Antananarivo",
+          "start": 0,
+          "nights": 1,
+          "area": "In the upper town or near the airport, with a guide and driver",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Andasibe",
+          "hotel": "Lodge near Andasibe",
+          "start": 1,
+          "nights": 2,
+          "area": "In a forest lodge near Andasibe, with an early start for the indri",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Morondava",
+          "hotel": "Hotel in Morondava",
+          "start": 3,
+          "nights": 3,
+          "area": "In Morondava, on the coast road",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Rova and Analakely market",
+          "notes": "Go with a guide; the city is busy.",
+          "where": "Antananarivo",
+          "book": "",
+          "place": "madagascar/antananarivo-rova"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "06:30",
+          "duration": "3h",
+          "name": "Andasibe indri walk",
+          "notes": "Leech socks and rain gear help; ask for a night walk too.",
+          "where": "Andasibe",
+          "book": "",
+          "place": "madagascar/andasibe-indri"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Avenue of the Baobabs at sunset",
+          "notes": "Go for sunset light.",
+          "where": "Morondava",
+          "book": "",
+          "place": "madagascar/baobab-avenue"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "06:00",
+          "duration": "2h",
+          "name": "Baobab sunrise and Kirindy forest",
+          "notes": "Go for sunset light.",
+          "where": "Morondava",
+          "book": "",
+          "place": "madagascar/baobab-avenue"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo Airport (TNR)",
+          "to": "Antananarivo hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo",
+          "to": "Andasibe lodge",
+          "time": "08:30",
+          "minutes": 180,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Andasibe lodge",
+          "to": "Antananarivo Airport (TNR)",
+          "time": "07:30",
+          "minutes": 180,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo airport",
+          "to": "Antananarivo Airport (TNR)",
+          "time": "14:00",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Morondava Airport (MOQ)",
+          "to": "Morondava hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Morondava hotel",
+          "to": "Morondava Airport (MOQ)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "madagascar-ranomafana-isalo-8d",
+      "title": "Madagascar RN7 Highlands in 8 Days",
+      "summary": "Antananarivo, Andasibe, Ranomafana and Isalo.",
+      "days": 8,
+      "route": "Antananarivo > Andasibe > Ranomafana > Isalo",
+      "arrive": "Antananarivo (TNR)",
+      "depart": "Toliara (TLE)",
+      "countries": [
+        "Madagascar"
+      ],
+      "regions": [],
+      "cities": [
+        "Antananarivo",
+        "Andasibe",
+        "Ranomafana",
+        "Isalo"
+      ],
+      "imageQuery": "Isalo National Park Madagascar",
+      "highlights": [
+        "Indri",
+        "Ranomafana lemurs",
+        "Ring-tailed lemurs",
+        "Isalo canyons"
+      ],
+      "destinationKeys": [
+        "madagascar",
+        "madagascar/antananarivo",
+        "madagascar/andasibe",
+        "madagascar/ranomafana",
+        "madagascar/isalo"
+      ],
+      "hero": "madagascar/isalo",
+      "sources": [
+        "Travelstride",
+        "Adventure Life",
+        "Voyageforum",
+        "Sunrise Travel",
+        "Rough Guides"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Antananarivo",
+          "hotel": "Hotel in Antananarivo",
+          "start": 0,
+          "nights": 1,
+          "area": "In the upper town or near the airport, with a guide and driver",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Andasibe",
+          "hotel": "Lodge near Andasibe",
+          "start": 1,
+          "nights": 2,
+          "area": "In a forest lodge near Andasibe, with an early start for the indri",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ranomafana",
+          "hotel": "Lodge near Ranomafana",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge near Ranomafana, close to the hot springs",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Isalo",
+          "hotel": "Lodge near Isalo",
+          "start": 5,
+          "nights": 2,
+          "area": "In a lodge on the edge of Isalo, with a sunset view",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Rova and Analakely market",
+          "notes": "Go with a guide; the city is busy.",
+          "where": "Antananarivo",
+          "book": "",
+          "place": "madagascar/antananarivo-rova"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "06:30",
+          "duration": "3h",
+          "name": "Andasibe indri walk",
+          "notes": "Leech socks and rain gear help; ask for a night walk too.",
+          "where": "Andasibe",
+          "book": "",
+          "place": "madagascar/andasibe-indri"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Ranomafana lemur trek and hot springs",
+          "notes": "Trails are steep and slippery.",
+          "where": "Ranomafana",
+          "book": "",
+          "place": "madagascar/ranomafana"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Anja ring-tailed lemurs",
+          "notes": "A community reserve on the road south.",
+          "where": "Anja",
+          "book": "",
+          "place": "madagascar/anja-ring-tailed"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "5h",
+          "name": "Isalo canyon and Piscine Naturelle",
+          "notes": "Start early; the heat builds quickly.",
+          "where": "Isalo",
+          "book": "",
+          "place": "madagascar/isalo"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo Airport (TNR)",
+          "to": "Antananarivo hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo",
+          "to": "Andasibe lodge",
+          "time": "08:30",
+          "minutes": 180,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Andasibe lodge",
+          "to": "Ranomafana lodge",
+          "time": "06:30",
+          "minutes": 540,
+          "carrier": "4x4 with driver-guide",
+          "notes": "A very long day on the RN7; a flight to Fianarantsoa is an option.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Ranomafana lodge",
+          "to": "Isalo lodge",
+          "time": "07:30",
+          "minutes": 360,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Isalo lodge",
+          "to": "Toliara Airport (TLE)",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "madagascar-south-coast-10d",
+      "title": "Madagascar South: Highlands, Isalo and Ifaty in 10 Days",
+      "summary": "Rainforest and lemurs, desert canyons and a beach finish at Ifaty.",
+      "days": 10,
+      "route": "Antananarivo > Andasibe > Ranomafana > Isalo > Ifaty",
+      "arrive": "Antananarivo (TNR)",
+      "depart": "Toliara (TLE)",
+      "countries": [
+        "Madagascar"
+      ],
+      "regions": [],
+      "cities": [
+        "Antananarivo",
+        "Andasibe",
+        "Ranomafana",
+        "Isalo",
+        "Ifaty"
+      ],
+      "imageQuery": "Ifaty beach Madagascar",
+      "highlights": [
+        "Indri",
+        "Ranomafana",
+        "Isalo",
+        "Reniala forest",
+        "Ifaty beach"
+      ],
+      "destinationKeys": [
+        "madagascar",
+        "madagascar/antananarivo",
+        "madagascar/andasibe",
+        "madagascar/ranomafana",
+        "madagascar/isalo",
+        "madagascar/ifaty"
+      ],
+      "hero": "madagascar/ifaty",
+      "sources": [
+        "Travelstride",
+        "Adventure Life",
+        "Voyageforum",
+        "Sunrise Travel",
+        "Rough Guides"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Antananarivo",
+          "hotel": "Hotel in Antananarivo",
+          "start": 0,
+          "nights": 1,
+          "area": "In the upper town or near the airport, with a guide and driver",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Andasibe",
+          "hotel": "Lodge near Andasibe",
+          "start": 1,
+          "nights": 2,
+          "area": "In a forest lodge near Andasibe, with an early start for the indri",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ranomafana",
+          "hotel": "Lodge near Ranomafana",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge near Ranomafana, close to the hot springs",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Isalo",
+          "hotel": "Lodge near Isalo",
+          "start": 5,
+          "nights": 2,
+          "area": "In a lodge on the edge of Isalo, with a sunset view",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ifaty",
+          "hotel": "Resort at Ifaty",
+          "start": 7,
+          "nights": 2,
+          "area": "On the beach at Ifaty, a short transfer from Toliara",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Rova and Analakely market",
+          "notes": "Go with a guide; the city is busy.",
+          "where": "Antananarivo",
+          "book": "",
+          "place": "madagascar/antananarivo-rova"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "06:30",
+          "duration": "3h",
+          "name": "Andasibe indri walk",
+          "notes": "Leech socks and rain gear help; ask for a night walk too.",
+          "where": "Andasibe",
+          "book": "",
+          "place": "madagascar/andasibe-indri"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Ranomafana lemur trek and hot springs",
+          "notes": "Trails are steep and slippery.",
+          "where": "Ranomafana",
+          "book": "",
+          "place": "madagascar/ranomafana"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Anja ring-tailed lemurs",
+          "notes": "A community reserve on the road south.",
+          "where": "Anja",
+          "book": "",
+          "place": "madagascar/anja-ring-tailed"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "5h",
+          "name": "Isalo canyon and Piscine Naturelle",
+          "notes": "Start early; the heat builds quickly.",
+          "where": "Isalo",
+          "book": "",
+          "place": "madagascar/isalo"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Ifaty snorkelling and Reniala spiny forest",
+          "notes": "Humpbacks pass July to September.",
+          "where": "Ifaty",
+          "book": "",
+          "place": "madagascar/ifaty-reniala"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo Airport (TNR)",
+          "to": "Antananarivo hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo",
+          "to": "Andasibe lodge",
+          "time": "08:30",
+          "minutes": 180,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Andasibe lodge",
+          "to": "Ranomafana lodge",
+          "time": "06:30",
+          "minutes": 540,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Ranomafana lodge",
+          "to": "Isalo lodge",
+          "time": "07:30",
+          "minutes": 360,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Isalo lodge",
+          "to": "Ifaty resort",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Ifaty resort",
+          "to": "Toliara Airport (TLE)",
+          "time": "10:00",
+          "minutes": 45,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "madagascar-south-nosy-be-12d",
+      "title": "Madagascar Highlands and Nosy Be in 12 Days",
+      "summary": "The RN7 circuit, Ifaty beach and a flight north to Nosy Be.",
+      "days": 12,
+      "route": "Antananarivo > Andasibe > Ranomafana > Isalo > Ifaty > Nosy Be",
+      "arrive": "Antananarivo (TNR)",
+      "depart": "Nosy Be (NOS)",
+      "countries": [
+        "Madagascar"
+      ],
+      "regions": [],
+      "cities": [
+        "Antananarivo",
+        "Andasibe",
+        "Ranomafana",
+        "Isalo",
+        "Ifaty",
+        "Nosy Be"
+      ],
+      "imageQuery": "Nosy Be Madagascar beach",
+      "highlights": [
+        "Indri",
+        "Ranomafana",
+        "Isalo",
+        "Ifaty",
+        "Nosy Komba lemurs"
+      ],
+      "destinationKeys": [
+        "madagascar",
+        "madagascar/antananarivo",
+        "madagascar/andasibe",
+        "madagascar/ranomafana",
+        "madagascar/isalo",
+        "madagascar/ifaty",
+        "madagascar/nosy-be"
+      ],
+      "hero": "madagascar/nosy-be",
+      "sources": [
+        "Travelstride",
+        "Adventure Life",
+        "Voyageforum",
+        "Sunrise Travel",
+        "Rough Guides"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "relax",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Antananarivo",
+          "hotel": "Hotel in Antananarivo",
+          "start": 0,
+          "nights": 1,
+          "area": "In the upper town or near the airport, with a guide and driver",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Andasibe",
+          "hotel": "Lodge near Andasibe",
+          "start": 1,
+          "nights": 2,
+          "area": "In a forest lodge near Andasibe, with an early start for the indri",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ranomafana",
+          "hotel": "Lodge near Ranomafana",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge near Ranomafana, close to the hot springs",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Isalo",
+          "hotel": "Lodge near Isalo",
+          "start": 5,
+          "nights": 2,
+          "area": "In a lodge on the edge of Isalo, with a sunset view",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ifaty",
+          "hotel": "Resort at Ifaty",
+          "start": 7,
+          "nights": 2,
+          "area": "On the beach at Ifaty, a short transfer from Toliara",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nosy Be",
+          "hotel": "Resort in Nosy Be",
+          "start": 9,
+          "nights": 2,
+          "area": "In Nosy Be, on Ambatoloaka or Andilana beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Rova and Analakely market",
+          "notes": "Go with a guide; the city is busy.",
+          "where": "Antananarivo",
+          "book": "",
+          "place": "madagascar/antananarivo-rova"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "06:30",
+          "duration": "3h",
+          "name": "Andasibe indri walk",
+          "notes": "Leech socks and rain gear help; ask for a night walk too.",
+          "where": "Andasibe",
+          "book": "",
+          "place": "madagascar/andasibe-indri"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Ranomafana lemur trek and hot springs",
+          "notes": "Trails are steep and slippery.",
+          "where": "Ranomafana",
+          "book": "",
+          "place": "madagascar/ranomafana"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Anja ring-tailed lemurs",
+          "notes": "A community reserve on the road south.",
+          "where": "Anja",
+          "book": "",
+          "place": "madagascar/anja-ring-tailed"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "5h",
+          "name": "Isalo canyon and Piscine Naturelle",
+          "notes": "Start early; the heat builds quickly.",
+          "where": "Isalo",
+          "book": "",
+          "place": "madagascar/isalo"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Ifaty snorkelling and Reniala spiny forest",
+          "notes": "Humpbacks pass July to September.",
+          "where": "Ifaty",
+          "book": "",
+          "place": "madagascar/ifaty-reniala"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Nosy Komba, Nosy Tanikely and Nosy Iranja boat day",
+          "notes": "Calmest from May to November.",
+          "where": "Nosy Be",
+          "book": "Yes - book a boat",
+          "place": "madagascar/nosy-be"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo Airport (TNR)",
+          "to": "Antananarivo hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo",
+          "to": "Andasibe lodge",
+          "time": "08:30",
+          "minutes": 180,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Andasibe lodge",
+          "to": "Ranomafana lodge",
+          "time": "06:30",
+          "minutes": 540,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Ranomafana lodge",
+          "to": "Isalo lodge",
+          "time": "07:30",
+          "minutes": 360,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Isalo lodge",
+          "to": "Ifaty resort",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Ifaty resort",
+          "to": "Toliara Airport (TLE)",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Antananarivo.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Nosy Be Airport (NOS)",
+          "to": "Nosy Be resort",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Nosy Be resort",
+          "to": "Nosy Be Airport (NOS)",
+          "time": "10:00",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "madagascar-grand-14d",
+      "title": "Grand Madagascar in 14 Days",
+      "summary": "The highlands, Isalo, the south coast, the baobabs and Nosy Be.",
+      "days": 14,
+      "route": "Antananarivo > Andasibe > Ranomafana > Isalo > Ifaty > Morondava > Nosy Be",
+      "arrive": "Antananarivo (TNR)",
+      "depart": "Nosy Be (NOS)",
+      "countries": [
+        "Madagascar"
+      ],
+      "regions": [],
+      "cities": [
+        "Antananarivo",
+        "Andasibe",
+        "Ranomafana",
+        "Isalo",
+        "Ifaty",
+        "Morondava",
+        "Nosy Be"
+      ],
+      "imageQuery": "Madagascar baobabs lemur",
+      "highlights": [
+        "Indri",
+        "Ranomafana",
+        "Isalo",
+        "Avenue of the Baobabs",
+        "Nosy Be"
+      ],
+      "destinationKeys": [
+        "madagascar",
+        "madagascar/antananarivo",
+        "madagascar/andasibe",
+        "madagascar/ranomafana",
+        "madagascar/isalo",
+        "madagascar/ifaty",
+        "madagascar/morondava",
+        "madagascar/nosy-be"
+      ],
+      "hero": "madagascar/antananarivo",
+      "sources": [
+        "Travelstride",
+        "Adventure Life",
+        "Voyageforum",
+        "Sunrise Travel",
+        "Rough Guides"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Antananarivo",
+          "hotel": "Hotel in Antananarivo",
+          "start": 0,
+          "nights": 1,
+          "area": "In the upper town or near the airport, with a guide and driver",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Andasibe",
+          "hotel": "Lodge near Andasibe",
+          "start": 1,
+          "nights": 2,
+          "area": "In a forest lodge near Andasibe, with an early start for the indri",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ranomafana",
+          "hotel": "Lodge near Ranomafana",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge near Ranomafana, close to the hot springs",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Isalo",
+          "hotel": "Lodge near Isalo",
+          "start": 5,
+          "nights": 2,
+          "area": "In a lodge on the edge of Isalo, with a sunset view",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ifaty",
+          "hotel": "Resort at Ifaty",
+          "start": 7,
+          "nights": 2,
+          "area": "On the beach at Ifaty, a short transfer from Toliara",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Morondava",
+          "hotel": "Hotel in Morondava",
+          "start": 9,
+          "nights": 2,
+          "area": "In Morondava, on the coast road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nosy Be",
+          "hotel": "Resort in Nosy Be",
+          "start": 11,
+          "nights": 2,
+          "area": "In Nosy Be, on Ambatoloaka or Andilana beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Rova and Analakely market",
+          "notes": "Go with a guide; the city is busy.",
+          "where": "Antananarivo",
+          "book": "",
+          "place": "madagascar/antananarivo-rova"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "06:30",
+          "duration": "3h",
+          "name": "Andasibe indri walk",
+          "notes": "Leech socks and rain gear help; ask for a night walk too.",
+          "where": "Andasibe",
+          "book": "",
+          "place": "madagascar/andasibe-indri"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Ranomafana lemur trek and hot springs",
+          "notes": "Trails are steep and slippery.",
+          "where": "Ranomafana",
+          "book": "",
+          "place": "madagascar/ranomafana"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Anja ring-tailed lemurs",
+          "notes": "A community reserve on the road south.",
+          "where": "Anja",
+          "book": "",
+          "place": "madagascar/anja-ring-tailed"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "5h",
+          "name": "Isalo canyon and Piscine Naturelle",
+          "notes": "Start early; the heat builds quickly.",
+          "where": "Isalo",
+          "book": "",
+          "place": "madagascar/isalo"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Ifaty snorkelling and Reniala spiny forest",
+          "notes": "Humpbacks pass July to September.",
+          "where": "Ifaty",
+          "book": "",
+          "place": "madagascar/ifaty-reniala"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Avenue of the Baobabs at sunset",
+          "notes": "Go for sunset light.",
+          "where": "Morondava",
+          "book": "",
+          "place": "madagascar/baobab-avenue"
+        },
+        {
+          "day": 12,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Nosy Komba, Nosy Tanikely and Nosy Iranja boat day",
+          "notes": "Calmest from May to November.",
+          "where": "Nosy Be",
+          "book": "Yes - book a boat",
+          "place": "madagascar/nosy-be"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo Airport (TNR)",
+          "to": "Antananarivo hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Antananarivo",
+          "to": "Andasibe lodge",
+          "time": "08:30",
+          "minutes": 180,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Andasibe lodge",
+          "to": "Ranomafana lodge",
+          "time": "06:30",
+          "minutes": 540,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Ranomafana lodge",
+          "to": "Isalo lodge",
+          "time": "07:30",
+          "minutes": 360,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Isalo lodge",
+          "to": "Ifaty resort",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "4x4 with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Ifaty resort",
+          "to": "Toliara Airport (TLE)",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Antananarivo.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Morondava Airport (MOQ)",
+          "to": "Morondava hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Morondava hotel",
+          "to": "Morondava Airport (MOQ)",
+          "time": "07:00",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Antananarivo.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Nosy Be Airport (NOS)",
+          "to": "Nosy Be resort",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Nosy Be resort",
+          "to": "Nosy Be Airport (NOS)",
+          "time": "10:00",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "madagascar/antananarivo-rova": {
+        "name": "Antananarivo Rova and Analakely market",
+        "description": "The hilltop royal palace and the busy markets of the highland capital.",
+        "details": "The Rova of Antananarivo was the palace of the Merina kings and sits above the city. Narrow stairways, markets and colourful minibuses fill the lower town. The city is chaotic and busy, so a guide helps on a first morning.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "madagascar/andasibe-indri": {
+        "name": "Andasibe-Mantadia and the indri",
+        "description": "A rainforest park where the largest living lemur, the indri, sings across the canopy.",
+        "details": "Andasibe holds indri family groups that give a haunting call at dawn. Guides lead morning and night walks to find lemurs, chameleons and frogs. The park is about three hours from the capital, and the forest is damp and cool. Leech socks and rain gear help.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "madagascar/ranomafana": {
+        "name": "Ranomafana National Park",
+        "description": "Rainforest in the southern highlands with golden bamboo lemurs and hot springs.",
+        "details": "Ranomafana has trails to sifakas, bamboo lemurs and chameleons, plus a thermal spring to soak in after a hike. Trails are steep and slippery in the rain. The park is a UNESCO site, reached after a long day on the RN7 road from Antananarivo.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "madagascar/anja-ring-tailed": {
+        "name": "Anja Community Reserve ring-tailed lemurs",
+        "description": "A community-run reserve with troops of ring-tailed lemurs on rocky outcrops.",
+        "details": "The small Anja reserve is run by local villagers, and visitors can walk among ring-tailed lemurs, chameleons and caves. A short stop on the road between Ranomafana and Isalo. Fees fund the local community.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "madagascar/isalo": {
+        "name": "Isalo National Park",
+        "description": "Sandstone canyons, natural pools and sunset views in the arid south.",
+        "details": "Isalo has rock formations, canyons and the Piscine Naturelle swimming hole. Walks of different lengths pass lemur troops and Bara tombs. The sunset from the Window of Isalo is a classic. Daytime heat is high, so start early and carry water.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "madagascar/ifaty-reniala": {
+        "name": "Ifaty beach and Reniala spiny forest",
+        "description": "A coast of reef-fringed beaches and a spiny forest with baobabs and hopping lizards.",
+        "details": "Ifaty sits near Toliara on the south-west coast, with Vezo fishing villages, snorkelling and, in season, humpback whales from July to September. The Reniala Reserve has ancient baobabs and spiny forest. Take sun protection.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "madagascar/baobab-avenue": {
+        "name": "Avenue of the Baobabs",
+        "description": "A dirt road lined with giant baobab trees, glowing at sunset near Morondava.",
+        "details": "The Avenue of the Baobabs is a short drive from Morondava, and the best light is at sunrise and sunset. Nearby are Kirindy Forest, where fossas can be seen on night walks, and the Baobab Amoureux. Roads are rough in the wet season.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "madagascar/nosy-be": {
+        "name": "Nosy Be and Nosy Iranja",
+        "description": "A tropical island base for beaches, snorkelling and the lemur island of Nosy Komba.",
+        "details": "Nosy Be is the main beach destination, with boat trips to Nosy Komba (black lemurs), Nosy Tanikely (snorkelling) and the sand spit of Nosy Iranja. Whale sharks are present in the cooler months. Conditions are best from May to November.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "madagascar": {
+        "name": "Madagascar",
+        "description": "An island of lemurs, baobabs, rainforest and rich Malagasy culture.",
+        "images": []
+      },
+      "madagascar/antananarivo": {
+        "name": "Antananarivo",
+        "description": "The highland capital, built on hills with a royal palace.",
+        "images": []
+      },
+      "madagascar/andasibe": {
+        "name": "Andasibe",
+        "description": "A rainforest park famous for the singing indri.",
+        "images": []
+      },
+      "madagascar/ranomafana": {
+        "name": "Ranomafana",
+        "description": "A highland rainforest park with hot springs.",
+        "images": []
+      },
+      "madagascar/isalo": {
+        "name": "Isalo",
+        "description": "A sandstone massif of canyons and natural pools.",
+        "images": []
+      },
+      "madagascar/ifaty": {
+        "name": "Ifaty",
+        "description": "A beach resort on the south-west coast.",
+        "images": []
+      },
+      "madagascar/morondava": {
+        "name": "Morondava",
+        "description": "A west-coast town near the Avenue of the Baobabs.",
+        "images": []
+      },
+      "madagascar/nosy-be": {
+        "name": "Nosy Be",
+        "description": "A northern beach island.",
+        "images": []
+      }
+    }
+  }
+}

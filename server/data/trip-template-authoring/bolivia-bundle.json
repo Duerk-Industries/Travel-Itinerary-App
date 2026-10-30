@@ -1,0 +1,1343 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Bushop Bolivia, The Discoveries Of, KimKim and Steppes Travel itineraries for Bolivia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "bolivia-copacabana-la-paz-6d",
+      "title": "La Paz and Lake Titicaca in 6 Days",
+      "summary": "Gentle acclimatisation at Copacabana and Isla del Sol, then the cable cars and markets of La Paz.",
+      "days": 6,
+      "route": "Copacabana > La Paz",
+      "arrive": "La Paz (LPB)",
+      "depart": "La Paz (LPB)",
+      "countries": [
+        "Bolivia"
+      ],
+      "regions": [
+        "La Paz"
+      ],
+      "cities": [
+        "Copacabana",
+        "La Paz"
+      ],
+      "imageQuery": "Lake Titicaca Isla del Sol Bolivia",
+      "highlights": [
+        "Isla del Sol",
+        "Teleferico",
+        "Witches Market",
+        "Valley of the Moon",
+        "Tiwanaku"
+      ],
+      "destinationKeys": [
+        "bolivia",
+        "bolivia/la-paz",
+        "bolivia/copacabana"
+      ],
+      "hero": "bolivia/copacabana",
+      "sources": [
+        "Bushop Bolivia",
+        "The Discoveries Of",
+        "KimKim",
+        "Career Gappers",
+        "Steppes Travel"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Copacabana",
+          "hotel": "Hotel in Copacabana",
+          "start": 0,
+          "nights": 2,
+          "area": "In Copacabana near the lake, or on the hillside with views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Paz",
+          "hotel": "Hotel in La Paz",
+          "start": 2,
+          "nights": 3,
+          "area": "In the centre near Sopocachi or the San Francisco area, with good access to cable cars",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Copacabana waterfront and cathedral",
+          "notes": "A pilgrimage town on the lake.",
+          "where": "Copacabana",
+          "book": "",
+          "place": "bolivia/copacabana-isla-del-sol"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Isla del Sol boat trip and ridge walk",
+          "notes": "Boats cross in about 90 minutes; walk the ridge between the two ends.",
+          "where": "Isla del Sol",
+          "book": "Yes - book a boat ticket",
+          "place": "bolivia/copacabana-isla-del-sol"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Mi Teleferico cable car ride",
+          "notes": "Ride the lines for city views; take it easy at altitude.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/la-paz-cable-car"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Witches Market and Calle Jaen",
+          "notes": "Walk slowly at 3,600 metres; ask before photographing vendors.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/witches-market"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Valley of the Moon",
+          "notes": "Bring sun protection and water.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/valley-of-the-moon"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "El Alto Airport (LPB)",
+          "to": "Copacabana",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Copacabana",
+          "to": "La Paz",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Tourist bus or private transfer",
+          "notes": "Travel by tourist bus; the route includes a short ferry crossing at the Strait of Tiquina.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "La Paz hotel",
+          "to": "El Alto Airport (LPB)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow extra time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bolivia-la-paz-uyuni-7d",
+      "title": "La Paz and the Salt Flats in 7 Days",
+      "summary": "Three days in La Paz, then a flight to Uyuni for the salt flat and lagoons.",
+      "days": 7,
+      "route": "La Paz > Uyuni",
+      "arrive": "La Paz (LPB)",
+      "depart": "Uyuni (UYU)",
+      "countries": [
+        "Bolivia"
+      ],
+      "regions": [
+        "La Paz",
+        "Potosi"
+      ],
+      "cities": [
+        "La Paz",
+        "Uyuni"
+      ],
+      "imageQuery": "Salar de Uyuni mirror reflection",
+      "highlights": [
+        "Teleferico",
+        "Valley of the Moon",
+        "Salar de Uyuni",
+        "Train Cemetery",
+        "Salt flat sunset"
+      ],
+      "destinationKeys": [
+        "bolivia",
+        "bolivia/la-paz",
+        "bolivia/potosi",
+        "bolivia/uyuni"
+      ],
+      "hero": "bolivia/uyuni",
+      "sources": [
+        "Bushop Bolivia",
+        "The Discoveries Of",
+        "KimKim",
+        "Career Gappers",
+        "Steppes Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "photography",
+        "adventure",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "La Paz",
+          "hotel": "Hotel in La Paz",
+          "start": 0,
+          "nights": 3,
+          "area": "In the centre near Sopocachi or the San Francisco area, with good access to cable cars",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Uyuni",
+          "hotel": "Hotel in Uyuni",
+          "start": 3,
+          "nights": 3,
+          "area": "In Uyuni town, near the main avenue; many hotels are basic",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Mi Teleferico cable car ride",
+          "notes": "Ride the lines for city views; take it easy at altitude.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/la-paz-cable-car"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Witches Market and Calle Jaen",
+          "notes": "Walk slowly at 3,600 metres; ask before photographing vendors.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/witches-market"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Valley of the Moon",
+          "notes": "Bring sun protection and water.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/valley-of-the-moon"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Train Cemetery",
+          "notes": "A short stop on the edge of town.",
+          "where": "Uyuni",
+          "book": "",
+          "place": "bolivia/train-cemetery"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:30",
+          "duration": "8h",
+          "name": "Salar de Uyuni day tour",
+          "notes": "Includes Isla Incahuasi; sunglasses and sun cream are essential.",
+          "where": "Salar de Uyuni",
+          "book": "Yes - book a tour",
+          "place": "bolivia/uyuni-salt-flat"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Salt flat sunset",
+          "notes": "Dress warmly; the cold arrives quickly after sunset.",
+          "where": "Salar de Uyuni",
+          "book": "Yes - book the tour",
+          "place": "bolivia/sunset-salt-flat"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "El Alto Airport (LPB)",
+          "to": "La Paz hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "La Paz hotel",
+          "to": "El Alto Airport (LPB)",
+          "time": "07:30",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow extra time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Uyuni Airport (UYU)",
+          "to": "Uyuni hotel",
+          "time": "",
+          "minutes": 10,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Uyuni hotel",
+          "to": "Uyuni Airport (UYU)",
+          "time": "10:00",
+          "minutes": 10,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow extra time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bolivia-titicaca-la-paz-uyuni-8d",
+      "title": "Titicaca, La Paz and Uyuni in 8 Days",
+      "summary": "Lake Titicaca first for acclimatisation, then La Paz and a flight to the salt flats.",
+      "days": 8,
+      "route": "Copacabana > La Paz > Uyuni",
+      "arrive": "La Paz (LPB)",
+      "depart": "Uyuni (UYU)",
+      "countries": [
+        "Bolivia"
+      ],
+      "regions": [
+        "La Paz",
+        "Potosi"
+      ],
+      "cities": [
+        "Copacabana",
+        "La Paz",
+        "Uyuni"
+      ],
+      "imageQuery": "Bolivia Uyuni salt flat sunset",
+      "highlights": [
+        "Isla del Sol",
+        "Death Road",
+        "Teleferico",
+        "Salar de Uyuni",
+        "Altiplano lagoons"
+      ],
+      "destinationKeys": [
+        "bolivia",
+        "bolivia/la-paz",
+        "bolivia/copacabana",
+        "bolivia/potosi",
+        "bolivia/uyuni"
+      ],
+      "hero": "bolivia/la-paz",
+      "sources": [
+        "Bushop Bolivia",
+        "The Discoveries Of",
+        "KimKim",
+        "Career Gappers",
+        "Steppes Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "culture",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Copacabana",
+          "hotel": "Hotel in Copacabana",
+          "start": 0,
+          "nights": 2,
+          "area": "In Copacabana near the lake, or on the hillside with views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Paz",
+          "hotel": "Hotel in La Paz",
+          "start": 2,
+          "nights": 3,
+          "area": "In the centre near Sopocachi or the San Francisco area, with good access to cable cars",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Uyuni",
+          "hotel": "Hotel in Uyuni",
+          "start": 5,
+          "nights": 2,
+          "area": "In Uyuni town, near the main avenue; many hotels are basic",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Copacabana waterfront and cathedral",
+          "notes": "A pilgrimage town on the lake.",
+          "where": "Copacabana",
+          "book": "",
+          "place": "bolivia/copacabana-isla-del-sol"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Isla del Sol boat trip and ridge walk",
+          "notes": "Boats cross in about 90 minutes; walk the ridge between the two ends.",
+          "where": "Isla del Sol",
+          "book": "Yes - book a boat ticket",
+          "place": "bolivia/copacabana-isla-del-sol"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Mi Teleferico cable car ride",
+          "notes": "Ride the lines for city views; take it easy at altitude.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/la-paz-cable-car"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Witches Market and Calle Jaen",
+          "notes": "Walk slowly at 3,600 metres; ask before photographing vendors.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/witches-market"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Death Road downhill bike ride",
+          "notes": "Choose a reputable operator; layers needed for the temperature change.",
+          "where": "North Yungas Road",
+          "book": "Yes - book with a safety-rated operator",
+          "place": "bolivia/death-road"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Train Cemetery",
+          "notes": "A short stop on the edge of town.",
+          "where": "Uyuni",
+          "book": "",
+          "place": "bolivia/train-cemetery"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "10:30",
+          "duration": "8h",
+          "name": "Salar de Uyuni day tour",
+          "notes": "Includes Isla Incahuasi; sunglasses and sun cream are essential.",
+          "where": "Salar de Uyuni",
+          "book": "Yes - book a tour",
+          "place": "bolivia/uyuni-salt-flat"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "El Alto Airport (LPB)",
+          "to": "Copacabana",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Copacabana",
+          "to": "La Paz",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Tourist bus or private transfer",
+          "notes": "Travel by tourist bus; the route includes a short ferry crossing at the Strait of Tiquina.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "La Paz hotel",
+          "to": "El Alto Airport (LPB)",
+          "time": "07:30",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow extra time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Uyuni Airport (UYU)",
+          "to": "Uyuni hotel",
+          "time": "",
+          "minutes": 10,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Uyuni hotel",
+          "to": "Uyuni Airport (UYU)",
+          "time": "10:00",
+          "minutes": 10,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow extra time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bolivia-classic-10d",
+      "title": "Bolivia Classic: Titicaca, La Paz, Sucre and Uyuni in 10 Days",
+      "summary": "Lake, high-altitude capital, colonial Sucre and the salt flat, with a stop at Potosi.",
+      "days": 10,
+      "route": "Copacabana > La Paz > Sucre > Uyuni",
+      "arrive": "La Paz (LPB)",
+      "depart": "Uyuni (UYU)",
+      "countries": [
+        "Bolivia"
+      ],
+      "regions": [
+        "La Paz",
+        "Chuquisaca",
+        "Potosi"
+      ],
+      "cities": [
+        "Copacabana",
+        "La Paz",
+        "Sucre",
+        "Uyuni"
+      ],
+      "imageQuery": "Sucre white city Bolivia",
+      "highlights": [
+        "Isla del Sol",
+        "Teleferico",
+        "Sucre",
+        "Potosi",
+        "Salar de Uyuni"
+      ],
+      "destinationKeys": [
+        "bolivia",
+        "bolivia/la-paz",
+        "bolivia/copacabana",
+        "bolivia/chuquisaca",
+        "bolivia/sucre",
+        "bolivia/potosi",
+        "bolivia/uyuni"
+      ],
+      "hero": "bolivia/chuquisaca",
+      "sources": [
+        "Bushop Bolivia",
+        "The Discoveries Of",
+        "KimKim",
+        "Career Gappers",
+        "Steppes Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "adventure",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Copacabana",
+          "hotel": "Hotel in Copacabana",
+          "start": 0,
+          "nights": 2,
+          "area": "In Copacabana near the lake, or on the hillside with views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Paz",
+          "hotel": "Hotel in La Paz",
+          "start": 2,
+          "nights": 3,
+          "area": "In the centre near Sopocachi or the San Francisco area, with good access to cable cars",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sucre",
+          "hotel": "Hotel in Sucre",
+          "start": 5,
+          "nights": 2,
+          "area": "In central Sucre near the main plaza",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Uyuni",
+          "hotel": "Hotel in Uyuni",
+          "start": 7,
+          "nights": 2,
+          "area": "In Uyuni town, near the main avenue; many hotels are basic",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Copacabana waterfront and cathedral",
+          "notes": "A pilgrimage town on the lake.",
+          "where": "Copacabana",
+          "book": "",
+          "place": "bolivia/copacabana-isla-del-sol"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Isla del Sol boat trip and ridge walk",
+          "notes": "Boats cross in about 90 minutes; walk the ridge between the two ends.",
+          "where": "Isla del Sol",
+          "book": "Yes - book a boat ticket",
+          "place": "bolivia/copacabana-isla-del-sol"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Mi Teleferico cable car ride",
+          "notes": "Ride the lines for city views; take it easy at altitude.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/la-paz-cable-car"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Witches Market and Calle Jaen",
+          "notes": "Walk slowly at 3,600 metres; ask before photographing vendors.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/witches-market"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Valley of the Moon",
+          "notes": "Bring sun protection and water.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/valley-of-the-moon"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Sucre colonial centre and Casa de la Libertad",
+          "notes": "Walk up to the Recoleta viewpoint for the roofs.",
+          "where": "Sucre",
+          "book": "",
+          "place": "bolivia/sucre-white-city"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "4h",
+          "name": "Potosi mint museum or Cerro Rico mine tour",
+          "notes": "Mine tours are physically demanding at 4,000 metres; the mint is an easier alternative.",
+          "where": "Potosi",
+          "book": "Yes - book a mine tour",
+          "place": "bolivia/potosi-cerro-rico"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Train Cemetery",
+          "notes": "A short stop on the edge of town.",
+          "where": "Uyuni",
+          "book": "",
+          "place": "bolivia/train-cemetery"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "10:30",
+          "duration": "8h",
+          "name": "Salar de Uyuni day tour",
+          "notes": "Includes Isla Incahuasi; sunglasses and sun cream are essential.",
+          "where": "Salar de Uyuni",
+          "book": "Yes - book a tour",
+          "place": "bolivia/uyuni-salt-flat"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "El Alto Airport (LPB)",
+          "to": "Copacabana",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Copacabana",
+          "to": "La Paz",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Tourist bus or private transfer",
+          "notes": "Travel by tourist bus; the route includes a short ferry crossing at the Strait of Tiquina.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "La Paz hotel",
+          "to": "El Alto Airport (LPB)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow extra time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Sucre Airport (SRE)",
+          "to": "Sucre hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Sucre",
+          "to": "Potosi",
+          "time": "07:30",
+          "minutes": 180,
+          "carrier": "Tourist bus or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Potosi",
+          "to": "Uyuni",
+          "time": "14:30",
+          "minutes": 240,
+          "carrier": "Tourist bus or private transfer",
+          "notes": "The road crosses the high altiplano; carry layers and water.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Uyuni hotel",
+          "to": "Uyuni Airport (UYU)",
+          "time": "10:00",
+          "minutes": 10,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow extra time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bolivia-complete-14d",
+      "title": "Complete Bolivia in 14 Days",
+      "summary": "Lake Titicaca, La Paz and Death Road, Sucre, Potosi and a full salt flat and lagoon tour.",
+      "days": 14,
+      "route": "Copacabana > La Paz > Sucre > Potosi > Uyuni",
+      "arrive": "La Paz (LPB)",
+      "depart": "Uyuni (UYU)",
+      "countries": [
+        "Bolivia"
+      ],
+      "regions": [
+        "La Paz",
+        "Chuquisaca",
+        "Potosi"
+      ],
+      "cities": [
+        "Copacabana",
+        "La Paz",
+        "Sucre",
+        "Potosi",
+        "Uyuni"
+      ],
+      "imageQuery": "Laguna Colorada flamingos Bolivia",
+      "highlights": [
+        "Isla del Sol",
+        "Death Road",
+        "Tiwanaku",
+        "Sucre",
+        "Potosi mines",
+        "Salar de Uyuni"
+      ],
+      "destinationKeys": [
+        "bolivia",
+        "bolivia/la-paz",
+        "bolivia/copacabana",
+        "bolivia/chuquisaca",
+        "bolivia/sucre",
+        "bolivia/potosi",
+        "bolivia/uyuni"
+      ],
+      "hero": "bolivia/potosi",
+      "sources": [
+        "Bushop Bolivia",
+        "The Discoveries Of",
+        "KimKim",
+        "Career Gappers",
+        "Steppes Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Copacabana",
+          "hotel": "Hotel in Copacabana",
+          "start": 0,
+          "nights": 2,
+          "area": "In Copacabana near the lake, or on the hillside with views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Paz",
+          "hotel": "Hotel in La Paz",
+          "start": 2,
+          "nights": 3,
+          "area": "In the centre near Sopocachi or the San Francisco area, with good access to cable cars",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sucre",
+          "hotel": "Hotel in Sucre",
+          "start": 5,
+          "nights": 3,
+          "area": "In central Sucre near the main plaza",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Potosi",
+          "hotel": "Hotel in Potosi",
+          "start": 8,
+          "nights": 2,
+          "area": "In Potosi centre near the main plaza; the altitude is over 4,000 metres",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Uyuni",
+          "hotel": "Hotel in Uyuni",
+          "start": 10,
+          "nights": 3,
+          "area": "In Uyuni town, near the main avenue; many hotels are basic",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Copacabana waterfront and cathedral",
+          "notes": "A pilgrimage town on the lake.",
+          "where": "Copacabana",
+          "book": "",
+          "place": "bolivia/copacabana-isla-del-sol"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Isla del Sol boat trip and ridge walk",
+          "notes": "Boats cross in about 90 minutes; walk the ridge between the two ends.",
+          "where": "Isla del Sol",
+          "book": "Yes - book a boat ticket",
+          "place": "bolivia/copacabana-isla-del-sol"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Witches Market and Calle Jaen",
+          "notes": "Walk slowly at 3,600 metres; ask before photographing vendors.",
+          "where": "La Paz",
+          "book": "",
+          "place": "bolivia/witches-market"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Tiwanaku ruins",
+          "notes": "A guide helps make sense of the stone structures.",
+          "where": "Tiwanaku",
+          "book": "Yes - book a guide or tour",
+          "place": "bolivia/tiwanaku"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Death Road downhill bike ride",
+          "notes": "Choose a reputable operator; layers needed for the temperature change.",
+          "where": "North Yungas Road",
+          "book": "Yes - book with a safety-rated operator",
+          "place": "bolivia/death-road"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Sucre colonial centre and Casa de la Libertad",
+          "notes": "Walk up to the Recoleta viewpoint for the roofs.",
+          "where": "Sucre",
+          "book": "",
+          "place": "bolivia/sucre-white-city"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Dinosaur footprints and Tarabuco market",
+          "notes": "The Tarabuco market is held only on Sundays.",
+          "where": "Sucre",
+          "book": "",
+          "place": "bolivia/tarabuco-dinosaur"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Potosi mint museum or Cerro Rico mine tour",
+          "notes": "Mine tours are physically demanding at 4,000 metres; the mint is an easier alternative.",
+          "where": "Potosi",
+          "book": "Yes - book a mine tour",
+          "place": "bolivia/potosi-cerro-rico"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Train Cemetery",
+          "notes": "A short stop on the edge of town.",
+          "where": "Uyuni",
+          "book": "",
+          "place": "bolivia/train-cemetery"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "10:30",
+          "duration": "8h",
+          "name": "Salar de Uyuni day tour",
+          "notes": "Includes Isla Incahuasi; sunglasses and sun cream are essential.",
+          "where": "Salar de Uyuni",
+          "book": "Yes - book a tour",
+          "place": "bolivia/uyuni-salt-flat"
+        },
+        {
+          "day": 12,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Altiplano lagoons day",
+          "notes": "Longer jeep routes visit Laguna Colorada; nights are very cold.",
+          "where": "Eduardo Avaroa Reserve",
+          "book": "Yes - book a jeep route",
+          "place": "bolivia/lagunas-altiplano"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "El Alto Airport (LPB)",
+          "to": "Copacabana",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Copacabana",
+          "to": "La Paz",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Tourist bus or private transfer",
+          "notes": "Travel by tourist bus; the route includes a short ferry crossing at the Strait of Tiquina.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "La Paz hotel",
+          "to": "El Alto Airport (LPB)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow extra time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Sucre Airport (SRE)",
+          "to": "Sucre hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Sucre",
+          "to": "Potosi",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Tourist bus or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Potosi",
+          "to": "Uyuni",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Tourist bus or private transfer",
+          "notes": "The road crosses the high altiplano; carry layers and water.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Uyuni hotel",
+          "to": "Uyuni Airport (UYU)",
+          "time": "10:00",
+          "minutes": 10,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow extra time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "bolivia/la-paz-cable-car": {
+        "name": "Mi Teleferico cable cars",
+        "description": "A network of cable cars linking La Paz and El Alto, with views of the city and Illimani.",
+        "details": "The Teleferico is both public transport and a sightseeing ride. Lines cross the canyon of La Paz and rise to El Alto, with views of the city and the Illimani peak. A ride over the neighbourhoods is a good way to orient yourself on the first day. It is cheap and avoids steep streets, which are tiring at altitude.",
+        "interests": [
+          "photography",
+          "authentic_local",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bolivia/witches-market": {
+        "name": "Witches Market and Calle Jaen",
+        "description": "Streets of herbs, amulets and dried llama foetuses beside the San Francisco church.",
+        "details": "The Mercado de las Brujas sells herbs, charms and offerings used in Aymara rituals, and nearby Calle Jaen is a preserved colonial street with small museums. The San Francisco church and plaza are close. Ask before photographing vendors. Walk slowly, as La Paz is at 3,600 metres.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bolivia/valley-of-the-moon": {
+        "name": "Valley of the Moon",
+        "description": "A strange landscape of eroded clay pinnacles on the edge of La Paz.",
+        "details": "The Valle de la Luna is a maze of spires and canyons carved by wind and rain, with short footpaths of about forty minutes. It is a half-day trip from the city centre by taxi or tour. Bring a sun hat and water, because the altitude means strong sun.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bolivia/tiwanaku": {
+        "name": "Tiwanaku archaeological site",
+        "description": "The ruins of a pre-Inca civilisation, including the Gate of the Sun, a UNESCO site.",
+        "details": "Tiwanaku was the capital of a culture that flourished before the Incas, about an hour and a half from La Paz. The Gate of the Sun, the Akapana pyramid and monolithic statues are the highlights. A guide helps make sense of the stone structures, and the nearby museums display the finds.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bolivia/death-road": {
+        "name": "Death Road (Camino de las Yungas) by bike",
+        "description": "A downhill ride on a former narrow cliff road from the Andes towards the Amazon.",
+        "details": "The North Yungas Road drops about 3,500 metres from the mountains to the subtropical valleys. Guided downhill rides provide bikes, helmets and a support van. Safety standards vary, so choose a reputable operator. Dress in layers, as temperatures change a lot on the descent. A serious but popular adventure.",
+        "interests": [
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "bolivia/copacabana-isla-del-sol": {
+        "name": "Copacabana and Isla del Sol",
+        "description": "A Lake Titicaca town and a sacred island of Inca ruins and walking paths.",
+        "details": "Copacabana is a pilgrimage town on the lake, with a cathedral and a waterfront. Boats cross in about ninety minutes to Isla del Sol, the legendary birthplace of the Inca sun, with a ridge walk between the north and south ends, villages and terraces. Pack for altitude and cold evenings.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "bolivia/uyuni-salt-flat": {
+        "name": "Salar de Uyuni",
+        "description": "The largest salt flat on earth, with mirror-like reflections in the wet season and hexagon crusts in the dry season.",
+        "details": "The Salar de Uyuni covers about 10,000 square kilometres, with the Isla Incahuasi cactus island and dazzling white horizons. Tours run as a day trip or on a multi-day jeep route to lagoons. From January to March a thin layer of water makes the ground a mirror, while the dry season gives access to more of the flats. Sunglasses and sun cream are essential.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "bolivia/train-cemetery": {
+        "name": "Train Cemetery, Uyuni",
+        "description": "Rusting steam locomotives abandoned on the edge of Uyuni town.",
+        "details": "Just outside the town are the remains of trains from the era when minerals were shipped to the Pacific. The rusted engines are a favourite photograph at sunset or sunrise. It is a short stop that is usually combined with a salt flat tour.",
+        "interests": [
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bolivia/sunset-salt-flat": {
+        "name": "Salt flat sunrise or sunset",
+        "description": "A guided evening or dawn on the flats, when the light changes the colours.",
+        "details": "Sunset and sunrise turn the white plain pink and gold and give the best reflections. Operators offer a short tour to the flats for the light, often with a drink toasting the sunset. Dress warmly, because it is very cold after dark, even in summer.",
+        "interests": [
+          "photography",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bolivia/sucre-white-city": {
+        "name": "Sucre, the white city",
+        "description": "A UNESCO colonial city of whitewashed buildings, plazas and museums at a gentler altitude.",
+        "details": "Sucre is the constitutional capital of Bolivia, with a pleasant climate and a compact centre. The Casa de la Libertad museum tells the story of independence, and the plaza is lined with cafes. The Recoleta viewpoint looks over the red roofs. Chocolate is a local speciality.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bolivia/tarabuco-dinosaur": {
+        "name": "Dinosaur footprints and Tarabuco market",
+        "description": "Cretaceous footprints on a wall near Sucre and a Sunday market in a traditional town.",
+        "details": "Cal Orck'o has a vertical wall with thousands of dinosaur footprints, and a park with models. The Sunday market in Tarabuco is a highlight, where Yampara people sell textiles in traditional dress. Check the days, as the market is held only on Sundays.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bolivia/potosi-cerro-rico": {
+        "name": "Potosi and the Cerro Rico mines",
+        "description": "A high-altitude silver-mining city and tours of working cooperative mines.",
+        "details": "Potosi was once among the richest cities in the world from the silver of Cerro Rico. Guided tours enter the working mines, where miners labour in poor conditions, and visitors give coca leaves and gifts. The tours are cramped, dusty and at 4,000 metres altitude, so they are not suitable for people with heart or breathing problems. The Casa de la Moneda mint museum is a good non-mine option.",
+        "interests": [
+          "culture",
+          "adventure",
+          "authentic_local"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "bolivia/lagunas-altiplano": {
+        "name": "Altiplano lagoons and Laguna Colorada",
+        "description": "Red and green lakes, flamingos and geysers on a multi-day jeep route south of Uyuni.",
+        "details": "The Reserva Eduardo Avaroa has Laguna Colorada, coloured red by algae, Laguna Verde, geysers and hot springs, at over 4,000 metres. The jeep route usually takes two or three days with basic lodges. Nights are very cold. This is the highlight of longer Uyuni tours.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "H",
+        "image": null
+      }
+    },
+    "destinations": {
+      "bolivia": {
+        "name": "Bolivia",
+        "description": "A high-altitude country of Andean cities, Lake Titicaca, colonial towns and the Uyuni salt flat.",
+        "images": []
+      },
+      "bolivia/la-paz": {
+        "name": "La Paz",
+        "description": "The world highest seat of government, in a canyon beneath Illimani, linked by cable cars.",
+        "images": []
+      },
+      "bolivia/copacabana": {
+        "name": "Copacabana",
+        "description": "A lakeside pilgrimage town on Lake Titicaca and the gateway to Isla del Sol.",
+        "images": []
+      },
+      "bolivia/potosi": {
+        "name": "Potosi",
+        "description": "A high-altitude silver city and gateway to the Cerro Rico mines.",
+        "images": []
+      },
+      "bolivia/uyuni": {
+        "name": "Uyuni",
+        "description": "A remote town and the gateway to the world largest salt flat.",
+        "images": []
+      },
+      "bolivia/chuquisaca": {
+        "name": "Chuquisaca",
+        "description": "The department around Sucre and its colonial heritage.",
+        "images": []
+      },
+      "bolivia/sucre": {
+        "name": "Sucre",
+        "description": "The elegant white colonial capital, at a gentler altitude.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import React, { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
@@ -45,7 +46,7 @@ export default function FollowTripButton({ styles, onFollowTrip }: Props) {
                   onPress={() => setShowFollowDialog(false)}
                   style={({ pressed }: { pressed: boolean }) => [styles.homeModalClose, pressed && styles.homeModalClosePressed]}
                 >
-                  <Text style={styles.homeModalCloseText}>✕</Text>
+                  <IconText style={styles.homeModalCloseText}>✕</IconText>
                 </Pressable>
               </View>
               <Text style={styles.homeModalRowMeta}>Enter a follow code to add a shared trip.</Text>

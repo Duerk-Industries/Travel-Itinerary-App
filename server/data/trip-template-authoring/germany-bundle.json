@@ -1,0 +1,1236 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Touropia, Travel Stride, Designer Journeys and Rick Steves forum itineraries for Germany",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "germany-berlin-4d",
+      "title": "Berlin City Break in 4 Days",
+      "summary": "The gate, the wall, museums and nightlife.",
+      "days": 4,
+      "route": "Berlin",
+      "arrive": "Berlin (BER)",
+      "depart": "Berlin (BER)",
+      "countries": [
+        "Germany"
+      ],
+      "regions": [],
+      "cities": [
+        "Berlin"
+      ],
+      "imageQuery": "Berlin Brandenburg Gate",
+      "highlights": [
+        "Brandenburg Gate",
+        "Reichstag dome",
+        "East Side Gallery",
+        "Museum Island"
+      ],
+      "destinationKeys": [
+        "germany",
+        "germany/berlin"
+      ],
+      "hero": "germany/berlin",
+      "sources": [
+        "Touropia",
+        "Travel Stride",
+        "Rick Steves Forum",
+        "Designer Journeys",
+        "Fodors Forum"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Berlin",
+          "hotel": "Hotel in Berlin",
+          "start": 0,
+          "nights": 3,
+          "area": "In Mitte or Prenzlauer Berg, with U-Bahn access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Brandenburg Gate and Reichstag dome",
+          "notes": "Register online for the dome in advance.",
+          "where": "Berlin",
+          "book": "Yes - register for the dome",
+          "place": "germany/brandenburg-reichstag"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Museum Island",
+          "notes": "Choose the Neues Museum for Nefertiti; check which wings are open.",
+          "where": "Museum Island, Berlin",
+          "book": "Yes - book timed entry",
+          "place": "germany/museum-island"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berlin Wall Memorial and East Side Gallery",
+          "notes": "Both are outdoors; dress for the weather.",
+          "where": "Berlin",
+          "book": "",
+          "place": "germany/berlin-wall"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Berlin Brandenburg Airport (BER)",
+          "to": "Berlin hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Berlin hotel area",
+          "to": "Berlin Brandenburg Airport (BER)",
+          "time": "12:00",
+          "minutes": 40,
+          "carrier": "S-bahn, express train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "germany-munich-neuschwanstein-5d",
+      "title": "Munich and Neuschwanstein in 5 Days",
+      "summary": "Beer halls, the old town and the fairytale castle.",
+      "days": 5,
+      "route": "Munich",
+      "arrive": "Munich (MUC)",
+      "depart": "Munich (MUC)",
+      "countries": [
+        "Germany"
+      ],
+      "regions": [
+        "Bavaria"
+      ],
+      "cities": [
+        "Munich"
+      ],
+      "imageQuery": "Neuschwanstein Castle Bavaria",
+      "highlights": [
+        "Marienplatz",
+        "Neuschwanstein",
+        "Beer garden",
+        "Dachau or Nymphenburg"
+      ],
+      "destinationKeys": [
+        "germany",
+        "germany/bavaria",
+        "germany/munich"
+      ],
+      "hero": "germany/munich",
+      "sources": [
+        "Touropia",
+        "Travel Stride",
+        "Rick Steves Forum",
+        "Designer Journeys",
+        "Fodors Forum"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Munich",
+          "hotel": "Hotel in Munich",
+          "start": 0,
+          "nights": 4,
+          "area": "Near Marienplatz or the main station, for walking and S-bahn links",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Marienplatz, Viktualienmarkt and beer garden",
+          "notes": "Glockenspiel at 11am and noon.",
+          "where": "Munich",
+          "book": "",
+          "place": "germany/munich-marienplatz"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "10h",
+          "name": "Neuschwanstein and Hohenschwangau",
+          "notes": "Book timed castle tickets in advance; train to Fussen.",
+          "where": "Fussen",
+          "book": "Yes - book castle tickets",
+          "place": "germany/neuschwanstein"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Dachau Memorial Site or Nymphenburg Palace",
+          "notes": "Choose a serious or lighter option.",
+          "where": "Munich",
+          "book": "",
+          "place": "germany/dachau-nymphenburg"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Munich Airport (MUC)",
+          "to": "Munich hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Munich hotel area",
+          "to": "Munich Airport (MUC)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "S-bahn, express train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "germany-berlin-munich-7d",
+      "title": "Berlin and Munich in 7 Days",
+      "summary": "The capital and Bavaria, linked by the ICE train.",
+      "days": 7,
+      "route": "Berlin > Munich",
+      "arrive": "Berlin (BER)",
+      "depart": "Munich (MUC)",
+      "countries": [
+        "Germany"
+      ],
+      "regions": [
+        "Bavaria"
+      ],
+      "cities": [
+        "Berlin",
+        "Munich"
+      ],
+      "imageQuery": "Munich Marienplatz",
+      "highlights": [
+        "Brandenburg Gate",
+        "East Side Gallery",
+        "Marienplatz",
+        "Neuschwanstein"
+      ],
+      "destinationKeys": [
+        "germany",
+        "germany/berlin",
+        "germany/bavaria",
+        "germany/munich"
+      ],
+      "hero": "germany/bavaria",
+      "sources": [
+        "Touropia",
+        "Travel Stride",
+        "Rick Steves Forum",
+        "Designer Journeys",
+        "Fodors Forum"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Berlin",
+          "hotel": "Hotel in Berlin",
+          "start": 0,
+          "nights": 3,
+          "area": "In Mitte or Prenzlauer Berg, with U-Bahn access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Munich",
+          "hotel": "Hotel in Munich",
+          "start": 3,
+          "nights": 3,
+          "area": "Near Marienplatz or the main station, for walking and S-bahn links",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Brandenburg Gate and Reichstag dome",
+          "notes": "Register online for the dome in advance.",
+          "where": "Berlin",
+          "book": "Yes - register for the dome",
+          "place": "germany/brandenburg-reichstag"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berlin Wall Memorial and East Side Gallery",
+          "notes": "Both are outdoors; dress for the weather.",
+          "where": "Berlin",
+          "book": "",
+          "place": "germany/berlin-wall"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Marienplatz, Viktualienmarkt and beer garden",
+          "notes": "Glockenspiel at 11am and noon.",
+          "where": "Munich",
+          "book": "",
+          "place": "germany/munich-marienplatz"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "10h",
+          "name": "Neuschwanstein and Hohenschwangau",
+          "notes": "Book timed castle tickets in advance; train to Fussen.",
+          "where": "Fussen",
+          "book": "Yes - book castle tickets",
+          "place": "germany/neuschwanstein"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Berlin Brandenburg Airport (BER)",
+          "to": "Berlin hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Berlin",
+          "to": "Munich",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Munich hotel area",
+          "to": "Munich Airport (MUC)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "S-bahn, express train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "germany-berlin-heidelberg-munich-8d",
+      "title": "Germany Classic: Berlin, Heidelberg and Munich in 8 Days",
+      "summary": "Capital, castle town and Bavaria.",
+      "days": 8,
+      "route": "Berlin > Heidelberg > Munich",
+      "arrive": "Berlin (BER)",
+      "depart": "Munich (MUC)",
+      "countries": [
+        "Germany"
+      ],
+      "regions": [
+        "Baden-Wurttemberg",
+        "Bavaria"
+      ],
+      "cities": [
+        "Berlin",
+        "Heidelberg",
+        "Munich"
+      ],
+      "imageQuery": "Heidelberg castle Germany",
+      "highlights": [
+        "Brandenburg Gate",
+        "Heidelberg Castle",
+        "Marienplatz",
+        "Neuschwanstein"
+      ],
+      "destinationKeys": [
+        "germany",
+        "germany/berlin",
+        "germany/baden-wurttemberg",
+        "germany/heidelberg",
+        "germany/bavaria",
+        "germany/munich"
+      ],
+      "hero": "germany/heidelberg",
+      "sources": [
+        "Touropia",
+        "Travel Stride",
+        "Rick Steves Forum",
+        "Designer Journeys",
+        "Fodors Forum"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Berlin",
+          "hotel": "Hotel in Berlin",
+          "start": 0,
+          "nights": 3,
+          "area": "In Mitte or Prenzlauer Berg, with U-Bahn access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Heidelberg",
+          "hotel": "Hotel in Heidelberg",
+          "start": 3,
+          "nights": 2,
+          "area": "In the old town of Heidelberg, near the Alte Bruecke",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Munich",
+          "hotel": "Hotel in Munich",
+          "start": 5,
+          "nights": 2,
+          "area": "Near Marienplatz or the main station, for walking and S-bahn links",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Brandenburg Gate and Reichstag dome",
+          "notes": "Register online for the dome in advance.",
+          "where": "Berlin",
+          "book": "Yes - register for the dome",
+          "place": "germany/brandenburg-reichstag"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berlin Wall Memorial and East Side Gallery",
+          "notes": "Both are outdoors; dress for the weather.",
+          "where": "Berlin",
+          "book": "",
+          "place": "germany/berlin-wall"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Heidelberg Castle and Philosophers Walk",
+          "notes": "Take the funicular up; cross the Alte Bruecke.",
+          "where": "Heidelberg",
+          "book": "",
+          "place": "germany/heidelberg-castle"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "10h",
+          "name": "Neuschwanstein and Hohenschwangau",
+          "notes": "Book timed castle tickets in advance; train to Fussen.",
+          "where": "Fussen",
+          "book": "Yes - book castle tickets",
+          "place": "germany/neuschwanstein"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Marienplatz, Viktualienmarkt and beer garden",
+          "notes": "Glockenspiel at 11am and noon.",
+          "where": "Munich",
+          "book": "",
+          "place": "germany/munich-marienplatz"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Berlin Brandenburg Airport (BER)",
+          "to": "Berlin hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Berlin",
+          "to": "Heidelberg",
+          "time": "08:30",
+          "minutes": 360,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "Direct ICE trains run most days.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Heidelberg",
+          "to": "Munich",
+          "time": "09:30",
+          "minutes": 200,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Munich hotel area",
+          "to": "Munich Airport (MUC)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "S-bahn, express train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "germany-berlin-cologne-heidelberg-munich-10d",
+      "title": "Berlin, the Rhine and Munich in 10 Days",
+      "summary": "Berlin, Cologne, the Rhine gorge, Heidelberg and Munich with Neuschwanstein.",
+      "days": 10,
+      "route": "Berlin > Cologne > Heidelberg > Munich",
+      "arrive": "Berlin (BER)",
+      "depart": "Munich (MUC)",
+      "countries": [
+        "Germany"
+      ],
+      "regions": [
+        "North Rhine-Westphalia",
+        "Baden-Wurttemberg",
+        "Bavaria"
+      ],
+      "cities": [
+        "Berlin",
+        "Cologne",
+        "Heidelberg",
+        "Munich"
+      ],
+      "imageQuery": "Rhine Valley castle Germany",
+      "highlights": [
+        "Museum Island",
+        "Cologne Cathedral",
+        "Rhine gorge",
+        "Heidelberg",
+        "Neuschwanstein"
+      ],
+      "destinationKeys": [
+        "germany",
+        "germany/berlin",
+        "germany/north-rhine-westphalia",
+        "germany/cologne",
+        "germany/baden-wurttemberg",
+        "germany/heidelberg",
+        "germany/bavaria",
+        "germany/munich"
+      ],
+      "hero": "germany/cologne",
+      "sources": [
+        "Touropia",
+        "Travel Stride",
+        "Rick Steves Forum",
+        "Designer Journeys",
+        "Fodors Forum"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Berlin",
+          "hotel": "Hotel in Berlin",
+          "start": 0,
+          "nights": 3,
+          "area": "In Mitte or Prenzlauer Berg, with U-Bahn access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cologne",
+          "hotel": "Hotel in Cologne",
+          "start": 3,
+          "nights": 2,
+          "area": "Near the cathedral and main station in Cologne",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Heidelberg",
+          "hotel": "Hotel in Heidelberg",
+          "start": 5,
+          "nights": 2,
+          "area": "In the old town of Heidelberg, near the Alte Bruecke",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Munich",
+          "hotel": "Hotel in Munich",
+          "start": 7,
+          "nights": 2,
+          "area": "Near Marienplatz or the main station, for walking and S-bahn links",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Brandenburg Gate and Reichstag dome",
+          "notes": "Register online for the dome in advance.",
+          "where": "Berlin",
+          "book": "Yes - register for the dome",
+          "place": "germany/brandenburg-reichstag"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berlin Wall Memorial and East Side Gallery",
+          "notes": "Both are outdoors; dress for the weather.",
+          "where": "Berlin",
+          "book": "",
+          "place": "germany/berlin-wall"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Cologne Cathedral tower and old town",
+          "notes": "Climb 533 steps for the view, then a Kolsch.",
+          "where": "Cologne",
+          "book": "",
+          "place": "germany/cologne-cathedral"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Rhine gorge cruise and castle villages",
+          "notes": "Cruise between Boppard and Rudesheim; wine tasting en route.",
+          "where": "Middle Rhine",
+          "book": "",
+          "place": "germany/rhine-valley"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Heidelberg Castle and Philosophers Walk",
+          "notes": "Take the funicular up; cross the Alte Bruecke.",
+          "where": "Heidelberg",
+          "book": "",
+          "place": "germany/heidelberg-castle"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Marienplatz, Viktualienmarkt and beer garden",
+          "notes": "Glockenspiel at 11am and noon.",
+          "where": "Munich",
+          "book": "",
+          "place": "germany/munich-marienplatz"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Berlin Brandenburg Airport (BER)",
+          "to": "Berlin hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Berlin",
+          "to": "Cologne",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Cologne",
+          "to": "Heidelberg",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Heidelberg",
+          "to": "Munich",
+          "time": "09:30",
+          "minutes": 200,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Munich hotel area",
+          "to": "Munich Airport (MUC)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "S-bahn, express train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "germany-complete-12d",
+      "title": "Complete Germany in 12 Days",
+      "summary": "Berlin, Cologne, Heidelberg, Rothenburg and three nights in Munich.",
+      "days": 12,
+      "route": "Berlin > Cologne > Heidelberg > Rothenburg ob der Tauber > Munich",
+      "arrive": "Berlin (BER)",
+      "depart": "Munich (MUC)",
+      "countries": [
+        "Germany"
+      ],
+      "regions": [
+        "North Rhine-Westphalia",
+        "Baden-Wurttemberg",
+        "Bavaria"
+      ],
+      "cities": [
+        "Berlin",
+        "Cologne",
+        "Heidelberg",
+        "Rothenburg ob der Tauber",
+        "Munich"
+      ],
+      "imageQuery": "Rothenburg ob der Tauber medieval",
+      "highlights": [
+        "Berlin Wall",
+        "Cologne Cathedral",
+        "Rhine gorge",
+        "Rothenburg",
+        "Neuschwanstein",
+        "Munich"
+      ],
+      "destinationKeys": [
+        "germany",
+        "germany/berlin",
+        "germany/north-rhine-westphalia",
+        "germany/cologne",
+        "germany/baden-wurttemberg",
+        "germany/heidelberg",
+        "germany/bavaria",
+        "germany/rothenburg-ob-der-tauber",
+        "germany/munich"
+      ],
+      "hero": "germany/rothenburg-ob-der-tauber",
+      "sources": [
+        "Touropia",
+        "Travel Stride",
+        "Rick Steves Forum",
+        "Designer Journeys",
+        "Fodors Forum"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "photography",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Berlin",
+          "hotel": "Hotel in Berlin",
+          "start": 0,
+          "nights": 3,
+          "area": "In Mitte or Prenzlauer Berg, with U-Bahn access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cologne",
+          "hotel": "Hotel in Cologne",
+          "start": 3,
+          "nights": 2,
+          "area": "Near the cathedral and main station in Cologne",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Heidelberg",
+          "hotel": "Hotel in Heidelberg",
+          "start": 5,
+          "nights": 2,
+          "area": "In the old town of Heidelberg, near the Alte Bruecke",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rothenburg ob der Tauber",
+          "hotel": "Guesthouse in Rothenburg ob der Tauber",
+          "start": 7,
+          "nights": 1,
+          "area": "Inside the walls of Rothenburg, to see it after the day-trippers leave",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Munich",
+          "hotel": "Hotel in Munich",
+          "start": 8,
+          "nights": 3,
+          "area": "Near Marienplatz or the main station, for walking and S-bahn links",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Brandenburg Gate and Reichstag dome",
+          "notes": "Register online for the dome in advance.",
+          "where": "Berlin",
+          "book": "Yes - register for the dome",
+          "place": "germany/brandenburg-reichstag"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berlin Wall Memorial and East Side Gallery",
+          "notes": "Both are outdoors; dress for the weather.",
+          "where": "Berlin",
+          "book": "",
+          "place": "germany/berlin-wall"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Cologne Cathedral tower and old town",
+          "notes": "Climb 533 steps for the view, then a Kolsch.",
+          "where": "Cologne",
+          "book": "",
+          "place": "germany/cologne-cathedral"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Rhine gorge cruise and castle villages",
+          "notes": "Cruise between Boppard and Rudesheim; wine tasting en route.",
+          "where": "Middle Rhine",
+          "book": "",
+          "place": "germany/rhine-valley"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Heidelberg Castle and Philosophers Walk",
+          "notes": "Take the funicular up; cross the Alte Bruecke.",
+          "where": "Heidelberg",
+          "book": "",
+          "place": "germany/heidelberg-castle"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Rothenburg walls and night watchman tour",
+          "notes": "Walk the town wall; join the evening tour.",
+          "where": "Rothenburg ob der Tauber",
+          "book": "",
+          "place": "germany/rothenburg"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Dachau Memorial Site or Nymphenburg Palace",
+          "notes": "Choose a serious or lighter option.",
+          "where": "Munich",
+          "book": "",
+          "place": "germany/dachau-nymphenburg"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Marienplatz, Viktualienmarkt and beer garden",
+          "notes": "Glockenspiel at 11am and noon.",
+          "where": "Munich",
+          "book": "",
+          "place": "germany/munich-marienplatz"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "10h",
+          "name": "Neuschwanstein and Hohenschwangau",
+          "notes": "Book timed castle tickets in advance; train to Fussen.",
+          "where": "Fussen",
+          "book": "Yes - book castle tickets",
+          "place": "germany/neuschwanstein"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Berlin Brandenburg Airport (BER)",
+          "to": "Berlin hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Berlin",
+          "to": "Cologne",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Cologne",
+          "to": "Heidelberg",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Heidelberg",
+          "to": "Rothenburg ob der Tauber",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "Change at Stuttgart and Steinach.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Rothenburg ob der Tauber",
+          "to": "Munich",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Deutsche Bahn ICE or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Munich hotel area",
+          "to": "Munich Airport (MUC)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "S-bahn, express train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "germany/brandenburg-reichstag": {
+        "name": "Brandenburg Gate and the Reichstag",
+        "description": "Berlin symbol of unity, with the parliament glass dome a short walk away.",
+        "details": "The Brandenburg Gate marks the old division and the reunion of the city. The Reichstag dome is free but requires online registration ahead, and gives a view over the government district. Unter den Linden and the Holocaust Memorial are close by.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "germany/berlin-wall": {
+        "name": "Berlin Wall Memorial and East Side Gallery",
+        "description": "A stretch of the wall preserved with a memorial, and the longest open-air mural gallery.",
+        "details": "The Berlin Wall Memorial on Bernauer Strasse shows the death strip and has an observation tower. The East Side Gallery has over a kilometre of murals along the river. Checkpoint Charlie is touristy, so use it as a signpost rather than a stop.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "germany/museum-island": {
+        "name": "Museum Island and Pergamon",
+        "description": "A UNESCO group of museums on an island in the Spree, including the Neues Museum with Nefertiti.",
+        "details": "Museum Island has five museums, the Pergamon Museum (partly closed for renovation), the Neues Museum with the Nefertiti bust, and the Alte Nationalgalerie. A combined ticket helps. Timed entry is advisable, and the island is a short walk from the cathedral.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "germany/cologne-cathedral": {
+        "name": "Cologne Cathedral and old town",
+        "description": "A Gothic cathedral with spires that dominate the riverfront, with Kolsch beer halls nearby.",
+        "details": "Cologne Cathedral is a UNESCO site, with a tower climb of 533 steps for a view over the Rhine. The old town below has brewery halls serving Kolsch in small glasses. The Hohenzollern Bridge, covered in love locks, is a short stroll away.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "germany/rhine-valley": {
+        "name": "Rhine Valley cruise and castles",
+        "description": "A boat trip through the gorge of the Middle Rhine, with castles, vineyards and the Loreley rock.",
+        "details": "The Rhine Gorge between Koblenz and Rudesheim is a UNESCO landscape with about forty castles and vineyards on steep slopes. KD boats run scenic cruises, stopping at villages such as Bacharach and St Goar. Rudesheim is a wine town with a cable car and a lively alley.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "culture",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "germany/heidelberg-castle": {
+        "name": "Heidelberg Castle and old town",
+        "description": "A ruined red sandstone castle above a romantic university town on the Neckar.",
+        "details": "Heidelberg Castle stands above the old town and holds a giant wine barrel. The Philosophers Walk across the river gives the best view. The old town has the Alte Bruecke, student pubs and a long pedestrian street. A funicular climbs to the castle.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "germany/rothenburg": {
+        "name": "Rothenburg ob der Tauber",
+        "description": "A perfectly preserved medieval walled town on the Romantic Road.",
+        "details": "Rothenburg has half-timbered houses, walls you can walk along and a Christmas museum. The town is busiest at midday with tour groups and is magical in the evening. A night watchman tour tells the history. Parking outside the walls.",
+        "interests": [
+          "culture",
+          "photography",
+          "authentic_local",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "germany/munich-marienplatz": {
+        "name": "Munich Marienplatz and beer gardens",
+        "description": "The old town centre with a glockenspiel, plus the Viktualienmarkt and Bavarian beer culture.",
+        "details": "Marienplatz has the New Town Hall with its glockenspiel at 11am and noon. The Viktualienmarkt is a food market, and the Hofbrauhaus is the famous beer hall. The English Garden has surfers on the Eisbach wave and a beer garden. Oktoberfest is in late September to early October.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "germany/neuschwanstein": {
+        "name": "Neuschwanstein and Hohenschwangau",
+        "description": "The fairytale castle of King Ludwig II in the Bavarian Alps.",
+        "details": "Neuschwanstein is reached from Fussen by bus and a short walk, and tours are timed, so book tickets in advance. Hohenschwangau castle and the Marienbruecke viewpoint complete the visit. It is a full-day trip from Munich by train, around two hours each way.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "germany/dachau-nymphenburg": {
+        "name": "Dachau Memorial or Nymphenburg Palace",
+        "description": "The concentration camp memorial site, or a baroque summer palace and park.",
+        "details": "Dachau Memorial Site is a sobering visit with an exhibition and guided tours, about 30 minutes from Munich by S-bahn. Nymphenburg Palace is a baroque palace with a large park, an option for a lighter afternoon. Choose one or both.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "germany": {
+        "name": "Germany",
+        "description": "A country of cities, castles, river valleys and beer halls.",
+        "images": []
+      },
+      "germany/berlin": {
+        "name": "Berlin",
+        "description": "The capital, a city of history, art and nightlife.",
+        "images": []
+      },
+      "germany/north-rhine-westphalia": {
+        "name": "North Rhine-Westphalia",
+        "description": "The western state of Cologne and the lower Rhine.",
+        "images": []
+      },
+      "germany/cologne": {
+        "name": "Cologne",
+        "description": "A Rhine city dominated by its Gothic cathedral.",
+        "images": []
+      },
+      "germany/baden-wurttemberg": {
+        "name": "Baden-Wurttemberg",
+        "description": "The south-western state of Heidelberg and the Black Forest.",
+        "images": []
+      },
+      "germany/heidelberg": {
+        "name": "Heidelberg",
+        "description": "A romantic castle town on the Neckar river.",
+        "images": []
+      },
+      "germany/bavaria": {
+        "name": "Bavaria",
+        "description": "The southern state of Munich, medieval towns and the Alps.",
+        "images": []
+      },
+      "germany/rothenburg-ob-der-tauber": {
+        "name": "Rothenburg ob der Tauber",
+        "description": "A perfectly preserved medieval town on the Romantic Road.",
+        "images": []
+      },
+      "germany/munich": {
+        "name": "Munich",
+        "description": "The Bavarian capital with beer halls, museums and Alpine access.",
+        "images": []
+      }
+    }
+  }
+}

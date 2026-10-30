@@ -1,3 +1,4 @@
+import IconText from './components/IconText';
 import { getStandaloneTheme, applyDocumentLayout, buildStyles, rootErrorStyles, themeStyle, getAppTheme, hitSlop } from './theme/theme';
 
 
@@ -98,6 +99,11 @@ const ADD_OPTION_PAGE: Record<AddOptionKey, Page> = {
   flight: 'overview',
   lodging: 'overview',
   import: 'ingest',
+  transfer: 'overview',
+  rental: 'overview',
+  person: 'overview',
+  note: 'overview',
+  checklist: 'overview',
 };
 import { FloatingInsetContext } from './contexts/FloatingInsetContext';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
@@ -617,7 +623,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [autoOpenAddPhotos, setAutoOpenAddPhotos] = useState(false);
   // One-shot requests from the phone Add menu, cleared by the tab once it opens the form.
   const [pendingExpenseAdd, setPendingExpenseAdd] = useState(false);
-  const [pendingItineraryAdd, setPendingItineraryAdd] = useState<'flight' | 'lodging' | 'activity' | null>(null);
+  const [pendingItineraryAdd, setPendingItineraryAdd] = useState<Exclude<AddOptionKey, 'expense' | 'blog' | 'import'> | null>(null);
   const [autoOpenActivityCapture, setAutoOpenActivityCapture] = useState<{ date: string; tags: string[] } | null>(null);
   const [activityRecapTarget, setActivityRecapTarget] = useState<ActivityRecapTarget | null>(null);
   const [pendingActivityRecap, setPendingActivityRecap] = useState<{ tripId: string; activityId: string } | null>(null);
@@ -3371,6 +3377,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         { key: 'activity', label: 'Activity', icon: 'activity' },
         { key: 'flight', label: 'Flight', icon: 'flight' },
         { key: 'lodging', label: 'Lodging', icon: 'lodging' },
+        { key: 'transfer', label: 'Ground transfer', icon: 'transfer' },
+        { key: 'rental', label: 'Car rental', icon: 'car' },
+        ...(activePage === 'overview'
+          ? (featureItineraryItemKinds ? [
+              { key: 'note', label: 'Note', icon: 'blog' },
+              { key: 'checklist', label: 'Checklist', icon: 'packing' },
+            ] : [])
+          : [{ key: 'person', label: 'Person', icon: 'profile' }]),
         ...(canImportConfirmations ? [{ key: 'import', label: 'Import email', icon: 'import' }] : []),
       ] as AddOption[]).filter((option) => !hiddenPages.has(ADD_OPTION_PAGE[option.key]))
     : [];
@@ -3379,7 +3393,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const handleChooseAdd = (key: AddOptionKey) => {
     if (key === 'expense') setPendingExpenseAdd(true);
     else if (key === 'blog') setAutoOpenAddPhotos(true);
-    else if (key === 'flight' || key === 'lodging' || key === 'activity') setPendingItineraryAdd(key);
+    else if (key !== 'import') setPendingItineraryAdd(key);
     requestPageChange(ADD_OPTION_PAGE[key]);
   };
 
@@ -3480,7 +3494,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   accessibilityLabel="Account"
                   hitSlop={hitSlop.small}
                 >
-                  <Text style={styles.userNameButtonText}>👤</Text>
+                  <IconText style={styles.userNameButtonText}>👤</IconText>
                 </TouchableOpacity>
               )}
               {userRole === 'admin' ? (
@@ -3912,6 +3926,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
       {activePage === 'car' ? renderSharedPageScroll(
         <CarRentalsPanel
+          compactCards={showBottomTabs || Platform.OS !== 'web'}
           carRentals={carRentals}
           carDraft={carDraft}
           setCarDraft={setCarDraft}
@@ -3969,6 +3984,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               lodgings={lodgings}
               mapApp={mapApp}
               transferScope={activePage === 'ground-transfers' ? 'ground' : 'flights'}
+              compactTransferCards={showBottomTabs || (activePage === 'ground-transfers' && Platform.OS !== 'web')}
               backendUrl={backendUrl}
               userToken={userToken}
               activeTripId={activeTripId}
@@ -4153,6 +4169,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ? renderBoundedPage(
               <View style={themeStyle('App_layout1', {  }, _styleTheme)}>
                 <OverviewTab
+                  useBottomAddMenu={showBottomTabs}
                   autoOpenAdd={pendingItineraryAdd}
                   onAutoOpenAddHandled={() => setPendingItineraryAdd(null)}
                   featureDayPlanCsvImport={featureDayPlanCsvImport}
@@ -4288,9 +4305,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             testID="auth-form-back-to-landing"
             style={themeStyle('App_12', {  }, _styleTheme)}
           >
-            <Text style={themeStyle('App_13', { theme: theme }, _styleTheme)}>
+            <IconText style={themeStyle('App_13', { theme: theme }, _styleTheme)}>
               {'← Back'}
-            </Text>
+            </IconText>
           </TouchableOpacity>
           <AuthForm
             authMode={authMode}
@@ -4542,7 +4559,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           leftTabs={[{ page: 'home', label: 'Home', icon: 'home' }, { page: 'overview', label: 'Itinerary', icon: 'itinerary' }]}
           rightTabs={[{ page: 'blog', label: 'Blog', icon: 'blog' }, { page: 'account', label: 'Profile', icon: 'profile' }]}
           addOptions={bottomTabAddOptions}
-          addTitle={activeTrip?.name ? `Add to ${activeTrip.name}` : 'Add to trip'}
+          addTitle={activePage === 'overview' ? 'Add to this day' : activeTrip?.name ? `Add to ${activeTrip.name}` : 'Add to trip'}
           onNavigate={(page) => requestPageChange(page as Page)}
           onChooseAdd={handleChooseAdd}
         />

@@ -1,3 +1,4 @@
+import { openTripWizard } from './ui';
 import { test, expect } from '@playwright/test';
 import { loginAsNewUser } from './fixtures';
 
@@ -24,8 +25,7 @@ test.describe('Create Trip Destination Autocomplete', () => {
       }
     });
 
-    await page.getByTestId('home-create-trip-button').click();
-    await page.waitForTimeout(3000);
+    await openTripWizard(page);
 
     const wizardVisible = await page.getByText('Create Trip Wizard').isVisible();
     if (!wizardVisible) {

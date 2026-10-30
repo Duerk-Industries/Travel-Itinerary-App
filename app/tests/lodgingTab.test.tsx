@@ -114,7 +114,7 @@ describe('LodgingTab', () => {
             />
         );
 
-        fireEvent.press(getByText('+'));
+        fireEvent.press(getByTestId('lodging-add'));
         const dialog = getByTestId('lodging-editor-dialog');
         expect(within(dialog).getByText('Add Lodging')).toBeTruthy();
     });

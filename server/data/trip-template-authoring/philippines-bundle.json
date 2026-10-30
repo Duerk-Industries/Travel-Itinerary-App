@@ -1,0 +1,1382 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Gecko Routes, Adventurous Miriam, KimKim and Salt in Our Hair itineraries for the Philippines",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "philippines-coron-el-nido-7d",
+      "title": "Palawan: Coron and El Nido in 7 Days",
+      "summary": "Two of the Philippines best island-hopping bases.",
+      "days": 7,
+      "route": "Coron > El Nido",
+      "arrive": "Manila (MNL)",
+      "depart": "El Nido (ENI)",
+      "countries": [
+        "Philippines"
+      ],
+      "regions": [],
+      "cities": [
+        "Coron",
+        "El Nido"
+      ],
+      "imageQuery": "El Nido lagoon Palawan",
+      "highlights": [
+        "Coron lagoons",
+        "Wreck snorkelling",
+        "El Nido island hopping"
+      ],
+      "destinationKeys": [
+        "philippines",
+        "philippines/coron",
+        "philippines/el-nido"
+      ],
+      "hero": "philippines/el-nido",
+      "sources": [
+        "Gecko Routes",
+        "Adventurous Miriam",
+        "KimKim",
+        "Salt in Our Hair",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Coron",
+          "hotel": "Resort in Coron",
+          "start": 0,
+          "nights": 3,
+          "area": "In Coron town, a short walk from the pier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Nido",
+          "hotel": "Resort in El Nido",
+          "start": 3,
+          "nights": 3,
+          "area": "In El Nido town or on the beach near Corong Corong",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Coron island hopping and wreck snorkel",
+          "notes": "Fees cover environmental charges; sea conditions vary.",
+          "where": "Coron",
+          "book": "Yes - book a boat tour",
+          "place": "philippines/coron-lagoons"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Twin Lagoon and Barracuda Lake kayak day",
+          "notes": "Fees cover environmental charges; sea conditions vary.",
+          "where": "Coron",
+          "book": "Yes - book a boat tour",
+          "place": "philippines/coron-lagoons"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "El Nido island hopping tour",
+          "notes": "Tours A to D visit different lagoons.",
+          "where": "El Nido",
+          "book": "Yes - book a tour",
+          "place": "philippines/el-nido-bacuit"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Second island hopping tour (different route)",
+          "notes": "Tours A to D visit different lagoons.",
+          "where": "El Nido",
+          "book": "Yes - book a tour",
+          "place": "philippines/el-nido-bacuit"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Manila airport",
+          "to": "Manila Airport (MNL)",
+          "time": "",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Domestic flight from Manila to Busuanga.",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Busuanga Airport (USU)",
+          "to": "Coron resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Other",
+          "from": "Coron",
+          "to": "El Nido",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Passenger ferry",
+          "notes": "A fast boat; flights are an alternative.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "El Nido resort",
+          "to": "El Nido Airport (ENI)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Tricycle or van",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "philippines-manila-coron-el-nido-8d",
+      "title": "Manila and Palawan in 8 Days",
+      "summary": "A night in Manila, then Coron and El Nido.",
+      "days": 8,
+      "route": "Manila > Coron > El Nido",
+      "arrive": "Manila (MNL)",
+      "depart": "El Nido (ENI)",
+      "countries": [
+        "Philippines"
+      ],
+      "regions": [],
+      "cities": [
+        "Manila",
+        "Coron",
+        "El Nido"
+      ],
+      "imageQuery": "Coron Kayangan Lake",
+      "highlights": [
+        "Intramuros",
+        "Coron lagoons",
+        "El Nido",
+        "Underground River"
+      ],
+      "destinationKeys": [
+        "philippines",
+        "philippines/manila",
+        "philippines/coron",
+        "philippines/el-nido"
+      ],
+      "hero": "philippines/coron",
+      "sources": [
+        "Gecko Routes",
+        "Adventurous Miriam",
+        "KimKim",
+        "Salt in Our Hair",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Manila",
+          "hotel": "Hotel in Manila",
+          "start": 0,
+          "nights": 1,
+          "area": "In Makati or near Intramuros; close to airport and sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Coron",
+          "hotel": "Resort in Coron",
+          "start": 1,
+          "nights": 3,
+          "area": "In Coron town, a short walk from the pier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Nido",
+          "hotel": "Resort in El Nido",
+          "start": 4,
+          "nights": 3,
+          "area": "In El Nido town or on the beach near Corong Corong",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3.5h",
+          "name": "Intramuros, San Agustin Church and Fort Santiago",
+          "notes": "Walk or take a calesa; heavy traffic outside the walls.",
+          "where": "Manila",
+          "book": "",
+          "place": "philippines/manila-intramuros"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Coron island hopping and wreck snorkel",
+          "notes": "Fees cover environmental charges; sea conditions vary.",
+          "where": "Coron",
+          "book": "Yes - book a boat tour",
+          "place": "philippines/coron-lagoons"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Twin Lagoon and Barracuda Lake kayak day",
+          "notes": "Fees cover environmental charges; sea conditions vary.",
+          "where": "Coron",
+          "book": "Yes - book a boat tour",
+          "place": "philippines/coron-lagoons"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "El Nido island hopping tour",
+          "notes": "Tours A to D visit different lagoons.",
+          "where": "El Nido",
+          "book": "Yes - book a tour",
+          "place": "philippines/el-nido-bacuit"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Puerto Princesa Underground River",
+          "notes": "Permits are limited; book ahead.",
+          "where": "Puerto Princesa",
+          "book": "Yes - book a permit",
+          "place": "philippines/puerto-princesa-underground"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Manila Airport (MNL)",
+          "to": "Manila hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Grab or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Manila hotel",
+          "to": "Manila Airport (MNL)",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Busuanga Airport (USU)",
+          "to": "Coron resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Other",
+          "from": "Coron",
+          "to": "El Nido",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "El Nido resort",
+          "to": "El Nido Airport (ENI)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Tricycle or van",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "philippines-palawan-bohol-10d",
+      "title": "Palawan and Bohol in 10 Days",
+      "summary": "Manila, Coron, El Nido and the Bohol hills and beaches.",
+      "days": 10,
+      "route": "Manila > Coron > El Nido > Bohol",
+      "arrive": "Manila (MNL)",
+      "depart": "Tagbilaran (TAG)",
+      "countries": [
+        "Philippines"
+      ],
+      "regions": [],
+      "cities": [
+        "Manila",
+        "Coron",
+        "El Nido",
+        "Bohol"
+      ],
+      "imageQuery": "Chocolate Hills Bohol",
+      "highlights": [
+        "Intramuros",
+        "Coron",
+        "El Nido",
+        "Chocolate Hills",
+        "Tarsiers"
+      ],
+      "destinationKeys": [
+        "philippines",
+        "philippines/manila",
+        "philippines/coron",
+        "philippines/el-nido",
+        "philippines/bohol"
+      ],
+      "hero": "philippines/bohol",
+      "sources": [
+        "Gecko Routes",
+        "Adventurous Miriam",
+        "KimKim",
+        "Salt in Our Hair",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Manila",
+          "hotel": "Hotel in Manila",
+          "start": 0,
+          "nights": 1,
+          "area": "In Makati or near Intramuros; close to airport and sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Coron",
+          "hotel": "Resort in Coron",
+          "start": 1,
+          "nights": 2,
+          "area": "In Coron town, a short walk from the pier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Nido",
+          "hotel": "Resort in El Nido",
+          "start": 3,
+          "nights": 3,
+          "area": "In El Nido town or on the beach near Corong Corong",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bohol",
+          "hotel": "Resort on Panglao",
+          "start": 6,
+          "nights": 3,
+          "area": "On Panglao Island near Alona Beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3.5h",
+          "name": "Intramuros, San Agustin Church and Fort Santiago",
+          "notes": "Walk or take a calesa; heavy traffic outside the walls.",
+          "where": "Manila",
+          "book": "",
+          "place": "philippines/manila-intramuros"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Coron island hopping and wreck snorkel",
+          "notes": "Fees cover environmental charges; sea conditions vary.",
+          "where": "Coron",
+          "book": "Yes - book a boat tour",
+          "place": "philippines/coron-lagoons"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "El Nido island hopping tour",
+          "notes": "Tours A to D visit different lagoons.",
+          "where": "El Nido",
+          "book": "Yes - book a tour",
+          "place": "philippines/el-nido-bacuit"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Puerto Princesa Underground River",
+          "notes": "Permits are limited; book ahead.",
+          "where": "Puerto Princesa",
+          "book": "Yes - book a permit",
+          "place": "philippines/puerto-princesa-underground"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Chocolate Hills, tarsiers and Loboc River",
+          "notes": "Keep quiet at the tarsier sanctuary.",
+          "where": "Bohol",
+          "book": "",
+          "place": "philippines/bohol-chocolate-tarsier"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "6h",
+          "name": "Balicasag dolphin watching and snorkel",
+          "notes": "Early starts find dolphins.",
+          "where": "Panglao",
+          "book": "Yes - book a boat",
+          "place": "philippines/panglao-beach"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Manila Airport (MNL)",
+          "to": "Manila hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Grab or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Manila hotel",
+          "to": "Manila Airport (MNL)",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Busuanga Airport (USU)",
+          "to": "Coron resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Other",
+          "from": "Coron",
+          "to": "El Nido",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "El Nido resort",
+          "to": "El Nido Airport (ENI)",
+          "time": "06:30",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Manila.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Tagbilaran Airport (TAG)",
+          "to": "Panglao resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Panglao resort",
+          "to": "Tagbilaran Airport (TAG)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Van or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "philippines-banaue-palawan-visayas-12d",
+      "title": "Rice Terraces, Palawan and Visayas in 12 Days",
+      "summary": "Banaue, Coron, El Nido, Bohol and Cebu.",
+      "days": 12,
+      "route": "Manila > Banaue > Coron > El Nido > Bohol > Cebu",
+      "arrive": "Manila (MNL)",
+      "depart": "Cebu (CEB)",
+      "countries": [
+        "Philippines"
+      ],
+      "regions": [],
+      "cities": [
+        "Manila",
+        "Banaue",
+        "Coron",
+        "El Nido",
+        "Bohol",
+        "Cebu"
+      ],
+      "imageQuery": "Banaue rice terraces Philippines",
+      "highlights": [
+        "Banaue terraces",
+        "Coron",
+        "El Nido",
+        "Chocolate Hills",
+        "Kawasan canyoning"
+      ],
+      "destinationKeys": [
+        "philippines",
+        "philippines/manila",
+        "philippines/banaue",
+        "philippines/coron",
+        "philippines/el-nido",
+        "philippines/bohol",
+        "philippines/cebu"
+      ],
+      "hero": "philippines/banaue",
+      "sources": [
+        "Gecko Routes",
+        "Adventurous Miriam",
+        "KimKim",
+        "Salt in Our Hair",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Manila",
+          "hotel": "Hotel in Manila",
+          "start": 0,
+          "nights": 1,
+          "area": "In Makati or near Intramuros; close to airport and sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banaue",
+          "hotel": "Guesthouse in Banaue",
+          "start": 1,
+          "nights": 2,
+          "area": "In Banaue town, simple but with terrace views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Coron",
+          "hotel": "Resort in Coron",
+          "start": 3,
+          "nights": 2,
+          "area": "In Coron town, a short walk from the pier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Nido",
+          "hotel": "Resort in El Nido",
+          "start": 5,
+          "nights": 2,
+          "area": "In El Nido town or on the beach near Corong Corong",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bohol",
+          "hotel": "Resort on Panglao",
+          "start": 7,
+          "nights": 2,
+          "area": "On Panglao Island near Alona Beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cebu",
+          "hotel": "Hotel in Cebu",
+          "start": 9,
+          "nights": 2,
+          "area": "In Cebu City, or south at Moalboal near the reef",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Intramuros, San Agustin Church and Fort Santiago",
+          "notes": "Walk or take a calesa; heavy traffic outside the walls.",
+          "where": "Manila",
+          "book": "",
+          "place": "philippines/manila-intramuros"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Banaue viewpoints and Batad terrace trek",
+          "notes": "Allow an hour on foot into Batad.",
+          "where": "Banaue",
+          "book": "",
+          "place": "philippines/banaue-terraces"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Coron island hopping and wreck snorkel",
+          "notes": "Fees cover environmental charges; sea conditions vary.",
+          "where": "Coron",
+          "book": "Yes - book a boat tour",
+          "place": "philippines/coron-lagoons"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "El Nido island hopping tour",
+          "notes": "Tours A to D visit different lagoons.",
+          "where": "El Nido",
+          "book": "Yes - book a tour",
+          "place": "philippines/el-nido-bacuit"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Chocolate Hills, tarsiers and Loboc River",
+          "notes": "Keep quiet at the tarsier sanctuary.",
+          "where": "Bohol",
+          "book": "",
+          "place": "philippines/bohol-chocolate-tarsier"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Kawasan Falls canyoning and Moalboal sardines",
+          "notes": "Wear water shoes; long day from Cebu City.",
+          "where": "Badian and Moalboal",
+          "book": "Yes - book canyoning",
+          "place": "philippines/cebu-kawasan-moalboal"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Manila Airport (MNL)",
+          "to": "Manila hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Grab or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Manila",
+          "to": "Banaue",
+          "time": "21:00",
+          "minutes": 540,
+          "carrier": "Overnight bus",
+          "notes": "Depart the evening before; arrive early morning.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Banaue",
+          "to": "Manila",
+          "time": "07:00",
+          "minutes": 540,
+          "carrier": "Bus or van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Manila airport",
+          "to": "Manila Airport (MNL)",
+          "time": "16:00",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Busuanga Airport (USU)",
+          "to": "Coron resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Other",
+          "from": "Coron",
+          "to": "El Nido",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "El Nido resort",
+          "to": "El Nido Airport (ENI)",
+          "time": "06:30",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Tagbilaran Airport (TAG)",
+          "to": "Panglao resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Other",
+          "from": "Bohol",
+          "to": "Cebu",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Passenger ferry",
+          "notes": "Fast ferry from Tagbilaran.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Cebu hotel",
+          "to": "Cebu Airport (CEB)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "Grab or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "philippines-grand-14d",
+      "title": "Grand Philippines in 14 Days",
+      "summary": "Terraces, Palawan, Bohol, Cebu and Siargao surf.",
+      "days": 14,
+      "route": "Manila > Banaue > Coron > El Nido > Bohol > Cebu > Siargao",
+      "arrive": "Manila (MNL)",
+      "depart": "Siargao (IAO)",
+      "countries": [
+        "Philippines"
+      ],
+      "regions": [],
+      "cities": [
+        "Manila",
+        "Banaue",
+        "Coron",
+        "El Nido",
+        "Bohol",
+        "Cebu",
+        "Siargao"
+      ],
+      "imageQuery": "Siargao Cloud 9 Philippines",
+      "highlights": [
+        "Banaue",
+        "Coron",
+        "El Nido",
+        "Chocolate Hills",
+        "Kawasan Falls",
+        "Siargao"
+      ],
+      "destinationKeys": [
+        "philippines",
+        "philippines/manila",
+        "philippines/banaue",
+        "philippines/coron",
+        "philippines/el-nido",
+        "philippines/bohol",
+        "philippines/cebu",
+        "philippines/siargao"
+      ],
+      "hero": "philippines/siargao",
+      "sources": [
+        "Gecko Routes",
+        "Adventurous Miriam",
+        "KimKim",
+        "Salt in Our Hair",
+        "On The Go Tours"
+      ],
+      "pace": "F",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Manila",
+          "hotel": "Hotel in Manila",
+          "start": 0,
+          "nights": 1,
+          "area": "In Makati or near Intramuros; close to airport and sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banaue",
+          "hotel": "Guesthouse in Banaue",
+          "start": 1,
+          "nights": 2,
+          "area": "In Banaue town, simple but with terrace views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Coron",
+          "hotel": "Resort in Coron",
+          "start": 3,
+          "nights": 2,
+          "area": "In Coron town, a short walk from the pier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Nido",
+          "hotel": "Resort in El Nido",
+          "start": 5,
+          "nights": 2,
+          "area": "In El Nido town or on the beach near Corong Corong",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bohol",
+          "hotel": "Resort on Panglao",
+          "start": 7,
+          "nights": 2,
+          "area": "On Panglao Island near Alona Beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cebu",
+          "hotel": "Hotel in Cebu",
+          "start": 9,
+          "nights": 1,
+          "area": "In Cebu City, or south at Moalboal near the reef",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Siargao",
+          "hotel": "Resort in Siargao",
+          "start": 10,
+          "nights": 3,
+          "area": "In General Luna, close to the surf breaks",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Intramuros, San Agustin Church and Fort Santiago",
+          "notes": "Walk or take a calesa; heavy traffic outside the walls.",
+          "where": "Manila",
+          "book": "",
+          "place": "philippines/manila-intramuros"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Banaue viewpoints and Batad terrace trek",
+          "notes": "Allow an hour on foot into Batad.",
+          "where": "Banaue",
+          "book": "",
+          "place": "philippines/banaue-terraces"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Coron island hopping and wreck snorkel",
+          "notes": "Fees cover environmental charges; sea conditions vary.",
+          "where": "Coron",
+          "book": "Yes - book a boat tour",
+          "place": "philippines/coron-lagoons"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "El Nido island hopping tour",
+          "notes": "Tours A to D visit different lagoons.",
+          "where": "El Nido",
+          "book": "Yes - book a tour",
+          "place": "philippines/el-nido-bacuit"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Chocolate Hills, tarsiers and Loboc River",
+          "notes": "Keep quiet at the tarsier sanctuary.",
+          "where": "Bohol",
+          "book": "",
+          "place": "philippines/bohol-chocolate-tarsier"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Moalboal sardine snorkel (morning)",
+          "notes": "Wear water shoes; long day from Cebu City.",
+          "where": "Badian and Moalboal",
+          "book": "Yes - book canyoning",
+          "place": "philippines/cebu-kawasan-moalboal"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Surf lesson or island hopping to Naked Island",
+          "notes": "Lessons available at Cloud 9 and Jacking Horse.",
+          "where": "Siargao",
+          "book": "",
+          "place": "philippines/siargao-surf"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Island hopping and Sugba Lagoon",
+          "notes": "Lessons available at Cloud 9 and Jacking Horse.",
+          "where": "Siargao",
+          "book": "",
+          "place": "philippines/siargao-surf"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Manila Airport (MNL)",
+          "to": "Manila hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Grab or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Manila",
+          "to": "Banaue",
+          "time": "21:00",
+          "minutes": 540,
+          "carrier": "Overnight bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Banaue",
+          "to": "Manila",
+          "time": "07:00",
+          "minutes": 540,
+          "carrier": "Bus or van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Manila airport",
+          "to": "Manila Airport (MNL)",
+          "time": "16:00",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Busuanga Airport (USU)",
+          "to": "Coron resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Other",
+          "from": "Coron",
+          "to": "El Nido",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "El Nido resort",
+          "to": "El Nido Airport (ENI)",
+          "time": "06:30",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Tagbilaran Airport (TAG)",
+          "to": "Panglao resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Other",
+          "from": "Bohol",
+          "to": "Cebu",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Cebu hotel",
+          "to": "Cebu Airport (CEB)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Siargao Airport (IAO)",
+          "to": "Siargao resort",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Siargao resort",
+          "to": "Siargao Airport (IAO)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Van or tricycle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "philippines/manila-intramuros": {
+        "name": "Manila Intramuros and Fort Santiago",
+        "description": "The walled Spanish colonial city, with churches, a fortress and horse-drawn calesas.",
+        "details": "Intramuros is the walled old city of Manila, with San Agustin Church (a UNESCO site), Fort Santiago and the Casa Manila museum. A walking or calesa tour covers it in half a day. Manila traffic is heavy, so allow extra time for transfers.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "philippines/banaue-terraces": {
+        "name": "Banaue and Batad rice terraces",
+        "description": "Two-thousand-year-old rice terraces carved by hand into the Cordillera mountains.",
+        "details": "The Banaue terraces are a UNESCO landscape, and the amphitheatre-shaped terraces at Batad are reached by a trek of about an hour from the road. Planting and harvest seasons colour the view. The overnight bus from Manila takes about nine hours.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "philippines/coron-lagoons": {
+        "name": "Coron island hopping and Kayangan Lake",
+        "description": "Limestone islands, lagoons for swimming and a WWII wreck snorkel.",
+        "details": "Coron boat tours visit Kayangan Lake, Twin Lagoon and Barracuda Lake, with snorkelling over sunken Japanese ships. The scenery is dramatic limestone cliffs rising from clear water. Tours run daily, and tickets include environmental fees.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "philippines/el-nido-bacuit": {
+        "name": "El Nido island hopping in Bacuit Bay",
+        "description": "Lagoons, hidden beaches and kayaking among limestone karsts.",
+        "details": "El Nido tours are labelled A to D, covering the Big and Small Lagoons, Secret Lagoon, Shimizu Island and 7 Commandos Beach. Mornings are calmer for kayaking. Tours include a seafood lunch. Boats can be cancelled in bad weather.",
+        "interests": [
+          "adventure",
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "philippines/puerto-princesa-underground": {
+        "name": "Puerto Princesa Underground River",
+        "description": "A UNESCO subterranean river explored by paddle boat in a limestone cave.",
+        "details": "The Underground River is one of the New 7 Wonders of Nature. Boatmen paddle visitors through cathedral-like chambers with stalactites and bats. Permits are limited, so book ahead. The trip is a day from Puerto Princesa or a long day from El Nido.",
+        "interests": [
+          "iconic_landmarks",
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "philippines/cebu-kawasan-moalboal": {
+        "name": "Cebu: Kawasan Falls canyoning and Moalboal sardines",
+        "description": "A waterfall canyon descent and a snorkel through a sardine school.",
+        "details": "Canyoneering at Kawasan Falls in Badian involves jumps and slides. Nearby Moalboal has a huge sardine bait ball just off the beach, plus turtles. Both can be reached from Cebu City in about three hours. Wear sturdy water shoes.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "philippines/bohol-chocolate-tarsier": {
+        "name": "Bohol Chocolate Hills and tarsiers",
+        "description": "Rounded hills turned brown in the dry season, plus the world smallest primate.",
+        "details": "The Chocolate Hills are over 1,200 grass-covered mounds, best seen from the Carmen viewing deck. Tarsiers are kept in a sanctuary at Corella, where visitors must stay quiet. A countryside tour includes the Loboc River lunch cruise and Baclayon Church.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "philippines/panglao-beach": {
+        "name": "Panglao beaches and dolphin watching",
+        "description": "White-sand beaches on Panglao island, with diving at Balicasag.",
+        "details": "Alona Beach is the main resort strip on Panglao, and boats go from here to Balicasag Island for snorkelling and early-morning dolphin watching. Sunset on the beach is a pleasant evening. Resorts line the coast.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "philippines/siargao-surf": {
+        "name": "Siargao surfing and island lagoons",
+        "description": "A teardrop island known for Cloud 9 surf and tidal pools.",
+        "details": "Siargao is the surfing capital of the Philippines, with Cloud 9 breaking off General Luna. Island hopping reaches Naked Island, Daku Island and Guyam Island, and Sugba Lagoon offers kayaking. Lessons are available for beginners.",
+        "interests": [
+          "adventure",
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "philippines": {
+        "name": "Philippines",
+        "description": "An archipelago of limestone lagoons, rice terraces, coral reefs and warm hospitality.",
+        "images": []
+      },
+      "philippines/manila": {
+        "name": "Manila",
+        "description": "The capital, with a Spanish walled city.",
+        "images": []
+      },
+      "philippines/banaue": {
+        "name": "Banaue",
+        "description": "A mountain town of ancient rice terraces.",
+        "images": []
+      },
+      "philippines/coron": {
+        "name": "Coron",
+        "description": "A lagoon and wreck-diving town on Busuanga.",
+        "images": []
+      },
+      "philippines/el-nido": {
+        "name": "El Nido",
+        "description": "A gateway to Bacuit Bay lagoons.",
+        "images": []
+      },
+      "philippines/cebu": {
+        "name": "Cebu",
+        "description": "A Visayan island of canyons and reefs.",
+        "images": []
+      },
+      "philippines/bohol": {
+        "name": "Bohol",
+        "description": "An island of hills, tarsiers and beaches.",
+        "images": []
+      },
+      "philippines/siargao": {
+        "name": "Siargao",
+        "description": "A surf island in the east.",
+        "images": []
+      }
+    }
+  }
+}

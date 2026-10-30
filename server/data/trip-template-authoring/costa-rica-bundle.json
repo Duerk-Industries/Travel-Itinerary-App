@@ -1,0 +1,2151 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim and Responsible Travel itineraries for Costa Rica",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "costa-rica-arenal-5d",
+      "title": "San José and Arenal in 5 Days",
+      "summary": "A short introduction to Costa Rica: a night in the capital, then three nights beneath Arenal volcano for waterfalls, hot springs and canopy walks.",
+      "days": 5,
+      "route": "San José > La Fortuna (Arenal)",
+      "arrive": "San José (SJO)",
+      "depart": "San José (SJO)",
+      "countries": [
+        "Costa Rica"
+      ],
+      "regions": [
+        "San José",
+        "Alajuela"
+      ],
+      "cities": [
+        "San José",
+        "La Fortuna"
+      ],
+      "imageQuery": "Arenal volcano Costa Rica La Fortuna",
+      "highlights": [
+        "Arenal Volcano",
+        "La Fortuna Waterfall",
+        "Hot springs",
+        "Hanging bridges",
+        "Chocolate tour"
+      ],
+      "destinationKeys": [
+        "costa-rica",
+        "costa-rica/san-jose",
+        "costa-rica/alajuela",
+        "costa-rica/la-fortuna"
+      ],
+      "hero": "costa-rica/la-fortuna",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "Responsible Travel itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "San José",
+          "hotel": "Hotel in San José",
+          "start": 0,
+          "nights": 1,
+          "area": "Escazú, Barrio Amón or near the airport in Alajuela: quieter than downtown and quick to the airport",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Fortuna",
+          "hotel": "Hotel in La Fortuna",
+          "start": 1,
+          "nights": 3,
+          "area": "In La Fortuna town, or on the lake side of the volcano for views and quiet",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Pre-Columbian Gold Museum",
+          "notes": "Bags must be left in lockers at the entrance; compact and air-conditioned.",
+          "where": "Plaza de la Cultura, San José",
+          "book": "",
+          "place": "costa-rica/san-jose-gold-museum"
+        },
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "16:45",
+          "duration": "1h",
+          "name": "San José Central Market",
+          "notes": "Closes by early evening; keep bags closed and in front of you.",
+          "where": "Centro, San José",
+          "book": "",
+          "place": "costa-rica/san-jose-central-market"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "La Fortuna Waterfall",
+          "notes": "The stairway down is long and steep, and the climb back is the hard part.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-waterfall"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Arenal hot springs",
+          "notes": "Water in the hottest pools can be very hot; take care with children and bring a towel and sandals.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hot-springs"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Arenal Volcano National Park trails",
+          "notes": "Go in the morning, when the summit is more likely to be clear; paths are rocky and sometimes muddy.",
+          "where": "Arenal Volcano National Park",
+          "book": "",
+          "place": "costa-rica/arenal-volcano-trails"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "2.5h",
+          "name": "Arenal hanging bridges",
+          "notes": "A guide helps with spotting wildlife; the bridges sway slightly.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hanging-bridges"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Cacao and chocolate tour",
+          "notes": "Booking ahead is wise in high season; easy walking.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-chocolate-tour"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "13:30",
+          "duration": "3h",
+          "name": "White-water rafting on the Balsa River",
+          "notes": "Suitable for beginners; participants should be able to swim comfortably.",
+          "where": "Balsa River, near La Fortuna",
+          "book": "Yes - trips run on a set schedule and fill up",
+          "place": "costa-rica/balsa-river-rafting"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San José Airport (SJO)",
+          "to": "San José hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Use an official orange airport taxi or a pre-arranged shuttle.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "San José hotel area",
+          "to": "La Fortuna",
+          "time": "08:00",
+          "minutes": 195,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Roads are winding in the hills; the drive takes around three hours.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "La Fortuna",
+          "to": "San José Airport (SJO)",
+          "time": "",
+          "minutes": 180,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "costa-rica-arenal-manuel-antonio-7d",
+      "title": "Arenal and Manuel Antonio in 7 Days",
+      "summary": "Volcano and rainforest in the north, then Pacific beach and national park wildlife in the south; two bases keep the driving to a minimum.",
+      "days": 7,
+      "route": "La Fortuna (Arenal) > Manuel Antonio",
+      "arrive": "San José (SJO)",
+      "depart": "San José (SJO)",
+      "countries": [
+        "Costa Rica"
+      ],
+      "regions": [
+        "Alajuela",
+        "Puntarenas"
+      ],
+      "cities": [
+        "La Fortuna",
+        "Manuel Antonio"
+      ],
+      "imageQuery": "Manuel Antonio Costa Rica beach national park sloth",
+      "highlights": [
+        "Arenal Volcano",
+        "Hot springs",
+        "Hanging bridges",
+        "Manuel Antonio National Park",
+        "Sunset catamaran"
+      ],
+      "destinationKeys": [
+        "costa-rica",
+        "costa-rica/alajuela",
+        "costa-rica/la-fortuna",
+        "costa-rica/puntarenas",
+        "costa-rica/manuel-antonio"
+      ],
+      "hero": "costa-rica/manuel-antonio",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "Responsible Travel itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "La Fortuna",
+          "hotel": "Hotel in La Fortuna",
+          "start": 0,
+          "nights": 3,
+          "area": "In La Fortuna town, or on the lake side of the volcano for views and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Manuel Antonio",
+          "hotel": "Hotel in Manuel Antonio",
+          "start": 3,
+          "nights": 3,
+          "area": "Along the road between Quepos and the park, with views over the Pacific; the beach strip near the park is more convenient",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Arenal hot springs",
+          "notes": "Water in the hottest pools can be very hot; take care with children and bring a towel and sandals.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hot-springs"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Arenal Volcano National Park trails",
+          "notes": "Go in the morning, when the summit is more likely to be clear; paths are rocky and sometimes muddy.",
+          "where": "Arenal Volcano National Park",
+          "book": "",
+          "place": "costa-rica/arenal-volcano-trails"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "2.5h",
+          "name": "Arenal hanging bridges",
+          "notes": "A guide helps with spotting wildlife; the bridges sway slightly.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hanging-bridges"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "La Fortuna Waterfall",
+          "notes": "The stairway down is long and steep, and the climb back is the hard part; swim with care, as currents are strong.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-waterfall"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Cacao and chocolate tour",
+          "notes": "Booking ahead is wise in high season; easy walking.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-chocolate-tour"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Manuel Antonio beach day",
+          "notes": "Swim near the lifeguards and heed the flags; the tropical sun is intense.",
+          "where": "Manuel Antonio",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-beaches"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "3.5h",
+          "name": "Manuel Antonio National Park",
+          "notes": "Closed on Mondays and with daily entry limits; a guide with a scope helps with sloths, and do not feed the wildlife.",
+          "where": "Manuel Antonio National Park",
+          "book": "Yes - daily entry numbers are limited",
+          "place": "costa-rica/manuel-antonio-national-park"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "3.5h",
+          "name": "Sunset catamaran cruise",
+          "notes": "Food and drinks are usually served on board; the sea can be choppy.",
+          "where": "Quepos coast",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-catamaran"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Mangrove kayak tour at Damas Island",
+          "notes": "Calm, shaded and suited to most fitness levels; bring insect repellent.",
+          "where": "Damas Island, Quepos",
+          "book": "",
+          "place": "costa-rica/damas-island-mangrove"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "3h",
+          "name": "Manuel Antonio beach day",
+          "notes": "Swim near the lifeguards and heed the flags.",
+          "where": "Manuel Antonio",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-beaches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San José Airport (SJO)",
+          "to": "La Fortuna",
+          "time": "",
+          "minutes": 170,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Roads are winding in the hills; the drive takes around three hours.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "La Fortuna",
+          "to": "Manuel Antonio",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "A long travel day by road via San José; roads are busy near the capital.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Manuel Antonio",
+          "to": "San José Airport (SJO)",
+          "time": "",
+          "minutes": 170,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "costa-rica-arenal-guanacaste-7d",
+      "title": "Arenal and Guanacaste in 7 Days",
+      "summary": "Fly into Liberia and stop at the blue Rio Celeste on the way to Arenal, then finish on the dry Pacific coast of Guanacaste at Tamarindo.",
+      "days": 7,
+      "route": "Rio Celeste > La Fortuna (Arenal) > Tamarindo",
+      "arrive": "Liberia (LIR)",
+      "depart": "Liberia (LIR)",
+      "countries": [
+        "Costa Rica"
+      ],
+      "regions": [
+        "Alajuela",
+        "Guanacaste"
+      ],
+      "cities": [
+        "Rio Celeste",
+        "La Fortuna",
+        "Tamarindo"
+      ],
+      "imageQuery": "Rio Celeste turquoise river Costa Rica",
+      "highlights": [
+        "Rio Celeste",
+        "Arenal Volcano",
+        "Hot springs",
+        "Tamarindo surf",
+        "Playa Conchal"
+      ],
+      "destinationKeys": [
+        "costa-rica",
+        "costa-rica/alajuela",
+        "costa-rica/rio-celeste",
+        "costa-rica/la-fortuna",
+        "costa-rica/guanacaste",
+        "costa-rica/tamarindo"
+      ],
+      "hero": "costa-rica/rio-celeste",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "Responsible Travel itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "La Fortuna",
+          "hotel": "Hotel in La Fortuna",
+          "start": 0,
+          "nights": 3,
+          "area": "In La Fortuna town, or on the lake side of the volcano for views and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tamarindo",
+          "hotel": "Hotel in Tamarindo",
+          "start": 3,
+          "nights": 3,
+          "area": "Within walking distance of Tamarindo beach, or quieter on the coast to the south",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Hike",
+          "time": "10:45",
+          "duration": "3.5h",
+          "name": "Rio Celeste waterfall hike",
+          "notes": "The trail is muddy with many steps; heavy rain turns the river brown, so the dry season gives the best colour.",
+          "where": "Tenorio Volcano National Park",
+          "book": "",
+          "place": "costa-rica/rio-celeste"
+        },
+        {
+          "day": 0,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Arenal hot springs",
+          "notes": "Water in the hottest pools can be very hot; take care with children and bring a towel and sandals.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hot-springs"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Arenal Volcano National Park trails",
+          "notes": "Go in the morning, when the summit is more likely to be clear; paths are rocky and sometimes muddy.",
+          "where": "Arenal Volcano National Park",
+          "book": "",
+          "place": "costa-rica/arenal-volcano-trails"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "2.5h",
+          "name": "Arenal hanging bridges",
+          "notes": "A guide helps with spotting wildlife; the bridges sway slightly.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hanging-bridges"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "La Fortuna Waterfall",
+          "notes": "The stairway down is long and steep, and the climb back is the hard part; swim with care, as currents are strong.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-waterfall"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Cacao and chocolate tour",
+          "notes": "Booking ahead is wise in high season; easy walking.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-chocolate-tour"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Tamarindo sunset sail",
+          "notes": "Sunsets over the Pacific are best in the dry season; reserve ahead.",
+          "where": "Tamarindo",
+          "book": "",
+          "place": "costa-rica/tamarindo-sunset-sail"
+        },
+        {
+          "day": 4,
+          "type": "Class",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Surf lesson at Tamarindo",
+          "notes": "Early mornings are calmer and less crowded; follow the instructor on currents and rocks.",
+          "where": "Tamarindo",
+          "book": "",
+          "place": "costa-rica/tamarindo-surf-lesson"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Playa Conchal",
+          "notes": "Snorkelling is best at the calm northern end; shade is limited.",
+          "where": "Playa Conchal, Guanacaste",
+          "book": "",
+          "place": "costa-rica/playa-conchal"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Liberia Airport (LIR)",
+          "to": "Rio Celeste",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Private transfer or rental car",
+          "notes": "Arrange a morning arrival so there is time for the trail.",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Rio Celeste",
+          "to": "La Fortuna",
+          "time": "14:30",
+          "minutes": 135,
+          "carrier": "Private transfer or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "La Fortuna",
+          "to": "Tamarindo",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "A long drive around the lake and across the dry plains.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Tamarindo",
+          "to": "Liberia Airport (LIR)",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "costa-rica-arenal-monteverde-manuel-antonio-10d",
+      "title": "Arenal, Monteverde and Manuel Antonio in 10 Days",
+      "summary": "The classic loop: volcano country, a misty cloud forest and a Pacific national park, finishing with a night in the capital.",
+      "days": 10,
+      "route": "La Fortuna (Arenal) > Monteverde > Manuel Antonio > San José",
+      "arrive": "San José (SJO)",
+      "depart": "San José (SJO)",
+      "countries": [
+        "Costa Rica"
+      ],
+      "regions": [
+        "Alajuela",
+        "Puntarenas",
+        "San José"
+      ],
+      "cities": [
+        "La Fortuna",
+        "Monteverde",
+        "Manuel Antonio",
+        "San José"
+      ],
+      "imageQuery": "Monteverde cloud forest Costa Rica hanging bridge",
+      "highlights": [
+        "Arenal Volcano",
+        "La Fortuna Waterfall",
+        "Monteverde Cloud Forest",
+        "Zip-lines",
+        "Manuel Antonio National Park"
+      ],
+      "destinationKeys": [
+        "costa-rica",
+        "costa-rica/alajuela",
+        "costa-rica/la-fortuna",
+        "costa-rica/puntarenas",
+        "costa-rica/monteverde",
+        "costa-rica/manuel-antonio",
+        "costa-rica/san-jose"
+      ],
+      "hero": "costa-rica/monteverde",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "Responsible Travel itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "La Fortuna",
+          "hotel": "Hotel in La Fortuna",
+          "start": 0,
+          "nights": 3,
+          "area": "In La Fortuna town, or on the lake side of the volcano for views and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Monteverde",
+          "hotel": "Hotel in Monteverde",
+          "start": 3,
+          "nights": 2,
+          "area": "Along the main road in Santa Elena, close to restaurants and tour operators; higher lodges are quieter but need transport",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Manuel Antonio",
+          "hotel": "Hotel in Manuel Antonio",
+          "start": 5,
+          "nights": 3,
+          "area": "Along the road between Quepos and the park, with views over the Pacific; the beach strip near the park is more convenient",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San José",
+          "hotel": "Hotel in San José",
+          "start": 8,
+          "nights": 1,
+          "area": "Escazú, Barrio Amón or near the airport in Alajuela: quieter than downtown and quick to the airport",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Arenal hot springs",
+          "notes": "Water in the hottest pools can be very hot; take care with children and bring a towel and sandals.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hot-springs"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Arenal Volcano National Park trails",
+          "notes": "Go in the morning, when the summit is more likely to be clear; paths are rocky and sometimes muddy.",
+          "where": "Arenal Volcano National Park",
+          "book": "",
+          "place": "costa-rica/arenal-volcano-trails"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "2.5h",
+          "name": "Arenal hanging bridges",
+          "notes": "A guide helps with spotting wildlife; the bridges sway slightly.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hanging-bridges"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "La Fortuna Waterfall",
+          "notes": "The stairway down is long and steep, and the climb back is the hard part; swim with care, as currents are strong.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-waterfall"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Cacao and chocolate tour",
+          "notes": "Booking ahead is wise in high season; easy walking.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-chocolate-tour"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coffee farm tour",
+          "notes": "The roads to the farms are steep and unpaved in places.",
+          "where": "Monteverde",
+          "book": "",
+          "place": "costa-rica/monteverde-coffee-tour"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Night walk in Monteverde",
+          "notes": "Closed shoes and a light waterproof are advised; it can be cool at night.",
+          "where": "Monteverde",
+          "book": "Yes - guided night walks are booked ahead",
+          "place": "costa-rica/monteverde-night-walk"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "3.5h",
+          "name": "Monteverde Cloud Forest Reserve",
+          "notes": "Go early for the best chance of wildlife; a guide is worth having, and a waterproof is essential.",
+          "where": "Monteverde",
+          "book": "",
+          "place": "costa-rica/monteverde-cloud-forest"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "13:30",
+          "duration": "2.5h",
+          "name": "Canopy zip-lines in Monteverde",
+          "notes": "Age and weight limits apply; tours may be cancelled in high wind.",
+          "where": "Monteverde",
+          "book": "Yes - zip-line slots fill up",
+          "place": "costa-rica/monteverde-canopy-zipline"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Manuel Antonio beach day",
+          "notes": "Swim near the lifeguards and heed the flags; the tropical sun is intense.",
+          "where": "Manuel Antonio",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-beaches"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "3.5h",
+          "name": "Manuel Antonio National Park",
+          "notes": "Closed on Mondays and with daily entry limits; a guide with a scope helps with sloths, and do not feed the wildlife.",
+          "where": "Manuel Antonio National Park",
+          "book": "Yes - daily entry numbers are limited",
+          "place": "costa-rica/manuel-antonio-national-park"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "3.5h",
+          "name": "Sunset catamaran cruise",
+          "notes": "Food and drinks are usually served on board; the sea can be choppy.",
+          "where": "Quepos coast",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-catamaran"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Mangrove kayak tour at Damas Island",
+          "notes": "Calm, shaded and suited to most fitness levels; bring insect repellent.",
+          "where": "Damas Island, Quepos",
+          "book": "",
+          "place": "costa-rica/damas-island-mangrove"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "3h",
+          "name": "Manuel Antonio beach day",
+          "notes": "Swim near the lifeguards and heed the flags.",
+          "where": "Manuel Antonio",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-beaches"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Pre-Columbian Gold Museum",
+          "notes": "Bags must be left in lockers at the entrance; compact and air-conditioned.",
+          "where": "Plaza de la Cultura, San José",
+          "book": "",
+          "place": "costa-rica/san-jose-gold-museum"
+        },
+        {
+          "day": 8,
+          "type": "Shopping",
+          "time": "16:45",
+          "duration": "1h",
+          "name": "San José Central Market",
+          "notes": "Closes by early evening; keep bags closed and in front of you.",
+          "where": "Centro, San José",
+          "book": "",
+          "place": "costa-rica/san-jose-central-market"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San José Airport (SJO)",
+          "to": "La Fortuna",
+          "time": "",
+          "minutes": 170,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Roads are winding in the hills; the drive takes around three hours.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "La Fortuna",
+          "to": "Monteverde",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Jeep-boat-jeep transfer across Lake Arenal",
+          "notes": "The popular route crosses Lake Arenal by boat; it is far quicker than the long road around the lake.",
+          "book": "Yes - seats on the jeep-boat-jeep run to a schedule"
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Monteverde",
+          "to": "Manuel Antonio",
+          "time": "08:00",
+          "minutes": 285,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "The road down the mountain is steep and winding at first.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Manuel Antonio",
+          "to": "San José hotel area",
+          "time": "10:00",
+          "minutes": 195,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "San José Airport (SJO)",
+          "to": "San José hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Use an official orange airport taxi or a pre-arranged shuttle.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "costa-rica-tortuguero-arenal-manuel-antonio-10d",
+      "title": "Tortuguero, Arenal and Manuel Antonio in 10 Days",
+      "summary": "Caribbean canals and turtle beaches, then Arenal volcano, then the Pacific, giving three contrasting ecosystems in ten days.",
+      "days": 10,
+      "route": "San José > Tortuguero > La Fortuna (Arenal) > Manuel Antonio",
+      "arrive": "San José (SJO)",
+      "depart": "San José (SJO)",
+      "countries": [
+        "Costa Rica"
+      ],
+      "regions": [
+        "San José",
+        "Limón",
+        "Alajuela",
+        "Puntarenas"
+      ],
+      "cities": [
+        "San José",
+        "Tortuguero",
+        "La Fortuna",
+        "Manuel Antonio"
+      ],
+      "imageQuery": "Tortuguero canals Costa Rica jungle boat",
+      "highlights": [
+        "Tortuguero canals",
+        "Turtle nesting",
+        "Arenal Volcano",
+        "Hot springs",
+        "Manuel Antonio"
+      ],
+      "destinationKeys": [
+        "costa-rica",
+        "costa-rica/san-jose",
+        "costa-rica/limon",
+        "costa-rica/tortuguero",
+        "costa-rica/alajuela",
+        "costa-rica/la-fortuna",
+        "costa-rica/puntarenas",
+        "costa-rica/manuel-antonio"
+      ],
+      "hero": "costa-rica/tortuguero",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "Responsible Travel itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "San José",
+          "hotel": "Hotel in San José",
+          "start": 0,
+          "nights": 1,
+          "area": "Escazú, Barrio Amón or near the airport in Alajuela: quieter than downtown and quick to the airport",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tortuguero",
+          "hotel": "Lodge in Tortuguero",
+          "start": 1,
+          "nights": 2,
+          "area": "A riverside jungle lodge on the Tortuguero canals; most include meals and tours",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Fortuna",
+          "hotel": "Hotel in La Fortuna",
+          "start": 3,
+          "nights": 3,
+          "area": "In La Fortuna town, or on the lake side of the volcano for views and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Manuel Antonio",
+          "hotel": "Hotel in Manuel Antonio",
+          "start": 6,
+          "nights": 3,
+          "area": "Along the road between Quepos and the park, with views over the Pacific; the beach strip near the park is more convenient",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Pre-Columbian Gold Museum",
+          "notes": "Bags must be left in lockers at the entrance; compact and air-conditioned.",
+          "where": "Plaza de la Cultura, San José",
+          "book": "",
+          "place": "costa-rica/san-jose-gold-museum"
+        },
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "16:45",
+          "duration": "1h",
+          "name": "San José Central Market",
+          "notes": "Closes by early evening; keep bags closed and in front of you.",
+          "where": "Centro, San José",
+          "book": "",
+          "place": "costa-rica/san-jose-central-market"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Tortuguero canal boat safari",
+          "notes": "Rain is frequent here all year, so waterproof layers are essential.",
+          "where": "Tortuguero National Park",
+          "book": "",
+          "place": "costa-rica/tortuguero-canal-boat"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "20:30",
+          "duration": "2.5h",
+          "name": "Turtle nesting night tour",
+          "notes": "A licensed guide is required; no flash, torches or noise. Green turtles nest mainly from July to October, and sightings are not guaranteed outside the season.",
+          "where": "Tortuguero beach",
+          "book": "Yes - nesting tours are guided and limited",
+          "place": "costa-rica/tortuguero-turtle-nesting"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Tortuguero canal boat safari",
+          "notes": "Dawn gives the best wildlife sightings; waterproofs are essential.",
+          "where": "Tortuguero National Park",
+          "book": "",
+          "place": "costa-rica/tortuguero-canal-boat"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Tortuguero village and beach walk",
+          "notes": "The sea is too rough and the currents too strong for swimming.",
+          "where": "Tortuguero",
+          "book": "",
+          "place": "costa-rica/tortuguero-village"
+        },
+        {
+          "day": 3,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Arenal hot springs",
+          "notes": "Water in the hottest pools can be very hot; take care with children and bring a towel and sandals.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hot-springs"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Arenal Volcano National Park trails",
+          "notes": "Go in the morning, when the summit is more likely to be clear; paths are rocky and sometimes muddy.",
+          "where": "Arenal Volcano National Park",
+          "book": "",
+          "place": "costa-rica/arenal-volcano-trails"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "2.5h",
+          "name": "Arenal hanging bridges",
+          "notes": "A guide helps with spotting wildlife; the bridges sway slightly.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hanging-bridges"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "La Fortuna Waterfall",
+          "notes": "The stairway down is long and steep, and the climb back is the hard part; swim with care, as currents are strong.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-waterfall"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Cacao and chocolate tour",
+          "notes": "Booking ahead is wise in high season; easy walking.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-chocolate-tour"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Manuel Antonio beach day",
+          "notes": "Swim near the lifeguards and heed the flags; the tropical sun is intense.",
+          "where": "Manuel Antonio",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-beaches"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "3.5h",
+          "name": "Manuel Antonio National Park",
+          "notes": "Closed on Mondays and with daily entry limits; a guide with a scope helps with sloths, and do not feed the wildlife.",
+          "where": "Manuel Antonio National Park",
+          "book": "Yes - daily entry numbers are limited",
+          "place": "costa-rica/manuel-antonio-national-park"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "3.5h",
+          "name": "Sunset catamaran cruise",
+          "notes": "Food and drinks are usually served on board; the sea can be choppy.",
+          "where": "Quepos coast",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-catamaran"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Mangrove kayak tour at Damas Island",
+          "notes": "Calm, shaded and suited to most fitness levels; bring insect repellent.",
+          "where": "Damas Island, Quepos",
+          "book": "",
+          "place": "costa-rica/damas-island-mangrove"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "3h",
+          "name": "Manuel Antonio beach day",
+          "notes": "Swim near the lifeguards and heed the flags.",
+          "where": "Manuel Antonio",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-beaches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San José Airport (SJO)",
+          "to": "San José hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Use an official orange airport taxi or a pre-arranged shuttle.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "San José hotel area",
+          "to": "Tortuguero",
+          "time": "06:00",
+          "minutes": 330,
+          "carrier": "Tour package: road to the canal landing, then boat",
+          "notes": "An early start; the last stretch is by boat along the canals, and packages usually include lodge meals.",
+          "book": "Yes - lodge packages book transfers and boat together"
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Tortuguero",
+          "to": "La Fortuna",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "Boat to the road, then shared shuttle",
+          "notes": "The boat ride to the road head and the long drive make this a full travel day.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "La Fortuna",
+          "to": "Manuel Antonio",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "A long travel day by road via San José.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Manuel Antonio",
+          "to": "San José Airport (SJO)",
+          "time": "",
+          "minutes": 170,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "costa-rica-coast-to-coast-osa-14d",
+      "title": "Costa Rica Coast to Coast with the Osa Peninsula in 14 Days",
+      "summary": "From the Caribbean canals of Tortuguero through the volcano and cloud forest highlands to the Pacific, finishing in the remote rainforest of the Osa Peninsula.",
+      "days": 14,
+      "route": "San José > Tortuguero > La Fortuna > Monteverde > Manuel Antonio > Drake Bay (Osa)",
+      "arrive": "San José (SJO)",
+      "depart": "Drake Bay (DRK), connecting via San José",
+      "countries": [
+        "Costa Rica"
+      ],
+      "regions": [
+        "San José",
+        "Limón",
+        "Alajuela",
+        "Puntarenas"
+      ],
+      "cities": [
+        "San José",
+        "Tortuguero",
+        "La Fortuna",
+        "Monteverde",
+        "Manuel Antonio",
+        "Drake Bay"
+      ],
+      "imageQuery": "Corcovado Osa Peninsula Costa Rica rainforest scarlet macaw",
+      "highlights": [
+        "Tortuguero canals",
+        "Arenal Volcano",
+        "Monteverde Cloud Forest",
+        "Manuel Antonio",
+        "Corcovado National Park"
+      ],
+      "destinationKeys": [
+        "costa-rica",
+        "costa-rica/san-jose",
+        "costa-rica/limon",
+        "costa-rica/tortuguero",
+        "costa-rica/alajuela",
+        "costa-rica/la-fortuna",
+        "costa-rica/puntarenas",
+        "costa-rica/monteverde",
+        "costa-rica/manuel-antonio",
+        "costa-rica/drake-bay"
+      ],
+      "hero": "costa-rica/drake-bay",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "Responsible Travel itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "San José",
+          "hotel": "Hotel in San José",
+          "start": 0,
+          "nights": 1,
+          "area": "Escazú, Barrio Amón or near the airport in Alajuela: quieter than downtown and quick to the airport",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tortuguero",
+          "hotel": "Lodge in Tortuguero",
+          "start": 1,
+          "nights": 2,
+          "area": "A riverside jungle lodge on the Tortuguero canals; most include meals and tours",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Fortuna",
+          "hotel": "Hotel in La Fortuna",
+          "start": 3,
+          "nights": 3,
+          "area": "In La Fortuna town, or on the lake side of the volcano for views and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Monteverde",
+          "hotel": "Hotel in Monteverde",
+          "start": 6,
+          "nights": 2,
+          "area": "Along the main road in Santa Elena, close to restaurants and tour operators; higher lodges are quieter but need transport",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Manuel Antonio",
+          "hotel": "Hotel in Manuel Antonio",
+          "start": 8,
+          "nights": 2,
+          "area": "Along the road between Quepos and the park, with views over the Pacific; the beach strip near the park is more convenient",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Drake Bay",
+          "hotel": "Lodge in Drake Bay",
+          "start": 10,
+          "nights": 3,
+          "area": "A lodge among the trees above the shore, usually with meals and tours included",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Pre-Columbian Gold Museum",
+          "notes": "Bags must be left in lockers at the entrance; compact and air-conditioned.",
+          "where": "Plaza de la Cultura, San José",
+          "book": "",
+          "place": "costa-rica/san-jose-gold-museum"
+        },
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "16:45",
+          "duration": "1h",
+          "name": "San José Central Market",
+          "notes": "Closes by early evening; keep bags closed and in front of you.",
+          "where": "Centro, San José",
+          "book": "",
+          "place": "costa-rica/san-jose-central-market"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Tortuguero canal boat safari",
+          "notes": "Rain is frequent here all year, so waterproof layers are essential.",
+          "where": "Tortuguero National Park",
+          "book": "",
+          "place": "costa-rica/tortuguero-canal-boat"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "20:30",
+          "duration": "2.5h",
+          "name": "Turtle nesting night tour",
+          "notes": "A licensed guide is required; no flash, torches or noise. Green turtles nest mainly from July to October, and sightings are not guaranteed outside the season.",
+          "where": "Tortuguero beach",
+          "book": "Yes - nesting tours are guided and limited",
+          "place": "costa-rica/tortuguero-turtle-nesting"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Tortuguero canal boat safari",
+          "notes": "Dawn gives the best wildlife sightings; waterproofs are essential.",
+          "where": "Tortuguero National Park",
+          "book": "",
+          "place": "costa-rica/tortuguero-canal-boat"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Tortuguero village and beach walk",
+          "notes": "The sea is too rough and the currents too strong for swimming.",
+          "where": "Tortuguero",
+          "book": "",
+          "place": "costa-rica/tortuguero-village"
+        },
+        {
+          "day": 3,
+          "type": "Spa/Wellness",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Arenal hot springs",
+          "notes": "Water in the hottest pools can be very hot; take care with children and bring a towel and sandals.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hot-springs"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Arenal Volcano National Park trails",
+          "notes": "Go in the morning, when the summit is more likely to be clear; paths are rocky and sometimes muddy.",
+          "where": "Arenal Volcano National Park",
+          "book": "",
+          "place": "costa-rica/arenal-volcano-trails"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "2.5h",
+          "name": "Arenal hanging bridges",
+          "notes": "A guide helps with spotting wildlife; the bridges sway slightly.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/arenal-hanging-bridges"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "La Fortuna Waterfall",
+          "notes": "The stairway down is long and steep, and the climb back is the hard part; swim with care, as currents are strong.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-waterfall"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Cacao and chocolate tour",
+          "notes": "Booking ahead is wise in high season; easy walking.",
+          "where": "La Fortuna",
+          "book": "",
+          "place": "costa-rica/la-fortuna-chocolate-tour"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coffee farm tour",
+          "notes": "The roads to the farms are steep and unpaved in places.",
+          "where": "Monteverde",
+          "book": "",
+          "place": "costa-rica/monteverde-coffee-tour"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Night walk in Monteverde",
+          "notes": "Closed shoes and a light waterproof are advised; it can be cool at night.",
+          "where": "Monteverde",
+          "book": "Yes - guided night walks are booked ahead",
+          "place": "costa-rica/monteverde-night-walk"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "3.5h",
+          "name": "Monteverde Cloud Forest Reserve",
+          "notes": "Go early for the best chance of wildlife; a guide is worth having, and a waterproof is essential.",
+          "where": "Monteverde",
+          "book": "",
+          "place": "costa-rica/monteverde-cloud-forest"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "13:30",
+          "duration": "2.5h",
+          "name": "Canopy zip-lines in Monteverde",
+          "notes": "Age and weight limits apply; tours may be cancelled in high wind.",
+          "where": "Monteverde",
+          "book": "Yes - zip-line slots fill up",
+          "place": "costa-rica/monteverde-canopy-zipline"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Manuel Antonio beach day",
+          "notes": "Swim near the lifeguards and heed the flags; the tropical sun is intense.",
+          "where": "Manuel Antonio",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-beaches"
+        },
+        {
+          "day": 9,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "3.5h",
+          "name": "Manuel Antonio National Park",
+          "notes": "Closed on Mondays and with daily entry limits; a guide with a scope helps with sloths, and do not feed the wildlife.",
+          "where": "Manuel Antonio National Park",
+          "book": "Yes - daily entry numbers are limited",
+          "place": "costa-rica/manuel-antonio-national-park"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "3.5h",
+          "name": "Sunset catamaran cruise",
+          "notes": "Food and drinks are usually served on board; the sea can be choppy.",
+          "where": "Quepos coast",
+          "book": "",
+          "place": "costa-rica/manuel-antonio-catamaran"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "11:30",
+          "duration": "1.25h",
+          "name": "Sierpe mangrove boat ride",
+          "notes": "The landing at Drake Bay is a wet one, onto the beach; use waterproof bags and sandals.",
+          "where": "Sierpe to Drake Bay",
+          "book": "",
+          "place": "costa-rica/sierpe-mangrove-boat"
+        },
+        {
+          "day": 11,
+          "type": "Day Trip",
+          "time": "06:00",
+          "duration": "9h",
+          "name": "Corcovado National Park",
+          "notes": "Entry is only with a licensed guide and a permit, arranged through the lodge; the trails are hot, humid and muddy.",
+          "where": "Corcovado, Osa Peninsula",
+          "book": "Yes - permits and guides must be arranged in advance",
+          "place": "costa-rica/corcovado"
+        },
+        {
+          "day": 12,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Snorkelling at Caño Island",
+          "notes": "The sea can be choppy and visibility varies; a reserve fee is usually included.",
+          "where": "Caño Island, Osa Peninsula",
+          "book": "",
+          "place": "costa-rica/cano-island"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San José Airport (SJO)",
+          "to": "San José hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Use an official orange airport taxi or a pre-arranged shuttle.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "San José hotel area",
+          "to": "Tortuguero",
+          "time": "06:00",
+          "minutes": 330,
+          "carrier": "Tour package: road to the canal landing, then boat",
+          "notes": "An early start; the last stretch is by boat along the canals, and packages usually include lodge meals.",
+          "book": "Yes - lodge packages book transfers and boat together"
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Tortuguero",
+          "to": "La Fortuna",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "Boat to the road, then shared shuttle",
+          "notes": "The boat ride to the road head and the long drive make this a full travel day.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "La Fortuna",
+          "to": "Monteverde",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Jeep-boat-jeep transfer across Lake Arenal",
+          "notes": "The popular route crosses Lake Arenal by boat; it is far quicker than the long road around the lake.",
+          "book": "Yes - seats on the jeep-boat-jeep run to a schedule"
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Monteverde",
+          "to": "Manuel Antonio",
+          "time": "08:00",
+          "minutes": 285,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "The road down the mountain is steep and winding at first.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Manuel Antonio",
+          "to": "Sierpe",
+          "time": "07:30",
+          "minutes": 210,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Roads turn rougher toward the south; the boat leaves from the Sierpe dock.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Sierpe dock",
+          "to": "Drake Bay",
+          "time": "10:15",
+          "minutes": 75,
+          "carrier": "Lodge boat",
+          "notes": "Boat times depend on the tide; the landing is wet.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Drake Bay",
+          "to": "Sirena Station, Corcovado",
+          "time": "05:45",
+          "minutes": 75,
+          "carrier": "Tour boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Sirena Station, Corcovado",
+          "to": "Drake Bay",
+          "time": "15:00",
+          "minutes": 75,
+          "carrier": "Tour boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Public Transit",
+          "from": "Drake Bay",
+          "to": "Caño Island",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Tour boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Public Transit",
+          "from": "Caño Island",
+          "to": "Drake Bay",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Tour boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Drake Bay lodge",
+          "to": "Drake Bay airstrip",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Lodge transfer",
+          "notes": "This covers the ground leg to the departure airstrip only; the flight to San José takes under an hour.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "costa-rica/san-jose-gold-museum": {
+        "name": "Pre-Columbian Gold Museum",
+        "description": "A museum beneath the Plaza de la Cultura in San José showing thousands of gold ornaments made by Costa Rica's early peoples.",
+        "details": "The Pre-Columbian Gold Museum holds a large collection of gold figures and jewellery made by Indigenous peoples of Costa Rica before the arrival of the Spanish, set out in underground galleries beneath the Plaza de la Cultura. Small animal-shaped pendants of frogs, jaguars and eagles are the best-known pieces. It is a compact, air-conditioned stop that fits well into a half day in the capital. Bags must be left in lockers at the entrance.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/san-jose-central-market": {
+        "name": "San José Central Market",
+        "description": "A covered market of small food counters, coffee stalls and craft shops that has traded in central San José since the nineteenth century.",
+        "details": "The Mercado Central is a maze of narrow aisles under a metal roof, with sodas serving casados, the plate of rice, beans and meat that is the standard Costa Rican lunch, along with stalls of coffee, spices, leather goods and hammocks. It is a good place to try local food and buy souvenirs. It is busy at midday and closes by early evening, and bags should be held securely against pickpockets.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/arenal-volcano-trails": {
+        "name": "Arenal Volcano National Park trails",
+        "description": "Forest and old lava-flow trails at the foot of the conical Arenal volcano, which has been quiet since 2010.",
+        "details": "Arenal is a near-perfect cone that erupted continuously from 1968 until 2010 and is now dormant. Trails in the national park cross old lava flows and rainforest at its base, with views of the summit when the clouds lift, which is more likely in the morning. Visitors cannot climb the volcano itself. Wildlife on the trails includes monkeys, coatis and many birds. Paths are rocky and can be muddy.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/arenal-hanging-bridges": {
+        "name": "Arenal hanging bridges",
+        "description": "A walk on suspension bridges and trails through the forest canopy near La Fortuna.",
+        "details": "Several private reserves near La Fortuna have a series of suspension bridges strung between trees, letting walkers look into the canopy at eye level. A guide helps with spotting birds, sloths and monkeys, who are often easier to see than from the ground. The walk is a couple of hours and fairly easy. Bridges sway slightly underfoot, so it may not suit those who are afraid of heights.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/la-fortuna-waterfall": {
+        "name": "La Fortuna Waterfall",
+        "description": "A seventy-metre waterfall in a forested gorge, reached by a long stairway, with a pool at the base.",
+        "details": "The La Fortuna Waterfall drops about seventy metres into a pool surrounded by forest, with a staircase of several hundred steps leading down to a viewpoint and the swimming area at the bottom. The climb back up is the hard part, in the heat and humidity. Swimming is possible but the currents near the falls can be strong. It is best visited in the morning when it is cooler and quieter.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "costa-rica/arenal-hot-springs": {
+        "name": "Arenal hot springs",
+        "description": "Volcano-heated thermal pools in landscaped jungle gardens, a popular way to end a day near Arenal.",
+        "details": "The volcano heats groundwater that feeds a number of resorts with thermal rivers and pools at different temperatures. Visits are usually an evening activity, with pools set among tropical plants and sometimes lit at night. Several resorts sell day or evening passes, while others are free for guests only. Water temperatures can be very high in the hottest pools, so take care with children, and bring a towel and sandals.",
+        "interests": [
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/la-fortuna-chocolate-tour": {
+        "name": "Cacao and chocolate tour",
+        "description": "A guided visit to a cacao farm near La Fortuna, following chocolate from bean to bar with tastings.",
+        "details": "Small farms around La Fortuna grow cacao, and tours show the pods, the fermenting and drying of the beans, the roasting and grinding, and finally the making of chocolate. Visitors usually taste the process at each stage, ending with warm chocolate drinks. Tours are around two hours and suit families. Booking ahead is wise in high season, and walking is on easy paths.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/balsa-river-rafting": {
+        "name": "White-water rafting on the Balsa River",
+        "description": "A half-day raft trip on moderate rapids on the Balsa River, suitable for beginners.",
+        "details": "The Balsa River near La Fortuna offers class II and III rapids that are suitable for first-time rafters, with guides steering and giving instructions. Trips last around three hours on the water, with a snack included. Water levels depend on recent rain, and the river can be higher and faster in the wet season. Participants should be able to swim comfortably and wear a helmet and life jacket.",
+        "interests": [
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/monteverde-cloud-forest": {
+        "name": "Monteverde Cloud Forest Reserve",
+        "description": "A misty mountain reserve of mossy trees, hanging bridges and a high diversity of birds, including the resplendent quetzal.",
+        "details": "The reserve covers high-altitude forest on the Continental Divide, where clouds drift through the trees and moss, orchids and bromeliads cover every branch. Well-kept trails and hanging bridges allow walkers to explore, and a guide is useful for spotting hummingbirds, toucans and, in the early months of the year, quetzals. It is cool and often wet, so a light waterproof is needed. Going early in the morning gives the best chance of wildlife.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/monteverde-canopy-zipline": {
+        "name": "Canopy zip-lines in Monteverde",
+        "description": "A series of zip-lines that carry riders across forested valleys and between platforms in the treetops.",
+        "details": "Monteverde is often credited as a birthplace of canopy tourism, and several operators run zip-line circuits with cables of different lengths between platforms in the trees, some with views down into the valleys. Riders are harnessed and guided, and an introduction covers the braking technique. Tours last about two to three hours. Participants must meet minimum age and weight limits, and tours may be cancelled in high wind.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/monteverde-night-walk": {
+        "name": "Night walk in Monteverde",
+        "description": "A guided after-dark walk with torches to look for sloths, tree frogs, insects and other nocturnal wildlife.",
+        "details": "After dark, the forest comes alive with creatures that stay hidden by day, and a guided walk with torches shows frogs, katydids, stick insects, sleeping birds and sometimes sloths or kinkajous. Guides know where to find the animals and use powerful spotlights. The walk is around ninety minutes on easy paths. Closed shoes and a light waterproof are advised, and it can be cool at night.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/monteverde-coffee-tour": {
+        "name": "Coffee farm tour in Monteverde",
+        "description": "A tour of a small coffee plantation showing how beans are picked, processed and roasted, with tasting.",
+        "details": "The hillsides around Monteverde are planted with coffee, and many small farms run tours showing the whole process from the red cherries on the bush to the roasted bean. Visitors learn about shade-grown cultivation and finish with a cupping. Tours take about two hours and are an easy activity for a quiet afternoon. The roads to the farms are steep and unpaved in places.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/manuel-antonio-national-park": {
+        "name": "Manuel Antonio National Park",
+        "description": "A small coastal rainforest park with white beaches, sloths, monkeys and iguanas, close to the Pacific coast road.",
+        "details": "Manuel Antonio is Costa Rica's smallest national park and also one of its most visited, with short trails through rainforest to a series of beaches. Monkeys, sloths, iguanas and many birds are easy to see, particularly with a guide who carries a spotting scope. Daily numbers are limited and the park closes on Mondays, so check the day. Do not feed the wildlife, and secure bags, as monkeys and raccoons will steal food.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/manuel-antonio-beaches": {
+        "name": "Manuel Antonio beach day",
+        "description": "A relaxed day on the calm sandy beaches near the national park, with warm water and shaded forest edges.",
+        "details": "Playa Espadilla and the beaches near the park have soft sand, warm Pacific water and a backdrop of green forest. The main public beach is lively with vendors and tour operators. Riptides can be strong, so swim near the lifeguards and heed the flags. Sun protection is important, as the tropical sun is intense.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/manuel-antonio-catamaran": {
+        "name": "Sunset catamaran cruise",
+        "description": "A boat trip along the Pacific coast with snorkelling stops, dolphins and a sunset with drinks.",
+        "details": "Catamaran cruises from Quepos or the Manuel Antonio coast head out for a few hours along the shore, with snorkelling, a swim stop and sometimes dolphins or whales, depending on the season. Food and drinks are usually served on board. Cruises sail in most conditions, but the sea can be choppy. Sunset departures are the most popular.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/damas-island-mangrove": {
+        "name": "Mangrove kayak tour at Damas Island",
+        "description": "A paddle through a mangrove estuary near Quepos, looking for monkeys, crabs and birds.",
+        "details": "The mangrove channels of Damas Island, an estuary near Quepos, can be explored by kayak or small boat with a guide who points out capuchin monkeys, herons, kingfishers, crabs and sometimes a crocodile. It is calmer and more shaded than the open coast, and suits most fitness levels. Tours go in the morning when the wildlife is most active. Insect repellent is a good idea.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/tortuguero-canal-boat": {
+        "name": "Tortuguero canal boat safari",
+        "description": "A dawn boat trip along the narrow jungle canals of Tortuguero National Park to spot monkeys, caimans and birds.",
+        "details": "Tortuguero National Park on the Caribbean coast is laced with canals that can only be explored by boat. A small, quiet boat with a naturalist guide drifts along the waterways at dawn, when wildlife is most active, passing howler and spider monkeys, sloths, caimans, kingfishers and herons. Rain is frequent here throughout the year, so waterproof layers are essential. Early departures give the best sightings.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/tortuguero-turtle-nesting": {
+        "name": "Turtle nesting night tour",
+        "description": "A guided night walk on the beach to watch sea turtles come ashore to nest in season.",
+        "details": "Tortuguero is one of the main nesting beaches in the Caribbean for green sea turtles, which come ashore at night mostly from July to October, with leatherbacks nesting earlier in the year. Visits are strictly regulated: a licensed guide is required, and flash photography, torches and noise are not allowed. Sightings are likely in season but never guaranteed. The beach is dark and the sand soft.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/tortuguero-village": {
+        "name": "Tortuguero village and beach walk",
+        "description": "An easy stroll through the small canal-side village and along the wild Caribbean beach.",
+        "details": "Tortuguero village is a small settlement with a few lodges, cafes and a turtle museum, reached only by boat or light aircraft. A path leads across to the beach, which has a heavy surf and strong currents, so swimming is not safe. The walk is flat and easy. Rain showers are common, and the village is lively with the evening meal at the lodges.",
+        "interests": [
+          "authentic_local",
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/rio-celeste": {
+        "name": "Rio Celeste waterfall hike",
+        "description": "A forest trail to a waterfall and a river that glows turquoise, in Tenorio Volcano National Park.",
+        "details": "The Río Celeste owes its unusual colour to the minerals in the water, which scatter light so that it appears sky-blue. A forest trail leads past hot springs and a bubbling spot where two streams meet and turn the water blue, before descending to a waterfall. The path is muddy and involves many steps. Heavy rain turns the river brown, so the dry season gives the best chance of seeing the colour.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "costa-rica/tamarindo-sunset-sail": {
+        "name": "Tamarindo sunset sail",
+        "description": "A catamaran or sailboat trip along the Guanacaste coast at sunset, with drinks and snorkelling.",
+        "details": "Sunset sails from Tamarindo head out along the Pacific coast, with a swim and snorkel stop and a light meal and drinks on board. Sunsets over the Pacific are a highlight of the Guanacaste coast, especially in the dry season. The sea is usually calm in the evening. Reserve ahead in busy periods.",
+        "interests": [
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/tamarindo-surf-lesson": {
+        "name": "Surf lesson at Tamarindo",
+        "description": "A beginner's surf lesson on the gentle waves at Tamarindo, one of the country's main surf towns.",
+        "details": "Tamarindo's long beach has consistent, forgiving waves that suit beginners, and schools offer lessons with boards and rash vests included. A lesson lasts around two hours and starts on the sand with the basics of standing up. Currents and rocks vary with the tide, so follow the instructor's advice. Early mornings are calmer and less crowded.",
+        "interests": [
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/playa-conchal": {
+        "name": "Playa Conchal",
+        "description": "A beach of crushed shell sand on the Guanacaste coast with calm turquoise water that is good for snorkelling.",
+        "details": "Playa Conchal is named for its sand, made largely of tiny crushed shells, and has clear, calm water at the northern end where snorkelling is good. It is reached by road from Tamarindo, and much of the beach front belongs to a resort. Public access is available, but shade is limited, so take sun protection.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "costa-rica/sierpe-mangrove-boat": {
+        "name": "Sierpe mangrove boat ride",
+        "description": "A boat journey through mangrove channels from Sierpe to the Pacific and along the coast to Drake Bay.",
+        "details": "The only practical way to reach Drake Bay from the road is by boat from Sierpe, which winds through mangrove channels before reaching the open Pacific and then running along the coast. It takes about an hour or more depending on the tide and sea state, and passengers can see birds, crocodiles and sometimes dolphins. The landing at Drake Bay is a wet one, from the boat onto the beach, so waterproof bags and sandals help.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "costa-rica/corcovado": {
+        "name": "Corcovado National Park",
+        "description": "A guided day trip to the remote rainforest of the Osa Peninsula, one of the most biodiverse places in Central America.",
+        "details": "Corcovado National Park protects the largest tract of lowland rainforest on the Pacific coast of Central America, with tapirs, scarlet macaws, monkeys and, very rarely, jaguars. Entry is allowed only with a licensed guide and a permit, usually arranged by the lodge, and day trips from Drake Bay go by boat to the Sirena station. Trails are hot, humid and muddy. Wildlife is plentiful but never guaranteed, and a decent level of fitness is needed.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "costa-rica/cano-island": {
+        "name": "Caño Island snorkelling",
+        "description": "A boat trip from Drake Bay to a protected island offshore, with coral reefs, rays and tropical fish.",
+        "details": "Caño Island is a biological reserve off the Osa coast, with clear water and coral reefs offering good snorkelling and diving, and migrating humpback whales pass offshore in some seasons. Trips by small boat from Drake Bay take about an hour each way. The sea can be choppy and conditions affect visibility. A landing fee for the reserve is usually included in the tour.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "costa-rica": {
+        "name": "Costa Rica",
+        "description": "A small Central American country of volcanoes, cloud forest, rainforest wildlife and Pacific and Caribbean beaches.",
+        "images": []
+      },
+      "costa-rica/san-jose": {
+        "name": "San José",
+        "description": "Costa Rica's capital in the central valley, used mostly as a gateway, with a gold museum and a busy central market.",
+        "images": []
+      },
+      "costa-rica/alajuela": {
+        "name": "Alajuela",
+        "description": "The province that holds La Fortuna and the Arenal volcano, along with the country's main international airport.",
+        "images": []
+      },
+      "costa-rica/la-fortuna": {
+        "name": "La Fortuna",
+        "description": "The town beneath Arenal volcano, a base for waterfalls, hot springs, rafting and canopy walks.",
+        "images": []
+      },
+      "costa-rica/rio-celeste": {
+        "name": "Rio Celeste",
+        "description": "A river in Tenorio Volcano National Park whose water turns an unusual turquoise, reached by a forest trail.",
+        "images": []
+      },
+      "costa-rica/puntarenas": {
+        "name": "Puntarenas",
+        "description": "The long Pacific province that includes Monteverde, Manuel Antonio and the remote Osa Peninsula.",
+        "images": []
+      },
+      "costa-rica/monteverde": {
+        "name": "Monteverde",
+        "description": "A mountain community beside a misty cloud forest reserve, known for birdlife, hanging bridges and zip-lines.",
+        "images": []
+      },
+      "costa-rica/manuel-antonio": {
+        "name": "Manuel Antonio",
+        "description": "A Pacific coast resort area beside a small national park with sloths, monkeys and sandy beaches.",
+        "images": []
+      },
+      "costa-rica/drake-bay": {
+        "name": "Drake Bay",
+        "description": "A remote village on the Osa Peninsula reached by boat, the launch point for Corcovado and Caño Island.",
+        "images": []
+      },
+      "costa-rica/limon": {
+        "name": "Limón",
+        "description": "The Caribbean province, with a different climate and culture from the Pacific side and the canals of Tortuguero.",
+        "images": []
+      },
+      "costa-rica/tortuguero": {
+        "name": "Tortuguero",
+        "description": "A canal-laced Caribbean national park reached only by boat or light plane, famous for turtle nesting.",
+        "images": []
+      },
+      "costa-rica/guanacaste": {
+        "name": "Guanacaste",
+        "description": "The dry north-west province of savannah, volcanoes and long Pacific beaches, served by Liberia airport.",
+        "images": []
+      },
+      "costa-rica/tamarindo": {
+        "name": "Tamarindo",
+        "description": "A surf town on the Guanacaste coast with a long beach, restaurants and sunset sails.",
+        "images": []
+      }
+    }
+  }
+}

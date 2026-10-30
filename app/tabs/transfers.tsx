@@ -1,3 +1,6 @@
+import IconText from '../components/IconText';
+import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
+import TransferSummaryCard from '../components/TransferSummaryCard';
 import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
 
 
@@ -492,6 +495,7 @@ export const fetchFlightsForTrip = async ({
 type FlightsTabProps = {
   mapApp?: MapApp;
   transferScope?: 'all' | 'flights' | 'ground';
+  compactTransferCards?: boolean;
   lodgings?: TransferHotel[];
   activities?: TransferActivity[];
   backendUrl: string;
@@ -579,6 +583,7 @@ const COMPACT_ICON_BUTTON: ViewStyle = themeStyle('tabs_transfers_2', {  }, getS
 
 export const FlightsTab: React.FC<FlightsTabProps> = ({
   transferScope = 'all',
+  compactTransferCards = false,
   mapApp,
   lodgings = [],
   activities = [],
@@ -613,11 +618,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const { isPhoneLayout } = useLayoutBreakpoints();
   const flights = useMemo(() => allFlights.filter(item => transferScope === 'all' || (transferScope === 'flights' ? isFlightTransfer(item) : !isFlightTransfer(item))), [allFlights, transferScope]);
   const allowedTransferTypes = useMemo(() => TRANSFER_TYPES.filter(type => transferScope === 'all' || (transferScope === 'flights' ? type === 'Flight' : type !== 'Flight')), [transferScope]);
   const initialDraft = (): FlightDraft => ({ ...createInitialFlightState(), transferType: transferScope === 'ground' ? 'Public Transit' : 'Flight' });
   const sectionTitle = transferScope === 'ground' ? 'Ground Transfers' : transferScope === 'flights' ? 'Flights' : 'Transfers';
   const ground = transferScope === 'ground';
+  const showTransferCards = compactTransferCards && transferScope !== 'all';
   const tableColumns = useMemo(() => columns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
     .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column), [ground]);
   const isWizard = mode === 'wizard';
@@ -767,7 +774,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
     : { key, direction: 'asc' });
   const allGridColumns = useMemo<GridColumn<Flight>[]>(() => [
-    { key: 'passenger_name', label: 'Passenger', width: 170, editor: 'text', sticky: 'left', getValue: (row) => row.passenger_name || '' },
+    { key: 'passenger_name', label: 'Passenger', width: 170, editor: 'text', getValue: (row) => row.passenger_name || '' },
     { key: 'status', label: 'Status', width: 135, editor: 'select', options: ITINERARY_STATUSES, getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
     { key: 'transfer_type', label: 'Type', width: 120, editor: 'select', options: allowedTransferTypes, getValue: (row) => normalizeTransferType(row.transfer_type || row.transferType) },
     { key: 'departure_date', label: 'Departure Date', width: 145, editor: 'date', getValue: (row) => row.departure_date || '' },
@@ -1580,19 +1587,19 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         ) : null}
         {!readOnly ? (
           <View style={themeStyle('tabs_transfers_10', {  }, (theme ?? _styleTheme))}>
-            {!tableEditing ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="transfer-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
+            {!tableEditing && !showTransferCards && !isPhoneLayout ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="transfer-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
             {tableEditing ? <>
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={cancelGridEdit} disabled={gridSaving} testID="transfer-table-cancel"><Text style={styles.dangerButtonText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={styles.button} onPress={saveGridEdit} disabled={gridSaving} testID="transfer-table-save"><Text style={styles.buttonText}>{gridSaving ? 'Saving…' : 'Save changes'}</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_11', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="transfer-table-undo"><Text style={styles.buttonText}>↶</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_12', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="transfer-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_11', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="transfer-table-undo"><IconText style={styles.buttonText}>↶</IconText></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_12', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="transfer-table-redo"><IconText style={styles.buttonText}>↷</IconText></TouchableOpacity>
             </> : null}
-            <TouchableOpacity style={[styles.button, styles.outlineButton, themeStyle('tabs_transfers_13', {  }, (theme ?? _styleTheme))]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
+            {!isPhoneLayout ? <TouchableOpacity style={[styles.button, styles.outlineButton, themeStyle('tabs_transfers_13', {  }, (theme ?? _styleTheme))]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
               <Text style={styles.buttonText}>Paste Info</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
-              <Text style={styles.buttonText}>+</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> : null}
+            {!isPhoneLayout || isWizard ? <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
+              <IconText style={styles.buttonText}>+</IconText>
+            </TouchableOpacity> : null}
           </View>
         ) : null}
       </View>
@@ -1600,7 +1607,17 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       {tableEditing ? <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
         <EditableDataGrid rows={sortedGridRows} columns={gridColumns} disabled={gridSaving} cellErrors={gridErrors} stagedDeleteIds={gridDeleteIds} onCellChange={changeGridCell} onDeleteRow={toggleGridDelete} onUndo={undoGridChange} onRedo={redoGridChange} sortKey={flightSort.key} sortDirection={flightSort.direction} onSort={sortFlightTable} styles={styles} theme={theme} />
       </HorizontalTableScroll> : null}
-      {!tableEditing ? <>
+      {!tableEditing && showTransferCards ? (
+        <View style={themeStyle('compactItemList', {}, theme)} testID={ground ? 'ground-transfer-summary-list' : 'flight-summary-list'}>
+          {sortedFlights.map((flight) => (
+            <View key={flight.id} style={styles.dayInfoCard}>
+              <TransferSummaryCard flight={flight} members={groupMembers} showTravelers theme={theme}
+                testID={`transfer-row-${flight.id}`} onPress={() => setSelectedTransfer(flight)} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {!tableEditing && !showTransferCards && !isPhoneLayout ? <>
       <HorizontalTableScroll
         style={styles.tableScroll}
         contentContainerStyle={styles.tableScrollContent}
@@ -1613,7 +1630,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 style={[
                   styles.cell,
                   fixedTableColumn(colWidth(col)),
-                  col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_transfers_14', { theme: theme }, (theme ?? _styleTheme)) as any),
                   col.key === 'actions' && Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_transfers_15', { theme: theme }, (theme ?? _styleTheme)) as any),
                   idx === tableColumns.length - 1 && styles.lastCell,
                 ]}
@@ -1684,13 +1700,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                             style={[styles.button, styles.smallButton, COMPACT_ICON_BUTTON]}
                             onPress={() => rateFlight(item.id, 1)}
                           >
-                            <Text style={styles.buttonText}>👍</Text>
+                            <IconText style={styles.buttonText}>👍</IconText>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.button, styles.smallButton, styles.dangerButton, COMPACT_ICON_BUTTON]}
                             onPress={() => rateFlight(item.id, -1)}
                           >
-                            <Text style={styles.dangerButtonText}>👎</Text>
+                            <IconText style={styles.dangerButtonText}>👎</IconText>
                           </TouchableOpacity>
                         </View>
                       ) : normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
@@ -1708,7 +1724,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     style={[
                       styles.cell,
                       fixedTableColumn(colWidth(col)),
-                      col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_transfers_18', { theme: theme }, (theme ?? _styleTheme)) as any),
                       isLast && styles.lastCell,
                     ]}
                   >

@@ -664,7 +664,7 @@ describe('Overview UI (nested itinerary)', () => {
 
     fireEvent.press(await findByTestId('overview-day-card-8'));
     const returnRow = await findByTestId('day-details-transfer-row-flight-return');
-    expect(within(returnRow).getByText('✈ SFO → BOS')).toBeTruthy();
+    expect(within(returnRow).getByText('SFO → BOS')).toBeTruthy();
     expect(within(returnRow).getByText(/^13:01 → 21:45/)).toBeTruthy();
   });
 
@@ -811,7 +811,7 @@ describe('Overview UI (nested itinerary)', () => {
     fireEvent.press(await findByTestId('overview-day-card-1'));
     const group = within(await findByTestId('day-details-add-actions'));
     expect(group.getByText('Add to this day')).toBeTruthy();
-    expect(group.getByText('+ Add accommodation').props.numberOfLines).toBe(1);
+    expect(group.getByText('Add accommodation').props.numberOfLines).toBe(1);
     expect(group.getByTestId('day-details-add-transfer-button')).toBeTruthy();
   });
 
@@ -958,12 +958,12 @@ describe('Overview UI (nested itinerary)', () => {
     const locations = within(await findByTestId('day-details-locations-activities'));
     const notes = within(await findByTestId('day-details-itinerary-items'));
     expect(locations.getByText('Locations and Activities')).toBeTruthy();
-    expect(locations.getByText('📍 Saved landmark')).toBeTruthy();
+    expect(locations.getByText('Saved landmark')).toBeTruthy();
     expect(locations.getByText('Legacy walking tour')).toBeTruthy();
-    expect(locations.queryByText('📝 Day reminder')).toBeNull();
+    expect(locations.queryByText('Day reminder')).toBeNull();
     expect(notes.getByText('Notes and Checklists')).toBeTruthy();
-    expect(notes.getByText('📝 Day reminder')).toBeTruthy();
-    expect(notes.queryByText('📍 Saved landmark')).toBeNull();
+    expect(notes.getByText('Day reminder')).toBeTruthy();
+    expect(notes.queryByText('Saved landmark')).toBeNull();
     expect(await findAllByTestId('day-details-add-activity-button')).toHaveLength(1);
   });
 
@@ -1018,6 +1018,23 @@ describe('Overview UI (nested itinerary)', () => {
     expect(onAutoOpenAddHandled).toHaveBeenCalledTimes(1);
   });
 
+  test.each([
+    ['transfer', 'ground-departure-hotel'],
+    ['rental', 'car-rental-form-modal'],
+    ['note', 'note-dialog'],
+    ['checklist', 'checklist-dialog'],
+  ] as ['transfer' | 'rental' | 'note' | 'checklist', string][])('phone Add opens the existing %s editor', async (kind, testId) => {
+    const { findByTestId, rerender } = await renderOverview(<OverviewTab {...baseProps} useBottomAddMenu />);
+    fireEvent.press(await findByTestId('overview-day-card-2'));
+    rerender(<OverviewTab {...baseProps} useBottomAddMenu autoOpenAdd={kind} />);
+    expect(await findByTestId(testId)).toBeTruthy();
+  });
+
+  test('phone Add person opens the trip traveler form', async () => {
+    const { findByPlaceholderText } = await renderOverview(<OverviewTab {...baseProps} autoOpenAdd="person" />);
+    expect(await findByPlaceholderText('First name')).toBeTruthy();
+  });
+
   test('a read-only trip ignores the Add menu request instead of opening a form', async () => {
     const onAutoOpenAddHandled = jest.fn();
     const { queryByTestId, findByTestId } = await renderOverview(
@@ -1028,13 +1045,19 @@ describe('Overview UI (nested itinerary)', () => {
     expect(onAutoOpenAddHandled).toHaveBeenCalledTimes(1);
   });
 
-  test.each([[1, '2026-01-29'], [2, '2026-01-30']])('defaults a new activity to viewed trip day %s', async (day, date) => {
+  test.each([[1, '2026-01-29', false], [2, '2026-01-30', false], [2, '2026-01-30', true]] as [number, string, boolean][])('defaults a new activity to viewed trip day %s (bottom menu: %s)', async (day, date, useBottomAddMenu) => {
     const onTourDataChanged = jest.fn();
-    const { findByTestId, getByPlaceholderText } = await renderOverview(
-      <OverviewTab {...baseProps} onTourDataChanged={onTourDataChanged} />
+    const { findByTestId, getByPlaceholderText, queryByTestId, rerender } = await renderOverview(
+      <OverviewTab {...baseProps} useBottomAddMenu={useBottomAddMenu} onTourDataChanged={onTourDataChanged} />
     );
     fireEvent.press(await findByTestId(`overview-day-card-${day}`));
-    fireEvent.press(await findByTestId('day-details-add-activity-button'));
+    if (useBottomAddMenu) {
+      expect(queryByTestId('day-details-add-actions')).toBeNull();
+      expect(queryByTestId('day-details-add-activity-button')).toBeNull();
+      rerender(<OverviewTab {...baseProps} useBottomAddMenu autoOpenAdd="activity" onTourDataChanged={onTourDataChanged} />);
+    } else {
+      fireEvent.press(await findByTestId('day-details-add-activity-button'));
+    }
     fireEvent.press(await findByTestId('add-item-option-activity'));
 
     expect(await findByTestId('activity-form-modal')).toBeTruthy();
@@ -1290,7 +1313,7 @@ More detail.` }));
 
     const { findByTestId, findByText } = await renderOverview(<OverviewTab {...weatherTripProps} />);
     expect(await findByTestId('overview-day-card-1-weather')).toBeTruthy();
-    expect(await findByText('☀ 72°F')).toBeTruthy();
+    expect(await findByText('72°F')).toBeTruthy();
   });
 
   test('shows weather badges in Celsius when the profile prefers Celsius', async () => {
@@ -1334,7 +1357,7 @@ More detail.` }));
     };
 
     const { findByText } = await renderOverview(<OverviewTab {...weatherTripProps} />);
-    expect(await findByText('☀ 22°C')).toBeTruthy();
+    expect(await findByText('22°C')).toBeTruthy();
   });
 
   test('a train day gets a train icon and short station names in its subtitle', async () => {
@@ -1359,7 +1382,7 @@ More detail.` }));
       ] as any[],
     };
     const { findByTestId } = await renderOverview(<OverviewTab {...trainProps} />);
-    expect((await findByTestId('overview-day-card-1-subtitle')).props.children).toBe('🚆 Kawaguchiko Station → Otsuki Station');
+    expect((await findByTestId('overview-day-card-1-subtitle')).props.children).toBe('Kawaguchiko Station → Otsuki Station');
   });
 
   test('renders transfer rows for a followed-style trip payload', async () => {
@@ -1400,13 +1423,13 @@ More detail.` }));
     const { findByTestId, findByText, findAllByText } = await renderOverview(<OverviewTab {...followedTripProps} />);
     // Title is the day's plan; the route moves to a short subtitle under it.
     expect(await findByText('Travel day')).toBeTruthy();
-    expect((await findByTestId('overview-day-card-1-subtitle')).props.children).toBe('✈ MXP → OTP');
+    expect((await findByTestId('overview-day-card-1-subtitle')).props.children).toBe('MXP → OTP');
     fireEvent.press(await findByTestId('overview-day-card-1'));
     expect((await findAllByText(/MXP → OTP/i)).length).toBeGreaterThan(0);
     // Day view transfer entry: route on its own line, then times and the airline (stacked so long
     // names can't push it off the card).
     const transferRow = await findByTestId('day-details-transfer-row-flight-followed-1');
-    expect(within(transferRow).getByText('✈ MXP → OTP')).toBeTruthy();
+    expect(within(transferRow).getByText('MXP → OTP')).toBeTruthy();
     expect(within(transferRow).getByText('08:00 → 11:00 · Ryanair FR259')).toBeTruthy();
   });
 });

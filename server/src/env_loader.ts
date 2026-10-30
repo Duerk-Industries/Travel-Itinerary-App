@@ -9,6 +9,7 @@ type LoadEnvOptions = {
 };
 
 export const loadEnv = (options: LoadEnvOptions = {}) => {
+    if (process.env.E2E_MODE === '1') return 'process.env/e2e';
     // Local development is explicitly marked with RUN_LOCAL=1 in a .local_env
     // file (or the shell). Keep local API keys in .env only; .secrets is for
     // production/legacy fallback loading and must not override local values.

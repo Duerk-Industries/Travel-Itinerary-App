@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -184,7 +185,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
               accessibilityRole="button"
               accessibilityLabel="Close lodging details"
             >
-              <Text style={detailStyles.closeText}>✕</Text>
+              <IconText style={detailStyles.closeText}>✕</IconText>
             </TouchableOpacity>
           </View>
           <View style={detailStyles.headerRow}>

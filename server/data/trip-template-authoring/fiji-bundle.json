@@ -1,0 +1,1301 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Fiji Pocket Guide, Frommers, Breathing Travel and Audley Travel itineraries for Fiji",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "fiji-mamanuca-5d",
+      "title": "Mamanuca Island Escape in 5 Days",
+      "summary": "Four nights on a lagoon island, with snorkelling and a village visit.",
+      "days": 5,
+      "route": "Mamanuca Islands",
+      "arrive": "Nadi (NAN)",
+      "depart": "Nadi (NAN)",
+      "countries": [
+        "Fiji"
+      ],
+      "regions": [],
+      "cities": [
+        "Mamanuca Islands"
+      ],
+      "imageQuery": "Mamanuca Islands Fiji lagoon",
+      "highlights": [
+        "Island snorkelling",
+        "Kava ceremony",
+        "Lagoon beaches"
+      ],
+      "destinationKeys": [
+        "fiji",
+        "fiji/mamanuca-islands"
+      ],
+      "hero": "fiji/mamanuca-islands",
+      "sources": [
+        "Fiji Pocket Guide",
+        "Frommers",
+        "Breathing Travel",
+        "Audley Travel",
+        "Amateur Traveler"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "outdoors",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Mamanuca Islands",
+          "hotel": "Resort in the Mamanuca Islands",
+          "start": 0,
+          "nights": 4,
+          "area": "On a small island resort in the Mamanucas, with a reef right outside",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Snorkelling and island time",
+          "notes": "Take reef-safe sunscreen; the lagoon is calm.",
+          "where": "Mamanuca Islands",
+          "book": "",
+          "place": "fiji/mamanuca-snorkel"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Village visit and kava ceremony",
+          "notes": "Dress modestly, remove hats and bring a small gift for the village.",
+          "where": "Fiji",
+          "book": "",
+          "place": "fiji/village-kava"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Paddle-board, kayak and beach day",
+          "notes": "Take reef-safe sunscreen; the lagoon is calm.",
+          "where": "Mamanuca Islands",
+          "book": "",
+          "place": "fiji/mamanuca-snorkel"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Nadi Airport (NAN)",
+          "to": "Denarau Marina",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Denarau Marina",
+          "to": "Mamanuca resort",
+          "time": "13:00",
+          "minutes": 60,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Mamanuca resort",
+          "to": "Denarau Marina",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Denarau Marina",
+          "to": "Nadi Airport (NAN)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "fiji-nadi-mamanuca-coral-coast-7d",
+      "title": "Fiji Islands and Coral Coast in 7 Days",
+      "summary": "Nadi, three island nights and two on the mainland Coral Coast.",
+      "days": 7,
+      "route": "Nadi > Mamanuca Islands > Coral Coast",
+      "arrive": "Nadi (NAN)",
+      "depart": "Nadi (NAN)",
+      "countries": [
+        "Fiji"
+      ],
+      "regions": [
+        "Viti Levu"
+      ],
+      "cities": [
+        "Nadi",
+        "Mamanuca Islands",
+        "Coral Coast"
+      ],
+      "imageQuery": "Fiji Coral Coast beach",
+      "highlights": [
+        "Mamanuca snorkelling",
+        "Kava ceremony",
+        "Sigatoka dunes",
+        "Nadi temple"
+      ],
+      "destinationKeys": [
+        "fiji",
+        "fiji/viti-levu",
+        "fiji/nadi",
+        "fiji/mamanuca-islands",
+        "fiji/coral-coast"
+      ],
+      "hero": "fiji/viti-levu",
+      "sources": [
+        "Fiji Pocket Guide",
+        "Frommers",
+        "Breathing Travel",
+        "Audley Travel",
+        "Amateur Traveler"
+      ],
+      "pace": "B",
+      "interests": [
+        "relax",
+        "outdoors",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Nadi",
+          "hotel": "Hotel in Nadi",
+          "start": 0,
+          "nights": 1,
+          "area": "Near Denarau Marina or Nadi town, for easy island boat connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mamanuca Islands",
+          "hotel": "Resort in the Mamanuca Islands",
+          "start": 1,
+          "nights": 3,
+          "area": "On a small island resort in the Mamanucas, with a reef right outside",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Coral Coast",
+          "hotel": "Resort on the Coral Coast",
+          "start": 4,
+          "nights": 2,
+          "area": "On a beach along the Coral Coast, close to the Sigatoka area",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Sri Siva Subramaniya Swami Temple and Sleeping Giant garden",
+          "notes": "Dress modestly and remove shoes at the temple.",
+          "where": "Nadi",
+          "book": "",
+          "place": "fiji/nadi-sights"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Snorkelling and island time",
+          "notes": "Take reef-safe sunscreen; the lagoon is calm.",
+          "where": "Mamanuca Islands",
+          "book": "",
+          "place": "fiji/mamanuca-snorkel"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Village visit and kava ceremony",
+          "notes": "Dress modestly, remove hats and bring a small gift for the village.",
+          "where": "Fiji",
+          "book": "",
+          "place": "fiji/village-kava"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Sigatoka sand dunes and Coral Coast beach",
+          "notes": "Sunscreen and water; good walking shoes for the dunes.",
+          "where": "Coral Coast",
+          "book": "",
+          "place": "fiji/coral-coast"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Nadi Airport (NAN)",
+          "to": "Nadi hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Denarau Marina",
+          "to": "Mamanuca resort",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Mamanuca resort",
+          "to": "Denarau Marina",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Denarau Marina",
+          "to": "Coral Coast resort",
+          "time": "11:00",
+          "minutes": 90,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Coral Coast resort",
+          "to": "Nadi Airport (NAN)",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "fiji-yasawa-mamanuca-taveuni-10d",
+      "title": "Yasawa, Mamanuca and Taveuni in 10 Days",
+      "summary": "Remote Yasawa beaches, a lagoon resort and the rainforest island of Taveuni.",
+      "days": 10,
+      "route": "Nadi > Yasawa Islands > Mamanuca Islands > Taveuni",
+      "arrive": "Nadi (NAN)",
+      "depart": "Taveuni (TVU)",
+      "countries": [
+        "Fiji"
+      ],
+      "regions": [
+        "Viti Levu"
+      ],
+      "cities": [
+        "Nadi",
+        "Yasawa Islands",
+        "Mamanuca Islands",
+        "Taveuni"
+      ],
+      "imageQuery": "Taveuni waterfall Fiji",
+      "highlights": [
+        "Sawa-i-Lau cave",
+        "Kava ceremony",
+        "Bouma waterfalls",
+        "Rainbow Reef"
+      ],
+      "destinationKeys": [
+        "fiji",
+        "fiji/viti-levu",
+        "fiji/nadi",
+        "fiji/yasawa-islands",
+        "fiji/mamanuca-islands",
+        "fiji/taveuni"
+      ],
+      "hero": "fiji/taveuni",
+      "sources": [
+        "Fiji Pocket Guide",
+        "Frommers",
+        "Breathing Travel",
+        "Audley Travel",
+        "Amateur Traveler"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Nadi",
+          "hotel": "Hotel in Nadi",
+          "start": 0,
+          "nights": 1,
+          "area": "Near Denarau Marina or Nadi town, for easy island boat connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Yasawa Islands",
+          "hotel": "Resort in the Yasawa Islands",
+          "start": 1,
+          "nights": 3,
+          "area": "In a beachfront bure at a Yasawa resort; simple lodging, limited power",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mamanuca Islands",
+          "hotel": "Resort in the Mamanuca Islands",
+          "start": 4,
+          "nights": 2,
+          "area": "On a small island resort in the Mamanucas, with a reef right outside",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Taveuni",
+          "hotel": "Lodge on Taveuni",
+          "start": 6,
+          "nights": 3,
+          "area": "In a rainforest lodge or coastal bure on Taveuni",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Sri Siva Subramaniya Swami Temple and Sleeping Giant garden",
+          "notes": "Dress modestly and remove shoes at the temple.",
+          "where": "Nadi",
+          "book": "",
+          "place": "fiji/nadi-sights"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Sawa-i-Lau cave swim",
+          "notes": "Boats leave from the resort; the cave is lit from above.",
+          "where": "Yasawa Islands",
+          "book": "Yes - book the boat trip",
+          "place": "fiji/yasawa-sawa-i-lau"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Village visit and kava ceremony",
+          "notes": "Dress modestly, remove hats and bring a small gift for the village.",
+          "where": "Fiji",
+          "book": "",
+          "place": "fiji/village-kava"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Snorkelling and island time",
+          "notes": "Take reef-safe sunscreen; the lagoon is calm.",
+          "where": "Mamanuca Islands",
+          "book": "",
+          "place": "fiji/mamanuca-snorkel"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Tavoro waterfalls at Bouma",
+          "notes": "Wear shoes with grip and bring repellent.",
+          "where": "Taveuni",
+          "book": "",
+          "place": "fiji/taveuni-bouma"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Lavena coastal walk and 180th meridian",
+          "notes": "The trail ends at a waterfall; swim if tide allows.",
+          "where": "Taveuni",
+          "book": "",
+          "place": "fiji/taveuni-meridian"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Nadi Airport (NAN)",
+          "to": "Nadi hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Denarau Marina",
+          "to": "Yasawa resort",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "The Yasawa Flyer catamaran serves the islands daily.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Yasawa resort",
+          "to": "Mamanuca resort",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Mamanuca resort",
+          "to": "Nadi Airport (NAN)",
+          "time": "07:00",
+          "minutes": 90,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The small plane flies via Nadi or Suva; check the schedule.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Matei Airport, Taveuni (TVU)",
+          "to": "Taveuni lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Taveuni lodge",
+          "to": "Matei Airport, Taveuni (TVU)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "fiji-islands-taveuni-suva-12d",
+      "title": "Fiji Islands, Taveuni and Suva in 12 Days",
+      "summary": "Two island groups, rainforest Taveuni and the capital.",
+      "days": 12,
+      "route": "Nadi > Mamanuca Islands > Yasawa Islands > Taveuni > Suva",
+      "arrive": "Nadi (NAN)",
+      "depart": "Suva (SUV)",
+      "countries": [
+        "Fiji"
+      ],
+      "regions": [
+        "Viti Levu"
+      ],
+      "cities": [
+        "Nadi",
+        "Mamanuca Islands",
+        "Yasawa Islands",
+        "Taveuni",
+        "Suva"
+      ],
+      "imageQuery": "Fiji Yasawa beach bure",
+      "highlights": [
+        "Mamanuca snorkelling",
+        "Sawa-i-Lau",
+        "Bouma",
+        "Rainbow Reef",
+        "Suva market"
+      ],
+      "destinationKeys": [
+        "fiji",
+        "fiji/viti-levu",
+        "fiji/nadi",
+        "fiji/mamanuca-islands",
+        "fiji/yasawa-islands",
+        "fiji/taveuni",
+        "fiji/suva"
+      ],
+      "hero": "fiji/yasawa-islands",
+      "sources": [
+        "Fiji Pocket Guide",
+        "Frommers",
+        "Breathing Travel",
+        "Audley Travel",
+        "Amateur Traveler"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Nadi",
+          "hotel": "Hotel in Nadi",
+          "start": 0,
+          "nights": 1,
+          "area": "Near Denarau Marina or Nadi town, for easy island boat connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mamanuca Islands",
+          "hotel": "Resort in the Mamanuca Islands",
+          "start": 1,
+          "nights": 3,
+          "area": "On a small island resort in the Mamanucas, with a reef right outside",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Yasawa Islands",
+          "hotel": "Resort in the Yasawa Islands",
+          "start": 4,
+          "nights": 3,
+          "area": "In a beachfront bure at a Yasawa resort; simple lodging, limited power",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Taveuni",
+          "hotel": "Lodge on Taveuni",
+          "start": 7,
+          "nights": 3,
+          "area": "In a rainforest lodge or coastal bure on Taveuni",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Suva",
+          "hotel": "Hotel in Suva",
+          "start": 10,
+          "nights": 1,
+          "area": "In central Suva, close to the museum and market",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Sri Siva Subramaniya Swami Temple and Sleeping Giant garden",
+          "notes": "Dress modestly and remove shoes at the temple.",
+          "where": "Nadi",
+          "book": "",
+          "place": "fiji/nadi-sights"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Snorkelling and island time",
+          "notes": "Take reef-safe sunscreen; the lagoon is calm.",
+          "where": "Mamanuca Islands",
+          "book": "",
+          "place": "fiji/mamanuca-snorkel"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Village visit and kava ceremony",
+          "notes": "Dress modestly, remove hats and bring a small gift for the village.",
+          "where": "Fiji",
+          "book": "",
+          "place": "fiji/village-kava"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Sawa-i-Lau cave swim",
+          "notes": "Boats leave from the resort; the cave is lit from above.",
+          "where": "Yasawa Islands",
+          "book": "Yes - book the boat trip",
+          "place": "fiji/yasawa-sawa-i-lau"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Tavoro waterfalls at Bouma",
+          "notes": "Wear shoes with grip and bring repellent.",
+          "where": "Taveuni",
+          "book": "",
+          "place": "fiji/taveuni-bouma"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Lavena coastal walk and 180th meridian",
+          "notes": "The trail ends at a waterfall; swim if tide allows.",
+          "where": "Taveuni",
+          "book": "",
+          "place": "fiji/taveuni-meridian"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Rainbow Reef snorkel or dive",
+          "notes": "Currents can be strong; choose a licensed operator.",
+          "where": "Taveuni",
+          "book": "Yes - book a licensed boat",
+          "place": "fiji/rainbow-reef"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Fiji Museum and Suva market",
+          "notes": "Wetter and cooler than the west; bring a rain jacket.",
+          "where": "Suva",
+          "book": "",
+          "place": "fiji/suva-museum"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Nadi Airport (NAN)",
+          "to": "Nadi hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Denarau Marina",
+          "to": "Mamanuca resort",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Mamanuca resort",
+          "to": "Yasawa resort",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Yasawa resort",
+          "to": "Denarau Marina",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Denarau Marina",
+          "to": "Nadi Airport (NAN)",
+          "time": "15:00",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Matei Airport, Taveuni (TVU)",
+          "to": "Taveuni lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Taveuni lodge",
+          "to": "Matei Airport, Taveuni (TVU)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Nausori Airport (SUV)",
+          "to": "Suva hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Suva hotel",
+          "to": "Nausori Airport (SUV)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "fiji-grand-14d",
+      "title": "Complete Fiji in 14 Days",
+      "summary": "Mamanucas, Yasawas, the Coral Coast, Suva and Taveuni.",
+      "days": 14,
+      "route": "Nadi > Mamanuca Islands > Yasawa Islands > Coral Coast > Suva > Taveuni",
+      "arrive": "Nadi (NAN)",
+      "depart": "Taveuni (TVU)",
+      "countries": [
+        "Fiji"
+      ],
+      "regions": [
+        "Viti Levu"
+      ],
+      "cities": [
+        "Nadi",
+        "Mamanuca Islands",
+        "Yasawa Islands",
+        "Coral Coast",
+        "Suva",
+        "Taveuni"
+      ],
+      "imageQuery": "Fiji islands aerial",
+      "highlights": [
+        "Mamanuca lagoons",
+        "Sawa-i-Lau",
+        "Sigatoka dunes",
+        "Suva",
+        "Rainbow Reef",
+        "Bouma"
+      ],
+      "destinationKeys": [
+        "fiji",
+        "fiji/viti-levu",
+        "fiji/nadi",
+        "fiji/mamanuca-islands",
+        "fiji/yasawa-islands",
+        "fiji/coral-coast",
+        "fiji/suva",
+        "fiji/taveuni"
+      ],
+      "hero": "fiji/nadi",
+      "sources": [
+        "Fiji Pocket Guide",
+        "Frommers",
+        "Breathing Travel",
+        "Audley Travel",
+        "Amateur Traveler"
+      ],
+      "pace": "R",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Nadi",
+          "hotel": "Hotel in Nadi",
+          "start": 0,
+          "nights": 1,
+          "area": "Near Denarau Marina or Nadi town, for easy island boat connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mamanuca Islands",
+          "hotel": "Resort in the Mamanuca Islands",
+          "start": 1,
+          "nights": 3,
+          "area": "On a small island resort in the Mamanucas, with a reef right outside",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Yasawa Islands",
+          "hotel": "Resort in the Yasawa Islands",
+          "start": 4,
+          "nights": 3,
+          "area": "In a beachfront bure at a Yasawa resort; simple lodging, limited power",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Coral Coast",
+          "hotel": "Resort on the Coral Coast",
+          "start": 7,
+          "nights": 2,
+          "area": "On a beach along the Coral Coast, close to the Sigatoka area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Suva",
+          "hotel": "Hotel in Suva",
+          "start": 9,
+          "nights": 1,
+          "area": "In central Suva, close to the museum and market",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Taveuni",
+          "hotel": "Lodge on Taveuni",
+          "start": 10,
+          "nights": 3,
+          "area": "In a rainforest lodge or coastal bure on Taveuni",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Sri Siva Subramaniya Swami Temple and Sleeping Giant garden",
+          "notes": "Dress modestly and remove shoes at the temple.",
+          "where": "Nadi",
+          "book": "",
+          "place": "fiji/nadi-sights"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Snorkelling and island time",
+          "notes": "Take reef-safe sunscreen; the lagoon is calm.",
+          "where": "Mamanuca Islands",
+          "book": "",
+          "place": "fiji/mamanuca-snorkel"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Village visit and kava ceremony",
+          "notes": "Dress modestly, remove hats and bring a small gift for the village.",
+          "where": "Fiji",
+          "book": "",
+          "place": "fiji/village-kava"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Sawa-i-Lau cave swim",
+          "notes": "Boats leave from the resort; the cave is lit from above.",
+          "where": "Yasawa Islands",
+          "book": "Yes - book the boat trip",
+          "place": "fiji/yasawa-sawa-i-lau"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Sigatoka sand dunes and Coral Coast beach",
+          "notes": "Sunscreen and water; good walking shoes for the dunes.",
+          "where": "Coral Coast",
+          "book": "",
+          "place": "fiji/coral-coast"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Fiji Museum and Suva market",
+          "notes": "Wetter and cooler than the west; bring a rain jacket.",
+          "where": "Suva",
+          "book": "",
+          "place": "fiji/suva-museum"
+        },
+        {
+          "day": 11,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Tavoro waterfalls at Bouma",
+          "notes": "Wear shoes with grip and bring repellent.",
+          "where": "Taveuni",
+          "book": "",
+          "place": "fiji/taveuni-bouma"
+        },
+        {
+          "day": 12,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Rainbow Reef snorkel or dive",
+          "notes": "Currents can be strong; choose a licensed operator.",
+          "where": "Taveuni",
+          "book": "Yes - book a licensed boat",
+          "place": "fiji/rainbow-reef"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Nadi Airport (NAN)",
+          "to": "Nadi hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Denarau Marina",
+          "to": "Mamanuca resort",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Mamanuca resort",
+          "to": "Yasawa resort",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Yasawa resort",
+          "to": "Denarau Marina",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Island catamaran or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Denarau Marina",
+          "to": "Coral Coast resort",
+          "time": "13:30",
+          "minutes": 90,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Coral Coast resort",
+          "to": "Suva",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Suva hotel",
+          "to": "Nausori Airport (SUV)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Matei Airport, Taveuni (TVU)",
+          "to": "Taveuni lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Taveuni lodge",
+          "to": "Matei Airport, Taveuni (TVU)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Resort transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "fiji/nadi-sights": {
+        "name": "Nadi temple and Garden of the Sleeping Giant",
+        "description": "The largest Hindu temple in the southern hemisphere and an orchid garden in the hills.",
+        "details": "Sri Siva Subramaniya Swami Temple in Nadi is a colourful Dravidian temple, open to visitors who dress modestly and remove shoes. The Garden of the Sleeping Giant has orchids and walks in the hills. A relaxed way to spend the first or last afternoon.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "fiji/mamanuca-snorkel": {
+        "name": "Mamanuca Islands snorkelling and island day",
+        "description": "Calm lagoons and coral reefs a short boat ride from Nadi, with beach resorts on small islands.",
+        "details": "The Mamanuca group is a chain of sandy islands in a sheltered lagoon, with clear water for snorkelling, paddle-boarding and kayaking. Island resorts are reached by catamaran or speedboat from Denarau Marina. Some islands have surf breaks for experienced riders.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "fiji/yasawa-sawa-i-lau": {
+        "name": "Yasawa blue lagoon and Sawa-i-Lau cave",
+        "description": "A remote island chain of white beaches, with a swimming cave inside a limestone island.",
+        "details": "The Yasawas are reached by the Yasawa Flyer catamaran or a seaplane. Sawa-i-Lau is a limestone island with a cave you can swim into, lit from above. Village visits and manta ray snorkelling in season give variety. Lodgings are simple, and electricity may be limited.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "fiji/village-kava": {
+        "name": "Village visit and kava ceremony",
+        "description": "A welcome into a Fijian village, with a kava ceremony, song and a shared meal.",
+        "details": "Visits to a Fijian village begin with a sevusevu offering to the chief and a kava ceremony, where a mildly numbing drink is shared from a coconut bowl. Dress modestly, remove hats and do not touch heads. Many resorts organise visits, and a donation to the village is usual.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "fiji/coral-coast": {
+        "name": "Coral Coast, Sigatoka Dunes and Shark Reef",
+        "description": "A resort strip on the south of Viti Levu with sand dunes, river safaris and shark diving.",
+        "details": "The Coral Coast has long beaches with gentle reefs, the Sigatoka Sand Dunes National Park and a river valley with village stops. Pacific Harbour offers shark dives and rafting. It is easier by road than the islands, and good for a mainland stay.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "fiji/suva-museum": {
+        "name": "Suva, museum and municipal market",
+        "description": "The capital and port, with a good museum and a bustling market.",
+        "details": "Suva has the Fiji Museum in Thurston Gardens with a collection of Fijian artefacts, a colourful municipal market for fruit and kava root, and Colo-i-Suva Forest Park for walks. It is cooler and wetter than the western side.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "fiji/taveuni-bouma": {
+        "name": "Taveuni waterfalls at Bouma",
+        "description": "Rainforest waterfalls and natural swimming holes on the garden island of Fiji.",
+        "details": "Bouma National Heritage Park has three Tavoro Waterfalls linked by trails through forest, with swimming pools at the base. Taveuni is known as the Garden Island for its rainforest. Wear walking shoes, and bring repellent.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "fiji/taveuni-meridian": {
+        "name": "180th meridian and Lavena coastal walk",
+        "description": "A marker for the international date line and a scenic coastal trail.",
+        "details": "Taveuni is crossed by the 180th meridian, where visitors can stand with one foot in each day. The Lavena Coastal Walk follows the shore to a waterfall at the end of the trail. Combine with a village visit.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "fiji/rainbow-reef": {
+        "name": "Rainbow Reef and Great White Wall dive",
+        "description": "Some of the best soft coral diving and snorkelling in the Pacific.",
+        "details": "The Somosomo Strait off Taveuni has rich coral gardens, with the Great White Wall a famous dive. Dive operators run trips for certified divers, and snorkel boats visit shallower sites. Currents can be strong, so choose a licensed operator.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "fiji": {
+        "name": "Fiji",
+        "description": "A Pacific archipelago of coral islands, village culture and warm welcomes.",
+        "images": []
+      },
+      "fiji/viti-levu": {
+        "name": "Viti Levu",
+        "description": "The main island, home to Nadi, the Coral Coast and Suva.",
+        "images": []
+      },
+      "fiji/nadi": {
+        "name": "Nadi",
+        "description": "The gateway town and airport on the west of Viti Levu.",
+        "images": []
+      },
+      "fiji/mamanuca-islands": {
+        "name": "Mamanuca Islands",
+        "description": "A sheltered island chain of resorts and clear lagoons off Nadi.",
+        "images": []
+      },
+      "fiji/yasawa-islands": {
+        "name": "Yasawa Islands",
+        "description": "A remote chain of white beaches and caves north of the Mamanucas.",
+        "images": []
+      },
+      "fiji/coral-coast": {
+        "name": "Coral Coast",
+        "description": "A south-coast strip of beaches and resorts on Viti Levu.",
+        "images": []
+      },
+      "fiji/suva": {
+        "name": "Suva",
+        "description": "The capital, on the wetter south-east coast.",
+        "images": []
+      },
+      "fiji/taveuni": {
+        "name": "Taveuni",
+        "description": "The garden island of waterfalls, rainforest and soft coral reefs.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,0 +1,1492 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, Boundless Ethiopia, Brilliant Ethiopia and King Dawit Tours itineraries for Ethiopia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "ethiopia-addis-lalibela-5d",
+      "title": "Addis Ababa and Lalibela in 5 Days",
+      "summary": "The capital then the rock-hewn churches of Lalibela.",
+      "days": 5,
+      "route": "Addis Ababa > Lalibela",
+      "arrive": "Addis Ababa (ADD)",
+      "depart": "Lalibela (LLI)",
+      "countries": [
+        "Ethiopia"
+      ],
+      "regions": [
+        "Amhara"
+      ],
+      "cities": [
+        "Addis Ababa",
+        "Lalibela"
+      ],
+      "imageQuery": "Lalibela rock church Bete Giyorgis",
+      "highlights": [
+        "National Museum",
+        "Coffee ceremony",
+        "Lalibela churches",
+        "Bete Giyorgis"
+      ],
+      "destinationKeys": [
+        "ethiopia",
+        "ethiopia/addis-ababa",
+        "ethiopia/amhara",
+        "ethiopia/lalibela"
+      ],
+      "hero": "ethiopia/lalibela",
+      "sources": [
+        "KimKim",
+        "Boundless Ethiopia",
+        "Brilliant Ethiopia",
+        "King Dawit Tours",
+        "Ethiopian Adventure Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Addis Ababa",
+          "hotel": "Hotel in Addis Ababa",
+          "start": 0,
+          "nights": 1,
+          "area": "In Bole or near the centre for restaurants and the museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lalibela",
+          "hotel": "Hotel in Lalibela",
+          "start": 1,
+          "nights": 3,
+          "area": "In Lalibela town, close to the churches; some hotels have views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Coffee ceremony and Ethiopian dinner",
+          "notes": "Traditional restaurant with live music.",
+          "where": "Addis Ababa",
+          "book": "",
+          "place": "ethiopia/coffee-ceremony"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Lalibela northern church group",
+          "notes": "Walk barefoot inside; go with a guide.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-churches"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Lalibela southern church group and Bete Giyorgis",
+          "notes": "The cross-shaped Bete Giyorgis is a highlight.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-churches"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Ashetan Maryam hill walk",
+          "notes": "Panoramic views of the valleys.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-hilltop"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa Bole Airport (ADD)",
+          "to": "Addis Ababa hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Pre-arranged driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa hotel",
+          "to": "Addis Ababa Bole Airport (ADD)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Lalibela Airport (LLI)",
+          "to": "Lalibela hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lalibela hotel",
+          "to": "Lalibela Airport (LLI)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Pre-arranged driver",
+          "notes": "Domestic flights are subject to schedule changes; confirm timings.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ethiopia-addis-lalibela-axum-7d",
+      "title": "Ethiopia Highlights: Addis, Lalibela and Axum in 7 Days",
+      "summary": "Capital, rock churches and the ancient obelisks of Axum.",
+      "days": 7,
+      "route": "Addis Ababa > Lalibela > Axum",
+      "arrive": "Addis Ababa (ADD)",
+      "depart": "Axum (AXU)",
+      "countries": [
+        "Ethiopia"
+      ],
+      "regions": [
+        "Amhara",
+        "Tigray"
+      ],
+      "cities": [
+        "Addis Ababa",
+        "Lalibela",
+        "Axum"
+      ],
+      "imageQuery": "Axum stelae Ethiopia",
+      "highlights": [
+        "National Museum",
+        "Lalibela churches",
+        "Axum stelae",
+        "St Mary of Zion"
+      ],
+      "destinationKeys": [
+        "ethiopia",
+        "ethiopia/addis-ababa",
+        "ethiopia/amhara",
+        "ethiopia/lalibela",
+        "ethiopia/tigray",
+        "ethiopia/axum"
+      ],
+      "hero": "ethiopia/tigray",
+      "sources": [
+        "KimKim",
+        "Boundless Ethiopia",
+        "Brilliant Ethiopia",
+        "King Dawit Tours",
+        "Ethiopian Adventure Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Addis Ababa",
+          "hotel": "Hotel in Addis Ababa",
+          "start": 0,
+          "nights": 2,
+          "area": "In Bole or near the centre for restaurants and the museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lalibela",
+          "hotel": "Hotel in Lalibela",
+          "start": 2,
+          "nights": 2,
+          "area": "In Lalibela town, close to the churches; some hotels have views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Axum",
+          "hotel": "Hotel in Axum",
+          "start": 4,
+          "nights": 2,
+          "area": "In central Axum, within reach of the stelae",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "National Museum and Merkato visit",
+          "notes": "Take it easy at altitude; go with a guide to Merkato.",
+          "where": "Addis Ababa",
+          "book": "",
+          "place": "ethiopia/addis-museum"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Coffee ceremony and Ethiopian dinner",
+          "notes": "Traditional restaurant with live music.",
+          "where": "Addis Ababa",
+          "book": "",
+          "place": "ethiopia/coffee-ceremony"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Lalibela northern church group",
+          "notes": "Walk barefoot inside; go with a guide.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-churches"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Ashetan Maryam hill walk",
+          "notes": "Panoramic views of the valleys.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-hilltop"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Axum stelae and St Mary of Zion",
+          "notes": "Dress modestly; women cannot enter some parts.",
+          "where": "Axum",
+          "book": "",
+          "place": "ethiopia/axum-stelae"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa Bole Airport (ADD)",
+          "to": "Addis Ababa hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Pre-arranged driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa hotel",
+          "to": "Addis Ababa Bole Airport (ADD)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Lalibela Airport (LLI)",
+          "to": "Lalibela hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lalibela hotel",
+          "to": "Lalibela Airport (LLI)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Axum Airport (AXU)",
+          "to": "Axum hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Axum hotel",
+          "to": "Axum Airport (AXU)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Pre-arranged driver",
+          "notes": "Domestic flights are subject to schedule changes; confirm timings.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ethiopia-northern-circuit-10d",
+      "title": "Northern Historic Route in 10 Days",
+      "summary": "Addis, Lake Tana, Gondar, Axum and Lalibela.",
+      "days": 10,
+      "route": "Addis Ababa > Bahir Dar > Gondar > Axum > Lalibela",
+      "arrive": "Addis Ababa (ADD)",
+      "depart": "Lalibela (LLI)",
+      "countries": [
+        "Ethiopia"
+      ],
+      "regions": [
+        "Amhara",
+        "Tigray"
+      ],
+      "cities": [
+        "Addis Ababa",
+        "Bahir Dar",
+        "Gondar",
+        "Axum",
+        "Lalibela"
+      ],
+      "imageQuery": "Gondar Fasil Ghebbi castle",
+      "highlights": [
+        "Lake Tana monasteries",
+        "Blue Nile Falls",
+        "Gondar castles",
+        "Axum",
+        "Lalibela"
+      ],
+      "destinationKeys": [
+        "ethiopia",
+        "ethiopia/addis-ababa",
+        "ethiopia/amhara",
+        "ethiopia/bahir-dar",
+        "ethiopia/gondar",
+        "ethiopia/tigray",
+        "ethiopia/axum",
+        "ethiopia/lalibela"
+      ],
+      "hero": "ethiopia/gondar",
+      "sources": [
+        "KimKim",
+        "Boundless Ethiopia",
+        "Brilliant Ethiopia",
+        "King Dawit Tours",
+        "Ethiopian Adventure Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Addis Ababa",
+          "hotel": "Hotel in Addis Ababa",
+          "start": 0,
+          "nights": 1,
+          "area": "In Bole or near the centre for restaurants and the museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bahir Dar",
+          "hotel": "Hotel in Bahir Dar",
+          "start": 1,
+          "nights": 2,
+          "area": "On the lake shore or in central Bahir Dar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gondar",
+          "hotel": "Hotel in Gondar",
+          "start": 3,
+          "nights": 2,
+          "area": "Near the castle compound in Gondar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Axum",
+          "hotel": "Hotel in Axum",
+          "start": 5,
+          "nights": 2,
+          "area": "In central Axum, within reach of the stelae",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lalibela",
+          "hotel": "Hotel in Lalibela",
+          "start": 7,
+          "nights": 2,
+          "area": "In Lalibela town, close to the churches; some hotels have views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Coffee ceremony and Ethiopian dinner",
+          "notes": "Traditional restaurant with live music.",
+          "where": "Addis Ababa",
+          "book": "",
+          "place": "ethiopia/coffee-ceremony"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Lake Tana island monasteries",
+          "notes": "Dress modestly and remove shoes at the churches.",
+          "where": "Lake Tana",
+          "book": "",
+          "place": "ethiopia/lake-tana-monasteries"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Blue Nile Falls",
+          "notes": "Strongest between July and October.",
+          "where": "Bahir Dar",
+          "book": "",
+          "place": "ethiopia/blue-nile-falls"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Fasil Ghebbi castles and Debre Birhan Selassie church",
+          "notes": "Hire a guide for the royal compound.",
+          "where": "Gondar",
+          "book": "",
+          "place": "ethiopia/gondar-fasil"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Axum stelae and St Mary of Zion",
+          "notes": "Dress modestly; women cannot enter some parts.",
+          "where": "Axum",
+          "book": "",
+          "place": "ethiopia/axum-stelae"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Lalibela northern church group",
+          "notes": "Walk barefoot inside; go with a guide.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-churches"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Ashetan Maryam hill walk",
+          "notes": "Panoramic views of the valleys.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-hilltop"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa Bole Airport (ADD)",
+          "to": "Addis Ababa hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Pre-arranged driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa hotel",
+          "to": "Addis Ababa Bole Airport (ADD)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Bahir Dar Airport (BJR)",
+          "to": "Bahir Dar hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Bahir Dar",
+          "to": "Gondar",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Private 4x4 with driver",
+          "notes": "A scenic drive past Lake Tana; flights also operate.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Gondar hotel",
+          "to": "Gondar Airport (GDQ)",
+          "time": "08:00",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Axum Airport (AXU)",
+          "to": "Axum hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Axum hotel",
+          "to": "Axum Airport (AXU)",
+          "time": "09:00",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Lalibela Airport (LLI)",
+          "to": "Lalibela hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Lalibela hotel",
+          "to": "Lalibela Airport (LLI)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Pre-arranged driver",
+          "notes": "Domestic flights are subject to schedule changes; confirm timings.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ethiopia-simien-historic-11d",
+      "title": "Ethiopia with the Simien Mountains in 11 Days",
+      "summary": "The northern circuit plus two nights trekking in the Simien Mountains.",
+      "days": 11,
+      "route": "Addis Ababa > Bahir Dar > Gondar > Simien Mountains > Axum > Lalibela",
+      "arrive": "Addis Ababa (ADD)",
+      "depart": "Lalibela (LLI)",
+      "countries": [
+        "Ethiopia"
+      ],
+      "regions": [
+        "Amhara",
+        "Tigray"
+      ],
+      "cities": [
+        "Addis Ababa",
+        "Bahir Dar",
+        "Gondar",
+        "Simien Mountains",
+        "Axum",
+        "Lalibela"
+      ],
+      "imageQuery": "Simien Mountains gelada baboons",
+      "highlights": [
+        "Lake Tana",
+        "Gondar castles",
+        "Simien Mountains",
+        "Axum stelae",
+        "Lalibela churches"
+      ],
+      "destinationKeys": [
+        "ethiopia",
+        "ethiopia/addis-ababa",
+        "ethiopia/amhara",
+        "ethiopia/bahir-dar",
+        "ethiopia/gondar",
+        "ethiopia/simien-mountains",
+        "ethiopia/tigray",
+        "ethiopia/axum",
+        "ethiopia/lalibela"
+      ],
+      "hero": "ethiopia/simien-mountains",
+      "sources": [
+        "KimKim",
+        "Boundless Ethiopia",
+        "Brilliant Ethiopia",
+        "King Dawit Tours",
+        "Ethiopian Adventure Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Addis Ababa",
+          "hotel": "Hotel in Addis Ababa",
+          "start": 0,
+          "nights": 1,
+          "area": "In Bole or near the centre for restaurants and the museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bahir Dar",
+          "hotel": "Hotel in Bahir Dar",
+          "start": 1,
+          "nights": 2,
+          "area": "On the lake shore or in central Bahir Dar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gondar",
+          "hotel": "Hotel in Gondar",
+          "start": 3,
+          "nights": 1,
+          "area": "Near the castle compound in Gondar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Simien Mountains",
+          "hotel": "Lodge in the Simien Mountains",
+          "start": 4,
+          "nights": 2,
+          "area": "In a mountain lodge on the edge of the park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Axum",
+          "hotel": "Hotel in Axum",
+          "start": 6,
+          "nights": 2,
+          "area": "In central Axum, within reach of the stelae",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lalibela",
+          "hotel": "Hotel in Lalibela",
+          "start": 8,
+          "nights": 2,
+          "area": "In Lalibela town, close to the churches; some hotels have views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Coffee ceremony and Ethiopian dinner",
+          "notes": "Traditional restaurant with live music.",
+          "where": "Addis Ababa",
+          "book": "",
+          "place": "ethiopia/coffee-ceremony"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Lake Tana island monasteries",
+          "notes": "Dress modestly and remove shoes at the churches.",
+          "where": "Lake Tana",
+          "book": "",
+          "place": "ethiopia/lake-tana-monasteries"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Blue Nile Falls",
+          "notes": "Strongest between July and October.",
+          "where": "Bahir Dar",
+          "book": "",
+          "place": "ethiopia/blue-nile-falls"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Fasil Ghebbi castles and Debre Birhan Selassie church",
+          "notes": "Hire a guide for the royal compound.",
+          "where": "Gondar",
+          "book": "",
+          "place": "ethiopia/gondar-fasil"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Simien Mountains escarpment hike",
+          "notes": "A scout is required; expect gelada baboons.",
+          "where": "Simien Mountains",
+          "book": "Yes - book a guide and scout",
+          "place": "ethiopia/simien-mountains"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Axum stelae and St Mary of Zion",
+          "notes": "Dress modestly; women cannot enter some parts.",
+          "where": "Axum",
+          "book": "",
+          "place": "ethiopia/axum-stelae"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Lalibela northern church group",
+          "notes": "Walk barefoot inside; go with a guide.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-churches"
+        },
+        {
+          "day": 9,
+          "type": "Hike",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Ashetan Maryam hill walk",
+          "notes": "Panoramic views of the valleys.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-hilltop"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa Bole Airport (ADD)",
+          "to": "Addis Ababa hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Pre-arranged driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa hotel",
+          "to": "Addis Ababa Bole Airport (ADD)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Bahir Dar Airport (BJR)",
+          "to": "Bahir Dar hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Bahir Dar",
+          "to": "Gondar",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Private 4x4 with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Gondar",
+          "to": "Simien Mountains lodge",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "Private 4x4 with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Simien Mountains lodge",
+          "to": "Gondar Airport (GDQ)",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Private 4x4 with driver",
+          "notes": "Drive back to Gondar for the flight to Axum.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Gondar airport",
+          "to": "Gondar Airport (GDQ)",
+          "time": "13:00",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Axum Airport (AXU)",
+          "to": "Axum hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Axum hotel",
+          "to": "Axum Airport (AXU)",
+          "time": "09:00",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Lalibela Airport (LLI)",
+          "to": "Lalibela hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Lalibela hotel",
+          "to": "Lalibela Airport (LLI)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Pre-arranged driver",
+          "notes": "Domestic flights are subject to schedule changes; confirm timings.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ethiopia-complete-13d",
+      "title": "Complete Northern Ethiopia in 13 Days",
+      "summary": "Two nights in Addis, then the whole northern circuit with the Simien Mountains.",
+      "days": 13,
+      "route": "Addis Ababa > Bahir Dar > Gondar > Simien Mountains > Axum > Lalibela",
+      "arrive": "Addis Ababa (ADD)",
+      "depart": "Addis Ababa (ADD)",
+      "countries": [
+        "Ethiopia"
+      ],
+      "regions": [
+        "Amhara",
+        "Tigray"
+      ],
+      "cities": [
+        "Addis Ababa",
+        "Bahir Dar",
+        "Gondar",
+        "Simien Mountains",
+        "Axum",
+        "Lalibela"
+      ],
+      "imageQuery": "Ethiopia highlands Lalibela Simien",
+      "highlights": [
+        "Merkato",
+        "Blue Nile Falls",
+        "Simien trek",
+        "Axum",
+        "Lalibela",
+        "Coffee ceremony"
+      ],
+      "destinationKeys": [
+        "ethiopia",
+        "ethiopia/addis-ababa",
+        "ethiopia/amhara",
+        "ethiopia/bahir-dar",
+        "ethiopia/gondar",
+        "ethiopia/simien-mountains",
+        "ethiopia/tigray",
+        "ethiopia/axum",
+        "ethiopia/lalibela"
+      ],
+      "hero": "ethiopia/addis-ababa",
+      "sources": [
+        "KimKim",
+        "Boundless Ethiopia",
+        "Brilliant Ethiopia",
+        "King Dawit Tours",
+        "Ethiopian Adventure Tours"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Addis Ababa",
+          "hotel": "Hotel in Addis Ababa",
+          "start": 0,
+          "nights": 2,
+          "area": "In Bole or near the centre for restaurants and the museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bahir Dar",
+          "hotel": "Hotel in Bahir Dar",
+          "start": 2,
+          "nights": 2,
+          "area": "On the lake shore or in central Bahir Dar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gondar",
+          "hotel": "Hotel in Gondar",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the castle compound in Gondar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Simien Mountains",
+          "hotel": "Lodge in the Simien Mountains",
+          "start": 6,
+          "nights": 2,
+          "area": "In a mountain lodge on the edge of the park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Axum",
+          "hotel": "Hotel in Axum",
+          "start": 8,
+          "nights": 2,
+          "area": "In central Axum, within reach of the stelae",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lalibela",
+          "hotel": "Hotel in Lalibela",
+          "start": 10,
+          "nights": 2,
+          "area": "In Lalibela town, close to the churches; some hotels have views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "National Museum and Merkato visit",
+          "notes": "Take it easy at altitude; go with a guide to Merkato.",
+          "where": "Addis Ababa",
+          "book": "",
+          "place": "ethiopia/addis-museum"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Coffee ceremony and Ethiopian dinner",
+          "notes": "Traditional restaurant with live music.",
+          "where": "Addis Ababa",
+          "book": "",
+          "place": "ethiopia/coffee-ceremony"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Lake Tana island monasteries",
+          "notes": "Dress modestly and remove shoes at the churches.",
+          "where": "Lake Tana",
+          "book": "",
+          "place": "ethiopia/lake-tana-monasteries"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Blue Nile Falls",
+          "notes": "Strongest between July and October.",
+          "where": "Bahir Dar",
+          "book": "",
+          "place": "ethiopia/blue-nile-falls"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Fasil Ghebbi castles and Debre Birhan Selassie church",
+          "notes": "Hire a guide for the royal compound.",
+          "where": "Gondar",
+          "book": "",
+          "place": "ethiopia/gondar-fasil"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Simien Mountains escarpment hike",
+          "notes": "A scout is required; expect gelada baboons.",
+          "where": "Simien Mountains",
+          "book": "Yes - book a guide and scout",
+          "place": "ethiopia/simien-mountains"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Axum stelae and St Mary of Zion",
+          "notes": "Dress modestly; women cannot enter some parts.",
+          "where": "Axum",
+          "book": "",
+          "place": "ethiopia/axum-stelae"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Lalibela northern church group",
+          "notes": "Walk barefoot inside; go with a guide.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-churches"
+        },
+        {
+          "day": 11,
+          "type": "Hike",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Ashetan Maryam hill walk",
+          "notes": "Panoramic views of the valleys.",
+          "where": "Lalibela",
+          "book": "",
+          "place": "ethiopia/lalibela-hilltop"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa Bole Airport (ADD)",
+          "to": "Addis Ababa hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Pre-arranged driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa hotel",
+          "to": "Addis Ababa Bole Airport (ADD)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Bahir Dar Airport (BJR)",
+          "to": "Bahir Dar hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Bahir Dar",
+          "to": "Gondar",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Private 4x4 with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Gondar",
+          "to": "Simien Mountains lodge",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "Private 4x4 with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Simien Mountains lodge",
+          "to": "Gondar Airport (GDQ)",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Private 4x4 with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Gondar airport",
+          "to": "Gondar Airport (GDQ)",
+          "time": "13:00",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Axum Airport (AXU)",
+          "to": "Axum hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Axum hotel",
+          "to": "Axum Airport (AXU)",
+          "time": "09:00",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Lalibela Airport (LLI)",
+          "to": "Lalibela hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Lalibela hotel",
+          "to": "Lalibela Airport (LLI)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Addis Ababa Bole Airport (ADD)",
+          "to": "Addis Ababa hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "ethiopia/addis-museum": {
+        "name": "Addis Ababa National Museum and Merkato",
+        "description": "The home of Lucy the fossil hominin, plus the biggest open-air market in Africa.",
+        "details": "The National Museum shows Lucy, a 3.2-million-year-old skeleton, and Ethiopian art. The Merkato is a vast market district best seen with a local guide. Entoto hill overlooks the city. Addis is at 2,350 metres, so take it easy on arrival.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ethiopia/coffee-ceremony": {
+        "name": "Traditional coffee ceremony and Ethiopian dinner",
+        "description": "Roasted, ground and brewed in front of you, with injera and music.",
+        "details": "Coffee originated in Ethiopia, and the ceremony includes roasting, grinding and three rounds of coffee with incense. A traditional restaurant serves injera with stews and live azmari music. It is a relaxed introduction to the culture.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ethiopia/lake-tana-monasteries": {
+        "name": "Lake Tana island monasteries",
+        "description": "Ancient monasteries with painted walls on islands in Ethiopia largest lake.",
+        "details": "Boat trips from Bahir Dar visit monasteries such as Ura Kidane Mehret, with colourful murals and treasures. Dress modestly and remove shoes at the church doors. The lake has hippos and many birds.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ethiopia/blue-nile-falls": {
+        "name": "Blue Nile Falls",
+        "description": "A waterfall known as Tis Issat, the smoking water, reached by a short walk.",
+        "details": "The Blue Nile Falls are best in the rainy season, from July to October, and are reduced by a hydro scheme in the dry season. The walk from the village crosses a stone bridge. A half-day trip from Bahir Dar.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ethiopia/gondar-fasil": {
+        "name": "Gondar and Fasil Ghebbi",
+        "description": "The castle city of imperial Ethiopia, with a walled compound of stone palaces.",
+        "details": "Gondar was the capital in the 17th and 18th centuries. The Fasil Ghebbi royal enclosure is a UNESCO site with castles, and Debre Birhan Selassie church is covered with painted angels on the ceiling. The Fasilides Bath is used at the Timkat festival in January.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ethiopia/simien-mountains": {
+        "name": "Simien Mountains National Park",
+        "description": "A dramatic escarpment of peaks and gelada baboons, with day hikes from a lodge.",
+        "details": "The Simien Mountains have a rim walk with sweeping drops and troops of gelada baboons grazing on the grass. Day walks of three to six hours start from Simien Lodge or Gich. A scout and guide are required. It is cold at 3,000 metres or higher, and the dry season is October to March.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "ethiopia/axum-stelae": {
+        "name": "Axum stelae and St Mary of Zion",
+        "description": "Giant granite obelisks from the Aksumite empire and a church said to hold the Ark of the Covenant.",
+        "details": "Axum was a great ancient kingdom. The stelae field has huge carved obelisks, the tallest standing 24 metres, and a museum. St Mary of Zion is a pilgrimage church, with the chapel claimed to contain the Ark that only one monk may see. Nearby is Yeha, an ancient temple.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ethiopia/lalibela-churches": {
+        "name": "Lalibela rock-hewn churches",
+        "description": "Eleven medieval churches carved down into the rock, a UNESCO site and a pilgrimage centre.",
+        "details": "The Lalibela churches were carved from solid rock in the 12th and 13th centuries. Bete Giyorgis is shaped like a cross and Bete Medhane Alem is among the largest. Walk barefoot inside, with a guide. Pilgrims fill the town for Genna (Christmas) in January and for Timkat.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ethiopia/lalibela-hilltop": {
+        "name": "Ashetan Maryam church hike",
+        "description": "A walk up a hill above Lalibela to a church with views over the valley.",
+        "details": "The hike to Ashetan Maryam takes about two hours up, with views of the valleys. It passes Yemrehanna Kristos, an older church in a cave 40 kilometres from town on longer trips. A good activity for the afternoon after the churches.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "ethiopia": {
+        "name": "Ethiopia",
+        "description": "An ancient highland country of rock churches, obelisks, mountains and coffee culture.",
+        "images": []
+      },
+      "ethiopia/addis-ababa": {
+        "name": "Addis Ababa",
+        "description": "The high-altitude capital, with museums, markets and cafes.",
+        "images": []
+      },
+      "ethiopia/amhara": {
+        "name": "Amhara",
+        "description": "The northern highland region of Lake Tana, Gondar, Simien and Lalibela.",
+        "images": []
+      },
+      "ethiopia/bahir-dar": {
+        "name": "Bahir Dar",
+        "description": "A lakeside city on Lake Tana, close to the Blue Nile Falls.",
+        "images": []
+      },
+      "ethiopia/gondar": {
+        "name": "Gondar",
+        "description": "A castle city of imperial palaces.",
+        "images": []
+      },
+      "ethiopia/simien-mountains": {
+        "name": "Simien Mountains",
+        "description": "A national park of high peaks and gelada baboons.",
+        "images": []
+      },
+      "ethiopia/tigray": {
+        "name": "Tigray",
+        "description": "The northern region of Axum.",
+        "images": []
+      },
+      "ethiopia/axum": {
+        "name": "Axum",
+        "description": "An ancient capital with giant stone stelae.",
+        "images": []
+      },
+      "ethiopia/lalibela": {
+        "name": "Lalibela",
+        "description": "A pilgrimage town of rock-hewn churches.",
+        "images": []
+      }
+    }
+  }
+}

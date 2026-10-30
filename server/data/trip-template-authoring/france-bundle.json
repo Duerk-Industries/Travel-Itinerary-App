@@ -1,0 +1,1452 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, Rough Guides, Jetpac Global and On The Go Tours itineraries for France",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "france-paris-5d",
+      "title": "Paris in 5 Days",
+      "summary": "The icons, the museums, Versailles and the neighbourhoods.",
+      "days": 5,
+      "route": "Paris",
+      "arrive": "Paris (CDG)",
+      "depart": "Paris (CDG)",
+      "countries": [
+        "France"
+      ],
+      "regions": [],
+      "cities": [
+        "Paris"
+      ],
+      "imageQuery": "Paris Eiffel Tower Seine",
+      "highlights": [
+        "Eiffel Tower",
+        "Louvre",
+        "Montmartre",
+        "Versailles"
+      ],
+      "destinationKeys": [
+        "france",
+        "france/paris"
+      ],
+      "hero": "france/paris",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Jetpac Global",
+        "On The Go Tours",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Paris",
+          "hotel": "Hotel in Paris",
+          "start": 0,
+          "nights": 4,
+          "area": "In the Latin Quarter, Marais or near Saint-Germain; central and metro-friendly",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Eiffel Tower and Seine cruise",
+          "notes": "Book timed tickets; take a Seine cruise at dusk.",
+          "where": "Paris",
+          "book": "Yes - book the tower",
+          "place": "france/eiffel-seine"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Louvre or Musee d Orsay",
+          "notes": "Choose a few wings; the Louvre is closed Tuesday.",
+          "where": "Paris",
+          "book": "Yes - book timed entry",
+          "place": "france/louvre-orsay"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Montmartre and the Marais",
+          "notes": "Walk the hills and old lanes; aperitif at a cafe.",
+          "where": "Paris",
+          "book": "",
+          "place": "france/montmartre-marais"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Palace of Versailles",
+          "notes": "Closed on Mondays; timed tickets.",
+          "where": "Versailles",
+          "book": "Yes - book timed entry",
+          "place": "france/versailles"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paris Charles de Gaulle Airport (CDG)",
+          "to": "Paris hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "RER train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Paris hotel area",
+          "to": "Paris Charles de Gaulle Airport (CDG)",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Train, RER or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "france-paris-loire-7d",
+      "title": "Paris and the Loire Valley in 7 Days",
+      "summary": "Four days in Paris, then two in the chateau country of the Loire.",
+      "days": 7,
+      "route": "Paris > Amboise",
+      "arrive": "Paris (CDG)",
+      "depart": "Paris (CDG)",
+      "countries": [
+        "France"
+      ],
+      "regions": [
+        "Loire Valley"
+      ],
+      "cities": [
+        "Paris",
+        "Amboise"
+      ],
+      "imageQuery": "Chenonceau chateau Loire",
+      "highlights": [
+        "Eiffel Tower",
+        "Louvre",
+        "Versailles",
+        "Chenonceau",
+        "Chambord"
+      ],
+      "destinationKeys": [
+        "france",
+        "france/paris",
+        "france/loire-valley",
+        "france/amboise"
+      ],
+      "hero": "france/loire-valley",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Jetpac Global",
+        "On The Go Tours",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Paris",
+          "hotel": "Hotel in Paris",
+          "start": 0,
+          "nights": 4,
+          "area": "In the Latin Quarter, Marais or near Saint-Germain; central and metro-friendly",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Amboise",
+          "hotel": "Hotel in Amboise",
+          "start": 4,
+          "nights": 2,
+          "area": "In Amboise near the chateau, for the Loire sights by train or car",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Eiffel Tower and Seine cruise",
+          "notes": "Book timed tickets; take a Seine cruise at dusk.",
+          "where": "Paris",
+          "book": "Yes - book the tower",
+          "place": "france/eiffel-seine"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Louvre or Musee d Orsay",
+          "notes": "Choose a few wings; the Louvre is closed Tuesday.",
+          "where": "Paris",
+          "book": "Yes - book timed entry",
+          "place": "france/louvre-orsay"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Montmartre and the Marais",
+          "notes": "Walk the hills and old lanes; aperitif at a cafe.",
+          "where": "Paris",
+          "book": "",
+          "place": "france/montmartre-marais"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Palace of Versailles",
+          "notes": "Closed on Mondays; timed tickets.",
+          "where": "Versailles",
+          "book": "Yes - book timed entry",
+          "place": "france/versailles"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Chenonceau, Chambord and Amboise",
+          "notes": "Small-group tour or a rental car; add a wine tasting.",
+          "where": "Loire Valley",
+          "book": "Yes - book a tour or car",
+          "place": "france/loire-chateaux"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paris Charles de Gaulle Airport (CDG)",
+          "to": "Paris hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "RER train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Paris",
+          "to": "Amboise",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "Train to Saint-Pierre-des-Corps then a local train.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Amboise",
+          "to": "Paris",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Paris",
+          "to": "Paris Charles de Gaulle Airport (CDG)",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Train, RER or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "france-paris-normandy-loire-8d",
+      "title": "Paris, Normandy and the Loire in 8 Days",
+      "summary": "Capital, D-Day history and Renaissance chateaux.",
+      "days": 8,
+      "route": "Paris > Bayeux > Amboise",
+      "arrive": "Paris (CDG)",
+      "depart": "Paris (CDG)",
+      "countries": [
+        "France"
+      ],
+      "regions": [
+        "Normandy",
+        "Loire Valley"
+      ],
+      "cities": [
+        "Paris",
+        "Bayeux",
+        "Amboise"
+      ],
+      "imageQuery": "Mont-Saint-Michel France",
+      "highlights": [
+        "Louvre",
+        "D-Day beaches",
+        "Mont-Saint-Michel",
+        "Chenonceau"
+      ],
+      "destinationKeys": [
+        "france",
+        "france/paris",
+        "france/normandy",
+        "france/bayeux",
+        "france/loire-valley",
+        "france/amboise"
+      ],
+      "hero": "france/normandy",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Jetpac Global",
+        "On The Go Tours",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Paris",
+          "hotel": "Hotel in Paris",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Latin Quarter, Marais or near Saint-Germain; central and metro-friendly",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bayeux",
+          "hotel": "Hotel in Bayeux",
+          "start": 3,
+          "nights": 2,
+          "area": "In Bayeux old town, a short walk to the tapestry museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Amboise",
+          "hotel": "Hotel in Amboise",
+          "start": 5,
+          "nights": 2,
+          "area": "In Amboise near the chateau, for the Loire sights by train or car",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Eiffel Tower and Seine cruise",
+          "notes": "Book timed tickets; take a Seine cruise at dusk.",
+          "where": "Paris",
+          "book": "Yes - book the tower",
+          "place": "france/eiffel-seine"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Louvre or Musee d Orsay",
+          "notes": "Choose a few wings; the Louvre is closed Tuesday.",
+          "where": "Paris",
+          "book": "Yes - book timed entry",
+          "place": "france/louvre-orsay"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Montmartre and the Marais",
+          "notes": "Walk the hills and old lanes; aperitif at a cafe.",
+          "where": "Paris",
+          "book": "",
+          "place": "france/montmartre-marais"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "D-Day beaches tour",
+          "notes": "A guided day trip from Bayeux.",
+          "where": "Normandy",
+          "book": "Yes - book a tour",
+          "place": "france/normandy-dday"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Chenonceau, Chambord and Amboise",
+          "notes": "Small-group tour or a rental car; add a wine tasting.",
+          "where": "Loire Valley",
+          "book": "Yes - book a tour or car",
+          "place": "france/loire-chateaux"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paris Charles de Gaulle Airport (CDG)",
+          "to": "Paris hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "RER train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Paris",
+          "to": "Bayeux",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "Direct trains run from Paris Saint-Lazare.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Bayeux",
+          "to": "Amboise",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "Change in Paris or Caen; or rent a car.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Amboise",
+          "to": "Paris",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Paris",
+          "to": "Paris Charles de Gaulle Airport (CDG)",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Train, RER or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "france-paris-normandy-loire-bordeaux-10d",
+      "title": "France Food and Wine Classic in 10 Days",
+      "summary": "Paris, Normandy, the Loire and Bordeaux.",
+      "days": 10,
+      "route": "Paris > Bayeux > Amboise > Bordeaux",
+      "arrive": "Paris (CDG)",
+      "depart": "Bordeaux (BOD)",
+      "countries": [
+        "France"
+      ],
+      "regions": [
+        "Normandy",
+        "Loire Valley"
+      ],
+      "cities": [
+        "Paris",
+        "Bayeux",
+        "Amboise",
+        "Bordeaux"
+      ],
+      "imageQuery": "Bordeaux Saint-Emilion vineyards",
+      "highlights": [
+        "Louvre",
+        "D-Day beaches",
+        "Mont-Saint-Michel",
+        "Loire chateaux",
+        "Saint-Emilion"
+      ],
+      "destinationKeys": [
+        "france",
+        "france/paris",
+        "france/normandy",
+        "france/bayeux",
+        "france/loire-valley",
+        "france/amboise",
+        "france/bordeaux"
+      ],
+      "hero": "france/bordeaux",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Jetpac Global",
+        "On The Go Tours",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "culture",
+        "iconic_landmarks",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Paris",
+          "hotel": "Hotel in Paris",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Latin Quarter, Marais or near Saint-Germain; central and metro-friendly",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bayeux",
+          "hotel": "Hotel in Bayeux",
+          "start": 3,
+          "nights": 2,
+          "area": "In Bayeux old town, a short walk to the tapestry museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Amboise",
+          "hotel": "Hotel in Amboise",
+          "start": 5,
+          "nights": 2,
+          "area": "In Amboise near the chateau, for the Loire sights by train or car",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bordeaux",
+          "hotel": "Hotel in Bordeaux",
+          "start": 7,
+          "nights": 2,
+          "area": "Near the Garonne river or in the historic Triangle district",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Eiffel Tower and Seine cruise",
+          "notes": "Book timed tickets; take a Seine cruise at dusk.",
+          "where": "Paris",
+          "book": "Yes - book the tower",
+          "place": "france/eiffel-seine"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Louvre or Musee d Orsay",
+          "notes": "Choose a few wings; the Louvre is closed Tuesday.",
+          "where": "Paris",
+          "book": "Yes - book timed entry",
+          "place": "france/louvre-orsay"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Montmartre and the Marais",
+          "notes": "Walk the hills and old lanes; aperitif at a cafe.",
+          "where": "Paris",
+          "book": "",
+          "place": "france/montmartre-marais"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "D-Day beaches tour",
+          "notes": "A guided day trip from Bayeux.",
+          "where": "Normandy",
+          "book": "Yes - book a tour",
+          "place": "france/normandy-dday"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Mont-Saint-Michel late afternoon",
+          "notes": "Check the tide times; visit early or late.",
+          "where": "Mont-Saint-Michel",
+          "book": "",
+          "place": "france/mont-saint-michel"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Chenonceau, Chambord and Amboise",
+          "notes": "Small-group tour or a rental car; add a wine tasting.",
+          "where": "Loire Valley",
+          "book": "Yes - book a tour or car",
+          "place": "france/loire-chateaux"
+        },
+        {
+          "day": 8,
+          "type": "Food & Drink",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Saint-Emilion wine day",
+          "notes": "Book chateau tastings ahead.",
+          "where": "Saint-Emilion",
+          "book": "Yes - book tastings",
+          "place": "france/bordeaux-saint-emilion"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paris Charles de Gaulle Airport (CDG)",
+          "to": "Paris hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "RER train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Paris",
+          "to": "Bayeux",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Bayeux",
+          "to": "Amboise",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Amboise",
+          "to": "Bordeaux",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "TGV from Saint-Pierre-des-Corps.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Bordeaux hotel",
+          "to": "Bordeaux Airport (BOD)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Train, RER or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "france-paris-loire-bordeaux-provence-riviera-12d",
+      "title": "France North to South in 12 Days",
+      "summary": "Paris, Loire, Bordeaux, Avignon and Nice by TGV.",
+      "days": 12,
+      "route": "Paris > Amboise > Bordeaux > Avignon > Nice",
+      "arrive": "Paris (CDG)",
+      "depart": "Nice (NCE)",
+      "countries": [
+        "France"
+      ],
+      "regions": [
+        "Loire Valley",
+        "Provence",
+        "French Riviera"
+      ],
+      "cities": [
+        "Paris",
+        "Amboise",
+        "Bordeaux",
+        "Avignon",
+        "Nice"
+      ],
+      "imageQuery": "Nice French Riviera promenade",
+      "highlights": [
+        "Louvre",
+        "Loire chateaux",
+        "Saint-Emilion",
+        "Pont du Gard",
+        "Riviera"
+      ],
+      "destinationKeys": [
+        "france",
+        "france/paris",
+        "france/loire-valley",
+        "france/amboise",
+        "france/bordeaux",
+        "france/provence",
+        "france/avignon",
+        "france/french-riviera",
+        "france/nice"
+      ],
+      "hero": "france/provence",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Jetpac Global",
+        "On The Go Tours",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Paris",
+          "hotel": "Hotel in Paris",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Latin Quarter, Marais or near Saint-Germain; central and metro-friendly",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Amboise",
+          "hotel": "Hotel in Amboise",
+          "start": 3,
+          "nights": 2,
+          "area": "In Amboise near the chateau, for the Loire sights by train or car",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bordeaux",
+          "hotel": "Hotel in Bordeaux",
+          "start": 5,
+          "nights": 2,
+          "area": "Near the Garonne river or in the historic Triangle district",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Avignon",
+          "hotel": "Hotel in Avignon",
+          "start": 7,
+          "nights": 2,
+          "area": "Inside the old walls of Avignon",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nice",
+          "hotel": "Hotel in Nice",
+          "start": 9,
+          "nights": 2,
+          "area": "In Nice old town or near the Promenade des Anglais",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Eiffel Tower and Seine cruise",
+          "notes": "Book timed tickets; take a Seine cruise at dusk.",
+          "where": "Paris",
+          "book": "Yes - book the tower",
+          "place": "france/eiffel-seine"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Louvre or Musee d Orsay",
+          "notes": "Choose a few wings; the Louvre is closed Tuesday.",
+          "where": "Paris",
+          "book": "Yes - book timed entry",
+          "place": "france/louvre-orsay"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Montmartre and the Marais",
+          "notes": "Walk the hills and old lanes; aperitif at a cafe.",
+          "where": "Paris",
+          "book": "",
+          "place": "france/montmartre-marais"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Chenonceau, Chambord and Amboise",
+          "notes": "Small-group tour or a rental car; add a wine tasting.",
+          "where": "Loire Valley",
+          "book": "Yes - book a tour or car",
+          "place": "france/loire-chateaux"
+        },
+        {
+          "day": 6,
+          "type": "Food & Drink",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Saint-Emilion wine day",
+          "notes": "Book chateau tastings ahead.",
+          "where": "Saint-Emilion",
+          "book": "Yes - book tastings",
+          "place": "france/bordeaux-saint-emilion"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "8h",
+          "name": "Pont du Gard and Luberon villages",
+          "notes": "Lavender in July; a car helps.",
+          "where": "Provence",
+          "book": "",
+          "place": "france/avignon-provence"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Nice old town, Eze and Monaco",
+          "notes": "Trains run along the coast; beaches are pebbly.",
+          "where": "French Riviera",
+          "book": "",
+          "place": "france/nice-riviera"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paris Charles de Gaulle Airport (CDG)",
+          "to": "Paris hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "RER train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Paris",
+          "to": "Amboise",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Amboise",
+          "to": "Bordeaux",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Bordeaux",
+          "to": "Avignon",
+          "time": "09:00",
+          "minutes": 360,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "Change in Paris or Lyon; or fly via Marseille.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Avignon",
+          "to": "Nice",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Nice hotel",
+          "to": "Nice Airport (NCE)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Train, RER or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "france-grand-14d",
+      "title": "Grand Tour of France in 14 Days",
+      "summary": "Paris, Normandy, the Loire, Bordeaux, Provence and the Riviera.",
+      "days": 14,
+      "route": "Paris > Bayeux > Amboise > Bordeaux > Avignon > Nice",
+      "arrive": "Paris (CDG)",
+      "depart": "Nice (NCE)",
+      "countries": [
+        "France"
+      ],
+      "regions": [
+        "Normandy",
+        "Loire Valley",
+        "Provence",
+        "French Riviera"
+      ],
+      "cities": [
+        "Paris",
+        "Bayeux",
+        "Amboise",
+        "Bordeaux",
+        "Avignon",
+        "Nice"
+      ],
+      "imageQuery": "France Provence lavender village",
+      "highlights": [
+        "Versailles",
+        "D-Day beaches",
+        "Loire chateaux",
+        "Saint-Emilion",
+        "Provence villages",
+        "Nice"
+      ],
+      "destinationKeys": [
+        "france",
+        "france/paris",
+        "france/normandy",
+        "france/bayeux",
+        "france/loire-valley",
+        "france/amboise",
+        "france/bordeaux",
+        "france/provence",
+        "france/avignon",
+        "france/french-riviera",
+        "france/nice"
+      ],
+      "hero": "france/paris",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Jetpac Global",
+        "On The Go Tours",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Paris",
+          "hotel": "Hotel in Paris",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Latin Quarter, Marais or near Saint-Germain; central and metro-friendly",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bayeux",
+          "hotel": "Hotel in Bayeux",
+          "start": 3,
+          "nights": 2,
+          "area": "In Bayeux old town, a short walk to the tapestry museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Amboise",
+          "hotel": "Hotel in Amboise",
+          "start": 5,
+          "nights": 2,
+          "area": "In Amboise near the chateau, for the Loire sights by train or car",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bordeaux",
+          "hotel": "Hotel in Bordeaux",
+          "start": 7,
+          "nights": 2,
+          "area": "Near the Garonne river or in the historic Triangle district",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Avignon",
+          "hotel": "Hotel in Avignon",
+          "start": 9,
+          "nights": 2,
+          "area": "Inside the old walls of Avignon",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nice",
+          "hotel": "Hotel in Nice",
+          "start": 11,
+          "nights": 2,
+          "area": "In Nice old town or near the Promenade des Anglais",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Eiffel Tower and Seine cruise",
+          "notes": "Book timed tickets; take a Seine cruise at dusk.",
+          "where": "Paris",
+          "book": "Yes - book the tower",
+          "place": "france/eiffel-seine"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Louvre or Musee d Orsay",
+          "notes": "Choose a few wings; the Louvre is closed Tuesday.",
+          "where": "Paris",
+          "book": "Yes - book timed entry",
+          "place": "france/louvre-orsay"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Montmartre and the Marais",
+          "notes": "Walk the hills and old lanes; aperitif at a cafe.",
+          "where": "Paris",
+          "book": "",
+          "place": "france/montmartre-marais"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "D-Day beaches tour",
+          "notes": "A guided day trip from Bayeux.",
+          "where": "Normandy",
+          "book": "Yes - book a tour",
+          "place": "france/normandy-dday"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Chenonceau, Chambord and Amboise",
+          "notes": "Small-group tour or a rental car; add a wine tasting.",
+          "where": "Loire Valley",
+          "book": "Yes - book a tour or car",
+          "place": "france/loire-chateaux"
+        },
+        {
+          "day": 8,
+          "type": "Food & Drink",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Saint-Emilion wine day",
+          "notes": "Book chateau tastings ahead.",
+          "where": "Saint-Emilion",
+          "book": "Yes - book tastings",
+          "place": "france/bordeaux-saint-emilion"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "8h",
+          "name": "Pont du Gard and Luberon villages",
+          "notes": "Lavender in July; a car helps.",
+          "where": "Provence",
+          "book": "",
+          "place": "france/avignon-provence"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Nice old town, Eze and Monaco",
+          "notes": "Trains run along the coast; beaches are pebbly.",
+          "where": "French Riviera",
+          "book": "",
+          "place": "france/nice-riviera"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Paris Charles de Gaulle Airport (CDG)",
+          "to": "Paris hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "RER train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Paris",
+          "to": "Bayeux",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Bayeux",
+          "to": "Amboise",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Amboise",
+          "to": "Bordeaux",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Bordeaux",
+          "to": "Avignon",
+          "time": "09:00",
+          "minutes": 360,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Avignon",
+          "to": "Nice",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "SNCF TGV or regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Nice hotel",
+          "to": "Nice Airport (NCE)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Train, RER or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "france/eiffel-seine": {
+        "name": "Eiffel Tower and the Seine",
+        "description": "Paris icon, with river walks, cruises and the Trocadero view.",
+        "details": "The Eiffel Tower can be climbed or ascended by lift, and tickets are timed. The Trocadero gives the classic view, and a Seine cruise at dusk passes Notre-Dame and the Louvre. Book the tower ahead, and be wary of pickpockets near the monument.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "france/louvre-orsay": {
+        "name": "Louvre and Musee d Orsay",
+        "description": "The world most visited art museum, and the Impressionist museum in a former station.",
+        "details": "The Louvre holds the Mona Lisa, the Venus de Milo and vast collections, so choose a few wings. The Orsay has Monet, Renoir and Van Gogh. Book timed tickets and avoid Tuesdays (Louvre) or Mondays (Orsay) when they are closed.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "france/montmartre-marais": {
+        "name": "Montmartre and the Marais",
+        "description": "A hilltop village of painters with Sacre-Coeur, and the medieval quarter of boutiques and cafes.",
+        "details": "Montmartre has steep lanes, the Sacre-Coeur basilica and the Place du Tertre. The Marais has the Place des Vosges, falafel on rue des Rosiers and fashion boutiques. Both are best on foot. Evening aperitifs are a Paris institution.",
+        "interests": [
+          "culture",
+          "food",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "france/versailles": {
+        "name": "Palace of Versailles",
+        "description": "The vast palace and gardens of Louis XIV, a half-day from Paris by train.",
+        "details": "Versailles has the Hall of Mirrors, royal apartments and gardens with fountains. Tickets are timed, and the palace is closed on Mondays. The gardens are free on most days except fountain-show days. Allow a half or full day.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "france/normandy-dday": {
+        "name": "D-Day beaches and Normandy memorials",
+        "description": "Omaha Beach, the American cemetery and the museums of the 1944 landings.",
+        "details": "A guided day trip from Bayeux visits Omaha Beach, the Normandy American Cemetery, Pointe du Hoc and Arromanches. The sites are moving, so allow time. The Bayeux Tapestry in town tells the 1066 story and is worth an hour.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "france/mont-saint-michel": {
+        "name": "Mont-Saint-Michel",
+        "description": "A tidal island abbey, rising from the bay on the Normandy-Brittany border.",
+        "details": "The abbey stands on a rock reached by a causeway. Tides change the scenery dramatically, so check the tide times. The village is crowded in summer, and early or late visits are calmer. A guided bay walk is possible.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "france/loire-chateaux": {
+        "name": "Loire Valley chateaux",
+        "description": "Renaissance castles including Chenonceau, Chambord and Amboise, in a river valley of vineyards.",
+        "details": "Chenonceau spans the river Cher, Chambord is a huge hunting lodge, and Amboise holds the grave of Leonardo da Vinci. A rental car or a small-group tour is the easiest way. Wine tasting in Vouvray and Chinon is a perfect addition.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "france/bordeaux-saint-emilion": {
+        "name": "Bordeaux and Saint-Emilion wine",
+        "description": "The elegant wine capital and a medieval village of vineyards, with tastings.",
+        "details": "Bordeaux has a restored riverfront, the Cite du Vin museum and a historic centre. Saint-Emilion is a UNESCO village of limestone streets with underground churches, surrounded by vines. Book chateau tastings ahead.",
+        "interests": [
+          "food",
+          "culture",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "france/avignon-provence": {
+        "name": "Avignon, Pont du Gard and Provence villages",
+        "description": "The papal city, a Roman aqueduct and hilltop villages in the Luberon.",
+        "details": "Avignon has the Palais des Papes and a half-bridge over the Rhone. Pont du Gard is a Roman aqueduct, and Luberon villages such as Gordes and Roussillon have ochre cliffs and lavender in July. A car makes the villages easy.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "france/nice-riviera": {
+        "name": "Nice, Eze and Monaco",
+        "description": "A seaside promenade, a cliff village and a glamorous principality on the French Riviera.",
+        "details": "Nice has the Promenade des Anglais, the old town and the cours Saleya market. Eze is a hilltop village with a perfume factory, and Monaco has the casino and palace. Trains run along the coast every few minutes. Beaches are pebbly.",
+        "interests": [
+          "relax",
+          "photography",
+          "food",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "france": {
+        "name": "France",
+        "description": "A country of art, villages, wine regions and Mediterranean coast.",
+        "images": []
+      },
+      "france/paris": {
+        "name": "Paris",
+        "description": "The capital, with museums, monuments and cafes.",
+        "images": []
+      },
+      "france/normandy": {
+        "name": "Normandy",
+        "description": "The northern region of D-Day beaches, cider and Mont-Saint-Michel.",
+        "images": []
+      },
+      "france/bayeux": {
+        "name": "Bayeux",
+        "description": "A medieval town, home to the tapestry, and base for the D-Day beaches.",
+        "images": []
+      },
+      "france/loire-valley": {
+        "name": "Loire Valley",
+        "description": "The valley of Renaissance chateaux and vineyards.",
+        "images": []
+      },
+      "france/amboise": {
+        "name": "Amboise",
+        "description": "A royal chateau town in the heart of the Loire.",
+        "images": []
+      },
+      "france/bordeaux": {
+        "name": "Bordeaux",
+        "description": "A graceful wine city on the Garonne river.",
+        "images": []
+      },
+      "france/provence": {
+        "name": "Provence",
+        "description": "The south-east region of lavender fields, Roman ruins and hill villages.",
+        "images": []
+      },
+      "france/avignon": {
+        "name": "Avignon",
+        "description": "The papal city on the Rhone.",
+        "images": []
+      },
+      "france/french-riviera": {
+        "name": "French Riviera",
+        "description": "The Mediterranean coast of Nice, Cannes and Monaco.",
+        "images": []
+      },
+      "france/nice": {
+        "name": "Nice",
+        "description": "The capital of the French Riviera.",
+        "images": []
+      }
+    }
+  }
+}

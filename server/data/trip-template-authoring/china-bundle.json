@@ -1,0 +1,1398 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, China Highlights, China Travel and On The Go Tours itineraries for China",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "china-beijing-5d",
+      "title": "Beijing in 5 Days",
+      "summary": "The Forbidden City, the Great Wall, the Temple of Heaven and the hutongs.",
+      "days": 5,
+      "route": "Beijing",
+      "arrive": "Beijing (PEK)",
+      "depart": "Beijing (PEK)",
+      "countries": [
+        "China"
+      ],
+      "regions": [],
+      "cities": [
+        "Beijing"
+      ],
+      "imageQuery": "Great Wall Mutianyu",
+      "highlights": [
+        "Forbidden City",
+        "Great Wall at Mutianyu",
+        "Temple of Heaven",
+        "Peking duck"
+      ],
+      "destinationKeys": [
+        "china",
+        "china/beijing"
+      ],
+      "hero": "china/beijing",
+      "sources": [
+        "KimKim",
+        "China Highlights",
+        "China Travel",
+        "On The Go Tours",
+        "Original Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Beijing",
+          "hotel": "Hotel in Beijing",
+          "start": 0,
+          "nights": 4,
+          "area": "Near Wangfujing, the hutongs or a metro station, convenient for the Forbidden City",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Hutong walk and Peking duck dinner",
+          "notes": "Book a duck restaurant; explore by rickshaw or bike.",
+          "where": "Beijing",
+          "book": "Yes - book dinner",
+          "place": "china/hutongs-duck"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Forbidden City and Tiananmen Square",
+          "notes": "Timed tickets with passport; closed Mondays.",
+          "where": "Beijing",
+          "book": "Yes - book timed entry",
+          "place": "china/forbidden-city"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Great Wall at Mutianyu",
+          "notes": "Cable car up and toboggan down; go early on weekdays.",
+          "where": "Mutianyu",
+          "book": "",
+          "place": "china/mutianyu-great-wall"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Temple of Heaven and Summer Palace",
+          "notes": "Both are in parks; the metro links them.",
+          "where": "Beijing",
+          "book": "",
+          "place": "china/temple-of-heaven"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Beijing Capital Airport (PEK)",
+          "to": "Beijing hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Beijing hotel area",
+          "to": "Beijing Capital Airport (PEK)",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "china-beijing-xian-7d",
+      "title": "Beijing and Xi an in 7 Days",
+      "summary": "The imperial capital, the Great Wall and the Terracotta Army, joined by high-speed rail.",
+      "days": 7,
+      "route": "Beijing > Xi an",
+      "arrive": "Beijing (PEK)",
+      "depart": "Xi an (XIY)",
+      "countries": [
+        "China"
+      ],
+      "regions": [
+        "Shaanxi"
+      ],
+      "cities": [
+        "Beijing",
+        "Xi an"
+      ],
+      "imageQuery": "Terracotta Army Xi an",
+      "highlights": [
+        "Forbidden City",
+        "Great Wall",
+        "Terracotta Army",
+        "Xi an city wall"
+      ],
+      "destinationKeys": [
+        "china",
+        "china/beijing",
+        "china/shaanxi",
+        "china/xi-an"
+      ],
+      "hero": "china/shaanxi",
+      "sources": [
+        "KimKim",
+        "China Highlights",
+        "China Travel",
+        "On The Go Tours",
+        "Original Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Beijing",
+          "hotel": "Hotel in Beijing",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Wangfujing, the hutongs or a metro station, convenient for the Forbidden City",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Xi an",
+          "hotel": "Hotel in Xi an",
+          "start": 3,
+          "nights": 3,
+          "area": "Inside the city wall near the Bell Tower, for the Muslim Quarter",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Hutong walk and Peking duck dinner",
+          "notes": "Book a duck restaurant; explore by rickshaw or bike.",
+          "where": "Beijing",
+          "book": "Yes - book dinner",
+          "place": "china/hutongs-duck"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Forbidden City and Tiananmen Square",
+          "notes": "Timed tickets with passport; closed Mondays.",
+          "where": "Beijing",
+          "book": "Yes - book timed entry",
+          "place": "china/forbidden-city"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Great Wall at Mutianyu",
+          "notes": "Cable car up and toboggan down; go early on weekdays.",
+          "where": "Mutianyu",
+          "book": "",
+          "place": "china/mutianyu-great-wall"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Xi an City Wall by bike",
+          "notes": "Bike rentals on the wall; 14 kilometres round.",
+          "where": "Xi an",
+          "book": "",
+          "place": "china/xian-city-wall"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Muslim Quarter street food",
+          "notes": "Try lamb skewers and biang biang noodles.",
+          "where": "Xi an",
+          "book": "",
+          "place": "china/xian-city-wall"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Terracotta Army",
+          "notes": "Go early; take a guide for context.",
+          "where": "Lintong",
+          "book": "",
+          "place": "china/terracotta-army"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Beijing Capital Airport (PEK)",
+          "to": "Beijing hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Beijing",
+          "to": "Xi an",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "High-speed train",
+          "notes": "Book tickets in advance with your passport.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Xi an hotel area",
+          "to": "Xi an Airport (XIY)",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "china-beijing-xian-shanghai-9d",
+      "title": "Beijing, Xi an and Shanghai in 9 Days",
+      "summary": "Three iconic cities: capital, ancient capital and the modern waterfront.",
+      "days": 9,
+      "route": "Beijing > Xi an > Shanghai",
+      "arrive": "Beijing (PEK)",
+      "depart": "Shanghai (PVG)",
+      "countries": [
+        "China"
+      ],
+      "regions": [
+        "Shaanxi"
+      ],
+      "cities": [
+        "Beijing",
+        "Xi an",
+        "Shanghai"
+      ],
+      "imageQuery": "Shanghai Bund skyline",
+      "highlights": [
+        "Forbidden City",
+        "Great Wall",
+        "Terracotta Army",
+        "The Bund"
+      ],
+      "destinationKeys": [
+        "china",
+        "china/beijing",
+        "china/shaanxi",
+        "china/xi-an",
+        "china/shanghai"
+      ],
+      "hero": "china/shanghai",
+      "sources": [
+        "KimKim",
+        "China Highlights",
+        "China Travel",
+        "On The Go Tours",
+        "Original Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Beijing",
+          "hotel": "Hotel in Beijing",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Wangfujing, the hutongs or a metro station, convenient for the Forbidden City",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Xi an",
+          "hotel": "Hotel in Xi an",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside the city wall near the Bell Tower, for the Muslim Quarter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Shanghai",
+          "hotel": "Hotel in Shanghai",
+          "start": 5,
+          "nights": 3,
+          "area": "Near the Bund, People s Square or the French Concession",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Hutong walk and Peking duck dinner",
+          "notes": "Book a duck restaurant; explore by rickshaw or bike.",
+          "where": "Beijing",
+          "book": "Yes - book dinner",
+          "place": "china/hutongs-duck"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Forbidden City and Tiananmen Square",
+          "notes": "Timed tickets with passport; closed Mondays.",
+          "where": "Beijing",
+          "book": "Yes - book timed entry",
+          "place": "china/forbidden-city"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Great Wall at Mutianyu",
+          "notes": "Cable car up and toboggan down; go early on weekdays.",
+          "where": "Mutianyu",
+          "book": "",
+          "place": "china/mutianyu-great-wall"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Xi an City Wall by bike",
+          "notes": "Bike rentals on the wall; 14 kilometres round.",
+          "where": "Xi an",
+          "book": "",
+          "place": "china/xian-city-wall"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Muslim Quarter street food",
+          "notes": "Try lamb skewers and biang biang noodles.",
+          "where": "Xi an",
+          "book": "",
+          "place": "china/xian-city-wall"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Terracotta Army",
+          "notes": "Go early; take a guide for context.",
+          "where": "Lintong",
+          "book": "",
+          "place": "china/terracotta-army"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "The Bund and Pudong skyline",
+          "notes": "Go at dusk to see the lights.",
+          "where": "Shanghai",
+          "book": "",
+          "place": "china/the-bund"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Yu Garden and old city bazaar",
+          "notes": "Try soup dumplings; stroll the French Concession afterwards.",
+          "where": "Shanghai",
+          "book": "",
+          "place": "china/yu-garden-old-city"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Zhujiajiao water town",
+          "notes": "Metro and bus; boat ride on the canals.",
+          "where": "Zhujiajiao",
+          "book": "",
+          "place": "china/zhujiajiao"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Beijing Capital Airport (PEK)",
+          "to": "Beijing hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Beijing",
+          "to": "Xi an",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "High-speed train",
+          "notes": "Book tickets in advance with your passport.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Xi an",
+          "to": "Shanghai",
+          "time": "08:30",
+          "minutes": 390,
+          "carrier": "High-speed train",
+          "notes": "Book tickets early; or fly with paired airport legs.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Shanghai hotel area",
+          "to": "Shanghai Pudong Airport (PVG)",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "china-beijing-xian-chengdu-shanghai-12d",
+      "title": "China Classic with Pandas in 12 Days",
+      "summary": "Beijing, Xi an, Chengdu for the pandas, and Shanghai.",
+      "days": 12,
+      "route": "Beijing > Xi an > Chengdu > Shanghai",
+      "arrive": "Beijing (PEK)",
+      "depart": "Shanghai (PVG)",
+      "countries": [
+        "China"
+      ],
+      "regions": [
+        "Shaanxi",
+        "Sichuan"
+      ],
+      "cities": [
+        "Beijing",
+        "Xi an",
+        "Chengdu",
+        "Shanghai"
+      ],
+      "imageQuery": "Chengdu giant panda",
+      "highlights": [
+        "Forbidden City",
+        "Great Wall",
+        "Terracotta Army",
+        "Giant pandas",
+        "The Bund"
+      ],
+      "destinationKeys": [
+        "china",
+        "china/beijing",
+        "china/shaanxi",
+        "china/xi-an",
+        "china/sichuan",
+        "china/chengdu",
+        "china/shanghai"
+      ],
+      "hero": "china/chengdu",
+      "sources": [
+        "KimKim",
+        "China Highlights",
+        "China Travel",
+        "On The Go Tours",
+        "Original Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Beijing",
+          "hotel": "Hotel in Beijing",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Wangfujing, the hutongs or a metro station, convenient for the Forbidden City",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Xi an",
+          "hotel": "Hotel in Xi an",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside the city wall near the Bell Tower, for the Muslim Quarter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chengdu",
+          "hotel": "Hotel in Chengdu",
+          "start": 5,
+          "nights": 3,
+          "area": "Near Tianfu Square or Chunxi Road for food and metro access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Shanghai",
+          "hotel": "Hotel in Shanghai",
+          "start": 8,
+          "nights": 3,
+          "area": "Near the Bund, People s Square or the French Concession",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Hutong walk and Peking duck dinner",
+          "notes": "Book a duck restaurant; explore by rickshaw or bike.",
+          "where": "Beijing",
+          "book": "Yes - book dinner",
+          "place": "china/hutongs-duck"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Forbidden City and Tiananmen Square",
+          "notes": "Timed tickets with passport; closed Mondays.",
+          "where": "Beijing",
+          "book": "Yes - book timed entry",
+          "place": "china/forbidden-city"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Great Wall at Mutianyu",
+          "notes": "Cable car up and toboggan down; go early on weekdays.",
+          "where": "Mutianyu",
+          "book": "",
+          "place": "china/mutianyu-great-wall"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Xi an City Wall by bike",
+          "notes": "Bike rentals on the wall; 14 kilometres round.",
+          "where": "Xi an",
+          "book": "",
+          "place": "china/xian-city-wall"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Muslim Quarter street food",
+          "notes": "Try lamb skewers and biang biang noodles.",
+          "where": "Xi an",
+          "book": "",
+          "place": "china/xian-city-wall"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Terracotta Army",
+          "notes": "Go early; take a guide for context.",
+          "where": "Lintong",
+          "book": "",
+          "place": "china/terracotta-army"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "08:00",
+          "duration": "4h",
+          "name": "Giant panda base",
+          "notes": "Arrive at opening, when pandas are fed and active.",
+          "where": "Chengdu",
+          "book": "",
+          "place": "china/chengdu-pandas"
+        },
+        {
+          "day": 6,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Sichuan hotpot and opera",
+          "notes": "Ask for a milder spice level if needed.",
+          "where": "Chengdu",
+          "book": "",
+          "place": "china/sichuan-food"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Leshan Giant Buddha",
+          "notes": "Queues build at the steps in holidays.",
+          "where": "Leshan",
+          "book": "Yes - book transport or tour",
+          "place": "china/leshan-buddha"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "The Bund and Pudong skyline",
+          "notes": "Go at dusk to see the lights.",
+          "where": "Shanghai",
+          "book": "",
+          "place": "china/the-bund"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Yu Garden and old city bazaar",
+          "notes": "Try soup dumplings; stroll the French Concession afterwards.",
+          "where": "Shanghai",
+          "book": "",
+          "place": "china/yu-garden-old-city"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Zhujiajiao water town",
+          "notes": "Metro and bus; boat ride on the canals.",
+          "where": "Zhujiajiao",
+          "book": "",
+          "place": "china/zhujiajiao"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Beijing Capital Airport (PEK)",
+          "to": "Beijing hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Beijing",
+          "to": "Xi an",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "High-speed train",
+          "notes": "Book tickets in advance with your passport.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Xi an",
+          "to": "Chengdu",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "High-speed train",
+          "notes": "Book tickets in advance with your passport.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Chengdu hotel area",
+          "to": "Chengdu Tianfu Airport (TFU)",
+          "time": "08:00",
+          "minutes": 50,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Shanghai Pudong Airport (PVG)",
+          "to": "Shanghai hotel area",
+          "time": "12:00",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Shanghai hotel area",
+          "to": "Shanghai Pudong Airport (PVG)",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "china-grand-14d",
+      "title": "Grand China in 14 Days",
+      "summary": "Beijing, Xi an, Chengdu, the Li River at Yangshuo and Shanghai.",
+      "days": 14,
+      "route": "Beijing > Xi an > Chengdu > Yangshuo > Shanghai",
+      "arrive": "Beijing (PEK)",
+      "depart": "Shanghai (PVG)",
+      "countries": [
+        "China"
+      ],
+      "regions": [
+        "Shaanxi",
+        "Sichuan",
+        "Guangxi"
+      ],
+      "cities": [
+        "Beijing",
+        "Xi an",
+        "Chengdu",
+        "Yangshuo",
+        "Shanghai"
+      ],
+      "imageQuery": "Li River karst Yangshuo",
+      "highlights": [
+        "Forbidden City",
+        "Great Wall",
+        "Terracotta Army",
+        "Giant pandas",
+        "Li River",
+        "The Bund"
+      ],
+      "destinationKeys": [
+        "china",
+        "china/beijing",
+        "china/shaanxi",
+        "china/xi-an",
+        "china/sichuan",
+        "china/chengdu",
+        "china/guangxi",
+        "china/yangshuo",
+        "china/shanghai"
+      ],
+      "hero": "china/yangshuo",
+      "sources": [
+        "KimKim",
+        "China Highlights",
+        "China Travel",
+        "On The Go Tours",
+        "Original Travel"
+      ],
+      "pace": "F",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Beijing",
+          "hotel": "Hotel in Beijing",
+          "start": 0,
+          "nights": 4,
+          "area": "Near Wangfujing, the hutongs or a metro station, convenient for the Forbidden City",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Xi an",
+          "hotel": "Hotel in Xi an",
+          "start": 4,
+          "nights": 2,
+          "area": "Inside the city wall near the Bell Tower, for the Muslim Quarter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chengdu",
+          "hotel": "Hotel in Chengdu",
+          "start": 6,
+          "nights": 3,
+          "area": "Near Tianfu Square or Chunxi Road for food and metro access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Yangshuo",
+          "hotel": "Hotel in Yangshuo",
+          "start": 9,
+          "nights": 2,
+          "area": "Near West Street or a riverside hotel with views of the karst peaks",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Shanghai",
+          "hotel": "Hotel in Shanghai",
+          "start": 11,
+          "nights": 2,
+          "area": "Near the Bund, People s Square or the French Concession",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Hutong walk and Peking duck dinner",
+          "notes": "Book a duck restaurant; explore by rickshaw or bike.",
+          "where": "Beijing",
+          "book": "Yes - book dinner",
+          "place": "china/hutongs-duck"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Forbidden City and Tiananmen Square",
+          "notes": "Timed tickets with passport; closed Mondays.",
+          "where": "Beijing",
+          "book": "Yes - book timed entry",
+          "place": "china/forbidden-city"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Great Wall at Mutianyu",
+          "notes": "Cable car up and toboggan down; go early on weekdays.",
+          "where": "Mutianyu",
+          "book": "",
+          "place": "china/mutianyu-great-wall"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Temple of Heaven and Summer Palace",
+          "notes": "Both are in parks; the metro links them.",
+          "where": "Beijing",
+          "book": "",
+          "place": "china/temple-of-heaven"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Xi an City Wall by bike",
+          "notes": "Bike rentals on the wall; 14 kilometres round.",
+          "where": "Xi an",
+          "book": "",
+          "place": "china/xian-city-wall"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Muslim Quarter street food",
+          "notes": "Try lamb skewers and biang biang noodles.",
+          "where": "Xi an",
+          "book": "",
+          "place": "china/xian-city-wall"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Terracotta Army",
+          "notes": "Go early; take a guide for context.",
+          "where": "Lintong",
+          "book": "",
+          "place": "china/terracotta-army"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "08:00",
+          "duration": "4h",
+          "name": "Giant panda base",
+          "notes": "Arrive at opening, when pandas are fed and active.",
+          "where": "Chengdu",
+          "book": "",
+          "place": "china/chengdu-pandas"
+        },
+        {
+          "day": 7,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Sichuan hotpot and opera",
+          "notes": "Ask for a milder spice level if needed.",
+          "where": "Chengdu",
+          "book": "",
+          "place": "china/sichuan-food"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Leshan Giant Buddha",
+          "notes": "Queues build at the steps in holidays.",
+          "where": "Leshan",
+          "book": "Yes - book transport or tour",
+          "place": "china/leshan-buddha"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Li River cruise",
+          "notes": "Four hours on the water; bring a hat and sun cream.",
+          "where": "Guilin to Yangshuo",
+          "book": "Yes - book the cruise",
+          "place": "china/li-river-cruise"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Yulong River bike ride",
+          "notes": "Includes Moon Hill; end with West Street dinner.",
+          "where": "Yangshuo",
+          "book": "",
+          "place": "china/yangshuo-countryside"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "The Bund and Pudong skyline",
+          "notes": "Go at dusk to see the lights.",
+          "where": "Shanghai",
+          "book": "",
+          "place": "china/the-bund"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Yu Garden and old city bazaar",
+          "notes": "Try soup dumplings; stroll the French Concession afterwards.",
+          "where": "Shanghai",
+          "book": "",
+          "place": "china/yu-garden-old-city"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Beijing Capital Airport (PEK)",
+          "to": "Beijing hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Beijing",
+          "to": "Xi an",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "High-speed train",
+          "notes": "Book tickets in advance with your passport.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Xi an",
+          "to": "Chengdu",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "High-speed train",
+          "notes": "Book tickets in advance with your passport.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Chengdu hotel area",
+          "to": "Chengdu Tianfu Airport (TFU)",
+          "time": "07:30",
+          "minutes": 50,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Guilin Airport (KWL)",
+          "to": "Guilin",
+          "time": "10:30",
+          "minutes": 40,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Yangshuo",
+          "to": "Guilin Airport (KWL)",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Shuttle bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Shanghai Pudong Airport (PVG)",
+          "to": "Shanghai hotel area",
+          "time": "15:30",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Shanghai hotel area",
+          "to": "Shanghai Pudong Airport (PVG)",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Airport express, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "china/forbidden-city": {
+        "name": "Forbidden City and Tiananmen Square",
+        "description": "The imperial palace complex of the Ming and Qing emperors, beside the vast square at the centre of Beijing.",
+        "details": "The Forbidden City has nearly 1,000 buildings and was the home of 24 emperors. Entry is by timed ticket and passport, and tickets sell out in peak months. Allow three hours and walk north from Tiananmen Gate through to Jingshan Park for a view over the golden roofs. The palace is closed on Mondays.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/mutianyu-great-wall": {
+        "name": "Great Wall at Mutianyu",
+        "description": "A restored section of the Great Wall with watchtowers, cable car and a toboggan down.",
+        "details": "Mutianyu is about 90 minutes from central Beijing, and less crowded than Badaling. A cable car or chairlift reaches the wall, and a toboggan makes the way back down. Walk the stretch between towers 6 and 14 for the best views. Go early on weekdays.",
+        "interests": [
+          "iconic_landmarks",
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "china/temple-of-heaven": {
+        "name": "Temple of Heaven and Summer Palace",
+        "description": "The round blue-roofed temple and the lakeside imperial garden, both in parks locals use every morning.",
+        "details": "The Temple of Heaven is surrounded by a park where people exercise, play cards and dance in the morning. The Summer Palace is a garden of pavilions, bridges and the Kunming Lake, an easy half-day outing by metro.",
+        "interests": [
+          "culture",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/hutongs-duck": {
+        "name": "Hutongs and Peking duck",
+        "description": "The old alleys of Beijing, explored by rickshaw or bicycle, ending with a roast duck dinner.",
+        "details": "The hutongs are narrow lanes with courtyard homes, small shops and tea houses around the Drum and Bell Towers and Nanluoguxiang. A rickshaw or bike tour is a good introduction. Dinner of Peking duck, carved at the table, is a Beijing ritual. Book popular restaurants.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/terracotta-army": {
+        "name": "Terracotta Army",
+        "description": "Thousands of life-size clay warriors guarding the tomb of the first emperor.",
+        "details": "The Terracotta Army was found by farmers in 1974 near Xi an. Three pits hold the soldiers, horses and chariots, and the largest is Pit 1. A guide gives the story, and the museum shows bronze chariots. It is about an hour from the city by bus or taxi. Go early to avoid the crowds.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/xian-city-wall": {
+        "name": "Xi an City Wall and Muslim Quarter",
+        "description": "A cycle or walk along the Ming-era wall, then street food in the old Muslim Quarter.",
+        "details": "The Xi an city wall is 14 kilometres long and can be cycled in about two hours, with the Bell Tower and Drum Tower inside. The Muslim Quarter has night-time stalls with lamb skewers, biang biang noodles and persimmon cakes. The Great Mosque is a tranquil stop.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/chengdu-pandas": {
+        "name": "Chengdu Research Base of Giant Panda Breeding",
+        "description": "A sanctuary where giant pandas eat bamboo and play, best seen in the morning.",
+        "details": "The panda base is about 40 minutes from central Chengdu and is best at opening time, when the pandas are fed and active. Red pandas live there too. Short cubs can be seen in the nursery in some seasons. Midday heat sends them to sleep.",
+        "interests": [
+          "iconic_landmarks",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/leshan-buddha": {
+        "name": "Leshan Giant Buddha",
+        "description": "A 71-metre Buddha carved into a cliff at the meeting of three rivers, a UNESCO site.",
+        "details": "The Leshan Buddha was carved in the eighth century and is the tallest stone Buddha in the world. A boat gives a view from the river, and a stairway leads down beside it. It is about two hours from Chengdu by train and bus, and queues build at the steps in holidays.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "china/sichuan-food": {
+        "name": "Sichuan hotpot and opera",
+        "description": "Chengdu famously spicy cuisine, a teahouse and an evening of face-changing opera.",
+        "details": "Chengdu is a UNESCO city of gastronomy, with hotpot, mapo tofu and dan dan noodles. A traditional teahouse in People s Park is a relaxing break, and a Sichuan opera show includes the famous face-changing. Ask for the spice level to be reduced if you need it.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/li-river-cruise": {
+        "name": "Li River cruise",
+        "description": "A boat ride between limestone karst peaks from Guilin to Yangshuo.",
+        "details": "The Li River cruise passes the scenery printed on the 20-yuan note, with bamboo rafts, water buffalo and conical peaks. The trip takes about four hours from Guilin to Yangshuo. Mist is common and adds drama, but views are best in clear weather. Bring a hat and sun cream.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/yangshuo-countryside": {
+        "name": "Yangshuo countryside by bike",
+        "description": "Cycling among karst hills, rice paddies and villages along the Yulong River.",
+        "details": "Yangshuo is a backpacker town on the Li River, surrounded by peaks. A bike ride along the Yulong River passes the Moon Hill arch, bamboo raft stops and small villages. The West Street has bars and restaurants, and a night show on the river by Zhang Yimou is popular.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "authentic_local",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "china/the-bund": {
+        "name": "The Bund and Pudong skyline",
+        "description": "The colonial waterfront and the futuristic towers opposite, best at night.",
+        "details": "The Bund is a promenade lined with historic banks and hotels looking across the Huangpu River to Pudong and the Oriental Pearl Tower. The view from the Pudong side from an observation deck is spectacular. Go at dusk and stay for the lights.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/yu-garden-old-city": {
+        "name": "Yu Garden and Shanghai old city",
+        "description": "A Ming-dynasty garden with rockeries and pavilions, near a bazaar of snack stalls.",
+        "details": "Yu Garden is a classical garden of ponds, bridges and halls. The bazaar outside is touristy but good for soup dumplings, or xiaolongbao. French Concession streets nearby make a nice contrast for a stroll with cafes and plane trees.",
+        "interests": [
+          "culture",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "china/zhujiajiao": {
+        "name": "Zhujiajiao water town",
+        "description": "A canal village with stone bridges and boat rides, an hour from Shanghai.",
+        "details": "Zhujiajiao is an ancient water town with covered bridges and narrow lanes along canals. Rowing boats take visitors along the waterways. It is a quiet escape from the city and can be reached by metro and bus.",
+        "interests": [
+          "relax",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "china": {
+        "name": "China",
+        "description": "An ancient civilisation of imperial capitals, karst landscapes, pandas and sprawling modern cities.",
+        "images": []
+      },
+      "china/beijing": {
+        "name": "Beijing",
+        "description": "The capital, with the Forbidden City, hutongs and the Great Wall within reach.",
+        "images": []
+      },
+      "china/shaanxi": {
+        "name": "Shaanxi",
+        "description": "The province of Xi an, the Terracotta Army and the old Silk Road start.",
+        "images": []
+      },
+      "china/xi-an": {
+        "name": "Xi an",
+        "description": "An ancient capital with a city wall, a Muslim Quarter and the Terracotta Army nearby.",
+        "images": []
+      },
+      "china/sichuan": {
+        "name": "Sichuan",
+        "description": "The south-west province famed for pandas and fiery cuisine.",
+        "images": []
+      },
+      "china/chengdu": {
+        "name": "Chengdu",
+        "description": "A relaxed city of teahouses, hotpot and giant pandas.",
+        "images": []
+      },
+      "china/guangxi": {
+        "name": "Guangxi",
+        "description": "The region of Guilin and Yangshuo, with karst peaks and the Li River.",
+        "images": []
+      },
+      "china/yangshuo": {
+        "name": "Yangshuo",
+        "description": "A river town among limestone hills, ideal for cycling and cruises.",
+        "images": []
+      },
+      "china/shanghai": {
+        "name": "Shanghai",
+        "description": "The biggest city in China, with a colonial waterfront and a futuristic skyline.",
+        "images": []
+      }
+    }
+  }
+}

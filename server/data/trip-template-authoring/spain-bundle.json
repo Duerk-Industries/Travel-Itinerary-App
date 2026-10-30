@@ -1,0 +1,3012 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim and TravelStride itineraries for Spain",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "spain-madrid-4d",
+      "title": "Madrid in 4 Days",
+      "summary": "A city break built around Spain's great art museums and tapas culture, with a day trip by fast train to medieval Toledo.",
+      "days": 4,
+      "route": "Madrid (Toledo day trip)",
+      "arrive": "Madrid (MAD)",
+      "depart": "Madrid (MAD)",
+      "countries": [
+        "Spain"
+      ],
+      "regions": [
+        "Madrid",
+        "Castile-La Mancha"
+      ],
+      "cities": [
+        "Madrid",
+        "Toledo"
+      ],
+      "imageQuery": "Madrid Spain Plaza Mayor Royal Palace",
+      "highlights": [
+        "Prado Museum",
+        "Royal Palace",
+        "Tapas in La Latina",
+        "Toledo day trip",
+        "Retiro Park"
+      ],
+      "destinationKeys": [
+        "spain",
+        "spain/madrid",
+        "spain/castile-la-mancha",
+        "spain/toledo"
+      ],
+      "hero": "spain/madrid",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Madrid",
+          "hotel": "Hotel in Madrid",
+          "start": 0,
+          "nights": 3,
+          "area": "Sol, Huertas or Salamanca: central and walkable, on the metro, with tapas bars close by",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Plaza Mayor and Puerta del Sol",
+          "notes": "Both are crowded in the day, and pickpockets work the crowds, so keep bags closed and in front of you.",
+          "where": "Centro, Madrid",
+          "book": "",
+          "place": "spain/plaza-mayor-sol"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas crawl in La Latina",
+          "notes": "Spaniards dine late, so the bars fill after nine; have a drink and a plate or two at each stop.",
+          "where": "La Latina, Madrid",
+          "book": "",
+          "place": "spain/madrid-tapas-crawl"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Royal Palace of Madrid",
+          "notes": "Closed during official events, so check the schedule; photography is not allowed inside.",
+          "where": "Palacio, Madrid",
+          "book": "",
+          "place": "spain/royal-palace-madrid"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Prado Museum",
+          "notes": "Too big for one visit, so choose a few rooms; the free-entry period in the evening brings long queues.",
+          "where": "Paseo del Prado, Madrid",
+          "book": "",
+          "place": "spain/prado-museum"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Retiro Park",
+          "notes": "Rowing boats can be hired on the lake; Sunday afternoons are lively.",
+          "where": "Retiro, Madrid",
+          "book": "",
+          "place": "spain/retiro-park"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1h",
+          "name": "Temple of Debod sunset",
+          "notes": "A free exterior view; the interior closes early.",
+          "where": "Moncloa, Madrid",
+          "book": "",
+          "place": "spain/temple-of-debod"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Toledo",
+          "notes": "Steep, cobbled lanes; Santo Tomé holds El Greco's Burial of the Count of Orgaz. The city fills with day-trippers from late morning.",
+          "where": "Toledo",
+          "book": "",
+          "place": "spain/toledo"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Reina Sofía Museum",
+          "notes": "Closed on Tuesdays; a good last stop near Atocha station.",
+          "where": "Atocha, Madrid",
+          "book": "",
+          "place": "spain/reina-sofia"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Madrid Barajas Airport (MAD)",
+          "to": "Madrid hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Metro line 8 plus line 10 or a taxi, or the airport express bus",
+          "notes": "Taxis from the airport to the centre charge a fixed fare; the metro needs a supplement.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Madrid Atocha Station",
+          "to": "Toledo Station",
+          "time": "08:45",
+          "minutes": 35,
+          "carrier": "Avant high-speed train",
+          "notes": "The train is fast and frequent; the station is below the old town, so allow time for the climb or take the bus.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Toledo Station",
+          "to": "Madrid Atocha Station",
+          "time": "17:30",
+          "minutes": 35,
+          "carrier": "Avant high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Madrid hotel area",
+          "to": "Madrid Barajas Airport (MAD)",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Metro line 8 plus line 10 or a taxi, or the airport express bus",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "spain-madrid-seville-granada-7d",
+      "title": "Madrid, Seville and Granada in 7 Days",
+      "summary": "The classic first-timer's week: two nights each in Madrid, Seville and Granada, linked by high-speed train and coach.",
+      "days": 7,
+      "route": "Madrid > Seville > Granada",
+      "arrive": "Madrid (MAD)",
+      "depart": "Málaga (AGP)",
+      "countries": [
+        "Spain"
+      ],
+      "regions": [
+        "Madrid",
+        "Andalusia"
+      ],
+      "cities": [
+        "Madrid",
+        "Seville",
+        "Granada"
+      ],
+      "imageQuery": "Alhambra Granada Spain palace Nasrid",
+      "highlights": [
+        "Prado Museum",
+        "Seville Alcázar",
+        "Seville Cathedral",
+        "Alhambra",
+        "Tapas culture"
+      ],
+      "destinationKeys": [
+        "spain",
+        "spain/madrid",
+        "spain/andalusia",
+        "spain/seville",
+        "spain/granada"
+      ],
+      "hero": "spain/granada",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Madrid",
+          "hotel": "Hotel in Madrid",
+          "start": 0,
+          "nights": 2,
+          "area": "Sol, Huertas or Salamanca: central and walkable, on the metro, with tapas bars close by",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Seville",
+          "hotel": "Hotel in Seville",
+          "start": 2,
+          "nights": 2,
+          "area": "Santa Cruz or the Alfalfa district: walkable to the cathedral and Alcázar and quiet at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Granada",
+          "hotel": "Hotel in Granada",
+          "start": 4,
+          "nights": 2,
+          "area": "Near Plaza Nueva or the foot of the Albaicín: walkable to the cathedral, the tapas bars and the bus up to the Alhambra",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Plaza Mayor and Puerta del Sol",
+          "notes": "Both are crowded in the day, and pickpockets work the crowds, so keep bags closed and in front of you.",
+          "where": "Centro, Madrid",
+          "book": "",
+          "place": "spain/plaza-mayor-sol"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas crawl in La Latina",
+          "notes": "Spaniards dine late, so the bars fill after nine; have a drink and a plate or two at each stop.",
+          "where": "La Latina, Madrid",
+          "book": "",
+          "place": "spain/madrid-tapas-crawl"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Royal Palace of Madrid",
+          "notes": "Closed during official events, so check the schedule; photography is not allowed inside.",
+          "where": "Palacio, Madrid",
+          "book": "",
+          "place": "spain/royal-palace-madrid"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Prado Museum",
+          "notes": "Too big for one visit, so choose a few rooms; the free-entry period in the evening brings long queues.",
+          "where": "Paseo del Prado, Madrid",
+          "book": "",
+          "place": "spain/prado-museum"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Retiro Park",
+          "notes": "Rowing boats can be hired on the lake; Sunday afternoons are lively.",
+          "where": "Retiro, Madrid",
+          "book": "",
+          "place": "spain/retiro-park"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1h",
+          "name": "Temple of Debod sunset",
+          "notes": "A free exterior view; the interior closes early.",
+          "where": "Moncloa, Madrid",
+          "book": "",
+          "place": "spain/temple-of-debod"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Barrio de Santa Cruz",
+          "notes": "Easy to get lost in the lanes, which is part of the charm; cobbles are uneven.",
+          "where": "Santa Cruz, Seville",
+          "book": "",
+          "place": "spain/santa-cruz-seville"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas in Seville",
+          "notes": "Order a drink and one or two plates at each bar; sherry is the natural pairing.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/seville-tapas"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Real Alcázar of Seville",
+          "notes": "Timed tickets sell out, so book ahead and go early.",
+          "where": "Santa Cruz, Seville",
+          "book": "Yes - timed tickets sell out",
+          "place": "spain/seville-alcazar"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Seville Cathedral and the Giralda",
+          "notes": "The Giralda is climbed by ramps, not stairs; opening hours change on religious days.",
+          "where": "Centro, Seville",
+          "book": "",
+          "place": "spain/seville-cathedral"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Plaza de España and Parque de María Luisa",
+          "notes": "Rowing boats are available on the canal.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/plaza-de-espana"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Albaicín and the Mirador de San Nicolás",
+          "notes": "Sunset draws a crowd, so arrive early; the lanes are steep and cobbled.",
+          "where": "Albaicín, Granada",
+          "book": "",
+          "place": "spain/albaicin-viewpoint"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "21:00",
+          "duration": "2h",
+          "name": "Tapas in Granada",
+          "notes": "A free tapa usually comes with each drink; order drinks at the bar and eat standing.",
+          "where": "Granada",
+          "book": "",
+          "place": "spain/granada-tapas"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3.5h",
+          "name": "Alhambra and Generalife",
+          "notes": "Entry to the palaces is by strictly timed slot and tickets sell out weeks ahead; the site is large with steps and slopes.",
+          "where": "Alhambra, Granada",
+          "book": "Yes - timed Nasrid Palaces slots sell out weeks ahead",
+          "place": "spain/alhambra"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Granada Cathedral and the Royal Chapel",
+          "notes": "No photography in the chapel; the two are separate admissions.",
+          "where": "Centro, Granada",
+          "book": "",
+          "place": "spain/granada-cathedral"
+        },
+        {
+          "day": 5,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "1.5h",
+          "name": "Sacromonte flamenco",
+          "notes": "Reached by a steep walk, so many visitors take a taxi.",
+          "where": "Sacromonte, Granada",
+          "book": "Yes - cave venues are small",
+          "place": "spain/sacromonte-flamenco"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Madrid Barajas Airport (MAD)",
+          "to": "Madrid hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Metro line 8 plus line 10 or a taxi, or the airport express bus",
+          "notes": "Taxis from the airport to the centre charge a fixed fare; the metro needs a supplement.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Madrid Atocha Station",
+          "to": "Seville Santa Justa Station",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "AVE high-speed train",
+          "notes": "Book ahead for the best fares; seats are reserved.",
+          "book": "Yes - advance fares are much cheaper and seats are reserved"
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Seville Plaza de Armas bus station",
+          "to": "Granada bus station",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "ALSA coach",
+          "notes": "The coach is the simplest link; a train takes similar time with a change.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Granada bus station",
+          "to": "Málaga Airport (AGP)",
+          "time": "09:30",
+          "minutes": 105,
+          "carrier": "ALSA coach",
+          "notes": "The coach runs directly to the airport; allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "spain-andalusia-7d",
+      "title": "Seville, Córdoba and Granada in 7 Days",
+      "summary": "A week in Andalusia only: three nights in Seville, a night in Córdoba for the Mezquita, and two in Granada for the Alhambra.",
+      "days": 7,
+      "route": "Seville > Córdoba > Granada",
+      "arrive": "Seville (SVQ)",
+      "depart": "Málaga (AGP)",
+      "countries": [
+        "Spain"
+      ],
+      "regions": [
+        "Andalusia"
+      ],
+      "cities": [
+        "Seville",
+        "Córdoba",
+        "Granada"
+      ],
+      "imageQuery": "Seville Plaza de Espana Spain tiles bridge",
+      "highlights": [
+        "Seville Alcázar",
+        "Plaza de España",
+        "Mezquita of Córdoba",
+        "Alhambra",
+        "Flamenco"
+      ],
+      "destinationKeys": [
+        "spain",
+        "spain/andalusia",
+        "spain/seville",
+        "spain/cordoba",
+        "spain/granada"
+      ],
+      "hero": "spain/cordoba",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Seville",
+          "hotel": "Hotel in Seville",
+          "start": 0,
+          "nights": 3,
+          "area": "Santa Cruz or the Alfalfa district: walkable to the cathedral and Alcázar and quiet at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Córdoba",
+          "hotel": "Hotel in Córdoba",
+          "start": 3,
+          "nights": 1,
+          "area": "Near the Mezquita and the Judería, which are easily walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Granada",
+          "hotel": "Hotel in Granada",
+          "start": 4,
+          "nights": 2,
+          "area": "Near Plaza Nueva or the foot of the Albaicín: walkable to the cathedral, the tapas bars and the bus up to the Alhambra",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Barrio de Santa Cruz",
+          "notes": "Easy to get lost in the lanes, which is part of the charm; cobbles are uneven.",
+          "where": "Santa Cruz, Seville",
+          "book": "",
+          "place": "spain/santa-cruz-seville"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas in Seville",
+          "notes": "Order a drink and one or two plates at each bar; sherry is the natural pairing.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/seville-tapas"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Real Alcázar of Seville",
+          "notes": "Timed tickets sell out, so book ahead and go early.",
+          "where": "Santa Cruz, Seville",
+          "book": "Yes - timed tickets sell out",
+          "place": "spain/seville-alcazar"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Seville Cathedral and the Giralda",
+          "notes": "The Giralda is climbed by ramps, not stairs; opening hours change on religious days.",
+          "where": "Centro, Seville",
+          "book": "",
+          "place": "spain/seville-cathedral"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Plaza de España and Parque de María Luisa",
+          "notes": "Rowing boats are available on the canal.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/plaza-de-espana"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Triana",
+          "notes": "Cross the Puente de Isabel II for a view of the old city; the ceramics workshops and market are good for tapas.",
+          "where": "Triana, Seville",
+          "book": "",
+          "place": "spain/triana"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "20:30",
+          "duration": "1.5h",
+          "name": "Flamenco in Seville",
+          "notes": "Rooms are small, so book ahead; the shows are intense and short.",
+          "where": "Seville",
+          "book": "Yes - small venues fill up",
+          "place": "spain/flamenco-seville"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Mezquita-Cathedral of Córdoba",
+          "notes": "Early morning is quieter; certain hours are restricted for worship.",
+          "where": "Centro Histórico, Córdoba",
+          "book": "",
+          "place": "spain/mezquita-cordoba"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Córdoba Jewish Quarter and patios",
+          "notes": "Some patios are open to visitors outside the May festival; lanes are cobbled.",
+          "where": "Judería, Córdoba",
+          "book": "",
+          "place": "spain/cordoba-juderia"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Albaicín and the Mirador de San Nicolás",
+          "notes": "Sunset draws a crowd, so arrive early; the lanes are steep and cobbled.",
+          "where": "Albaicín, Granada",
+          "book": "",
+          "place": "spain/albaicin-viewpoint"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "21:00",
+          "duration": "2h",
+          "name": "Tapas in Granada",
+          "notes": "A free tapa usually comes with each drink; order drinks at the bar and eat standing.",
+          "where": "Granada",
+          "book": "",
+          "place": "spain/granada-tapas"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3.5h",
+          "name": "Alhambra and Generalife",
+          "notes": "Entry to the palaces is by strictly timed slot and tickets sell out weeks ahead; the site is large with steps and slopes.",
+          "where": "Alhambra, Granada",
+          "book": "Yes - timed Nasrid Palaces slots sell out weeks ahead",
+          "place": "spain/alhambra"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Granada Cathedral and the Royal Chapel",
+          "notes": "No photography in the chapel; the two are separate admissions.",
+          "where": "Centro, Granada",
+          "book": "",
+          "place": "spain/granada-cathedral"
+        },
+        {
+          "day": 5,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "1.5h",
+          "name": "Sacromonte flamenco",
+          "notes": "Reached by a steep walk, so many visitors take a taxi.",
+          "where": "Sacromonte, Granada",
+          "book": "Yes - cave venues are small",
+          "place": "spain/sacromonte-flamenco"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Seville Airport (SVQ)",
+          "to": "Seville hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Seville Santa Justa Station",
+          "to": "Córdoba Station",
+          "time": "09:00",
+          "minutes": 45,
+          "carrier": "AVE high-speed train",
+          "notes": "Frequent trains; the station is a short walk from the old town.",
+          "book": "Yes - seats are reserved"
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Córdoba Station",
+          "to": "Granada Station",
+          "time": "09:30",
+          "minutes": 140,
+          "carrier": "Avant train",
+          "notes": "There is no high-speed line to Granada, so this is a slower regional run.",
+          "book": "Yes - seats are reserved"
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Granada bus station",
+          "to": "Málaga Airport (AGP)",
+          "time": "09:30",
+          "minutes": 105,
+          "carrier": "ALSA coach",
+          "notes": "The coach runs directly to the airport; allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "spain-madrid-andalusia-barcelona-10d",
+      "title": "Madrid, Seville, Granada and Barcelona in 10 Days",
+      "summary": "The classic ten-day arc: Madrid with a Toledo day trip, Seville and Granada in Andalusia, then Barcelona for Gaudí.",
+      "days": 10,
+      "route": "Madrid (Toledo) > Seville > Granada > Barcelona",
+      "arrive": "Madrid (MAD)",
+      "depart": "Barcelona (BCN)",
+      "countries": [
+        "Spain"
+      ],
+      "regions": [
+        "Madrid",
+        "Castile-La Mancha",
+        "Andalusia",
+        "Catalonia"
+      ],
+      "cities": [
+        "Madrid",
+        "Toledo",
+        "Seville",
+        "Granada",
+        "Barcelona"
+      ],
+      "imageQuery": "Barcelona Sagrada Familia Spain Gaudi",
+      "highlights": [
+        "Prado Museum",
+        "Toledo",
+        "Seville Alcázar",
+        "Alhambra",
+        "Sagrada Família"
+      ],
+      "destinationKeys": [
+        "spain",
+        "spain/madrid",
+        "spain/castile-la-mancha",
+        "spain/toledo",
+        "spain/andalusia",
+        "spain/seville",
+        "spain/granada",
+        "spain/catalonia",
+        "spain/barcelona"
+      ],
+      "hero": "spain/barcelona",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "photography",
+        "nightlife"
+      ],
+      "stays": [
+        {
+          "base": "Madrid",
+          "hotel": "Hotel in Madrid",
+          "start": 0,
+          "nights": 3,
+          "area": "Sol, Huertas or Salamanca: central and walkable, on the metro, with tapas bars close by",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Seville",
+          "hotel": "Hotel in Seville",
+          "start": 3,
+          "nights": 2,
+          "area": "Santa Cruz or the Alfalfa district: walkable to the cathedral and Alcázar and quiet at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Granada",
+          "hotel": "Hotel in Granada",
+          "start": 5,
+          "nights": 2,
+          "area": "Near Plaza Nueva or the foot of the Albaicín: walkable to the cathedral, the tapas bars and the bus up to the Alhambra",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Barcelona",
+          "hotel": "Hotel in Barcelona",
+          "start": 7,
+          "nights": 2,
+          "area": "Eixample near Passeig de Gràcia, or the Gothic Quarter or El Born for atmosphere; the Eixample is quieter at night",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Plaza Mayor and Puerta del Sol",
+          "notes": "Both are crowded in the day, and pickpockets work the crowds, so keep bags closed and in front of you.",
+          "where": "Centro, Madrid",
+          "book": "",
+          "place": "spain/plaza-mayor-sol"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas crawl in La Latina",
+          "notes": "Spaniards dine late, so the bars fill after nine; have a drink and a plate or two at each stop.",
+          "where": "La Latina, Madrid",
+          "book": "",
+          "place": "spain/madrid-tapas-crawl"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Royal Palace of Madrid",
+          "notes": "Closed during official events, so check the schedule; photography is not allowed inside.",
+          "where": "Palacio, Madrid",
+          "book": "",
+          "place": "spain/royal-palace-madrid"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Prado Museum",
+          "notes": "Too big for one visit, so choose a few rooms; the free-entry period in the evening brings long queues.",
+          "where": "Paseo del Prado, Madrid",
+          "book": "",
+          "place": "spain/prado-museum"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Retiro Park",
+          "notes": "Rowing boats can be hired on the lake; Sunday afternoons are lively.",
+          "where": "Retiro, Madrid",
+          "book": "",
+          "place": "spain/retiro-park"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1h",
+          "name": "Temple of Debod sunset",
+          "notes": "A free exterior view; the interior closes early.",
+          "where": "Moncloa, Madrid",
+          "book": "",
+          "place": "spain/temple-of-debod"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Toledo",
+          "notes": "Steep, cobbled lanes; Santo Tomé holds El Greco's Burial of the Count of Orgaz. The city fills with day-trippers from late morning.",
+          "where": "Toledo",
+          "book": "",
+          "place": "spain/toledo"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Barrio de Santa Cruz",
+          "notes": "Easy to get lost in the lanes, which is part of the charm; cobbles are uneven.",
+          "where": "Santa Cruz, Seville",
+          "book": "",
+          "place": "spain/santa-cruz-seville"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas in Seville",
+          "notes": "Order a drink and one or two plates at each bar; sherry is the natural pairing.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/seville-tapas"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Real Alcázar of Seville",
+          "notes": "Timed tickets sell out, so book ahead and go early.",
+          "where": "Santa Cruz, Seville",
+          "book": "Yes - timed tickets sell out",
+          "place": "spain/seville-alcazar"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Seville Cathedral and the Giralda",
+          "notes": "The Giralda is climbed by ramps, not stairs; opening hours change on religious days.",
+          "where": "Centro, Seville",
+          "book": "",
+          "place": "spain/seville-cathedral"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Plaza de España and Parque de María Luisa",
+          "notes": "Rowing boats are available on the canal.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/plaza-de-espana"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Albaicín and the Mirador de San Nicolás",
+          "notes": "Sunset draws a crowd, so arrive early; the lanes are steep and cobbled.",
+          "where": "Albaicín, Granada",
+          "book": "",
+          "place": "spain/albaicin-viewpoint"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "21:00",
+          "duration": "2h",
+          "name": "Tapas in Granada",
+          "notes": "A free tapa usually comes with each drink; order drinks at the bar and eat standing.",
+          "where": "Granada",
+          "book": "",
+          "place": "spain/granada-tapas"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3.5h",
+          "name": "Alhambra and Generalife",
+          "notes": "Entry to the palaces is by strictly timed slot and tickets sell out weeks ahead; the site is large with steps and slopes.",
+          "where": "Alhambra, Granada",
+          "book": "Yes - timed Nasrid Palaces slots sell out weeks ahead",
+          "place": "spain/alhambra"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Granada Cathedral and the Royal Chapel",
+          "notes": "No photography in the chapel; the two are separate admissions.",
+          "where": "Centro, Granada",
+          "book": "",
+          "place": "spain/granada-cathedral"
+        },
+        {
+          "day": 6,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "1.5h",
+          "name": "Sacromonte flamenco",
+          "notes": "Reached by a steep walk, so many visitors take a taxi.",
+          "where": "Sacromonte, Granada",
+          "book": "Yes - cave venues are small",
+          "place": "spain/sacromonte-flamenco"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Gothic Quarter",
+          "notes": "Pickpockets work the tourist areas, particularly in the evening.",
+          "where": "Barri Gòtic, Barcelona",
+          "book": "",
+          "place": "spain/barri-gotic"
+        },
+        {
+          "day": 7,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas in El Born",
+          "notes": "Dinner is late, from about nine.",
+          "where": "El Born, Barcelona",
+          "book": "",
+          "place": "spain/el-born-tapas"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Sagrada Família",
+          "notes": "Entry is by timed ticket; book well in advance. Towers are extra and reached by lift. Dress codes apply.",
+          "where": "Eixample, Barcelona",
+          "book": "Yes - timed tickets sell out well ahead",
+          "place": "spain/sagrada-familia"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "12:00",
+          "duration": "1h",
+          "name": "Casa Batlló",
+          "notes": "The audio guide leads you through; timed tickets avoid long queues.",
+          "where": "Passeig de Gràcia, Barcelona",
+          "book": "Yes - timed tickets avoid long queues",
+          "place": "spain/casa-batllo"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Park Güell",
+          "notes": "The monumental zone has timed entry with limited numbers; the park is hilly.",
+          "where": "Gràcia, Barcelona",
+          "book": "Yes - timed entry with limited numbers",
+          "place": "spain/park-guell"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Barceloneta beach",
+          "notes": "Crowded in summer; keep valuables close.",
+          "where": "Barceloneta, Barcelona",
+          "book": "",
+          "place": "spain/barceloneta-beach"
+        },
+        {
+          "day": 9,
+          "type": "Shopping",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "La Boqueria market",
+          "notes": "Closed on Sundays; the best value is at the stalls further in from the entrance.",
+          "where": "La Rambla, Barcelona",
+          "book": "",
+          "place": "spain/la-boqueria"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Madrid Barajas Airport (MAD)",
+          "to": "Madrid hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Metro line 8 plus line 10 or a taxi, or the airport express bus",
+          "notes": "Taxis from the airport to the centre charge a fixed fare; the metro needs a supplement.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Madrid Atocha Station",
+          "to": "Toledo Station",
+          "time": "08:45",
+          "minutes": 35,
+          "carrier": "Avant high-speed train",
+          "notes": "The train is fast and frequent; the station is below the old town, so allow time for the climb or take the bus.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Toledo Station",
+          "to": "Madrid Atocha Station",
+          "time": "17:30",
+          "minutes": 35,
+          "carrier": "Avant high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Madrid Atocha Station",
+          "to": "Seville Santa Justa Station",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "AVE high-speed train",
+          "notes": "Book ahead for the best fares; seats are reserved.",
+          "book": "Yes - advance fares are much cheaper and seats are reserved"
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Seville Plaza de Armas bus station",
+          "to": "Granada bus station",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "ALSA coach",
+          "notes": "The coach is the simplest link; a train takes similar time with a change.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Granada hotel area",
+          "to": "Granada Airport (GRX)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or airport bus",
+          "notes": "This covers the ground leg to the departure airport only; Granada to Barcelona is a short domestic flight (a train via Madrid takes much longer).",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Barcelona El Prat Airport (BCN)",
+          "to": "Barcelona hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Aerobús, metro line 9 Sud or a taxi",
+          "notes": "The Aerobús runs to Plaça Catalunya.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Barcelona hotel area",
+          "to": "Barcelona El Prat Airport (BCN)",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Aerobús, metro line 9 Sud or a taxi",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "spain-barcelona-valencia-madrid-andalusia-14d",
+      "title": "Barcelona, Valencia, Madrid, Seville and Granada in 14 Days",
+      "summary": "A fortnight down the length of Spain by high-speed train: Catalonia, the Mediterranean coast, the capital, and Andalusia's Moorish cities.",
+      "days": 14,
+      "route": "Barcelona (Montserrat) > Valencia > Madrid (Toledo) > Seville (Córdoba) > Granada",
+      "arrive": "Barcelona (BCN)",
+      "depart": "Málaga (AGP)",
+      "countries": [
+        "Spain"
+      ],
+      "regions": [
+        "Catalonia",
+        "Valencian Community",
+        "Madrid",
+        "Castile-La Mancha",
+        "Andalusia"
+      ],
+      "cities": [
+        "Barcelona",
+        "Montserrat",
+        "Valencia",
+        "Madrid",
+        "Toledo",
+        "Seville",
+        "Córdoba",
+        "Granada"
+      ],
+      "imageQuery": "Valencia Spain City of Arts and Sciences",
+      "highlights": [
+        "Sagrada Família",
+        "Valencia Central Market",
+        "Prado Museum",
+        "Mezquita of Córdoba",
+        "Alhambra"
+      ],
+      "destinationKeys": [
+        "spain",
+        "spain/catalonia",
+        "spain/barcelona",
+        "spain/montserrat",
+        "spain/valencian-community",
+        "spain/valencia",
+        "spain/madrid",
+        "spain/castile-la-mancha",
+        "spain/toledo",
+        "spain/andalusia",
+        "spain/seville",
+        "spain/cordoba",
+        "spain/granada"
+      ],
+      "hero": "spain/valencia",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Barcelona",
+          "hotel": "Hotel in Barcelona",
+          "start": 0,
+          "nights": 3,
+          "area": "Eixample near Passeig de Gràcia, or the Gothic Quarter or El Born for atmosphere; the Eixample is quieter at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Valencia",
+          "hotel": "Hotel in Valencia",
+          "start": 3,
+          "nights": 2,
+          "area": "Ciutat Vella (the old town) near the Central Market, walkable to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Madrid",
+          "hotel": "Hotel in Madrid",
+          "start": 5,
+          "nights": 3,
+          "area": "Sol, Huertas or Salamanca: central and walkable, on the metro, with tapas bars close by",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Seville",
+          "hotel": "Hotel in Seville",
+          "start": 8,
+          "nights": 3,
+          "area": "Santa Cruz or the Alfalfa district: walkable to the cathedral and Alcázar and quiet at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Granada",
+          "hotel": "Hotel in Granada",
+          "start": 11,
+          "nights": 2,
+          "area": "Near Plaza Nueva or the foot of the Albaicín: walkable to the cathedral, the tapas bars and the bus up to the Alhambra",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Gothic Quarter",
+          "notes": "Pickpockets work the tourist areas, particularly in the evening.",
+          "where": "Barri Gòtic, Barcelona",
+          "book": "",
+          "place": "spain/barri-gotic"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas in El Born",
+          "notes": "Dinner is late, from about nine; the streets are crowded on weekends.",
+          "where": "El Born, Barcelona",
+          "book": "",
+          "place": "spain/el-born-tapas"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Sagrada Família",
+          "notes": "Entry is by timed ticket; book well in advance. Towers are extra and reached by lift. Dress codes apply.",
+          "where": "Eixample, Barcelona",
+          "book": "Yes - timed tickets sell out well ahead",
+          "place": "spain/sagrada-familia"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:00",
+          "duration": "1h",
+          "name": "Casa Batlló",
+          "notes": "The audio guide leads you through; timed tickets avoid long queues.",
+          "where": "Passeig de Gràcia, Barcelona",
+          "book": "Yes - timed tickets avoid long queues",
+          "place": "spain/casa-batllo"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Park Güell",
+          "notes": "The monumental zone has timed entry with limited numbers; the park is hilly.",
+          "where": "Gràcia, Barcelona",
+          "book": "Yes - timed entry with limited numbers",
+          "place": "spain/park-guell"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Barceloneta beach",
+          "notes": "Crowded in summer; keep valuables close.",
+          "where": "Barceloneta, Barcelona",
+          "book": "",
+          "place": "spain/barceloneta-beach"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Montserrat monastery",
+          "notes": "The rack railway or cable car climbs from the valley; check when the boys' choir sings. The mountain is cooler and the trails rocky.",
+          "where": "Montserrat",
+          "book": "",
+          "place": "spain/montserrat"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "2h",
+          "name": "Montjuïc",
+          "notes": "A cable car runs up; the Magic Fountain shows run on set evenings in season, and some sites close on Mondays.",
+          "where": "Montjuïc, Barcelona",
+          "book": "",
+          "place": "spain/montjuic"
+        },
+        {
+          "day": 3,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Valencia Central Market and La Lonja",
+          "notes": "The market closes in the afternoon; go in the morning if you can.",
+          "where": "Ciutat Vella, Valencia",
+          "book": "",
+          "place": "spain/valencia-central-market"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "City of Arts and Sciences",
+          "notes": "Best seen from outside; there is little shade.",
+          "where": "Valencia",
+          "book": "",
+          "place": "spain/city-of-arts-sciences"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "13:30",
+          "duration": "3h",
+          "name": "Albufera lagoon and paella",
+          "notes": "Paella valenciana is made with rabbit, chicken and beans; many lunch spots close by late afternoon.",
+          "where": "El Palmar, Valencia",
+          "book": "",
+          "place": "spain/albufera-paella"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Turia Gardens",
+          "notes": "Hire a bike to cover the length; paths are flat.",
+          "where": "Valencia",
+          "book": "",
+          "place": "spain/turia-gardens"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Plaza Mayor and Puerta del Sol",
+          "notes": "Both are crowded in the day, and pickpockets work the crowds, so keep bags closed and in front of you.",
+          "where": "Centro, Madrid",
+          "book": "",
+          "place": "spain/plaza-mayor-sol"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas crawl in La Latina",
+          "notes": "Spaniards dine late, so the bars fill after nine; have a drink and a plate or two at each stop.",
+          "where": "La Latina, Madrid",
+          "book": "",
+          "place": "spain/madrid-tapas-crawl"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Royal Palace of Madrid",
+          "notes": "Closed during official events, so check the schedule; photography is not allowed inside.",
+          "where": "Palacio, Madrid",
+          "book": "",
+          "place": "spain/royal-palace-madrid"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Prado Museum",
+          "notes": "Too big for one visit, so choose a few rooms; the free-entry period in the evening brings long queues.",
+          "where": "Paseo del Prado, Madrid",
+          "book": "",
+          "place": "spain/prado-museum"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Retiro Park",
+          "notes": "Rowing boats can be hired on the lake; Sunday afternoons are lively.",
+          "where": "Retiro, Madrid",
+          "book": "",
+          "place": "spain/retiro-park"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1h",
+          "name": "Temple of Debod sunset",
+          "notes": "A free exterior view; the interior closes early.",
+          "where": "Moncloa, Madrid",
+          "book": "",
+          "place": "spain/temple-of-debod"
+        },
+        {
+          "day": 6,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "1.5h",
+          "name": "Flamenco show in a tablao",
+          "notes": "Small venues with limited seating, so book ahead; shows start late.",
+          "where": "Madrid",
+          "book": "Yes - small venues fill up",
+          "place": "spain/flamenco-madrid"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Toledo",
+          "notes": "Steep, cobbled lanes; Santo Tomé holds El Greco's Burial of the Count of Orgaz. The city fills with day-trippers from late morning.",
+          "where": "Toledo",
+          "book": "",
+          "place": "spain/toledo"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Barrio de Santa Cruz",
+          "notes": "Easy to get lost in the lanes, which is part of the charm; cobbles are uneven.",
+          "where": "Santa Cruz, Seville",
+          "book": "",
+          "place": "spain/santa-cruz-seville"
+        },
+        {
+          "day": 8,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas in Seville",
+          "notes": "Order a drink and one or two plates at each bar; sherry is the natural pairing.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/seville-tapas"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Real Alcázar of Seville",
+          "notes": "Timed tickets sell out, so book ahead and go early.",
+          "where": "Santa Cruz, Seville",
+          "book": "Yes - timed tickets sell out",
+          "place": "spain/seville-alcazar"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Seville Cathedral and the Giralda",
+          "notes": "The Giralda is climbed by ramps, not stairs; opening hours change on religious days.",
+          "where": "Centro, Seville",
+          "book": "",
+          "place": "spain/seville-cathedral"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Plaza de España and Parque de María Luisa",
+          "notes": "Rowing boats are available on the canal.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/plaza-de-espana"
+        },
+        {
+          "day": 10,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Mezquita-Cathedral of Córdoba",
+          "notes": "Early morning is quieter; certain hours are restricted for worship.",
+          "where": "Centro Histórico, Córdoba",
+          "book": "",
+          "place": "spain/mezquita-cordoba"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Córdoba Jewish Quarter and patios",
+          "notes": "Some patios are open to visitors outside the May festival; lanes are cobbled.",
+          "where": "Judería, Córdoba",
+          "book": "",
+          "place": "spain/cordoba-juderia"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Albaicín and the Mirador de San Nicolás",
+          "notes": "Sunset draws a crowd, so arrive early; the lanes are steep and cobbled.",
+          "where": "Albaicín, Granada",
+          "book": "",
+          "place": "spain/albaicin-viewpoint"
+        },
+        {
+          "day": 11,
+          "type": "Food & Drink",
+          "time": "21:00",
+          "duration": "2h",
+          "name": "Tapas in Granada",
+          "notes": "A free tapa usually comes with each drink; order drinks at the bar and eat standing.",
+          "where": "Granada",
+          "book": "",
+          "place": "spain/granada-tapas"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3.5h",
+          "name": "Alhambra and Generalife",
+          "notes": "Entry to the palaces is by strictly timed slot and tickets sell out weeks ahead; the site is large with steps and slopes.",
+          "where": "Alhambra, Granada",
+          "book": "Yes - timed Nasrid Palaces slots sell out weeks ahead",
+          "place": "spain/alhambra"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Granada Cathedral and the Royal Chapel",
+          "notes": "No photography in the chapel; the two are separate admissions.",
+          "where": "Centro, Granada",
+          "book": "",
+          "place": "spain/granada-cathedral"
+        },
+        {
+          "day": 12,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "1.5h",
+          "name": "Sacromonte flamenco",
+          "notes": "Reached by a steep walk, so many visitors take a taxi.",
+          "where": "Sacromonte, Granada",
+          "book": "Yes - cave venues are small",
+          "place": "spain/sacromonte-flamenco"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Barcelona El Prat Airport (BCN)",
+          "to": "Barcelona hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Aerobús, metro line 9 Sud or a taxi",
+          "notes": "The Aerobús runs to Plaça Catalunya.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Barcelona Plaça Espanya",
+          "to": "Montserrat",
+          "time": "08:00",
+          "minutes": 75,
+          "carrier": "R5 train plus rack railway",
+          "notes": "Trains and the rack railway connect at Monistrol.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Montserrat",
+          "to": "Barcelona Plaça Espanya",
+          "time": "15:30",
+          "minutes": 75,
+          "carrier": "Rack railway plus R5 train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Barcelona Sants Station",
+          "to": "Valencia Joaquín Sorolla Station",
+          "time": "09:00",
+          "minutes": 185,
+          "carrier": "AVE or Euromed high-speed train",
+          "notes": "Book ahead for the best fares.",
+          "book": "Yes - advance fares are much cheaper and seats are reserved"
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Valencia",
+          "to": "El Palmar",
+          "time": "12:45",
+          "minutes": 30,
+          "carrier": "Bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "El Palmar",
+          "to": "Valencia",
+          "time": "17:15",
+          "minutes": 30,
+          "carrier": "Bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Valencia Joaquín Sorolla Station",
+          "to": "Madrid Atocha Station",
+          "time": "09:00",
+          "minutes": 100,
+          "carrier": "AVE high-speed train",
+          "notes": "",
+          "book": "Yes - advance fares are much cheaper and seats are reserved"
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Madrid Atocha Station",
+          "to": "Toledo Station",
+          "time": "08:45",
+          "minutes": 35,
+          "carrier": "Avant high-speed train",
+          "notes": "The train is fast and frequent; the station is below the old town, so allow time for the climb or take the bus.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Toledo Station",
+          "to": "Madrid Atocha Station",
+          "time": "17:30",
+          "minutes": 35,
+          "carrier": "Avant high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Madrid Atocha Station",
+          "to": "Seville Santa Justa Station",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "AVE high-speed train",
+          "notes": "Book ahead for the best fares; seats are reserved.",
+          "book": "Yes - advance fares are much cheaper and seats are reserved"
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Seville Santa Justa Station",
+          "to": "Córdoba Station",
+          "time": "09:30",
+          "minutes": 45,
+          "carrier": "AVE high-speed train",
+          "notes": "Frequent trains; the station is a short walk from the old town.",
+          "book": "Yes - seats are reserved"
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Córdoba Station",
+          "to": "Seville Santa Justa Station",
+          "time": "18:00",
+          "minutes": 45,
+          "carrier": "AVE high-speed train",
+          "notes": "",
+          "book": "Yes - seats are reserved"
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Seville Plaza de Armas bus station",
+          "to": "Granada bus station",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "ALSA coach",
+          "notes": "The coach is the simplest link; a train takes similar time with a change.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Public Transit",
+          "from": "Granada bus station",
+          "to": "Málaga Airport (AGP)",
+          "time": "09:30",
+          "minutes": 105,
+          "carrier": "ALSA coach",
+          "notes": "The coach runs directly to the airport; allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "spain-barcelona-basque-madrid-seville-14d",
+      "title": "Barcelona, the Basque Country, Madrid and Seville in 14 Days",
+      "summary": "A fortnight that swaps Granada for the north: Barcelona, Bilbao's Guggenheim, three days of pintxos in San Sebastián, then Madrid and Seville.",
+      "days": 14,
+      "route": "Barcelona (Montserrat) > Bilbao > San Sebastián (Getaria) > Madrid (Toledo) > Seville",
+      "arrive": "Barcelona (BCN)",
+      "depart": "Seville (SVQ)",
+      "countries": [
+        "Spain"
+      ],
+      "regions": [
+        "Catalonia",
+        "Basque Country",
+        "Madrid",
+        "Castile-La Mancha",
+        "Andalusia"
+      ],
+      "cities": [
+        "Barcelona",
+        "Montserrat",
+        "Bilbao",
+        "San Sebastián",
+        "Getaria",
+        "Madrid",
+        "Toledo",
+        "Seville"
+      ],
+      "imageQuery": "San Sebastian La Concha bay Basque Country Spain",
+      "highlights": [
+        "Sagrada Família",
+        "Guggenheim Bilbao",
+        "Pintxos in San Sebastián",
+        "Prado Museum",
+        "Seville Alcázar"
+      ],
+      "destinationKeys": [
+        "spain",
+        "spain/catalonia",
+        "spain/barcelona",
+        "spain/montserrat",
+        "spain/basque-country",
+        "spain/bilbao",
+        "spain/san-sebastian",
+        "spain/getaria",
+        "spain/madrid",
+        "spain/castile-la-mancha",
+        "spain/toledo",
+        "spain/andalusia",
+        "spain/seville"
+      ],
+      "hero": "spain/san-sebastian",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "R",
+      "interests": [
+        "food",
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Barcelona",
+          "hotel": "Hotel in Barcelona",
+          "start": 0,
+          "nights": 3,
+          "area": "Eixample near Passeig de Gràcia, or the Gothic Quarter or El Born for atmosphere; the Eixample is quieter at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bilbao",
+          "hotel": "Hotel in Bilbao",
+          "start": 3,
+          "nights": 2,
+          "area": "Near the Casco Viejo, or Abando on the south bank of the river for easy transport",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San Sebastián",
+          "hotel": "Hotel in San Sebastián",
+          "start": 5,
+          "nights": 3,
+          "area": "In the Parte Vieja or Centro, near La Concha bay and the pintxo bars",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Madrid",
+          "hotel": "Hotel in Madrid",
+          "start": 8,
+          "nights": 3,
+          "area": "Sol, Huertas or Salamanca: central and walkable, on the metro, with tapas bars close by",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Seville",
+          "hotel": "Hotel in Seville",
+          "start": 11,
+          "nights": 2,
+          "area": "Santa Cruz or the Alfalfa district: walkable to the cathedral and Alcázar and quiet at night",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Gothic Quarter",
+          "notes": "Pickpockets work the tourist areas, particularly in the evening.",
+          "where": "Barri Gòtic, Barcelona",
+          "book": "",
+          "place": "spain/barri-gotic"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas in El Born",
+          "notes": "Dinner is late, from about nine; the streets are crowded on weekends.",
+          "where": "El Born, Barcelona",
+          "book": "",
+          "place": "spain/el-born-tapas"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Sagrada Família",
+          "notes": "Entry is by timed ticket; book well in advance. Towers are extra and reached by lift. Dress codes apply.",
+          "where": "Eixample, Barcelona",
+          "book": "Yes - timed tickets sell out well ahead",
+          "place": "spain/sagrada-familia"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:00",
+          "duration": "1h",
+          "name": "Casa Batlló",
+          "notes": "The audio guide leads you through; timed tickets avoid long queues.",
+          "where": "Passeig de Gràcia, Barcelona",
+          "book": "Yes - timed tickets avoid long queues",
+          "place": "spain/casa-batllo"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Park Güell",
+          "notes": "The monumental zone has timed entry with limited numbers; the park is hilly.",
+          "where": "Gràcia, Barcelona",
+          "book": "Yes - timed entry with limited numbers",
+          "place": "spain/park-guell"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Barceloneta beach",
+          "notes": "Crowded in summer; keep valuables close.",
+          "where": "Barceloneta, Barcelona",
+          "book": "",
+          "place": "spain/barceloneta-beach"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Montserrat monastery",
+          "notes": "The rack railway or cable car climbs from the valley; check when the boys' choir sings. The mountain is cooler and the trails rocky.",
+          "where": "Montserrat",
+          "book": "",
+          "place": "spain/montserrat"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "2h",
+          "name": "Montjuïc",
+          "notes": "A cable car runs up; the Magic Fountain shows run on set evenings in season, and some sites close on Mondays.",
+          "where": "Montjuïc, Barcelona",
+          "book": "",
+          "place": "spain/montjuic"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Guggenheim Museum Bilbao",
+          "notes": "The exterior is as much the draw as the collection; closed on Mondays in winter.",
+          "where": "Abando, Bilbao",
+          "book": "",
+          "place": "spain/guggenheim-bilbao"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "Casco Viejo and pintxos",
+          "notes": "Order at the bar and keep track of what you eat; evenings are busy.",
+          "where": "Casco Viejo, Bilbao",
+          "book": "",
+          "place": "spain/bilbao-casco-viejo"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "La Concha Bay",
+          "notes": "A flat promenade walk along the whole bay.",
+          "where": "La Concha, San Sebastián",
+          "book": "",
+          "place": "spain/la-concha"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "20:00",
+          "duration": "2.5h",
+          "name": "Pintxos in the Parte Vieja",
+          "notes": "Have one or two pintxos and a glass of txakoli at each stop; many bars close for part of the afternoon.",
+          "where": "Parte Vieja, San Sebastián",
+          "book": "",
+          "place": "spain/parte-vieja-pintxos"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "1.5h",
+          "name": "Monte Igueldo",
+          "notes": "A vintage funicular runs to the top; best on a clear day, and it does not run in bad weather.",
+          "where": "Monte Igueldo, San Sebastián",
+          "book": "",
+          "place": "spain/monte-igueldo"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "3h",
+          "name": "Beach afternoon on La Concha",
+          "notes": "The beach is busy in summer.",
+          "where": "La Concha, San Sebastián",
+          "book": "",
+          "place": "spain/la-concha"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Getaria and the Basque coast",
+          "notes": "Grilled turbot, txakoli vineyards and the Balenciaga Museum; a long lunch is the point.",
+          "where": "Getaria, Basque Country",
+          "book": "",
+          "place": "spain/getaria-coast"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Plaza Mayor and Puerta del Sol",
+          "notes": "Both are crowded in the day, and pickpockets work the crowds, so keep bags closed and in front of you.",
+          "where": "Centro, Madrid",
+          "book": "",
+          "place": "spain/plaza-mayor-sol"
+        },
+        {
+          "day": 8,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas crawl in La Latina",
+          "notes": "Spaniards dine late, so the bars fill after nine; have a drink and a plate or two at each stop.",
+          "where": "La Latina, Madrid",
+          "book": "",
+          "place": "spain/madrid-tapas-crawl"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Royal Palace of Madrid",
+          "notes": "Closed during official events, so check the schedule; photography is not allowed inside.",
+          "where": "Palacio, Madrid",
+          "book": "",
+          "place": "spain/royal-palace-madrid"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2.5h",
+          "name": "Prado Museum",
+          "notes": "Too big for one visit, so choose a few rooms; the free-entry period in the evening brings long queues.",
+          "where": "Paseo del Prado, Madrid",
+          "book": "",
+          "place": "spain/prado-museum"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Retiro Park",
+          "notes": "Rowing boats can be hired on the lake; Sunday afternoons are lively.",
+          "where": "Retiro, Madrid",
+          "book": "",
+          "place": "spain/retiro-park"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1h",
+          "name": "Temple of Debod sunset",
+          "notes": "A free exterior view; the interior closes early.",
+          "where": "Moncloa, Madrid",
+          "book": "",
+          "place": "spain/temple-of-debod"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Toledo",
+          "notes": "Steep, cobbled lanes; Santo Tomé holds El Greco's Burial of the Count of Orgaz. The city fills with day-trippers from late morning.",
+          "where": "Toledo",
+          "book": "",
+          "place": "spain/toledo"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Barrio de Santa Cruz",
+          "notes": "Easy to get lost in the lanes, which is part of the charm; cobbles are uneven.",
+          "where": "Santa Cruz, Seville",
+          "book": "",
+          "place": "spain/santa-cruz-seville"
+        },
+        {
+          "day": 11,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Tapas in Seville",
+          "notes": "Order a drink and one or two plates at each bar; sherry is the natural pairing.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/seville-tapas"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Real Alcázar of Seville",
+          "notes": "Timed tickets sell out, so book ahead and go early.",
+          "where": "Santa Cruz, Seville",
+          "book": "Yes - timed tickets sell out",
+          "place": "spain/seville-alcazar"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Seville Cathedral and the Giralda",
+          "notes": "The Giralda is climbed by ramps, not stairs; opening hours change on religious days.",
+          "where": "Centro, Seville",
+          "book": "",
+          "place": "spain/seville-cathedral"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Plaza de España and Parque de María Luisa",
+          "notes": "Rowing boats are available on the canal.",
+          "where": "Seville",
+          "book": "",
+          "place": "spain/plaza-de-espana"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Barcelona El Prat Airport (BCN)",
+          "to": "Barcelona hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Aerobús, metro line 9 Sud or a taxi",
+          "notes": "The Aerobús runs to Plaça Catalunya.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Barcelona Plaça Espanya",
+          "to": "Montserrat",
+          "time": "08:00",
+          "minutes": 75,
+          "carrier": "R5 train plus rack railway",
+          "notes": "Trains and the rack railway connect at Monistrol.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Montserrat",
+          "to": "Barcelona Plaça Espanya",
+          "time": "15:30",
+          "minutes": 75,
+          "carrier": "Rack railway plus R5 train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Barcelona hotel area",
+          "to": "Barcelona El Prat Airport (BCN)",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Aerobús, metro line 9 Sud or a taxi",
+          "notes": "This covers the ground leg to the departure airport only; Barcelona to Bilbao is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Bilbao Airport (BIO)",
+          "to": "Bilbao hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Bilbao Termibus",
+          "to": "San Sebastián bus station",
+          "time": "10:00",
+          "minutes": 80,
+          "carrier": "PESA or ALSA coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "San Sebastián",
+          "to": "Getaria",
+          "time": "09:30",
+          "minutes": 40,
+          "carrier": "Local bus or train plus bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Getaria",
+          "to": "San Sebastián",
+          "time": "16:00",
+          "minutes": 40,
+          "carrier": "Local bus or train plus bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "San Sebastián station",
+          "to": "Madrid Chamartín Station",
+          "time": "09:00",
+          "minutes": 320,
+          "carrier": "Alvia long-distance train",
+          "notes": "A long scenic ride across the plateau; book a seat ahead.",
+          "book": "Yes - seats are reserved"
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Madrid Atocha Station",
+          "to": "Toledo Station",
+          "time": "08:45",
+          "minutes": 35,
+          "carrier": "Avant high-speed train",
+          "notes": "The train is fast and frequent; the station is below the old town, so allow time for the climb or take the bus.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Toledo Station",
+          "to": "Madrid Atocha Station",
+          "time": "17:30",
+          "minutes": 35,
+          "carrier": "Avant high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Madrid Atocha Station",
+          "to": "Seville Santa Justa Station",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "AVE high-speed train",
+          "notes": "Book ahead for the best fares; seats are reserved.",
+          "book": "Yes - advance fares are much cheaper and seats are reserved"
+        },
+        {
+          "day": 13,
+          "transferType": "Public Transit",
+          "from": "Seville hotel area",
+          "to": "Seville Airport (SVQ)",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Airport bus or taxi",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "spain/plaza-mayor-sol": {
+        "name": "Plaza Mayor and Puerta del Sol",
+        "description": "Madrid's arcaded seventeenth-century main square and the busy plaza nearby that marks the centre of the country's road network.",
+        "details": "The Plaza Mayor is a closed rectangular square of tall, uniform buildings with arcades, built in the early seventeenth century and used for markets, bullfights and public ceremonies. A short walk away, the Puerta del Sol is the city's busiest square, with a plaque in the pavement marking kilometre zero of Spain's roads and a statue of a bear and strawberry tree. Both are crowded in the day, and cafe terraces on the Plaza Mayor charge more than other places nearby. Pickpockets work the crowds.",
+        "interests": [
+          "iconic_landmarks",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/madrid-tapas-crawl": {
+        "name": "Tapas crawl in La Latina",
+        "description": "An evening of small plates and wine moving between bars on Calle Cava Baja and the lanes around it.",
+        "details": "La Latina is one of the oldest districts of Madrid and its main street for eating, Cava Baja, is lined with bars serving tapas such as croquetas, tortilla, jamón and fried squid. The local custom is to take a drink and a plate or two at each bar before moving on. Spaniards eat late, with the busiest hours after nine, and the district is lively on Sundays after the El Rastro flea market nearby. Standing at the bar is usually cheaper than a table.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/royal-palace-madrid": {
+        "name": "Royal Palace of Madrid",
+        "description": "The ceremonial palace of the Spanish royal family, one of the largest in Europe, with lavish state rooms and a royal armoury.",
+        "details": "The Royal Palace was built in the eighteenth century on the site of an earlier Alcázar that burned down, and is still used for state ceremonies though the royal family lives elsewhere. Its state rooms have ornate ceilings, tapestries, chandeliers and a throne room, and the royal armoury holds historic armour and weapons. The palace closes during official events, so check the schedule. Photography is not allowed inside.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "spain/prado-museum": {
+        "name": "Prado Museum",
+        "description": "Spain's national art museum, holding major works by Velázquez, Goya, El Greco and Bosch.",
+        "details": "The Prado is housed in a neoclassical building completed in the early nineteenth century, and holds the great Spanish royal collection. Highlights include Velázquez's Las Meninas, Goya's Black Paintings and Bosch's Garden of Earthly Delights. It is too big to see in one visit, so a short list of rooms is wise. Free-entry periods in the evening bring long queues.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/retiro-park": {
+        "name": "Retiro Park",
+        "description": "Madrid's grand central park, with a boating lake, a glass palace, rose gardens and shaded avenues.",
+        "details": "El Retiro was once the private grounds of a royal palace and became a public park in the nineteenth century. It has a large lake where rowing boats can be hired, a glass-and-iron pavilion called the Crystal Palace, a formal rose garden and tree-lined avenues. It is a UNESCO-listed part of the Paseo del Arte landscape. Sunday afternoons are lively with performers and families.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/reina-sofia": {
+        "name": "Reina Sofía Museum",
+        "description": "Madrid's museum of modern and contemporary art, home to Picasso's Guernica.",
+        "details": "The Reina Sofía occupies a former hospital building and holds twentieth-century Spanish art by Picasso, Dalí and Miró. Its best-known work is Picasso's Guernica, a huge painting of the bombing of a Basque town in 1937, in a room of its own with strict rules on photography. The museum is closed on Tuesdays, which differs from the Prado, so check the days. Its glass lifts on the outside give a view over the neighbourhood.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/temple-of-debod": {
+        "name": "Temple of Debod sunset",
+        "description": "An ancient Egyptian temple rebuilt in a Madrid park and popular for sunset views.",
+        "details": "The Temple of Debod was built in Egypt in the second century BC and was moved stone by stone to Madrid in the 1960s as a gift in thanks for Spanish help saving monuments threatened by the Aswan High Dam. It stands in a small park on a hill west of the Royal Palace and is a favourite spot for watching the sunset over the Casa de Campo. Entry to the interior is limited and closes early, but the exterior and its reflecting pool are free.",
+        "interests": [
+          "photography",
+          "relax",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/flamenco-madrid": {
+        "name": "Flamenco show in a tablao",
+        "description": "An evening of flamenco song and dance in an intimate Madrid venue.",
+        "details": "A tablao is a small flamenco venue with a stage close to the audience, where singers, guitarists and dancers perform a set of around an hour. The best have a raw, close-up intensity compared with big theatre shows. Some include dinner, but many serve only drinks. Seating is limited and the shows start late, so booking is advisable.",
+        "interests": [
+          "culture",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/toledo": {
+        "name": "Toledo",
+        "description": "A walled medieval hill city south of Madrid, once home to Christians, Muslims and Jews, with a Gothic cathedral and El Greco paintings.",
+        "details": "Toledo sits on a granite hill ringed by the Tagus river and is a UNESCO World Heritage Site, with a maze of steep lanes, medieval walls and the great Gothic cathedral. Churches and former synagogues hold works by El Greco, whose Burial of the Count of Orgaz hangs in the church of Santo Tomé. The city was a centre for sword-making, and marzipan is the local sweet. It is about half an hour from Madrid by fast train and is full of day-trippers from late morning.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "spain/seville-alcazar": {
+        "name": "Real Alcázar of Seville",
+        "description": "A royal palace of Moorish-style courtyards, tilework and gardens, still used by the Spanish royal family.",
+        "details": "The Real Alcázar was begun in the Moorish period and rebuilt in the fourteenth century by Pedro I in the Mudéjar style, with intricate plasterwork, painted ceilings and tiled courtyards. Its gardens are shaded by palms and orange trees, with pools, fountains and a maze. It is a UNESCO World Heritage Site and still a royal residence. Timed tickets sell out, so book ahead and go early.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "spain/seville-cathedral": {
+        "name": "Seville Cathedral and the Giralda",
+        "description": "One of the largest Gothic cathedrals in the world, with a bell tower that began life as a minaret.",
+        "details": "Seville's cathedral was begun in the fifteenth century on the site of the city's main mosque, and the Giralda bell tower was the mosque's minaret. Inside, a monument holds the tomb of Christopher Columbus, and the high altar is a vast gilded altarpiece. The Giralda is climbed by ramps rather than stairs, which are wide enough for horses, and the view from the top is across the rooftops. Opening hours change on religious days.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "spain/plaza-de-espana": {
+        "name": "Plaza de España and Parque de María Luisa",
+        "description": "A semicircular brick-and-tile plaza built for the 1929 Ibero-American Exposition, beside a shady riverside park.",
+        "details": "The Plaza de España was built for the Ibero-American Exposition of 1929 and is a curve of buildings, towers and a canal crossed by bridges, with tiled alcoves representing each province of Spain. It is one of the most photographed places in Seville. The neighbouring Parque de María Luisa is a shady park of fountains and pavilions. Rowing boats can be hired on the canal.",
+        "interests": [
+          "photography",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/santa-cruz-seville": {
+        "name": "Barrio de Santa Cruz",
+        "description": "Seville's old Jewish quarter, a maze of whitewashed lanes, small squares and orange trees.",
+        "details": "Santa Cruz is the former Jewish quarter, tucked between the cathedral and the Alcázar, with narrow winding lanes, balconies hung with flowers and small plazas planted with orange trees. It is easy to lose your bearings, which is part of the charm. It is full of visitors in the day and calmer in the evening. Cobbles are uneven in places.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "spain/triana": {
+        "name": "Triana",
+        "description": "The traditional neighbourhood across the river from central Seville, known for ceramics, tapas bars and flamenco heritage.",
+        "details": "Triana sits on the west bank of the Guadalquivir and has long been associated with potters, sailors and flamenco artists. Its ceramic workshops still sell tiles, and the riverside street and the market are good for tapas. It feels more local than the centre. Crossing the Puente de Isabel II gives a view of the old city.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/flamenco-seville": {
+        "name": "Flamenco in Seville",
+        "description": "A small-venue flamenco performance in the city that is one of the art form's homes.",
+        "details": "Flamenco developed in Andalusia, and Seville has several small venues where the singers, guitarists and dancers perform close to the audience. The best shows are intense and short, around an hour, with strong emphasis on the singing. Seats near the front give a feel for the footwork. Booking ahead is wise, as the rooms are small.",
+        "interests": [
+          "culture",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/seville-tapas": {
+        "name": "Tapas in Seville",
+        "description": "A tapas crawl through the city's bars, with plates of fried fish, jamón, spinach with chickpeas and sherry.",
+        "details": "Seville is one of the best cities in Spain for tapas, with bars serving local specialities such as espinacas con garbanzos, pork cheeks in sherry sauce and fried fish. The local custom is to order a drink and one or two plates at a time before moving on. Sherry from nearby Jerez is the natural pairing. Kitchens often reopen at about eight in the evening after the afternoon break.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/mezquita-cordoba": {
+        "name": "Mezquita-Cathedral of Córdoba",
+        "description": "A vast eighth-century mosque with a forest of red-and-white arches, with a Renaissance cathedral built in its centre.",
+        "details": "The Mezquita was begun in the eighth century and enlarged over two centuries into one of the great mosques of the Islamic world, with hundreds of columns supporting double arches in red brick and white stone. After the Christian conquest, a cathedral was built in the middle of it in the sixteenth century. The contrast of the two is the point of the visit. Early morning is quieter, and certain hours are restricted for worship.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/cordoba-juderia": {
+        "name": "Córdoba Jewish Quarter and patios",
+        "description": "Whitewashed lanes of the old Jewish quarter, with flower-filled courtyards and a medieval synagogue.",
+        "details": "The Judería is a network of narrow whitewashed lanes near the Mezquita, with a small medieval synagogue and a statue of the philosopher Maimonides. Córdoba is also known for its patios, interior courtyards filled with potted flowers, and some are open to visitors outside the May festival. It is easily done on foot. The lanes are cobbled and uneven.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "spain/alhambra": {
+        "name": "Alhambra and Generalife",
+        "description": "The Nasrid palace-fortress above Granada, with carved palaces, courtyards and terraced gardens.",
+        "details": "The Alhambra was built mostly in the thirteenth and fourteenth centuries as the palace and fortress of the Nasrid rulers, the last Muslim dynasty in Spain, and is a UNESCO World Heritage Site. The Nasrid Palaces have intricate carved plasterwork, tiles and courtyards with pools, and the Generalife gardens climb the hill beside them. Entry to the palaces is by strictly timed slot, and tickets sell out weeks ahead in busy periods, so book early. The site is large with steps and slopes.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "spain/albaicin-viewpoint": {
+        "name": "Albaicín and the Mirador de San Nicolás",
+        "description": "Granada's old Moorish quarter and the hilltop viewpoint with the classic sunset view of the Alhambra.",
+        "details": "The Albaicín is a steep hillside district of white houses, narrow lanes and hidden courtyards, and a UNESCO site, rising opposite the Alhambra. The Mirador de San Nicolás at the top looks across the valley to the Alhambra with the Sierra Nevada behind. Sunset draws a crowd, so arrive early. The lanes are steep and cobbled, and a small bus runs through the district.",
+        "interests": [
+          "photography",
+          "culture",
+          "relax"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "spain/granada-tapas": {
+        "name": "Tapas in Granada",
+        "description": "A tapas evening in a city where many bars serve a free small plate with every drink.",
+        "details": "Granada is famous for the tradition that a bar gives a free tapa with each drink ordered, and the plates grow bigger with each round. Bars in the centre and around Calle Navas serve the classics, while the Realejo district is quieter and more local. It is an inexpensive way to have dinner. Order drinks at the bar and eat standing.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/sacromonte-flamenco": {
+        "name": "Sacromonte flamenco",
+        "description": "A flamenco performance in a whitewashed cave on the hill above Granada, in the traditional zambra style.",
+        "details": "Sacromonte is the hillside district of cave dwellings where the Roma community of Granada developed a form of flamenco called zambra. Performances take place in whitewashed caves with seating around a small stage, close to the artists. The atmosphere is intimate, and shows are short. The walk up is steep, so many visitors go by taxi.",
+        "interests": [
+          "culture",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "spain/granada-cathedral": {
+        "name": "Granada Cathedral and the Royal Chapel",
+        "description": "A Renaissance cathedral beside the Royal Chapel, where Ferdinand and Isabella are buried.",
+        "details": "Granada's cathedral was built in the sixteenth century after the Christian conquest, in a Renaissance style with a huge, bright interior. Next door, the Royal Chapel holds the tombs of the Catholic Monarchs, Ferdinand and Isabella, with a fine altarpiece and a small museum of their possessions. Photography is not allowed in the chapel. The two are separate admissions.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/city-of-arts-sciences": {
+        "name": "City of Arts and Sciences",
+        "description": "A futuristic complex of white buildings and pools in Valencia designed by Santiago Calatrava.",
+        "details": "The City of Arts and Sciences was built between the late 1990s and the 2000s in the old Turia riverbed and includes an opera house, a science museum, a planetarium and Europe's largest aquarium, the Oceanogràfic. The buildings are best seen from outside, with their white curves reflected in shallow pools. There is little shade, so the area is hot in summer. Some buildings need separate tickets.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/valencia-central-market": {
+        "name": "Central Market and La Lonja",
+        "description": "A Modernist iron-and-glass food market next to the Gothic silk exchange, a UNESCO World Heritage Site.",
+        "details": "Valencia's Central Market, built in the 1920s, is one of the largest fresh food markets in Europe, with stalls selling fruit, seafood, ham and local rice. Across the square, La Lonja de la Seda is a fifteenth-century Gothic silk exchange with a hall of twisting columns, listed by UNESCO. Both are within the old town and close together. The market closes in the afternoon, so go in the morning.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/albufera-paella": {
+        "name": "Albufera lagoon and paella",
+        "description": "A freshwater lagoon south of Valencia ringed by rice fields, where paella valenciana was born.",
+        "details": "The Albufera is a coastal freshwater lagoon and nature reserve south of Valencia, surrounded by the rice paddies that supply the city's paella. The village of El Palmar is known for restaurants serving paella cooked over wood, with rabbit, chicken and beans in the traditional recipe. Boat trips on the lagoon run at sunset. The village is about half an hour by bus or taxi from the city.",
+        "interests": [
+          "food",
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/turia-gardens": {
+        "name": "Turia Gardens",
+        "description": "A long park in a former riverbed that runs through Valencia, popular for cycling and walking.",
+        "details": "After a catastrophic flood in 1957 the Turia river was diverted around the city, and its dry bed was turned into a continuous park of gardens, sports fields, playgrounds and paths that runs for some nine kilometres. It leads to the City of Arts and Sciences. Hired bikes are the easiest way to cover it. The paths are flat and shaded in places.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/sagrada-familia": {
+        "name": "Sagrada Família",
+        "description": "Gaudí's unfinished basilica, with spires, a carved Nativity facade and an interior designed like a forest of stone columns.",
+        "details": "Work on the Sagrada Família began in 1882 and continues, funded by visitors and donations. Gaudí took over the project soon after it began and devoted his last decades to it. The interior is the highlight, with branching columns and stained glass that fills it with coloured light. Entry is by timed ticket, which should be booked well in advance, and the towers are an extra and are reached by lift. Dress codes apply.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/park-guell": {
+        "name": "Park Güell",
+        "description": "A hillside park of mosaic-covered terraces, columns and a salamander fountain designed by Antoni Gaudí.",
+        "details": "Park Güell was designed by Gaudí as a garden city for wealthy residents in the early twentieth century, though few plots were sold and it became a public park. Its best-known features are the mosaic-covered serpentine bench and the colourful tiled salamander. The monumental zone has timed entry with limited numbers, so book ahead. The park is on a hill and involves steps and slopes.",
+        "interests": [
+          "photography",
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "spain/casa-batllo": {
+        "name": "Casa Batlló",
+        "description": "A Gaudí remodel of a building on Passeig de Gràcia, with a scaly rooftop, bone-like balconies and flowing interiors.",
+        "details": "Casa Batlló was rebuilt by Gaudí between 1904 and 1906 for a textile magnate, with a facade of coloured glass and ceramics, curving balconies and a rooftop that resembles a dragon's back. The interiors have no straight lines. Visits use an audio guide, and timed tickets help avoid long queues. It stands on the Passeig de Gràcia, with other notable modernist buildings nearby.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/barri-gotic": {
+        "name": "Gothic Quarter",
+        "description": "Barcelona's medieval core, with a Gothic cathedral and its cloister, narrow lanes and Roman remains beneath.",
+        "details": "The Barri Gòtic is the oldest part of Barcelona, built on Roman foundations, with a tangle of narrow lanes, hidden plazas and the Gothic cathedral with a cloister where white geese live. Small museums reveal the buried Roman streets. It is crowded in the day, and pickpockets are a particular concern in tourist areas. Evenings are atmospheric but busy.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/la-boqueria": {
+        "name": "La Boqueria market",
+        "description": "Barcelona's most famous food market, with stalls of fruit, ham, seafood and sweets off La Rambla.",
+        "details": "La Boqueria is a covered market with a history stretching back to the thirteenth century, selling fruit, vegetables, cured meats, seafood and sweets. The stalls near the front are tourist-oriented, while the better value is further in. It is busy by late morning and closed on Sundays. Watch for pickpockets.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/el-born-tapas": {
+        "name": "Tapas in El Born",
+        "description": "An evening of tapas and vermouth in the lively lanes of the El Born district.",
+        "details": "El Born is a district of narrow medieval lanes with boutiques, wine bars and tapas places, set around the church of Santa Maria del Mar. Dishes such as patatas bravas, croquetas, anchovies and pan con tomate are standard. Dinner is late, from about nine in the evening. The streets are crowded on weekends.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/barceloneta-beach": {
+        "name": "Barceloneta beach",
+        "description": "The city's main beach, with a seafront promenade and seafood restaurants in the old fishermen's quarter behind.",
+        "details": "Barceloneta is the oldest and busiest of Barcelona's city beaches, backed by a promenade and the grid of small streets of the former fishermen's neighbourhood, where seafood and rice dishes are the specialities. It is crowded in summer and not the cleanest or quietest beach on the coast, but it is easy to reach. Keep valuables close.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/montjuic": {
+        "name": "Montjuïc",
+        "description": "A hill above the port with a castle, gardens, museums and views over the city, reached by cable car.",
+        "details": "Montjuïc is the hill on the south-west side of Barcelona, with a seventeenth-century castle, gardens, art museums and the stadium from the 1992 Olympics. A cable car runs up from the Barceloneta side. In the evening the Magic Fountain at the foot of the hill puts on a light and music show on set nights in season. Paths are steep, and some sites are closed on Mondays.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "spain/montserrat": {
+        "name": "Montserrat monastery",
+        "description": "A Benedictine monastery set among jagged serrated peaks an hour from Barcelona, home to the Black Madonna.",
+        "details": "Montserrat is a mountain of jagged rock pinnacles with a Benedictine abbey on its flank, which has been a place of pilgrimage for centuries and holds the statue of the Black Madonna. A rack railway or cable car climbs from the valley, and walking trails lead to viewpoints. The boys' choir, the Escolania, usually sings in the basilica, though schedules vary, so check ahead. The mountain is cooler than Barcelona, and trails are rocky.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "spain/guggenheim-bilbao": {
+        "name": "Guggenheim Museum Bilbao",
+        "description": "Frank Gehry's curved titanium museum of contemporary art, which helped transform the city when it opened in 1997.",
+        "details": "The Guggenheim Bilbao opened in 1997 and is an icon of modern architecture, with swirling titanium forms beside the Nervión river. In front stand Jeff Koons's giant floral Puppy and Louise Bourgeois's spider sculpture. The museum shows contemporary art and large installations such as Richard Serra's steel spirals. The exterior is as much the draw as the collection, and the museum is closed on Mondays in winter.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/bilbao-casco-viejo": {
+        "name": "Casco Viejo and pintxos",
+        "description": "Bilbao's old town of seven original streets, lined with bars serving Basque pintxos and local wine.",
+        "details": "The Casco Viejo is the medieval heart of Bilbao, laid out around the Siete Calles, the seven original streets, with a cathedral and a covered market on the riverside. The bars serve pintxos, small snacks on bread or skewers displayed on the counter, which are eaten with a glass of txakoli or cider. Order at the bar and keep track of what you eat. Evenings are busy and lively.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/la-concha": {
+        "name": "La Concha Bay",
+        "description": "San Sebastián's shell-shaped city beach and seafront promenade, backed by Belle Époque buildings.",
+        "details": "La Concha is a gentle, shell-shaped bay in the centre of San Sebastián, with a wide sandy beach and an elegant promenade lined with white railings and Belle Époque buildings. The small island of Santa Clara sits in the middle of the bay. Walking the full length of the promenade is a pleasant way to spend an hour. The beach is busy in summer.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/parte-vieja-pintxos": {
+        "name": "Pintxos in the Parte Vieja",
+        "description": "A bar-hopping evening through the old town's many pintxo bars, one of the best-known eating districts in Spain.",
+        "details": "San Sebastián's old town has one of the highest concentrations of excellent bars in the country, each known for a handful of signature pintxos, with others cooked to order. The custom is to have one or two pintxos and a small glass of txakoli white wine at each stop before moving on. Counters are crowded in the evening, so be patient. Many bars close for part of the afternoon.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/monte-igueldo": {
+        "name": "Monte Igueldo",
+        "description": "A hill with a vintage funicular, a small amusement park and the best panorama of San Sebastián's bay.",
+        "details": "Monte Igueldo rises at the west end of La Concha bay and is reached by a funicular dating from 1912, which climbs to a viewing terrace and an old-fashioned amusement park. The view takes in the bay, the old town and the coast. It is best on a clear day, and it can be windy. The funicular does not run in bad weather.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "spain/getaria-coast": {
+        "name": "Getaria and the Basque coast",
+        "description": "A fishing village on the Basque coast known for grilled turbot, txakoli vineyards and the Balenciaga Museum.",
+        "details": "Getaria is a harbour town about half an hour west of San Sebastián, known for restaurants grilling whole turbot over charcoal and for the vineyards that produce the local white wine, txakoli. The fashion designer Cristóbal Balenciaga was born here and has a museum nearby. The coastal road and train route to it pass dramatic cliffs and flysch rock formations. It is best done at a leisurely pace with a long lunch.",
+        "interests": [
+          "food",
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "spain": {
+        "name": "Spain",
+        "description": "A country of Moorish palaces, Gaudí's Barcelona, late tapas dinners and fast trains joining its great cities.",
+        "images": []
+      },
+      "spain/madrid": {
+        "name": "Madrid",
+        "description": "Spain's capital, with world-class art museums, grand squares, a lively tapas culture and late nights.",
+        "images": []
+      },
+      "spain/castile-la-mancha": {
+        "name": "Castile-La Mancha",
+        "description": "The central region south of Madrid, home to the walled hill city of Toledo and Don Quixote's windmills.",
+        "images": []
+      },
+      "spain/toledo": {
+        "name": "Toledo",
+        "description": "A walled medieval city on a hill, with a Gothic cathedral, former synagogues and El Greco paintings.",
+        "images": []
+      },
+      "spain/andalusia": {
+        "name": "Andalusia",
+        "description": "Spain's southern region of flamenco, whitewashed villages and the Moorish heritage of Seville, Córdoba and Granada.",
+        "images": []
+      },
+      "spain/seville": {
+        "name": "Seville",
+        "description": "Andalusia's capital, with a Moorish-style royal palace, a vast cathedral, orange-tree lanes and flamenco.",
+        "images": []
+      },
+      "spain/cordoba": {
+        "name": "Córdoba",
+        "description": "A former Moorish capital with a spectacular mosque-cathedral and whitewashed lanes of flower-filled courtyards.",
+        "images": []
+      },
+      "spain/granada": {
+        "name": "Granada",
+        "description": "A hillside city beneath the Sierra Nevada, dominated by the Alhambra and known for its free tapas.",
+        "images": []
+      },
+      "spain/valencian-community": {
+        "name": "Valencian Community",
+        "description": "The Mediterranean region of rice fields, orange groves and beaches, centred on the city of Valencia.",
+        "images": []
+      },
+      "spain/valencia": {
+        "name": "Valencia",
+        "description": "A relaxed Mediterranean city with a futuristic arts complex, a historic old town and the birthplace of paella.",
+        "images": []
+      },
+      "spain/catalonia": {
+        "name": "Catalonia",
+        "description": "The north-eastern region with its own language and culture, centred on Barcelona and including Montserrat.",
+        "images": []
+      },
+      "spain/barcelona": {
+        "name": "Barcelona",
+        "description": "A Mediterranean capital of Gaudí's buildings, a medieval Gothic Quarter, beaches and a strong food scene.",
+        "images": []
+      },
+      "spain/montserrat": {
+        "name": "Montserrat",
+        "description": "A jagged mountain north-west of Barcelona with a Benedictine monastery and the Black Madonna.",
+        "images": []
+      },
+      "spain/basque-country": {
+        "name": "Basque Country",
+        "description": "A green northern region with its own language, a strong food culture and a dramatic coast.",
+        "images": []
+      },
+      "spain/bilbao": {
+        "name": "Bilbao",
+        "description": "A revitalised industrial port city best known for the Guggenheim Museum and a lively old town of pintxo bars.",
+        "images": []
+      },
+      "spain/san-sebastian": {
+        "name": "San Sebastián",
+        "description": "A seaside Basque city with a graceful shell-shaped bay and some of Spain's finest pintxo bars.",
+        "images": []
+      },
+      "spain/getaria": {
+        "name": "Getaria",
+        "description": "A fishing harbour town on the Basque coast, known for grilled turbot, txakoli wine and the birthplace of Balenciaga.",
+        "images": []
+      }
+    }
+  }
+}

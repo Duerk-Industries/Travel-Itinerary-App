@@ -8,6 +8,7 @@
  * APIs, same permission check) but produces a standalone recording rather than drafting into an
  * existing item's caption field.
  */
+import IconText from './IconText';
 import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { ThemedText as Text } from './ThemedText';
@@ -87,9 +88,9 @@ const VoiceNoteRecorder: React.FC<Props> = ({
       onPress={toggle}
       style={[style, state === 'recording' ? activeStyle : null]}
     >
-      <Text style={textStyle}>
+      <IconText style={textStyle}>
         {state === 'recording' ? '● Stop' : state === 'processing' ? processingLabel : '🎙 Record'}
-      </Text>
+      </IconText>
     </TouchableOpacity>
   );
 };

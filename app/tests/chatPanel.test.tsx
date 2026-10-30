@@ -48,7 +48,7 @@ jest.mock('react-native', () => {
         return React.createElement('FlatList', { testID, ...props }, header, items);
       },
     ),
-    StyleSheet: { create: (styles: any) => styles },
+    StyleSheet: { create: (styles: any) => styles, flatten: (style: any): any => Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style },
     Platform: { OS: 'web' },
     Dimensions: { get: () => ({ width: 1200, height: 800 }) },
     useWindowDimensions: () => ({ width: mockViewportWidth, height: 800, scale: 1, fontScale: 1 }),

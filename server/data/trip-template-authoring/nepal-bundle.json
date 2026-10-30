@@ -1,0 +1,1166 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining On The Go Tours, The Culture Trip, Lonely Planet and TravelStride itineraries for Nepal",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "nepal-kathmandu-pokhara-5d",
+      "title": "Kathmandu and Pokhara in 5 Days",
+      "summary": "Temples of the valley, then lake and mountain views.",
+      "days": 5,
+      "route": "Kathmandu > Pokhara",
+      "arrive": "Kathmandu (KTM)",
+      "depart": "Pokhara (PKR)",
+      "countries": [
+        "Nepal"
+      ],
+      "regions": [],
+      "cities": [
+        "Kathmandu",
+        "Pokhara"
+      ],
+      "imageQuery": "Boudhanath stupa Kathmandu",
+      "highlights": [
+        "Boudhanath",
+        "Swayambhunath",
+        "Phewa Lake",
+        "Sarangkot sunrise"
+      ],
+      "destinationKeys": [
+        "nepal",
+        "nepal/kathmandu",
+        "nepal/pokhara"
+      ],
+      "hero": "nepal/kathmandu",
+      "sources": [
+        "On The Go Tours",
+        "The Culture Trip",
+        "Lonely Planet",
+        "TravelStride",
+        "Amazing Nepal Trek"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Kathmandu",
+          "hotel": "Hotel in Kathmandu",
+          "start": 0,
+          "nights": 2,
+          "area": "In Thamel for convenience, or Boudha for a quieter, more spiritual stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pokhara",
+          "hotel": "Hotel in Pokhara",
+          "start": 2,
+          "nights": 2,
+          "area": "On the Lakeside strip in Pokhara, near Phewa Lake",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Durbar Square, Swayambhunath and Boudhanath",
+          "notes": "Entry fees apply at heritage squares; dress modestly.",
+          "where": "Kathmandu",
+          "book": "",
+          "place": "nepal/kathmandu-heritage"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Phewa Lake boating and World Peace Pagoda",
+          "notes": "Row across the lake, then climb to the pagoda.",
+          "where": "Pokhara",
+          "book": "",
+          "place": "nepal/pokhara-phewa"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "05:00",
+          "duration": "3h",
+          "name": "Sarangkot sunrise and paragliding",
+          "notes": "Flights are weather-dependent.",
+          "where": "Pokhara",
+          "book": "Yes - book a paraglide",
+          "place": "nepal/sarangkot"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tribhuvan Airport, Kathmandu (KTM)",
+          "to": "Kathmandu hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Hotel pick-up or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Kathmandu hotel",
+          "to": "Tribhuvan Airport, Kathmandu (KTM)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Pokhara Airport (PKR)",
+          "to": "Pokhara hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Pokhara hotel",
+          "to": "Pokhara Airport (PKR)",
+          "time": "11:00",
+          "minutes": 15,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "nepal-kathmandu-chitwan-pokhara-7d",
+      "title": "Nepal Classic: Kathmandu, Chitwan and Pokhara in 7 Days",
+      "summary": "Temples, a jungle safari and a lakeside finish.",
+      "days": 7,
+      "route": "Kathmandu > Chitwan > Pokhara",
+      "arrive": "Kathmandu (KTM)",
+      "depart": "Pokhara (PKR)",
+      "countries": [
+        "Nepal"
+      ],
+      "regions": [],
+      "cities": [
+        "Kathmandu",
+        "Chitwan",
+        "Pokhara"
+      ],
+      "imageQuery": "Chitwan rhino Nepal",
+      "highlights": [
+        "Kathmandu temples",
+        "Bhaktapur",
+        "Chitwan rhinos",
+        "Pokhara lake"
+      ],
+      "destinationKeys": [
+        "nepal",
+        "nepal/kathmandu",
+        "nepal/chitwan",
+        "nepal/pokhara"
+      ],
+      "hero": "nepal/chitwan",
+      "sources": [
+        "On The Go Tours",
+        "The Culture Trip",
+        "Lonely Planet",
+        "TravelStride",
+        "Amazing Nepal Trek"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Kathmandu",
+          "hotel": "Hotel in Kathmandu",
+          "start": 0,
+          "nights": 2,
+          "area": "In Thamel for convenience, or Boudha for a quieter, more spiritual stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chitwan",
+          "hotel": "Lodge at Chitwan",
+          "start": 2,
+          "nights": 2,
+          "area": "In a jungle lodge near Sauraha, on the edge of the park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pokhara",
+          "hotel": "Hotel in Pokhara",
+          "start": 4,
+          "nights": 2,
+          "area": "On the Lakeside strip in Pokhara, near Phewa Lake",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Durbar Square, Swayambhunath and Boudhanath",
+          "notes": "Entry fees apply at heritage squares; dress modestly.",
+          "where": "Kathmandu",
+          "book": "",
+          "place": "nepal/kathmandu-heritage"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Jungle safari and canoe ride",
+          "notes": "Go with a park guide; dawn and dusk are best.",
+          "where": "Chitwan",
+          "book": "Yes - book safari",
+          "place": "nepal/chitwan-safari"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Phewa Lake boating and World Peace Pagoda",
+          "notes": "Row across the lake, then climb to the pagoda.",
+          "where": "Pokhara",
+          "book": "",
+          "place": "nepal/pokhara-phewa"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "05:00",
+          "duration": "3h",
+          "name": "Sarangkot sunrise and paragliding",
+          "notes": "Flights are weather-dependent.",
+          "where": "Pokhara",
+          "book": "Yes - book a paraglide",
+          "place": "nepal/sarangkot"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tribhuvan Airport, Kathmandu (KTM)",
+          "to": "Kathmandu hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Hotel pick-up or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Kathmandu",
+          "to": "Chitwan lodge",
+          "time": "07:30",
+          "minutes": 300,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "The highway is slow; allow a full day.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Chitwan lodge",
+          "to": "Pokhara",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Pokhara hotel",
+          "to": "Pokhara Airport (PKR)",
+          "time": "11:00",
+          "minutes": 15,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "nepal-chitwan-pokhara-poon-hill-9d",
+      "title": "Nepal with Poon Hill in 9 Days",
+      "summary": "Kathmandu, Chitwan, Pokhara and a short teahouse trek.",
+      "days": 9,
+      "route": "Kathmandu > Chitwan > Pokhara > Ghorepani",
+      "arrive": "Kathmandu (KTM)",
+      "depart": "Pokhara (PKR)",
+      "countries": [
+        "Nepal"
+      ],
+      "regions": [],
+      "cities": [
+        "Kathmandu",
+        "Chitwan",
+        "Pokhara",
+        "Ghorepani"
+      ],
+      "imageQuery": "Poon Hill sunrise Himalaya",
+      "highlights": [
+        "Kathmandu",
+        "Chitwan safari",
+        "Pokhara",
+        "Poon Hill sunrise"
+      ],
+      "destinationKeys": [
+        "nepal",
+        "nepal/kathmandu",
+        "nepal/chitwan",
+        "nepal/pokhara",
+        "nepal/ghorepani"
+      ],
+      "hero": "nepal/ghorepani",
+      "sources": [
+        "On The Go Tours",
+        "The Culture Trip",
+        "Lonely Planet",
+        "TravelStride",
+        "Amazing Nepal Trek"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Kathmandu",
+          "hotel": "Hotel in Kathmandu",
+          "start": 0,
+          "nights": 2,
+          "area": "In Thamel for convenience, or Boudha for a quieter, more spiritual stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chitwan",
+          "hotel": "Lodge at Chitwan",
+          "start": 2,
+          "nights": 2,
+          "area": "In a jungle lodge near Sauraha, on the edge of the park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pokhara",
+          "hotel": "Hotel in Pokhara",
+          "start": 4,
+          "nights": 2,
+          "area": "On the Lakeside strip in Pokhara, near Phewa Lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ghorepani",
+          "hotel": "Guesthouse in Ghorepani",
+          "start": 6,
+          "nights": 2,
+          "area": "In a teahouse at Ghorepani, simple and cold at night",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Durbar Square, Swayambhunath and Boudhanath",
+          "notes": "Entry fees apply at heritage squares; dress modestly.",
+          "where": "Kathmandu",
+          "book": "",
+          "place": "nepal/kathmandu-heritage"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Jungle safari and canoe ride",
+          "notes": "Go with a park guide; dawn and dusk are best.",
+          "where": "Chitwan",
+          "book": "Yes - book safari",
+          "place": "nepal/chitwan-safari"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Phewa Lake boating and World Peace Pagoda",
+          "notes": "Row across the lake, then climb to the pagoda.",
+          "where": "Pokhara",
+          "book": "",
+          "place": "nepal/pokhara-phewa"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "04:45",
+          "duration": "3h",
+          "name": "Poon Hill sunrise",
+          "notes": "Climb 45 minutes before dawn with a headlamp.",
+          "where": "Poon Hill",
+          "book": "",
+          "place": "nepal/poon-hill-trek"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tribhuvan Airport, Kathmandu (KTM)",
+          "to": "Kathmandu hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Hotel pick-up or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Kathmandu",
+          "to": "Chitwan lodge",
+          "time": "07:30",
+          "minutes": 300,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Chitwan lodge",
+          "to": "Pokhara",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Pokhara",
+          "to": "Nayapul trailhead",
+          "time": "07:00",
+          "minutes": 90,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "The trek to Ghorepani takes about six hours.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Nayapul",
+          "to": "Pokhara Airport (PKR)",
+          "time": "12:00",
+          "minutes": 100,
+          "carrier": "Jeep or taxi",
+          "notes": "The descent is about five hours on foot.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "nepal-lumbini-poon-hill-11d",
+      "title": "Nepal Culture and Trek in 11 Days",
+      "summary": "Kathmandu, Chitwan, Buddha birthplace Lumbini, Pokhara and Poon Hill.",
+      "days": 11,
+      "route": "Kathmandu > Chitwan > Lumbini > Pokhara > Ghorepani",
+      "arrive": "Kathmandu (KTM)",
+      "depart": "Pokhara (PKR)",
+      "countries": [
+        "Nepal"
+      ],
+      "regions": [],
+      "cities": [
+        "Kathmandu",
+        "Chitwan",
+        "Lumbini",
+        "Pokhara",
+        "Ghorepani"
+      ],
+      "imageQuery": "Lumbini Maya Devi temple",
+      "highlights": [
+        "Bhaktapur",
+        "Chitwan safari",
+        "Lumbini",
+        "Phewa Lake",
+        "Poon Hill"
+      ],
+      "destinationKeys": [
+        "nepal",
+        "nepal/kathmandu",
+        "nepal/chitwan",
+        "nepal/lumbini",
+        "nepal/pokhara",
+        "nepal/ghorepani"
+      ],
+      "hero": "nepal/lumbini",
+      "sources": [
+        "On The Go Tours",
+        "The Culture Trip",
+        "Lonely Planet",
+        "TravelStride",
+        "Amazing Nepal Trek"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Kathmandu",
+          "hotel": "Hotel in Kathmandu",
+          "start": 0,
+          "nights": 3,
+          "area": "In Thamel for convenience, or Boudha for a quieter, more spiritual stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chitwan",
+          "hotel": "Lodge at Chitwan",
+          "start": 3,
+          "nights": 2,
+          "area": "In a jungle lodge near Sauraha, on the edge of the park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lumbini",
+          "hotel": "Hotel in Lumbini",
+          "start": 5,
+          "nights": 1,
+          "area": "Near the Lumbini sacred garden",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pokhara",
+          "hotel": "Hotel in Pokhara",
+          "start": 6,
+          "nights": 2,
+          "area": "On the Lakeside strip in Pokhara, near Phewa Lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ghorepani",
+          "hotel": "Guesthouse in Ghorepani",
+          "start": 8,
+          "nights": 2,
+          "area": "In a teahouse at Ghorepani, simple and cold at night",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Durbar Square, Swayambhunath and Boudhanath",
+          "notes": "Entry fees apply at heritage squares; dress modestly.",
+          "where": "Kathmandu",
+          "book": "",
+          "place": "nepal/kathmandu-heritage"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Bhaktapur and Patan",
+          "notes": "Try juju dhau curd; foreigner entry fee applies.",
+          "where": "Bhaktapur",
+          "book": "",
+          "place": "nepal/bhaktapur-patan"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Jungle safari and canoe ride",
+          "notes": "Go with a park guide; dawn and dusk are best.",
+          "where": "Chitwan",
+          "book": "Yes - book safari",
+          "place": "nepal/chitwan-safari"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Lumbini sacred garden and monastery zone",
+          "notes": "Rent a bicycle to cover the park.",
+          "where": "Lumbini",
+          "book": "",
+          "place": "nepal/lumbini"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Phewa Lake boating and World Peace Pagoda",
+          "notes": "Row across the lake, then climb to the pagoda.",
+          "where": "Pokhara",
+          "book": "",
+          "place": "nepal/pokhara-phewa"
+        },
+        {
+          "day": 9,
+          "type": "Hike",
+          "time": "04:45",
+          "duration": "3h",
+          "name": "Poon Hill sunrise",
+          "notes": "Climb 45 minutes before dawn with a headlamp.",
+          "where": "Poon Hill",
+          "book": "",
+          "place": "nepal/poon-hill-trek"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tribhuvan Airport, Kathmandu (KTM)",
+          "to": "Kathmandu hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Hotel pick-up or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kathmandu",
+          "to": "Chitwan lodge",
+          "time": "07:30",
+          "minutes": 300,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Chitwan lodge",
+          "to": "Lumbini",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Lumbini",
+          "to": "Pokhara",
+          "time": "07:30",
+          "minutes": 420,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Pokhara",
+          "to": "Nayapul trailhead",
+          "time": "07:00",
+          "minutes": 90,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Nayapul",
+          "to": "Pokhara Airport (PKR)",
+          "time": "12:00",
+          "minutes": 100,
+          "carrier": "Jeep or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "nepal-complete-13d",
+      "title": "Complete Nepal in 13 Days",
+      "summary": "Heritage cities, Nagarkot, the jungle, Lumbini, Pokhara and a Himalayan trek.",
+      "days": 13,
+      "route": "Kathmandu > Nagarkot > Chitwan > Lumbini > Pokhara > Ghorepani",
+      "arrive": "Kathmandu (KTM)",
+      "depart": "Pokhara (PKR)",
+      "countries": [
+        "Nepal"
+      ],
+      "regions": [],
+      "cities": [
+        "Kathmandu",
+        "Nagarkot",
+        "Chitwan",
+        "Lumbini",
+        "Pokhara",
+        "Ghorepani"
+      ],
+      "imageQuery": "Nepal Himalaya Annapurna sunrise",
+      "highlights": [
+        "Kathmandu",
+        "Nagarkot sunrise",
+        "Chitwan",
+        "Lumbini",
+        "Sarangkot",
+        "Poon Hill"
+      ],
+      "destinationKeys": [
+        "nepal",
+        "nepal/kathmandu",
+        "nepal/nagarkot",
+        "nepal/chitwan",
+        "nepal/lumbini",
+        "nepal/pokhara",
+        "nepal/ghorepani"
+      ],
+      "hero": "nepal/pokhara",
+      "sources": [
+        "On The Go Tours",
+        "The Culture Trip",
+        "Lonely Planet",
+        "TravelStride",
+        "Amazing Nepal Trek"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Kathmandu",
+          "hotel": "Hotel in Kathmandu",
+          "start": 0,
+          "nights": 3,
+          "area": "In Thamel for convenience, or Boudha for a quieter, more spiritual stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nagarkot",
+          "hotel": "Lodge at Nagarkot",
+          "start": 3,
+          "nights": 1,
+          "area": "In a hilltop lodge at Nagarkot with Himalayan views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chitwan",
+          "hotel": "Lodge at Chitwan",
+          "start": 4,
+          "nights": 2,
+          "area": "In a jungle lodge near Sauraha, on the edge of the park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lumbini",
+          "hotel": "Hotel in Lumbini",
+          "start": 6,
+          "nights": 1,
+          "area": "Near the Lumbini sacred garden",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pokhara",
+          "hotel": "Hotel in Pokhara",
+          "start": 7,
+          "nights": 3,
+          "area": "On the Lakeside strip in Pokhara, near Phewa Lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ghorepani",
+          "hotel": "Guesthouse in Ghorepani",
+          "start": 10,
+          "nights": 2,
+          "area": "In a teahouse at Ghorepani, simple and cold at night",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Durbar Square, Swayambhunath and Boudhanath",
+          "notes": "Entry fees apply at heritage squares; dress modestly.",
+          "where": "Kathmandu",
+          "book": "",
+          "place": "nepal/kathmandu-heritage"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Bhaktapur and Patan",
+          "notes": "Try juju dhau curd; foreigner entry fee applies.",
+          "where": "Bhaktapur",
+          "book": "",
+          "place": "nepal/bhaktapur-patan"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "3h",
+          "name": "Nagarkot sunrise and ridge walk",
+          "notes": "Clearest from October to March.",
+          "where": "Nagarkot",
+          "book": "",
+          "place": "nepal/nagarkot-sunrise"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Jungle safari and canoe ride",
+          "notes": "Go with a park guide; dawn and dusk are best.",
+          "where": "Chitwan",
+          "book": "Yes - book safari",
+          "place": "nepal/chitwan-safari"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Lumbini sacred garden and monastery zone",
+          "notes": "Rent a bicycle to cover the park.",
+          "where": "Lumbini",
+          "book": "",
+          "place": "nepal/lumbini"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Phewa Lake boating and World Peace Pagoda",
+          "notes": "Row across the lake, then climb to the pagoda.",
+          "where": "Pokhara",
+          "book": "",
+          "place": "nepal/pokhara-phewa"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "05:00",
+          "duration": "3h",
+          "name": "Sarangkot sunrise and paragliding",
+          "notes": "Flights are weather-dependent.",
+          "where": "Pokhara",
+          "book": "Yes - book a paraglide",
+          "place": "nepal/sarangkot"
+        },
+        {
+          "day": 11,
+          "type": "Hike",
+          "time": "04:45",
+          "duration": "3h",
+          "name": "Poon Hill sunrise",
+          "notes": "Climb 45 minutes before dawn with a headlamp.",
+          "where": "Poon Hill",
+          "book": "",
+          "place": "nepal/poon-hill-trek"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tribhuvan Airport, Kathmandu (KTM)",
+          "to": "Kathmandu hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Hotel pick-up or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kathmandu",
+          "to": "Nagarkot lodge",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Nagarkot lodge",
+          "to": "Chitwan lodge",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Chitwan lodge",
+          "to": "Lumbini",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Lumbini",
+          "to": "Pokhara",
+          "time": "07:30",
+          "minutes": 420,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Pokhara",
+          "to": "Nayapul trailhead",
+          "time": "07:00",
+          "minutes": 90,
+          "carrier": "Tourist bus or private vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Nayapul",
+          "to": "Pokhara Airport (PKR)",
+          "time": "12:00",
+          "minutes": 100,
+          "carrier": "Jeep or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "nepal/kathmandu-heritage": {
+        "name": "Kathmandu Durbar Square, Swayambhunath and Boudhanath",
+        "description": "The old royal square, the monkey temple and one of the largest stupas in the world.",
+        "details": "Kathmandu Valley holds seven UNESCO monument zones. Durbar Square has temples damaged and restored after the 2015 earthquake, Swayambhunath is a hilltop stupa with macaques, and Boudhanath is a white dome ringed by prayer wheels, lively at dusk. Pashupatinath on the river is a Hindu cremation site, so visit respectfully.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "nepal/bhaktapur-patan": {
+        "name": "Bhaktapur and Patan",
+        "description": "Two medieval Newar cities of carved wooden temples, pottery squares and curd.",
+        "details": "Bhaktapur has a car-free old town with pottery squares and the 55-window palace. Patan has the Golden Temple and a fine museum. Try juju dhau, the king of curds. Both are within an hour of Kathmandu and need an entry fee for foreigners.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "nepal/nagarkot-sunrise": {
+        "name": "Nagarkot sunrise",
+        "description": "A hilltop village with views of the Himalaya from Langtang to Everest on clear mornings.",
+        "details": "Nagarkot is 32 kilometres from Kathmandu and a classic overnight for sunrise. Views are best in October to March; haze and cloud are common in the monsoon. Short walks follow ridgelines through terraced fields.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "nepal/chitwan-safari": {
+        "name": "Chitwan National Park jungle safari",
+        "description": "Jeep safaris and canoe rides to spot one-horned rhinos, deer and crocodiles.",
+        "details": "Chitwan is the lowland park on the Terai plains. Guided jeep safaris, river canoe trips and bird walks find one-horned rhinoceros, gharial and, with luck, tigers. Dawn and dusk are best. Walking inside the park is only with a guide.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "nepal/lumbini": {
+        "name": "Lumbini birthplace of the Buddha",
+        "description": "A UNESCO pilgrimage site with the Maya Devi Temple and monasteries from many countries.",
+        "details": "Lumbini marks the birthplace of Siddhartha Gautama. The Maya Devi Temple stands over the exact spot, with a pond and an Ashoka pillar. A monastery zone has Buddhist temples built by many nations. Hire a bicycle or rickshaw, as the park is large and flat.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "nepal/pokhara-phewa": {
+        "name": "Pokhara Phewa Lake and World Peace Pagoda",
+        "description": "A lakeside town with boating, a white pagoda and a mountain view across the water.",
+        "details": "Pokhara is the adventure hub of Nepal, with the Annapurna range reflected in Phewa Lake on clear mornings. Rowing boats cross to the Tal Barahi temple, and a hike climbs to the World Peace Pagoda. Paragliding and zip-lining are popular.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "nepal/sarangkot": {
+        "name": "Sarangkot sunrise and paragliding",
+        "description": "A hill above Pokhara with an Annapurna sunrise view and a famous paragliding launch.",
+        "details": "Sarangkot is reached by a pre-dawn taxi and offers views of Machapuchare and the Annapurna and Dhaulagiri ranges. Tandem paragliding flights launch from here. Flights depend on weather, and sunrise views are best from October to March.",
+        "interests": [
+          "adventure",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "nepal/poon-hill-trek": {
+        "name": "Ghorepani Poon Hill trek",
+        "description": "A short, classic Himalayan trek through rhododendron forest to a sunrise view of Dhaulagiri and Annapurna.",
+        "details": "The trek from Nayapul climbs stone steps to Ghorepani at 2,800 metres, then 45 minutes before dawn to Poon Hill (3,210 metres) for a sweeping view of eight peaks. Teahouses provide food and beds. Permits are needed, and spring and autumn are best.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "H",
+        "image": null
+      }
+    },
+    "destinations": {
+      "nepal": {
+        "name": "Nepal",
+        "description": "A Himalayan country of temples, trekking, rhino jungles and Buddhist pilgrimage.",
+        "images": []
+      },
+      "nepal/kathmandu": {
+        "name": "Kathmandu",
+        "description": "The capital and valley of ancient temples and stupas.",
+        "images": []
+      },
+      "nepal/nagarkot": {
+        "name": "Nagarkot",
+        "description": "A hilltop village for Himalayan sunrise.",
+        "images": []
+      },
+      "nepal/chitwan": {
+        "name": "Chitwan",
+        "description": "A lowland national park for rhinos and jungle safaris.",
+        "images": []
+      },
+      "nepal/lumbini": {
+        "name": "Lumbini",
+        "description": "The birthplace of the Buddha.",
+        "images": []
+      },
+      "nepal/pokhara": {
+        "name": "Pokhara",
+        "description": "A lakeside gateway to the Annapurna.",
+        "images": []
+      },
+      "nepal/ghorepani": {
+        "name": "Ghorepani",
+        "description": "A teahouse village on the Poon Hill trek.",
+        "images": []
+      }
+    }
+  }
+}

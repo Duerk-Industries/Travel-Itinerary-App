@@ -1,3 +1,5 @@
+import IconText from '../components/IconText';
+import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -17,6 +19,7 @@ import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import DateField from '../components/DateField';
 import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import { normalizeDateString } from '../utils/normalizeDateString';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
@@ -163,9 +166,11 @@ const formatDateLabel = (iso: string): string => {
 
 const buildDateRange = (trip: Trip | null): string[] => {
   if (!trip?.startDate || !trip?.endDate) return [];
-  const start = parseLocalDateOnly(trip.startDate);
-  const end = parseLocalDateOnly(trip.endDate);
-  if (formatLocalDateOnly(start) !== trip.startDate || formatLocalDateOnly(end) !== trip.endDate) return [];
+  const startDate = normalizeDateString(trip.startDate);
+  const endDate = normalizeDateString(trip.endDate);
+  const start = parseLocalDateOnly(startDate);
+  const end = parseLocalDateOnly(endDate);
+  if (formatLocalDateOnly(start) !== startDate || formatLocalDateOnly(end) !== endDate) return [];
   const dates: string[] = [];
   const cursor = new Date(start.getTime());
   while (cursor <= end) {
@@ -202,6 +207,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const canImportExpenses = Boolean(expenseImportAllowed && costTrackingAllowed && !readOnly);
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const { isPhoneLayout } = useLayoutBreakpoints();
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null);
   const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
   const tripPendingEntries = useMemo(
@@ -679,14 +685,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     <View style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Daily Expenses</Text>
-        <TouchableOpacity
+        {!isPhoneLayout ? <TouchableOpacity
           style={[styles.button, styles.smallButton, themeStyle('tabs_dailyExpenses_12', {  }, (theme ?? _styleTheme))]}
           onPress={openAddExpenseModal}
           disabled={readOnly && !(allowOfflineAdd && pendingExpenses)}
           testID="expense-add-button"
         >
-          <Text style={styles.buttonText}>+ Add Expense</Text>
-        </TouchableOpacity>
+          <IconText style={styles.buttonText}>+ Add Expense</IconText>
+        </TouchableOpacity> : null}
         {canScanReceipt ? (
           <TouchableOpacity
             style={[styles.button, styles.smallButton, receiptParsing && styles.buttonDisabled]}
@@ -978,7 +984,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                           </TouchableOpacity>
                           <Text style={styles.cellText} testID={`expense-share-weight-${id}`}>{weights[index]}</Text>
                           <TouchableOpacity testID={`expense-share-inc-${id}`} accessibilityRole="button" accessibilityLabel={`More shares for ${memberNameMap.get(id) ?? 'traveler'}`} style={[styles.button, styles.smallButton]} onPress={() => setDraftShare(id, weights[index] + 1)}>
-                            <Text style={styles.buttonText}>+</Text>
+                            <IconText style={styles.buttonText}>+</IconText>
                           </TouchableOpacity>
                           <Text style={styles.helperText} testID={`expense-share-amount-${id}`}>{(amounts[index] ?? 0).toFixed(2)}</Text>
                         </View>

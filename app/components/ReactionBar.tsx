@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -109,7 +110,7 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
         onPress={() => handlePress(1)}
         style={[styles((theme ?? _styleTheme)).button, upActive && styles((theme ?? _styleTheme)).buttonActiveUp, disabled && styles((theme ?? _styleTheme)).buttonDisabled]}
       >
-        <Text style={[styles((theme ?? _styleTheme)).glyph, upActive && styles((theme ?? _styleTheme)).glyphActive]}>{'👍'}</Text>
+        <IconText style={[styles((theme ?? _styleTheme)).glyph, upActive && styles((theme ?? _styleTheme)).glyphActive]}>{'👍'}</IconText>
         <Text style={[styles((theme ?? _styleTheme)).count, themedStyles?.count, upActive && (themedStyles?.countActive ?? styles((theme ?? _styleTheme)).countActive)]}>{localSummary.upCount}</Text>
       </Pressable>
       <Text style={[styles((theme ?? _styleTheme)).score, themedStyles?.score]} testID={`reaction-score-${detailId}`}>
@@ -124,7 +125,7 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
         onPress={() => handlePress(-1)}
         style={[styles((theme ?? _styleTheme)).button, downActive && styles((theme ?? _styleTheme)).buttonActiveDown, disabled && styles((theme ?? _styleTheme)).buttonDisabled]}
       >
-        <Text style={[styles((theme ?? _styleTheme)).glyph, downActive && styles((theme ?? _styleTheme)).glyphActive]}>{'👎'}</Text>
+        <IconText style={[styles((theme ?? _styleTheme)).glyph, downActive && styles((theme ?? _styleTheme)).glyphActive]}>{'👎'}</IconText>
         <Text style={[styles((theme ?? _styleTheme)).count, themedStyles?.count, downActive && (themedStyles?.countActive ?? styles((theme ?? _styleTheme)).countActive)]}>{localSummary.downCount}</Text>
       </Pressable>
     </View>

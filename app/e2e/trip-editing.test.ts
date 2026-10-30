@@ -54,24 +54,14 @@ const day2 = isoDate(new Date(tripStart.getTime() + 1 * 24 * 60 * 60 * 1000));
 test.describe('Trip Content Editing', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsNewUser(page);
-    await createTripViaWizard(page);
-
-    // Capture the active trip ID from the page state
-    tripId = await page.evaluate((): string => {
-      const match = document.body.innerHTML.match(/trip[_-]?id['":\s]+([a-zA-Z0-9_-]{6,})/i);
-      return match?.[1] ?? '';
-    }).catch(() => '');
-
-    // Fallback: extract from API via the trips list
-    if (!tripId) {
-      const headers = await getAuthHeaders(page);
-      const res = await page.request.get(`${API_BASE}/api/trips`, { headers });
-      if (res.ok()) {
-        const data = await res.json();
-        const trips: Array<{ id: string }> = Array.isArray(data) ? data : (data.trips ?? []);
-        if (trips.length) tripId = trips[0].id;
-      }
-    }
+    const tripName = await createTripViaWizard(page);
+    const headers = await getAuthHeaders(page);
+    const response = await page.request.get(`${API_BASE}/api/trips`, { headers });
+    expect(response.ok()).toBe(true);
+    const trips: Array<{ id: string; name: string }> = await response.json();
+    const createdTrip = trips.find(trip => trip.name === tripName);
+    expect(createdTrip, 'The created trip must be present in the API').toBeDefined();
+    tripId = createdTrip!.id;
   });
 
   // -------------------------------------------------------------------------
@@ -80,7 +70,7 @@ test.describe('Trip Content Editing', () => {
   test.describe('Transfers', () => {
     test('adds a transfer via the flight editing modal', async ({ page }) => {
       await openTab(page, 'flights');
-      await expect(page.getByText('Transfers')).toBeVisible();
+      await expect(page.getByText('Flights', { exact: true })).toBeVisible();
 
       // Open the modal
       await page.getByTestId('transfer-add').click();
@@ -88,7 +78,7 @@ test.describe('Trip Content Editing', () => {
       await page.getByTestId('flight-modal-carrier').fill('Test Air');
       await page.getByTestId('flight-modal-flight-number').fill('TA001');
       await page.getByTestId('flight-modal-save').click();
-      await page.waitForLoadState('networkidle');
+
 
       // A row with this carrier text should appear
       await expect(page.getByText('Test Air')).toBeVisible({ timeout: 8000 });
@@ -117,7 +107,7 @@ test.describe('Trip Content Editing', () => {
       const { id: transferId } = await createRes.json();
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
+
       await openTab(page, 'flights');
 
       const elapsed = await measureMs(async () => {
@@ -128,7 +118,7 @@ test.describe('Trip Content Editing', () => {
 
       await page.getByTestId('flight-modal-carrier').fill('UpdatedAir');
       await page.getByTestId('flight-modal-save').click();
-      await page.waitForLoadState('networkidle');
+
       await expect(page.getByText('UpdatedAir')).toBeVisible({ timeout: 8000 });
     });
 
@@ -154,11 +144,11 @@ test.describe('Trip Content Editing', () => {
       const { id: transferId } = await createRes.json();
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
+
       await openTab(page, 'flights');
 
       await page.getByTestId(`transfer-delete-${transferId}`).click();
-      await page.waitForLoadState('networkidle');
+
       await expect(page.getByTestId(`transfer-row-${transferId}`)).not.toBeVisible({ timeout: 6000 });
     });
   });
@@ -175,7 +165,7 @@ test.describe('Trip Content Editing', () => {
       // LodgingDialog form — fill the name field
       await page.getByPlaceholder(/name|hotel|accommodation/i).first().fill('Test Hotel');
       await page.getByText('Save').click();
-      await page.waitForLoadState('networkidle');
+
       await expect(page.getByText('Test Hotel')).toBeVisible({ timeout: 8000 });
     });
 
@@ -189,7 +179,7 @@ test.describe('Trip Content Editing', () => {
       const { id: lodgingId } = await createRes.json();
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
+
       await openTab(page, 'lodging');
 
       await page.getByTestId(`lodging-edit-${lodgingId}`).click();
@@ -198,7 +188,7 @@ test.describe('Trip Content Editing', () => {
       const nameInput = page.getByPlaceholder(/name|hotel/i).first();
       await nameInput.fill('NewHotel');
       await page.getByText('Save').click();
-      await page.waitForLoadState('networkidle');
+
       await expect(page.getByText('NewHotel')).toBeVisible({ timeout: 8000 });
     });
 
@@ -212,14 +202,14 @@ test.describe('Trip Content Editing', () => {
       const { id: lodgingId } = await createRes.json();
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
+
       await openTab(page, 'lodging');
 
       await page.getByTestId(`lodging-delete-${lodgingId}`).click();
       // ConfirmDialog should appear
       await expect(page.getByTestId('delete-lodging-dialog')).toBeVisible();
-      await page.getByText('Confirm').click();
-      await page.waitForLoadState('networkidle');
+      await page.getByTestId('delete-lodging-dialog').getByRole('button', { name: 'Delete', exact: true }).click();
+
       await expect(page.getByTestId(`lodging-row-${lodgingId}`)).not.toBeVisible({ timeout: 6000 });
     });
   });
@@ -235,7 +225,7 @@ test.describe('Trip Content Editing', () => {
 
       await page.getByPlaceholder(/name|title|activity/i).first().fill('Museum Tour');
       await page.getByTestId('activity-save').click();
-      await page.waitForLoadState('networkidle');
+
       await expect(page.getByText('Museum Tour')).toBeVisible({ timeout: 8000 });
     });
 
@@ -249,16 +239,16 @@ test.describe('Trip Content Editing', () => {
       const { id: activityId } = await createRes.json();
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
+
       await openTab(page, 'tours');
 
       await page.getByTestId(`activity-details-${activityId}`).click();
-      await page.getByTestId(`activity-details-edit-${activityId}`).click();
+      await page.getByTestId('activity-details-edit').click();
       await expect(page.getByTestId('activity-form-modal')).toBeVisible();
       const nameInput = page.getByPlaceholder(/name|title|activity/i).first();
       await nameInput.fill('UpdatedActivity');
       await page.getByTestId('activity-save').click();
-      await page.waitForLoadState('networkidle');
+
       await expect(page.getByText('UpdatedActivity')).toBeVisible({ timeout: 8000 });
     });
 
@@ -272,12 +262,13 @@ test.describe('Trip Content Editing', () => {
       const { id: activityId } = await createRes.json();
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
+
       await openTab(page, 'tours');
 
       await page.getByTestId(`activity-details-${activityId}`).click();
-      await page.getByTestId(`activity-details-delete-${activityId}`).click();
-      await page.waitForLoadState('networkidle');
+      await page.getByTestId('activity-details-delete').click();
+      await page.getByTestId('confirm-dialog').getByRole('button', { name: 'Delete', exact: true }).click();
+
       await expect(page.getByTestId(`activity-row-${activityId}`)).not.toBeVisible({ timeout: 6000 });
     });
   });
@@ -289,12 +280,12 @@ test.describe('Trip Content Editing', () => {
     test('adds a car rental via the modal form', async ({ page }) => {
       await openTab(page, 'car');
       await page.getByTestId('car-rental-add').click();
-      await expect(page.getByTestId('car-rental-editor-dialog')).toBeVisible();
-      await page.getByPlaceholder('Pick up location').fill('LAX Airport');
-      await page.getByPlaceholder('Drop off location').fill('Downtown LA');
+      await expect(page.getByTestId('car-rental-form-modal')).toBeVisible();
+      await page.getByPlaceholder('Pick-up location').fill('LAX Airport');
+      await page.getByPlaceholder('Drop-off location').fill('Downtown LA');
       await page.getByTestId('car-rental-save').click();
-      await page.waitForLoadState('networkidle');
-      await expect(page.getByText('LAX Airport')).toBeVisible({ timeout: 8000 });
+
+      await expect(page.getByText('LAX Airport → Downtown LA')).toBeVisible({ timeout: 8000 });
     });
 
     test('deletes a car rental', async ({ page }) => {
@@ -307,12 +298,12 @@ test.describe('Trip Content Editing', () => {
       const { id: rentalId } = await createRes.json();
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
+
       await openTab(page, 'car');
 
       await page.getByTestId(`car-rental-delete-${rentalId}`).click();
-      await page.waitForLoadState('networkidle');
-      await expect(page.getByText('SFO')).not.toBeVisible({ timeout: 6000 });
+
+      await expect(page.getByText('SFO → Oakland', { exact: true })).not.toBeVisible({ timeout: 6000 });
     });
   });
 
@@ -334,7 +325,7 @@ test.describe('Trip Content Editing', () => {
       await page.getByPlaceholder(/amount/i).first().fill('50');
       await page.getByPlaceholder(/description|note/i).first().fill('Lunch');
       await page.getByTestId('expense-save').click();
-      await page.waitForLoadState('networkidle');
+
 
       // The expense-cell for day1 should now have a value
       await expect(page.locator(`[data-testid^="expense-cell-${day1}"]`)).toBeVisible({ timeout: 8000 });
@@ -357,7 +348,7 @@ test.describe('Trip Content Editing', () => {
       const { id: expenseId } = await createRes.json();
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
+
       await openTab(page, 'expenses');
 
       // Click the cell to open detail modal
@@ -371,7 +362,7 @@ test.describe('Trip Content Editing', () => {
       if (await confirmBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
         await confirmBtn.click();
       }
-      await page.waitForLoadState('networkidle');
+
       await expect(page.getByTestId(`expense-delete-${expenseId}`)).not.toBeVisible({ timeout: 6000 });
     });
   });

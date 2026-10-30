@@ -100,7 +100,7 @@ test.describe('Trip Chat', () => {
     // Close chat, reload, reopen
     await page.getByTestId('chat-close').click();
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle');
+
     await openChat(page);
 
     // Message still visible from history
@@ -138,23 +138,11 @@ test.describe('Trip Chat', () => {
     await loginAsUser(pageB, credB);
     await acceptInviteViaApi(pageB);
     await pageB.reload({ waitUntil: 'domcontentloaded' });
-    await pageB.waitForLoadState('networkidle');
 
-    // Both users should be on the same active trip now
-    // Give Socket.IO a moment to propagate presence
-    await pageA.waitForLoadState('networkidle');
-    await pageB.waitForLoadState('networkidle');
-    await pageA.waitForTimeout(2000);
 
-    // Presence avatars should be visible for User A (showing User B)
-    const presenceA = pageA.getByTestId('presence-avatars');
-    const hasPresence = await presenceA.isVisible({ timeout: 5000 }).catch(() => false);
-    // If Socket.IO is connected, the other user's avatar should appear.
-    // This is a best-effort check — the test does not fail if presence is
-    // not yet propagated (network timing in CI).
-    if (hasPresence) {
-      expect(hasPresence).toBe(true);
-    }
+    await expect(pageB.getByTestId('chat-fab')).toBeVisible();
+    await expect(pageA.getByTestId('presence-avatars')).toBeVisible({ timeout: 10_000 });
+    await expect(pageB.getByTestId('presence-avatars')).toBeVisible({ timeout: 10_000 });
 
     await ctxA.close();
     await ctxB.close();
@@ -175,24 +163,17 @@ test.describe('Trip Chat', () => {
     await loginAsUser(pageB, credB);
     await acceptInviteViaApi(pageB);
     await pageB.reload({ waitUntil: 'domcontentloaded' });
-    await pageB.waitForLoadState('networkidle');
 
-    // User B opens chat and sends a message
-    if (await pageB.getByTestId('chat-fab').isVisible({ timeout: 5000 }).catch(() => false)) {
-      await openChat(pageB);
-      const testMsg = `Hi from B at ${Date.now()}`;
-      await pageB.getByTestId('chat-input').fill(testMsg);
-      await pageB.getByTestId('chat-send').click();
-      await expect(pageB.getByText(testMsg)).toBeVisible({ timeout: 5000 });
 
-      // User A's badge should increment (give Socket.IO a moment)
-      await pageA.waitForTimeout(1500);
-      const badge = pageA.getByTestId('chat-unread-badge');
-      if (await badge.isVisible({ timeout: 3000 }).catch(() => false)) {
-        const badgeText = await badge.textContent();
-        expect(Number(badgeText)).toBeGreaterThan(0);
-      }
-    }
+    await expect(pageA.getByTestId('presence-avatars')).toBeVisible({ timeout: 10_000 });
+    await expect(pageB.getByTestId('presence-avatars')).toBeVisible({ timeout: 10_000 });
+    await openChat(pageB);
+    await expect(pageB.getByTestId('chat-send')).toBeEnabled();
+    const testMsg = `Hi from B at ${Date.now()}`;
+    await pageB.getByTestId('chat-input').fill(testMsg);
+    await pageB.getByTestId('chat-send').click();
+    await expect(pageB.getByText(testMsg)).toBeVisible();
+    await expect(pageA.getByTestId('chat-unread-badge')).toHaveText(/[1-9]\d*/, { timeout: 10_000 });
 
     await ctxA.close();
     await ctxB.close();

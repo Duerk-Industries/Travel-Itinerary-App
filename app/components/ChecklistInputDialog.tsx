@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -127,7 +128,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
             onPress={addItem}
             style={({ pressed }: { pressed: boolean }) => [styles((theme ?? _styleTheme)).addBtn, pressed && themeStyle('components_ChecklistInputDialog_11', { colors: colors }, (theme ?? _styleTheme))]}
           >
-            <Text style={[styles((theme ?? _styleTheme)).addBtnText, colors && themeStyle('components_ChecklistInputDialog_12', { theme: theme, colors: colors }, (theme ?? _styleTheme))]}>+ Add another item</Text>
+            <IconText style={[styles((theme ?? _styleTheme)).addBtnText, colors && themeStyle('components_ChecklistInputDialog_12', { theme: theme, colors: colors }, (theme ?? _styleTheme))]}>+ Add another item</IconText>
           </Pressable>
           {error ? <Text style={[styles((theme ?? _styleTheme)).error, theme?.mode === 'dark' && themeStyle('components_ChecklistInputDialog_13', {  }, (theme ?? _styleTheme))]}>{error}</Text> : null}
           <View style={styles((theme ?? _styleTheme)).actions}>

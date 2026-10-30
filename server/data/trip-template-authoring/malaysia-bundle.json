@@ -1,0 +1,1302 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, Backpack Bob, Bamboo Travel and Remote Lands itineraries for Malaysia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "malaysia-kl-melaka-5d",
+      "title": "Kuala Lumpur and Melaka in 5 Days",
+      "summary": "Skyline, street food and a heritage port.",
+      "days": 5,
+      "route": "Kuala Lumpur > Melaka",
+      "arrive": "Kuala Lumpur (KUL)",
+      "depart": "Kuala Lumpur (KUL)",
+      "countries": [
+        "Malaysia"
+      ],
+      "regions": [],
+      "cities": [
+        "Kuala Lumpur",
+        "Melaka"
+      ],
+      "imageQuery": "Kuala Lumpur Petronas Towers",
+      "highlights": [
+        "Petronas Towers",
+        "Batu Caves",
+        "Jalan Alor",
+        "Melaka heritage"
+      ],
+      "destinationKeys": [
+        "malaysia",
+        "malaysia/kuala-lumpur",
+        "malaysia/melaka"
+      ],
+      "hero": "malaysia/kuala-lumpur",
+      "sources": [
+        "KimKim",
+        "Backpack Bob",
+        "Bamboo Travel",
+        "Remote Lands",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Kuala Lumpur",
+          "hotel": "Hotel in Kuala Lumpur",
+          "start": 0,
+          "nights": 2,
+          "area": "Near KLCC or Bukit Bintang, for walkable sights and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Melaka",
+          "hotel": "Hotel in a Melaka heritage shophouse",
+          "start": 2,
+          "nights": 2,
+          "area": "In the Jonker Street area, in a heritage shophouse hotel",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Jalan Alor and Chinatown street food",
+          "notes": "Share a few dishes between you.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Batu Caves and Petronas Towers",
+          "notes": "Go to Batu Caves early; dress modestly.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-towers-batu"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Melaka heritage walk and river cruise",
+          "notes": "Jonker Street night market on weekends.",
+          "where": "Melaka",
+          "book": "",
+          "place": "malaysia/melaka-heritage"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Melaka food trail and museums",
+          "notes": "Jonker Street night market on weekends.",
+          "where": "Melaka",
+          "book": "",
+          "place": "malaysia/melaka-heritage"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kuala Lumpur Airport (KUL)",
+          "to": "Kuala Lumpur hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Kuala Lumpur",
+          "to": "Melaka",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Intercity coach or train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Melaka",
+          "to": "Kuala Lumpur Airport (KUL)",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Intercity coach or train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "malaysia-kl-penang-7d",
+      "title": "Kuala Lumpur and Penang in 7 Days",
+      "summary": "Capital sights and Penang street food, with Penang Hill.",
+      "days": 7,
+      "route": "Kuala Lumpur > Penang",
+      "arrive": "Kuala Lumpur (KUL)",
+      "depart": "Penang (PEN)",
+      "countries": [
+        "Malaysia"
+      ],
+      "regions": [
+        "Penang"
+      ],
+      "cities": [
+        "Kuala Lumpur",
+        "George Town"
+      ],
+      "imageQuery": "George Town Penang street art",
+      "highlights": [
+        "Batu Caves",
+        "Petronas Towers",
+        "George Town murals",
+        "Penang Hill"
+      ],
+      "destinationKeys": [
+        "malaysia",
+        "malaysia/kuala-lumpur",
+        "malaysia/penang",
+        "malaysia/george-town"
+      ],
+      "hero": "malaysia/penang",
+      "sources": [
+        "KimKim",
+        "Backpack Bob",
+        "Bamboo Travel",
+        "Remote Lands",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "culture",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Kuala Lumpur",
+          "hotel": "Hotel in Kuala Lumpur",
+          "start": 0,
+          "nights": 3,
+          "area": "Near KLCC or Bukit Bintang, for walkable sights and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "George Town",
+          "hotel": "Hotel in George Town",
+          "start": 3,
+          "nights": 3,
+          "area": "In George Town heritage zone, a short walk to hawkers",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Jalan Alor and Chinatown street food",
+          "notes": "Share a few dishes between you.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Batu Caves and Petronas Towers",
+          "notes": "Go to Batu Caves early; dress modestly.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-towers-batu"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "George Town street art and clan houses",
+          "notes": "Walk in the morning; eat at hawkers at night.",
+          "where": "George Town",
+          "book": "",
+          "place": "malaysia/george-town"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Kek Lok Si and Penang Hill",
+          "notes": "Choose a clear morning.",
+          "where": "Penang",
+          "book": "",
+          "place": "malaysia/penang-hill"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kuala Lumpur Airport (KUL)",
+          "to": "Kuala Lumpur hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kuala Lumpur hotel",
+          "to": "Kuala Lumpur Airport (KUL)",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Penang Airport (PEN)",
+          "to": "George Town hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "George Town hotel",
+          "to": "Penang Airport (PEN)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Taxi or Grab",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "malaysia-peninsula-10d",
+      "title": "Peninsular Malaysia in 10 Days",
+      "summary": "Kuala Lumpur, Cameron Highlands, Penang and Langkawi.",
+      "days": 10,
+      "route": "Kuala Lumpur > Cameron Highlands > George Town > Langkawi",
+      "arrive": "Kuala Lumpur (KUL)",
+      "depart": "Langkawi (LGK)",
+      "countries": [
+        "Malaysia"
+      ],
+      "regions": [
+        "Penang"
+      ],
+      "cities": [
+        "Kuala Lumpur",
+        "Cameron Highlands",
+        "George Town",
+        "Langkawi"
+      ],
+      "imageQuery": "Cameron Highlands tea plantation",
+      "highlights": [
+        "Batu Caves",
+        "Cameron Highlands tea",
+        "George Town food",
+        "Langkawi SkyBridge"
+      ],
+      "destinationKeys": [
+        "malaysia",
+        "malaysia/kuala-lumpur",
+        "malaysia/cameron-highlands",
+        "malaysia/penang",
+        "malaysia/george-town",
+        "malaysia/langkawi"
+      ],
+      "hero": "malaysia/cameron-highlands",
+      "sources": [
+        "KimKim",
+        "Backpack Bob",
+        "Bamboo Travel",
+        "Remote Lands",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "outdoors",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Kuala Lumpur",
+          "hotel": "Hotel in Kuala Lumpur",
+          "start": 0,
+          "nights": 3,
+          "area": "Near KLCC or Bukit Bintang, for walkable sights and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cameron Highlands",
+          "hotel": "Resort in the Cameron Highlands",
+          "start": 3,
+          "nights": 2,
+          "area": "In Tanah Rata, close to the tea trails",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "George Town",
+          "hotel": "Hotel in George Town",
+          "start": 5,
+          "nights": 2,
+          "area": "In George Town heritage zone, a short walk to hawkers",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Langkawi",
+          "hotel": "Resort in Langkawi",
+          "start": 7,
+          "nights": 2,
+          "area": "On Pantai Cenang or Kuah, near the cable car and jetty",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Jalan Alor and Chinatown street food",
+          "notes": "Share a few dishes between you.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Batu Caves and Petronas Towers",
+          "notes": "Go to Batu Caves early; dress modestly.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-towers-batu"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Tea plantation and Mossy Forest",
+          "notes": "Bring a jumper; cool and often misty.",
+          "where": "Cameron Highlands",
+          "book": "",
+          "place": "malaysia/cameron-highlands"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "George Town street art and clan houses",
+          "notes": "Walk in the morning; eat at hawkers at night.",
+          "where": "George Town",
+          "book": "",
+          "place": "malaysia/george-town"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Kek Lok Si and Penang Hill",
+          "notes": "Choose a clear morning.",
+          "where": "Penang",
+          "book": "",
+          "place": "malaysia/penang-hill"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Langkawi SkyBridge and mangrove cruise",
+          "notes": "The cable car closes in strong wind.",
+          "where": "Langkawi",
+          "book": "",
+          "place": "malaysia/langkawi-skybridge"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kuala Lumpur Airport (KUL)",
+          "to": "Kuala Lumpur hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kuala Lumpur",
+          "to": "Cameron Highlands",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Private driver or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Cameron Highlands",
+          "to": "George Town",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Private driver or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Other",
+          "from": "Penang jetty",
+          "to": "Langkawi",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Langkawi resort",
+          "to": "Langkawi Airport (LGK)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "malaysia-penang-langkawi-borneo-12d",
+      "title": "Malaysia and Borneo in 12 Days",
+      "summary": "Kuala Lumpur, Penang, Langkawi and Sabah rainforest.",
+      "days": 12,
+      "route": "Kuala Lumpur > George Town > Langkawi > Kota Kinabalu > Sepilok > Kinabatangan",
+      "arrive": "Kuala Lumpur (KUL)",
+      "depart": "Sandakan (SDK)",
+      "countries": [
+        "Malaysia"
+      ],
+      "regions": [
+        "Penang",
+        "Sabah"
+      ],
+      "cities": [
+        "Kuala Lumpur",
+        "George Town",
+        "Langkawi",
+        "Kota Kinabalu",
+        "Sepilok",
+        "Kinabatangan"
+      ],
+      "imageQuery": "Kinabatangan River proboscis monkey",
+      "highlights": [
+        "Batu Caves",
+        "George Town",
+        "Langkawi",
+        "Sepilok orangutans",
+        "Kinabatangan cruise"
+      ],
+      "destinationKeys": [
+        "malaysia",
+        "malaysia/kuala-lumpur",
+        "malaysia/penang",
+        "malaysia/george-town",
+        "malaysia/langkawi",
+        "malaysia/sabah",
+        "malaysia/kota-kinabalu",
+        "malaysia/sepilok",
+        "malaysia/kinabatangan"
+      ],
+      "hero": "malaysia/sabah",
+      "sources": [
+        "KimKim",
+        "Backpack Bob",
+        "Bamboo Travel",
+        "Remote Lands",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "food",
+        "adventure",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Kuala Lumpur",
+          "hotel": "Hotel in Kuala Lumpur",
+          "start": 0,
+          "nights": 2,
+          "area": "Near KLCC or Bukit Bintang, for walkable sights and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "George Town",
+          "hotel": "Hotel in George Town",
+          "start": 2,
+          "nights": 3,
+          "area": "In George Town heritage zone, a short walk to hawkers",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Langkawi",
+          "hotel": "Resort in Langkawi",
+          "start": 5,
+          "nights": 2,
+          "area": "On Pantai Cenang or Kuah, near the cable car and jetty",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kota Kinabalu",
+          "hotel": "Hotel in Kota Kinabalu",
+          "start": 7,
+          "nights": 1,
+          "area": "In central Kota Kinabalu near the waterfront",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sepilok",
+          "hotel": "Lodge near Sepilok",
+          "start": 8,
+          "nights": 1,
+          "area": "Near Sepilok, a short drive from Sandakan",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kinabatangan",
+          "hotel": "Lodge on the Kinabatangan River",
+          "start": 9,
+          "nights": 2,
+          "area": "In a riverside lodge on the Kinabatangan, with cruises included",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Jalan Alor and Chinatown street food",
+          "notes": "Share a few dishes between you.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Batu Caves and Petronas Towers",
+          "notes": "Go to Batu Caves early; dress modestly.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-towers-batu"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "George Town street art and clan houses",
+          "notes": "Walk in the morning; eat at hawkers at night.",
+          "where": "George Town",
+          "book": "",
+          "place": "malaysia/george-town"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Kek Lok Si and Penang Hill",
+          "notes": "Choose a clear morning.",
+          "where": "Penang",
+          "book": "",
+          "place": "malaysia/penang-hill"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Langkawi SkyBridge and mangrove cruise",
+          "notes": "The cable car closes in strong wind.",
+          "where": "Langkawi",
+          "book": "",
+          "place": "malaysia/langkawi-skybridge"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Sepilok orangutan centre",
+          "notes": "Feeding times are 10am and 3pm.",
+          "where": "Sepilok",
+          "book": "",
+          "place": "malaysia/sepilok-orangutan"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Kinabatangan river wildlife cruise",
+          "notes": "Dawn and dusk cruises find proboscis monkeys.",
+          "where": "Kinabatangan",
+          "book": "",
+          "place": "malaysia/kinabatangan"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kuala Lumpur Airport (KUL)",
+          "to": "Kuala Lumpur hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Kuala Lumpur hotel",
+          "to": "Kuala Lumpur Airport (KUL)",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Penang Airport (PEN)",
+          "to": "George Town hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Other",
+          "from": "Penang jetty",
+          "to": "Langkawi",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Langkawi resort",
+          "to": "Langkawi Airport (LGK)",
+          "time": "07:30",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight goes via Kuala Lumpur.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Kota Kinabalu Airport (BKI)",
+          "to": "Kota Kinabalu hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Kota Kinabalu hotel",
+          "to": "Kota Kinabalu Airport (BKI)",
+          "time": "08:00",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Sandakan Airport (SDK)",
+          "to": "Sepilok lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Sepilok",
+          "to": "Kinabatangan lodge",
+          "time": "14:00",
+          "minutes": 120,
+          "carrier": "Private driver or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Kinabatangan lodge",
+          "to": "Sandakan Airport (SDK)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Private driver or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "malaysia-peninsula-borneo-14d",
+      "title": "Grand Malaysia in 14 Days",
+      "summary": "The peninsula highlights and Borneo wildlife.",
+      "days": 14,
+      "route": "Kuala Lumpur > Cameron Highlands > George Town > Langkawi > Sepilok > Kinabatangan",
+      "arrive": "Kuala Lumpur (KUL)",
+      "depart": "Sandakan (SDK)",
+      "countries": [
+        "Malaysia"
+      ],
+      "regions": [
+        "Penang",
+        "Sabah"
+      ],
+      "cities": [
+        "Kuala Lumpur",
+        "Cameron Highlands",
+        "George Town",
+        "Langkawi",
+        "Sepilok",
+        "Kinabatangan"
+      ],
+      "imageQuery": "Sepilok orangutan Borneo",
+      "highlights": [
+        "Batu Caves",
+        "Cameron Highlands",
+        "George Town",
+        "Langkawi",
+        "Sepilok",
+        "Kinabatangan"
+      ],
+      "destinationKeys": [
+        "malaysia",
+        "malaysia/kuala-lumpur",
+        "malaysia/cameron-highlands",
+        "malaysia/penang",
+        "malaysia/george-town",
+        "malaysia/langkawi",
+        "malaysia/sabah",
+        "malaysia/sepilok",
+        "malaysia/kinabatangan"
+      ],
+      "hero": "malaysia/kinabatangan",
+      "sources": [
+        "KimKim",
+        "Backpack Bob",
+        "Bamboo Travel",
+        "Remote Lands",
+        "On The Go Tours"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "food",
+        "adventure",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Kuala Lumpur",
+          "hotel": "Hotel in Kuala Lumpur",
+          "start": 0,
+          "nights": 3,
+          "area": "Near KLCC or Bukit Bintang, for walkable sights and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cameron Highlands",
+          "hotel": "Resort in the Cameron Highlands",
+          "start": 3,
+          "nights": 2,
+          "area": "In Tanah Rata, close to the tea trails",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "George Town",
+          "hotel": "Hotel in George Town",
+          "start": 5,
+          "nights": 3,
+          "area": "In George Town heritage zone, a short walk to hawkers",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Langkawi",
+          "hotel": "Resort in Langkawi",
+          "start": 8,
+          "nights": 2,
+          "area": "On Pantai Cenang or Kuah, near the cable car and jetty",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sepilok",
+          "hotel": "Lodge near Sepilok",
+          "start": 10,
+          "nights": 1,
+          "area": "Near Sepilok, a short drive from Sandakan",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kinabatangan",
+          "hotel": "Lodge on the Kinabatangan River",
+          "start": 11,
+          "nights": 2,
+          "area": "In a riverside lodge on the Kinabatangan, with cruises included",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Jalan Alor and Chinatown street food",
+          "notes": "Share a few dishes between you.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Batu Caves and Petronas Towers",
+          "notes": "Go to Batu Caves early; dress modestly.",
+          "where": "Kuala Lumpur",
+          "book": "",
+          "place": "malaysia/kl-towers-batu"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Tea plantation and Mossy Forest",
+          "notes": "Bring a jumper; cool and often misty.",
+          "where": "Cameron Highlands",
+          "book": "",
+          "place": "malaysia/cameron-highlands"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "George Town street art and clan houses",
+          "notes": "Walk in the morning; eat at hawkers at night.",
+          "where": "George Town",
+          "book": "",
+          "place": "malaysia/george-town"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Kek Lok Si and Penang Hill",
+          "notes": "Choose a clear morning.",
+          "where": "Penang",
+          "book": "",
+          "place": "malaysia/penang-hill"
+        },
+        {
+          "day": 9,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Langkawi SkyBridge and mangrove cruise",
+          "notes": "The cable car closes in strong wind.",
+          "where": "Langkawi",
+          "book": "",
+          "place": "malaysia/langkawi-skybridge"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Sepilok orangutan centre",
+          "notes": "Feeding times are 10am and 3pm.",
+          "where": "Sepilok",
+          "book": "",
+          "place": "malaysia/sepilok-orangutan"
+        },
+        {
+          "day": 12,
+          "type": "Tour",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Kinabatangan river wildlife cruise",
+          "notes": "Dawn and dusk cruises find proboscis monkeys.",
+          "where": "Kinabatangan",
+          "book": "",
+          "place": "malaysia/kinabatangan"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kuala Lumpur Airport (KUL)",
+          "to": "Kuala Lumpur hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport express train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kuala Lumpur",
+          "to": "Cameron Highlands",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Private driver or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Cameron Highlands",
+          "to": "George Town",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Private driver or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Other",
+          "from": "Penang jetty",
+          "to": "Langkawi",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Langkawi resort",
+          "to": "Langkawi Airport (LGK)",
+          "time": "07:30",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight goes via Kuala Lumpur.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Sandakan Airport (SDK)",
+          "to": "Sepilok lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Sepilok",
+          "to": "Kinabatangan lodge",
+          "time": "14:00",
+          "minutes": 120,
+          "carrier": "Private driver or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Kinabatangan lodge",
+          "to": "Sandakan Airport (SDK)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Private driver or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "malaysia/kl-towers-batu": {
+        "name": "Petronas Towers, KL Tower and Batu Caves",
+        "description": "The twin towers skyline, a city viewpoint and a Hindu cave temple with a rainbow staircase.",
+        "details": "The Petronas Towers have a skybridge and observation deck, with the KLCC park at their foot. Batu Caves is a limestone hill with a golden statue of Murugan and 272 steps to a cave temple, with macaques. Dress modestly at the temple, and go in the morning.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "malaysia/kl-food": {
+        "name": "Jalan Alor and Chinatown street food",
+        "description": "A street of hawker stalls, satay and durian, and the old Chinatown market.",
+        "details": "Jalan Alor is lined with open-air restaurants and stalls from late afternoon. Petaling Street has a busy night market, and Chinese and Indian temples are close. Try nasi lemak, char kway teow and satay. Order a few dishes to share.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "malaysia/melaka-heritage": {
+        "name": "Melaka heritage town",
+        "description": "A UNESCO trading port of red Dutch buildings, Jonker Street and river cruises.",
+        "details": "Melaka has the Dutch Stadthuys, A Famosa fort ruins and Jonker Street, with a night market on weekends. The river cruise passes murals. Peranakan food, such as laksa and chicken rice balls, is a speciality. It is two hours from Kuala Lumpur.",
+        "interests": [
+          "culture",
+          "food",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "malaysia/cameron-highlands": {
+        "name": "Cameron Highlands tea plantations and Mossy Forest",
+        "description": "Cool hill-station scenery with tea estates, strawberry farms and a cloud forest walk.",
+        "details": "The Cameron Highlands sit at 1,500 metres, with tea plantations such as BOH and the Mossy Forest, a boardwalk through moss-draped trees. Temperatures are cool, so bring a jumper. Tea rooms serve scones. Roads wind steeply from the plains.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "malaysia/george-town": {
+        "name": "George Town street art and hawker food",
+        "description": "A UNESCO old town of shophouses, murals, clan houses and some of the best street food in Asia.",
+        "details": "George Town in Penang has heritage lanes, Khoo Kongsi clan house, Armenian Street murals and hawker centres serving char kway teow, assam laksa and cendol. Walk in the morning and eat at night. Penang Hill and Kek Lok Si temple lie just outside.",
+        "interests": [
+          "food",
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "malaysia/penang-hill": {
+        "name": "Penang Hill and Kek Lok Si Temple",
+        "description": "A funicular to a hilltop with city views, and a huge Buddhist temple complex.",
+        "details": "Penang Hill is reached by a funicular railway, with views of George Town and the strait. Kek Lok Si is a vast hillside temple with a tall Guanyin statue. Go on a clear morning, and avoid midday heat.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "malaysia/langkawi-skybridge": {
+        "name": "Langkawi SkyBridge and island hopping",
+        "description": "A cable car to a curved bridge among clouds, and boat trips to mangroves and beaches.",
+        "details": "The Langkawi SkyCab climbs Mount Mat Cincang to a curved pedestrian bridge. Mangrove tours see eagles and bats, and island-hopping visits Pregnancy Maiden Lake and beaches. Duty-free shopping is a draw. The cable car closes in strong wind or rain.",
+        "interests": [
+          "adventure",
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "malaysia/sepilok-orangutan": {
+        "name": "Sepilok Orangutan Rehabilitation Centre",
+        "description": "A forest centre where young orangutans learn to live in the wild, with feeding platforms.",
+        "details": "Sepilok cares for orphaned orangutans, with feeding times at 10am and 3pm viewed from platforms. The Rainforest Discovery Centre next door has a canopy walkway, and the sun bear sanctuary is close. It is near Sandakan, in eastern Sabah.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "malaysia/kinabatangan": {
+        "name": "Kinabatangan River wildlife cruises",
+        "description": "Dawn and dusk river cruises to see proboscis monkeys, pygmy elephants and hornbills.",
+        "details": "The Kinabatangan is the longest river in Sabah, and its lower reaches are a corridor of rainforest with monkeys and birds easily seen from small boats. Lodges offer morning and evening cruises and night walks. Expect humidity and rain, and bring a rain jacket.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "malaysia": {
+        "name": "Malaysia",
+        "description": "A country of skyscrapers, hill stations, heritage ports and Borneo rainforest.",
+        "images": []
+      },
+      "malaysia/kuala-lumpur": {
+        "name": "Kuala Lumpur",
+        "description": "The skyline capital with food streets and a famous cave temple.",
+        "images": []
+      },
+      "malaysia/melaka": {
+        "name": "Melaka",
+        "description": "A historic trading port with Dutch buildings.",
+        "images": []
+      },
+      "malaysia/cameron-highlands": {
+        "name": "Cameron Highlands",
+        "description": "A cool hill station of tea plantations.",
+        "images": []
+      },
+      "malaysia/penang": {
+        "name": "Penang",
+        "description": "An island state famous for George Town and its food.",
+        "images": []
+      },
+      "malaysia/george-town": {
+        "name": "George Town",
+        "description": "A UNESCO heritage town.",
+        "images": []
+      },
+      "malaysia/langkawi": {
+        "name": "Langkawi",
+        "description": "A beach island with a cable car.",
+        "images": []
+      },
+      "malaysia/sabah": {
+        "name": "Sabah",
+        "description": "The Borneo state of orangutans, rainforest and Mount Kinabalu.",
+        "images": []
+      },
+      "malaysia/kota-kinabalu": {
+        "name": "Kota Kinabalu",
+        "description": "The Sabah capital and gateway to Borneo.",
+        "images": []
+      },
+      "malaysia/sepilok": {
+        "name": "Sepilok",
+        "description": "Home of the orangutan rehabilitation centre.",
+        "images": []
+      },
+      "malaysia/kinabatangan": {
+        "name": "Kinabatangan",
+        "description": "A river famous for wildlife cruises.",
+        "images": []
+      }
+    }
+  }
+}

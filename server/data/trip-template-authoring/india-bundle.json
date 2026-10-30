@@ -1,0 +1,3044 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim and TravelStride itineraries for India",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "india-delhi-agra-4d",
+      "title": "Delhi and the Taj Mahal in 4 Days",
+      "summary": "A short introduction to India: Old and New Delhi, with a day trip by fast train to see the Taj Mahal and Agra Fort.",
+      "days": 4,
+      "route": "Delhi (Agra day trip)",
+      "arrive": "Delhi (DEL)",
+      "depart": "Delhi (DEL)",
+      "countries": [
+        "India"
+      ],
+      "regions": [
+        "Delhi",
+        "Uttar Pradesh"
+      ],
+      "cities": [
+        "Delhi",
+        "Agra"
+      ],
+      "imageQuery": "Taj Mahal Agra India sunrise",
+      "highlights": [
+        "Red Fort",
+        "Chandni Chowk food walk",
+        "Taj Mahal",
+        "Humayun's Tomb",
+        "Gurudwara Bangla Sahib"
+      ],
+      "destinationKeys": [
+        "india",
+        "india/delhi",
+        "india/uttar-pradesh",
+        "india/agra"
+      ],
+      "hero": "india/agra",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Delhi",
+          "hotel": "Hotel in Delhi",
+          "start": 0,
+          "nights": 3,
+          "area": "Central New Delhi (Connaught Place, Janpath) or near Aerocity: central and on the metro, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Qutub Minar",
+          "notes": "Visitors cannot climb the tower; the open, shaded ruins around it are best in the morning or late afternoon.",
+          "where": "Mehrauli, Delhi",
+          "book": "",
+          "place": "india/qutub-minar"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "India Gate and Kartavya Path",
+          "notes": "Lit up in the evening, when families stroll on the lawns; security may restrict access at times.",
+          "where": "Central Delhi",
+          "book": "",
+          "place": "india/india-gate"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Red Fort",
+          "notes": "Closed on Mondays; arrive early because security queues can be long.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/red-fort"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Jama Masjid",
+          "notes": "Cover shoulders and legs, remove shoes, and avoid prayer times; the minaret climb is steep and narrow.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/jama-masjid-delhi"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Chandni Chowk food walk",
+          "notes": "A guided walk helps with choosing busy stalls with a high turnover; the lanes are crowded and shared with rickshaws.",
+          "where": "Chandni Chowk, Old Delhi",
+          "book": "",
+          "place": "india/chandni-chowk"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1h",
+          "name": "Gurudwara Bangla Sahib",
+          "notes": "Cover your head, remove shoes and wash your feet at the entrance; the free community kitchen welcomes everyone.",
+          "where": "Connaught Place, Delhi",
+          "book": "",
+          "place": "india/bangla-sahib"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Taj Mahal",
+          "notes": "Closed to normal visitors on Fridays, so choose another day; large bags are not allowed in.",
+          "where": "Agra",
+          "book": "Yes - buy tickets in advance and choose the earliest slot",
+          "place": "india/taj-mahal"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "1.5h",
+          "name": "Agra Fort",
+          "notes": "Large and best seen with a guide or audio guide; ramps and worn stone steps throughout.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/agra-fort"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Humayun's Tomb",
+          "notes": "Quieter and more spacious than most Delhi sites; the late afternoon light is soft on the sandstone.",
+          "where": "Nizamuddin, Delhi",
+          "book": "",
+          "place": "india/humayuns-tomb"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Delhi Indira Gandhi Airport (DEL)",
+          "to": "Delhi hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Airport Express metro plus taxi, or taxi",
+          "notes": "Use a prepaid airport taxi or a pre-arranged transfer rather than a driver who approaches you in the terminal.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Delhi (Hazrat Nizamuddin or New Delhi station)",
+          "to": "Agra Cantt Station",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Fast intercity train (Gatimaan Express or Shatabdi)",
+          "notes": "The fast trains are reserved and the quickest way to Agra, around two hours; check which days they run.",
+          "book": "Yes - seats on the fast trains are reserved and sell out"
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Agra Cantt Station",
+          "to": "Delhi (Hazrat Nizamuddin or New Delhi station)",
+          "time": "17:50",
+          "minutes": 120,
+          "carrier": "Fast intercity train (Gatimaan Express or Shatabdi)",
+          "notes": "Check the last useful evening departure before heading out for the day.",
+          "book": "Yes - seats on the fast trains are reserved and sell out"
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Delhi hotel area",
+          "to": "Delhi Indira Gandhi Airport (DEL)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Airport Express metro plus taxi, or taxi",
+          "notes": "Allow three hours before an international flight; Delhi traffic is slow and unpredictable.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "india-golden-triangle-7d",
+      "title": "The Golden Triangle in 7 Days",
+      "summary": "The classic first trip to India linking Delhi, Agra and Jaipur, covering Mughal monuments, the Taj Mahal and Rajasthan's Pink City.",
+      "days": 7,
+      "route": "Delhi > Agra > Jaipur > Delhi",
+      "arrive": "Delhi (DEL)",
+      "depart": "Delhi (DEL)",
+      "countries": [
+        "India"
+      ],
+      "regions": [
+        "Delhi",
+        "Uttar Pradesh",
+        "Rajasthan"
+      ],
+      "cities": [
+        "Delhi",
+        "Agra",
+        "Fatehpur Sikri",
+        "Jaipur"
+      ],
+      "imageQuery": "Jaipur Amber Fort Rajasthan India",
+      "highlights": [
+        "Red Fort",
+        "Taj Mahal at sunrise",
+        "Fatehpur Sikri",
+        "Amber Fort",
+        "Jaipur bazaars"
+      ],
+      "destinationKeys": [
+        "india",
+        "india/delhi",
+        "india/uttar-pradesh",
+        "india/agra",
+        "india/fatehpur-sikri",
+        "india/rajasthan",
+        "india/jaipur"
+      ],
+      "hero": "india/agra",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Delhi",
+          "hotel": "Hotel in Delhi",
+          "start": 0,
+          "nights": 2,
+          "area": "Central New Delhi (Connaught Place, Janpath) or near Aerocity: central and on the metro, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Agra",
+          "hotel": "Hotel in Agra",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the Taj Mahal gates or Taj Ganj, so the sunrise slot is a short walk or rickshaw ride",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jaipur",
+          "hotel": "Hotel in Jaipur",
+          "start": 4,
+          "nights": 2,
+          "area": "Inside or beside the walled Pink City, within reach of the bazaars and City Palace",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "India Gate and Kartavya Path",
+          "notes": "Lit up in the evening, when families stroll on the lawns; security may restrict access at times.",
+          "where": "Central Delhi",
+          "book": "",
+          "place": "india/india-gate"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Red Fort",
+          "notes": "Closed on Mondays; arrive early because security queues can be long.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/red-fort"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Jama Masjid",
+          "notes": "Cover shoulders and legs, remove shoes, and avoid prayer times; the minaret climb is steep and narrow.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/jama-masjid-delhi"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Chandni Chowk food walk",
+          "notes": "A guided walk helps with choosing busy stalls with a high turnover; the lanes are crowded and shared with rickshaws.",
+          "where": "Chandni Chowk, Old Delhi",
+          "book": "",
+          "place": "india/chandni-chowk"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Humayun's Tomb",
+          "notes": "Quieter and more spacious than most Delhi sites; the late afternoon light is soft on the sandstone.",
+          "where": "Nizamuddin, Delhi",
+          "book": "",
+          "place": "india/humayuns-tomb"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Agra Fort",
+          "notes": "Large and best seen with a guide or audio guide; ramps and worn stone steps throughout.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/agra-fort"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "06:00",
+          "duration": "2h",
+          "name": "Taj Mahal",
+          "notes": "Closed to normal visitors on Fridays; the earliest slot is the least crowded and the marble is pink at dawn. Large bags are not allowed in.",
+          "where": "Agra",
+          "book": "Yes - buy tickets in advance and choose the earliest slot",
+          "place": "india/taj-mahal"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "1h",
+          "name": "Itimad-ud-Daulah",
+          "notes": "Small and calm; best in the morning light.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/itimad-ud-daulah"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:15",
+          "duration": "1h",
+          "name": "Mehtab Bagh",
+          "notes": "A flat garden walk with a view of the Taj Mahal at sunset; the river is low in the dry season.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/mehtab-bagh"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Fatehpur Sikri",
+          "notes": "Unofficial guides are persistent at the gates, so arrange an official one in advance if you want a guide.",
+          "where": "Fatehpur Sikri",
+          "book": "",
+          "place": "india/fatehpur-sikri"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:45",
+          "duration": "0.75h",
+          "name": "Hawa Mahal",
+          "notes": "The best view is from the cafes across the street; from inside it is a narrow set of rooms.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/hawa-mahal"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Jaipur bazaars",
+          "notes": "Bargaining is the norm; some shops close on Sundays, and traffic and pavement stalls slow the walk.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jaipur-bazaars"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Amber Fort",
+          "notes": "Go early before the groups; elephant rides raise animal welfare concerns, so many visitors walk the ramp or take a jeep.",
+          "where": "Amber, Jaipur",
+          "book": "",
+          "place": "india/amber-fort"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "City Palace, Jaipur",
+          "notes": "A guide or audio guide helps with the collections; part of the complex is still the royal family's home.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/city-palace-jaipur"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Jantar Mantar",
+          "notes": "There is little shade, and a guide makes the instruments far easier to understand.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jantar-mantar-jaipur"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Nahargarh Fort at sunset",
+          "notes": "The ramparts have no railings in places; the road up is winding.",
+          "where": "Nahargarh Hills, Jaipur",
+          "book": "",
+          "place": "india/nahargarh-fort"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Delhi Indira Gandhi Airport (DEL)",
+          "to": "Delhi hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Airport Express metro plus taxi, or taxi",
+          "notes": "Use a prepaid airport taxi or a pre-arranged transfer rather than a driver who approaches you in the terminal.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Delhi (Hazrat Nizamuddin or New Delhi station)",
+          "to": "Agra Cantt Station",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Fast intercity train (Gatimaan Express or Shatabdi)",
+          "notes": "The fast trains are reserved and the quickest way to Agra, around two hours; check which days they run.",
+          "book": "Yes - seats on the fast trains are reserved and sell out"
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Agra",
+          "to": "Fatehpur Sikri",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Fatehpur Sikri",
+          "to": "Jaipur hotel area",
+          "time": "12:15",
+          "minutes": 240,
+          "carrier": "Car with driver",
+          "notes": "A long day by road; the highway is busy, so allow for delays.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Jaipur hotel area",
+          "to": "Delhi Indira Gandhi Airport (DEL)",
+          "time": "",
+          "minutes": 300,
+          "carrier": "Car with driver",
+          "notes": "A long drive on departure day; leave early and book an evening international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "india-rajasthan-7d",
+      "title": "Jaipur, Jodhpur and Udaipur in 7 Days",
+      "summary": "Rajasthan's three great cities in a week: the Pink City, the Blue City below its fort, and the lake palaces of Udaipur, joined by road with a stop at the Jain temple of Ranakpur.",
+      "days": 7,
+      "route": "Jaipur > Jodhpur > Udaipur (Ranakpur)",
+      "arrive": "Jaipur (JAI)",
+      "depart": "Udaipur (UDR)",
+      "countries": [
+        "India"
+      ],
+      "regions": [
+        "Rajasthan"
+      ],
+      "cities": [
+        "Jaipur",
+        "Jodhpur",
+        "Ranakpur",
+        "Udaipur"
+      ],
+      "imageQuery": "Udaipur Lake Pichola City Palace India",
+      "highlights": [
+        "Amber Fort",
+        "Mehrangarh Fort",
+        "Blue City",
+        "Ranakpur Jain Temple",
+        "Lake Pichola boat ride"
+      ],
+      "destinationKeys": [
+        "india",
+        "india/rajasthan",
+        "india/jaipur",
+        "india/jodhpur",
+        "india/ranakpur",
+        "india/udaipur"
+      ],
+      "hero": "india/jodhpur",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Jaipur",
+          "hotel": "Hotel in Jaipur",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside or beside the walled Pink City, within reach of the bazaars and City Palace",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jodhpur",
+          "hotel": "Hotel in Jodhpur",
+          "start": 2,
+          "nights": 2,
+          "area": "Below Mehrangarh Fort in the old town, among the blue houses, for views and short walks",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Udaipur",
+          "hotel": "Hotel in Udaipur",
+          "start": 4,
+          "nights": 2,
+          "area": "Along the lakeside lanes of the old town for views over Lake Pichola",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "0.75h",
+          "name": "Hawa Mahal",
+          "notes": "The best view is from the cafes across the street; from inside it is a narrow set of rooms.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/hawa-mahal"
+        },
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Jaipur bazaars",
+          "notes": "Bargaining is the norm; some shops close on Sundays, and traffic and pavement stalls slow the walk.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jaipur-bazaars"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Amber Fort",
+          "notes": "Go early before the groups; elephant rides raise animal welfare concerns, so many visitors walk the ramp or take a jeep.",
+          "where": "Amber, Jaipur",
+          "book": "",
+          "place": "india/amber-fort"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "City Palace, Jaipur",
+          "notes": "A guide or audio guide helps with the collections; part of the complex is still the royal family's home.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/city-palace-jaipur"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Jantar Mantar",
+          "notes": "There is little shade, and a guide makes the instruments far easier to understand.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jantar-mantar-jaipur"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Nahargarh Fort at sunset",
+          "notes": "The ramparts have no railings in places; the road up is winding.",
+          "where": "Nahargarh Hills, Jaipur",
+          "book": "",
+          "place": "india/nahargarh-fort"
+        },
+        {
+          "day": 2,
+          "type": "Shopping",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Sardar Market and Clock Tower",
+          "notes": "A working local market, busy and less polished than the tourist bazaars; some shops close on Sundays.",
+          "where": "Old Town, Jodhpur",
+          "book": "",
+          "place": "india/sardar-market"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Mehrangarh Fort",
+          "notes": "Take the lift for part of the climb; the audio guide is excellent and the fort is steep with many steps.",
+          "where": "Mehrangarh, Jodhpur",
+          "book": "",
+          "place": "india/mehrangarh-fort"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "0.75h",
+          "name": "Jaswant Thada",
+          "notes": "A quiet marble cenotaph near the fort; the carving is delicate, so please do not touch.",
+          "where": "Jodhpur",
+          "book": "",
+          "place": "india/jaswant-thada"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Jodhpur Blue City walk",
+          "notes": "Lanes are steep and winding in places; mornings and late afternoons give the best light.",
+          "where": "Brahmpuri, Jodhpur",
+          "book": "",
+          "place": "india/jodhpur-blue-city"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Ranakpur Jain Temple",
+          "notes": "Shoes and leather items are not allowed inside and modest dress is required; non-Jains are admitted in the afternoon.",
+          "where": "Ranakpur",
+          "book": "",
+          "place": "india/ranakpur-jain-temple"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Lake Pichola boat ride",
+          "notes": "Boats run at sunset for about an hour; water levels can be low in the dry season.",
+          "where": "Lake Pichola, Udaipur",
+          "book": "",
+          "place": "india/lake-pichola-boat"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "City Palace, Udaipur",
+          "notes": "Narrow stairs and low doors; views over the lake from the upper levels.",
+          "where": "City Palace, Udaipur",
+          "book": "",
+          "place": "india/city-palace-udaipur"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "0.75h",
+          "name": "Jagdish Temple",
+          "notes": "An active temple; remove shoes and keep photography respectful.",
+          "where": "Old Town, Udaipur",
+          "book": "",
+          "place": "india/jagdish-temple"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Saheliyon-ki-Bari",
+          "notes": "A calm garden of fountains; flat and easy walking, best in the cooler hours.",
+          "where": "Udaipur",
+          "book": "",
+          "place": "india/saheliyon-ki-bari"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Monsoon Palace",
+          "notes": "The building is bare; the draw is the sunset view over the lakes.",
+          "where": "Sajjangarh, Udaipur",
+          "book": "",
+          "place": "india/monsoon-palace"
+        },
+        {
+          "day": 5,
+          "type": "Concert/Show",
+          "time": "19:00",
+          "duration": "1h",
+          "name": "Folk dance and puppet show",
+          "notes": "Seating is limited, so arrive early.",
+          "where": "Gangaur Ghat, Udaipur",
+          "book": "",
+          "place": "india/udaipur-folk-show"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Jaipur Airport (JAI)",
+          "to": "Jaipur hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-arranged transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Jaipur hotel area",
+          "to": "Jodhpur hotel area",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Car with driver",
+          "notes": "A long day by road across the plain; there are rest stops on the highway.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Jodhpur hotel area",
+          "to": "Ranakpur",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Ranakpur",
+          "to": "Udaipur hotel area",
+          "time": "13:00",
+          "minutes": 105,
+          "carrier": "Car with driver",
+          "notes": "The road climbs through the Aravalli hills.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Udaipur hotel area",
+          "to": "Udaipur Airport (UDR)",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi or pre-arranged transfer",
+          "notes": "Flights home usually connect through Delhi or Mumbai; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "india-golden-triangle-varanasi-10d",
+      "title": "The Golden Triangle and Varanasi in 10 Days",
+      "summary": "The Golden Triangle with the sacred city of Varanasi added, ending with dawn on the Ganges and the evening aarti ceremony.",
+      "days": 10,
+      "route": "Delhi > Agra > Jaipur > Varanasi",
+      "arrive": "Delhi (DEL)",
+      "depart": "Varanasi (VNS), connecting via Delhi",
+      "countries": [
+        "India"
+      ],
+      "regions": [
+        "Delhi",
+        "Uttar Pradesh",
+        "Rajasthan"
+      ],
+      "cities": [
+        "Delhi",
+        "Agra",
+        "Fatehpur Sikri",
+        "Jaipur",
+        "Varanasi",
+        "Sarnath"
+      ],
+      "imageQuery": "Varanasi Ganges ghats boats sunrise India",
+      "highlights": [
+        "Red Fort",
+        "Taj Mahal at sunrise",
+        "Amber Fort",
+        "Sunrise boat on the Ganges",
+        "Ganga Aarti"
+      ],
+      "destinationKeys": [
+        "india",
+        "india/delhi",
+        "india/uttar-pradesh",
+        "india/agra",
+        "india/fatehpur-sikri",
+        "india/rajasthan",
+        "india/jaipur",
+        "india/varanasi",
+        "india/sarnath"
+      ],
+      "hero": "india/varanasi",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "iconic_landmarks",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Delhi",
+          "hotel": "Hotel in Delhi",
+          "start": 0,
+          "nights": 2,
+          "area": "Central New Delhi (Connaught Place, Janpath) or near Aerocity: central and on the metro, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Agra",
+          "hotel": "Hotel in Agra",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the Taj Mahal gates or Taj Ganj, so the sunrise slot is a short walk or rickshaw ride",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jaipur",
+          "hotel": "Hotel in Jaipur",
+          "start": 4,
+          "nights": 2,
+          "area": "Inside or beside the walled Pink City, within reach of the bazaars and City Palace",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Varanasi",
+          "hotel": "Hotel in Varanasi",
+          "start": 6,
+          "nights": 3,
+          "area": "Near the ghats (Assi to Dashashwamedh): walkable, though lanes are narrow and luggage is carried the last stretch",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "India Gate and Kartavya Path",
+          "notes": "Lit up in the evening, when families stroll on the lawns; security may restrict access at times.",
+          "where": "Central Delhi",
+          "book": "",
+          "place": "india/india-gate"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Red Fort",
+          "notes": "Closed on Mondays; arrive early because security queues can be long.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/red-fort"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Jama Masjid",
+          "notes": "Cover shoulders and legs, remove shoes, and avoid prayer times; the minaret climb is steep and narrow.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/jama-masjid-delhi"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Chandni Chowk food walk",
+          "notes": "A guided walk helps with choosing busy stalls with a high turnover; the lanes are crowded and shared with rickshaws.",
+          "where": "Chandni Chowk, Old Delhi",
+          "book": "",
+          "place": "india/chandni-chowk"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Humayun's Tomb",
+          "notes": "Quieter and more spacious than most Delhi sites; the late afternoon light is soft on the sandstone.",
+          "where": "Nizamuddin, Delhi",
+          "book": "",
+          "place": "india/humayuns-tomb"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Agra Fort",
+          "notes": "Large and best seen with a guide or audio guide; ramps and worn stone steps throughout.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/agra-fort"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "06:00",
+          "duration": "2h",
+          "name": "Taj Mahal",
+          "notes": "Closed to normal visitors on Fridays; the earliest slot is the least crowded and the marble is pink at dawn. Large bags are not allowed in.",
+          "where": "Agra",
+          "book": "Yes - buy tickets in advance and choose the earliest slot",
+          "place": "india/taj-mahal"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "1h",
+          "name": "Itimad-ud-Daulah",
+          "notes": "Small and calm; best in the morning light.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/itimad-ud-daulah"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:15",
+          "duration": "1h",
+          "name": "Mehtab Bagh",
+          "notes": "A flat garden walk with a view of the Taj Mahal at sunset; the river is low in the dry season.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/mehtab-bagh"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Fatehpur Sikri",
+          "notes": "Unofficial guides are persistent at the gates, so arrange an official one in advance if you want a guide.",
+          "where": "Fatehpur Sikri",
+          "book": "",
+          "place": "india/fatehpur-sikri"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:45",
+          "duration": "0.75h",
+          "name": "Hawa Mahal",
+          "notes": "The best view is from the cafes across the street; from inside it is a narrow set of rooms.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/hawa-mahal"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Jaipur bazaars",
+          "notes": "Bargaining is the norm; some shops close on Sundays, and traffic and pavement stalls slow the walk.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jaipur-bazaars"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Amber Fort",
+          "notes": "Go early before the groups; elephant rides raise animal welfare concerns, so many visitors walk the ramp or take a jeep.",
+          "where": "Amber, Jaipur",
+          "book": "",
+          "place": "india/amber-fort"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "City Palace, Jaipur",
+          "notes": "A guide or audio guide helps with the collections; part of the complex is still the royal family's home.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/city-palace-jaipur"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Jantar Mantar",
+          "notes": "There is little shade, and a guide makes the instruments far easier to understand.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jantar-mantar-jaipur"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Nahargarh Fort at sunset",
+          "notes": "The ramparts have no railings in places; the road up is winding.",
+          "where": "Nahargarh Hills, Jaipur",
+          "book": "",
+          "place": "india/nahargarh-fort"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Ganga Aarti at Dashashwamedh Ghat",
+          "notes": "Arrive early for a good spot, or watch from a boat; keep belongings close in the crowd.",
+          "where": "Dashashwamedh Ghat, Varanasi",
+          "book": "",
+          "place": "india/ganga-aarti"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "2h",
+          "name": "Sunrise boat ride on the Ganges",
+          "notes": "Dress modestly, agree the length and fare before boarding, and do not photograph the cremation ghats.",
+          "where": "Ghats, Varanasi",
+          "book": "",
+          "place": "india/ganges-sunrise-boat"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Varanasi ghats and old city lanes",
+          "notes": "Steps are slippery near the water and the lanes are shared with cows and motorbikes; photography is not allowed at the burning ghats.",
+          "where": "Old City, Varanasi",
+          "book": "",
+          "place": "india/varanasi-ghats"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Sarnath",
+          "notes": "A quiet counterpoint to Varanasi; the museum holds the Ashoka lion capital, and there is little shade among the ruins.",
+          "where": "Sarnath, near Varanasi",
+          "book": "",
+          "place": "india/sarnath"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Delhi Indira Gandhi Airport (DEL)",
+          "to": "Delhi hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Airport Express metro plus taxi, or taxi",
+          "notes": "Use a prepaid airport taxi or a pre-arranged transfer rather than a driver who approaches you in the terminal.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Delhi (Hazrat Nizamuddin or New Delhi station)",
+          "to": "Agra Cantt Station",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Fast intercity train (Gatimaan Express or Shatabdi)",
+          "notes": "The fast trains are reserved and the quickest way to Agra, around two hours; check which days they run.",
+          "book": "Yes - seats on the fast trains are reserved and sell out"
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Agra",
+          "to": "Fatehpur Sikri",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Fatehpur Sikri",
+          "to": "Jaipur hotel area",
+          "time": "12:15",
+          "minutes": 240,
+          "carrier": "Car with driver",
+          "notes": "A long day by road; the highway is busy, so allow for delays.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Jaipur hotel area",
+          "to": "Jaipur Airport (JAI)",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-arranged transfer",
+          "notes": "This covers the ground leg to the departure airport only; the onward leg is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Varanasi Airport (VNS)",
+          "to": "Varanasi hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-arranged transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Varanasi hotel area",
+          "to": "Sarnath",
+          "time": "08:30",
+          "minutes": 30,
+          "carrier": "Taxi or auto-rickshaw",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Sarnath",
+          "to": "Varanasi hotel area",
+          "time": "12:15",
+          "minutes": 30,
+          "carrier": "Taxi or auto-rickshaw",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Varanasi hotel area",
+          "to": "Varanasi Airport (VNS)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-arranged transfer",
+          "notes": "Flights home usually connect through Delhi; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "india-rajasthan-varanasi-14d",
+      "title": "The Golden Triangle, Rajasthan and Varanasi in 14 Days",
+      "summary": "A fuller first trip: the Golden Triangle, then west to Jodhpur and Udaipur, and a flight east to finish at Varanasi on the Ganges.",
+      "days": 14,
+      "route": "Delhi > Agra > Jaipur > Jodhpur > Udaipur > Varanasi",
+      "arrive": "Delhi (DEL)",
+      "depart": "Varanasi (VNS), connecting via Delhi",
+      "countries": [
+        "India"
+      ],
+      "regions": [
+        "Delhi",
+        "Uttar Pradesh",
+        "Rajasthan"
+      ],
+      "cities": [
+        "Delhi",
+        "Agra",
+        "Fatehpur Sikri",
+        "Jaipur",
+        "Jodhpur",
+        "Ranakpur",
+        "Udaipur",
+        "Varanasi",
+        "Sarnath"
+      ],
+      "imageQuery": "Rajasthan India fort palace desert city",
+      "highlights": [
+        "Taj Mahal at sunrise",
+        "Amber Fort",
+        "Mehrangarh Fort",
+        "Lake Pichola",
+        "Ganga Aarti"
+      ],
+      "destinationKeys": [
+        "india",
+        "india/delhi",
+        "india/uttar-pradesh",
+        "india/agra",
+        "india/fatehpur-sikri",
+        "india/rajasthan",
+        "india/jaipur",
+        "india/jodhpur",
+        "india/ranakpur",
+        "india/udaipur",
+        "india/varanasi",
+        "india/sarnath"
+      ],
+      "hero": "india/udaipur",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "authentic_local",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Delhi",
+          "hotel": "Hotel in Delhi",
+          "start": 0,
+          "nights": 2,
+          "area": "Central New Delhi (Connaught Place, Janpath) or near Aerocity: central and on the metro, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Agra",
+          "hotel": "Hotel in Agra",
+          "start": 2,
+          "nights": 1,
+          "area": "Near the Taj Mahal gates or Taj Ganj, so the sunrise slot is a short walk or rickshaw ride",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jaipur",
+          "hotel": "Hotel in Jaipur",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside or beside the walled Pink City, within reach of the bazaars and City Palace",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jodhpur",
+          "hotel": "Hotel in Jodhpur",
+          "start": 5,
+          "nights": 2,
+          "area": "Below Mehrangarh Fort in the old town, among the blue houses, for views and short walks",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Udaipur",
+          "hotel": "Hotel in Udaipur",
+          "start": 7,
+          "nights": 3,
+          "area": "Along the lakeside lanes of the old town for views over Lake Pichola",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Varanasi",
+          "hotel": "Hotel in Varanasi",
+          "start": 10,
+          "nights": 3,
+          "area": "Near the ghats (Assi to Dashashwamedh): walkable, though lanes are narrow and luggage is carried the last stretch",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "India Gate and Kartavya Path",
+          "notes": "Lit up in the evening, when families stroll on the lawns; security may restrict access at times.",
+          "where": "Central Delhi",
+          "book": "",
+          "place": "india/india-gate"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Red Fort",
+          "notes": "Closed on Mondays; arrive early because security queues can be long.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/red-fort"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Jama Masjid",
+          "notes": "Cover shoulders and legs, remove shoes, and avoid prayer times; the minaret climb is steep and narrow.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/jama-masjid-delhi"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Chandni Chowk food walk",
+          "notes": "A guided walk helps with choosing busy stalls with a high turnover; the lanes are crowded and shared with rickshaws.",
+          "where": "Chandni Chowk, Old Delhi",
+          "book": "",
+          "place": "india/chandni-chowk"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Humayun's Tomb",
+          "notes": "Quieter and more spacious than most Delhi sites; the late afternoon light is soft on the sandstone.",
+          "where": "Nizamuddin, Delhi",
+          "book": "",
+          "place": "india/humayuns-tomb"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Agra Fort",
+          "notes": "Large and best seen with a guide or audio guide; ramps and worn stone steps throughout.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/agra-fort"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "Itimad-ud-Daulah",
+          "notes": "Small and calm; best in the morning light.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/itimad-ud-daulah"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Mehtab Bagh",
+          "notes": "A flat garden walk with a view of the Taj Mahal at sunset; the river is low in the dry season.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/mehtab-bagh"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "06:00",
+          "duration": "2h",
+          "name": "Taj Mahal",
+          "notes": "Closed to normal visitors on Fridays; the earliest slot is the least crowded and the marble is pink at dawn. Large bags are not allowed in.",
+          "where": "Agra",
+          "book": "Yes - buy tickets in advance and choose the earliest slot",
+          "place": "india/taj-mahal"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:45",
+          "duration": "1.5h",
+          "name": "Fatehpur Sikri",
+          "notes": "Unofficial guides are persistent at the gates, so arrange an official one in advance if you want a guide.",
+          "where": "Fatehpur Sikri",
+          "book": "",
+          "place": "india/fatehpur-sikri"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:15",
+          "duration": "0.75h",
+          "name": "Hawa Mahal",
+          "notes": "The best view is from the cafes across the street; from inside it is a narrow set of rooms.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/hawa-mahal"
+        },
+        {
+          "day": 3,
+          "type": "Shopping",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Jaipur bazaars",
+          "notes": "Bargaining is the norm; some shops close on Sundays, and traffic and pavement stalls slow the walk.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jaipur-bazaars"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Amber Fort",
+          "notes": "Go early before the groups; elephant rides raise animal welfare concerns, so many visitors walk the ramp or take a jeep.",
+          "where": "Amber, Jaipur",
+          "book": "",
+          "place": "india/amber-fort"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "City Palace, Jaipur",
+          "notes": "A guide or audio guide helps with the collections; part of the complex is still the royal family's home.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/city-palace-jaipur"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Jantar Mantar",
+          "notes": "There is little shade, and a guide makes the instruments far easier to understand.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jantar-mantar-jaipur"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Jaipur bazaars",
+          "notes": "Bargaining is the norm; some shops close on Sundays.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jaipur-bazaars"
+        },
+        {
+          "day": 5,
+          "type": "Shopping",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Sardar Market and Clock Tower",
+          "notes": "A working local market, busy and less polished than the tourist bazaars; some shops close on Sundays.",
+          "where": "Old Town, Jodhpur",
+          "book": "",
+          "place": "india/sardar-market"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Mehrangarh Fort",
+          "notes": "Take the lift for part of the climb; the audio guide is excellent and the fort is steep with many steps.",
+          "where": "Mehrangarh, Jodhpur",
+          "book": "",
+          "place": "india/mehrangarh-fort"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "0.75h",
+          "name": "Jaswant Thada",
+          "notes": "A quiet marble cenotaph near the fort; the carving is delicate, so please do not touch.",
+          "where": "Jodhpur",
+          "book": "",
+          "place": "india/jaswant-thada"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Jodhpur Blue City walk",
+          "notes": "Lanes are steep and winding in places; mornings and late afternoons give the best light.",
+          "where": "Brahmpuri, Jodhpur",
+          "book": "",
+          "place": "india/jodhpur-blue-city"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Ranakpur Jain Temple",
+          "notes": "Shoes and leather items are not allowed inside and modest dress is required; non-Jains are admitted in the afternoon.",
+          "where": "Ranakpur",
+          "book": "",
+          "place": "india/ranakpur-jain-temple"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Lake Pichola boat ride",
+          "notes": "Boats run at sunset for about an hour; water levels can be low in the dry season.",
+          "where": "Lake Pichola, Udaipur",
+          "book": "",
+          "place": "india/lake-pichola-boat"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "City Palace, Udaipur",
+          "notes": "Narrow stairs and low doors; views over the lake from the upper levels.",
+          "where": "City Palace, Udaipur",
+          "book": "",
+          "place": "india/city-palace-udaipur"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "0.75h",
+          "name": "Jagdish Temple",
+          "notes": "An active temple; remove shoes and keep photography respectful.",
+          "where": "Old Town, Udaipur",
+          "book": "",
+          "place": "india/jagdish-temple"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Saheliyon-ki-Bari",
+          "notes": "A calm garden of fountains; flat and easy walking, best in the cooler hours.",
+          "where": "Udaipur",
+          "book": "",
+          "place": "india/saheliyon-ki-bari"
+        },
+        {
+          "day": 8,
+          "type": "Concert/Show",
+          "time": "19:00",
+          "duration": "1h",
+          "name": "Folk dance and puppet show",
+          "notes": "Seating is limited, so arrive early.",
+          "where": "Gangaur Ghat, Udaipur",
+          "book": "",
+          "place": "india/udaipur-folk-show"
+        },
+        {
+          "day": 9,
+          "type": "Class",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Rajasthani cooking class",
+          "notes": "Often held in a family home; most food is vegetarian, and spice levels can be adjusted on request.",
+          "where": "Udaipur",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "india/udaipur-cooking-class"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Monsoon Palace",
+          "notes": "The building is bare; the draw is the sunset view. The road up winds through a wildlife sanctuary.",
+          "where": "Sajjangarh, Udaipur",
+          "book": "",
+          "place": "india/monsoon-palace"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Ganga Aarti at Dashashwamedh Ghat",
+          "notes": "Arrive early for a good spot, or watch from a boat; keep belongings close in the crowd.",
+          "where": "Dashashwamedh Ghat, Varanasi",
+          "book": "",
+          "place": "india/ganga-aarti"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "2h",
+          "name": "Sunrise boat ride on the Ganges",
+          "notes": "Dress modestly, agree the length and fare before boarding, and do not photograph the cremation ghats.",
+          "where": "Ghats, Varanasi",
+          "book": "",
+          "place": "india/ganges-sunrise-boat"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Varanasi ghats and old city lanes",
+          "notes": "Steps are slippery near the water and the lanes are shared with cows and motorbikes; photography is not allowed at the burning ghats.",
+          "where": "Old City, Varanasi",
+          "book": "",
+          "place": "india/varanasi-ghats"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Sarnath",
+          "notes": "A quiet counterpoint to Varanasi; the museum holds the Ashoka lion capital, and there is little shade among the ruins.",
+          "where": "Sarnath, near Varanasi",
+          "book": "",
+          "place": "india/sarnath"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Delhi Indira Gandhi Airport (DEL)",
+          "to": "Delhi hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Airport Express metro plus taxi, or taxi",
+          "notes": "Use a prepaid airport taxi or a pre-arranged transfer rather than a driver who approaches you in the terminal.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Delhi (Hazrat Nizamuddin or New Delhi station)",
+          "to": "Agra Cantt Station",
+          "time": "07:00",
+          "minutes": 120,
+          "carrier": "Fast intercity train (Gatimaan Express or Shatabdi)",
+          "notes": "The fast trains are reserved and the quickest way to Agra, around two hours; check which days they run.",
+          "book": "Yes - seats on the fast trains are reserved and sell out"
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Agra",
+          "to": "Fatehpur Sikri",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Fatehpur Sikri",
+          "to": "Jaipur hotel area",
+          "time": "12:30",
+          "minutes": 240,
+          "carrier": "Car with driver",
+          "notes": "A long day by road; the highway is busy.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Jaipur hotel area",
+          "to": "Jodhpur hotel area",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Car with driver",
+          "notes": "A long day by road across the plain; there are rest stops on the highway.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Jodhpur hotel area",
+          "to": "Ranakpur",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Ranakpur",
+          "to": "Udaipur hotel area",
+          "time": "13:00",
+          "minutes": 105,
+          "carrier": "Car with driver",
+          "notes": "The road climbs through the Aravalli hills.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Udaipur hotel area",
+          "to": "Udaipur Airport (UDR)",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi or pre-arranged transfer",
+          "notes": "This covers the ground leg to the departure airport only; the onward leg is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Varanasi Airport (VNS)",
+          "to": "Varanasi hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-arranged transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Varanasi hotel area",
+          "to": "Sarnath",
+          "time": "08:30",
+          "minutes": 30,
+          "carrier": "Taxi or auto-rickshaw",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Sarnath",
+          "to": "Varanasi hotel area",
+          "time": "12:15",
+          "minutes": 30,
+          "carrier": "Taxi or auto-rickshaw",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Varanasi hotel area",
+          "to": "Varanasi Airport (VNS)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-arranged transfer",
+          "notes": "Flights home usually connect through Delhi; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "india-golden-triangle-kerala-14d",
+      "title": "The Golden Triangle and Kerala in 14 Days",
+      "summary": "A north-and-south contrast: Delhi, Agra and Jaipur, then a flight to Kerala for Fort Kochi, the tea hills of Munnar, Periyar wildlife and a night on a backwater houseboat.",
+      "days": 14,
+      "route": "Delhi > Agra > Jaipur > Kochi > Munnar > Thekkady > Alleppey",
+      "arrive": "Delhi (DEL)",
+      "depart": "Kochi (COK)",
+      "countries": [
+        "India"
+      ],
+      "regions": [
+        "Delhi",
+        "Uttar Pradesh",
+        "Rajasthan",
+        "Kerala"
+      ],
+      "cities": [
+        "Delhi",
+        "Agra",
+        "Fatehpur Sikri",
+        "Jaipur",
+        "Kochi",
+        "Munnar",
+        "Thekkady",
+        "Alleppey"
+      ],
+      "imageQuery": "Kerala backwaters houseboat Alleppey India",
+      "highlights": [
+        "Taj Mahal at sunrise",
+        "Amber Fort",
+        "Fort Kochi",
+        "Munnar tea hills",
+        "Backwater houseboat"
+      ],
+      "destinationKeys": [
+        "india",
+        "india/delhi",
+        "india/uttar-pradesh",
+        "india/agra",
+        "india/fatehpur-sikri",
+        "india/rajasthan",
+        "india/jaipur",
+        "india/kerala",
+        "india/kochi",
+        "india/munnar",
+        "india/thekkady",
+        "india/alleppey"
+      ],
+      "hero": "india/alleppey",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Delhi",
+          "hotel": "Hotel in Delhi",
+          "start": 0,
+          "nights": 2,
+          "area": "Central New Delhi (Connaught Place, Janpath) or near Aerocity: central and on the metro, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Agra",
+          "hotel": "Hotel in Agra",
+          "start": 2,
+          "nights": 1,
+          "area": "Near the Taj Mahal gates or Taj Ganj, so the sunrise slot is a short walk or rickshaw ride",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jaipur",
+          "hotel": "Hotel in Jaipur",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside or beside the walled Pink City, within reach of the bazaars and City Palace",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kochi",
+          "hotel": "Hotel in Kochi",
+          "start": 5,
+          "nights": 2,
+          "area": "Fort Kochi, for the heritage walk and waterfront",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Munnar",
+          "hotel": "Hotel in Munnar",
+          "start": 7,
+          "nights": 2,
+          "area": "Among the tea estates, away from the busy town centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Thekkady",
+          "hotel": "Hotel in Thekkady",
+          "start": 9,
+          "nights": 2,
+          "area": "Near the reserve gate, for early boat departures",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Alleppey",
+          "hotel": "Stay aboard a houseboat, then a hotel in Alleppey",
+          "start": 11,
+          "nights": 2,
+          "area": "One night on a backwater houseboat, one in a hotel by the canals",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "India Gate and Kartavya Path",
+          "notes": "Lit up in the evening, when families stroll on the lawns; security may restrict access at times.",
+          "where": "Central Delhi",
+          "book": "",
+          "place": "india/india-gate"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Red Fort",
+          "notes": "Closed on Mondays; arrive early because security queues can be long.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/red-fort"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Jama Masjid",
+          "notes": "Cover shoulders and legs, remove shoes, and avoid prayer times; the minaret climb is steep and narrow.",
+          "where": "Old Delhi",
+          "book": "",
+          "place": "india/jama-masjid-delhi"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Chandni Chowk food walk",
+          "notes": "A guided walk helps with choosing busy stalls with a high turnover; the lanes are crowded and shared with rickshaws.",
+          "where": "Chandni Chowk, Old Delhi",
+          "book": "",
+          "place": "india/chandni-chowk"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Humayun's Tomb",
+          "notes": "Quieter and more spacious than most Delhi sites; the late afternoon light is soft on the sandstone.",
+          "where": "Nizamuddin, Delhi",
+          "book": "",
+          "place": "india/humayuns-tomb"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Agra Fort",
+          "notes": "Large and best seen with a guide or audio guide; ramps and worn stone steps throughout.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/agra-fort"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "Itimad-ud-Daulah",
+          "notes": "Small and calm; best in the morning light.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/itimad-ud-daulah"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Mehtab Bagh",
+          "notes": "A flat garden walk with a view of the Taj Mahal at sunset; the river is low in the dry season.",
+          "where": "Agra",
+          "book": "",
+          "place": "india/mehtab-bagh"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "06:00",
+          "duration": "2h",
+          "name": "Taj Mahal",
+          "notes": "Closed to normal visitors on Fridays; the earliest slot is the least crowded and the marble is pink at dawn. Large bags are not allowed in.",
+          "where": "Agra",
+          "book": "Yes - buy tickets in advance and choose the earliest slot",
+          "place": "india/taj-mahal"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:45",
+          "duration": "1.5h",
+          "name": "Fatehpur Sikri",
+          "notes": "Unofficial guides are persistent at the gates, so arrange an official one in advance if you want a guide.",
+          "where": "Fatehpur Sikri",
+          "book": "",
+          "place": "india/fatehpur-sikri"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:15",
+          "duration": "0.75h",
+          "name": "Hawa Mahal",
+          "notes": "The best view is from the cafes across the street; from inside it is a narrow set of rooms.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/hawa-mahal"
+        },
+        {
+          "day": 3,
+          "type": "Shopping",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Jaipur bazaars",
+          "notes": "Bargaining is the norm; some shops close on Sundays, and traffic and pavement stalls slow the walk.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jaipur-bazaars"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Amber Fort",
+          "notes": "Go early before the groups; elephant rides raise animal welfare concerns, so many visitors walk the ramp or take a jeep.",
+          "where": "Amber, Jaipur",
+          "book": "",
+          "place": "india/amber-fort"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "City Palace, Jaipur",
+          "notes": "A guide or audio guide helps with the collections; part of the complex is still the royal family's home.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/city-palace-jaipur"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Jantar Mantar",
+          "notes": "There is little shade, and a guide makes the instruments far easier to understand.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jantar-mantar-jaipur"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Jaipur bazaars",
+          "notes": "Bargaining is the norm; some shops close on Sundays.",
+          "where": "Pink City, Jaipur",
+          "book": "",
+          "place": "india/jaipur-bazaars"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Fort Kochi heritage walk",
+          "notes": "Flat but hot and humid; the Chinese fishing nets are at their best around sunset.",
+          "where": "Fort Kochi, Kochi",
+          "book": "",
+          "place": "india/fort-kochi"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Fort Kochi heritage walk",
+          "notes": "Jew Town, the synagogue and the palace murals are best seen in the morning before the heat.",
+          "where": "Fort Kochi, Kochi",
+          "book": "",
+          "place": "india/fort-kochi"
+        },
+        {
+          "day": 6,
+          "type": "Concert/Show",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Kathakali performance",
+          "notes": "Arrive early to watch the make-up being applied; the hall can be warm and the seating basic.",
+          "where": "Fort Kochi, Kochi",
+          "book": "",
+          "place": "india/kathakali-show"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Munnar tea plantation walk",
+          "notes": "Carry a light waterproof, as mist and rain are common; paths can be wet and slippery.",
+          "where": "Munnar",
+          "book": "",
+          "place": "india/munnar-tea-plantations"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Munnar tea museum and factory",
+          "notes": "The factory tour may not run every day; a tasting room serves the finished tea.",
+          "where": "Munnar",
+          "book": "",
+          "place": "india/munnar-tea-museum"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "11:30",
+          "duration": "3h",
+          "name": "Eravikulam National Park",
+          "notes": "The park closes during the calving season, usually around February and March, so check dates; cloud often hides the view.",
+          "where": "Eravikulam, near Munnar",
+          "book": "",
+          "place": "india/eravikulam-national-park"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Spice plantation tour in Thekkady",
+          "notes": "The walk is easy and level; insect repellent is worthwhile in the wet season.",
+          "where": "Thekkady",
+          "book": "",
+          "place": "india/thekkady-spice-plantation"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "07:30",
+          "duration": "2h",
+          "name": "Periyar Lake boat safari",
+          "notes": "The first boat of the day gives the best chance of seeing wildlife; tigers are very rarely seen.",
+          "where": "Periyar Tiger Reserve, Thekkady",
+          "book": "Yes - boat tickets are limited and the early departures fill first",
+          "place": "india/periyar-boat-safari"
+        },
+        {
+          "day": 10,
+          "type": "Concert/Show",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Kalaripayattu demonstration",
+          "notes": "Seats are close to the action in a small hall.",
+          "where": "Thekkady",
+          "book": "",
+          "place": "india/kalaripayattu-show"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "12:30",
+          "duration": "overnight",
+          "name": "Houseboat on the Kerala backwaters",
+          "notes": "Operators vary in quality and environmental practice, so choose with care; expect warm, humid weather.",
+          "where": "Alleppey Backwaters",
+          "book": "Yes - houseboats book up well ahead in high season",
+          "place": "india/alleppey-houseboat"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Village canoe tour in the backwaters",
+          "notes": "The canoes are low, so sit still when getting in and out.",
+          "where": "Alleppey Backwaters",
+          "book": "",
+          "place": "india/backwater-canoe"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Delhi Indira Gandhi Airport (DEL)",
+          "to": "Delhi hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Airport Express metro plus taxi, or taxi",
+          "notes": "Use a prepaid airport taxi or a pre-arranged transfer rather than a driver who approaches you in the terminal.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Delhi (Hazrat Nizamuddin or New Delhi station)",
+          "to": "Agra Cantt Station",
+          "time": "07:00",
+          "minutes": 120,
+          "carrier": "Fast intercity train (Gatimaan Express or Shatabdi)",
+          "notes": "The fast trains are reserved and the quickest way to Agra, around two hours; check which days they run.",
+          "book": "Yes - seats on the fast trains are reserved and sell out"
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Agra",
+          "to": "Fatehpur Sikri",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Fatehpur Sikri",
+          "to": "Jaipur hotel area",
+          "time": "12:30",
+          "minutes": 240,
+          "carrier": "Car with driver",
+          "notes": "A long day by road; the highway is busy.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Jaipur hotel area",
+          "to": "Jaipur Airport (JAI)",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-arranged transfer",
+          "notes": "This covers the ground leg to the departure airport only; Jaipur to Kochi is a domestic flight, usually via Delhi or Mumbai.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Kochi Airport (COK)",
+          "to": "Fort Kochi hotel area",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Prepaid taxi or pre-arranged transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Kochi",
+          "to": "Munnar",
+          "time": "08:30",
+          "minutes": 240,
+          "carrier": "Car with driver",
+          "notes": "The road climbs through winding hill roads with tea estates at the top; allow time for photo stops.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Munnar",
+          "to": "Thekkady",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Thekkady",
+          "to": "Alleppey",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Alleppey",
+          "to": "Kochi Airport (COK)",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Car with driver",
+          "notes": "Allow three hours before an international flight, plus time for traffic on the coast road.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "india/red-fort": {
+        "name": "Red Fort",
+        "description": "The red sandstone Mughal fortress-palace in Old Delhi, built by Shah Jahan in the seventeenth century.",
+        "details": "The Red Fort was built by the Mughal emperor Shah Jahan in the mid-seventeenth century when he moved his capital to Delhi, and its high red walls enclose halls, pavilions and gardens. It is a UNESCO World Heritage Site and the place from which India's prime minister addresses the nation each Independence Day. Inside, the Hall of Public Audience and the marble pavilions give an idea of Mughal court life, though some buildings are bare after past looting. It is closed on Mondays, and security queues can be long.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/jama-masjid-delhi": {
+        "name": "Jama Masjid, Delhi",
+        "description": "One of the largest mosques in India, with a huge courtyard and minarets that can be climbed for a view over Old Delhi.",
+        "details": "The Jama Masjid was completed in the mid-seventeenth century under Shah Jahan and has a courtyard that can hold many thousands of worshippers. Visitors may enter outside prayer times if they dress modestly, which means covering shoulders and legs, and remove their shoes. A separate charge applies for cameras, and for climbing the southern minaret, which has narrow steps and a view over the crowded rooftops of the old city. The streets around it are extremely busy.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/chandni-chowk": {
+        "name": "Chandni Chowk food walk",
+        "description": "A walk through Old Delhi's main bazaar and its side lanes, sampling parathas, chaat, kebabs and sweets from long-established stalls.",
+        "details": "Chandni Chowk is the old main street of Shahjahanabad, lined with shops, and the lanes off it hold some of Delhi's most famous food, such as stuffed parathas, spiced chaat, kebabs and jalebi. Many stalls and shops have been run by the same families for generations. The area is crowded and noisy, and rickshaws, handcarts and motorbikes share narrow lanes. A guided food walk helps with choosing stalls with a good turnover, and with navigating the maze.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/humayuns-tomb": {
+        "name": "Humayun's Tomb",
+        "description": "A Mughal garden tomb of red sandstone and white marble, the forerunner of the Taj Mahal.",
+        "details": "Humayun's Tomb was built in the sixteenth century for the second Mughal emperor, and it was the first monumental garden tomb on the Indian subcontinent. Its symmetrical charbagh gardens, high platform and double dome set a pattern later developed at the Taj Mahal. The complex is a UNESCO World Heritage Site and has been carefully restored. It is quieter and more spacious than many of Delhi's major sites, and the late afternoon light is soft on the sandstone.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/india-gate": {
+        "name": "India Gate and Kartavya Path",
+        "description": "A war memorial arch at the end of a long ceremonial avenue in New Delhi, lit up in the evening.",
+        "details": "India Gate is a memorial arch designed by Edwin Lutyens, completed in 1931, commemorating Indian soldiers who died in the First World War. It stands at the end of a broad ceremonial avenue, now called Kartavya Path, that runs between lawns toward the presidential palace. In the evening the arch is lit, and families come to walk and eat ice cream on the lawns. Security checks may restrict access around the memorial at times.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/qutub-minar": {
+        "name": "Qutub Minar",
+        "description": "A seventy-metre sandstone victory tower from the twelfth century, surrounded by early Islamic ruins in south Delhi.",
+        "details": "The Qutub Minar was begun in the late twelfth century as a victory tower after the establishment of the Delhi Sultanate, and is about seventy metres high with five tapering storeys of carved sandstone. Around it stand the ruins of one of the earliest mosques in India and an iron pillar that has famously resisted rust for well over a thousand years. Visitors cannot climb the tower. The complex is open, flat and shaded in parts, and mornings are quietest.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/bangla-sahib": {
+        "name": "Gurudwara Bangla Sahib",
+        "description": "A major Sikh temple in central Delhi with a sacred pool and a free community kitchen open to everyone.",
+        "details": "Gurudwara Bangla Sahib is one of the most important Sikh temples in Delhi, centred on a golden-domed shrine beside a large pool of sacred water. Visitors of any faith are welcome after covering their heads, removing their shoes and washing their feet at the entrance. Its langar, a community kitchen, serves free vegetarian meals to thousands of people daily, and visitors may sit and eat. The atmosphere is calm, and kirtan hymns are sung throughout the day.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/taj-mahal": {
+        "name": "Taj Mahal",
+        "description": "The white marble mausoleum built by Shah Jahan in memory of his wife Mumtaz Mahal, on the bank of the Yamuna at Agra.",
+        "details": "The Taj Mahal was built between roughly 1632 and 1653 by the Mughal emperor Shah Jahan as a tomb for his wife Mumtaz Mahal, and it is a UNESCO World Heritage Site. Its white marble is inlaid with semi-precious stones and its colour changes through the day, pink at dawn and soft grey in the morning mist. It is closed to normal visitors on Fridays and has timed entry slots, with the earliest at sunrise being the least crowded. Shoe covers or bare feet are needed on the marble platform, and large bags are not allowed in.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/agra-fort": {
+        "name": "Agra Fort",
+        "description": "A massive red sandstone Mughal fort and palace on the Yamuna, from which the Taj Mahal can be seen in the distance.",
+        "details": "Agra Fort was developed mainly under Akbar in the sixteenth century and extended by his grandson Shah Jahan, who added marble pavilions. According to tradition, Shah Jahan spent his last years confined in the fort by his son, looking across the river at the Taj Mahal. The complex is large and contains courts, mosques and palaces, and it is best seen with a guide or audio guide. Much of it involves ramps and steps on worn stone.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/itimad-ud-daulah": {
+        "name": "Itimad-ud-Daulah",
+        "description": "A small, intricately inlaid marble tomb on the Yamuna, sometimes called the Baby Taj.",
+        "details": "The tomb of Itimad-ud-Daulah was built in the 1620s by the empress Nur Jahan for her father, a senior minister of the Mughal court, and it was the first Mughal tomb to be built mostly from marble. Its walls are covered in delicate inlay of semi-precious stone and painted panels, an early version of the style later seen at the Taj Mahal. It is small, calm and quick to visit, and far less crowded. Light is best in the morning.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/mehtab-bagh": {
+        "name": "Mehtab Bagh",
+        "description": "A garden across the river from the Taj Mahal that gives a clear view of the monument at sunset.",
+        "details": "Mehtab Bagh is a Mughal-era garden on the opposite bank of the Yamuna, aligned with the Taj Mahal and offering a calm view of its full width with the river in front. It is used for sunset views without the crowds of the monument itself. The river is low and often smelly in the dry season. It is an easy, flat garden path.",
+        "interests": [
+          "photography",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/fatehpur-sikri": {
+        "name": "Fatehpur Sikri",
+        "description": "An abandoned Mughal capital of red sandstone palaces and a vast mosque, between Agra and Jaipur.",
+        "details": "Fatehpur Sikri was built by the emperor Akbar in the 1570s as his new capital, then abandoned after only a few years, probably because of water shortages. Its red sandstone palaces, courtyards and the huge Buland Darwaza gateway of its mosque survive well. It is a UNESCO World Heritage Site and sits conveniently on the road between Agra and Jaipur. Unofficial guides are persistent at the gates; arranging an official guide in advance avoids this.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/amber-fort": {
+        "name": "Amber Fort",
+        "description": "A hilltop fort-palace of sandstone and marble above Maota Lake, with a mirrored hall and views over the surrounding hills.",
+        "details": "Amber Fort was the capital of the Kachwaha rulers before Jaipur was founded in the eighteenth century, and its rooms, courtyards and gardens climb up a ridge above a lake. The Sheesh Mahal, a hall inlaid with tiny mirrors, is the best-known room. The ride up on elephants has become controversial for animal welfare reasons, so many visitors choose to walk the ramp or take a jeep. It is busiest in the middle of the day, and an early start gives a calmer visit.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/city-palace-jaipur": {
+        "name": "City Palace, Jaipur",
+        "description": "The royal residence in the heart of the Pink City, part museum and part still the family home of Jaipur's former rulers.",
+        "details": "The City Palace complex was begun in the eighteenth century by Sawai Jai Singh II, the founder of Jaipur, and combines Rajput and Mughal styles. Parts are open as a museum, with textiles, weapons and royal costumes, and the family still lives in one wing. Its ornate gates in the Peacock Courtyard are much photographed. A guide or audio guide helps make sense of the collections, and the main courts are flat and easy to walk.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/hawa-mahal": {
+        "name": "Hawa Mahal",
+        "description": "The Palace of Winds, a pink sandstone facade of hundreds of small latticed windows on a main street of Jaipur.",
+        "details": "The Hawa Mahal was built in 1799 as a screen that let the women of the royal household watch street life without being seen. Its honeycomb of small windows, set in a five-storey pink and red sandstone face, is one of the most recognisable images of Jaipur. The best view of it is from the cafes on the opposite side of the road, since from inside it is a rather narrow set of rooms. Early morning light on the facade is the best.",
+        "interests": [
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/jantar-mantar-jaipur": {
+        "name": "Jantar Mantar",
+        "description": "An eighteenth-century open-air astronomical observatory of giant stone instruments, listed by UNESCO.",
+        "details": "Jantar Mantar was built by Sawai Jai Singh II in the 1720s and is the largest and best preserved of the observatories he built in India. Its large stone instruments, including a sundial that can tell the time to within a few seconds, were used to measure the position of stars and track the movements of the sun. It is a UNESCO World Heritage Site. Visiting with a guide makes the instruments much easier to understand, and there is little shade at midday.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/jaipur-bazaars": {
+        "name": "Jaipur bazaars",
+        "description": "The market streets of the walled Pink City, selling jewellery, block-printed textiles, leather shoes and spices.",
+        "details": "The old city of Jaipur is laid out on a grid of wide streets lined with arcaded shops, painted pink in the nineteenth century for a royal visit. Johari Bazaar is the street for jewellers and gemstones, while Bapu Bazaar and nearby lanes sell block-printed cotton, brass and leather mojari shoes. Bargaining is the norm, and some shops close on Sundays. Busy traffic and pavement stalls make the walk slow.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/nahargarh-fort": {
+        "name": "Nahargarh Fort sunset",
+        "description": "A hilltop fort on the ridge above Jaipur, popular for sunset views over the city.",
+        "details": "Nahargarh sits on the Aravalli ridge overlooking Jaipur, and was built in the eighteenth century as a retreat and part of the city's defences. The fort itself is quite plain, and the reason to come is the view of the city lights coming on from the ramparts. A cafe on the terrace is a popular place to wait for sunset. The access road is winding, and the ramparts have no railings in places.",
+        "interests": [
+          "photography",
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/mehrangarh-fort": {
+        "name": "Mehrangarh Fort",
+        "description": "A towering fifteenth-century fort on a rocky ridge above Jodhpur, with a museum of royal treasures and views over the blue city.",
+        "details": "Mehrangarh stands on a steep cliff above the old city of Jodhpur and has been home to the Rathore rulers since the fifteenth century. Its walls rise sheer from the rock, and inside, a series of courtyards and palaces hold a good museum of howdahs, palanquins, weapons and paintings. The audio guide is highly regarded. A lift is available for part of the climb, though the fort is still steep with many steps.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "india/jaswant-thada": {
+        "name": "Jaswant Thada",
+        "description": "A white marble cenotaph near Mehrangarh, built in memory of a Jodhpur maharaja.",
+        "details": "Jaswant Thada was built at the end of the nineteenth century in memory of Maharaja Jaswant Singh II, and is built of thin sheets of carved marble that glow when sunlight passes through them. It sits in a quiet garden with a view back to the fort. It is quick to visit and calm after the busy fort. Some of the marble work inside is delicate, so visitors are asked not to touch.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/jodhpur-blue-city": {
+        "name": "Jodhpur Blue City walk",
+        "description": "A walk through the old town's blue-washed houses below Mehrangarh Fort.",
+        "details": "Many of the old houses around Mehrangarh in Jodhpur are washed in shades of blue, an area known as Brahmpuri, because of its association with the Brahmin community. Explanations for the colour vary, from social status to keeping the interiors cool and deterring insects. The narrow, winding lanes are steep in places, and a guide helps with finding the best viewpoints. Mornings and the late afternoon give the best light.",
+        "interests": [
+          "photography",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/sardar-market": {
+        "name": "Sardar Market and Clock Tower",
+        "description": "Jodhpur's central market around a clock tower, selling spices, textiles, silver and sweets.",
+        "details": "Sardar Market surrounds the old clock tower in the middle of Jodhpur's old town, and its lanes are lined with stalls selling spices, textiles, handicrafts, silver and sweets. It is a working local market, and busier and less polished than the tourist bazaars of other cities. The tower is a useful landmark for finding your way. Some shops close on Sundays.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/ranakpur-jain-temple": {
+        "name": "Ranakpur Jain Temple",
+        "description": "A fifteenth-century marble Jain temple in a forested valley, carved with more than a thousand different pillars.",
+        "details": "The Ranakpur temple was built in the fifteenth century and is among the largest and most ornate Jain temples in India, set in a wooded valley in the Aravalli hills. Its interior is a forest of carved marble pillars, with no two exactly alike, and ceilings of intricate carving. Shoes and leather items are not allowed inside, and modest dress is required. It sits conveniently on the road between Jodhpur and Udaipur and is open to non-Jains in the afternoon.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/city-palace-udaipur": {
+        "name": "City Palace, Udaipur",
+        "description": "A complex of palaces and courtyards rising above Lake Pichola, the largest palace complex in Rajasthan.",
+        "details": "The City Palace was begun in the sixteenth century by Maharana Udai Singh II and extended by his successors, so it combines several styles in one long waterfront facade. Inside are courtyards, balconies, mirror-work rooms and a museum of royal artefacts, with views over the lake from the upper levels. Part of the complex is still used by the royal family. The route involves many narrow stairs and low doors.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/lake-pichola-boat": {
+        "name": "Lake Pichola boat ride",
+        "description": "A boat trip on the lake at sunset, passing the City Palace and the white island palaces.",
+        "details": "Lake Pichola is the central lake in Udaipur, with the City Palace on its eastern shore and two island palaces rising from the water. Boats leave from a jetty near the palace for a trip of about an hour, usually at sunset, and often stop at an island. The light is soft and the atmosphere calm, though the water level in the dry season can drop. Island palaces are mostly hotels, so landing there is limited.",
+        "interests": [
+          "relax",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/jagdish-temple": {
+        "name": "Jagdish Temple",
+        "description": "A seventeenth-century Hindu temple of Vishnu in Udaipur, reached by a steep flight of steps.",
+        "details": "The Jagdish Temple was built in the 1650s and dedicated to Lord Jagannath, a form of Vishnu. It is an active temple with a carved spire and a steep stairway lined with stone elephants. Morning and evening prayers draw worshippers, and visitors are welcome to watch quietly. Shoes are removed at the entrance, and photography inside may be restricted.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/saheliyon-ki-bari": {
+        "name": "Saheliyon-ki-Bari",
+        "description": "A tranquil garden of fountains, lotus pools and marble pavilions made for the women of the royal court.",
+        "details": "Saheliyon-ki-Bari, which means the garden of the maidens, was laid out in the eighteenth century with fountains, lotus pools, marble elephants and shaded pavilions. It is a quiet garden compared with the busy streets around the palace. It is flat and easy to walk, and fountains run at set times. Visit in the cooler part of the day.",
+        "interests": [
+          "relax",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/monsoon-palace": {
+        "name": "Monsoon Palace (Sajjangarh)",
+        "description": "A hilltop palace above Udaipur, built to watch the monsoon clouds and now popular for sunset views.",
+        "details": "Sajjangarh, also called the Monsoon Palace, stands on a ridge west of Udaipur and was built in the late nineteenth century as an observation post for the monsoon rains. The building itself is bare, and the draw is the panorama over the lakes and city, particularly at sunset. It sits inside a wildlife sanctuary, so wild animals may be seen on the road up. Access is by car or jeep, and the road winds.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/udaipur-folk-show": {
+        "name": "Folk dance and puppet show",
+        "description": "An evening of Rajasthani dance, music and puppetry in a restored haveli beside Lake Pichola.",
+        "details": "Bagore ki Haveli, a restored eighteenth-century mansion on the lake, stages a nightly hour of traditional Rajasthani dances, folk music and a puppet show. It is aimed at visitors and short, but it gives a colourful look at regional performance traditions. Seating is limited, so it is worth arriving early. A small museum in the haveli is open by day.",
+        "interests": [
+          "culture",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/udaipur-cooking-class": {
+        "name": "Rajasthani cooking class",
+        "description": "A home-style cooking class in Udaipur covering regional vegetarian dishes, breads and chai.",
+        "details": "Cooking classes in Udaipur are often held in family homes and teach dishes such as dal baati, vegetable curries, flatbreads and masala chai. Many start with a visit to buy vegetables and spices. Groups are small, and most food is vegetarian, reflecting local custom. You eat the meal at the end of the session, and spice levels can be adjusted on request.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/ganga-aarti": {
+        "name": "Ganga Aarti at Dashashwamedh Ghat",
+        "description": "The nightly fire ceremony on the Ganges at Varanasi, with priests, chanting and lamps held above the river.",
+        "details": "Every evening at Dashashwamedh Ghat, priests perform an aarti in which large oil lamps are swung to the rhythm of chants and bells in honour of the River Ganga. Thousands gather on the steps and in boats on the water to watch. Arrive early for a good spot, since the ghat becomes extremely crowded, or watch from a boat for a better view. Keep belongings close in the crowd.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/ganges-sunrise-boat": {
+        "name": "Sunrise boat ride on the Ganges",
+        "description": "A rowing-boat trip along the ghats at dawn, watching bathers, rituals and the old city from the water.",
+        "details": "Boats leave before sunrise from the main ghats and drift slowly along the riverfront, past temples, palaces and stepped ghats where people bathe and pray. It is the best way to see the whole length of the waterfront in the soft early light. The river is a place of worship and also of cremation, so photographs should be taken with respect and cremation ghats are not photographed. Dress modestly and agree the length and fare before boarding.",
+        "interests": [
+          "culture",
+          "photography",
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/varanasi-ghats": {
+        "name": "Varanasi ghats and old city lanes",
+        "description": "A walk along the stepped riverfront and through the narrow lanes of one of the world's oldest living cities.",
+        "details": "Varanasi is among the oldest continuously inhabited cities in the world and a major centre of pilgrimage for Hindus. Walking from ghat to ghat shows the daily life of the river, from washing and yoga to priests and boat-makers, and the lanes behind are a maze of shrines, silk shops and tea stalls. Cremations take place at the burning ghats, where photography is not permitted. Streets are narrow and shared with cows and motorbikes, and the stepped ghats can be slippery.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/sarnath": {
+        "name": "Sarnath",
+        "description": "The deer park near Varanasi where the Buddha gave his first sermon, with a large stupa and a museum.",
+        "details": "Sarnath, about ten kilometres from Varanasi, is where the Buddha is said to have delivered his first teaching after enlightenment. The Dhamek Stupa and the ruins of ancient monasteries stand in a calm park, and the small archaeological museum holds the Ashoka lion capital that became India's national emblem. It is a quiet counterpart to the intensity of Varanasi. A modest entry fee applies and there is little shade in the ruins.",
+        "interests": [
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/fort-kochi": {
+        "name": "Fort Kochi heritage walk",
+        "description": "A walk among the Chinese fishing nets, colonial churches, Jewish quarter and spice warehouses of Kochi's old port.",
+        "details": "Fort Kochi was shaped by Portuguese, Dutch, British and Jewish and Arab traders, and its mix of architecture reflects them. Cantilevered Chinese fishing nets line the waterfront, and nearby are St Francis Church, one of the oldest European-built churches in India, and the Mattancherry Palace with its murals. In Jew Town, shops of spices and antiques surround the Paradesi Synagogue. The walk is flat but hot and humid, and it is best done in the morning.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/kathakali-show": {
+        "name": "Kathakali performance",
+        "description": "A traditional Kerala dance-drama with elaborate make-up, costumes and drumming, usually shown in the evening.",
+        "details": "Kathakali is a classical dance-drama of Kerala in which performers act out stories from Hindu epics using elaborate face paint, costumes and precise gestures of the hands and eyes. Shows for visitors are usually shorter than the all-night traditional versions. Arriving early lets you watch the make-up being applied, which takes a long time and is part of the experience. The hall can be warm and seating basic.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/munnar-tea-plantations": {
+        "name": "Munnar tea plantation walk",
+        "description": "A walk through the green terraces of tea bushes that cover the hills around Munnar.",
+        "details": "Munnar sits at about 1,500 metres in the Western Ghats, and tea plantations blanket the hills in neat green rows. Walking between the bushes, with pickers working among them, is the main pleasure, and the air is cooler and clearer than on the coast. Mist and rain are common, particularly during the monsoon, so a light waterproof is useful. Paths can be wet and slippery.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/munnar-tea-museum": {
+        "name": "Munnar tea museum and factory",
+        "description": "A small museum and working factory showing how tea is picked, withered, rolled and graded.",
+        "details": "The tea museum in Munnar tells the story of tea growing in the hills from the nineteenth century, with old machinery, photographs and a short film. A tour of the working factory, where available, shows the stages from withering to grading. A tasting room serves the finished product. It is a quick, easy half-day stop, and the factory may not run on some days.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/eravikulam-national-park": {
+        "name": "Eravikulam National Park",
+        "description": "A high grassland park near Munnar, home to the endangered Nilgiri tahr, a mountain goat.",
+        "details": "Eravikulam protects open montane grassland on the high ridges above Munnar and is the best place to see the Nilgiri tahr, a wild mountain goat found only in the Western Ghats. Visitors travel by park bus to the starting point and walk a limited stretch of path. The park closes during the calving season, usually around February and March, so check dates before planning. Weather can change quickly, and cloud often hides the views.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/thekkady-spice-plantation": {
+        "name": "Spice plantation tour in Thekkady",
+        "description": "A guided walk through gardens of cardamom, pepper, cinnamon and vanilla in the hills around Thekkady.",
+        "details": "The hills around Thekkady have grown spices for centuries, and a guided walk through a working plantation shows cardamom, black pepper, cinnamon, clove, nutmeg and vanilla in their natural form. Guides explain how each is grown, harvested and dried, and the plantation shop sells fresh spice. It is humid and leech and insect repellent is worthwhile in the wet season. The walk is easy, along level paths.",
+        "interests": [
+          "food",
+          "outdoors",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "india/periyar-boat-safari": {
+        "name": "Periyar Lake boat safari",
+        "description": "A boat trip on the lake in Periyar Tiger Reserve, watching for elephants, deer and birds at the shoreline.",
+        "details": "Periyar Tiger Reserve centres on a large lake created by a dam in the nineteenth century, and boat trips run early in the morning and late in the afternoon when animals come to drink. Elephants, wild boar, sambar deer and many birds are regularly seen, while tigers live in the reserve but are very rarely spotted. The first boat of the day gives the best chance, and booking in advance is recommended. Mist over the water in the early morning is part of the appeal.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/kalaripayattu-show": {
+        "name": "Kalaripayattu demonstration",
+        "description": "A demonstration of Kerala's ancient martial art, with performers using swords, shields and sticks.",
+        "details": "Kalaripayattu is a martial art from Kerala with a history said to go back many centuries, taught in dedicated training halls. Evening demonstrations show fighters using sticks, swords, shields and hand-to-hand techniques, with fast, acrobatic movement. Seating is close to the action in a small hall. Shows are short and aimed at visitors.",
+        "interests": [
+          "culture",
+          "adventure",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/alleppey-houseboat": {
+        "name": "Houseboat on the Kerala backwaters",
+        "description": "An overnight stay on a converted rice barge drifting through the canals and lakes of the backwaters near Alleppey.",
+        "details": "The backwaters are a network of lagoons, canals and rivers behind the Kerala coast, and houseboats made from converted rice barges, called kettuvallams, drift slowly through them. A crew cooks local fish and rice meals on board, and the boat moors for the night in a quiet spot. Rooms are air-conditioned in some boats but power is limited. Operators vary in quality and environmental practice, so choose with care, and expect warm, humid weather.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "india/backwater-canoe": {
+        "name": "Village canoe tour in the backwaters",
+        "description": "A paddle in a small canoe along narrow canals lined with houses, coconut palms and rice fields.",
+        "details": "Small canoes can reach narrow canals that houseboats cannot, passing village houses, fishermen, coconut palms and rice paddies. A local guide paddles or poles the boat, and the trip usually lasts two hours or so. It is a quieter way to see daily life on the water. The canoes are low, so sit still while getting in and out.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "india": {
+        "name": "India",
+        "description": "A vast country of Mughal monuments, desert forts, Himalayan foothills, sacred rivers and tropical backwaters, best taken one region at a time.",
+        "images": []
+      },
+      "india/delhi": {
+        "name": "Delhi",
+        "description": "India's capital, combining the Mughal alleys of Old Delhi with the broad avenues and monuments of New Delhi.",
+        "images": []
+      },
+      "india/uttar-pradesh": {
+        "name": "Uttar Pradesh",
+        "description": "A northern state holding the Taj Mahal at Agra and the sacred city of Varanasi on the Ganges.",
+        "images": []
+      },
+      "india/agra": {
+        "name": "Agra",
+        "description": "The Mughal city on the Yamuna that holds the Taj Mahal, a vast red fort and some of the best-preserved Mughal tombs.",
+        "images": []
+      },
+      "india/fatehpur-sikri": {
+        "name": "Fatehpur Sikri",
+        "description": "A red sandstone Mughal capital abandoned soon after it was built, between Agra and Jaipur.",
+        "images": []
+      },
+      "india/rajasthan": {
+        "name": "Rajasthan",
+        "description": "India's desert state of hilltop forts, palaces and bazaars, known for its colourful cities.",
+        "images": []
+      },
+      "india/jaipur": {
+        "name": "Jaipur",
+        "description": "The Pink City, a walled capital of palaces, bazaars and a hilltop fort, and the gateway to Rajasthan.",
+        "images": []
+      },
+      "india/jodhpur": {
+        "name": "Jodhpur",
+        "description": "The Blue City, dominated by the vast Mehrangarh Fort above a maze of blue-washed houses.",
+        "images": []
+      },
+      "india/ranakpur": {
+        "name": "Ranakpur",
+        "description": "A forested valley in the Aravalli hills with a fifteenth-century marble Jain temple, on the route between Jodhpur and Udaipur.",
+        "images": []
+      },
+      "india/udaipur": {
+        "name": "Udaipur",
+        "description": "The City of Lakes, with palaces on the water, narrow lanes and views from surrounding hills.",
+        "images": []
+      },
+      "india/varanasi": {
+        "name": "Varanasi",
+        "description": "The sacred city on the Ganges, where pilgrims bathe on stepped ghats and evening ceremonies light the river.",
+        "images": []
+      },
+      "india/sarnath": {
+        "name": "Sarnath",
+        "description": "The deer park near Varanasi where the Buddha gave his first sermon, with stupas, ruins and a museum.",
+        "images": []
+      },
+      "india/kerala": {
+        "name": "Kerala",
+        "description": "A narrow southern state of palm-fringed backwaters, tea hills, spice gardens and a distinct culture and cuisine.",
+        "images": []
+      },
+      "india/kochi": {
+        "name": "Kochi",
+        "description": "A historic port on the Kerala coast with Chinese fishing nets, colonial churches and a Jewish quarter in Fort Kochi.",
+        "images": []
+      },
+      "india/munnar": {
+        "name": "Munnar",
+        "description": "A hill station in the Western Ghats surrounded by tea plantations, cool and green after the coast.",
+        "images": []
+      },
+      "india/thekkady": {
+        "name": "Thekkady",
+        "description": "A town beside Periyar Tiger Reserve in the Cardamom Hills, known for spice plantations and lake safaris.",
+        "images": []
+      },
+      "india/alleppey": {
+        "name": "Alleppey",
+        "description": "The main gateway to the Kerala backwaters, where houseboats and canoes explore the canals and lagoons.",
+        "images": []
+      }
+    }
+  }
+}

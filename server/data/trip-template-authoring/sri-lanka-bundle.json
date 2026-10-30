@@ -1,0 +1,1611 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, Rickshaw Travel, Salt in Our Hair and The Daily Packers itineraries for Sri Lanka",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "sri-lanka-sigiriya-kandy-5d",
+      "title": "Cultural Triangle and Kandy in 5 Days",
+      "summary": "Sigiriya rock, ancient cities and the Temple of the Tooth.",
+      "days": 5,
+      "route": "Sigiriya > Kandy",
+      "arrive": "Colombo (CMB)",
+      "depart": "Colombo (CMB)",
+      "countries": [
+        "Sri Lanka"
+      ],
+      "regions": [],
+      "cities": [
+        "Sigiriya",
+        "Kandy"
+      ],
+      "imageQuery": "Sigiriya rock Sri Lanka",
+      "highlights": [
+        "Sigiriya Rock",
+        "Polonnaruwa",
+        "Temple of the Tooth"
+      ],
+      "destinationKeys": [
+        "sri-lanka",
+        "sri-lanka/sigiriya",
+        "sri-lanka/kandy"
+      ],
+      "hero": "sri-lanka/sigiriya",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "Salt in Our Hair",
+        "The Daily Packers",
+        "Blue Lanka Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Sigiriya",
+          "hotel": "Lodge near Sigiriya",
+          "start": 0,
+          "nights": 2,
+          "area": "In a boutique lodge near Sigiriya with a view of the rock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kandy",
+          "hotel": "Hotel in Kandy",
+          "start": 2,
+          "nights": 2,
+          "area": "In Kandy, on the hillside above the lake",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Sigiriya Rock climb",
+          "notes": "Climb at opening to beat the heat; about 1,200 steps.",
+          "where": "Sigiriya",
+          "book": "",
+          "place": "sri-lanka/sigiriya"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Dambulla caves and Polonnaruwa by bike",
+          "notes": "Cover shoulders and knees at the temples.",
+          "where": "Cultural Triangle",
+          "book": "",
+          "place": "sri-lanka/dambulla-polonnaruwa"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Temple of the Tooth evening puja and Kandy Lake",
+          "notes": "Puja ceremonies start in the evening; dress modestly.",
+          "where": "Kandy",
+          "book": "",
+          "place": "sri-lanka/kandy-tooth"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Colombo Airport (CMB)",
+          "to": "Sigiriya lodge",
+          "time": "",
+          "minutes": 210,
+          "carrier": "Driver or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Sigiriya",
+          "to": "Kandy",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Kandy",
+          "to": "Colombo Airport (CMB)",
+          "time": "10:00",
+          "minutes": 180,
+          "carrier": "Driver or expressway taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sri-lanka-sigiriya-kandy-ella-7d",
+      "title": "Sri Lanka Hills and Culture in 7 Days",
+      "summary": "Sigiriya, Kandy and the train to Ella.",
+      "days": 7,
+      "route": "Sigiriya > Kandy > Ella",
+      "arrive": "Colombo (CMB)",
+      "depart": "Colombo (CMB)",
+      "countries": [
+        "Sri Lanka"
+      ],
+      "regions": [],
+      "cities": [
+        "Sigiriya",
+        "Kandy",
+        "Ella"
+      ],
+      "imageQuery": "Kandy to Ella train Sri Lanka",
+      "highlights": [
+        "Sigiriya Rock",
+        "Temple of the Tooth",
+        "Scenic train",
+        "Nine Arches Bridge"
+      ],
+      "destinationKeys": [
+        "sri-lanka",
+        "sri-lanka/sigiriya",
+        "sri-lanka/kandy",
+        "sri-lanka/ella"
+      ],
+      "hero": "sri-lanka/ella",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "Salt in Our Hair",
+        "The Daily Packers",
+        "Blue Lanka Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Sigiriya",
+          "hotel": "Lodge near Sigiriya",
+          "start": 0,
+          "nights": 2,
+          "area": "In a boutique lodge near Sigiriya with a view of the rock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kandy",
+          "hotel": "Hotel in Kandy",
+          "start": 2,
+          "nights": 2,
+          "area": "In Kandy, on the hillside above the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ella",
+          "hotel": "Hotel in Ella",
+          "start": 4,
+          "nights": 2,
+          "area": "In Ella, close to the train station and cafes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Sigiriya Rock climb",
+          "notes": "Climb at opening to beat the heat; about 1,200 steps.",
+          "where": "Sigiriya",
+          "book": "",
+          "place": "sri-lanka/sigiriya"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Dambulla caves and Polonnaruwa by bike",
+          "notes": "Cover shoulders and knees at the temples.",
+          "where": "Cultural Triangle",
+          "book": "",
+          "place": "sri-lanka/dambulla-polonnaruwa"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Temple of the Tooth evening puja and Kandy Lake",
+          "notes": "Puja ceremonies start in the evening; dress modestly.",
+          "where": "Kandy",
+          "book": "",
+          "place": "sri-lanka/kandy-tooth"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Scenic train from Kandy to Ella",
+          "notes": "Reserve seats ahead; keep clear of open doors.",
+          "where": "Hill country",
+          "book": "Yes - reserve train seats",
+          "place": "sri-lanka/kandy-ella-train"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Little Adam Peak and Nine Arches Bridge",
+          "notes": "Be at the bridge when the train passes.",
+          "where": "Ella",
+          "book": "",
+          "place": "sri-lanka/ella-nine-arches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Colombo Airport (CMB)",
+          "to": "Sigiriya lodge",
+          "time": "",
+          "minutes": 210,
+          "carrier": "Driver or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Sigiriya",
+          "to": "Kandy",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Kandy",
+          "to": "Ella",
+          "time": "08:30",
+          "minutes": 420,
+          "carrier": "Sri Lanka Railways",
+          "notes": "The famed hill-country line.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Ella",
+          "to": "Colombo Airport (CMB)",
+          "time": "07:00",
+          "minutes": 360,
+          "carrier": "Private car with driver",
+          "notes": "A long drive; consider a flight or the expressway.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sri-lanka-highlights-8d",
+      "title": "Sri Lanka Highlights in 8 Days",
+      "summary": "Sigiriya, Kandy, Ella and Galle Fort.",
+      "days": 8,
+      "route": "Sigiriya > Kandy > Ella > Galle",
+      "arrive": "Colombo (CMB)",
+      "depart": "Colombo (CMB)",
+      "countries": [
+        "Sri Lanka"
+      ],
+      "regions": [],
+      "cities": [
+        "Sigiriya",
+        "Kandy",
+        "Ella",
+        "Galle"
+      ],
+      "imageQuery": "Galle Fort Sri Lanka",
+      "highlights": [
+        "Sigiriya Rock",
+        "Scenic train",
+        "Ella",
+        "Galle Fort"
+      ],
+      "destinationKeys": [
+        "sri-lanka",
+        "sri-lanka/sigiriya",
+        "sri-lanka/kandy",
+        "sri-lanka/ella",
+        "sri-lanka/galle"
+      ],
+      "hero": "sri-lanka/galle",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "Salt in Our Hair",
+        "The Daily Packers",
+        "Blue Lanka Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "outdoors",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Sigiriya",
+          "hotel": "Lodge near Sigiriya",
+          "start": 0,
+          "nights": 2,
+          "area": "In a boutique lodge near Sigiriya with a view of the rock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kandy",
+          "hotel": "Hotel in Kandy",
+          "start": 2,
+          "nights": 2,
+          "area": "In Kandy, on the hillside above the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ella",
+          "hotel": "Hotel in Ella",
+          "start": 4,
+          "nights": 2,
+          "area": "In Ella, close to the train station and cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Galle",
+          "hotel": "Hotel in Galle",
+          "start": 6,
+          "nights": 1,
+          "area": "In Galle Fort, in a restored Dutch house",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Sigiriya Rock climb",
+          "notes": "Climb at opening to beat the heat; about 1,200 steps.",
+          "where": "Sigiriya",
+          "book": "",
+          "place": "sri-lanka/sigiriya"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Dambulla caves and Polonnaruwa by bike",
+          "notes": "Cover shoulders and knees at the temples.",
+          "where": "Cultural Triangle",
+          "book": "",
+          "place": "sri-lanka/dambulla-polonnaruwa"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Temple of the Tooth evening puja and Kandy Lake",
+          "notes": "Puja ceremonies start in the evening; dress modestly.",
+          "where": "Kandy",
+          "book": "",
+          "place": "sri-lanka/kandy-tooth"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Scenic train from Kandy to Ella",
+          "notes": "Reserve seats ahead; keep clear of open doors.",
+          "where": "Hill country",
+          "book": "Yes - reserve train seats",
+          "place": "sri-lanka/kandy-ella-train"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Little Adam Peak and Nine Arches Bridge",
+          "notes": "Be at the bridge when the train passes.",
+          "where": "Ella",
+          "book": "",
+          "place": "sri-lanka/ella-nine-arches"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3.5h",
+          "name": "Galle Fort ramparts at sunset",
+          "notes": "Walk the walls and browse the galleries.",
+          "where": "Galle",
+          "book": "",
+          "place": "sri-lanka/galle-fort"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Colombo Airport (CMB)",
+          "to": "Sigiriya lodge",
+          "time": "",
+          "minutes": 210,
+          "carrier": "Driver or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Sigiriya",
+          "to": "Kandy",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Kandy",
+          "to": "Ella",
+          "time": "08:30",
+          "minutes": 420,
+          "carrier": "Sri Lanka Railways",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Ella",
+          "to": "Galle",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Galle",
+          "to": "Colombo Airport (CMB)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Driver or expressway taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sri-lanka-hill-country-south-10d",
+      "title": "Sri Lanka Classic in 10 Days",
+      "summary": "Culture, tea country, Ella and two nights in Galle.",
+      "days": 10,
+      "route": "Sigiriya > Kandy > Nuwara Eliya > Ella > Galle",
+      "arrive": "Colombo (CMB)",
+      "depart": "Colombo (CMB)",
+      "countries": [
+        "Sri Lanka"
+      ],
+      "regions": [],
+      "cities": [
+        "Sigiriya",
+        "Kandy",
+        "Nuwara Eliya",
+        "Ella",
+        "Galle"
+      ],
+      "imageQuery": "Nuwara Eliya tea plantation Sri Lanka",
+      "highlights": [
+        "Sigiriya",
+        "Tea estates",
+        "Horton Plains",
+        "Ella",
+        "Galle Fort"
+      ],
+      "destinationKeys": [
+        "sri-lanka",
+        "sri-lanka/sigiriya",
+        "sri-lanka/kandy",
+        "sri-lanka/nuwara-eliya",
+        "sri-lanka/ella",
+        "sri-lanka/galle"
+      ],
+      "hero": "sri-lanka/nuwara-eliya",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "Salt in Our Hair",
+        "The Daily Packers",
+        "Blue Lanka Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Sigiriya",
+          "hotel": "Lodge near Sigiriya",
+          "start": 0,
+          "nights": 2,
+          "area": "In a boutique lodge near Sigiriya with a view of the rock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kandy",
+          "hotel": "Hotel in Kandy",
+          "start": 2,
+          "nights": 2,
+          "area": "In Kandy, on the hillside above the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nuwara Eliya",
+          "hotel": "Hotel in Nuwara Eliya",
+          "start": 4,
+          "nights": 1,
+          "area": "In Nuwara Eliya, near Gregory Lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ella",
+          "hotel": "Hotel in Ella",
+          "start": 5,
+          "nights": 2,
+          "area": "In Ella, close to the train station and cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Galle",
+          "hotel": "Hotel in Galle",
+          "start": 7,
+          "nights": 2,
+          "area": "In Galle Fort, in a restored Dutch house",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Sigiriya Rock climb",
+          "notes": "Climb at opening to beat the heat; about 1,200 steps.",
+          "where": "Sigiriya",
+          "book": "",
+          "place": "sri-lanka/sigiriya"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Dambulla caves and Polonnaruwa by bike",
+          "notes": "Cover shoulders and knees at the temples.",
+          "where": "Cultural Triangle",
+          "book": "",
+          "place": "sri-lanka/dambulla-polonnaruwa"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Temple of the Tooth evening puja and Kandy Lake",
+          "notes": "Puja ceremonies start in the evening; dress modestly.",
+          "where": "Kandy",
+          "book": "",
+          "place": "sri-lanka/kandy-tooth"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "5h",
+          "name": "Horton Plains World End walk and tea factory",
+          "notes": "Go at dawn before the mist.",
+          "where": "Horton Plains",
+          "book": "",
+          "place": "sri-lanka/nuwara-eliya-tea"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Little Adam Peak and Nine Arches Bridge",
+          "notes": "Be at the bridge when the train passes.",
+          "where": "Ella",
+          "book": "",
+          "place": "sri-lanka/ella-nine-arches"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3.5h",
+          "name": "Galle Fort ramparts at sunset",
+          "notes": "Walk the walls and browse the galleries.",
+          "where": "Galle",
+          "book": "",
+          "place": "sri-lanka/galle-fort"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Unawatuna beach and Galle Fort cafes",
+          "notes": "Walk the walls and browse the galleries.",
+          "where": "Galle",
+          "book": "",
+          "place": "sri-lanka/galle-fort"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Colombo Airport (CMB)",
+          "to": "Sigiriya lodge",
+          "time": "",
+          "minutes": 210,
+          "carrier": "Driver or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Sigiriya",
+          "to": "Kandy",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Kandy",
+          "to": "Nuwara Eliya",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Private car with driver",
+          "notes": "Stops at Ramboda Falls and a tea factory.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Nuwara Eliya",
+          "to": "Ella",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Sri Lanka Railways",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Ella",
+          "to": "Galle",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Galle",
+          "to": "Colombo Airport (CMB)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Driver or expressway taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sri-lanka-with-yala-12d",
+      "title": "Sri Lanka with Safari and Whales in 12 Days",
+      "summary": "The hill country, Yala leopards, whale watching at Mirissa and Galle.",
+      "days": 12,
+      "route": "Sigiriya > Kandy > Nuwara Eliya > Ella > Yala > Mirissa > Galle",
+      "arrive": "Colombo (CMB)",
+      "depart": "Colombo (CMB)",
+      "countries": [
+        "Sri Lanka"
+      ],
+      "regions": [],
+      "cities": [
+        "Sigiriya",
+        "Kandy",
+        "Nuwara Eliya",
+        "Ella",
+        "Yala",
+        "Mirissa",
+        "Galle"
+      ],
+      "imageQuery": "Yala leopard Sri Lanka",
+      "highlights": [
+        "Sigiriya",
+        "Ella",
+        "Yala leopards",
+        "Mirissa whales",
+        "Galle Fort"
+      ],
+      "destinationKeys": [
+        "sri-lanka",
+        "sri-lanka/sigiriya",
+        "sri-lanka/kandy",
+        "sri-lanka/nuwara-eliya",
+        "sri-lanka/ella",
+        "sri-lanka/yala",
+        "sri-lanka/mirissa",
+        "sri-lanka/galle"
+      ],
+      "hero": "sri-lanka/yala",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "Salt in Our Hair",
+        "The Daily Packers",
+        "Blue Lanka Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Sigiriya",
+          "hotel": "Lodge near Sigiriya",
+          "start": 0,
+          "nights": 2,
+          "area": "In a boutique lodge near Sigiriya with a view of the rock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kandy",
+          "hotel": "Hotel in Kandy",
+          "start": 2,
+          "nights": 2,
+          "area": "In Kandy, on the hillside above the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nuwara Eliya",
+          "hotel": "Hotel in Nuwara Eliya",
+          "start": 4,
+          "nights": 1,
+          "area": "In Nuwara Eliya, near Gregory Lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ella",
+          "hotel": "Hotel in Ella",
+          "start": 5,
+          "nights": 2,
+          "area": "In Ella, close to the train station and cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Yala",
+          "hotel": "Lodge near Yala",
+          "start": 7,
+          "nights": 1,
+          "area": "In a lodge near Yala, a pre-dawn safari away",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mirissa",
+          "hotel": "Hotel in Mirissa",
+          "start": 8,
+          "nights": 1,
+          "area": "On the beach at Mirissa or Weligama",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Galle",
+          "hotel": "Hotel in Galle",
+          "start": 9,
+          "nights": 2,
+          "area": "In Galle Fort, in a restored Dutch house",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Sigiriya Rock climb",
+          "notes": "Climb at opening to beat the heat; about 1,200 steps.",
+          "where": "Sigiriya",
+          "book": "",
+          "place": "sri-lanka/sigiriya"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Dambulla caves and Polonnaruwa by bike",
+          "notes": "Cover shoulders and knees at the temples.",
+          "where": "Cultural Triangle",
+          "book": "",
+          "place": "sri-lanka/dambulla-polonnaruwa"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Temple of the Tooth evening puja and Kandy Lake",
+          "notes": "Puja ceremonies start in the evening; dress modestly.",
+          "where": "Kandy",
+          "book": "",
+          "place": "sri-lanka/kandy-tooth"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "5h",
+          "name": "Horton Plains World End walk and tea factory",
+          "notes": "Go at dawn before the mist.",
+          "where": "Horton Plains",
+          "book": "",
+          "place": "sri-lanka/nuwara-eliya-tea"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Nuwara Eliya to Ella train (scenic stretch)",
+          "notes": "Reserve seats ahead; keep clear of open doors.",
+          "where": "Hill country",
+          "book": "Yes - reserve train seats",
+          "place": "sri-lanka/kandy-ella-train"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Little Adam Peak and Nine Arches Bridge",
+          "notes": "Be at the bridge when the train passes.",
+          "where": "Ella",
+          "book": "",
+          "place": "sri-lanka/ella-nine-arches"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Yala leopard safari",
+          "notes": "Choose a reputable jeep driver; the park closes for part of the dry season.",
+          "where": "Yala",
+          "book": "Yes - book a jeep",
+          "place": "sri-lanka/yala-safari"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Mirissa whale watching",
+          "notes": "November to April is the best season.",
+          "where": "Mirissa",
+          "book": "Yes - book a boat",
+          "place": "sri-lanka/mirissa-whales"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3.5h",
+          "name": "Galle Fort ramparts at sunset",
+          "notes": "Walk the walls and browse the galleries.",
+          "where": "Galle",
+          "book": "",
+          "place": "sri-lanka/galle-fort"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Colombo Airport (CMB)",
+          "to": "Sigiriya lodge",
+          "time": "",
+          "minutes": 210,
+          "carrier": "Driver or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Sigiriya",
+          "to": "Kandy",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Kandy",
+          "to": "Nuwara Eliya",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Nuwara Eliya",
+          "to": "Ella",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Sri Lanka Railways",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Ella",
+          "to": "Yala lodge",
+          "time": "12:00",
+          "minutes": 150,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Yala lodge",
+          "to": "Mirissa",
+          "time": "10:00",
+          "minutes": 180,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Mirissa",
+          "to": "Galle",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Galle",
+          "to": "Colombo Airport (CMB)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Driver or expressway taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sri-lanka-complete-14d",
+      "title": "Complete Sri Lanka in 14 Days",
+      "summary": "The whole island at an easy pace, from Colombo to the beaches.",
+      "days": 14,
+      "route": "Colombo > Sigiriya > Kandy > Nuwara Eliya > Ella > Yala > Mirissa > Galle",
+      "arrive": "Colombo (CMB)",
+      "depart": "Colombo (CMB)",
+      "countries": [
+        "Sri Lanka"
+      ],
+      "regions": [],
+      "cities": [
+        "Colombo",
+        "Sigiriya",
+        "Kandy",
+        "Nuwara Eliya",
+        "Ella",
+        "Yala",
+        "Mirissa",
+        "Galle"
+      ],
+      "imageQuery": "Sri Lanka tea hills train",
+      "highlights": [
+        "Sigiriya",
+        "Kandy",
+        "Horton Plains",
+        "Yala",
+        "Mirissa whales",
+        "Galle Fort"
+      ],
+      "destinationKeys": [
+        "sri-lanka",
+        "sri-lanka/colombo",
+        "sri-lanka/sigiriya",
+        "sri-lanka/kandy",
+        "sri-lanka/nuwara-eliya",
+        "sri-lanka/ella",
+        "sri-lanka/yala",
+        "sri-lanka/mirissa",
+        "sri-lanka/galle"
+      ],
+      "hero": "sri-lanka/colombo",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "Salt in Our Hair",
+        "The Daily Packers",
+        "Blue Lanka Tours"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Colombo",
+          "hotel": "Hotel in Colombo",
+          "start": 0,
+          "nights": 1,
+          "area": "Near Galle Face or the Cinnamon Gardens area of Colombo",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sigiriya",
+          "hotel": "Lodge near Sigiriya",
+          "start": 1,
+          "nights": 2,
+          "area": "In a boutique lodge near Sigiriya with a view of the rock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kandy",
+          "hotel": "Hotel in Kandy",
+          "start": 3,
+          "nights": 2,
+          "area": "In Kandy, on the hillside above the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nuwara Eliya",
+          "hotel": "Hotel in Nuwara Eliya",
+          "start": 5,
+          "nights": 1,
+          "area": "In Nuwara Eliya, near Gregory Lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ella",
+          "hotel": "Hotel in Ella",
+          "start": 6,
+          "nights": 2,
+          "area": "In Ella, close to the train station and cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Yala",
+          "hotel": "Lodge near Yala",
+          "start": 8,
+          "nights": 1,
+          "area": "In a lodge near Yala, a pre-dawn safari away",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mirissa",
+          "hotel": "Hotel in Mirissa",
+          "start": 9,
+          "nights": 2,
+          "area": "On the beach at Mirissa or Weligama",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Galle",
+          "hotel": "Hotel in Galle",
+          "start": 11,
+          "nights": 2,
+          "area": "In Galle Fort, in a restored Dutch house",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Colombo temples and Galle Face Green",
+          "notes": "A short stop; try kottu roti.",
+          "where": "Colombo",
+          "book": "",
+          "place": "sri-lanka/colombo"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Sigiriya Rock climb",
+          "notes": "Climb at opening to beat the heat; about 1,200 steps.",
+          "where": "Sigiriya",
+          "book": "",
+          "place": "sri-lanka/sigiriya"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Dambulla caves and Polonnaruwa by bike",
+          "notes": "Cover shoulders and knees at the temples.",
+          "where": "Cultural Triangle",
+          "book": "",
+          "place": "sri-lanka/dambulla-polonnaruwa"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Temple of the Tooth evening puja and Kandy Lake",
+          "notes": "Puja ceremonies start in the evening; dress modestly.",
+          "where": "Kandy",
+          "book": "",
+          "place": "sri-lanka/kandy-tooth"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "5h",
+          "name": "Horton Plains World End walk and tea factory",
+          "notes": "Go at dawn before the mist.",
+          "where": "Horton Plains",
+          "book": "",
+          "place": "sri-lanka/nuwara-eliya-tea"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Little Adam Peak and Nine Arches Bridge",
+          "notes": "Be at the bridge when the train passes.",
+          "where": "Ella",
+          "book": "",
+          "place": "sri-lanka/ella-nine-arches"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Yala leopard safari",
+          "notes": "Choose a reputable jeep driver; the park closes for part of the dry season.",
+          "where": "Yala",
+          "book": "Yes - book a jeep",
+          "place": "sri-lanka/yala-safari"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Mirissa whale watching",
+          "notes": "November to April is the best season.",
+          "where": "Mirissa",
+          "book": "Yes - book a boat",
+          "place": "sri-lanka/mirissa-whales"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3.5h",
+          "name": "Galle Fort ramparts at sunset",
+          "notes": "Walk the walls and browse the galleries.",
+          "where": "Galle",
+          "book": "",
+          "place": "sri-lanka/galle-fort"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Unawatuna beach day",
+          "notes": "Walk the walls and browse the galleries.",
+          "where": "Galle",
+          "book": "",
+          "place": "sri-lanka/galle-fort"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Colombo Airport (CMB)",
+          "to": "Colombo hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Driver or pre-booked car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Colombo",
+          "to": "Sigiriya lodge",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Sigiriya",
+          "to": "Kandy",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Kandy",
+          "to": "Nuwara Eliya",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Nuwara Eliya",
+          "to": "Ella",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Sri Lanka Railways",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Ella",
+          "to": "Yala lodge",
+          "time": "12:00",
+          "minutes": 150,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Yala lodge",
+          "to": "Mirissa",
+          "time": "10:00",
+          "minutes": 180,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Mirissa",
+          "to": "Galle",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Galle",
+          "to": "Colombo Airport (CMB)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Driver or expressway taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "sri-lanka/colombo": {
+        "name": "Colombo temples, Galle Face and markets",
+        "description": "A coastal capital of Buddhist temples, a seafront green and Pettah bazaars.",
+        "details": "Colombo has Gangaramaya Temple, Beira Lake, the Galle Face Green promenade and the Pettah market area. Arrival is usually late, so a short stop suffices. Try hoppers and kottu roti at a local eatery.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sri-lanka/sigiriya": {
+        "name": "Sigiriya Rock Fortress",
+        "description": "A 200-metre rock with ruins of a fifth-century palace, mirror wall and frescoes.",
+        "details": "Sigiriya is climbed by about 1,200 steps to a summit palace ruin, passing frescoed maidens and lion paws. Go at opening (about 7am) to beat the heat and crowds. Pidurangala Rock nearby gives a view of Sigiriya itself at sunset.",
+        "interests": [
+          "iconic_landmarks",
+          "adventure",
+          "photography",
+          "culture"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "sri-lanka/dambulla-polonnaruwa": {
+        "name": "Dambulla cave temples and Polonnaruwa",
+        "description": "Painted Buddhist caves and an ancient royal capital explored by bike.",
+        "details": "The Dambulla caves hold 150 Buddha statues and painted ceilings. Polonnaruwa is a UNESCO ruined city best seen by bicycle, with the Gal Vihara reclining Buddha. Both lie in the Cultural Triangle. Dress modestly, covering shoulders and knees.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "sri-lanka/kandy-tooth": {
+        "name": "Kandy Temple of the Tooth and the lake",
+        "description": "A hill-country temple holding a relic of the Buddha, and a lakeside old city.",
+        "details": "The Temple of the Tooth is the most sacred Buddhist site in Sri Lanka, with evening puja ceremonies and drumming. Kandy Lake is good for a stroll, and the Royal Botanic Gardens at Peradeniya are a short ride away. Cultural dance shows run nightly.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sri-lanka/kandy-ella-train": {
+        "name": "Kandy to Ella train ride",
+        "description": "One of the world most scenic train journeys through tea country, blue-painted carriages and viaducts.",
+        "details": "The train from Kandy to Ella (via Nanu Oya) runs through tea plantations, waterfalls and cloud forest. Second-class reserved seats and observation cars sell out, so book ahead. Doors are open for photos, so take care. It takes 6 to 7 hours.",
+        "interests": [
+          "photography",
+          "authentic_local",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sri-lanka/nuwara-eliya-tea": {
+        "name": "Nuwara Eliya tea estates and Horton Plains",
+        "description": "Little England of the hills, with tea factory visits, Gregory Lake and a World End cliff walk.",
+        "details": "Nuwara Eliya sits at 1,900 metres, cool and misty. Pedro Tea Estate offers tours and tastings. Horton Plains has a 9-kilometre loop to World End, a cliff drop best at dawn before the mist. Bring a jacket.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "sri-lanka/ella-nine-arches": {
+        "name": "Ella: Nine Arches Bridge, Little Adam Peak and Ravana Falls",
+        "description": "A village of easy hikes with a colonial railway viaduct and waterfalls.",
+        "details": "Ella is a laid-back hill village. The Nine Arches Bridge is photographed as the train crosses, Little Adam Peak is an easy sunrise walk and Ella Rock a stiffer hike. Check train times so you are at the bridge at the right moment.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "sri-lanka/yala-safari": {
+        "name": "Yala National Park safari",
+        "description": "A jeep safari for leopards, elephants and birds in a coastal national park.",
+        "details": "Yala has one of the highest leopard densities in the world, along with elephants, sloth bears and crocodiles. Morning and afternoon jeeps start at dawn or 2pm. Book a reputable driver, and note that the park closes for some weeks in the dry season.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sri-lanka/mirissa-whales": {
+        "name": "Mirissa whale watching and beach",
+        "description": "Blue whale season cruises and a palm-lined south coast beach.",
+        "details": "Mirissa has boat trips to see blue whales and dolphins, from about November to April. The beach is good for swimming and has a famous palm-tree point (Coconut Tree Hill). Choose a responsible whale-watching operator and take seasickness tablets.",
+        "interests": [
+          "relax",
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sri-lanka/galle-fort": {
+        "name": "Galle Fort",
+        "description": "A Dutch-era walled fort on the sea with cafes, boutiques and a lighthouse.",
+        "details": "Galle Fort is a UNESCO site with ramparts you can walk at sunset, colonial houses, a lighthouse and small galleries. Cafes and restaurants fill the lanes. Unawatuna beach is a short ride away.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "sri-lanka": {
+        "name": "Sri Lanka",
+        "description": "A teardrop island of ancient kingdoms, tea hills, leopards and palm-lined beaches.",
+        "images": []
+      },
+      "sri-lanka/colombo": {
+        "name": "Colombo",
+        "description": "The coastal capital.",
+        "images": []
+      },
+      "sri-lanka/sigiriya": {
+        "name": "Sigiriya",
+        "description": "The Lion Rock and the Cultural Triangle.",
+        "images": []
+      },
+      "sri-lanka/kandy": {
+        "name": "Kandy",
+        "description": "A hill-country city of the Temple of the Tooth.",
+        "images": []
+      },
+      "sri-lanka/nuwara-eliya": {
+        "name": "Nuwara Eliya",
+        "description": "A cool hill station of tea estates.",
+        "images": []
+      },
+      "sri-lanka/ella": {
+        "name": "Ella",
+        "description": "A hill village with waterfalls and viaduct views.",
+        "images": []
+      },
+      "sri-lanka/yala": {
+        "name": "Yala",
+        "description": "The famous leopard national park.",
+        "images": []
+      },
+      "sri-lanka/mirissa": {
+        "name": "Mirissa",
+        "description": "A whale-watching beach town.",
+        "images": []
+      },
+      "sri-lanka/galle": {
+        "name": "Galle",
+        "description": "A Dutch fort town on the south coast.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,0 +1,1180 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Nomad Tours, Africa Budget Safaris, Hostelworld and Safarifind itineraries for Mozambique",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "mozambique-maputo-tofo-5d",
+      "title": "Maputo and Tofo in 5 Days",
+      "summary": "City sights and a famous dive beach.",
+      "days": 5,
+      "route": "Maputo > Tofo",
+      "arrive": "Maputo (MPM)",
+      "depart": "Inhambane (INH)",
+      "countries": [
+        "Mozambique"
+      ],
+      "regions": [],
+      "cities": [
+        "Maputo",
+        "Tofo"
+      ],
+      "imageQuery": "Tofo beach Mozambique manta",
+      "highlights": [
+        "Maputo",
+        "Manta rays",
+        "Whale sharks",
+        "Tofo beach"
+      ],
+      "destinationKeys": [
+        "mozambique",
+        "mozambique/maputo",
+        "mozambique/tofo"
+      ],
+      "hero": "mozambique/tofo",
+      "sources": [
+        "Nomad Tours",
+        "Africa Budget Safaris",
+        "Hostelworld",
+        "Iati Seguros",
+        "Safarifind"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Maputo",
+          "hotel": "Hotel in Maputo",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Polana area, with restaurants and the sea close by",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tofo",
+          "hotel": "Lodge at Tofo",
+          "start": 2,
+          "nights": 2,
+          "area": "In a beach lodge at Tofo with a short walk to the dive centre",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Maputo fortress, Iron House and Central Market",
+          "notes": "Seafood lunch by the bay; go with a guide for the first walk.",
+          "where": "Maputo",
+          "book": "",
+          "place": "mozambique/maputo-city"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Tofo and Tofinho beach time",
+          "notes": "Strong sun and currents; swim with care.",
+          "where": "Tofo",
+          "book": "",
+          "place": "mozambique/tofo-beach"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Manta and whale shark dive or snorkel",
+          "notes": "Whale sharks are most likely October to March.",
+          "where": "Tofo",
+          "book": "Yes - book a dive boat",
+          "place": "mozambique/tofo-diving"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maputo Airport (MPM)",
+          "to": "Maputo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Maputo hotel",
+          "to": "Maputo Airport (MPM)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Inhambane Airport (INH)",
+          "to": "Tofo lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Tofo lodge",
+          "to": "Inhambane Airport (INH)",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mozambique-maputo-tofo-vilanculos-7d",
+      "title": "Mozambique Coast in 7 Days",
+      "summary": "Maputo, Tofo diving and the Bazaruto islands.",
+      "days": 7,
+      "route": "Maputo > Tofo > Vilanculos",
+      "arrive": "Maputo (MPM)",
+      "depart": "Vilanculos (VNX)",
+      "countries": [
+        "Mozambique"
+      ],
+      "regions": [],
+      "cities": [
+        "Maputo",
+        "Tofo",
+        "Vilanculos"
+      ],
+      "imageQuery": "Bazaruto dhow Mozambique",
+      "highlights": [
+        "Maputo",
+        "Tofo diving",
+        "Dhow sailing",
+        "Bazaruto"
+      ],
+      "destinationKeys": [
+        "mozambique",
+        "mozambique/maputo",
+        "mozambique/tofo",
+        "mozambique/vilanculos"
+      ],
+      "hero": "mozambique/vilanculos",
+      "sources": [
+        "Nomad Tours",
+        "Africa Budget Safaris",
+        "Hostelworld",
+        "Iati Seguros",
+        "Safarifind"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "relax",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Maputo",
+          "hotel": "Hotel in Maputo",
+          "start": 0,
+          "nights": 1,
+          "area": "In the Polana area, with restaurants and the sea close by",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tofo",
+          "hotel": "Lodge at Tofo",
+          "start": 1,
+          "nights": 3,
+          "area": "In a beach lodge at Tofo with a short walk to the dive centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Vilanculos",
+          "hotel": "Lodge at Vilanculos",
+          "start": 4,
+          "nights": 2,
+          "area": "In a lodge on the Vilanculos beach with dhow departures",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Maputo fortress, Iron House and Central Market",
+          "notes": "Seafood lunch by the bay; go with a guide for the first walk.",
+          "where": "Maputo",
+          "book": "",
+          "place": "mozambique/maputo-city"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Manta and whale shark dive or snorkel",
+          "notes": "Whale sharks are most likely October to March.",
+          "where": "Tofo",
+          "book": "Yes - book a dive boat",
+          "place": "mozambique/tofo-diving"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Tofo and Tofinho beach time",
+          "notes": "Strong sun and currents; swim with care.",
+          "where": "Tofo",
+          "book": "",
+          "place": "mozambique/tofo-beach"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Dhow sail to the islands",
+          "notes": "Mornings are calmer for sailing.",
+          "where": "Vilanculos",
+          "book": "Yes - book a dhow",
+          "place": "mozambique/vilanculos-dhow"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maputo Airport (MPM)",
+          "to": "Maputo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Maputo hotel",
+          "to": "Maputo Airport (MPM)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Inhambane Airport (INH)",
+          "to": "Tofo lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Tofo lodge",
+          "to": "Vilanculos Airport (VNX)",
+          "time": "07:30",
+          "minutes": 300,
+          "carrier": "4x4 or shared chapa",
+          "notes": "A long road; flights via Maputo are another option.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Vilanculos lodge",
+          "to": "Vilanculos Airport (VNX)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mozambique-maputo-tofo-vilanculos-9d",
+      "title": "Mozambique Beaches and Islands in 9 Days",
+      "summary": "Maputo, Tofo and a longer stay at Vilanculos with Bazaruto.",
+      "days": 9,
+      "route": "Maputo > Tofo > Vilanculos",
+      "arrive": "Maputo (MPM)",
+      "depart": "Vilanculos (VNX)",
+      "countries": [
+        "Mozambique"
+      ],
+      "regions": [],
+      "cities": [
+        "Maputo",
+        "Tofo",
+        "Vilanculos"
+      ],
+      "imageQuery": "Vilanculos beach Mozambique",
+      "highlights": [
+        "Maputo",
+        "Manta rays",
+        "Bazaruto snorkelling",
+        "Dhow sailing"
+      ],
+      "destinationKeys": [
+        "mozambique",
+        "mozambique/maputo",
+        "mozambique/tofo",
+        "mozambique/vilanculos"
+      ],
+      "hero": "mozambique/maputo",
+      "sources": [
+        "Nomad Tours",
+        "Africa Budget Safaris",
+        "Hostelworld",
+        "Iati Seguros",
+        "Safarifind"
+      ],
+      "pace": "R",
+      "interests": [
+        "adventure",
+        "relax",
+        "outdoors",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Maputo",
+          "hotel": "Hotel in Maputo",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Polana area, with restaurants and the sea close by",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tofo",
+          "hotel": "Lodge at Tofo",
+          "start": 2,
+          "nights": 3,
+          "area": "In a beach lodge at Tofo with a short walk to the dive centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Vilanculos",
+          "hotel": "Lodge at Vilanculos",
+          "start": 5,
+          "nights": 3,
+          "area": "In a lodge on the Vilanculos beach with dhow departures",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Maputo fortress, Iron House and Central Market",
+          "notes": "Seafood lunch by the bay; go with a guide for the first walk.",
+          "where": "Maputo",
+          "book": "",
+          "place": "mozambique/maputo-city"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Manta and whale shark dive or snorkel",
+          "notes": "Whale sharks are most likely October to March.",
+          "where": "Tofo",
+          "book": "Yes - book a dive boat",
+          "place": "mozambique/tofo-diving"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Tofo and Tofinho beach time",
+          "notes": "Strong sun and currents; swim with care.",
+          "where": "Tofo",
+          "book": "",
+          "place": "mozambique/tofo-beach"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Bazaruto snorkelling and dune slide",
+          "notes": "Day trips from Vilanculos are the budget option.",
+          "where": "Bazaruto Archipelago",
+          "book": "Yes - book a boat",
+          "place": "mozambique/bazaruto-snorkel"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Dhow sail to the islands",
+          "notes": "Mornings are calmer for sailing.",
+          "where": "Vilanculos",
+          "book": "Yes - book a dhow",
+          "place": "mozambique/vilanculos-dhow"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maputo Airport (MPM)",
+          "to": "Maputo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Maputo hotel",
+          "to": "Maputo Airport (MPM)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Inhambane Airport (INH)",
+          "to": "Tofo lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Tofo lodge",
+          "to": "Vilanculos Airport (VNX)",
+          "time": "07:30",
+          "minutes": 300,
+          "carrier": "4x4 or shared chapa",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Vilanculos lodge",
+          "to": "Vilanculos Airport (VNX)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mozambique-island-of-mozambique-12d",
+      "title": "South to North Mozambique in 12 Days",
+      "summary": "Maputo, Tofo, Vilanculos and the island of Mozambique.",
+      "days": 12,
+      "route": "Maputo > Tofo > Vilanculos > Ilha de Mocambique",
+      "arrive": "Maputo (MPM)",
+      "depart": "Nampula (APL)",
+      "countries": [
+        "Mozambique"
+      ],
+      "regions": [],
+      "cities": [
+        "Maputo",
+        "Tofo",
+        "Vilanculos",
+        "Ilha de Mocambique"
+      ],
+      "imageQuery": "Ilha de Mocambique fortress",
+      "highlights": [
+        "Maputo",
+        "Tofo",
+        "Bazaruto",
+        "Ilha de Mocambique"
+      ],
+      "destinationKeys": [
+        "mozambique",
+        "mozambique/maputo",
+        "mozambique/tofo",
+        "mozambique/vilanculos",
+        "mozambique/ilha-de-mocambique"
+      ],
+      "hero": "mozambique/ilha-de-mocambique",
+      "sources": [
+        "Nomad Tours",
+        "Africa Budget Safaris",
+        "Hostelworld",
+        "Iati Seguros",
+        "Safarifind"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Maputo",
+          "hotel": "Hotel in Maputo",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Polana area, with restaurants and the sea close by",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tofo",
+          "hotel": "Lodge at Tofo",
+          "start": 2,
+          "nights": 3,
+          "area": "In a beach lodge at Tofo with a short walk to the dive centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Vilanculos",
+          "hotel": "Lodge at Vilanculos",
+          "start": 5,
+          "nights": 3,
+          "area": "In a lodge on the Vilanculos beach with dhow departures",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ilha de Mocambique",
+          "hotel": "Hotel in Ilha de Mocambique",
+          "start": 8,
+          "nights": 3,
+          "area": "In the stone town of Ilha de Mocambique, in a restored Portuguese house",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Maputo fortress, Iron House and Central Market",
+          "notes": "Seafood lunch by the bay; go with a guide for the first walk.",
+          "where": "Maputo",
+          "book": "",
+          "place": "mozambique/maputo-city"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Manta and whale shark dive or snorkel",
+          "notes": "Whale sharks are most likely October to March.",
+          "where": "Tofo",
+          "book": "Yes - book a dive boat",
+          "place": "mozambique/tofo-diving"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Tofo and Tofinho beach time",
+          "notes": "Strong sun and currents; swim with care.",
+          "where": "Tofo",
+          "book": "",
+          "place": "mozambique/tofo-beach"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Bazaruto snorkelling and dune slide",
+          "notes": "Day trips from Vilanculos are the budget option.",
+          "where": "Bazaruto Archipelago",
+          "book": "Yes - book a boat",
+          "place": "mozambique/bazaruto-snorkel"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Dhow sail to the islands",
+          "notes": "Mornings are calmer for sailing.",
+          "where": "Vilanculos",
+          "book": "Yes - book a dhow",
+          "place": "mozambique/vilanculos-dhow"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Ilha de Mocambique fort and stone town",
+          "notes": "A guide helps with the history of the island.",
+          "where": "Ilha de Mocambique",
+          "book": "",
+          "place": "mozambique/ilha-de-mocambique"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Second day on the island: churches, beaches and market",
+          "notes": "A guide helps with the history of the island.",
+          "where": "Ilha de Mocambique",
+          "book": "",
+          "place": "mozambique/ilha-de-mocambique"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maputo Airport (MPM)",
+          "to": "Maputo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Maputo hotel",
+          "to": "Maputo Airport (MPM)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Inhambane Airport (INH)",
+          "to": "Tofo lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Tofo lodge",
+          "to": "Vilanculos Airport (VNX)",
+          "time": "07:30",
+          "minutes": 300,
+          "carrier": "4x4 or shared chapa",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Vilanculos lodge",
+          "to": "Vilanculos Airport (VNX)",
+          "time": "08:00",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Maputo; the transfer from Nampula takes about 3 to 4 hours.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Nampula Airport (APL)",
+          "to": "Ilha de Mocambique house",
+          "time": "",
+          "minutes": 210,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Ilha de Mocambique",
+          "to": "Nampula Airport (APL)",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "4x4 or shared chapa",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mozambique-grand-14d",
+      "title": "Grand Mozambique in 14 Days",
+      "summary": "The southern coast, the island of Mozambique and the Quirimbas Archipelago.",
+      "days": 14,
+      "route": "Maputo > Tofo > Vilanculos > Ilha de Mocambique > Ibo Island",
+      "arrive": "Maputo (MPM)",
+      "depart": "Pemba (POL)",
+      "countries": [
+        "Mozambique"
+      ],
+      "regions": [],
+      "cities": [
+        "Maputo",
+        "Tofo",
+        "Vilanculos",
+        "Ilha de Mocambique",
+        "Ibo Island"
+      ],
+      "imageQuery": "Ibo Island Quirimbas Mozambique",
+      "highlights": [
+        "Tofo manta rays",
+        "Bazaruto",
+        "Ilha de Mocambique",
+        "Ibo Island"
+      ],
+      "destinationKeys": [
+        "mozambique",
+        "mozambique/maputo",
+        "mozambique/tofo",
+        "mozambique/vilanculos",
+        "mozambique/ilha-de-mocambique",
+        "mozambique/ibo-island"
+      ],
+      "hero": "mozambique/ibo-island",
+      "sources": [
+        "Nomad Tours",
+        "Africa Budget Safaris",
+        "Hostelworld",
+        "Iati Seguros",
+        "Safarifind"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Maputo",
+          "hotel": "Hotel in Maputo",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Polana area, with restaurants and the sea close by",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tofo",
+          "hotel": "Lodge at Tofo",
+          "start": 2,
+          "nights": 3,
+          "area": "In a beach lodge at Tofo with a short walk to the dive centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Vilanculos",
+          "hotel": "Lodge at Vilanculos",
+          "start": 5,
+          "nights": 3,
+          "area": "In a lodge on the Vilanculos beach with dhow departures",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ilha de Mocambique",
+          "hotel": "Hotel in Ilha de Mocambique",
+          "start": 8,
+          "nights": 2,
+          "area": "In the stone town of Ilha de Mocambique, in a restored Portuguese house",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ibo Island",
+          "hotel": "Lodge on Ibo Island",
+          "start": 10,
+          "nights": 3,
+          "area": "In a guesthouse or lodge on Ibo Island",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Maputo fortress, Iron House and Central Market",
+          "notes": "Seafood lunch by the bay; go with a guide for the first walk.",
+          "where": "Maputo",
+          "book": "",
+          "place": "mozambique/maputo-city"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Manta and whale shark dive or snorkel",
+          "notes": "Whale sharks are most likely October to March.",
+          "where": "Tofo",
+          "book": "Yes - book a dive boat",
+          "place": "mozambique/tofo-diving"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Tofo and Tofinho beach time",
+          "notes": "Strong sun and currents; swim with care.",
+          "where": "Tofo",
+          "book": "",
+          "place": "mozambique/tofo-beach"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Bazaruto snorkelling and dune slide",
+          "notes": "Day trips from Vilanculos are the budget option.",
+          "where": "Bazaruto Archipelago",
+          "book": "Yes - book a boat",
+          "place": "mozambique/bazaruto-snorkel"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Ilha de Mocambique fort and stone town",
+          "notes": "A guide helps with the history of the island.",
+          "where": "Ilha de Mocambique",
+          "book": "",
+          "place": "mozambique/ilha-de-mocambique"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Ibo Island fort, silversmiths and dhow trip",
+          "notes": "Check local security advice before travelling.",
+          "where": "Ibo Island",
+          "book": "",
+          "place": "mozambique/quirimbas-ibo"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maputo Airport (MPM)",
+          "to": "Maputo hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Maputo hotel",
+          "to": "Maputo Airport (MPM)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Inhambane Airport (INH)",
+          "to": "Tofo lodge",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Tofo lodge",
+          "to": "Vilanculos Airport (VNX)",
+          "time": "07:30",
+          "minutes": 300,
+          "carrier": "4x4 or shared chapa",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Vilanculos lodge",
+          "to": "Vilanculos Airport (VNX)",
+          "time": "08:00",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Nampula Airport (APL)",
+          "to": "Ilha de Mocambique house",
+          "time": "",
+          "minutes": 210,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Ilha de Mocambique house",
+          "to": "Nampula Airport (APL)",
+          "time": "07:00",
+          "minutes": 210,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Pemba Airport (POL)",
+          "to": "Pemba harbour",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Other",
+          "from": "Pemba harbour",
+          "to": "Ibo Island",
+          "time": "13:00",
+          "minutes": 150,
+          "carrier": "Dhow or speedboat",
+          "notes": "Tides decide departures.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Other",
+          "from": "Ibo Island",
+          "to": "Pemba harbour",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "Dhow or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Pemba harbour",
+          "to": "Pemba Airport (POL)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "mozambique/maputo-city": {
+        "name": "Maputo Fortaleza, Iron House and seafood",
+        "description": "A Portuguese-era capital of markets, cafes, art-deco buildings and fresh prawns.",
+        "details": "Maputo has the Fortaleza fort, the Iron House by Eiffel, the railway station and the Central Market. Katembe across the bay has a ferry ride and beach restaurants. Seafood, especially grilled prawns, is a highlight. Go on a guided walk for a first visit.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mozambique/tofo-diving": {
+        "name": "Tofo diving with mantas and whale sharks",
+        "description": "A surf and dive beach village famed for manta rays and whale sharks year round.",
+        "details": "Tofo is one of the best places in the world to see manta rays, and whale sharks are most common from October to March. Dive and snorkel boats launch from the beach. Humpback whales pass from July to October. The village has simple lodges and surf.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "mozambique/tofo-beach": {
+        "name": "Tofo and Barra beaches",
+        "description": "Long sandy beaches near Inhambane with surf, sunsets and fresh seafood.",
+        "details": "Tofo Beach is a laid-back strip with cafes and beach bars. Barra and Praia do Tofinho have good waves, and the old town of Inhambane is a short drive away with a ferry crossing. Take sun protection, as the sun is strong.",
+        "interests": [
+          "relax",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mozambique/vilanculos-dhow": {
+        "name": "Vilanculos dhow sailing",
+        "description": "A traditional wooden dhow trip to sandbars and islands in the Bazaruto Archipelago.",
+        "details": "Vilanculos is the mainland base for the Bazaruto islands. Traditional dhows sail to Magaruque and Benguerra for snorkelling and sandbanks. The wind can get up in the afternoon, so most trips go in the morning.",
+        "interests": [
+          "adventure",
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mozambique/bazaruto-snorkel": {
+        "name": "Bazaruto Archipelago snorkelling and dunes",
+        "description": "Coral reefs, dune walks and a national marine park of dugong habitat.",
+        "details": "The Bazaruto Archipelago is a marine national park of islands with huge dunes, reefs and seagrass beds that support dugongs. Dune sliding is a popular activity. Lodges on the islands are expensive, and day trips from Vilanculos are cheaper.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "mozambique/ilha-de-mocambique": {
+        "name": "Ilha de Mocambique",
+        "description": "A UNESCO island town of Portuguese forts, Swahili stone houses and mosques.",
+        "details": "Ilha de Mocambique was the capital of Portuguese East Africa. The Sao Sebastiao fortress sits at the northern tip, and the stone town has mosques, churches and a quiet atmosphere. It is reached by a long causeway. A guide helps with the history.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mozambique/quirimbas-ibo": {
+        "name": "Quirimbas Archipelago and Ibo Island",
+        "description": "Remote islands with crumbling colonial forts, silver workshops and dhow trips.",
+        "details": "The Quirimbas are reached from Pemba by boat or small plane. Ibo Island has a fort, silversmiths and a ghost-town feel, and nearby islands offer white sand and snorkelling. Lodging is simple or luxurious. Check the security situation before travelling.",
+        "interests": [
+          "culture",
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "mozambique": {
+        "name": "Mozambique",
+        "description": "A long Indian Ocean coast of islands, reefs and Portuguese-African culture.",
+        "images": []
+      },
+      "mozambique/maputo": {
+        "name": "Maputo",
+        "description": "The Portuguese-influenced capital.",
+        "images": []
+      },
+      "mozambique/tofo": {
+        "name": "Tofo",
+        "description": "A beach village for diving and surfing.",
+        "images": []
+      },
+      "mozambique/vilanculos": {
+        "name": "Vilanculos",
+        "description": "The mainland gateway to the Bazaruto islands.",
+        "images": []
+      },
+      "mozambique/ilha-de-mocambique": {
+        "name": "Ilha de Mocambique",
+        "description": "A UNESCO island town on the northern coast.",
+        "images": []
+      },
+      "mozambique/ibo-island": {
+        "name": "Ibo Island",
+        "description": "A remote island in the Quirimbas.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,0 +1,3037 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Opus 5), combining Rough Guides, Lonely Planet and PROMPERU itineraries for Peru",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "peru-cusco-machu-picchu-5d",
+      "title": "Cusco, the Sacred Valley and Machu Picchu in 5 Days",
+      "summary": "The shortest trip that reaches Machu Picchu sensibly, dropping straight from the Cusco airport into the lower Sacred Valley to acclimatise before going up to the citadel.",
+      "days": 5,
+      "route": "Sacred Valley > Aguas Calientes (Machu Picchu) > Cusco",
+      "arrive": "Cusco (CUZ)",
+      "depart": "Cusco (CUZ)",
+      "countries": [
+        "Peru"
+      ],
+      "regions": [
+        "Cusco"
+      ],
+      "cities": [
+        "Urubamba",
+        "Sacred Valley",
+        "Ollantaytambo",
+        "Aguas Calientes",
+        "Machu Picchu",
+        "Cusco"
+      ],
+      "imageQuery": "Machu Picchu Peru citadel Andes",
+      "highlights": [
+        "Machu Picchu",
+        "Ollantaytambo fortress",
+        "Pisac terraces",
+        "Cusco Plaza de Armas",
+        "Sacsayhuamán"
+      ],
+      "destinationKeys": [
+        "peru",
+        "peru/cusco",
+        "peru/sacred-valley",
+        "peru/urubamba",
+        "peru/ollantaytambo",
+        "peru/aguas-calientes",
+        "peru/machu-picchu"
+      ],
+      "hero": "peru/machu-picchu",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "PROMPERÚ (official tourism site)"
+      ],
+      "pace": "F",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Urubamba",
+          "hotel": "Hotel in Urubamba",
+          "start": 0,
+          "nights": 2,
+          "area": "The Sacred Valley floor near Urubamba: several hundred metres lower than Cusco, which makes the first nights much easier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aguas Calientes",
+          "hotel": "Hotel in Aguas Calientes",
+          "start": 2,
+          "nights": 1,
+          "area": "Anywhere in the small town: staying here is what allows the first entry slot at Machu Picchu",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cusco",
+          "hotel": "Hotel in Cusco",
+          "start": 3,
+          "nights": 1,
+          "area": "Near the Plaza de Armas or San Blas, both walkable to the main sights",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Sacred Valley of the Incas",
+          "notes": "Transfer straight down from the airport and keep the first afternoon very light; the valley sits lower than Cusco, which is the point of coming here first.",
+          "where": "Urubamba, Sacred Valley",
+          "book": "",
+          "place": "peru/sacred-valley-overview"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Pisac ruins and market",
+          "notes": "A road climbs most of the way up; the upper ridge paths are narrow, uneven and exposed. Covered by the Cusco tourist ticket.",
+          "where": "Pisac, Sacred Valley",
+          "book": "",
+          "place": "peru/pisac-ruins-market"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Ollantaytambo",
+          "notes": "The terrace climb is steep and stepped throughout; the town below is still laid out on its Inca street plan.",
+          "where": "Ollantaytambo, Sacred Valley",
+          "book": "",
+          "place": "peru/ollantaytambo-ruins"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Aguas Calientes",
+          "notes": "Arrive by afternoon train and take it easy; buy bus tickets up to the site this evening rather than in the morning queue.",
+          "where": "Aguas Calientes",
+          "book": "",
+          "place": "peru/aguas-calientes"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Machu Picchu",
+          "notes": "Tickets are a timed slot on a fixed circuit with a daily cap, and some circuits require a guide, so book well ahead. The site is steep and stepped with sheer drops, and the weather on the ridge changes fast.",
+          "where": "Machu Picchu",
+          "book": "Yes - timed circuit tickets are capped daily and sell out months ahead in high season",
+          "place": "peru/machu-picchu"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Cusco Plaza de Armas",
+          "notes": "A short last walk around the square and the Inca walls in the streets off it before the flight.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/cusco-plaza-de-armas"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cusco Airport (CUZ)",
+          "to": "Urubamba, Sacred Valley",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Private transfer or colectivo van",
+          "notes": "Go straight to the valley rather than into Cusco: it is lower, and arriving at 3,400 metres and staying there is the main cause of a ruined first day.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Ollantaytambo Station",
+          "to": "Aguas Calientes",
+          "time": "14:30",
+          "minutes": 95,
+          "carrier": "PeruRail or Inca Rail",
+          "notes": "No road reaches Aguas Calientes; the train along the river is the only way in apart from walking. Seats are reserved and sell out in season.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Aguas Calientes",
+          "to": "Cusco",
+          "time": "15:00",
+          "minutes": 230,
+          "carrier": "Train to Ollantaytambo, then road transfer",
+          "notes": "The train runs to Ollantaytambo or Poroy and a van or bus covers the rest; allow most of the afternoon.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Cusco hotel area",
+          "to": "Cusco Airport (CUZ)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Cusco flights are frequently delayed or cancelled by afternoon weather, so an early departure is safer.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "peru-lima-cusco-machu-picchu-7d",
+      "title": "Lima, Cusco and Machu Picchu in 7 Days",
+      "summary": "The standard first visit to Peru: a night in Lima for the food, then the Sacred Valley, Machu Picchu and Cusco, ordered so the altitude builds gradually.",
+      "days": 7,
+      "route": "Lima > Sacred Valley > Aguas Calientes (Machu Picchu) > Cusco",
+      "arrive": "Lima (LIM)",
+      "depart": "Cusco (CUZ), or Lima (LIM) via a connection",
+      "countries": [
+        "Peru"
+      ],
+      "regions": [
+        "Lima",
+        "Cusco"
+      ],
+      "cities": [
+        "Lima",
+        "Urubamba",
+        "Sacred Valley",
+        "Ollantaytambo",
+        "Aguas Calientes",
+        "Machu Picchu",
+        "Cusco"
+      ],
+      "imageQuery": "Machu Picchu Peru Sacred Valley terraces",
+      "highlights": [
+        "Machu Picchu",
+        "Ceviche in Lima",
+        "Ollantaytambo fortress",
+        "Qorikancha",
+        "Sacsayhuamán"
+      ],
+      "destinationKeys": [
+        "peru",
+        "peru/lima",
+        "peru/cusco",
+        "peru/sacred-valley",
+        "peru/urubamba",
+        "peru/ollantaytambo",
+        "peru/aguas-calientes",
+        "peru/machu-picchu"
+      ],
+      "hero": "peru/machu-picchu",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "PROMPERÚ (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Lima",
+          "hotel": "Hotel in Lima",
+          "start": 0,
+          "nights": 1,
+          "area": "Miraflores or Barranco: both on the clifftop, walkable and the safest-feeling districts for a short stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Urubamba",
+          "hotel": "Hotel in Urubamba",
+          "start": 1,
+          "nights": 2,
+          "area": "The Sacred Valley floor, several hundred metres lower than Cusco",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aguas Calientes",
+          "hotel": "Hotel in Aguas Calientes",
+          "start": 3,
+          "nights": 1,
+          "area": "Anywhere in the small town, to reach the first entry slot at Machu Picchu",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cusco",
+          "hotel": "Hotel in Cusco",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the Plaza de Armas or San Blas",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Miraflores Malecón",
+          "notes": "A flat clifftop walk to shake off the flight; the sea is usually under grey coastal haze.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/miraflores-malecon"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Pisco sour tasting",
+          "notes": "A good introduction before the altitude, where alcohol is felt more strongly.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/pisco-sour-tasting"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Ceviche in Lima",
+          "notes": "Traditionally a lunchtime dish, and many specialist cevicherías close once the morning's fish has gone, so do not leave it late.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/lima-ceviche"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Pisac ruins and market",
+          "notes": "Covered by the Cusco tourist ticket; the upper ridge paths are narrow and exposed.",
+          "where": "Pisac, Sacred Valley",
+          "book": "",
+          "place": "peru/pisac-ruins-market"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "Moray and the Maras salt pans",
+          "notes": "Exposed high ground with little shade; the Moray terraces are viewed from the rim rather than entered.",
+          "where": "Maras, Sacred Valley",
+          "book": "",
+          "place": "peru/moray-maras"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Ollantaytambo",
+          "notes": "The terrace climb is steep and stepped throughout.",
+          "where": "Ollantaytambo, Sacred Valley",
+          "book": "",
+          "place": "peru/ollantaytambo-ruins"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Aguas Calientes",
+          "notes": "Buy bus tickets up to the site this evening rather than queueing in the morning.",
+          "where": "Aguas Calientes",
+          "book": "",
+          "place": "peru/aguas-calientes"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Machu Picchu",
+          "notes": "Timed circuit tickets with a daily cap; some circuits require a guide. Steep and stepped throughout with sheer drops.",
+          "where": "Machu Picchu",
+          "book": "Yes - timed circuit tickets are capped daily and sell out months ahead in high season",
+          "place": "peru/machu-picchu"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Qorikancha",
+          "notes": "The Inca sun temple with a Dominican convent built directly on top of it; the stonework is among the finest the Inca produced.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/qorikancha"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "San Pedro Market",
+          "notes": "Busiest in the morning; keep bags closed and to the front in the tight aisles.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/san-pedro-market"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Sacsayhuamán",
+          "notes": "A short drive or a steep walk up from the city; open ground with no shade at around 3,700 metres.",
+          "where": "Above Cusco",
+          "book": "",
+          "place": "peru/sacsayhuaman"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "San Blas",
+          "notes": "A steady climb on stepped cobbled lanes; the Twelve-Angled Stone is on the usual approach.",
+          "where": "San Blas, Cusco",
+          "book": "",
+          "place": "peru/cusco-san-blas"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "Cusco Plaza de Armas",
+          "notes": "A short last walk before the flight; Cusco departures are safer early in the day.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/cusco-plaza-de-armas"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Lima Airport (LIM)",
+          "to": "Lima hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi or hotel transfer",
+          "notes": "Use an official desk inside the terminal rather than a driver who approaches you; traffic to Miraflores is heavy at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Lima hotel area",
+          "to": "Lima Airport (LIM)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi",
+          "notes": "This covers the ground leg to the departure airport only; the Lima to Cusco hop is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Cusco Airport (CUZ)",
+          "to": "Urubamba, Sacred Valley",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Private transfer or colectivo van",
+          "notes": "Head straight down to the valley rather than staying up in Cusco on arrival day.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Ollantaytambo Station",
+          "to": "Aguas Calientes",
+          "time": "14:30",
+          "minutes": 95,
+          "carrier": "PeruRail or Inca Rail",
+          "notes": "The train along the river is the only way in apart from walking.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Aguas Calientes",
+          "to": "Cusco",
+          "time": "15:00",
+          "minutes": 230,
+          "carrier": "Train to Ollantaytambo, then road transfer",
+          "notes": "Allow most of the afternoon for the combined journey.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Cusco hotel area",
+          "to": "Cusco Airport (CUZ)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Cusco flights are frequently delayed by afternoon weather, so take an early departure.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "peru-lima-cusco-amazon-10d",
+      "title": "Lima, Machu Picchu and the Amazon in 10 Days",
+      "summary": "Three very different parts of Peru in ten days: Lima's coast and food, the Inca sites around Cusco, and a jungle lodge in the Tambopata rainforest.",
+      "days": 10,
+      "route": "Lima > Sacred Valley > Aguas Calientes (Machu Picchu) > Cusco > Puerto Maldonado (Amazon)",
+      "arrive": "Lima (LIM)",
+      "depart": "Lima (LIM)",
+      "countries": [
+        "Peru"
+      ],
+      "regions": [
+        "Lima",
+        "Cusco",
+        "Madre de Dios"
+      ],
+      "cities": [
+        "Lima",
+        "Urubamba",
+        "Sacred Valley",
+        "Ollantaytambo",
+        "Aguas Calientes",
+        "Machu Picchu",
+        "Cusco",
+        "Puerto Maldonado"
+      ],
+      "imageQuery": "Peru Amazon rainforest river lodge",
+      "highlights": [
+        "Machu Picchu",
+        "Sacred Valley ruins",
+        "Tambopata jungle lodge",
+        "Giant otters",
+        "Ceviche in Lima"
+      ],
+      "destinationKeys": [
+        "peru",
+        "peru/lima",
+        "peru/cusco",
+        "peru/sacred-valley",
+        "peru/urubamba",
+        "peru/ollantaytambo",
+        "peru/aguas-calientes",
+        "peru/machu-picchu",
+        "peru/madre-de-dios",
+        "peru/puerto-maldonado"
+      ],
+      "hero": "peru/machu-picchu",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "PROMPERÚ (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "iconic_landmarks",
+        "adventure",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Lima",
+          "hotel": "Hotel in Lima",
+          "start": 0,
+          "nights": 2,
+          "area": "Miraflores or Barranco, both on the clifftop and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Urubamba",
+          "hotel": "Hotel in Urubamba",
+          "start": 2,
+          "nights": 2,
+          "area": "The Sacred Valley floor, lower than Cusco",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aguas Calientes",
+          "hotel": "Hotel in Aguas Calientes",
+          "start": 4,
+          "nights": 1,
+          "area": "Anywhere in the small town, to reach the first entry slot",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cusco",
+          "hotel": "Hotel in Cusco",
+          "start": 5,
+          "nights": 2,
+          "area": "Near the Plaza de Armas or San Blas",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Maldonado",
+          "hotel": "Lodge near Puerto Maldonado",
+          "start": 7,
+          "nights": 2,
+          "area": "A riverside lodge upriver from town, reached by motorised canoe",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Miraflores Malecón",
+          "notes": "A flat clifftop walk to shake off the flight.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/miraflores-malecon"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Pisco sour tasting",
+          "notes": "",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/pisco-sour-tasting"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Lima historic centre",
+          "notes": "Flat and walkable but busy with traffic; the catacombs under San Francisco are the usual highlight.",
+          "where": "Centro, Lima",
+          "book": "",
+          "place": "peru/lima-historic-centre"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Ceviche in Lima",
+          "notes": "A lunchtime dish; many cevicherías close in the afternoon.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/lima-ceviche"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Larco Museum",
+          "notes": "Keeps longer hours than most Lima museums; the open storerooms are the unusual part.",
+          "where": "Pueblo Libre, Lima",
+          "book": "",
+          "place": "peru/larco-museum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Barranco",
+          "notes": "Walkable from Miraflores along the clifftop; busiest on weekend evenings.",
+          "where": "Barranco, Lima",
+          "book": "",
+          "place": "peru/barranco"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Sacred Valley of the Incas",
+          "notes": "Transfer straight down from the Cusco airport and keep the first afternoon light.",
+          "where": "Urubamba, Sacred Valley",
+          "book": "",
+          "place": "peru/sacred-valley-overview"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Pisac ruins and market",
+          "notes": "Covered by the Cusco tourist ticket.",
+          "where": "Pisac, Sacred Valley",
+          "book": "",
+          "place": "peru/pisac-ruins-market"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Moray and the Maras salt pans",
+          "notes": "Exposed high ground with little shade.",
+          "where": "Maras, Sacred Valley",
+          "book": "",
+          "place": "peru/moray-maras"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Ollantaytambo",
+          "notes": "The terrace climb is steep and stepped throughout.",
+          "where": "Ollantaytambo, Sacred Valley",
+          "book": "",
+          "place": "peru/ollantaytambo-ruins"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Aguas Calientes",
+          "notes": "Buy bus tickets up to the site this evening.",
+          "where": "Aguas Calientes",
+          "book": "",
+          "place": "peru/aguas-calientes"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Machu Picchu",
+          "notes": "Timed circuit tickets with a daily cap; some circuits require a guide.",
+          "where": "Machu Picchu",
+          "book": "Yes - timed circuit tickets are capped daily and sell out months ahead in high season",
+          "place": "peru/machu-picchu"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Qorikancha",
+          "notes": "Inca sun temple with a convent built on top of it.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/qorikancha"
+        },
+        {
+          "day": 6,
+          "type": "Food & Drink",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "San Pedro Market",
+          "notes": "Busiest in the morning.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/san-pedro-market"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Sacsayhuamán",
+          "notes": "Open ground with no shade at around 3,700 metres.",
+          "where": "Above Cusco",
+          "book": "",
+          "place": "peru/sacsayhuaman"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "San Blas",
+          "notes": "A steady climb on stepped cobbled lanes.",
+          "where": "San Blas, Cusco",
+          "book": "",
+          "place": "peru/cusco-san-blas"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Tambopata jungle lodge",
+          "notes": "Arrive by canoe from Puerto Maldonado and settle in; the first outing is usually a short walk or river trip near the lodge. Long sleeves, closed shoes and repellent from the start.",
+          "where": "Tambopata, Madre de Dios",
+          "book": "",
+          "place": "peru/tambopata-lodge"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Amazon night walk",
+          "notes": "Uneven, often muddy trails crossed with roots; a head torch and closed boots matter. Called off in heavy rain.",
+          "where": "Tambopata, Madre de Dios",
+          "book": "",
+          "place": "peru/amazon-night-walk"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3.5h",
+          "name": "Oxbow lake canoe trip",
+          "notes": "An early start for the best chance of giant otters; the forest walk in to the lake is uneven and often muddy.",
+          "where": "Tambopata, Madre de Dios",
+          "book": "",
+          "place": "peru/amazon-oxbow-lake"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Amazon canopy walkway",
+          "notes": "Suspension bridges reached by stair towers, swaying underfoot; closed in high wind or electrical storms.",
+          "where": "Tambopata, Madre de Dios",
+          "book": "",
+          "place": "peru/amazon-canopy-walk"
+        },
+        {
+          "day": 9,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Ceviche in Lima",
+          "notes": "A last meal on the coast if the connection leaves an evening in Lima; otherwise skip straight to the airport.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/lima-ceviche"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Lima Airport (LIM)",
+          "to": "Lima hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi or hotel transfer",
+          "notes": "Use an official desk inside the terminal rather than a driver who approaches you.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Lima hotel area",
+          "to": "Lima Airport (LIM)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi",
+          "notes": "Ground leg only; the Lima to Cusco hop is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cusco Airport (CUZ)",
+          "to": "Urubamba, Sacred Valley",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Private transfer or colectivo van",
+          "notes": "Straight down to the valley rather than staying up in Cusco on arrival day.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Ollantaytambo Station",
+          "to": "Aguas Calientes",
+          "time": "14:30",
+          "minutes": 95,
+          "carrier": "PeruRail or Inca Rail",
+          "notes": "The only way in apart from walking.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Aguas Calientes",
+          "to": "Cusco",
+          "time": "15:00",
+          "minutes": 230,
+          "carrier": "Train to Ollantaytambo, then road transfer",
+          "notes": "",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Cusco hotel area",
+          "to": "Cusco Airport (CUZ)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Ground leg only; Cusco to Puerto Maldonado is a short domestic flight over the Andes.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Puerto Maldonado Airport",
+          "to": "Tambopata lodge",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Lodge road transfer then motorised canoe",
+          "notes": "Travel time varies with how far upriver the lodge is and with the river level; lodges hold luggage not needed in the jungle.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Tambopata lodge",
+          "to": "Puerto Maldonado Airport",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Motorised canoe then road transfer",
+          "notes": "Ground leg only; the return to Lima is by domestic flight, usually via Cusco.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Lima Airport (LIM)",
+          "to": "Lima hotel area or international departures",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi",
+          "notes": "Long-haul flights out of Lima mostly leave late in the evening, which is what makes a same-day connection from the jungle workable.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "peru-lima-arequipa-colca-cusco-10d",
+      "title": "Lima, Arequipa, Colca Canyon and Machu Picchu in 10 Days",
+      "summary": "A southern route that builds altitude gradually through Arequipa and the Colca Canyon before reaching the Sacred Valley and Machu Picchu, with condors on the way.",
+      "days": 10,
+      "route": "Lima > Arequipa > Colca Canyon > Sacred Valley (Machu Picchu) > Cusco",
+      "arrive": "Lima (LIM)",
+      "depart": "Cusco (CUZ)",
+      "countries": [
+        "Peru"
+      ],
+      "regions": [
+        "Lima",
+        "Arequipa",
+        "Cusco"
+      ],
+      "cities": [
+        "Lima",
+        "Arequipa",
+        "Colca Canyon",
+        "Urubamba",
+        "Sacred Valley",
+        "Ollantaytambo",
+        "Machu Picchu",
+        "Cusco"
+      ],
+      "imageQuery": "Colca Canyon Peru condor terraces",
+      "highlights": [
+        "Santa Catalina Monastery",
+        "Cruz del Cóndor",
+        "Machu Picchu",
+        "Ollantaytambo fortress",
+        "Arequipa picantería"
+      ],
+      "destinationKeys": [
+        "peru",
+        "peru/lima",
+        "peru/arequipa",
+        "peru/colca-canyon",
+        "peru/cusco",
+        "peru/sacred-valley",
+        "peru/urubamba",
+        "peru/ollantaytambo",
+        "peru/machu-picchu"
+      ],
+      "hero": "peru/colca-canyon",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "PROMPERÚ (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Lima",
+          "hotel": "Hotel in Lima",
+          "start": 0,
+          "nights": 2,
+          "area": "Miraflores or Barranco, both on the clifftop and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Arequipa",
+          "hotel": "Hotel in Arequipa",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the Plaza de Armas, within walking distance of the monastery",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Colca Canyon",
+          "hotel": "Lodge in the Colca valley",
+          "start": 4,
+          "nights": 1,
+          "area": "Chivay or Yanque on the valley floor, so the condor viewpoint is reachable before dawn",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Urubamba",
+          "hotel": "Hotel in Urubamba",
+          "start": 5,
+          "nights": 3,
+          "area": "The Sacred Valley floor, lower than Cusco",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cusco",
+          "hotel": "Hotel in Cusco",
+          "start": 8,
+          "nights": 1,
+          "area": "Near the Plaza de Armas or San Blas",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Miraflores Malecón",
+          "notes": "A flat clifftop walk to shake off the flight.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/miraflores-malecon"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Pisco sour tasting",
+          "notes": "",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/pisco-sour-tasting"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Lima historic centre",
+          "notes": "Flat and walkable but busy with traffic.",
+          "where": "Centro, Lima",
+          "book": "",
+          "place": "peru/lima-historic-centre"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Ceviche in Lima",
+          "notes": "A lunchtime dish; many cevicherías close in the afternoon.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/lima-ceviche"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Larco Museum",
+          "notes": "The open storerooms are the unusual part of the visit.",
+          "where": "Pueblo Libre, Lima",
+          "book": "",
+          "place": "peru/larco-museum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Barranco",
+          "notes": "Walkable from Miraflores along the clifftop.",
+          "where": "Barranco, Lima",
+          "book": "",
+          "place": "peru/barranco"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Arequipa Plaza de Armas",
+          "notes": "At around 2,300 metres this is a useful first step up from the coast; keep the arrival afternoon easy.",
+          "where": "Arequipa",
+          "book": "",
+          "place": "peru/arequipa-plaza-de-armas"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Santa Catalina Monastery",
+          "notes": "A walled quarter rather than a single building; cobbled, uneven floors with steps between levels. Allow a couple of hours.",
+          "where": "Arequipa",
+          "book": "",
+          "place": "peru/santa-catalina-monastery"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Picantería lunch in Arequipa",
+          "notes": "Many picanterías open at lunchtime only and work to a fixed dish by weekday, closing once the food runs out.",
+          "where": "Arequipa",
+          "book": "",
+          "place": "peru/arequipa-picanteria"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Museo Santuarios Andinos",
+          "notes": "Guided tour in a fixed sequence, around an hour, with no photography. A sober museum rather than a spectacle.",
+          "where": "Arequipa",
+          "book": "",
+          "place": "peru/arequipa-juanita-museum"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Colca Canyon",
+          "notes": "The drive in crosses a pass above 4,800 metres, where altitude is felt sharply; take it slowly on arrival.",
+          "where": "Colca Canyon",
+          "book": "",
+          "place": "peru/colca-canyon"
+        },
+        {
+          "day": 4,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Colca hot springs",
+          "notes": "Steps down toward the river, and the walk back up is more tiring than it looks at this altitude.",
+          "where": "Chivay, Colca Canyon",
+          "book": "",
+          "place": "peru/colca-hot-springs"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "1.5h",
+          "name": "Cruz del Cóndor",
+          "notes": "Condors rise on the morning thermals, so tours leave before dawn; sightings are usual but not guaranteed. Exposed and cold at that hour.",
+          "where": "Colca Canyon",
+          "book": "",
+          "place": "peru/cruz-del-condor"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Pisac ruins and market",
+          "notes": "Covered by the Cusco tourist ticket; the upper ridge paths are narrow and exposed.",
+          "where": "Pisac, Sacred Valley",
+          "book": "",
+          "place": "peru/pisac-ruins-market"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Chinchero weaving demonstration",
+          "notes": "Higher than Cusco at around 3,760 metres; short demonstrations ending with textiles for sale, with no obligation to buy.",
+          "where": "Chinchero, Sacred Valley",
+          "book": "",
+          "place": "peru/chinchero-weaving"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Ollantaytambo",
+          "notes": "The terrace climb is steep and stepped throughout.",
+          "where": "Ollantaytambo, Sacred Valley",
+          "book": "",
+          "place": "peru/ollantaytambo-ruins"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "4h",
+          "name": "Machu Picchu",
+          "notes": "A long day trip from the valley by train rather than an overnight in Aguas Calientes, so expect a later entry slot and more company at the site.",
+          "where": "Machu Picchu",
+          "book": "Yes - timed circuit tickets are capped daily and sell out months ahead in high season",
+          "place": "peru/machu-picchu"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "1.5h",
+          "name": "Qorikancha",
+          "notes": "Inca sun temple with a Dominican convent built directly on top of it.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/qorikancha"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "2h",
+          "name": "Sacsayhuamán",
+          "notes": "Open ground with no shade at around 3,700 metres.",
+          "where": "Above Cusco",
+          "book": "",
+          "place": "peru/sacsayhuaman"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "San Blas",
+          "notes": "A steady climb on stepped cobbled lanes.",
+          "where": "San Blas, Cusco",
+          "book": "",
+          "place": "peru/cusco-san-blas"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "Cusco Plaza de Armas",
+          "notes": "A short last walk before the flight.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/cusco-plaza-de-armas"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Lima Airport (LIM)",
+          "to": "Lima hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi or hotel transfer",
+          "notes": "Use an official desk inside the terminal.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Lima hotel area",
+          "to": "Lima Airport (LIM)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi",
+          "notes": "Ground leg only; Lima to Arequipa is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Arequipa Airport",
+          "to": "Arequipa hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Arequipa",
+          "to": "Colca valley (Chivay)",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Tour minibus or private transfer",
+          "notes": "The road crosses a pass above 4,800 metres with stops for vicuña and the altiplano; most operators run this as a two-day tour.",
+          "book": "Yes - two-day Colca tours are booked as a package"
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Colca valley",
+          "to": "Puno",
+          "time": "09:00",
+          "minutes": 360,
+          "carrier": "Tour minibus with onward drop-off",
+          "notes": "Many Colca operators continue to Puno on the second day instead of returning to Arequipa, which avoids backtracking. From Puno an onward transfer or train reaches Cusco and the valley.",
+          "book": "Yes - ask for the onward drop-off when booking the Colca tour"
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Cusco Airport (CUZ)",
+          "to": "Urubamba, Sacred Valley",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Private transfer or colectivo van",
+          "notes": "Those flying Arequipa to Cusco instead of taking the Colca onward route arrive here directly.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Ollantaytambo Station",
+          "to": "Aguas Calientes",
+          "time": "06:10",
+          "minutes": 95,
+          "carrier": "PeruRail or Inca Rail",
+          "notes": "An early train is essential for a same-day return; buses run up to the site from the edge of Aguas Calientes.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Aguas Calientes",
+          "to": "Ollantaytambo Station",
+          "time": "16:30",
+          "minutes": 95,
+          "carrier": "PeruRail or Inca Rail",
+          "notes": "",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Urubamba, Sacred Valley",
+          "to": "Cusco",
+          "time": "08:00",
+          "minutes": 90,
+          "carrier": "Private transfer or colectivo van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Cusco hotel area",
+          "to": "Cusco Airport (CUZ)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Cusco flights are frequently delayed by afternoon weather, so take an early departure.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "peru-southern-circuit-14d",
+      "title": "Southern Peru in 14 Days: Arequipa, Colca, Titicaca and Machu Picchu",
+      "summary": "The full southern circuit in two weeks, stepping up through Arequipa, the Colca Canyon and Lake Titicaca before the Sacred Valley and Machu Picchu, with no backtracking.",
+      "days": 14,
+      "route": "Lima > Arequipa > Colca Canyon > Puno (Lake Titicaca) > Sacred Valley > Aguas Calientes (Machu Picchu) > Cusco",
+      "arrive": "Lima (LIM)",
+      "depart": "Cusco (CUZ)",
+      "countries": [
+        "Peru"
+      ],
+      "regions": [
+        "Lima",
+        "Arequipa",
+        "Puno",
+        "Cusco"
+      ],
+      "cities": [
+        "Lima",
+        "Arequipa",
+        "Colca Canyon",
+        "Puno",
+        "Lake Titicaca",
+        "Urubamba",
+        "Sacred Valley",
+        "Ollantaytambo",
+        "Aguas Calientes",
+        "Machu Picchu",
+        "Cusco"
+      ],
+      "imageQuery": "Lake Titicaca Peru reed islands altiplano",
+      "highlights": [
+        "Santa Catalina Monastery",
+        "Cruz del Cóndor",
+        "Uros floating islands",
+        "Machu Picchu",
+        "Sacsayhuamán"
+      ],
+      "destinationKeys": [
+        "peru",
+        "peru/lima",
+        "peru/arequipa",
+        "peru/colca-canyon",
+        "peru/puno",
+        "peru/lake-titicaca",
+        "peru/cusco",
+        "peru/sacred-valley",
+        "peru/urubamba",
+        "peru/ollantaytambo",
+        "peru/aguas-calientes",
+        "peru/machu-picchu"
+      ],
+      "hero": "peru/lake-titicaca",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "PROMPERÚ (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "iconic_landmarks",
+        "authentic_local",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Lima",
+          "hotel": "Hotel in Lima",
+          "start": 0,
+          "nights": 2,
+          "area": "Miraflores or Barranco, both on the clifftop and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Arequipa",
+          "hotel": "Hotel in Arequipa",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the Plaza de Armas",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Colca Canyon",
+          "hotel": "Lodge in the Colca valley",
+          "start": 4,
+          "nights": 1,
+          "area": "Chivay or Yanque on the valley floor",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puno",
+          "hotel": "Hotel in Puno",
+          "start": 5,
+          "nights": 2,
+          "area": "Near the lakeshore or the main street, within reach of the boat dock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Urubamba",
+          "hotel": "Hotel in Urubamba",
+          "start": 7,
+          "nights": 2,
+          "area": "The Sacred Valley floor, lower than Cusco and Puno both",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aguas Calientes",
+          "hotel": "Hotel in Aguas Calientes",
+          "start": 9,
+          "nights": 1,
+          "area": "Anywhere in the small town, to reach the first entry slot",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cusco",
+          "hotel": "Hotel in Cusco",
+          "start": 10,
+          "nights": 3,
+          "area": "Near the Plaza de Armas or San Blas",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Miraflores Malecón",
+          "notes": "A flat clifftop walk to shake off the flight.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/miraflores-malecon"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Pisco sour tasting",
+          "notes": "",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/pisco-sour-tasting"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Lima historic centre",
+          "notes": "Flat and walkable but busy with traffic.",
+          "where": "Centro, Lima",
+          "book": "",
+          "place": "peru/lima-historic-centre"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Ceviche in Lima",
+          "notes": "A lunchtime dish; many cevicherías close in the afternoon.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/lima-ceviche"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Huaca Pucllana",
+          "notes": "An adobe pyramid in the middle of residential Miraflores; visits are by guided tour on a set path, and evening tours run when it is floodlit.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/huaca-pucllana"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Barranco",
+          "notes": "Walkable from Miraflores along the clifftop.",
+          "where": "Barranco, Lima",
+          "book": "",
+          "place": "peru/barranco"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Arequipa Plaza de Armas",
+          "notes": "At around 2,300 metres this is the first step up from the coast; keep the arrival afternoon easy.",
+          "where": "Arequipa",
+          "book": "",
+          "place": "peru/arequipa-plaza-de-armas"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Santa Catalina Monastery",
+          "notes": "Cobbled, uneven floors with steps between levels; allow a couple of hours.",
+          "where": "Arequipa",
+          "book": "",
+          "place": "peru/santa-catalina-monastery"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Picantería lunch in Arequipa",
+          "notes": "Lunchtime only, with a fixed dish by weekday in many places.",
+          "where": "Arequipa",
+          "book": "",
+          "place": "peru/arequipa-picanteria"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Museo Santuarios Andinos",
+          "notes": "Guided tour in a fixed sequence with no photography.",
+          "where": "Arequipa",
+          "book": "",
+          "place": "peru/arequipa-juanita-museum"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Colca Canyon",
+          "notes": "The drive in crosses a pass above 4,800 metres; take it slowly on arrival.",
+          "where": "Colca Canyon",
+          "book": "",
+          "place": "peru/colca-canyon"
+        },
+        {
+          "day": 4,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Colca hot springs",
+          "notes": "Steps down toward the river, and the climb back up is tiring at this altitude.",
+          "where": "Chivay, Colca Canyon",
+          "book": "",
+          "place": "peru/colca-hot-springs"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "1.5h",
+          "name": "Cruz del Cóndor",
+          "notes": "Condors rise on the morning thermals, so the departure is before dawn; exposed and cold at that hour.",
+          "where": "Colca Canyon",
+          "book": "",
+          "place": "peru/cruz-del-condor"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Lake Titicaca",
+          "notes": "A short lakeshore stop on arrival in Puno. At around 3,810 metres this is the highest the trip goes, and the light is intense even when the air is cold.",
+          "where": "Puno, Lake Titicaca",
+          "book": "",
+          "place": "peru/lake-titicaca"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "08:00",
+          "duration": "7h",
+          "name": "Uros floating islands",
+          "notes": "Islands of layered totora reed, soft and uneven underfoot with no shade; the nearest ones are frankly commercial.",
+          "where": "Lake Titicaca, Puno",
+          "book": "",
+          "place": "peru/uros-floating-islands"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "11:00",
+          "duration": "4h",
+          "name": "Taquile Island",
+          "notes": "Reaching the village from the landing means several hundred stone steps at well over 3,800 metres, which is the hardest part of the day. Lunch is usually with a local family.",
+          "where": "Lake Titicaca, Puno",
+          "book": "",
+          "place": "peru/taquile-island"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Sillustani",
+          "notes": "Pre-Inca burial towers on a ridge above a lake; exposed, windy and at around 4,000 metres, with a steady walk up from the car park.",
+          "where": "near Puno",
+          "book": "",
+          "place": "peru/sillustani"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Pisac ruins and market",
+          "notes": "Covered by the Cusco tourist ticket.",
+          "where": "Pisac, Sacred Valley",
+          "book": "",
+          "place": "peru/pisac-ruins-market"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Moray and the Maras salt pans",
+          "notes": "Exposed high ground with little shade; Moray is viewed from the rim.",
+          "where": "Maras, Sacred Valley",
+          "book": "",
+          "place": "peru/moray-maras"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Chinchero weaving demonstration",
+          "notes": "Short demonstrations of dyeing and backstrap-loom weaving, ending with textiles for sale.",
+          "where": "Chinchero, Sacred Valley",
+          "book": "",
+          "place": "peru/chinchero-weaving"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Ollantaytambo",
+          "notes": "See the fortress before taking the afternoon train; the terrace climb is steep and stepped.",
+          "where": "Ollantaytambo, Sacred Valley",
+          "book": "",
+          "place": "peru/ollantaytambo-ruins"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Aguas Calientes",
+          "notes": "Buy bus tickets up to the site this evening rather than queueing in the morning.",
+          "where": "Aguas Calientes",
+          "book": "",
+          "place": "peru/aguas-calientes"
+        },
+        {
+          "day": 10,
+          "type": "Ticketed Attraction",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Machu Picchu",
+          "notes": "Timed circuit tickets with a daily cap; some circuits require a guide. Steep and stepped with sheer drops.",
+          "where": "Machu Picchu",
+          "book": "Yes - timed circuit tickets are capped daily and sell out months ahead in high season",
+          "place": "peru/machu-picchu"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Qorikancha",
+          "notes": "Inca sun temple with a Dominican convent built on top of it.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/qorikancha"
+        },
+        {
+          "day": 11,
+          "type": "Food & Drink",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "San Pedro Market",
+          "notes": "Busiest in the morning; keep bags closed in the tight aisles.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/san-pedro-market"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Sacsayhuamán",
+          "notes": "Open ground with no shade at around 3,700 metres.",
+          "where": "Above Cusco",
+          "book": "",
+          "place": "peru/sacsayhuaman"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "San Blas",
+          "notes": "A steady climb on stepped cobbled lanes; the Twelve-Angled Stone is on the usual approach.",
+          "where": "San Blas, Cusco",
+          "book": "",
+          "place": "peru/cusco-san-blas"
+        },
+        {
+          "day": 12,
+          "type": "Day Trip",
+          "time": "05:00",
+          "duration": "10h",
+          "name": "Vinicunca (Rainbow Mountain)",
+          "notes": "A long day from Cusco finishing above 5,000 metres, which is why it belongs late in the trip rather than early. Horses can be hired for much of the route, and the colours are muted in overcast or wet weather.",
+          "where": "Vinicunca, near Cusco",
+          "book": "Yes - day tours leave before dawn and are booked the day before",
+          "place": "peru/rainbow-mountain"
+        },
+        {
+          "day": 13,
+          "type": "Food & Drink",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "San Pedro Market",
+          "notes": "A short last stop for a juice counter breakfast before the airport.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/san-pedro-market"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Lima Airport (LIM)",
+          "to": "Lima hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi or hotel transfer",
+          "notes": "Use an official desk inside the terminal.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Lima hotel area",
+          "to": "Lima Airport (LIM)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi",
+          "notes": "Ground leg only; Lima to Arequipa is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Arequipa Airport",
+          "to": "Arequipa hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Arequipa",
+          "to": "Colca valley (Chivay)",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Tour minibus or private transfer",
+          "notes": "The road crosses a pass above 4,800 metres with stops on the altiplano; most operators run this as a two-day tour.",
+          "book": "Yes - two-day Colca tours are booked as a package"
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Colca valley",
+          "to": "Puno",
+          "time": "09:00",
+          "minutes": 360,
+          "carrier": "Tour minibus with onward drop-off",
+          "notes": "Ask for the Puno drop-off when booking the Colca tour; this is what keeps the route from doubling back to Arequipa.",
+          "book": "Yes - ask for the onward drop-off when booking the Colca tour"
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Puno dock",
+          "to": "Uros and Taquile islands",
+          "time": "07:45",
+          "minutes": 150,
+          "carrier": "Lake tour boat",
+          "notes": "A full-day boat combining both islands; the lake is at around 3,810 metres and the light is intense, so sun protection matters.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Taquile Island",
+          "to": "Puno dock",
+          "time": "14:30",
+          "minutes": 150,
+          "carrier": "Lake tour boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Puno",
+          "to": "Urubamba, Sacred Valley",
+          "time": "12:00",
+          "minutes": 420,
+          "carrier": "Tourist bus via Juliaca and Cusco, with stops en route",
+          "notes": "The tourist bus breaks the long altiplano run with stops at Pukara, La Raya pass and Raqchi; plain service buses are faster but see none of it.",
+          "book": "Yes - tourist buses run to a fixed schedule and are reserved"
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Ollantaytambo Station",
+          "to": "Aguas Calientes",
+          "time": "14:30",
+          "minutes": 95,
+          "carrier": "PeruRail or Inca Rail",
+          "notes": "The only way in apart from walking.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Aguas Calientes",
+          "to": "Cusco",
+          "time": "15:00",
+          "minutes": 230,
+          "carrier": "Train to Ollantaytambo, then road transfer",
+          "notes": "Allow most of the afternoon for the combined journey.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Cusco hotel area",
+          "to": "Cusco Airport (CUZ)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Cusco flights are frequently delayed by afternoon weather, so take an early departure.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "peru-cusco-amazon-14d",
+      "title": "Peru in 14 Days: Lima, Machu Picchu and the Tambopata Amazon",
+      "summary": "Two weeks with real time in each place: Lima's coast, four nights around Cusco and the Sacred Valley, Machu Picchu, and three nights deep in the Tambopata rainforest.",
+      "days": 14,
+      "route": "Lima > Sacred Valley > Aguas Calientes (Machu Picchu) > Cusco > Puerto Maldonado (Amazon) > Lima",
+      "arrive": "Lima (LIM)",
+      "depart": "Lima (LIM)",
+      "countries": [
+        "Peru"
+      ],
+      "regions": [
+        "Lima",
+        "Cusco",
+        "Madre de Dios"
+      ],
+      "cities": [
+        "Lima",
+        "Urubamba",
+        "Sacred Valley",
+        "Ollantaytambo",
+        "Aguas Calientes",
+        "Machu Picchu",
+        "Cusco",
+        "Puerto Maldonado"
+      ],
+      "imageQuery": "Peru Machu Picchu Amazon macaw rainforest",
+      "highlights": [
+        "Machu Picchu",
+        "Huayna Picchu climb",
+        "Macaw clay lick",
+        "Giant otters",
+        "Sacsayhuamán",
+        "Lima food scene"
+      ],
+      "destinationKeys": [
+        "peru",
+        "peru/lima",
+        "peru/cusco",
+        "peru/sacred-valley",
+        "peru/urubamba",
+        "peru/ollantaytambo",
+        "peru/aguas-calientes",
+        "peru/machu-picchu",
+        "peru/madre-de-dios",
+        "peru/puerto-maldonado"
+      ],
+      "hero": "peru/madre-de-dios",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "PROMPERÚ (official tourism site)"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "culture",
+        "iconic_landmarks",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Lima",
+          "hotel": "Hotel in Lima",
+          "start": 0,
+          "nights": 2,
+          "area": "Miraflores or Barranco, both on the clifftop and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Urubamba",
+          "hotel": "Hotel in Urubamba",
+          "start": 2,
+          "nights": 3,
+          "area": "The Sacred Valley floor, several hundred metres lower than Cusco",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aguas Calientes",
+          "hotel": "Hotel in Aguas Calientes",
+          "start": 5,
+          "nights": 1,
+          "area": "Anywhere in the small town, to reach the first entry slot",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cusco",
+          "hotel": "Hotel in Cusco",
+          "start": 6,
+          "nights": 3,
+          "area": "Near the Plaza de Armas or San Blas",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Maldonado",
+          "hotel": "Lodge near Puerto Maldonado",
+          "start": 9,
+          "nights": 3,
+          "area": "A riverside lodge well upriver from town, reached by motorised canoe",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lima",
+          "hotel": "Hotel in Lima",
+          "start": 12,
+          "nights": 1,
+          "area": "Miraflores, for a last night before the long-haul flight",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Miraflores Malecón",
+          "notes": "A flat clifftop walk to shake off the flight.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/miraflores-malecon"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Pisco sour tasting",
+          "notes": "",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/pisco-sour-tasting"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Lima historic centre",
+          "notes": "Flat and walkable but busy with traffic.",
+          "where": "Centro, Lima",
+          "book": "",
+          "place": "peru/lima-historic-centre"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Ceviche in Lima",
+          "notes": "A lunchtime dish; many cevicherías close in the afternoon.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/lima-ceviche"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Larco Museum",
+          "notes": "The open storerooms are the unusual part of the visit.",
+          "where": "Pueblo Libre, Lima",
+          "book": "",
+          "place": "peru/larco-museum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Barranco",
+          "notes": "Walkable from Miraflores along the clifftop.",
+          "where": "Barranco, Lima",
+          "book": "",
+          "place": "peru/barranco"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Sacred Valley of the Incas",
+          "notes": "Transfer straight down from the Cusco airport and keep the first afternoon light.",
+          "where": "Urubamba, Sacred Valley",
+          "book": "",
+          "place": "peru/sacred-valley-overview"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Pisac ruins and market",
+          "notes": "Covered by the Cusco tourist ticket; the upper ridge paths are narrow and exposed.",
+          "where": "Pisac, Sacred Valley",
+          "book": "",
+          "place": "peru/pisac-ruins-market"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Moray and the Maras salt pans",
+          "notes": "Exposed high ground with little shade.",
+          "where": "Maras, Sacred Valley",
+          "book": "",
+          "place": "peru/moray-maras"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Chinchero weaving demonstration",
+          "notes": "Higher than Cusco at around 3,760 metres, so leave it until you have adjusted.",
+          "where": "Chinchero, Sacred Valley",
+          "book": "",
+          "place": "peru/chinchero-weaving"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Ollantaytambo",
+          "notes": "The terrace climb is steep and stepped throughout; the town below is still on its Inca street plan.",
+          "where": "Ollantaytambo, Sacred Valley",
+          "book": "",
+          "place": "peru/ollantaytambo-ruins"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Aguas Calientes",
+          "notes": "Buy bus tickets up to the site this evening rather than queueing in the morning.",
+          "where": "Aguas Calientes",
+          "book": "",
+          "place": "peru/aguas-calientes"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Machu Picchu",
+          "notes": "Timed circuit tickets with a daily cap; some circuits require a guide.",
+          "where": "Machu Picchu",
+          "book": "Yes - timed circuit tickets are capped daily and sell out months ahead in high season",
+          "place": "peru/machu-picchu"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Huayna Picchu",
+          "notes": "Permits are capped at a small number daily on fixed entry windows and sell out months ahead. Steep, continuously stepped and exposed, with long drops beside the path.",
+          "where": "Machu Picchu",
+          "book": "Yes - a separate capped permit bought with the Machu Picchu ticket, months ahead",
+          "place": "peru/huayna-picchu"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Qorikancha",
+          "notes": "Inca sun temple with a Dominican convent built on top of it.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/qorikancha"
+        },
+        {
+          "day": 7,
+          "type": "Food & Drink",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "San Pedro Market",
+          "notes": "Busiest in the morning.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/san-pedro-market"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Sacsayhuamán",
+          "notes": "Open ground with no shade at around 3,700 metres.",
+          "where": "Above Cusco",
+          "book": "",
+          "place": "peru/sacsayhuaman"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "San Blas",
+          "notes": "A steady climb on stepped cobbled lanes.",
+          "where": "San Blas, Cusco",
+          "book": "",
+          "place": "peru/cusco-san-blas"
+        },
+        {
+          "day": 8,
+          "type": "Class",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Peruvian cooking class in Cusco",
+          "notes": "Usually starts with a market walk; three to four hours, much of it standing.",
+          "where": "Cusco",
+          "book": "Yes - small group sessions need booking ahead",
+          "place": "peru/cusco-cooking-class"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Cusco Plaza de Armas",
+          "notes": "A last evening on the square before the jungle leg.",
+          "where": "Cusco",
+          "book": "",
+          "place": "peru/cusco-plaza-de-armas"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Tambopata jungle lodge",
+          "notes": "Arrive by canoe and settle in; the first outing is usually a short walk or river trip near the lodge.",
+          "where": "Tambopata, Madre de Dios",
+          "book": "",
+          "place": "peru/tambopata-lodge"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Amazon night walk",
+          "notes": "Uneven, often muddy trails; closed boots and a head torch matter. Called off in heavy rain.",
+          "where": "Tambopata, Madre de Dios",
+          "book": "",
+          "place": "peru/amazon-night-walk"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "04:30",
+          "duration": "3h",
+          "name": "Macaw clay lick",
+          "notes": "Birds come down shortly after first light, so this means leaving the lodge well before dawn, and they do not come in rain. Binoculars make a large difference.",
+          "where": "Tambopata, Madre de Dios",
+          "book": "",
+          "place": "peru/amazon-macaw-clay-lick"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Amazon canopy walkway",
+          "notes": "Suspension bridges reached by stair towers, swaying underfoot; closed in high wind or electrical storms.",
+          "where": "Tambopata, Madre de Dios",
+          "book": "",
+          "place": "peru/amazon-canopy-walk"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3.5h",
+          "name": "Oxbow lake canoe trip",
+          "notes": "An early start for the best chance of giant otters; the forest walk in is uneven and often muddy.",
+          "where": "Tambopata, Madre de Dios",
+          "book": "",
+          "place": "peru/amazon-oxbow-lake"
+        },
+        {
+          "day": 12,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Ceviche in Lima",
+          "notes": "A last meal on the coast, with a full night in Lima before the long-haul flight.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/lima-ceviche"
+        },
+        {
+          "day": 13,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Miraflores Malecón",
+          "notes": "A flat last walk above the Pacific before the airport.",
+          "where": "Miraflores, Lima",
+          "book": "",
+          "place": "peru/miraflores-malecon"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Lima Airport (LIM)",
+          "to": "Lima hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi or hotel transfer",
+          "notes": "Use an official desk inside the terminal.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Lima hotel area",
+          "to": "Lima Airport (LIM)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi",
+          "notes": "Ground leg only; Lima to Cusco is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cusco Airport (CUZ)",
+          "to": "Urubamba, Sacred Valley",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Private transfer or colectivo van",
+          "notes": "Straight down to the valley rather than staying up in Cusco on arrival day.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Ollantaytambo Station",
+          "to": "Aguas Calientes",
+          "time": "14:30",
+          "minutes": 95,
+          "carrier": "PeruRail or Inca Rail",
+          "notes": "The only way in apart from walking.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Aguas Calientes",
+          "to": "Cusco",
+          "time": "16:00",
+          "minutes": 230,
+          "carrier": "Train to Ollantaytambo, then road transfer",
+          "notes": "A later train than usual, to allow the Huayna Picchu climb in the morning.",
+          "book": "Yes - trains are reserved and sell out in high season"
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Cusco hotel area",
+          "to": "Cusco Airport (CUZ)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Ground leg only; Cusco to Puerto Maldonado is a short domestic flight over the Andes.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Puerto Maldonado Airport",
+          "to": "Tambopata lodge",
+          "time": "",
+          "minutes": 150,
+          "carrier": "Lodge road transfer then motorised canoe",
+          "notes": "Lodges further upriver take longer but see more wildlife; they hold luggage not needed in the jungle.",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Tambopata lodge",
+          "to": "Puerto Maldonado Airport",
+          "time": "",
+          "minutes": 150,
+          "carrier": "Motorised canoe then road transfer",
+          "notes": "Ground leg only; the return to Lima is by domestic flight, usually via Cusco.",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Lima Airport (LIM)",
+          "to": "Lima hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Lima hotel area",
+          "to": "Lima Airport (LIM)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Authorised airport taxi",
+          "notes": "Allow three hours before an international flight; Lima traffic is unpredictable.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "peru/lima-historic-centre": {
+        "name": "Lima historic centre",
+        "description": "The colonial core of Lima around its main square, with painted balconies, a cathedral and the catacombs beneath San Francisco.",
+        "details": "The centre of Lima was laid out by the Spanish in the 1530s and its surviving colonial architecture is a UNESCO World Heritage Site. The Plaza Mayor holds the cathedral and the government palace, and nearby streets keep their enclosed wooden balconies, a distinctive feature of the city. The monastery of San Francisco is visited chiefly for its catacombs, where bones from centuries of burials are stacked in the passages below. The centre is flat and walkable but busy with traffic, and it is some distance from the clifftop districts most visitors stay in.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/miraflores-malecon": {
+        "name": "Miraflores Malecón",
+        "description": "A clifftop park and promenade above the Pacific in Lima's main visitor district, with paragliders launching from the edge.",
+        "details": "The Malecón is a chain of parks running several kilometres along the cliff edge in Miraflores, high above the beaches and the coast road. Paragliders launch from a point near the middle and circle over the clifftop, and tandem flights are sold on the spot. The Parque del Amor, with its mosaic benches and large sculpture of an embracing couple, sits along the route. The path is flat and paved, and the sea is usually veiled in the grey coastal haze that covers Lima for much of the year.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/barranco": {
+        "name": "Barranco",
+        "description": "A small bohemian district south of Miraflores in Lima, with painted murals, old mansions and a wooden footbridge.",
+        "details": "Barranco was a seaside resort for wealthy Limeños in the nineteenth century and keeps a number of their mansions, now mixed with galleries, bars and street art. The Puente de los Suspiros, a short wooden bridge over a ravine running down to the sea, is its best-known spot, with a stepped walkway beneath it leading toward the shore. The district is compact and walkable from Miraflores along the clifftop. It is quietest in the daytime and busiest on weekend evenings.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "nightlife",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/larco-museum": {
+        "name": "Larco Museum",
+        "description": "A private Lima museum of pre-Columbian art in a whitewashed colonial mansion, with a garden and an openly displayed storeroom.",
+        "details": "The Larco Museum holds a large private collection of pre-Columbian ceramics, textiles, gold and silver, housed in an eighteenth-century mansion built over an earlier pyramid. Unusually, it allows visitors into its storerooms, where tens of thousands of catalogued pots are shelved in the open rather than hidden away. A separate gallery holds its well-known collection of erotic Moche pottery. The gardens are planted with bougainvillea and the museum keeps longer hours than most in the city, which makes it a workable late-afternoon stop.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/lima-ceviche": {
+        "name": "Ceviche in Lima",
+        "description": "Peru's best-known dish, raw fish cured in lime juice with chilli and onion, eaten in the city that made it famous.",
+        "details": "Ceviche is made by curing raw fish in lime juice with chilli, onion and salt, and in Peru it is served fresh and eaten quickly rather than left to marinate for long. It is traditionally a lunchtime dish, and many of the specialist restaurants, called cevicherías, close in the afternoon once the morning's fish has gone. The milky residue left in the bowl, leche de tigre, is drunk as a separate shot in some places. Lima's standing as a food destination rests heavily on it, and quality varies more by kitchen than by price.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/huaca-pucllana": {
+        "name": "Huaca Pucllana",
+        "description": "A pre-Inca adobe pyramid standing in the middle of residential Miraflores in Lima.",
+        "details": "Huaca Pucllana is a stepped pyramid built from small adobe bricks set on end, raised by the Lima culture from around the fifth century and later used by the Wari. It survives as a large mound in the middle of a modern residential district, which makes for an odd juxtaposition with the apartment blocks around it. Visits are by guided tour along a set path, and evening tours run when the site is floodlit. The ground is sandy and uneven with gentle slopes.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/cusco-plaza-de-armas": {
+        "name": "Cusco Plaza de Armas",
+        "description": "The arcaded main square of the former Inca capital, ringed by colonial churches built on Inca foundations.",
+        "details": "Cusco was the capital of the Inca empire, and its main square sits where the Inca ceremonial plaza stood, now enclosed by arcaded colonial buildings and two large churches. The cathedral and the Jesuit church of La Compañía face each other across it, both raised on Inca stonework after the conquest. Streets leading off the square still show Inca walls at ground level, with colonial and modern building above. The city sits at around 3,400 metres, so the first day here is best kept slow regardless of how well you feel.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/qorikancha": {
+        "name": "Qorikancha",
+        "description": "The Inca sun temple in Cusco, its precisely fitted stone walls built over by a Dominican convent.",
+        "details": "Qorikancha was the most important temple of the Inca empire, dedicated to the sun and reported to have been lined with sheets of gold that were stripped after the Spanish arrival. The Dominicans built a convent directly on top of it, and the result shows both: curved Inca walls of tightly fitted stone carrying colonial arcades and plasterwork above. Several original chambers survive inside, and the stonework is among the finest the Inca produced. The site is central, compact and involves some steps between levels.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/sacsayhuaman": {
+        "name": "Sacsayhuamán",
+        "description": "A vast Inca walled complex on the hill above Cusco, built from stone blocks fitted without mortar.",
+        "details": "Sacsayhuamán stands on high ground overlooking Cusco and is built in three terraced zigzag walls of enormous limestone blocks, some weighing many tonnes, cut and fitted so closely that no mortar was needed. Much of the upper structure was dismantled for building stone after the conquest, so what survives is mainly the walls. The site is a short drive or a steep walk up from the city and is covered by the Cusco tourist ticket, which bundles several sites. At around 3,700 metres with open ground and no shade, it is hard work before you have acclimatised.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "peru/san-pedro-market": {
+        "name": "San Pedro Market",
+        "description": "Cusco's main covered market, with produce, cheese, juice counters and cooked food aisles.",
+        "details": "San Pedro is the working food market for central Cusco, arranged in aisles by trade: fruit and juice stands at one end, then bread, cheese, meat, and rows of stalls serving cheap cooked lunches. Potatoes and corn appear in far more varieties than most visitors expect, both being native to the Andes. It is busiest in the morning and quietens through the afternoon. Keep bags closed and to the front, as the aisles are tight and crowded.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/cusco-san-blas": {
+        "name": "San Blas",
+        "description": "A steep artisan quarter above Cusco's main square, of narrow cobbled lanes, workshops and viewpoints.",
+        "details": "San Blas climbs the hillside above the Plaza de Armas on narrow cobbled lanes, several of them stepped, and has long been the city's craft district, with workshops and small galleries still working there. The Twelve-Angled Stone, a famously well-cut block in an Inca wall on Hatunrumiyoc street, sits on the usual approach. Small squares and terraces along the way give views over the tiled roofs toward the hills. It is a steady climb at altitude, so it suits a slow pace.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "peru/cusco-cooking-class": {
+        "name": "Peruvian cooking class in Cusco",
+        "description": "A hands-on session making Andean dishes, usually starting with a walk through a market for ingredients.",
+        "details": "Cooking classes in Cusco generally begin at a market to pick out produce, then cover a few dishes such as ceviche, causa or lomo saltado alongside a pisco sour. They are a practical way to learn what the many Andean potato and corn varieties actually are and how they are used. Sessions typically run three to four hours and end with eating what has been made. Most involve standing at a counter for much of that time, and group sizes are small enough that booking ahead matters.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/pisco-sour-tasting": {
+        "name": "Pisco sour tasting",
+        "description": "An introduction to pisco, the Peruvian grape brandy, and the egg-white sour made from it.",
+        "details": "Pisco is a brandy distilled from grapes grown in the coastal valleys south of Lima, made in several varieties depending on the grape used. The pisco sour combines it with lime, syrup, egg white and a few drops of bitters, shaken to a foam; its origin in Lima in the early twentieth century is generally accepted, though Chile disputes claims over pisco itself. Tastings usually compare several piscos neat before mixing. Bars at altitude in Cusco serve them too, where alcohol tends to be felt more strongly.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/sacred-valley-overview": {
+        "name": "Sacred Valley of the Incas",
+        "description": "The broad Urubamba river valley below Cusco, lower and warmer than the city, lined with Inca sites and market towns.",
+        "details": "The Sacred Valley follows the Urubamba river north-west of Cusco, dropping several hundred metres below the city, which is why most itineraries now send arrivals straight here to acclimatise before returning to Cusco. The valley floor was intensively farmed by the Inca, and terraces, storehouses and fortresses survive along its length at Pisac, Ollantaytambo and elsewhere. Towns along it hold craft markets and the valley is the usual starting point for trains to Machu Picchu. Distances between sites are short but the roads wind.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/pisac-ruins-market": {
+        "name": "Pisac ruins and market",
+        "description": "Terraced Inca ruins on a ridge above the Sacred Valley town of Pisac, with a craft market in the square below.",
+        "details": "The Inca site above Pisac spreads along a ridge in curving agricultural terraces, with a ceremonial sector of fine stonework at the top and tombs cut into the cliff opposite. A road climbs most of the way, and paths link the sectors along the ridge with drops to either side. The town below holds a craft market in its main square, busiest on Sunday, Tuesday and Thursday. The ruins are covered by the Cusco tourist ticket and the upper paths are narrow, uneven and exposed.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "peru/ollantaytambo-ruins": {
+        "name": "Ollantaytambo",
+        "description": "A Sacred Valley town still on its Inca street plan, below a steep terraced fortress and temple.",
+        "details": "Ollantaytambo is one of the few places where an Inca town plan is still in everyday use, with streets, walls and water channels laid out before the conquest and lived in since. Above it, terraces climb steeply to an unfinished temple whose wall of huge dressed monoliths was quarried across the valley and hauled into place. It was the site of one of the few Inca military successes against the Spanish. The town is the main railhead for trains to Machu Picchu, and the climb up the terraces is steep and stepped throughout.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "peru/moray-maras": {
+        "name": "Moray and the Maras salt pans",
+        "description": "Concentric Inca agricultural terraces sunk into a bowl in the ground, near a hillside of worked salt ponds.",
+        "details": "Moray is a set of deep circular terraces built in natural depressions, each ring at a slightly different temperature, which is generally read as an Inca site for testing crops at varying conditions. A few kilometres away at Maras, shallow salt ponds step down a hillside and are still worked by local families who channel saline spring water into them and harvest the crust by hand. The two are usually combined in one outing from the Sacred Valley. Both sit on exposed high ground with little shade, and the Moray terraces are viewed from the rim rather than entered.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/chinchero-weaving": {
+        "name": "Chinchero weaving demonstration",
+        "description": "A village above the Sacred Valley where weaving cooperatives show the dyeing and backstrap-loom techniques still in use.",
+        "details": "Chinchero sits high on the plateau above the Sacred Valley and has a strong textile tradition, with cooperatives that demonstrate the full process: washing wool with a root that lathers, dyeing it with cochineal and plant materials, and weaving on a backstrap loom. The village also has Inca terracing and a colonial church built on an Inca platform. Demonstrations are short and end with textiles for sale, with no obligation to buy. At around 3,760 metres it is higher than Cusco, so it is worth leaving until you have adjusted.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/machu-picchu": {
+        "name": "Machu Picchu",
+        "description": "The Inca citadel on a ridge high above the Urubamba river, abandoned in the sixteenth century and never found by the Spanish.",
+        "details": "Machu Picchu was built in the fifteenth century on a saddle between two peaks and abandoned around the time of the Spanish conquest, which it appears to have escaped entirely; it was brought to wide attention by Hiram Bingham in 1911. Its terraces, temples and houses survive in unusually complete form, and it is a UNESCO World Heritage Site. Entry is now tightly managed: tickets are for a timed slot on one of several fixed circuits, numbers are capped daily, and a guide is required for some circuits. The site is steep and stepped throughout with sheer drops, and the weather on the ridge changes quickly.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "peru/huayna-picchu": {
+        "name": "Huayna Picchu",
+        "description": "The steep peak behind Machu Picchu, climbed by a narrow stepped path to ruins at the summit.",
+        "details": "Huayna Picchu is the sharp peak that rises behind the citadel in most photographs of Machu Picchu, and a path climbs it to small Inca structures and terraces near the top. The route is steep and continuously stepped, narrow in places, with cables to hold on exposed sections and long drops beside the path. Permits are capped at a small number each day on fixed entry windows and are sold with the Machu Picchu ticket, selling out months ahead in high season. It is not suitable for anyone uneasy with heights or unsteady on steps.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "peru/aguas-calientes": {
+        "name": "Aguas Calientes",
+        "description": "The small town in the gorge below Machu Picchu, reached only by train or on foot, with hot springs above it.",
+        "details": "Aguas Calientes, also called Machu Picchu Pueblo, sits in a steep gorge directly below the citadel and exists almost entirely to serve it. No road reaches it: arrival is by train along the river or on foot, and buses switchback up to the site entrance from the edge of town. Thermal pools above the main street give the town its name. Staying here is the way to reach Machu Picchu for the first entry slots of the day, before the train arrivals, though the town itself is small and heavily geared to visitors.",
+        "interests": [
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/rainbow-mountain": {
+        "name": "Vinicunca (Rainbow Mountain)",
+        "description": "A ridge of banded mineral-coloured rock south-east of Cusco, reached by a short but very high-altitude walk.",
+        "details": "Vinicunca is a ridge whose slopes show bands of red, ochre and green from different mineral deposits in the rock, exposed as glacial cover retreated. It became a mass day trip from Cusco only in the mid-2010s and now sees large numbers daily. The walk in from the road is not long, but it finishes above 5,000 metres, higher than most visitors will have been, and altitude sickness is common even among people who felt fine in Cusco. Horses can be hired for much of the route, and the colours are muted in overcast or wet weather.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "peru/arequipa-plaza-de-armas": {
+        "name": "Arequipa Plaza de Armas",
+        "description": "A colonial square built in pale volcanic stone, with arcades on three sides and a volcano rising behind the cathedral.",
+        "details": "Arequipa's main square is enclosed by arcades on three sides with the cathedral filling the fourth, all built from sillar, the white volcanic stone quarried locally that gives the city its nickname. The cone of Misti volcano stands behind it and is visible from much of the centre. The historic centre is a UNESCO World Heritage Site, and the square is flat, shaded and a natural place to sit. At around 2,300 metres the city is a useful acclimatisation stop between the coast and the higher Andes.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/santa-catalina-monastery": {
+        "name": "Santa Catalina Monastery",
+        "description": "A walled convent in Arequipa that functions as a small town of painted lanes, cloisters and cells.",
+        "details": "Santa Catalina was founded in the sixteenth century and remained effectively closed to outsiders until the 1970s, which is why it survives as a complete enclosed quarter rather than a single building. Inside, lanes painted in deep ochre and blue run between cloisters, kitchens and the individual cells of the nuns, some of whom lived there with servants. It covers a substantial walled block in the middle of the city and takes a couple of hours to see properly. Floors are cobbled and uneven with steps between levels, and some sections keep shorter hours than the main site.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/arequipa-juanita-museum": {
+        "name": "Museo Santuarios Andinos",
+        "description": "A small Arequipa museum displaying Juanita, the frozen body of an Inca girl found on a volcano summit.",
+        "details": "The museum exists chiefly to display the remains known as Juanita, an adolescent girl found in 1995 near the summit of Ampato volcano, preserved by the cold and understood to have been a capacocha sacrifice. The textiles, figurines and offerings buried with her are shown alongside. Visits are by guided tour in a fixed sequence and last around an hour, with photography not permitted. It is a sober, quiet museum rather than a spectacle, and worth pairing with the monastery on the same day.",
+        "interests": [
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/arequipa-picanteria": {
+        "name": "Picantería lunch in Arequipa",
+        "description": "A traditional Arequipan eating house serving regional stews and chilli dishes, open at lunchtime only.",
+        "details": "A picantería is a traditional Arequipan establishment serving the region's own cooking, which is distinct from Lima's and built on chillies, stews and river shrimp. Many work to a fixed dish of the day by weekday and open for lunch only, closing once the food runs out. Rocoto relleno, a stuffed chilli baked with cheese, and chupe de camarones, a shrimp chowder, are among the dishes they are known for. Portions are generally large and the rooms plain, with long shared tables in some.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/colca-canyon": {
+        "name": "Colca Canyon",
+        "description": "A deep canyon north of Arequipa, terraced for farming since pre-Inca times and still worked by villages along its rim.",
+        "details": "The Colca canyon was cut by the Colca river through the high plateau north of Arequipa and reaches depths well over twice those of the Grand Canyon, though its sides are less sheer. Terraces on the valley walls have been farmed continuously since before the Inca and are still worked by the Collagua and Cabana communities in the villages along the rim. The drive from Arequipa crosses a pass above 4,800 metres, where altitude is felt sharply even by those who have adjusted to the city. Most visits stay a night in the valley at Chivay or Yanque rather than making it a single long day.",
+        "interests": [
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/cruz-del-condor": {
+        "name": "Cruz del Cóndor",
+        "description": "A canyon-rim viewpoint in Colca where Andean condors ride the morning thermals at close range.",
+        "details": "Cruz del Cóndor is a viewpoint on the Colca canyon rim where Andean condors, among the largest flying birds in the world, rise on the thermals that form as the morning sun warms the canyon walls. They typically appear in the earlier part of the morning, which is why tours leave the valley before dawn, and sightings are usual but not guaranteed. The birds often pass within a short distance of the rim. The viewing area is a set of paved platforms and short paths, exposed and cold at that hour.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/colca-hot-springs": {
+        "name": "Colca hot springs",
+        "description": "Thermal pools fed by volcanic springs in the Colca valley, used after a day on the canyon rim.",
+        "details": "Several thermal bathing complexes sit in the Colca valley near Chivay, fed by hot springs from the volcanic ground beneath, with pools at different temperatures in the open air beside the river. They are a straightforward way to warm up after an early, cold morning on the canyon rim. Facilities are basic but adequate, with changing rooms and lockers. The approach involves steps down toward the river, and the altitude means the walk back up is more tiring than it looks.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/lake-titicaca": {
+        "name": "Lake Titicaca",
+        "description": "A vast high-altitude lake on the Peru–Bolivia border, the highest in the world that commercial boats work.",
+        "details": "Lake Titicaca lies at around 3,810 metres on the altiplano, straddling the border with Bolivia, and is the highest lake in the world with commercial navigation. Its scale is more like an inland sea than a lake, and the light at that altitude is intense, so sun protection matters more than the air temperature suggests. Puno on the Peruvian shore is the usual base, with boats running out to the inhabited islands. The altitude here is higher than Cusco's, and arriving directly from the coast is a common cause of altitude sickness.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "peru/uros-floating-islands": {
+        "name": "Uros floating islands",
+        "description": "Inhabited islands on Lake Titicaca built and continually rebuilt from layered totora reed.",
+        "details": "The Uros people live on islands constructed from bundled totora reed, floated on the lake and anchored, with new reed added on top as the underside rots away. Houses, boats and much else are made from the same material. The islands nearest Puno receive visitors daily and the reception is frankly commercial, with reed boat rides and crafts offered; the further communities live more as they did. The surface is soft and springy underfoot and uneven, and there is no shade.",
+        "interests": [
+          "authentic_local",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/taquile-island": {
+        "name": "Taquile Island",
+        "description": "A terraced island on Lake Titicaca known for its knitted textiles and car-free stepped paths.",
+        "details": "Taquile is a steep, terraced island a few hours by boat from Puno whose community is known for finely knitted textiles, a tradition on UNESCO's intangible heritage list, in which the men knit and the patterns of a cap signal marital status. There are no vehicles or dogs on the island and the paths are stone and stepped. Reaching the village from the landing involves a sustained climb of several hundred steps at well over 3,800 metres, which is the hardest part of the day. Lunch is usually taken with a local family as part of the visit.",
+        "interests": [
+          "authentic_local",
+          "culture",
+          "outdoors"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "peru/sillustani": {
+        "name": "Sillustani",
+        "description": "Pre-Inca stone burial towers on a peninsula above a lake near Puno.",
+        "details": "Sillustani is a cemetery of chullpas, cylindrical stone burial towers raised by the Colla people and later the Inca, standing on a ridge above Lake Umayo near Puno. Some are over ten metres tall and taper outward toward the top, with the stonework on the later Inca-period towers notably finer. Several are broken open, which is usually attributed to grave robbing or lightning. The site is exposed, windy and at around 4,000 metres, with a gentle but steady walk up from the car park.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/tambopata-lodge": {
+        "name": "Tambopata jungle lodge",
+        "description": "A riverside lodge in the Amazon lowlands of south-east Peru, reached by boat from Puerto Maldonado.",
+        "details": "Lodges in the Tambopata region sit along the Tambopata or Madre de Dios rivers in Amazon lowland rainforest, reached by motorised canoe from Puerto Maldonado, anything from under an hour to several hours upriver depending on the lodge. Rooms are generally simple, often with one wall open to the forest behind mosquito netting, and electricity is frequently limited to set hours. Guided activities run early morning and after dark, when wildlife is most active. Long sleeves, closed shoes and repellent matter more here than anything else packed.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/amazon-canopy-walk": {
+        "name": "Amazon canopy walkway",
+        "description": "A suspended walkway strung between towers high in the rainforest canopy, at the level where most birds feed.",
+        "details": "Canopy walkways in the Peruvian Amazon run as a series of suspension bridges between platforms built on tall trees, bringing visitors up to roughly thirty metres, which is the level where much of the forest's bird and insect life actually lives. Early morning is when the canopy is most active. The structures sway underfoot and are reached by long stair towers, so they do not suit anyone uneasy with heights. Walkways close in high wind or electrical storms.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "peru/amazon-oxbow-lake": {
+        "name": "Oxbow lake canoe trip",
+        "description": "A paddle on a still lake cut off from the river, where giant otters and caiman are often seen.",
+        "details": "Oxbow lakes form where a river meander is abandoned and left as a standing body of water, and several near the Tambopata lodges are visited by paddled catamaran at first light. Giant otters live on some of them in family groups and are among the more reliable large-mammal sightings in the region, along with caiman and hoatzin. The water is still and the paddling slow, so the trip suits most fitness levels. Reaching the lake usually involves a forest walk in on uneven, often muddy ground.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/amazon-macaw-clay-lick": {
+        "name": "Macaw clay lick",
+        "description": "A riverbank of exposed clay where macaws and parrots gather in numbers soon after dawn.",
+        "details": "Macaws and parrots gather at exposed riverbank clay to eat the soil, behaviour generally understood as supplementing minerals in their diet. The larger licks in the Tambopata region draw flocks of several species together and are watched from a blind or the far bank at a distance that does not disturb them. Birds arrive shortly after first light, so this means leaving a lodge well before dawn, and they do not come down in rain. A telephoto lens or binoculars make a large difference.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "peru/amazon-night-walk": {
+        "name": "Amazon night walk",
+        "description": "A guided walk on forest trails after dark, when frogs, insects and snakes become active.",
+        "details": "Much of the rainforest's life is nocturnal, and a guided walk after dark on the trails near a lodge turns up frogs, tarantulas, stick insects, snakes and the eyeshine of mammals that stay hidden by day. Guides carry torches and know where particular species are reliably found. The ground is uneven, often muddy and crossed with roots, so closed boots and a head torch matter. Walks are usually short, an hour or so, and are called off in heavy rain.",
+        "interests": [
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "H",
+        "image": null
+      }
+    },
+    "destinations": {
+      "peru": {
+        "name": "Peru",
+        "description": "A country of Inca stonework, Andean peaks, high lakes and Amazon rainforest, with a food culture that stands on its own.",
+        "images": []
+      },
+      "peru/lima": {
+        "name": "Lima",
+        "description": "Peru's coastal capital, with a colonial centre, clifftop districts above the Pacific and the country's best-known restaurant scene.",
+        "images": []
+      },
+      "peru/cusco": {
+        "name": "Cusco",
+        "description": "The former Inca capital high in the Andes, where colonial churches sit on Inca foundations and most Machu Picchu trips begin.",
+        "images": []
+      },
+      "peru/sacred-valley": {
+        "name": "Sacred Valley",
+        "description": "The Urubamba river valley below Cusco, lower and warmer than the city, lined with Inca terraces, fortresses and market towns.",
+        "images": []
+      },
+      "peru/urubamba": {
+        "name": "Urubamba",
+        "description": "A Sacred Valley town used as a central base for the valley's Inca sites, lower in altitude than Cusco.",
+        "images": []
+      },
+      "peru/ollantaytambo": {
+        "name": "Ollantaytambo",
+        "description": "A Sacred Valley town still on its original Inca street plan, below a steep terraced fortress, and the main railhead for Machu Picchu.",
+        "images": []
+      },
+      "peru/aguas-calientes": {
+        "name": "Aguas Calientes",
+        "description": "The town in the gorge directly below Machu Picchu, reached only by train or on foot.",
+        "images": []
+      },
+      "peru/machu-picchu": {
+        "name": "Machu Picchu",
+        "description": "The Inca citadel on a high ridge above the Urubamba river, abandoned in the sixteenth century and never found by the Spanish.",
+        "images": []
+      },
+      "peru/arequipa": {
+        "name": "Arequipa",
+        "description": "A southern Peruvian city built in pale volcanic stone below the Misti volcano, with a walled convent at its centre.",
+        "images": []
+      },
+      "peru/colca-canyon": {
+        "name": "Colca Canyon",
+        "description": "A deep terraced canyon north of Arequipa, farmed since pre-Inca times and known for close views of Andean condors.",
+        "images": []
+      },
+      "peru/puno": {
+        "name": "Puno",
+        "description": "The Peruvian port on Lake Titicaca, used as the base for boat trips to the lake's reed and terraced islands.",
+        "images": []
+      },
+      "peru/lake-titicaca": {
+        "name": "Lake Titicaca",
+        "description": "A vast lake on the Peru–Bolivia altiplano at around 3,810 metres, the highest in the world with commercial navigation.",
+        "images": []
+      },
+      "peru/madre-de-dios": {
+        "name": "Madre de Dios",
+        "description": "Peru's south-eastern Amazon region, of lowland rainforest, river lodges and some of the most biodiverse protected land in the country.",
+        "images": []
+      },
+      "peru/puerto-maldonado": {
+        "name": "Puerto Maldonado",
+        "description": "The river town in south-east Peru that serves as the gateway to the Tambopata and Madre de Dios jungle lodges.",
+        "images": []
+      }
+    }
+  }
+}

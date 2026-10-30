@@ -65,15 +65,21 @@ test.describe('Keyboard-only trip wizard', () => {
     await loginAsNewUser(page);
     await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 15_000 });
 
-    // Tab to the "+ Create Trip" button → activate with Enter.
     await blurFocus(page);
-    const tabsToCreateTrip = await tabUntilFocused(
-      page,
-      (d) => d.testId === 'home-create-trip-button',
-      'home-create-trip-button',
-    );
-    expect(tabsToCreateTrip).toBeLessThan(MAX_TAB_PRESSES);
+    await tabUntilFocused(page, d => d.testId === 'home-all-trips', 'All Trips');
     await page.keyboard.press('Enter');
+    await expect(page.getByTestId('all-trips-create-button')).toBeVisible();
+    await blurFocus(page);
+    await tabUntilFocused(page, d => d.testId === 'all-trips-create-button', 'Create Trip');
+    await page.keyboard.press('Enter');
+    const customize = page.getByTestId('quick-start-customize');
+    const fullWizard = page.getByText('Create Trip Wizard', { exact: true });
+    await expect(customize.or(fullWizard)).toBeVisible();
+    if (await customize.isVisible()) {
+      await blurFocus(page);
+      await tabUntilFocused(page, d => d.testId === 'quick-start-customize', 'Customize before creating');
+      await page.keyboard.press('Enter');
+    }
 
     // The wizard's first step (Trip Details) should render.
     await expect(page.getByText('Create Trip Wizard')).toBeVisible({ timeout: 10_000 });
@@ -83,7 +89,7 @@ test.describe('Keyboard-only trip wizard', () => {
     await blurFocus(page);
     const tabsToName = await tabUntilFocused(
       page,
-      (d) => d.tag === 'input' && d.placeholder === 'Trip Name',
+      (d) => d.tag === 'input' && d.placeholder?.toLowerCase() === 'trip name',
       'Trip Name input',
     );
     expect(tabsToName).toBeLessThan(MAX_TAB_PRESSES);
@@ -102,6 +108,6 @@ test.describe('Keyboard-only trip wizard', () => {
     await page.keyboard.press('Enter');
 
     // Step 2 label should appear.
-    await expect(page.getByText('Dates', { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/^Step 2 of \d+:/)).toBeVisible({ timeout: 10_000 });
   });
 });

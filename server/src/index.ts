@@ -105,6 +105,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     await warnIfStripePricesUnconfigured(getBillingPlanConfig);
     await seedDefaultTestAccountsIfEnabled();
     await refreshMeanVector().catch(err => logError('[mean-vector] Startup refresh failed', err));
+    app.locals.e2eReady = true;
   } catch (err) {
     logError('[startup] initialization failed after binding port', err);
     server.close(() => process.exit(1));

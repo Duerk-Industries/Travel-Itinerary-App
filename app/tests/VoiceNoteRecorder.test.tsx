@@ -34,7 +34,7 @@ describe('VoiceNoteRecorder', () => {
     // into a recording-capable mode first (iOS throws RecordingDisabledException otherwise) --
     // assert that happens, and happens *before* record() is called.
     await waitFor(() => expect(calls).toContain('record'));
-    expect(view.getByText('● Stop')).toBeTruthy();
+    expect(view.getByText('Stop')).toBeTruthy();
 
     fireEvent.press(view.getByTestId('blog-record-voice-note'));
     await waitFor(() => expect(calls).toContain('stop'));
@@ -79,7 +79,7 @@ describe('VoiceNoteRecorder', () => {
     fireEvent.press(view.getByTestId('blog-record-voice-note'));
     await waitFor(() => expect(onError).toHaveBeenCalledWith('Recording not allowed on iOS.'));
     expect(record).not.toHaveBeenCalled();
-    expect(view.getByText('🎙 Record')).toBeTruthy();
+    expect(view.getByText('Record')).toBeTruthy();
   });
 
   it('ignores taps while disabled', () => {

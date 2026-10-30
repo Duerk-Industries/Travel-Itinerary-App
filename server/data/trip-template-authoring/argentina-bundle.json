@@ -1,0 +1,1694 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, On The Go Tours, The Discoveries Of and TravelStride itineraries for Argentina",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "argentina-buenos-aires-iguazu-7d",
+      "title": "Buenos Aires and Iguazu Falls in 7 Days",
+      "summary": "Four days of tango, steak and barrios in Buenos Aires, then the Iguazu Falls on both sides of the border.",
+      "days": 7,
+      "route": "Buenos Aires > Puerto Iguazu",
+      "arrive": "Buenos Aires (EZE)",
+      "depart": "Puerto Iguazu (IGR)",
+      "countries": [
+        "Argentina"
+      ],
+      "regions": [
+        "Buenos Aires",
+        "Misiones"
+      ],
+      "cities": [
+        "Buenos Aires",
+        "Puerto Iguazu"
+      ],
+      "imageQuery": "Iguazu Falls Devil Throat",
+      "highlights": [
+        "Recoleta",
+        "San Telmo",
+        "Tango show",
+        "Iguazu Falls",
+        "Devil Throat"
+      ],
+      "destinationKeys": [
+        "argentina",
+        "argentina/buenos-aires",
+        "argentina/misiones",
+        "argentina/puerto-iguazu"
+      ],
+      "hero": "argentina/puerto-iguazu",
+      "sources": [
+        "Rough Guides",
+        "On The Go Tours",
+        "The Discoveries Of",
+        "TravelStride",
+        "South America Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "outdoors",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Buenos Aires",
+          "hotel": "Hotel in Buenos Aires",
+          "start": 0,
+          "nights": 4,
+          "area": "In Recoleta or Palermo for restaurants and parks; San Telmo for history",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Iguazu",
+          "hotel": "Lodge near Iguazu Falls",
+          "start": 4,
+          "nights": 2,
+          "area": "In Puerto Iguazu town or a lodge near the national park entrance",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "La Boca and Caminito",
+          "notes": "Stay on the main tourist streets and watch your belongings.",
+          "where": "La Boca, Buenos Aires",
+          "book": "",
+          "place": "argentina/la-boca"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Mayo and Casa Rosada",
+          "notes": "Free palace tours on weekends need registration.",
+          "where": "Plaza de Mayo, Buenos Aires",
+          "book": "",
+          "place": "argentina/plaza-de-mayo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Recoleta Cemetery and neighbourhood",
+          "notes": "English tours at set times; Sunday craft fair outside.",
+          "where": "Recoleta, Buenos Aires",
+          "book": "",
+          "place": "argentina/recoleta-cemetery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "San Telmo market and Plaza Dorrego",
+          "notes": "Sunday street fair is busiest; stay aware of belongings.",
+          "where": "San Telmo, Buenos Aires",
+          "book": "",
+          "place": "argentina/san-telmo"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "2.5h",
+          "name": "Tango show and dinner",
+          "notes": "Dinner begins late; choose a stage show or an intimate milonga.",
+          "where": "Buenos Aires",
+          "book": "Yes - book a show ahead",
+          "place": "argentina/tango-show"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "9h",
+          "name": "San Antonio de Areco and estancia lunch",
+          "notes": "Includes an asado lunch and a gaucho riding demonstration.",
+          "where": "San Antonio de Areco",
+          "book": "Yes - book estancia day",
+          "place": "argentina/san-antonio-de-areco"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Iguazu Falls, Argentine side",
+          "notes": "Do the Devil Throat first; boardwalk may close after heavy rain.",
+          "where": "Iguazu National Park",
+          "book": "",
+          "place": "argentina/iguazu-argentine-side"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Ezeiza (EZE)",
+          "to": "Buenos Aires hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Buenos Aires hotel area",
+          "to": "Aeroparque (AEP)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Iguazu Airport (IGR)",
+          "to": "Iguazu lodge",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Iguazu lodge",
+          "to": "Iguazu Airport (IGR)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "argentina-buenos-aires-el-calafate-8d",
+      "title": "Buenos Aires and Patagonian Glaciers in 8 Days",
+      "summary": "Three days in the capital, then four in El Calafate for Perito Moreno and a glacier cruise.",
+      "days": 8,
+      "route": "Buenos Aires > El Calafate",
+      "arrive": "Buenos Aires (EZE)",
+      "depart": "El Calafate (FTE)",
+      "countries": [
+        "Argentina"
+      ],
+      "regions": [
+        "Buenos Aires",
+        "Santa Cruz"
+      ],
+      "cities": [
+        "Buenos Aires",
+        "El Calafate"
+      ],
+      "imageQuery": "Perito Moreno Glacier Argentina",
+      "highlights": [
+        "Recoleta",
+        "San Telmo",
+        "Perito Moreno",
+        "Upsala glacier cruise"
+      ],
+      "destinationKeys": [
+        "argentina",
+        "argentina/buenos-aires",
+        "argentina/santa-cruz",
+        "argentina/el-calafate"
+      ],
+      "hero": "argentina/el-calafate",
+      "sources": [
+        "Rough Guides",
+        "On The Go Tours",
+        "The Discoveries Of",
+        "TravelStride",
+        "South America Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Buenos Aires",
+          "hotel": "Hotel in Buenos Aires",
+          "start": 0,
+          "nights": 3,
+          "area": "In Recoleta or Palermo for restaurants and parks; San Telmo for history",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Calafate",
+          "hotel": "Hotel in El Calafate",
+          "start": 3,
+          "nights": 4,
+          "area": "In El Calafate town along Avenida del Libertador",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Mayo and Casa Rosada",
+          "notes": "Free palace tours on weekends need registration.",
+          "where": "Plaza de Mayo, Buenos Aires",
+          "book": "",
+          "place": "argentina/plaza-de-mayo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Recoleta Cemetery and neighbourhood",
+          "notes": "English tours at set times; Sunday craft fair outside.",
+          "where": "Recoleta, Buenos Aires",
+          "book": "",
+          "place": "argentina/recoleta-cemetery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "San Telmo market and Plaza Dorrego",
+          "notes": "Sunday street fair is busiest; stay aware of belongings.",
+          "where": "San Telmo, Buenos Aires",
+          "book": "",
+          "place": "argentina/san-telmo"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "2.5h",
+          "name": "Tango show and dinner",
+          "notes": "Dinner begins late; choose a stage show or an intimate milonga.",
+          "where": "Buenos Aires",
+          "book": "Yes - book a show ahead",
+          "place": "argentina/tango-show"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Perito Moreno Glacier",
+          "notes": "Walkways face the ice wall; dress for cold wind.",
+          "where": "Los Glaciares National Park",
+          "book": "",
+          "place": "argentina/perito-moreno"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "9h",
+          "name": "Upsala and Spegazzini glacier cruise",
+          "notes": "A long day on the water; bring warm layers.",
+          "where": "Puerto Bandera, El Calafate",
+          "book": "Yes - book the cruise ahead",
+          "place": "argentina/glacier-boat"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Ezeiza (EZE)",
+          "to": "Buenos Aires hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Buenos Aires hotel area",
+          "to": "Aeroparque (AEP)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "El Calafate Airport (FTE)",
+          "to": "El Calafate hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "El Calafate hotel",
+          "to": "El Calafate Airport (FTE)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "argentina-classic-10d",
+      "title": "Argentina Classic: Buenos Aires, Iguazu and Patagonia in 10 Days",
+      "summary": "The three-part classic: capital, Iguazu Falls and the Perito Moreno Glacier.",
+      "days": 10,
+      "route": "Buenos Aires > Puerto Iguazu > El Calafate",
+      "arrive": "Buenos Aires (EZE)",
+      "depart": "El Calafate (FTE)",
+      "countries": [
+        "Argentina"
+      ],
+      "regions": [
+        "Buenos Aires",
+        "Misiones",
+        "Santa Cruz"
+      ],
+      "cities": [
+        "Buenos Aires",
+        "Puerto Iguazu",
+        "El Calafate"
+      ],
+      "imageQuery": "Argentina Iguazu Perito Moreno",
+      "highlights": [
+        "Tango show",
+        "Iguazu Falls",
+        "Brazilian side",
+        "Perito Moreno"
+      ],
+      "destinationKeys": [
+        "argentina",
+        "argentina/buenos-aires",
+        "argentina/misiones",
+        "argentina/puerto-iguazu",
+        "argentina/santa-cruz",
+        "argentina/el-calafate"
+      ],
+      "hero": "argentina/buenos-aires",
+      "sources": [
+        "Rough Guides",
+        "On The Go Tours",
+        "The Discoveries Of",
+        "TravelStride",
+        "South America Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Buenos Aires",
+          "hotel": "Hotel in Buenos Aires",
+          "start": 0,
+          "nights": 3,
+          "area": "In Recoleta or Palermo for restaurants and parks; San Telmo for history",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Iguazu",
+          "hotel": "Lodge near Iguazu Falls",
+          "start": 3,
+          "nights": 2,
+          "area": "In Puerto Iguazu town or a lodge near the national park entrance",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Calafate",
+          "hotel": "Hotel in El Calafate",
+          "start": 5,
+          "nights": 4,
+          "area": "In El Calafate town along Avenida del Libertador",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Mayo and Casa Rosada",
+          "notes": "Free palace tours on weekends need registration.",
+          "where": "Plaza de Mayo, Buenos Aires",
+          "book": "",
+          "place": "argentina/plaza-de-mayo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Recoleta Cemetery and neighbourhood",
+          "notes": "English tours at set times; Sunday craft fair outside.",
+          "where": "Recoleta, Buenos Aires",
+          "book": "",
+          "place": "argentina/recoleta-cemetery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "San Telmo market and Plaza Dorrego",
+          "notes": "Sunday street fair is busiest; stay aware of belongings.",
+          "where": "San Telmo, Buenos Aires",
+          "book": "",
+          "place": "argentina/san-telmo"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "2.5h",
+          "name": "Tango show and dinner",
+          "notes": "Dinner begins late; choose a stage show or an intimate milonga.",
+          "where": "Buenos Aires",
+          "book": "Yes - book a show ahead",
+          "place": "argentina/tango-show"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Iguazu Falls, Brazilian side",
+          "notes": "Bring a passport and check entry rules for the border crossing.",
+          "where": "Foz do Iguacu, Brazil",
+          "book": "Yes - arrange border transfer",
+          "place": "argentina/iguazu-brazil-side"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Iguazu Falls, Argentine side",
+          "notes": "Do the Devil Throat first; boardwalk may close after heavy rain.",
+          "where": "Iguazu National Park",
+          "book": "",
+          "place": "argentina/iguazu-argentine-side"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Perito Moreno Glacier",
+          "notes": "Walkways face the ice wall; dress for cold wind.",
+          "where": "Los Glaciares National Park",
+          "book": "",
+          "place": "argentina/perito-moreno"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "9h",
+          "name": "Upsala and Spegazzini glacier cruise",
+          "notes": "A long day on the water; bring warm layers.",
+          "where": "Puerto Bandera, El Calafate",
+          "book": "Yes - book the cruise ahead",
+          "place": "argentina/glacier-boat"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Ezeiza (EZE)",
+          "to": "Buenos Aires hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Buenos Aires hotel area",
+          "to": "Aeroparque (AEP)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Iguazu Airport (IGR)",
+          "to": "Iguazu lodge",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Iguazu lodge",
+          "to": "Iguazu Airport (IGR)",
+          "time": "07:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "El Calafate Airport (FTE)",
+          "to": "El Calafate hotel",
+          "time": "14:00",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "El Calafate hotel",
+          "to": "El Calafate Airport (FTE)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "argentina-buenos-aires-mendoza-bariloche-10d",
+      "title": "Wine and Lakes: Buenos Aires, Mendoza and Bariloche in 10 Days",
+      "summary": "Tango, then Malbec and the High Andes in Mendoza, and the lake district around Bariloche.",
+      "days": 10,
+      "route": "Buenos Aires > Mendoza > Bariloche",
+      "arrive": "Buenos Aires (EZE)",
+      "depart": "Bariloche (BRC)",
+      "countries": [
+        "Argentina"
+      ],
+      "regions": [
+        "Buenos Aires",
+        "Mendoza",
+        "Rio Negro"
+      ],
+      "cities": [
+        "Buenos Aires",
+        "Mendoza",
+        "Bariloche"
+      ],
+      "imageQuery": "Mendoza vineyards Andes",
+      "highlights": [
+        "San Telmo tango",
+        "Mendoza wineries",
+        "Aconcagua viewpoint",
+        "Circuito Chico"
+      ],
+      "destinationKeys": [
+        "argentina",
+        "argentina/buenos-aires",
+        "argentina/mendoza",
+        "argentina/rio-negro",
+        "argentina/bariloche"
+      ],
+      "hero": "argentina/mendoza",
+      "sources": [
+        "Rough Guides",
+        "On The Go Tours",
+        "The Discoveries Of",
+        "TravelStride",
+        "South America Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "outdoors",
+        "culture",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Buenos Aires",
+          "hotel": "Hotel in Buenos Aires",
+          "start": 0,
+          "nights": 3,
+          "area": "In Recoleta or Palermo for restaurants and parks; San Telmo for history",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mendoza",
+          "hotel": "Hotel in Mendoza",
+          "start": 3,
+          "nights": 3,
+          "area": "In central Mendoza or near the wine areas of Lujan de Cuyo",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bariloche",
+          "hotel": "Hotel in Bariloche",
+          "start": 6,
+          "nights": 3,
+          "area": "On the lake shore on the road to Llao Llao for views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Mayo and Casa Rosada",
+          "notes": "Free palace tours on weekends need registration.",
+          "where": "Plaza de Mayo, Buenos Aires",
+          "book": "",
+          "place": "argentina/plaza-de-mayo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Recoleta Cemetery and neighbourhood",
+          "notes": "English tours at set times; Sunday craft fair outside.",
+          "where": "Recoleta, Buenos Aires",
+          "book": "",
+          "place": "argentina/recoleta-cemetery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "San Telmo market and Plaza Dorrego",
+          "notes": "Sunday street fair is busiest; stay aware of belongings.",
+          "where": "San Telmo, Buenos Aires",
+          "book": "",
+          "place": "argentina/san-telmo"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "2.5h",
+          "name": "Tango show and dinner",
+          "notes": "Dinner begins late; choose a stage show or an intimate milonga.",
+          "where": "Buenos Aires",
+          "book": "Yes - book a show ahead",
+          "place": "argentina/tango-show"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "10:30",
+          "duration": "6h",
+          "name": "Lujan de Cuyo and Uco Valley winery day",
+          "notes": "Reserve tastings and lunch; use a driver or tour.",
+          "where": "Mendoza",
+          "book": "Yes - book winery lunches",
+          "place": "argentina/mendoza-wineries"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "High Andes road and Aconcagua viewpoint",
+          "notes": "Altitude is noticeable; layers are useful.",
+          "where": "Uspallata and Puente del Inca",
+          "book": "Yes - book a day tour",
+          "place": "argentina/aconcagua-high-andes"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Circuito Chico and lake viewpoints",
+          "notes": "Drive or take a tour; stop for chocolate.",
+          "where": "Bariloche",
+          "book": "",
+          "place": "argentina/bariloche-circuito-chico"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Cerro Catedral or Isla Victoria boat trip",
+          "notes": "Choose by weather.",
+          "where": "Bariloche",
+          "book": "",
+          "place": "argentina/cerro-catedral"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Ezeiza (EZE)",
+          "to": "Buenos Aires hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Buenos Aires hotel area",
+          "to": "Aeroparque (AEP)",
+          "time": "08:30",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Mendoza Airport (MDZ)",
+          "to": "Mendoza hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Mendoza hotel",
+          "to": "Mendoza Airport (MDZ)",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Bariloche Airport (BRC)",
+          "to": "Bariloche hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Bariloche hotel",
+          "to": "Bariloche Airport (BRC)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "argentina-patagonia-trekking-12d",
+      "title": "Buenos Aires, Iguazu and Patagonia Trekking in 12 Days",
+      "summary": "The classic highlights plus El Chalten for hikes under Fitz Roy.",
+      "days": 12,
+      "route": "Buenos Aires > Puerto Iguazu > El Calafate > El Chalten",
+      "arrive": "Buenos Aires (EZE)",
+      "depart": "El Calafate (FTE)",
+      "countries": [
+        "Argentina"
+      ],
+      "regions": [
+        "Buenos Aires",
+        "Misiones",
+        "Santa Cruz"
+      ],
+      "cities": [
+        "Buenos Aires",
+        "Puerto Iguazu",
+        "El Calafate",
+        "El Chalten"
+      ],
+      "imageQuery": "Fitz Roy El Chalten Argentina",
+      "highlights": [
+        "Iguazu Falls",
+        "Perito Moreno",
+        "Fitz Roy hikes",
+        "Tango"
+      ],
+      "destinationKeys": [
+        "argentina",
+        "argentina/buenos-aires",
+        "argentina/misiones",
+        "argentina/puerto-iguazu",
+        "argentina/santa-cruz",
+        "argentina/el-calafate",
+        "argentina/el-chalten"
+      ],
+      "hero": "argentina/el-chalten",
+      "sources": [
+        "Rough Guides",
+        "On The Go Tours",
+        "The Discoveries Of",
+        "TravelStride",
+        "South America Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Buenos Aires",
+          "hotel": "Hotel in Buenos Aires",
+          "start": 0,
+          "nights": 3,
+          "area": "In Recoleta or Palermo for restaurants and parks; San Telmo for history",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Iguazu",
+          "hotel": "Lodge near Iguazu Falls",
+          "start": 3,
+          "nights": 2,
+          "area": "In Puerto Iguazu town or a lodge near the national park entrance",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Calafate",
+          "hotel": "Hotel in El Calafate",
+          "start": 5,
+          "nights": 3,
+          "area": "In El Calafate town along Avenida del Libertador",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Chalten",
+          "hotel": "Lodge in El Chalten",
+          "start": 8,
+          "nights": 3,
+          "area": "In El Chalten village, close to the trailheads",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Mayo and Casa Rosada",
+          "notes": "Free palace tours on weekends need registration.",
+          "where": "Plaza de Mayo, Buenos Aires",
+          "book": "",
+          "place": "argentina/plaza-de-mayo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Recoleta Cemetery and neighbourhood",
+          "notes": "English tours at set times; Sunday craft fair outside.",
+          "where": "Recoleta, Buenos Aires",
+          "book": "",
+          "place": "argentina/recoleta-cemetery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "San Telmo market and Plaza Dorrego",
+          "notes": "Sunday street fair is busiest; stay aware of belongings.",
+          "where": "San Telmo, Buenos Aires",
+          "book": "",
+          "place": "argentina/san-telmo"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "2.5h",
+          "name": "Tango show and dinner",
+          "notes": "Dinner begins late; choose a stage show or an intimate milonga.",
+          "where": "Buenos Aires",
+          "book": "Yes - book a show ahead",
+          "place": "argentina/tango-show"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Iguazu Falls, Argentine side",
+          "notes": "Do the Devil Throat first; boardwalk may close after heavy rain.",
+          "where": "Iguazu National Park",
+          "book": "",
+          "place": "argentina/iguazu-argentine-side"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Perito Moreno Glacier",
+          "notes": "Walkways face the ice wall; dress for cold wind.",
+          "where": "Los Glaciares National Park",
+          "book": "",
+          "place": "argentina/perito-moreno"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "9h",
+          "name": "Upsala and Spegazzini glacier cruise",
+          "notes": "A long day on the water; bring warm layers.",
+          "where": "Puerto Bandera, El Calafate",
+          "book": "Yes - book the cruise ahead",
+          "place": "argentina/glacier-boat"
+        },
+        {
+          "day": 9,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "8h",
+          "name": "Laguna Torre or Laguna de los Tres hike",
+          "notes": "Choose the shorter trail if clouds hide the peaks; weather turns quickly.",
+          "where": "El Chalten",
+          "book": "",
+          "place": "argentina/el-chalten-hikes"
+        },
+        {
+          "day": 10,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "6h",
+          "name": "Second hike day or rest day at El Chalten",
+          "notes": "Choose the shorter trail if clouds hide the peaks; weather turns quickly.",
+          "where": "El Chalten",
+          "book": "",
+          "place": "argentina/el-chalten-hikes"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Ezeiza (EZE)",
+          "to": "Buenos Aires hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Buenos Aires hotel area",
+          "to": "Aeroparque (AEP)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Iguazu Airport (IGR)",
+          "to": "Iguazu lodge",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Iguazu lodge",
+          "to": "Iguazu Airport (IGR)",
+          "time": "07:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "El Calafate Airport (FTE)",
+          "to": "El Calafate hotel",
+          "time": "14:00",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "El Calafate",
+          "to": "El Chalten",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Bus or private transfer",
+          "notes": "The road crosses open steppe; fuel and snacks are limited.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "El Chalten",
+          "to": "El Calafate Airport (FTE)",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Bus or private transfer",
+          "notes": "Allow a buffer for the airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "argentina-grand-14d",
+      "title": "Argentina Grand Tour in 14 Days",
+      "summary": "Buenos Aires, Iguazu, Mendoza wine country, the Lake District and the glaciers of El Calafate.",
+      "days": 14,
+      "route": "Buenos Aires > Puerto Iguazu > Mendoza > Bariloche > El Calafate",
+      "arrive": "Buenos Aires (EZE)",
+      "depart": "El Calafate (FTE)",
+      "countries": [
+        "Argentina"
+      ],
+      "regions": [
+        "Buenos Aires",
+        "Misiones",
+        "Mendoza",
+        "Rio Negro",
+        "Santa Cruz"
+      ],
+      "cities": [
+        "Buenos Aires",
+        "Puerto Iguazu",
+        "Mendoza",
+        "Bariloche",
+        "El Calafate"
+      ],
+      "imageQuery": "Argentina Patagonia mountains lake",
+      "highlights": [
+        "Iguazu Falls",
+        "Mendoza Malbec",
+        "Bariloche lakes",
+        "Perito Moreno"
+      ],
+      "destinationKeys": [
+        "argentina",
+        "argentina/buenos-aires",
+        "argentina/misiones",
+        "argentina/puerto-iguazu",
+        "argentina/mendoza",
+        "argentina/rio-negro",
+        "argentina/bariloche",
+        "argentina/santa-cruz",
+        "argentina/el-calafate"
+      ],
+      "hero": "argentina/buenos-aires",
+      "sources": [
+        "Rough Guides",
+        "On The Go Tours",
+        "The Discoveries Of",
+        "TravelStride",
+        "South America Vacations"
+      ],
+      "pace": "F",
+      "interests": [
+        "culture",
+        "food",
+        "outdoors",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Buenos Aires",
+          "hotel": "Hotel in Buenos Aires",
+          "start": 0,
+          "nights": 3,
+          "area": "In Recoleta or Palermo for restaurants and parks; San Telmo for history",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Iguazu",
+          "hotel": "Lodge near Iguazu Falls",
+          "start": 3,
+          "nights": 2,
+          "area": "In Puerto Iguazu town or a lodge near the national park entrance",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mendoza",
+          "hotel": "Hotel in Mendoza",
+          "start": 5,
+          "nights": 3,
+          "area": "In central Mendoza or near the wine areas of Lujan de Cuyo",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bariloche",
+          "hotel": "Hotel in Bariloche",
+          "start": 8,
+          "nights": 2,
+          "area": "On the lake shore on the road to Llao Llao for views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Calafate",
+          "hotel": "Hotel in El Calafate",
+          "start": 10,
+          "nights": 3,
+          "area": "In El Calafate town along Avenida del Libertador",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Mayo and Casa Rosada",
+          "notes": "Free palace tours on weekends need registration.",
+          "where": "Plaza de Mayo, Buenos Aires",
+          "book": "",
+          "place": "argentina/plaza-de-mayo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Recoleta Cemetery and neighbourhood",
+          "notes": "English tours at set times; Sunday craft fair outside.",
+          "where": "Recoleta, Buenos Aires",
+          "book": "",
+          "place": "argentina/recoleta-cemetery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "San Telmo market and Plaza Dorrego",
+          "notes": "Sunday street fair is busiest; stay aware of belongings.",
+          "where": "San Telmo, Buenos Aires",
+          "book": "",
+          "place": "argentina/san-telmo"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "21:00",
+          "duration": "2.5h",
+          "name": "Tango show and dinner",
+          "notes": "Dinner begins late; choose a stage show or an intimate milonga.",
+          "where": "Buenos Aires",
+          "book": "Yes - book a show ahead",
+          "place": "argentina/tango-show"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Iguazu Falls, Argentine side",
+          "notes": "Do the Devil Throat first; boardwalk may close after heavy rain.",
+          "where": "Iguazu National Park",
+          "book": "",
+          "place": "argentina/iguazu-argentine-side"
+        },
+        {
+          "day": 6,
+          "type": "Food & Drink",
+          "time": "10:30",
+          "duration": "6h",
+          "name": "Lujan de Cuyo and Uco Valley winery day",
+          "notes": "Reserve tastings and lunch; use a driver or tour.",
+          "where": "Mendoza",
+          "book": "Yes - book winery lunches",
+          "place": "argentina/mendoza-wineries"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "High Andes road and Aconcagua viewpoint",
+          "notes": "Altitude is noticeable; layers are useful.",
+          "where": "Uspallata and Puente del Inca",
+          "book": "Yes - book a day tour",
+          "place": "argentina/aconcagua-high-andes"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Circuito Chico and lake viewpoints",
+          "notes": "Drive or take a tour; stop for chocolate.",
+          "where": "Bariloche",
+          "book": "",
+          "place": "argentina/bariloche-circuito-chico"
+        },
+        {
+          "day": 11,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Perito Moreno Glacier",
+          "notes": "Walkways face the ice wall; dress for cold wind.",
+          "where": "Los Glaciares National Park",
+          "book": "",
+          "place": "argentina/perito-moreno"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Ezeiza (EZE)",
+          "to": "Buenos Aires hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Buenos Aires hotel area",
+          "to": "Aeroparque (AEP)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Iguazu Airport (IGR)",
+          "to": "Iguazu lodge",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Iguazu lodge",
+          "to": "Iguazu Airport (IGR)",
+          "time": "07:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Mendoza Airport (MDZ)",
+          "to": "Mendoza hotel",
+          "time": "15:00",
+          "minutes": 20,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Mendoza hotel",
+          "to": "Mendoza Airport (MDZ)",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Bariloche Airport (BRC)",
+          "to": "Bariloche hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Bariloche hotel",
+          "to": "Bariloche Airport (BRC)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "El Calafate Airport (FTE)",
+          "to": "El Calafate hotel",
+          "time": "14:00",
+          "minutes": 25,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "El Calafate hotel",
+          "to": "El Calafate Airport (FTE)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi, remise or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "argentina/recoleta-cemetery": {
+        "name": "Recoleta Cemetery",
+        "description": "An ornate necropolis of mausoleums in the heart of Buenos Aires, the resting place of Eva Peron.",
+        "details": "Recoleta Cemetery is a maze of marble tombs, statues and narrow lanes, and a showcase of the city history. The Duarte family vault holds Eva Peron. Free guided tours are offered in English at set times. The neighbourhood has a Sunday craft fair, cafes and the Basilica of Our Lady of the Pilar.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/plaza-de-mayo": {
+        "name": "Plaza de Mayo and Casa Rosada",
+        "description": "The historic main square, with the pink presidential palace, the cathedral and the Cabildo.",
+        "details": "Plaza de Mayo has been the centre of Argentine political life since colonial times. The Casa Rosada is the presidential palace, and the Metropolitan Cathedral holds the tomb of General San Martin. The Mothers of the Plaza de Mayo still walk on Thursday afternoons. Free palace tours run on weekends, and need registration.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/san-telmo": {
+        "name": "San Telmo market and tango",
+        "description": "A cobbled barrio of antique shops, Sunday market stalls and old milongas.",
+        "details": "San Telmo is the oldest barrio of Buenos Aires, with colonial buildings and a Sunday street fair on Defensa. Tango dancers perform in Plaza Dorrego. Evening milongas and tango shows are held in historic halls nearby. The cobbled streets are uneven.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/la-boca": {
+        "name": "La Boca and Caminito",
+        "description": "A colourful port neighbourhood with painted houses, tango and the Boca Juniors stadium.",
+        "details": "La Boca grew around Italian immigrant dockworkers and is known for the corrugated-metal houses painted in bright colours along the Caminito. Stay on the tourist streets and take care with belongings. The Boca Juniors stadium and museum are close, and match tickets are hard to get.",
+        "interests": [
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/tango-show": {
+        "name": "Tango show and dinner",
+        "description": "An evening of live tango music and dance in one of the historic halls.",
+        "details": "Buenos Aires is the home of tango, and there are shows in grand old theatres with or without dinner. Choose between polished stage productions and more intimate milongas where locals dance. Dinner begins late, around nine, and the show can last two hours. Book ahead.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/san-antonio-de-areco": {
+        "name": "San Antonio de Areco gaucho day",
+        "description": "A day trip to a village of gaucho tradition, an estancia lunch and horse riding.",
+        "details": "San Antonio de Areco is a small town about 90 minutes from Buenos Aires, known for gaucho crafts and its leather and silver workshops. Many estancias offer an asado lunch, folk music and horseback demonstrations. It is a good way to see the pampas on a day away from the city.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/iguazu-argentine-side": {
+        "name": "Iguazu Falls, Argentine side",
+        "description": "A system of 275 waterfalls reached by boardwalks, including the Devil Throat.",
+        "details": "The Argentine side of Iguazu has the most extensive walkways, with the Upper and Lower circuits and a train to the Devil Throat viewpoint, where the water plunges into a huge gorge. Allow a full day. Rain can raise the river level and close some trails. Boat rides to the base of the falls can be added.",
+        "interests": [
+          "outdoors",
+          "iconic_landmarks",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "argentina/iguazu-brazil-side": {
+        "name": "Iguazu Falls, Brazilian side",
+        "description": "Panoramic views of the whole falls from the Brazilian side, a half-day visit.",
+        "details": "The Brazilian side gives sweeping views of the falls from a walkway, with a close approach to the Devil Throat from below. It takes about three hours and is usually combined with a transfer across the border. Bring your passport, and check visa rules for crossing into Brazil.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/perito-moreno": {
+        "name": "Perito Moreno Glacier",
+        "description": "A huge advancing glacier that calves ice into Lago Argentino, seen from walkways or by boat.",
+        "details": "The Perito Moreno Glacier is about 30 kilometres from El Calafate in Los Glaciares National Park. A network of walkways faces the ice wall, where blocks crash into the lake with a thunderous roar. Boat trips run along its face, and guided ice trekking is available. Dress warmly, as it is cold and windy.",
+        "interests": [
+          "outdoors",
+          "iconic_landmarks",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "argentina/glacier-boat": {
+        "name": "Upsala and Spegazzini glacier cruise",
+        "description": "A full-day boat trip through icebergs to the glaciers on the northern arms of Lago Argentino.",
+        "details": "The cruise leaves from Puerto Bandera and passes icebergs to the Upsala and Spegazzini glaciers. Time ashore lets you walk to a viewpoint. It is a long day on the water, and the wind is cold. Book ahead.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/el-chalten-hikes": {
+        "name": "El Chalten and Fitz Roy hikes",
+        "description": "Hiking capital of Argentina, with day walks to Laguna de los Tres and Laguna Torre under Fitz Roy.",
+        "details": "El Chalten sits below Mount Fitz Roy, and trails start at the edge of town. The walk to Laguna Torre is moderate and takes about six hours, while the Laguna de los Tres trail is harder and about nine hours. Weather changes quickly, and the summit is often in cloud, so keep a spare day.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "argentina/mendoza-wineries": {
+        "name": "Mendoza and Uco Valley wineries",
+        "description": "Malbec cellars under the Andes, with tastings, lunch and vineyard views.",
+        "details": "Mendoza is the capital of Argentine wine. The wineries of Lujan de Cuyo and the Uco Valley offer tastings and long lunches with views of the Andes. Many places need reservations. Hire a driver or join a tour, and consider cycling in Maipu for an easier day.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/aconcagua-high-andes": {
+        "name": "High Andes and Aconcagua viewpoint",
+        "description": "A mountain road day from Mendoza to Puente del Inca and a viewpoint of Aconcagua.",
+        "details": "The road to Chile rises through red and ochre canyons to Puente del Inca, a natural rock bridge over a hot stream, and the Aconcagua Provincial Park viewpoint. Aconcagua is the highest peak in the Americas. A day trip takes about nine hours, and altitude is noticeable.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "argentina/bariloche-circuito-chico": {
+        "name": "Circuito Chico and Lake Nahuel Huapi",
+        "description": "A scenic loop of lakes, viewpoints and chocolate shops near Bariloche.",
+        "details": "Circuito Chico is a 60-kilometre loop west of Bariloche, passing Llao Llao, Lake Moreno and chairlift viewpoints at Cerro Campanario. Many people drive or take a tour. In winter the area is a ski resort, and in summer it is good for hiking, boating and kayaking. Bariloche is also known for chocolate.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "argentina/cerro-catedral": {
+        "name": "Cerro Catedral or lake cruise",
+        "description": "Mountain gondola or a boat trip on Lake Nahuel Huapi to Isla Victoria.",
+        "details": "Cerro Catedral has chairlifts and gondolas with views in summer and skiing in winter. Boat excursions on Lake Nahuel Huapi visit Isla Victoria and the Arrayanes forest. Choose by weather, and carry layers.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "argentina": {
+        "name": "Argentina",
+        "description": "A country of tango, wine, waterfalls and the glaciers and peaks of Patagonia.",
+        "images": []
+      },
+      "argentina/buenos-aires": {
+        "name": "Buenos Aires",
+        "description": "The capital, a city of European boulevards, tango, steak and late nights.",
+        "images": []
+      },
+      "argentina/misiones": {
+        "name": "Misiones",
+        "description": "The north-east province of the Iguazu Falls and red-earth subtropical forest.",
+        "images": []
+      },
+      "argentina/puerto-iguazu": {
+        "name": "Puerto Iguazu",
+        "description": "The gateway town to Iguazu Falls, at the meeting of three countries.",
+        "images": []
+      },
+      "argentina/santa-cruz": {
+        "name": "Santa Cruz",
+        "description": "The southern Patagonian province of Perito Moreno and Fitz Roy.",
+        "images": []
+      },
+      "argentina/el-calafate": {
+        "name": "El Calafate",
+        "description": "The base for visits to the Perito Moreno Glacier on Lago Argentino.",
+        "images": []
+      },
+      "argentina/el-chalten": {
+        "name": "El Chalten",
+        "description": "A small trekking village below Mount Fitz Roy.",
+        "images": []
+      },
+      "argentina/mendoza": {
+        "name": "Mendoza",
+        "description": "Argentina wine capital, set at the foot of the Andes.",
+        "images": []
+      },
+      "argentina/rio-negro": {
+        "name": "Rio Negro",
+        "description": "The Andean lake province that includes Bariloche.",
+        "images": []
+      },
+      "argentina/bariloche": {
+        "name": "Bariloche",
+        "description": "An alpine-style lake town known for chocolate, skiing and hiking.",
+        "images": []
+      }
+    }
+  }
+}

@@ -56,9 +56,9 @@ const createSocketMock = (userId: string) => {
   return { socket, handlers, emit, join, leave };
 };
 
-const createIoMock = () => {
+const createIoMock = (viewers: Array<{ data: { user: { id: string } } }> = []) => {
   const roomEmit = jest.fn();
-  const io = { to: jest.fn(() => ({ emit: roomEmit })) };
+  const io = { to: jest.fn(() => ({ emit: roomEmit })), in: jest.fn(() => ({ fetchSockets: jest.fn(async () => viewers) })) };
   return { io, roomEmit };
 };
 
@@ -123,6 +123,24 @@ describe('chatHandler authorization', () => {
       SERVER_EVENTS.ERROR,
       expect.stringMatching(/Not authorized/i),
     );
+  });
+
+  it('publishes unread counts once per recipient after sending, including closed chat panels', async () => {
+    const { socket, handlers } = createSocketMock('sender');
+    const { io, roomEmit } = createIoMock([
+      { data: { user: { id: 'sender' } } },
+      { data: { user: { id: 'recipient' } } },
+      { data: { user: { id: 'recipient' } } },
+    ]);
+    registerChatHandlers(io as never, socket as never);
+    ensureUserInTripMock.mockResolvedValueOnce({ groupId: 'g1' });
+    addTripMessageMock.mockResolvedValueOnce({ id: 'msg-1' } as never);
+    const countUnread = jest.mocked(db.countUnreadMessages).mockResolvedValueOnce(3);
+    await handlers.get(CLIENT_EVENTS.SEND_MESSAGE)!({ tripId: 'trip-1', body: 'Hello' });
+    expect(countUnread).toHaveBeenCalledTimes(1);
+    expect(countUnread).toHaveBeenCalledWith('trip-1', 'recipient');
+    expect(io.to).toHaveBeenCalledWith('user:recipient');
+    expect(roomEmit).toHaveBeenCalledWith(SERVER_EVENTS.UNREAD_COUNT, { tripId: 'trip-1', count: 3 });
   });
 
   it('MARK_READ silently no-ops when the user is not a member', async () => {

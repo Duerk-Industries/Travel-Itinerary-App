@@ -1,0 +1,990 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Jasmine Alley, African Pride, Original Travel and Kabira Uganda Safaris itineraries for Rwanda",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "rwanda-kigali-gorillas-4d",
+      "title": "Gorillas in 4 Days",
+      "summary": "Kigali and a gorilla trek in the Virunga volcanoes.",
+      "days": 4,
+      "route": "Kigali > Volcanoes National Park",
+      "arrive": "Kigali (KGL)",
+      "depart": "Kigali (KGL)",
+      "countries": [
+        "Rwanda"
+      ],
+      "regions": [],
+      "cities": [
+        "Kigali",
+        "Volcanoes National Park"
+      ],
+      "imageQuery": "Rwanda mountain gorilla",
+      "highlights": [
+        "Gorilla trek",
+        "Kigali Memorial",
+        "Volcano views"
+      ],
+      "destinationKeys": [
+        "rwanda",
+        "rwanda/kigali",
+        "rwanda/volcanoes-national-park"
+      ],
+      "hero": "rwanda/volcanoes-national-park",
+      "sources": [
+        "Jasmine Alley",
+        "African Pride",
+        "Original Travel",
+        "Kabira Uganda Safaris",
+        "Travel Noire"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Kigali",
+          "hotel": "Hotel in Kigali",
+          "start": 0,
+          "nights": 1,
+          "area": "In Kiyovu or Nyarutarama, central and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Volcanoes National Park",
+          "hotel": "Lodge near Volcanoes National Park",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge near Kinigi, close to the park headquarters",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Kimironko market and coffee tasting",
+          "notes": "Try Rwandan coffee and local crafts.",
+          "where": "Kigali",
+          "book": "",
+          "place": "rwanda/kigali-city"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; one hour with the family.",
+          "where": "Volcanoes National Park",
+          "book": "Yes - gorilla permit required",
+          "place": "rwanda/gorilla-trek"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kigali Airport (KGL)",
+          "to": "Kigali hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Kigali",
+          "to": "Volcanoes lodge",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Volcanoes lodge",
+          "to": "Kigali Airport (KGL)",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "rwanda-kigali-gorillas-5d",
+      "title": "Kigali and Gorillas in 5 Days",
+      "summary": "Two nights in Kigali and two in the volcano park, with gorillas and golden monkeys.",
+      "days": 5,
+      "route": "Kigali > Volcanoes National Park",
+      "arrive": "Kigali (KGL)",
+      "depart": "Kigali (KGL)",
+      "countries": [
+        "Rwanda"
+      ],
+      "regions": [],
+      "cities": [
+        "Kigali",
+        "Volcanoes National Park"
+      ],
+      "imageQuery": "Volcanoes National Park Rwanda",
+      "highlights": [
+        "Kigali Memorial",
+        "Gorilla trek",
+        "Golden monkeys",
+        "Dian Fossey"
+      ],
+      "destinationKeys": [
+        "rwanda",
+        "rwanda/kigali",
+        "rwanda/volcanoes-national-park"
+      ],
+      "hero": "rwanda/kigali",
+      "sources": [
+        "Jasmine Alley",
+        "African Pride",
+        "Original Travel",
+        "Kabira Uganda Safaris",
+        "Travel Noire"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Kigali",
+          "hotel": "Hotel in Kigali",
+          "start": 0,
+          "nights": 2,
+          "area": "In Kiyovu or Nyarutarama, central and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Volcanoes National Park",
+          "hotel": "Lodge near Volcanoes National Park",
+          "start": 2,
+          "nights": 2,
+          "area": "In a lodge near Kinigi, close to the park headquarters",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Kigali Genocide Memorial",
+          "notes": "A sombre visit; allow quiet time afterwards.",
+          "where": "Kigali",
+          "book": "",
+          "place": "rwanda/kigali-memorial"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Kimironko market and coffee tasting",
+          "notes": "Try Rwandan coffee and local crafts.",
+          "where": "Kigali",
+          "book": "",
+          "place": "rwanda/kigali-city"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; one hour with the family.",
+          "where": "Volcanoes National Park",
+          "book": "Yes - gorilla permit required",
+          "place": "rwanda/gorilla-trek"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kigali Airport (KGL)",
+          "to": "Kigali hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Kigali",
+          "to": "Volcanoes lodge",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Volcanoes lodge",
+          "to": "Kigali Airport (KGL)",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "rwanda-gorillas-lake-kivu-7d",
+      "title": "Gorillas and Lake Kivu in 7 Days",
+      "summary": "Kigali, gorilla and golden monkey treks, and lake days.",
+      "days": 7,
+      "route": "Kigali > Volcanoes National Park > Lake Kivu",
+      "arrive": "Kigali (KGL)",
+      "depart": "Kigali (KGL)",
+      "countries": [
+        "Rwanda"
+      ],
+      "regions": [],
+      "cities": [
+        "Kigali",
+        "Volcanoes National Park",
+        "Lake Kivu"
+      ],
+      "imageQuery": "Lake Kivu Rwanda",
+      "highlights": [
+        "Kigali Memorial",
+        "Gorilla trek",
+        "Golden monkeys",
+        "Lake Kivu"
+      ],
+      "destinationKeys": [
+        "rwanda",
+        "rwanda/kigali",
+        "rwanda/volcanoes-national-park",
+        "rwanda/lake-kivu"
+      ],
+      "hero": "rwanda/lake-kivu",
+      "sources": [
+        "Jasmine Alley",
+        "African Pride",
+        "Original Travel",
+        "Kabira Uganda Safaris",
+        "Travel Noire"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Kigali",
+          "hotel": "Hotel in Kigali",
+          "start": 0,
+          "nights": 1,
+          "area": "In Kiyovu or Nyarutarama, central and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Volcanoes National Park",
+          "hotel": "Lodge near Volcanoes National Park",
+          "start": 1,
+          "nights": 3,
+          "area": "In a lodge near Kinigi, close to the park headquarters",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Kivu",
+          "hotel": "Lodge at Lake Kivu",
+          "start": 4,
+          "nights": 2,
+          "area": "In a lakeside lodge at Karongi or Rubavu",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Kigali Genocide Memorial",
+          "notes": "A sombre visit; allow quiet time afterwards.",
+          "where": "Kigali",
+          "book": "",
+          "place": "rwanda/kigali-memorial"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; one hour with the family.",
+          "where": "Volcanoes National Park",
+          "book": "Yes - gorilla permit required",
+          "place": "rwanda/gorilla-trek"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "5h",
+          "name": "Golden monkey trek or Dian Fossey grave hike",
+          "notes": "A separate permit is needed.",
+          "where": "Volcanoes National Park",
+          "book": "Yes - book a permit",
+          "place": "rwanda/golden-monkeys-fossey"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Lake Kivu kayak and coffee washing station",
+          "notes": "Calm water; a gentle day after the treks.",
+          "where": "Lake Kivu",
+          "book": "",
+          "place": "rwanda/lake-kivu"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kigali Airport (KGL)",
+          "to": "Kigali hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Kigali",
+          "to": "Volcanoes lodge",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Volcanoes lodge",
+          "to": "Lake Kivu lodge",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Lake Kivu lodge",
+          "to": "Kigali Airport (KGL)",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "rwanda-akagera-gorillas-kivu-8d",
+      "title": "Rwanda Safari, Gorillas and Lake in 8 Days",
+      "summary": "Akagera savannah, gorillas and Lake Kivu.",
+      "days": 8,
+      "route": "Kigali > Akagera > Volcanoes National Park > Lake Kivu",
+      "arrive": "Kigali (KGL)",
+      "depart": "Kigali (KGL)",
+      "countries": [
+        "Rwanda"
+      ],
+      "regions": [],
+      "cities": [
+        "Kigali",
+        "Akagera",
+        "Volcanoes National Park",
+        "Lake Kivu"
+      ],
+      "imageQuery": "Akagera National Park Rwanda lions",
+      "highlights": [
+        "Akagera safari",
+        "Gorilla trek",
+        "Golden monkeys",
+        "Lake Kivu"
+      ],
+      "destinationKeys": [
+        "rwanda",
+        "rwanda/kigali",
+        "rwanda/akagera",
+        "rwanda/volcanoes-national-park",
+        "rwanda/lake-kivu"
+      ],
+      "hero": "rwanda/akagera",
+      "sources": [
+        "Jasmine Alley",
+        "African Pride",
+        "Original Travel",
+        "Kabira Uganda Safaris",
+        "Travel Noire"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Kigali",
+          "hotel": "Hotel in Kigali",
+          "start": 0,
+          "nights": 1,
+          "area": "In Kiyovu or Nyarutarama, central and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Akagera",
+          "hotel": "Lodge at Akagera",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge or tented camp in Akagera",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Volcanoes National Park",
+          "hotel": "Lodge near Volcanoes National Park",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge near Kinigi, close to the park headquarters",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Kivu",
+          "hotel": "Lodge at Lake Kivu",
+          "start": 5,
+          "nights": 2,
+          "area": "In a lakeside lodge at Karongi or Rubavu",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Kigali Genocide Memorial",
+          "notes": "A sombre visit; allow quiet time afterwards.",
+          "where": "Kigali",
+          "book": "",
+          "place": "rwanda/kigali-memorial"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Akagera morning game drive",
+          "notes": "Look for lions and rhinos.",
+          "where": "Akagera",
+          "book": "",
+          "place": "rwanda/akagera-safari"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Lake Ihema boat safari",
+          "notes": "Hippos and crocodiles; calm evening light.",
+          "where": "Akagera",
+          "book": "",
+          "place": "rwanda/akagera-safari"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; one hour with the family.",
+          "where": "Volcanoes National Park",
+          "book": "Yes - gorilla permit required",
+          "place": "rwanda/gorilla-trek"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Lake Kivu kayak and coffee washing station",
+          "notes": "Calm water; a gentle day after the treks.",
+          "where": "Lake Kivu",
+          "book": "",
+          "place": "rwanda/lake-kivu"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kigali Airport (KGL)",
+          "to": "Kigali hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Kigali",
+          "to": "Akagera lodge",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Akagera lodge",
+          "to": "Volcanoes lodge",
+          "time": "07:30",
+          "minutes": 330,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "A long drive via Kigali.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Volcanoes lodge",
+          "to": "Lake Kivu lodge",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Lake Kivu lodge",
+          "to": "Kigali Airport (KGL)",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "rwanda-complete-10d",
+      "title": "Complete Rwanda in 10 Days",
+      "summary": "Kigali, Akagera, gorillas, Lake Kivu and Nyungwe chimps.",
+      "days": 10,
+      "route": "Kigali > Akagera > Volcanoes National Park > Lake Kivu > Nyungwe",
+      "arrive": "Kigali (KGL)",
+      "depart": "Kigali (KGL)",
+      "countries": [
+        "Rwanda"
+      ],
+      "regions": [],
+      "cities": [
+        "Kigali",
+        "Akagera",
+        "Volcanoes National Park",
+        "Lake Kivu",
+        "Nyungwe"
+      ],
+      "imageQuery": "Nyungwe forest canopy walk Rwanda",
+      "highlights": [
+        "Akagera safari",
+        "Gorilla trek",
+        "Lake Kivu",
+        "Nyungwe canopy walk",
+        "Chimp tracking"
+      ],
+      "destinationKeys": [
+        "rwanda",
+        "rwanda/kigali",
+        "rwanda/akagera",
+        "rwanda/volcanoes-national-park",
+        "rwanda/lake-kivu",
+        "rwanda/nyungwe"
+      ],
+      "hero": "rwanda/nyungwe",
+      "sources": [
+        "Jasmine Alley",
+        "African Pride",
+        "Original Travel",
+        "Kabira Uganda Safaris",
+        "Travel Noire"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Kigali",
+          "hotel": "Hotel in Kigali",
+          "start": 0,
+          "nights": 1,
+          "area": "In Kiyovu or Nyarutarama, central and quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Akagera",
+          "hotel": "Lodge at Akagera",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge or tented camp in Akagera",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Volcanoes National Park",
+          "hotel": "Lodge near Volcanoes National Park",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge near Kinigi, close to the park headquarters",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Kivu",
+          "hotel": "Lodge at Lake Kivu",
+          "start": 5,
+          "nights": 2,
+          "area": "In a lakeside lodge at Karongi or Rubavu",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nyungwe",
+          "hotel": "Lodge at Nyungwe",
+          "start": 7,
+          "nights": 2,
+          "area": "In a lodge on the edge of Nyungwe forest",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Kigali Genocide Memorial",
+          "notes": "A sombre visit; allow quiet time afterwards.",
+          "where": "Kigali",
+          "book": "",
+          "place": "rwanda/kigali-memorial"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Akagera morning game drive",
+          "notes": "Look for lions and rhinos.",
+          "where": "Akagera",
+          "book": "",
+          "place": "rwanda/akagera-safari"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Lake Ihema boat safari",
+          "notes": "Hippos and crocodiles; calm evening light.",
+          "where": "Akagera",
+          "book": "",
+          "place": "rwanda/akagera-safari"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; one hour with the family.",
+          "where": "Volcanoes National Park",
+          "book": "Yes - gorilla permit required",
+          "place": "rwanda/gorilla-trek"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Lake Kivu kayak and coffee washing station",
+          "notes": "Calm water; a gentle day after the treks.",
+          "where": "Lake Kivu",
+          "book": "",
+          "place": "rwanda/lake-kivu"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "06:30",
+          "duration": "6h",
+          "name": "Nyungwe canopy walk and chimp tracking",
+          "notes": "Dress for rain; early starts are best.",
+          "where": "Nyungwe",
+          "book": "Yes - book chimp tracking",
+          "place": "rwanda/nyungwe-canopy"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kigali Airport (KGL)",
+          "to": "Kigali hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Kigali",
+          "to": "Akagera lodge",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Akagera lodge",
+          "to": "Volcanoes lodge",
+          "time": "07:30",
+          "minutes": 330,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Volcanoes lodge",
+          "to": "Lake Kivu lodge",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Lake Kivu lodge",
+          "to": "Nyungwe lodge",
+          "time": "08:30",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "The Kivu Belt road is scenic.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Nyungwe lodge",
+          "to": "Kigali Airport (KGL)",
+          "time": "07:30",
+          "minutes": 420,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "rwanda/kigali-memorial": {
+        "name": "Kigali Genocide Memorial",
+        "description": "A moving memorial and museum to the 1994 genocide against the Tutsi.",
+        "details": "The Kigali Genocide Memorial holds an exhibition on the genocide and the graves of more than 250,000 victims. The visit is sobering, so allow a quiet half-day. Photography is limited inside. Give time to reflect, and perhaps combine with a calm afternoon.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "rwanda/kigali-city": {
+        "name": "Kigali markets, art and coffee",
+        "description": "A clean, hilly capital with craft markets, galleries and Rwandan coffee.",
+        "details": "Kigali has the Kimironko market for fabric and produce, the Inema Arts Centre and the Nyamirambo neighbourhood walking tour. Rwandan coffee tastings are a highlight. The city is safe and very tidy, with a ban on plastic bags.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "rwanda/gorilla-trek": {
+        "name": "Mountain gorilla trekking, Volcanoes National Park",
+        "description": "An hour with a habituated gorilla family in the bamboo forest.",
+        "details": "Gorilla treks in Volcanoes National Park are one of the great wildlife experiences. Groups of eight set off with guides and trackers, hiking for 1 to 4 hours to a family, then spend one hour in their presence. Permits are limited and costly, so book months ahead. Boots, long trousers and gloves help.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "rwanda/golden-monkeys-fossey": {
+        "name": "Golden monkey trek or Dian Fossey hike",
+        "description": "Alternative treks in the volcano park to rare golden monkeys or the grave of Dian Fossey.",
+        "details": "Golden monkeys are playful and found in bamboo forests, in treks easier than gorilla ones. The Dian Fossey grave hike climbs through montane forest to the site of Karisoke camp. Both need separate permits.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "rwanda/lake-kivu": {
+        "name": "Lake Kivu coffee and kayaking",
+        "description": "A calm highland lake with beaches, boat trips, coffee washing stations and the Congo Nile Trail.",
+        "details": "Lake Kivu is bordered by steep green hills. Karongi and Rubavu have beaches and lodges, and kayak and boat trips go to islands. Coffee tours show how Rwandan beans are processed. The Congo Nile Trail runs along the shore for cyclists and hikers.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "rwanda/nyungwe-canopy": {
+        "name": "Nyungwe Forest canopy walk and chimpanzees",
+        "description": "An ancient montane rainforest with a suspended walkway and primate tracking.",
+        "details": "Nyungwe is one of the oldest rainforests in Africa, with chimp tracking, colobus monkeys and a 160-metre canopy walkway over the tree tops. Early-morning treks are best. It is wet and cool, so bring rain gear.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "rwanda/akagera-safari": {
+        "name": "Akagera National Park safari",
+        "description": "Rwanda savannah park with lions, rhinos, elephants and a boat trip on Lake Ihema.",
+        "details": "Akagera was restored by conservationists and now has the Big Five. Game drives in the morning and afternoon find giraffe, zebra and big cats, and a boat cruise on Lake Ihema shows hippos and crocodiles. It is three hours from Kigali.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "rwanda": {
+        "name": "Rwanda",
+        "description": "The land of a thousand hills, with mountain gorillas and a clean, welcoming capital.",
+        "images": []
+      },
+      "rwanda/kigali": {
+        "name": "Kigali",
+        "description": "The tidy, hilly capital.",
+        "images": []
+      },
+      "rwanda/akagera": {
+        "name": "Akagera",
+        "description": "A savannah national park in the east.",
+        "images": []
+      },
+      "rwanda/volcanoes-national-park": {
+        "name": "Volcanoes National Park",
+        "description": "Home of the mountain gorillas.",
+        "images": []
+      },
+      "rwanda/lake-kivu": {
+        "name": "Lake Kivu",
+        "description": "A highland lake with beaches and coffee.",
+        "images": []
+      },
+      "rwanda/nyungwe": {
+        "name": "Nyungwe",
+        "description": "An ancient montane rainforest.",
+        "images": []
+      }
+    }
+  }
+}

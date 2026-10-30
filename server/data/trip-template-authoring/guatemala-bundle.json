@@ -1,0 +1,1179 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining G Adventures, KimKim, Bucketlistly and Audley Travel itineraries for Guatemala",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "guatemala-antigua-atitlan-5d",
+      "title": "Antigua and Lake Atitlan in 5 Days",
+      "summary": "A colonial city, a volcano hike and a volcano lake.",
+      "days": 5,
+      "route": "Antigua > Lake Atitlan",
+      "arrive": "Guatemala City (GUA)",
+      "depart": "Guatemala City (GUA)",
+      "countries": [
+        "Guatemala"
+      ],
+      "regions": [
+        "Sacatepequez",
+        "Solola"
+      ],
+      "cities": [
+        "Antigua",
+        "Lake Atitlan"
+      ],
+      "imageQuery": "Lake Atitlan volcanoes Guatemala",
+      "highlights": [
+        "Antigua",
+        "Pacaya volcano",
+        "Lake Atitlan"
+      ],
+      "destinationKeys": [
+        "guatemala",
+        "guatemala/sacatepequez",
+        "guatemala/antigua",
+        "guatemala/solola",
+        "guatemala/lake-atitlan"
+      ],
+      "hero": "guatemala/lake-atitlan",
+      "sources": [
+        "G Adventures",
+        "KimKim",
+        "Bucketlistly",
+        "Audley Travel",
+        "Adventures of A Plus K"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Antigua",
+          "hotel": "Hotel in Antigua",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the central park in Antigua, within walking distance of restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Atitlan",
+          "hotel": "Hotel in Lake Atitlan",
+          "start": 2,
+          "nights": 2,
+          "area": "In Panajachel, or in a quieter lakeside village such as San Marcos",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Antigua walking tour",
+          "notes": "Cover the arch, ruined churches and the Cerro de la Cruz view.",
+          "where": "Antigua",
+          "book": "",
+          "place": "guatemala/antigua-colonial"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "5h",
+          "name": "Pacaya volcano hike",
+          "notes": "Check volcanic activity; wear sturdy shoes and layers.",
+          "where": "Pacaya",
+          "book": "Yes - book a guide",
+          "place": "guatemala/pacaya-volcano"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Lake Atitlan boat hop between villages",
+          "notes": "Travel in the morning before the afternoon wind.",
+          "where": "Lake Atitlan",
+          "book": "",
+          "place": "guatemala/lake-atitlan"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Guatemala City Airport (GUA)",
+          "to": "Antigua hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Antigua",
+          "to": "Lake Atitlan",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lake Atitlan",
+          "to": "Guatemala City Airport (GUA)",
+          "time": "07:30",
+          "minutes": 210,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "guatemala-antigua-atitlan-tikal-7d",
+      "title": "Guatemala Highlights in 7 Days",
+      "summary": "Antigua, Lake Atitlan and a flight to Flores for Tikal.",
+      "days": 7,
+      "route": "Antigua > Lake Atitlan > Flores",
+      "arrive": "Guatemala City (GUA)",
+      "depart": "Flores (FRS)",
+      "countries": [
+        "Guatemala"
+      ],
+      "regions": [
+        "Sacatepequez",
+        "Solola",
+        "Peten"
+      ],
+      "cities": [
+        "Antigua",
+        "Lake Atitlan",
+        "Flores"
+      ],
+      "imageQuery": "Tikal temple jungle Guatemala",
+      "highlights": [
+        "Antigua",
+        "Lake Atitlan",
+        "Tikal",
+        "Flores island"
+      ],
+      "destinationKeys": [
+        "guatemala",
+        "guatemala/sacatepequez",
+        "guatemala/antigua",
+        "guatemala/solola",
+        "guatemala/lake-atitlan",
+        "guatemala/peten",
+        "guatemala/flores"
+      ],
+      "hero": "guatemala/peten",
+      "sources": [
+        "G Adventures",
+        "KimKim",
+        "Bucketlistly",
+        "Audley Travel",
+        "Adventures of A Plus K"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Antigua",
+          "hotel": "Hotel in Antigua",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the central park in Antigua, within walking distance of restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Atitlan",
+          "hotel": "Hotel in Lake Atitlan",
+          "start": 2,
+          "nights": 2,
+          "area": "In Panajachel, or in a quieter lakeside village such as San Marcos",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flores",
+          "hotel": "Hotel in Flores",
+          "start": 4,
+          "nights": 2,
+          "area": "On Flores island, or on the lake shore for sunsets",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Antigua walking tour",
+          "notes": "Cover the arch, ruined churches and the Cerro de la Cruz view.",
+          "where": "Antigua",
+          "book": "",
+          "place": "guatemala/antigua-colonial"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Lake Atitlan boat hop between villages",
+          "notes": "Travel in the morning before the afternoon wind.",
+          "where": "Lake Atitlan",
+          "book": "",
+          "place": "guatemala/lake-atitlan"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Flores island sunset",
+          "notes": "Walk the causeway and lakeside promenade.",
+          "where": "Flores",
+          "book": "",
+          "place": "guatemala/flores"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "05:00",
+          "duration": "7h",
+          "name": "Tikal sunrise tour",
+          "notes": "Bring water and repellent; book the sunrise tour.",
+          "where": "Tikal",
+          "book": "Yes - book a sunrise tour",
+          "place": "guatemala/tikal"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Guatemala City Airport (GUA)",
+          "to": "Antigua hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Antigua",
+          "to": "Lake Atitlan",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lake Atitlan",
+          "to": "Guatemala City Airport (GUA)",
+          "time": "06:00",
+          "minutes": 210,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Guatemala City airport",
+          "to": "Guatemala City Airport (GUA)",
+          "time": "10:00",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Short flight to Flores; confirm the schedule.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Flores Airport (FRS)",
+          "to": "Flores hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Flores hotel",
+          "to": "Flores Airport (FRS)",
+          "time": "10:00",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "guatemala-antigua-atitlan-flores-8d",
+      "title": "Guatemala with Chichicastenango in 8 Days",
+      "summary": "Antigua, the lake with a market day, then Tikal.",
+      "days": 8,
+      "route": "Antigua > Lake Atitlan > Flores",
+      "arrive": "Guatemala City (GUA)",
+      "depart": "Flores (FRS)",
+      "countries": [
+        "Guatemala"
+      ],
+      "regions": [
+        "Sacatepequez",
+        "Solola",
+        "Peten"
+      ],
+      "cities": [
+        "Antigua",
+        "Lake Atitlan",
+        "Flores"
+      ],
+      "imageQuery": "Chichicastenango market Guatemala",
+      "highlights": [
+        "Antigua",
+        "Pacaya",
+        "Chichicastenango market",
+        "Indian Nose",
+        "Tikal"
+      ],
+      "destinationKeys": [
+        "guatemala",
+        "guatemala/sacatepequez",
+        "guatemala/antigua",
+        "guatemala/solola",
+        "guatemala/lake-atitlan",
+        "guatemala/peten",
+        "guatemala/flores"
+      ],
+      "hero": "guatemala/sacatepequez",
+      "sources": [
+        "G Adventures",
+        "KimKim",
+        "Bucketlistly",
+        "Audley Travel",
+        "Adventures of A Plus K"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Antigua",
+          "hotel": "Hotel in Antigua",
+          "start": 0,
+          "nights": 3,
+          "area": "Near the central park in Antigua, within walking distance of restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Atitlan",
+          "hotel": "Hotel in Lake Atitlan",
+          "start": 3,
+          "nights": 2,
+          "area": "In Panajachel, or in a quieter lakeside village such as San Marcos",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flores",
+          "hotel": "Hotel in Flores",
+          "start": 5,
+          "nights": 2,
+          "area": "On Flores island, or on the lake shore for sunsets",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Antigua walking tour",
+          "notes": "Cover the arch, ruined churches and the Cerro de la Cruz view.",
+          "where": "Antigua",
+          "book": "",
+          "place": "guatemala/antigua-colonial"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "5h",
+          "name": "Pacaya volcano hike",
+          "notes": "Check volcanic activity; wear sturdy shoes and layers.",
+          "where": "Pacaya",
+          "book": "Yes - book a guide",
+          "place": "guatemala/pacaya-volcano"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Chichicastenango market",
+          "notes": "Market days are Thursday and Sunday.",
+          "where": "Chichicastenango",
+          "book": "",
+          "place": "guatemala/chichicastenango"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Flores island sunset",
+          "notes": "Walk the causeway and lakeside promenade.",
+          "where": "Flores",
+          "book": "",
+          "place": "guatemala/flores"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "05:00",
+          "duration": "7h",
+          "name": "Tikal sunrise tour",
+          "notes": "Bring water and repellent; book the sunrise tour.",
+          "where": "Tikal",
+          "book": "Yes - book a sunrise tour",
+          "place": "guatemala/tikal"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Guatemala City Airport (GUA)",
+          "to": "Antigua hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Antigua",
+          "to": "Lake Atitlan",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Lake Atitlan",
+          "to": "Guatemala City Airport (GUA)",
+          "time": "06:00",
+          "minutes": 210,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Guatemala City airport",
+          "to": "Guatemala City Airport (GUA)",
+          "time": "10:30",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Flores Airport (FRS)",
+          "to": "Flores hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Flores hotel",
+          "to": "Flores Airport (FRS)",
+          "time": "10:00",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "guatemala-semuc-champey-10d",
+      "title": "Guatemala with Semuc Champey in 10 Days",
+      "summary": "Antigua, the lake, the Semuc Champey pools and Tikal.",
+      "days": 10,
+      "route": "Antigua > Lake Atitlan > Lanquin > Flores",
+      "arrive": "Guatemala City (GUA)",
+      "depart": "Flores (FRS)",
+      "countries": [
+        "Guatemala"
+      ],
+      "regions": [
+        "Sacatepequez",
+        "Solola",
+        "Alta Verapaz",
+        "Peten"
+      ],
+      "cities": [
+        "Antigua",
+        "Lake Atitlan",
+        "Lanquin",
+        "Flores"
+      ],
+      "imageQuery": "Semuc Champey turquoise pools",
+      "highlights": [
+        "Antigua",
+        "Lake Atitlan",
+        "Semuc Champey",
+        "Tikal"
+      ],
+      "destinationKeys": [
+        "guatemala",
+        "guatemala/sacatepequez",
+        "guatemala/antigua",
+        "guatemala/solola",
+        "guatemala/lake-atitlan",
+        "guatemala/alta-verapaz",
+        "guatemala/lanquin",
+        "guatemala/peten",
+        "guatemala/flores"
+      ],
+      "hero": "guatemala/alta-verapaz",
+      "sources": [
+        "G Adventures",
+        "KimKim",
+        "Bucketlistly",
+        "Audley Travel",
+        "Adventures of A Plus K"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Antigua",
+          "hotel": "Hotel in Antigua",
+          "start": 0,
+          "nights": 3,
+          "area": "Near the central park in Antigua, within walking distance of restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Atitlan",
+          "hotel": "Hotel in Lake Atitlan",
+          "start": 3,
+          "nights": 3,
+          "area": "In Panajachel, or in a quieter lakeside village such as San Marcos",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lanquin",
+          "hotel": "Lodge in Lanquin",
+          "start": 6,
+          "nights": 2,
+          "area": "In a riverside lodge in Lanquin; basic but atmospheric",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flores",
+          "hotel": "Hotel in Flores",
+          "start": 8,
+          "nights": 1,
+          "area": "On Flores island, or on the lake shore for sunsets",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Antigua walking tour",
+          "notes": "Cover the arch, ruined churches and the Cerro de la Cruz view.",
+          "where": "Antigua",
+          "book": "",
+          "place": "guatemala/antigua-colonial"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "5h",
+          "name": "Pacaya volcano hike",
+          "notes": "Check volcanic activity; wear sturdy shoes and layers.",
+          "where": "Pacaya",
+          "book": "Yes - book a guide",
+          "place": "guatemala/pacaya-volcano"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Lake Atitlan boat hop between villages",
+          "notes": "Travel in the morning before the afternoon wind.",
+          "where": "Lake Atitlan",
+          "book": "",
+          "place": "guatemala/lake-atitlan"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "04:30",
+          "duration": "4h",
+          "name": "Indian Nose sunrise",
+          "notes": "Take a headlamp and a warm layer.",
+          "where": "Lake Atitlan",
+          "book": "",
+          "place": "guatemala/indian-nose"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Semuc Champey pools and cave tubing",
+          "notes": "Arrive when the gate opens.",
+          "where": "Semuc Champey",
+          "book": "",
+          "place": "guatemala/semuc-champey"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Flores island sunset",
+          "notes": "Walk the causeway and lakeside promenade.",
+          "where": "Flores",
+          "book": "",
+          "place": "guatemala/flores"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Guatemala City Airport (GUA)",
+          "to": "Antigua hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Antigua",
+          "to": "Lake Atitlan",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Lake Atitlan",
+          "to": "Lanquin",
+          "time": "06:00",
+          "minutes": 480,
+          "carrier": "Tourist shuttle",
+          "notes": "A long day by shuttle; book in advance.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Lanquin",
+          "to": "Flores",
+          "time": "07:00",
+          "minutes": 540,
+          "carrier": "Tourist shuttle",
+          "notes": "A very long ride on rough roads; consider breaking the trip.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Flores hotel",
+          "to": "Flores Airport (FRS)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "guatemala-complete-12d",
+      "title": "Complete Guatemala in 12 Days",
+      "summary": "Antigua, Acatenango, the lake, Semuc Champey and three nights in Flores for Tikal.",
+      "days": 12,
+      "route": "Antigua > Lake Atitlan > Lanquin > Flores",
+      "arrive": "Guatemala City (GUA)",
+      "depart": "Flores (FRS)",
+      "countries": [
+        "Guatemala"
+      ],
+      "regions": [
+        "Sacatepequez",
+        "Solola",
+        "Alta Verapaz",
+        "Peten"
+      ],
+      "cities": [
+        "Antigua",
+        "Lake Atitlan",
+        "Lanquin",
+        "Flores"
+      ],
+      "imageQuery": "Acatenango Fuego volcano eruption",
+      "highlights": [
+        "Acatenango",
+        "Lake Atitlan",
+        "Chichicastenango",
+        "Semuc Champey",
+        "Tikal"
+      ],
+      "destinationKeys": [
+        "guatemala",
+        "guatemala/sacatepequez",
+        "guatemala/antigua",
+        "guatemala/solola",
+        "guatemala/lake-atitlan",
+        "guatemala/alta-verapaz",
+        "guatemala/lanquin",
+        "guatemala/peten",
+        "guatemala/flores"
+      ],
+      "hero": "guatemala/antigua",
+      "sources": [
+        "G Adventures",
+        "KimKim",
+        "Bucketlistly",
+        "Audley Travel",
+        "Adventures of A Plus K"
+      ],
+      "pace": "F",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Antigua",
+          "hotel": "Hotel in Antigua",
+          "start": 0,
+          "nights": 3,
+          "area": "Near the central park in Antigua, within walking distance of restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Atitlan",
+          "hotel": "Hotel in Lake Atitlan",
+          "start": 3,
+          "nights": 3,
+          "area": "In Panajachel, or in a quieter lakeside village such as San Marcos",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lanquin",
+          "hotel": "Lodge in Lanquin",
+          "start": 6,
+          "nights": 2,
+          "area": "In a riverside lodge in Lanquin; basic but atmospheric",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flores",
+          "hotel": "Hotel in Flores",
+          "start": 8,
+          "nights": 3,
+          "area": "On Flores island, or on the lake shore for sunsets",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Antigua walking tour",
+          "notes": "Cover the arch, ruined churches and the Cerro de la Cruz view.",
+          "where": "Antigua",
+          "book": "",
+          "place": "guatemala/antigua-colonial"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "8h",
+          "name": "Acatenango overnight climb (first day)",
+          "notes": "Reputable operator only; cold at 3,600 metres.",
+          "where": "Acatenango",
+          "book": "Yes - book the trek",
+          "place": "guatemala/acatenango"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Chichicastenango market",
+          "notes": "Market days are Thursday and Sunday.",
+          "where": "Chichicastenango",
+          "book": "",
+          "place": "guatemala/chichicastenango"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "04:30",
+          "duration": "4h",
+          "name": "Indian Nose sunrise",
+          "notes": "Take a headlamp and a warm layer.",
+          "where": "Lake Atitlan",
+          "book": "",
+          "place": "guatemala/indian-nose"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Lake Atitlan boat hop between villages",
+          "notes": "Travel in the morning before the afternoon wind.",
+          "where": "Lake Atitlan",
+          "book": "",
+          "place": "guatemala/lake-atitlan"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Semuc Champey pools and cave tubing",
+          "notes": "Arrive when the gate opens.",
+          "where": "Semuc Champey",
+          "book": "",
+          "place": "guatemala/semuc-champey"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Flores island sunset",
+          "notes": "Walk the causeway and lakeside promenade.",
+          "where": "Flores",
+          "book": "",
+          "place": "guatemala/flores"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "05:00",
+          "duration": "7h",
+          "name": "Tikal sunrise tour",
+          "notes": "Bring water and repellent; book the sunrise tour.",
+          "where": "Tikal",
+          "book": "Yes - book a sunrise tour",
+          "place": "guatemala/tikal"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Guatemala City Airport (GUA)",
+          "to": "Antigua hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Antigua",
+          "to": "Lake Atitlan",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Lake Atitlan",
+          "to": "Lanquin",
+          "time": "06:00",
+          "minutes": 480,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Lanquin",
+          "to": "Flores",
+          "time": "07:00",
+          "minutes": 540,
+          "carrier": "Tourist shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Flores hotel",
+          "to": "Flores Airport (FRS)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "guatemala/antigua-colonial": {
+        "name": "Antigua colonial centre",
+        "description": "A UNESCO colonial city of cobbled streets, ruined churches and volcano views.",
+        "details": "Antigua has the Santa Catalina Arch, the Cerro de la Cruz viewpoint and many ruined baroque churches. The central plaza and the La Merced church are the heart. Markets, chocolate workshops and cafes fill the old streets. It is at 1,500 metres, so the climate is mild.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "guatemala/pacaya-volcano": {
+        "name": "Pacaya Volcano hike",
+        "description": "A half-day hike to lava fields and, when active, glowing lava, close to Antigua.",
+        "details": "Pacaya is an active volcano reached by a 2-hour climb across black lava fields. Guides lead groups, and some days allow marshmallow roasting on warm rocks. Conditions depend on volcanic activity, so check the status. Dress in layers and wear sturdy shoes.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "guatemala/acatenango": {
+        "name": "Acatenango overnight volcano climb",
+        "description": "An overnight trek to see the eruptions of neighbouring Fuego volcano.",
+        "details": "Acatenango is a challenging overnight hike to a camp at about 3,600 metres in front of the active Fuego volcano, with the climb to the summit at dawn. It is cold and tiring. Go with a reputable operator, and check conditions.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "guatemala/lake-atitlan": {
+        "name": "Lake Atitlan villages by boat",
+        "description": "A volcanic lake ringed by Maya villages, reached by shared boats.",
+        "details": "Lake Atitlan is surrounded by three volcanoes. Boats link Panajachel with San Pedro, San Marcos, Santiago and others. San Juan has women weaving cooperatives, San Marcos has yoga and healing, and Santa Cruz has quiet hotels. Afternoon winds make the lake choppy, so travel in the morning.",
+        "interests": [
+          "relax",
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "guatemala/indian-nose": {
+        "name": "Indian Nose sunrise",
+        "description": "A hill viewpoint above the lake for a sunrise over the volcanoes.",
+        "details": "The Indian Nose is a short pre-dawn hike from San Juan or San Pedro, with an expansive view of Lake Atitlan and the volcanoes at sunrise. Take a headlamp and a warm layer. Clouds can hide the view, so go on a clear morning.",
+        "interests": [
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "guatemala/chichicastenango": {
+        "name": "Chichicastenango market",
+        "description": "One of the largest indigenous markets in Central America, held on Thursday and Sunday.",
+        "details": "Chichi market sprawls through the town with textiles, masks, produce and flowers, and the Santo Tomas church steps are used for Maya rituals with incense. Sunday and Thursday are market days. Bargain politely, and ask before photographing people.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "guatemala/semuc-champey": {
+        "name": "Semuc Champey",
+        "description": "Turquoise limestone pools stepping down a river, in the green hills of Alta Verapaz.",
+        "details": "The Semuc Champey terraces are natural pools that can be swum, reached by a steep hike to the viewpoint. Cave tubing in K anba Cave and river tubing add adventure. The access road is long and rough from every direction. Visit early to avoid crowds.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "guatemala/tikal": {
+        "name": "Tikal National Park",
+        "description": "A Maya city rising out of the rainforest, with temples taller than the canopy.",
+        "details": "Tikal has towering pyramids, plazas and rainforest alive with howler monkeys and toucans. Temple IV is the classic sunrise point. A guide helps explain the layout. The site is hot and humid, so bring water and repellent. Sunrise tours need to be arranged in advance.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "guatemala/flores": {
+        "name": "Flores island",
+        "description": "A cobbled island town on Lake Peten Itza, a pleasant base for Tikal.",
+        "details": "Flores is a small island linked to the shore by a causeway, with colourful houses and lakeside restaurants. Evening is for sunsets by the water. Boats and kayaks explore the lake, and cheap shared vans go to Tikal.",
+        "interests": [
+          "relax",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "guatemala": {
+        "name": "Guatemala",
+        "description": "A Maya heartland of volcanoes, lakes, markets and jungle temples.",
+        "images": []
+      },
+      "guatemala/sacatepequez": {
+        "name": "Sacatepequez",
+        "description": "The department of Antigua and the nearby volcanoes.",
+        "images": []
+      },
+      "guatemala/antigua": {
+        "name": "Antigua",
+        "description": "A UNESCO colonial city beneath three volcanoes.",
+        "images": []
+      },
+      "guatemala/solola": {
+        "name": "Solola",
+        "description": "The highland department of Lake Atitlan.",
+        "images": []
+      },
+      "guatemala/lake-atitlan": {
+        "name": "Lake Atitlan",
+        "description": "A crater lake ringed by volcanoes and Maya villages.",
+        "images": []
+      },
+      "guatemala/alta-verapaz": {
+        "name": "Alta Verapaz",
+        "description": "The green northern highlands of Semuc Champey.",
+        "images": []
+      },
+      "guatemala/lanquin": {
+        "name": "Lanquin",
+        "description": "A small village and base for the Semuc Champey pools.",
+        "images": []
+      },
+      "guatemala/peten": {
+        "name": "Peten",
+        "description": "The jungle department of Tikal and Lake Peten Itza.",
+        "images": []
+      },
+      "guatemala/flores": {
+        "name": "Flores",
+        "description": "An island town on Lake Peten Itza.",
+        "images": []
+      }
+    }
+  }
+}

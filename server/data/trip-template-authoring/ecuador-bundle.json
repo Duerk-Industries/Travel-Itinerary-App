@@ -1,0 +1,1288 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim, Travellocal and Rickshaw Travel itineraries for Ecuador",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "ecuador-quito-cotopaxi-banos-6d",
+      "title": "Quito, Cotopaxi and Banos in 6 Days",
+      "summary": "The Andean highlands: colonial capital, volcano and waterfall town.",
+      "days": 6,
+      "route": "Quito > Cotopaxi > Banos",
+      "arrive": "Quito (UIO)",
+      "depart": "Quito (UIO)",
+      "countries": [
+        "Ecuador"
+      ],
+      "regions": [
+        "Pichincha",
+        "Tungurahua"
+      ],
+      "cities": [
+        "Quito",
+        "Cotopaxi",
+        "Banos"
+      ],
+      "imageQuery": "Cotopaxi volcano Ecuador",
+      "highlights": [
+        "Quito old town",
+        "Cotopaxi",
+        "Quilotoa",
+        "Banos waterfalls"
+      ],
+      "destinationKeys": [
+        "ecuador",
+        "ecuador/pichincha",
+        "ecuador/quito",
+        "ecuador/cotopaxi",
+        "ecuador/tungurahua",
+        "ecuador/banos"
+      ],
+      "hero": "ecuador/cotopaxi",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Travellocal",
+        "Rickshaw Travel",
+        "Gray Line Ecuador"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Quito",
+          "hotel": "Hotel in Quito",
+          "start": 0,
+          "nights": 2,
+          "area": "In the old town for history, or La Mariscal for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cotopaxi",
+          "hotel": "Lodge near Cotopaxi",
+          "start": 2,
+          "nights": 1,
+          "area": "In a hacienda-style lodge beside the park, with mountain views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banos",
+          "hotel": "Hotel in Banos",
+          "start": 3,
+          "nights": 2,
+          "area": "In Banos town, a short walk from the thermal baths",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Quito old town and Panecillo",
+          "notes": "Go slowly at 2,850 metres.",
+          "where": "Quito",
+          "book": "",
+          "place": "ecuador/quito-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Mitad del Mundo and Intinan Museum",
+          "notes": "A short half-day north of Quito.",
+          "where": "Mitad del Mundo",
+          "book": "",
+          "place": "ecuador/mitad-del-mundo"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Cotopaxi National Park",
+          "notes": "Acclimatise in Quito first; weather turns quickly.",
+          "where": "Cotopaxi",
+          "book": "",
+          "place": "ecuador/cotopaxi"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "11:30",
+          "duration": "3h",
+          "name": "Quilotoa crater lake",
+          "notes": "The climb back from the shore is steep; mules are available.",
+          "where": "Quilotoa",
+          "book": "",
+          "place": "ecuador/quilotoa"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Ruta de las Cascadas by bike",
+          "notes": "Ride to Pailon del Diablo; return by truck if tired.",
+          "where": "Banos",
+          "book": "",
+          "place": "ecuador/banos-waterfalls"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Quito Airport (UIO)",
+          "to": "Quito hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Quito",
+          "to": "Cotopaxi lodge",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Private driver or tourist bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cotopaxi lodge",
+          "to": "Banos",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Private driver or tourist bus",
+          "notes": "The route passes the Quilotoa loop for a lake visit.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Banos",
+          "to": "Quito Airport (UIO)",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Private driver or tourist bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ecuador-quito-galapagos-7d",
+      "title": "Quito and Galapagos in 7 Days",
+      "summary": "One night in Quito and five on Santa Cruz island with tortoises, beaches and a day cruise.",
+      "days": 7,
+      "route": "Quito > Puerto Ayora",
+      "arrive": "Quito (UIO)",
+      "depart": "Baltra (GPS)",
+      "countries": [
+        "Ecuador"
+      ],
+      "regions": [
+        "Pichincha",
+        "Galapagos"
+      ],
+      "cities": [
+        "Quito",
+        "Puerto Ayora"
+      ],
+      "imageQuery": "Galapagos giant tortoise",
+      "highlights": [
+        "Quito old town",
+        "Darwin Station",
+        "Giant tortoises",
+        "Tortuga Bay",
+        "Bartolome"
+      ],
+      "destinationKeys": [
+        "ecuador",
+        "ecuador/pichincha",
+        "ecuador/quito",
+        "ecuador/galapagos",
+        "ecuador/puerto-ayora"
+      ],
+      "hero": "ecuador/galapagos",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Travellocal",
+        "Rickshaw Travel",
+        "Gray Line Ecuador"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "adventure",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Quito",
+          "hotel": "Hotel in Quito",
+          "start": 0,
+          "nights": 1,
+          "area": "In the old town for history, or La Mariscal for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Ayora",
+          "hotel": "Hotel in Puerto Ayora",
+          "start": 1,
+          "nights": 5,
+          "area": "In Puerto Ayora near the harbour, with restaurants and tour offices",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Quito old town and Panecillo",
+          "notes": "Go slowly at 2,850 metres.",
+          "where": "Quito",
+          "book": "",
+          "place": "ecuador/quito-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Charles Darwin Station and Puerto Ayora",
+          "notes": "See the giant tortoise breeding centre.",
+          "where": "Puerto Ayora",
+          "book": "",
+          "place": "ecuador/darwin-station"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Highlands tortoises and lava tunnel",
+          "notes": "Rubber boots are lent at the reserve.",
+          "where": "Santa Cruz",
+          "book": "",
+          "place": "ecuador/tortoise-highlands"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Tortuga Bay beach",
+          "notes": "Bring water; limited shade.",
+          "where": "Puerto Ayora",
+          "book": "",
+          "place": "ecuador/tortuga-bay"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "9h",
+          "name": "Bartolome day cruise",
+          "notes": "Includes a summit walk and snorkelling.",
+          "where": "Bartolome",
+          "book": "Yes - book a licensed cruise",
+          "place": "ecuador/bartolome"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Quito Airport (UIO)",
+          "to": "Quito hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Quito hotel",
+          "to": "Quito Airport (UIO)",
+          "time": "06:00",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The Galapagos flight goes via Guayaquil; carry the transit card and pay the park fee.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Baltra Airport (GPS)",
+          "to": "Puerto Ayora hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Puerto Ayora hotel",
+          "to": "Baltra Airport (GPS)",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ecuador-andes-cuenca-8d",
+      "title": "Ecuador Andes and Cuenca in 8 Days",
+      "summary": "Quito, Cotopaxi, Banos and the colonial city of Cuenca.",
+      "days": 8,
+      "route": "Quito > Cotopaxi > Banos > Cuenca",
+      "arrive": "Quito (UIO)",
+      "depart": "Cuenca (CUE)",
+      "countries": [
+        "Ecuador"
+      ],
+      "regions": [
+        "Pichincha",
+        "Tungurahua",
+        "Azuay"
+      ],
+      "cities": [
+        "Quito",
+        "Cotopaxi",
+        "Banos",
+        "Cuenca"
+      ],
+      "imageQuery": "Cuenca Ecuador cathedral dome",
+      "highlights": [
+        "Quito",
+        "Cotopaxi",
+        "Banos",
+        "Cuenca",
+        "Cajas"
+      ],
+      "destinationKeys": [
+        "ecuador",
+        "ecuador/pichincha",
+        "ecuador/quito",
+        "ecuador/cotopaxi",
+        "ecuador/tungurahua",
+        "ecuador/banos",
+        "ecuador/azuay",
+        "ecuador/cuenca"
+      ],
+      "hero": "ecuador/azuay",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Travellocal",
+        "Rickshaw Travel",
+        "Gray Line Ecuador"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Quito",
+          "hotel": "Hotel in Quito",
+          "start": 0,
+          "nights": 2,
+          "area": "In the old town for history, or La Mariscal for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cotopaxi",
+          "hotel": "Lodge near Cotopaxi",
+          "start": 2,
+          "nights": 1,
+          "area": "In a hacienda-style lodge beside the park, with mountain views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banos",
+          "hotel": "Hotel in Banos",
+          "start": 3,
+          "nights": 2,
+          "area": "In Banos town, a short walk from the thermal baths",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cuenca",
+          "hotel": "Hotel in Cuenca",
+          "start": 5,
+          "nights": 2,
+          "area": "In the historic centre, a short walk to the cathedral and river",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Quito old town and Panecillo",
+          "notes": "Go slowly at 2,850 metres.",
+          "where": "Quito",
+          "book": "",
+          "place": "ecuador/quito-old-town"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Cotopaxi National Park",
+          "notes": "Acclimatise in Quito first; weather turns quickly.",
+          "where": "Cotopaxi",
+          "book": "",
+          "place": "ecuador/cotopaxi"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Ruta de las Cascadas by bike",
+          "notes": "Ride to Pailon del Diablo; return by truck if tired.",
+          "where": "Banos",
+          "book": "",
+          "place": "ecuador/banos-waterfalls"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Cuenca historic centre and hat workshop",
+          "notes": "See the blue domes and the flower market.",
+          "where": "Cuenca",
+          "book": "",
+          "place": "ecuador/cuenca-old-town"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Cajas National Park lakes",
+          "notes": "Bring waterproofs; often misty.",
+          "where": "Cajas",
+          "book": "",
+          "place": "ecuador/cajas"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Quito Airport (UIO)",
+          "to": "Quito hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Quito",
+          "to": "Cotopaxi lodge",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Private driver or tourist bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cotopaxi lodge",
+          "to": "Banos",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Private driver or tourist bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Banos",
+          "to": "Cuenca",
+          "time": "07:30",
+          "minutes": 480,
+          "carrier": "Private driver or tourist bus",
+          "notes": "A long day; flights via Quito or Guayaquil are an alternative.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Cuenca hotel",
+          "to": "Cuenca Airport (CUE)",
+          "time": "11:00",
+          "minutes": 15,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ecuador-quito-banos-cuenca-galapagos-10d",
+      "title": "Ecuador Andes and Galapagos in 10 Days",
+      "summary": "Quito, Banos, Cuenca and a flight to Santa Cruz island.",
+      "days": 10,
+      "route": "Quito > Banos > Cuenca > Puerto Ayora",
+      "arrive": "Quito (UIO)",
+      "depart": "Baltra (GPS)",
+      "countries": [
+        "Ecuador"
+      ],
+      "regions": [
+        "Pichincha",
+        "Tungurahua",
+        "Azuay",
+        "Galapagos"
+      ],
+      "cities": [
+        "Quito",
+        "Banos",
+        "Cuenca",
+        "Puerto Ayora"
+      ],
+      "imageQuery": "Galapagos Tortuga Bay iguana",
+      "highlights": [
+        "Otavalo market",
+        "Banos",
+        "Cuenca",
+        "Tortoises",
+        "Bartolome"
+      ],
+      "destinationKeys": [
+        "ecuador",
+        "ecuador/pichincha",
+        "ecuador/quito",
+        "ecuador/tungurahua",
+        "ecuador/banos",
+        "ecuador/azuay",
+        "ecuador/cuenca",
+        "ecuador/galapagos",
+        "ecuador/puerto-ayora"
+      ],
+      "hero": "ecuador/puerto-ayora",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Travellocal",
+        "Rickshaw Travel",
+        "Gray Line Ecuador"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Quito",
+          "hotel": "Hotel in Quito",
+          "start": 0,
+          "nights": 2,
+          "area": "In the old town for history, or La Mariscal for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banos",
+          "hotel": "Hotel in Banos",
+          "start": 2,
+          "nights": 2,
+          "area": "In Banos town, a short walk from the thermal baths",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cuenca",
+          "hotel": "Hotel in Cuenca",
+          "start": 4,
+          "nights": 2,
+          "area": "In the historic centre, a short walk to the cathedral and river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Ayora",
+          "hotel": "Hotel in Puerto Ayora",
+          "start": 6,
+          "nights": 3,
+          "area": "In Puerto Ayora near the harbour, with restaurants and tour offices",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Quito old town and Panecillo",
+          "notes": "Go slowly at 2,850 metres.",
+          "where": "Quito",
+          "book": "",
+          "place": "ecuador/quito-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Mitad del Mundo and Intinan Museum",
+          "notes": "A short half-day north of Quito.",
+          "where": "Mitad del Mundo",
+          "book": "",
+          "place": "ecuador/mitad-del-mundo"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Ruta de las Cascadas by bike",
+          "notes": "Ride to Pailon del Diablo; return by truck if tired.",
+          "where": "Banos",
+          "book": "",
+          "place": "ecuador/banos-waterfalls"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Cuenca historic centre and hat workshop",
+          "notes": "See the blue domes and the flower market.",
+          "where": "Cuenca",
+          "book": "",
+          "place": "ecuador/cuenca-old-town"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Charles Darwin Station and Puerto Ayora",
+          "notes": "See the giant tortoise breeding centre.",
+          "where": "Puerto Ayora",
+          "book": "",
+          "place": "ecuador/darwin-station"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Highlands tortoises and lava tunnel",
+          "notes": "Rubber boots are lent at the reserve.",
+          "where": "Santa Cruz",
+          "book": "",
+          "place": "ecuador/tortoise-highlands"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Quito Airport (UIO)",
+          "to": "Quito hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Quito",
+          "to": "Banos",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Private driver or tourist bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Banos",
+          "to": "Cuenca",
+          "time": "07:30",
+          "minutes": 480,
+          "carrier": "Private driver or tourist bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Cuenca hotel",
+          "to": "Cuenca Airport (CUE)",
+          "time": "06:30",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight goes via Guayaquil; pay the park fee on arrival.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Baltra Airport (GPS)",
+          "to": "Puerto Ayora hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Puerto Ayora hotel",
+          "to": "Baltra Airport (GPS)",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ecuador-complete-12d",
+      "title": "Complete Ecuador in 12 Days",
+      "summary": "Quito with Otavalo, Cotopaxi, Banos, Cuenca and the Galapagos.",
+      "days": 12,
+      "route": "Quito > Cotopaxi > Banos > Cuenca > Puerto Ayora",
+      "arrive": "Quito (UIO)",
+      "depart": "Baltra (GPS)",
+      "countries": [
+        "Ecuador"
+      ],
+      "regions": [
+        "Pichincha",
+        "Tungurahua",
+        "Azuay",
+        "Galapagos"
+      ],
+      "cities": [
+        "Quito",
+        "Cotopaxi",
+        "Banos",
+        "Cuenca",
+        "Puerto Ayora"
+      ],
+      "imageQuery": "Ecuador Quilotoa lake",
+      "highlights": [
+        "Otavalo",
+        "Cotopaxi",
+        "Quilotoa",
+        "Cuenca",
+        "Galapagos tortoises"
+      ],
+      "destinationKeys": [
+        "ecuador",
+        "ecuador/pichincha",
+        "ecuador/quito",
+        "ecuador/cotopaxi",
+        "ecuador/tungurahua",
+        "ecuador/banos",
+        "ecuador/azuay",
+        "ecuador/cuenca",
+        "ecuador/galapagos",
+        "ecuador/puerto-ayora"
+      ],
+      "hero": "ecuador/quito",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Travellocal",
+        "Rickshaw Travel",
+        "Gray Line Ecuador"
+      ],
+      "pace": "F",
+      "interests": [
+        "outdoors",
+        "culture",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Quito",
+          "hotel": "Hotel in Quito",
+          "start": 0,
+          "nights": 3,
+          "area": "In the old town for history, or La Mariscal for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cotopaxi",
+          "hotel": "Lodge near Cotopaxi",
+          "start": 3,
+          "nights": 1,
+          "area": "In a hacienda-style lodge beside the park, with mountain views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banos",
+          "hotel": "Hotel in Banos",
+          "start": 4,
+          "nights": 2,
+          "area": "In Banos town, a short walk from the thermal baths",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cuenca",
+          "hotel": "Hotel in Cuenca",
+          "start": 6,
+          "nights": 2,
+          "area": "In the historic centre, a short walk to the cathedral and river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Ayora",
+          "hotel": "Hotel in Puerto Ayora",
+          "start": 8,
+          "nights": 3,
+          "area": "In Puerto Ayora near the harbour, with restaurants and tour offices",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Quito old town and Panecillo",
+          "notes": "Go slowly at 2,850 metres.",
+          "where": "Quito",
+          "book": "",
+          "place": "ecuador/quito-old-town"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Otavalo market and Cuicocha Lake",
+          "notes": "The Saturday market is the largest.",
+          "where": "Otavalo",
+          "book": "",
+          "place": "ecuador/otavalo-market"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Cotopaxi National Park",
+          "notes": "Acclimatise in Quito first; weather turns quickly.",
+          "where": "Cotopaxi",
+          "book": "",
+          "place": "ecuador/cotopaxi"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "11:30",
+          "duration": "3h",
+          "name": "Quilotoa crater lake",
+          "notes": "The climb back from the shore is steep; mules are available.",
+          "where": "Quilotoa",
+          "book": "",
+          "place": "ecuador/quilotoa"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Ruta de las Cascadas by bike",
+          "notes": "Ride to Pailon del Diablo; return by truck if tired.",
+          "where": "Banos",
+          "book": "",
+          "place": "ecuador/banos-waterfalls"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Cuenca historic centre and hat workshop",
+          "notes": "See the blue domes and the flower market.",
+          "where": "Cuenca",
+          "book": "",
+          "place": "ecuador/cuenca-old-town"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Charles Darwin Station and Puerto Ayora",
+          "notes": "See the giant tortoise breeding centre.",
+          "where": "Puerto Ayora",
+          "book": "",
+          "place": "ecuador/darwin-station"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "9h",
+          "name": "Bartolome day cruise",
+          "notes": "Includes a summit walk and snorkelling.",
+          "where": "Bartolome",
+          "book": "Yes - book a licensed cruise",
+          "place": "ecuador/bartolome"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Quito Airport (UIO)",
+          "to": "Quito hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Quito",
+          "to": "Cotopaxi lodge",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Private driver or tourist bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Cotopaxi lodge",
+          "to": "Banos",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Private driver or tourist bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Banos",
+          "to": "Cuenca",
+          "time": "07:30",
+          "minutes": 480,
+          "carrier": "Private driver or tourist bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Cuenca hotel",
+          "to": "Cuenca Airport (CUE)",
+          "time": "06:30",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Baltra Airport (GPS)",
+          "to": "Puerto Ayora hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Puerto Ayora hotel",
+          "to": "Baltra Airport (GPS)",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "ecuador/quito-old-town": {
+        "name": "Quito Historic Centre and Teleferiqo",
+        "description": "A UNESCO colonial old town and a cable car to a 4,000-metre volcano ridge.",
+        "details": "Quito old town has plazas, baroque churches such as La Compania and views from the Panecillo hill. The Teleferiqo cable car climbs Pichincha volcano to about 4,000 metres. Take it slowly, because Quito is at 2,850 metres and altitude is noticeable.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ecuador/mitad-del-mundo": {
+        "name": "Middle of the World",
+        "description": "The monument and museum on the equator line north of Quito.",
+        "details": "The Mitad del Mundo complex marks the equator with a monument and a museum, though the true line found by GPS is nearby at the Intinan Museum. Visitors can balance an egg or watch water swirl. It is a short half-day trip from Quito.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ecuador/otavalo-market": {
+        "name": "Otavalo Market and Cuicocha Lake",
+        "description": "A famous indigenous market of textiles and crafts, with a crater lake nearby.",
+        "details": "The Saturday market in Otavalo is the largest in the Andes for woven textiles, jewellery and crafts, with a smaller market on other days. Cuicocha is a crater lake with a walking trail. The town is two hours north of Quito.",
+        "interests": [
+          "authentic_local",
+          "culture",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ecuador/cotopaxi": {
+        "name": "Cotopaxi National Park",
+        "description": "One of the highest active volcanoes in the world, with a visitor centre, lake and trails.",
+        "details": "Cotopaxi rises to 5,897 metres. Day visits drive to the car park at about 4,500 metres and walk to the Jose Ribas refuge, and cycling downhill is popular. Altitude sickness is a risk, so acclimatise first in Quito. Weather changes fast, and the cone is often hidden.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "ecuador/quilotoa": {
+        "name": "Quilotoa Lake",
+        "description": "A turquoise crater lake at 3,900 metres, with a steep hike to the shore.",
+        "details": "Quilotoa is a volcanic crater filled with a green-blue lake, reached from the rim by a steep path of about 30 minutes down and a harder walk back up. Mules can carry tired hikers. Dress warmly, because the rim is cold and windy.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "ecuador/banos-waterfalls": {
+        "name": "Banos waterfalls and thermal baths",
+        "description": "An adventure town in a river valley, famed for waterfalls, hot springs and the Swing at the End of the World.",
+        "details": "Banos sits at the foot of Tungurahua volcano. The Ruta de las Cascadas by bike or bus reaches the Pailon del Diablo waterfall. Evenings are for thermal baths, and the town offers canyoning, rafting and ziplining. Check the volcano activity status.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ecuador/cuenca-old-town": {
+        "name": "Cuenca historic centre",
+        "description": "A colonial city of domed cathedral, flower market and Panama hat workshops.",
+        "details": "Cuenca is a UNESCO city with a river, cobbled streets and the blue-domed New Cathedral. Panama hats are made here, not in Panama, and workshops show the process. The Pumapungo museum has Inca ruins and a bird park.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ecuador/cajas": {
+        "name": "Cajas National Park",
+        "description": "A high moorland of hundreds of glacial lakes, near Cuenca.",
+        "details": "Cajas lies at over 3,000 metres, with lakes, rocky paths and polylepis forest. Short and long trails are marked. Weather is cold and often misty, so bring waterproofs. It is half an hour from Cuenca.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ecuador/darwin-station": {
+        "name": "Charles Darwin Research Station",
+        "description": "A research centre in Puerto Ayora, with giant tortoise breeding and land iguanas.",
+        "details": "The Darwin Station shows the conservation work for giant tortoises. Walk there from Puerto Ayora along a path past cacti, and see tortoises of different ages. Fish market sea lions are a free show at the harbour.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ecuador/tortoise-highlands": {
+        "name": "Santa Cruz highlands tortoises and lava tunnels",
+        "description": "Giant tortoises in the wild on farmland, and a tunnel formed by lava.",
+        "details": "The highlands of Santa Cruz are home to free-roaming giant tortoises on private reserves, seen from a few metres. Nearby are the Los Gemelos twin craters and a lava tunnel to walk through. Wear rubber boots, which reserves lend.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ecuador/tortuga-bay": {
+        "name": "Tortuga Bay",
+        "description": "A white-sand beach where marine iguanas and sea turtles gather, reached by a long path.",
+        "details": "The 2.5-kilometre path from Puerto Ayora leads to Tortuga Bay, where marine iguanas rest on the sand and swimming is allowed at the calm lagoon further along. Bring water and sun protection, as there is little shade.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ecuador/bartolome": {
+        "name": "Bartolome and North Seymour day trip",
+        "description": "A volcanic island with a famous summit view, penguins and snorkelling.",
+        "details": "Day cruises from Santa Cruz visit Bartolome, with a boardwalk to the summit and a view of Pinnacle Rock, and snorkelling with penguins and sea turtles. Another option is North Seymour for frigatebirds and blue-footed boobies. Tours need a licensed guide.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "ecuador": {
+        "name": "Ecuador",
+        "description": "A compact country of volcanoes, Andean markets, Amazon rainforest and the Galapagos.",
+        "images": []
+      },
+      "ecuador/pichincha": {
+        "name": "Pichincha",
+        "description": "The province of Quito and the equator.",
+        "images": []
+      },
+      "ecuador/quito": {
+        "name": "Quito",
+        "description": "The high-altitude capital with a UNESCO old town.",
+        "images": []
+      },
+      "ecuador/cotopaxi": {
+        "name": "Cotopaxi",
+        "description": "The province and volcano south of Quito.",
+        "images": []
+      },
+      "ecuador/tungurahua": {
+        "name": "Tungurahua",
+        "description": "The province that includes Banos.",
+        "images": []
+      },
+      "ecuador/banos": {
+        "name": "Banos",
+        "description": "An adventure town in a valley of waterfalls and hot springs.",
+        "images": []
+      },
+      "ecuador/azuay": {
+        "name": "Azuay",
+        "description": "The southern Andean province of Cuenca.",
+        "images": []
+      },
+      "ecuador/cuenca": {
+        "name": "Cuenca",
+        "description": "A colonial city of domes and Panama hats.",
+        "images": []
+      },
+      "ecuador/galapagos": {
+        "name": "Galapagos",
+        "description": "The island province where evolution can be seen in giant tortoises and sea lions.",
+        "images": []
+      },
+      "ecuador/puerto-ayora": {
+        "name": "Puerto Ayora",
+        "description": "The main town of Santa Cruz island and base for day trips.",
+        "images": []
+      }
+    }
+  }
+}

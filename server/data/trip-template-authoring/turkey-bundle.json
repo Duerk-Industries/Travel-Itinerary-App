@@ -1,0 +1,2749 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, Lonely Planet, TravelStride and Magnificent Travel itineraries for Turkey",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "turkey-istanbul-cappadocia-7d",
+      "title": "Istanbul and Cappadocia in 7 Days",
+      "summary": "Three nights among Istanbul's mosques, palaces and bazaars, then a flight to Cappadocia for a balloon flight, rock churches and an underground city.",
+      "days": 7,
+      "route": "Istanbul > Cappadocia",
+      "arrive": "Istanbul (IST)",
+      "depart": "Nevşehir (NAV)",
+      "countries": [
+        "Turkey"
+      ],
+      "regions": [
+        "Istanbul",
+        "Nevşehir"
+      ],
+      "cities": [
+        "Istanbul",
+        "Göreme"
+      ],
+      "imageQuery": "Cappadocia hot air balloons Göreme Turkey",
+      "highlights": [
+        "Hagia Sophia",
+        "Topkapı Palace",
+        "Hot-air balloon",
+        "Göreme Open Air Museum",
+        "Derinkuyu"
+      ],
+      "destinationKeys": [
+        "turkey",
+        "turkey/istanbul",
+        "turkey/nevsehir",
+        "turkey/goreme"
+      ],
+      "hero": "turkey/goreme",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "TravelStride itinerary library",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Istanbul",
+          "hotel": "Hotel in Istanbul",
+          "start": 0,
+          "nights": 3,
+          "area": "In Sultanahmet to walk to the old city sights, or in Karaköy and Beyoğlu for restaurants and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Göreme",
+          "hotel": "Hotel in Göreme",
+          "start": 3,
+          "nights": 3,
+          "area": "In Göreme itself, ideally a cave hotel with a terrace for balloon views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Galata Tower and Karaköy",
+          "notes": "Queues are long at midday; the lanes below are cobbled and steep.",
+          "where": "Galata, Istanbul",
+          "book": "",
+          "place": "turkey/galata-tower"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Hagia Sophia",
+          "notes": "Dress modestly; visiting arrangements change, so check current rules and prayer times.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/hagia-sophia"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Blue Mosque",
+          "notes": "Closed to visitors at prayer times; modest dress and no shoes inside.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/blue-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Basilica Cistern",
+          "notes": "Cool and damp, but crowded at midday; book online.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/basilica-cistern"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Grand Bazaar",
+          "notes": "Closed on Sundays; note your gate, as it is easy to get lost.",
+          "where": "Beyazıt, Istanbul",
+          "book": "",
+          "place": "turkey/grand-bazaar"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Topkapı Palace",
+          "notes": "Closed on Tuesdays; the Harem needs a separate ticket, and queues build quickly.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/topkapi-palace"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bosphorus cruise",
+          "notes": "A public ferry is a local alternative to private tours; bring a jacket.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/bosphorus-cruise"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sunset at Uçhisar Castle",
+          "notes": "The steps are narrow and uneven; wear grippy shoes.",
+          "where": "Uçhisar, Cappadocia",
+          "book": "",
+          "place": "turkey/uchisar-castle"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3h",
+          "name": "Hot-air balloon flight",
+          "notes": "Flights are cancelled in strong wind, so book the first morning and keep a spare one; dress in layers.",
+          "where": "Göreme, Cappadocia",
+          "book": "Yes - book balloons well ahead",
+          "place": "turkey/hot-air-balloon"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Göreme Open Air Museum",
+          "notes": "Go early to avoid groups; photography is limited inside some churches.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/goreme-open-air-museum"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Avanos pottery workshop",
+          "notes": "Look at the quality before buying; some workshops offer a go on the wheel.",
+          "where": "Avanos",
+          "book": "",
+          "place": "turkey/avanos-pottery"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Red and Rose Valley hike",
+          "notes": "Little shade; take water and sun protection.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/red-rose-valley"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "2h",
+          "name": "Derinkuyu underground city",
+          "notes": "Tunnels are low and narrow, so not for the claustrophobic.",
+          "where": "Derinkuyu",
+          "book": "",
+          "place": "turkey/derinkuyu"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Istanbul Airport (IST)",
+          "to": "Istanbul hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Havabus, taxi or pre-booked transfer",
+          "notes": "Traffic can be heavy; a pre-booked transfer avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Istanbul hotel area",
+          "to": "Istanbul Airport (IST)",
+          "time": "07:30",
+          "minutes": 75,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow time for traffic; the airport is far from the old city.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Nevşehir Kapadokya Airport (NAV)",
+          "to": "Göreme",
+          "time": "10:30",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Shuttle buses meet most flights.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Göreme",
+          "to": "Nevşehir Kapadokya Airport (NAV)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Check the flight time and leave time for the shuttle.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "turkey-istanbul-cappadocia-ephesus-7d",
+      "title": "Istanbul, Cappadocia and Ephesus in 7 Days",
+      "summary": "A fast tour of three highlights: Istanbul's old city, a day in Cappadocia and the ancient city of Ephesus on the Aegean coast.",
+      "days": 7,
+      "route": "Istanbul > Cappadocia > Selçuk",
+      "arrive": "Istanbul (IST)",
+      "depart": "İzmir (ADB)",
+      "countries": [
+        "Turkey"
+      ],
+      "regions": [
+        "Istanbul",
+        "Nevşehir",
+        "İzmir"
+      ],
+      "cities": [
+        "Istanbul",
+        "Göreme",
+        "Selçuk"
+      ],
+      "imageQuery": "Ephesus Library of Celsus Turkey",
+      "highlights": [
+        "Hagia Sophia",
+        "Bosphorus cruise",
+        "Uçhisar sunset",
+        "Ephesus",
+        "Şirince"
+      ],
+      "destinationKeys": [
+        "turkey",
+        "turkey/istanbul",
+        "turkey/nevsehir",
+        "turkey/goreme",
+        "turkey/izmir",
+        "turkey/selcuk"
+      ],
+      "hero": "turkey/selcuk",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "TravelStride itinerary library",
+        "Magnificent Travel"
+      ],
+      "pace": "F",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Istanbul",
+          "hotel": "Hotel in Istanbul",
+          "start": 0,
+          "nights": 2,
+          "area": "In Sultanahmet to walk to the old city sights, or in Karaköy and Beyoğlu for restaurants and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Göreme",
+          "hotel": "Hotel in Göreme",
+          "start": 2,
+          "nights": 2,
+          "area": "In Göreme itself, ideally a cave hotel with a terrace for balloon views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Selçuk",
+          "hotel": "Hotel in Selçuk",
+          "start": 4,
+          "nights": 2,
+          "area": "In Selçuk town, close to the station, restaurants and the road to Ephesus",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Galata Tower and Karaköy",
+          "notes": "Queues are long at midday; the lanes below are cobbled and steep.",
+          "where": "Galata, Istanbul",
+          "book": "",
+          "place": "turkey/galata-tower"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Hagia Sophia",
+          "notes": "Dress modestly; visiting arrangements change, so check current rules and prayer times.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/hagia-sophia"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Blue Mosque",
+          "notes": "Closed to visitors at prayer times; modest dress and no shoes inside.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/blue-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Basilica Cistern",
+          "notes": "Cool and damp, but crowded at midday; book online.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/basilica-cistern"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Grand Bazaar",
+          "notes": "Closed on Sundays; note your gate, as it is easy to get lost.",
+          "where": "Beyazıt, Istanbul",
+          "book": "",
+          "place": "turkey/grand-bazaar"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sunset at Uçhisar Castle",
+          "notes": "The steps are narrow and uneven; wear grippy shoes.",
+          "where": "Uçhisar, Cappadocia",
+          "book": "",
+          "place": "turkey/uchisar-castle"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3h",
+          "name": "Hot-air balloon flight",
+          "notes": "Flights are cancelled in strong wind, so book the first morning; dress in layers.",
+          "where": "Göreme, Cappadocia",
+          "book": "Yes - book balloons well ahead",
+          "place": "turkey/hot-air-balloon"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Göreme Open Air Museum",
+          "notes": "Go early to avoid groups.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/goreme-open-air-museum"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Derinkuyu underground city",
+          "notes": "Tunnels are low and narrow, so not for the claustrophobic.",
+          "where": "Derinkuyu",
+          "book": "",
+          "place": "turkey/derinkuyu"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Şirince village",
+          "notes": "Busy with groups at midday and calm in the evening; fruit wines are the speciality.",
+          "where": "Şirince",
+          "book": "",
+          "place": "turkey/sirince"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Ephesus",
+          "notes": "Little shade and heat builds fast; take a taxi to the upper gate and walk downhill.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Terrace Houses of Ephesus",
+          "notes": "A separate ticket is needed; numbers on the walkways are limited.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus-terrace-houses"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Istanbul Airport (IST)",
+          "to": "Istanbul hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Havabus, taxi or pre-booked transfer",
+          "notes": "Traffic can be heavy; a pre-booked transfer avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Istanbul hotel area",
+          "to": "Istanbul Airport (IST)",
+          "time": "07:30",
+          "minutes": 75,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow time for traffic; the airport is far from the old city.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Nevşehir Kapadokya Airport (NAV)",
+          "to": "Göreme",
+          "time": "10:30",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Shuttle buses meet most flights.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Göreme",
+          "to": "Nevşehir Kapadokya Airport (NAV)",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Check the flight time and leave time for the shuttle.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "İzmir Adnan Menderes Airport (ADB)",
+          "to": "Selçuk",
+          "time": "14:30",
+          "minutes": 60,
+          "carrier": "Private transfer or Havaş shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Selçuk",
+          "to": "İzmir Adnan Menderes Airport (ADB)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Private transfer",
+          "notes": "Allow two hours before a domestic flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "turkey-istanbul-cappadocia-pamukkale-ephesus-8d",
+      "title": "Istanbul, Cappadocia, Pamukkale and Ephesus in 8 Days",
+      "summary": "Istanbul and Cappadocia, then an overland swing through Pamukkale's white terraces to the ruins of Ephesus.",
+      "days": 8,
+      "route": "Istanbul > Cappadocia > Pamukkale > Selçuk",
+      "arrive": "Istanbul (IST)",
+      "depart": "İzmir (ADB)",
+      "countries": [
+        "Turkey"
+      ],
+      "regions": [
+        "Istanbul",
+        "Nevşehir",
+        "Denizli",
+        "İzmir"
+      ],
+      "cities": [
+        "Istanbul",
+        "Göreme",
+        "Pamukkale",
+        "Selçuk"
+      ],
+      "imageQuery": "Pamukkale travertines Turkey",
+      "highlights": [
+        "Hagia Sophia",
+        "Cappadocia balloons",
+        "Pamukkale",
+        "Hierapolis",
+        "Ephesus"
+      ],
+      "destinationKeys": [
+        "turkey",
+        "turkey/istanbul",
+        "turkey/nevsehir",
+        "turkey/goreme",
+        "turkey/denizli",
+        "turkey/pamukkale",
+        "turkey/izmir",
+        "turkey/selcuk"
+      ],
+      "hero": "turkey/pamukkale",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "TravelStride itinerary library",
+        "Magnificent Travel"
+      ],
+      "pace": "F",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Istanbul",
+          "hotel": "Hotel in Istanbul",
+          "start": 0,
+          "nights": 2,
+          "area": "In Sultanahmet to walk to the old city sights, or in Karaköy and Beyoğlu for restaurants and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Göreme",
+          "hotel": "Hotel in Göreme",
+          "start": 2,
+          "nights": 2,
+          "area": "In Göreme itself, ideally a cave hotel with a terrace for balloon views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pamukkale",
+          "hotel": "Hotel in Pamukkale",
+          "start": 4,
+          "nights": 1,
+          "area": "In Pamukkale village, close to the terraces and the entrance gates",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Selçuk",
+          "hotel": "Hotel in Selçuk",
+          "start": 5,
+          "nights": 2,
+          "area": "In Selçuk town, close to the station, restaurants and the road to Ephesus",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Galata Tower and Karaköy",
+          "notes": "Queues are long at midday; the lanes below are cobbled and steep.",
+          "where": "Galata, Istanbul",
+          "book": "",
+          "place": "turkey/galata-tower"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Hagia Sophia",
+          "notes": "Dress modestly; visiting arrangements change, so check current rules and prayer times.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/hagia-sophia"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Blue Mosque",
+          "notes": "Closed to visitors at prayer times; modest dress and no shoes inside.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/blue-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Basilica Cistern",
+          "notes": "Cool and damp, but crowded at midday; book online.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/basilica-cistern"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Grand Bazaar",
+          "notes": "Closed on Sundays; note your gate, as it is easy to get lost.",
+          "where": "Beyazıt, Istanbul",
+          "book": "",
+          "place": "turkey/grand-bazaar"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sunset at Uçhisar Castle",
+          "notes": "The steps are narrow and uneven; wear grippy shoes.",
+          "where": "Uçhisar, Cappadocia",
+          "book": "",
+          "place": "turkey/uchisar-castle"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3h",
+          "name": "Hot-air balloon flight",
+          "notes": "Flights are cancelled in strong wind, so book the first morning; dress in layers.",
+          "where": "Göreme, Cappadocia",
+          "book": "Yes - book balloons well ahead",
+          "place": "turkey/hot-air-balloon"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Göreme Open Air Museum",
+          "notes": "Go early to avoid groups.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/goreme-open-air-museum"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Red and Rose Valley hike",
+          "notes": "Little shade; take water and sun protection.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/red-rose-valley"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "07:30",
+          "duration": "2.5h",
+          "name": "Pamukkale travertines and Hierapolis",
+          "notes": "Walk barefoot on the terraces; late afternoon is cooler and less crowded.",
+          "where": "Pamukkale",
+          "book": "",
+          "place": "turkey/pamukkale-hierapolis"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Şirince village",
+          "notes": "Busy with groups at midday and calm in the evening; fruit wines are the speciality.",
+          "where": "Şirince",
+          "book": "",
+          "place": "turkey/sirince"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Ephesus",
+          "notes": "Little shade and heat builds fast; take a taxi to the upper gate and walk downhill.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Terrace Houses of Ephesus",
+          "notes": "A separate ticket is needed; numbers on the walkways are limited.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus-terrace-houses"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Istanbul Airport (IST)",
+          "to": "Istanbul hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Havabus, taxi or pre-booked transfer",
+          "notes": "Traffic can be heavy; a pre-booked transfer avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Istanbul hotel area",
+          "to": "Istanbul Airport (IST)",
+          "time": "07:30",
+          "minutes": 75,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow time for traffic; the airport is far from the old city.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Nevşehir Kapadokya Airport (NAV)",
+          "to": "Göreme",
+          "time": "10:30",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Shuttle buses meet most flights.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Göreme",
+          "to": "Nevşehir Kapadokya Airport (NAV)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Check the flight time and leave time for the shuttle.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "İzmir Adnan Menderes Airport (ADB)",
+          "to": "Pamukkale",
+          "time": "12:30",
+          "minutes": 210,
+          "carrier": "Private transfer or rental car",
+          "notes": "A long drive inland from İzmir.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Pamukkale",
+          "to": "Selçuk",
+          "time": "10:30",
+          "minutes": 180,
+          "carrier": "Private transfer or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Selçuk",
+          "to": "İzmir Adnan Menderes Airport (ADB)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Private transfer",
+          "notes": "Allow two hours before a domestic flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "turkey-classic-cappadocia-pamukkale-ephesus-10d",
+      "title": "Classic Turkey in 10 Days",
+      "summary": "Three nights in Istanbul, three in Cappadocia with a full valley day, then Pamukkale and the Ephesus coast.",
+      "days": 10,
+      "route": "Istanbul > Cappadocia > Pamukkale > Selçuk",
+      "arrive": "Istanbul (IST)",
+      "depart": "İzmir (ADB)",
+      "countries": [
+        "Turkey"
+      ],
+      "regions": [
+        "Istanbul",
+        "Nevşehir",
+        "Denizli",
+        "İzmir"
+      ],
+      "cities": [
+        "Istanbul",
+        "Göreme",
+        "Pamukkale",
+        "Selçuk"
+      ],
+      "imageQuery": "Göreme fairy chimneys Cappadocia sunrise",
+      "highlights": [
+        "Hagia Sophia",
+        "Topkapı Palace",
+        "Hot-air balloon",
+        "Pamukkale",
+        "Ephesus"
+      ],
+      "destinationKeys": [
+        "turkey",
+        "turkey/istanbul",
+        "turkey/nevsehir",
+        "turkey/goreme",
+        "turkey/denizli",
+        "turkey/pamukkale",
+        "turkey/izmir",
+        "turkey/selcuk"
+      ],
+      "hero": "turkey/istanbul",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "TravelStride itinerary library",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Istanbul",
+          "hotel": "Hotel in Istanbul",
+          "start": 0,
+          "nights": 3,
+          "area": "In Sultanahmet to walk to the old city sights, or in Karaköy and Beyoğlu for restaurants and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Göreme",
+          "hotel": "Hotel in Göreme",
+          "start": 3,
+          "nights": 3,
+          "area": "In Göreme itself, ideally a cave hotel with a terrace for balloon views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pamukkale",
+          "hotel": "Hotel in Pamukkale",
+          "start": 6,
+          "nights": 1,
+          "area": "In Pamukkale village, close to the terraces and the entrance gates",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Selçuk",
+          "hotel": "Hotel in Selçuk",
+          "start": 7,
+          "nights": 2,
+          "area": "In Selçuk town, close to the station, restaurants and the road to Ephesus",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Galata Tower and Karaköy",
+          "notes": "Queues are long at midday; the lanes below are cobbled and steep.",
+          "where": "Galata, Istanbul",
+          "book": "",
+          "place": "turkey/galata-tower"
+        },
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Spice Bazaar",
+          "notes": "Closes in the early evening; sample before buying.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/spice-bazaar"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Hagia Sophia",
+          "notes": "Dress modestly; visiting arrangements change, so check current rules and prayer times.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/hagia-sophia"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Blue Mosque",
+          "notes": "Closed to visitors at prayer times; modest dress and no shoes inside.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/blue-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Basilica Cistern",
+          "notes": "Cool and damp, but crowded at midday; book online.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/basilica-cistern"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Grand Bazaar",
+          "notes": "Closed on Sundays; note your gate, as it is easy to get lost.",
+          "where": "Beyazıt, Istanbul",
+          "book": "",
+          "place": "turkey/grand-bazaar"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Topkapı Palace",
+          "notes": "Closed on Tuesdays; the Harem needs a separate ticket, and queues build quickly.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/topkapi-palace"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bosphorus cruise",
+          "notes": "A public ferry is a local alternative to private tours; bring a jacket.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/bosphorus-cruise"
+        },
+        {
+          "day": 2,
+          "type": "Spa/Wellness",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Turkish bath (hammam)",
+          "notes": "Book ahead; sections are usually separate for men and women.",
+          "where": "Çağaloğlu, Istanbul",
+          "book": "Yes - book the bathhouse in advance",
+          "place": "turkey/hammam-experience"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sunset at Uçhisar Castle",
+          "notes": "The steps are narrow and uneven; wear grippy shoes.",
+          "where": "Uçhisar, Cappadocia",
+          "book": "",
+          "place": "turkey/uchisar-castle"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3h",
+          "name": "Hot-air balloon flight",
+          "notes": "Flights are cancelled in strong wind, so book the first morning and keep a spare one; dress in layers.",
+          "where": "Göreme, Cappadocia",
+          "book": "Yes - book balloons well ahead",
+          "place": "turkey/hot-air-balloon"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Göreme Open Air Museum",
+          "notes": "Go early to avoid groups; photography is limited inside some churches.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/goreme-open-air-museum"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Avanos pottery workshop",
+          "notes": "Look at the quality before buying; some workshops offer a go on the wheel.",
+          "where": "Avanos",
+          "book": "",
+          "place": "turkey/avanos-pottery"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Red and Rose Valley hike",
+          "notes": "Little shade; take water and sun protection.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/red-rose-valley"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "2h",
+          "name": "Derinkuyu underground city",
+          "notes": "Tunnels are low and narrow, so not for the claustrophobic.",
+          "where": "Derinkuyu",
+          "book": "",
+          "place": "turkey/derinkuyu"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "07:30",
+          "duration": "2.5h",
+          "name": "Pamukkale travertines and Hierapolis",
+          "notes": "Walk barefoot on the terraces; late afternoon is cooler and less crowded.",
+          "where": "Pamukkale",
+          "book": "",
+          "place": "turkey/pamukkale-hierapolis"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Şirince village",
+          "notes": "Busy with groups at midday and calm in the evening; fruit wines are the speciality.",
+          "where": "Şirince",
+          "book": "",
+          "place": "turkey/sirince"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Ephesus",
+          "notes": "Little shade and heat builds fast; take a taxi to the upper gate and walk downhill.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Terrace Houses of Ephesus",
+          "notes": "A separate ticket is needed; numbers on the walkways are limited.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus-terrace-houses"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Istanbul Airport (IST)",
+          "to": "Istanbul hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Havabus, taxi or pre-booked transfer",
+          "notes": "Traffic can be heavy; a pre-booked transfer avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Istanbul hotel area",
+          "to": "Istanbul Airport (IST)",
+          "time": "07:30",
+          "minutes": 75,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow time for traffic; the airport is far from the old city.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Nevşehir Kapadokya Airport (NAV)",
+          "to": "Göreme",
+          "time": "10:30",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Shuttle buses meet most flights.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Göreme",
+          "to": "Nevşehir Kapadokya Airport (NAV)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Check the flight time and leave time for the shuttle.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "İzmir Adnan Menderes Airport (ADB)",
+          "to": "Pamukkale",
+          "time": "12:30",
+          "minutes": 210,
+          "carrier": "Private transfer or rental car",
+          "notes": "A long drive inland from İzmir.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Pamukkale",
+          "to": "Selçuk",
+          "time": "10:30",
+          "minutes": 180,
+          "carrier": "Private transfer or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Selçuk",
+          "to": "İzmir Adnan Menderes Airport (ADB)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Private transfer",
+          "notes": "Allow two hours before a domestic flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "turkey-istanbul-cappadocia-aegean-antalya-10d",
+      "title": "Istanbul, Cappadocia, Ephesus and Antalya in 10 Days",
+      "summary": "Istanbul, two nights in Cappadocia, Ephesus and Pamukkale, then two nights on the Mediterranean in Antalya.",
+      "days": 10,
+      "route": "Istanbul > Cappadocia > Selçuk > Pamukkale > Antalya",
+      "arrive": "Istanbul (IST)",
+      "depart": "Antalya (AYT)",
+      "countries": [
+        "Turkey"
+      ],
+      "regions": [
+        "Istanbul",
+        "Nevşehir",
+        "İzmir",
+        "Denizli",
+        "Antalya"
+      ],
+      "cities": [
+        "Istanbul",
+        "Göreme",
+        "Selçuk",
+        "Pamukkale",
+        "Antalya"
+      ],
+      "imageQuery": "Antalya Kaleiçi harbour Turkey",
+      "highlights": [
+        "Hagia Sophia",
+        "Cappadocia balloons",
+        "Ephesus",
+        "Pamukkale",
+        "Antalya old town"
+      ],
+      "destinationKeys": [
+        "turkey",
+        "turkey/istanbul",
+        "turkey/nevsehir",
+        "turkey/goreme",
+        "turkey/izmir",
+        "turkey/selcuk",
+        "turkey/denizli",
+        "turkey/pamukkale",
+        "turkey/antalya"
+      ],
+      "hero": "turkey/antalya",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "TravelStride itinerary library",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Istanbul",
+          "hotel": "Hotel in Istanbul",
+          "start": 0,
+          "nights": 3,
+          "area": "In Sultanahmet to walk to the old city sights, or in Karaköy and Beyoğlu for restaurants and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Göreme",
+          "hotel": "Hotel in Göreme",
+          "start": 3,
+          "nights": 2,
+          "area": "In Göreme itself, ideally a cave hotel with a terrace for balloon views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Selçuk",
+          "hotel": "Hotel in Selçuk",
+          "start": 5,
+          "nights": 1,
+          "area": "In Selçuk town, close to the station, restaurants and the road to Ephesus",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pamukkale",
+          "hotel": "Hotel in Pamukkale",
+          "start": 6,
+          "nights": 1,
+          "area": "In Pamukkale village, close to the terraces and the entrance gates",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Antalya",
+          "hotel": "Hotel in Antalya",
+          "start": 7,
+          "nights": 2,
+          "area": "In Kaleiçi, the old town, for atmosphere and walking; Lara for beach resorts",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Galata Tower and Karaköy",
+          "notes": "Queues are long at midday; the lanes below are cobbled and steep.",
+          "where": "Galata, Istanbul",
+          "book": "",
+          "place": "turkey/galata-tower"
+        },
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Spice Bazaar",
+          "notes": "Closes in the early evening; sample before buying.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/spice-bazaar"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Hagia Sophia",
+          "notes": "Dress modestly; visiting arrangements change, so check current rules and prayer times.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/hagia-sophia"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Blue Mosque",
+          "notes": "Closed to visitors at prayer times; modest dress and no shoes inside.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/blue-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Basilica Cistern",
+          "notes": "Cool and damp, but crowded at midday; book online.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/basilica-cistern"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Grand Bazaar",
+          "notes": "Closed on Sundays; note your gate, as it is easy to get lost.",
+          "where": "Beyazıt, Istanbul",
+          "book": "",
+          "place": "turkey/grand-bazaar"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Topkapı Palace",
+          "notes": "Closed on Tuesdays; the Harem needs a separate ticket, and queues build quickly.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/topkapi-palace"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bosphorus cruise",
+          "notes": "A public ferry is a local alternative to private tours; bring a jacket.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/bosphorus-cruise"
+        },
+        {
+          "day": 2,
+          "type": "Spa/Wellness",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Turkish bath (hammam)",
+          "notes": "Book ahead; sections are usually separate for men and women.",
+          "where": "Çağaloğlu, Istanbul",
+          "book": "Yes - book the bathhouse in advance",
+          "place": "turkey/hammam-experience"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sunset at Uçhisar Castle",
+          "notes": "The steps are narrow and uneven; wear grippy shoes.",
+          "where": "Uçhisar, Cappadocia",
+          "book": "",
+          "place": "turkey/uchisar-castle"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3h",
+          "name": "Hot-air balloon flight",
+          "notes": "Flights are cancelled in strong wind, so book the first morning and keep a spare one; dress in layers.",
+          "where": "Göreme, Cappadocia",
+          "book": "Yes - book balloons well ahead",
+          "place": "turkey/hot-air-balloon"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Göreme Open Air Museum",
+          "notes": "Go early to avoid groups; photography is limited inside some churches.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/goreme-open-air-museum"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Avanos pottery workshop",
+          "notes": "Look at the quality before buying; some workshops offer a go on the wheel.",
+          "where": "Avanos",
+          "book": "",
+          "place": "turkey/avanos-pottery"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Şirince village",
+          "notes": "Busy with groups at midday and calm in the evening; fruit wines are the speciality.",
+          "where": "Şirince",
+          "book": "",
+          "place": "turkey/sirince"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Ephesus",
+          "notes": "Little shade and heat builds fast; take a taxi to the upper gate and walk downhill.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Terrace Houses of Ephesus",
+          "notes": "A separate ticket is needed; numbers on the walkways are limited.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus-terrace-houses"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Pamukkale travertines and Hierapolis",
+          "notes": "Walk barefoot on the terraces; late afternoon is cooler and less crowded.",
+          "where": "Pamukkale",
+          "book": "",
+          "place": "turkey/pamukkale-hierapolis"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Kaleiçi old town",
+          "notes": "Wander lanes to the harbour and Hadrian's Gate; clifftop gardens look over the bay.",
+          "where": "Antalya",
+          "book": "",
+          "place": "turkey/antalya-kaleici"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Aspendos Roman theatre",
+          "notes": "Little shade, so go in the morning; the theatre still hosts summer performances.",
+          "where": "Aspendos, near Antalya",
+          "book": "",
+          "place": "turkey/aspendos"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Istanbul Airport (IST)",
+          "to": "Istanbul hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Havabus, taxi or pre-booked transfer",
+          "notes": "Traffic can be heavy; a pre-booked transfer avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Istanbul hotel area",
+          "to": "Istanbul Airport (IST)",
+          "time": "07:30",
+          "minutes": 75,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow time for traffic; the airport is far from the old city.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Nevşehir Kapadokya Airport (NAV)",
+          "to": "Göreme",
+          "time": "10:30",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Shuttle buses meet most flights.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Göreme",
+          "to": "Nevşehir Kapadokya Airport (NAV)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Check the flight time and leave time for the shuttle.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "İzmir Adnan Menderes Airport (ADB)",
+          "to": "Selçuk",
+          "time": "12:30",
+          "minutes": 60,
+          "carrier": "Private transfer or Havaş shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Selçuk",
+          "to": "Pamukkale",
+          "time": "13:00",
+          "minutes": 180,
+          "carrier": "Private transfer or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Pamukkale",
+          "to": "Antalya",
+          "time": "09:30",
+          "minutes": 190,
+          "carrier": "Private transfer or rental car",
+          "notes": "The route crosses the Taurus foothills and a lakes plateau.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Antalya",
+          "to": "Antalya Airport (AYT)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or shuttle",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "turkey-istanbul-aegean-antalya-10d",
+      "title": "Istanbul, Ephesus, Pamukkale and Antalya in 10 Days",
+      "summary": "A cultural coast route without Cappadocia: four nights in Istanbul, Ephesus, Pamukkale and a Mediterranean finish in Antalya.",
+      "days": 10,
+      "route": "Istanbul > Selçuk > Pamukkale > Antalya",
+      "arrive": "Istanbul (IST)",
+      "depart": "Antalya (AYT)",
+      "countries": [
+        "Turkey"
+      ],
+      "regions": [
+        "Istanbul",
+        "İzmir",
+        "Denizli",
+        "Antalya"
+      ],
+      "cities": [
+        "Istanbul",
+        "Selçuk",
+        "Pamukkale",
+        "Antalya"
+      ],
+      "imageQuery": "Ephesus ruins Selçuk Turkey Aegean",
+      "highlights": [
+        "Hagia Sophia",
+        "Bosphorus",
+        "Ephesus",
+        "Pamukkale",
+        "Aspendos"
+      ],
+      "destinationKeys": [
+        "turkey",
+        "turkey/istanbul",
+        "turkey/izmir",
+        "turkey/selcuk",
+        "turkey/denizli",
+        "turkey/pamukkale",
+        "turkey/antalya"
+      ],
+      "hero": "turkey/selcuk",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "TravelStride itinerary library",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "relax",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Istanbul",
+          "hotel": "Hotel in Istanbul",
+          "start": 0,
+          "nights": 4,
+          "area": "In Sultanahmet to walk to the old city sights, or in Karaköy and Beyoğlu for restaurants and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Selçuk",
+          "hotel": "Hotel in Selçuk",
+          "start": 4,
+          "nights": 2,
+          "area": "In Selçuk town, close to the station, restaurants and the road to Ephesus",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pamukkale",
+          "hotel": "Hotel in Pamukkale",
+          "start": 6,
+          "nights": 1,
+          "area": "In Pamukkale village, close to the terraces and the entrance gates",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Antalya",
+          "hotel": "Hotel in Antalya",
+          "start": 7,
+          "nights": 2,
+          "area": "In Kaleiçi, the old town, for atmosphere and walking; Lara for beach resorts",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Galata Tower and Karaköy",
+          "notes": "Queues are long at midday; the lanes below are cobbled and steep.",
+          "where": "Galata, Istanbul",
+          "book": "",
+          "place": "turkey/galata-tower"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Hagia Sophia",
+          "notes": "Dress modestly; visiting arrangements change, so check current rules and prayer times.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/hagia-sophia"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Blue Mosque",
+          "notes": "Closed to visitors at prayer times; modest dress and no shoes inside.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/blue-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Basilica Cistern",
+          "notes": "Cool and damp, but crowded at midday; book online.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/basilica-cistern"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Grand Bazaar",
+          "notes": "Closed on Sundays; note your gate, as it is easy to get lost.",
+          "where": "Beyazıt, Istanbul",
+          "book": "",
+          "place": "turkey/grand-bazaar"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Topkapı Palace",
+          "notes": "Closed on Tuesdays; the Harem needs a separate ticket, and queues build quickly.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/topkapi-palace"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bosphorus cruise",
+          "notes": "A public ferry is a local alternative to private tours; bring a jacket.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/bosphorus-cruise"
+        },
+        {
+          "day": 3,
+          "type": "Shopping",
+          "time": "10:00",
+          "duration": "1.5h",
+          "name": "Spice Bazaar",
+          "notes": "Sample before buying; close to the ferry docks.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/spice-bazaar"
+        },
+        {
+          "day": 3,
+          "type": "Spa/Wellness",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Turkish bath (hammam)",
+          "notes": "Book ahead; sections are usually separate for men and women.",
+          "where": "Çağaloğlu, Istanbul",
+          "book": "Yes - book the bathhouse in advance",
+          "place": "turkey/hammam-experience"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Şirince village",
+          "notes": "Busy with groups at midday and calm in the evening; fruit wines are the speciality.",
+          "where": "Şirince",
+          "book": "",
+          "place": "turkey/sirince"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Ephesus",
+          "notes": "Little shade and heat builds fast; take a taxi to the upper gate and walk downhill.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Terrace Houses of Ephesus",
+          "notes": "A separate ticket is needed; numbers on the walkways are limited.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus-terrace-houses"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Pamukkale travertines and Hierapolis",
+          "notes": "Walk barefoot on the terraces; late afternoon is cooler and less crowded.",
+          "where": "Pamukkale",
+          "book": "",
+          "place": "turkey/pamukkale-hierapolis"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Kaleiçi old town",
+          "notes": "Wander lanes to the harbour and Hadrian's Gate; clifftop gardens look over the bay.",
+          "where": "Antalya",
+          "book": "",
+          "place": "turkey/antalya-kaleici"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Aspendos Roman theatre",
+          "notes": "Little shade, so go in the morning; the theatre still hosts summer performances.",
+          "where": "Aspendos, near Antalya",
+          "book": "",
+          "place": "turkey/aspendos"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Istanbul Airport (IST)",
+          "to": "Istanbul hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Havabus, taxi or pre-booked transfer",
+          "notes": "Traffic can be heavy; a pre-booked transfer avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Istanbul hotel area",
+          "to": "Istanbul Airport (IST)",
+          "time": "07:30",
+          "minutes": 75,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow time for traffic; the airport is far from the old city.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "İzmir Adnan Menderes Airport (ADB)",
+          "to": "Selçuk",
+          "time": "12:00",
+          "minutes": 60,
+          "carrier": "Private transfer or Havaş shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Selçuk",
+          "to": "Pamukkale",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Private transfer or rental car",
+          "notes": "The road goes inland via the Büyük Menderes valley.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Pamukkale",
+          "to": "Antalya",
+          "time": "09:30",
+          "minutes": 190,
+          "carrier": "Private transfer or rental car",
+          "notes": "The route crosses the Taurus foothills and a lakes plateau.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Antalya",
+          "to": "Antalya Airport (AYT)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or shuttle",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "turkey-grand-tour-14d",
+      "title": "Grand Tour of Turkey in 14 Days",
+      "summary": "The full circuit: four nights in Istanbul, three in Cappadocia including Ihlara Valley, Ephesus, Pamukkale and a relaxed finish in Antalya.",
+      "days": 14,
+      "route": "Istanbul > Cappadocia > Selçuk > Pamukkale > Antalya",
+      "arrive": "Istanbul (IST)",
+      "depart": "Antalya (AYT)",
+      "countries": [
+        "Turkey"
+      ],
+      "regions": [
+        "Istanbul",
+        "Nevşehir",
+        "İzmir",
+        "Denizli",
+        "Antalya"
+      ],
+      "cities": [
+        "Istanbul",
+        "Göreme",
+        "Selçuk",
+        "Pamukkale",
+        "Antalya"
+      ],
+      "imageQuery": "Turkey Cappadocia Pamukkale Istanbul collage",
+      "highlights": [
+        "Hagia Sophia",
+        "Hot-air balloon",
+        "Ihlara Valley",
+        "Ephesus",
+        "Pamukkale",
+        "Aspendos"
+      ],
+      "destinationKeys": [
+        "turkey",
+        "turkey/istanbul",
+        "turkey/nevsehir",
+        "turkey/goreme",
+        "turkey/izmir",
+        "turkey/selcuk",
+        "turkey/denizli",
+        "turkey/pamukkale",
+        "turkey/antalya"
+      ],
+      "hero": "turkey/goreme",
+      "sources": [
+        "Rough Guides",
+        "Lonely Planet",
+        "TravelStride itinerary library",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Istanbul",
+          "hotel": "Hotel in Istanbul",
+          "start": 0,
+          "nights": 4,
+          "area": "In Sultanahmet to walk to the old city sights, or in Karaköy and Beyoğlu for restaurants and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Göreme",
+          "hotel": "Hotel in Göreme",
+          "start": 4,
+          "nights": 3,
+          "area": "In Göreme itself, ideally a cave hotel with a terrace for balloon views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Selçuk",
+          "hotel": "Hotel in Selçuk",
+          "start": 7,
+          "nights": 2,
+          "area": "In Selçuk town, close to the station, restaurants and the road to Ephesus",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pamukkale",
+          "hotel": "Hotel in Pamukkale",
+          "start": 9,
+          "nights": 1,
+          "area": "In Pamukkale village, close to the terraces and the entrance gates",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Antalya",
+          "hotel": "Hotel in Antalya",
+          "start": 10,
+          "nights": 3,
+          "area": "In Kaleiçi, the old town, for atmosphere and walking; Lara for beach resorts",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Galata Tower and Karaköy",
+          "notes": "Queues are long at midday; the lanes below are cobbled and steep.",
+          "where": "Galata, Istanbul",
+          "book": "",
+          "place": "turkey/galata-tower"
+        },
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Spice Bazaar",
+          "notes": "Closes in the early evening; sample before buying.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/spice-bazaar"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Hagia Sophia",
+          "notes": "Dress modestly; visiting arrangements change, so check current rules and prayer times.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/hagia-sophia"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Blue Mosque",
+          "notes": "Closed to visitors at prayer times; modest dress and no shoes inside.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/blue-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Basilica Cistern",
+          "notes": "Cool and damp, but crowded at midday; book online.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/basilica-cistern"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Grand Bazaar",
+          "notes": "Closed on Sundays; note your gate, as it is easy to get lost.",
+          "where": "Beyazıt, Istanbul",
+          "book": "",
+          "place": "turkey/grand-bazaar"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Topkapı Palace",
+          "notes": "Closed on Tuesdays; the Harem needs a separate ticket, and queues build quickly.",
+          "where": "Sultanahmet, Istanbul",
+          "book": "",
+          "place": "turkey/topkapi-palace"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bosphorus cruise",
+          "notes": "A public ferry is a local alternative to private tours; bring a jacket.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/bosphorus-cruise"
+        },
+        {
+          "day": 2,
+          "type": "Spa/Wellness",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Turkish bath (hammam)",
+          "notes": "Book ahead; sections are usually separate for men and women.",
+          "where": "Çağaloğlu, Istanbul",
+          "book": "Yes - book the bathhouse in advance",
+          "place": "turkey/hammam-experience"
+        },
+        {
+          "day": 3,
+          "type": "Shopping",
+          "time": "10:00",
+          "duration": "1.5h",
+          "name": "Spice Bazaar",
+          "notes": "Sample before buying; close to the ferry docks.",
+          "where": "Eminönü, Istanbul",
+          "book": "",
+          "place": "turkey/spice-bazaar"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sunset at Uçhisar Castle",
+          "notes": "The steps are narrow and uneven; wear grippy shoes.",
+          "where": "Uçhisar, Cappadocia",
+          "book": "",
+          "place": "turkey/uchisar-castle"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3h",
+          "name": "Hot-air balloon flight",
+          "notes": "Flights are cancelled in strong wind, so book the first morning and keep a spare one.",
+          "where": "Göreme, Cappadocia",
+          "book": "Yes - book balloons well ahead",
+          "place": "turkey/hot-air-balloon"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Göreme Open Air Museum",
+          "notes": "Go early to avoid groups.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/goreme-open-air-museum"
+        },
+        {
+          "day": 5,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Avanos pottery workshop",
+          "notes": "Look at the quality before buying.",
+          "where": "Avanos",
+          "book": "",
+          "place": "turkey/avanos-pottery"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Ihlara Valley walk",
+          "notes": "A long staircase at the start; the trail is shaded and cool in summer.",
+          "where": "Ihlara Valley",
+          "book": "",
+          "place": "turkey/ihlara-valley"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Red and Rose Valley at sunset",
+          "notes": "The rock glows pink in the evening light.",
+          "where": "Göreme",
+          "book": "",
+          "place": "turkey/red-rose-valley"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Şirince village",
+          "notes": "Busy with groups at midday and calm in the evening; fruit wines are the speciality.",
+          "where": "Şirince",
+          "book": "",
+          "place": "turkey/sirince"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Ephesus",
+          "notes": "Little shade and heat builds fast; take a taxi to the upper gate and walk downhill.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Terrace Houses of Ephesus",
+          "notes": "A separate ticket is needed; numbers on the walkways are limited.",
+          "where": "Ephesus, near Selçuk",
+          "book": "",
+          "place": "turkey/ephesus-terrace-houses"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Pamukkale travertines and Hierapolis",
+          "notes": "Walk barefoot on the terraces; late afternoon is cooler and less crowded.",
+          "where": "Pamukkale",
+          "book": "",
+          "place": "turkey/pamukkale-hierapolis"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Kaleiçi old town",
+          "notes": "Wander lanes to the harbour and Hadrian's Gate; clifftop gardens look over the bay.",
+          "where": "Antalya",
+          "book": "",
+          "place": "turkey/antalya-kaleici"
+        },
+        {
+          "day": 11,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Aspendos Roman theatre",
+          "notes": "Little shade, so go in the morning; the theatre still hosts summer performances.",
+          "where": "Aspendos, near Antalya",
+          "book": "",
+          "place": "turkey/aspendos"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Istanbul Airport (IST)",
+          "to": "Istanbul hotel area",
+          "time": "",
+          "minutes": 70,
+          "carrier": "Havabus, taxi or pre-booked transfer",
+          "notes": "Traffic can be heavy; a pre-booked transfer avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Istanbul hotel area",
+          "to": "Istanbul Airport (IST)",
+          "time": "07:30",
+          "minutes": 75,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "Allow time for traffic; the airport is far from the old city.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Nevşehir Kapadokya Airport (NAV)",
+          "to": "Göreme",
+          "time": "10:30",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Shuttle buses meet most flights.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Göreme",
+          "to": "Nevşehir Kapadokya Airport (NAV)",
+          "time": "08:00",
+          "minutes": 40,
+          "carrier": "Shuttle or pre-booked transfer",
+          "notes": "Check the flight time and leave time for the shuttle.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "İzmir Adnan Menderes Airport (ADB)",
+          "to": "Selçuk",
+          "time": "12:30",
+          "minutes": 60,
+          "carrier": "Private transfer or Havaş shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Selçuk",
+          "to": "Pamukkale",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Private transfer or rental car",
+          "notes": "The road goes inland via the Büyük Menderes valley.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Pamukkale",
+          "to": "Antalya",
+          "time": "09:30",
+          "minutes": 190,
+          "carrier": "Private transfer or rental car",
+          "notes": "The route crosses the Taurus foothills and a lakes plateau.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Antalya",
+          "to": "Antalya Airport (AYT)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or shuttle",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "turkey/galata-tower": {
+        "name": "Galata Tower and Karaköy",
+        "description": "A medieval stone tower above the Golden Horn with a panoramic view, and the cafes and galleries of Karaköy below.",
+        "details": "The Galata Tower, built in 1348 by the Genoese, rises above the old Galata district and gives a circular view over the Golden Horn, the Bosphorus and the old city skyline. Queues are long at midday, so go late in the afternoon. The streets below are cobbled and steep, with cafes and small galleries in Karaköy. A tram and funicular help with the climb.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/hagia-sophia": {
+        "name": "Hagia Sophia",
+        "description": "The sixth-century domed cathedral turned mosque, one of the great buildings of the world.",
+        "details": "Hagia Sophia was built by the Byzantine emperor Justinian in 537 and held the title of the world's largest cathedral for almost a thousand years. It is now a working mosque with a vast dome and Byzantine mosaics. Dress modestly, remove shoes and cover the head if you are a woman. Visiting arrangements and access to the upper gallery have changed in recent years, so check current rules before going. Prayer times can limit entry.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/blue-mosque": {
+        "name": "Blue Mosque",
+        "description": "The seventeenth-century Sultanahmet Mosque, known for its six minarets and the blue tiles inside.",
+        "details": "The Sultan Ahmed Mosque was built in the early 1600s and gets its popular name from the thousands of blue Iznik tiles covering the interior. It is an active place of worship and closes to visitors at prayer times, so check the schedule. Dress modestly and remove shoes; scarves and wraps are lent at the entrance. Entry is free and the queue moves quickly in the morning.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/basilica-cistern": {
+        "name": "Basilica Cistern",
+        "description": "A vast underground Byzantine water reservoir with 336 columns, lit softly and reflected in shallow water.",
+        "details": "The Basilica Cistern was built in the sixth century to store water for the Great Palace. Its forest of marble columns, two of which rest on Medusa head bases, is lit atmospherically, and wooden walkways pass above the water. It is cool and damp, a relief on hot days, though crowded at midday. Tickets booked online save queuing.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/topkapi-palace": {
+        "name": "Topkapı Palace",
+        "description": "The Ottoman sultans' palace, with courtyards, the Harem and treasury rooms above the Bosphorus.",
+        "details": "Topkapı Palace was the main home of the Ottoman sultans for almost four centuries. Courtyards, pavilions, tiled rooms, the treasury and the terraces overlooking the Bosphorus make up the complex. The Harem needs a separate ticket and is worth it. Go early, as the queues build quickly. The site is closed on Tuesdays, and allow at least three hours.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/grand-bazaar": {
+        "name": "Grand Bazaar",
+        "description": "One of the world's oldest covered markets, with thousands of shops selling ceramics, textiles, lamps and jewellery.",
+        "details": "The Grand Bazaar dates from the fifteenth century and holds about four thousand shops under vaulted ceilings. Browse for ceramics, carpets, leather, lamps and jewellery, and expect to bargain. It closes on Sundays and religious holidays. It is easy to get lost, so note which gate you came through.",
+        "interests": [
+          "authentic_local",
+          "culture",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/spice-bazaar": {
+        "name": "Spice Bazaar",
+        "description": "A covered market by the Golden Horn, selling spices, Turkish delight, tea and dried fruit.",
+        "details": "The Spice Bazaar, or Egyptian Bazaar, is an L-shaped covered market built in the 1660s, filled with the smell of spices and teas. Stalls sell Turkish delight, nuts, saffron and dried fruit. Many shopkeepers offer a taste. It is less overwhelming than the Grand Bazaar and close to the ferry docks at Eminönü.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/bosphorus-cruise": {
+        "name": "Bosphorus cruise",
+        "description": "A ferry trip between Europe and Asia, passing palaces, wooden mansions and fortresses along the strait.",
+        "details": "Public and private ferries run up the Bosphorus between Eminönü and the Black Sea, passing Dolmabahçe Palace, the Ortaköy mosque, fortresses and waterfront mansions. A short cruise lasts one to two hours, and the public ferry is a cheap and local alternative to private tours. Bring a jacket, as it is breezy on deck.",
+        "interests": [
+          "relax",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/hammam-experience": {
+        "name": "Turkish bath (hammam)",
+        "description": "A traditional steam bath, scrub and foam massage in a historic Istanbul bathhouse.",
+        "details": "A hammam visit includes time in a hot marble room, a vigorous scrub with a coarse mitt and a soap-foam wash. Historic bathhouses in Çağaloğlu and Sultanahmet offer set packages for visitors, usually with separate sections for men and women. Booking ahead is wise. Avoid going on a full stomach, and bring a swimsuit.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/goreme-open-air-museum": {
+        "name": "Göreme Open Air Museum",
+        "description": "A valley of rock-cut Byzantine churches and monasteries with well-preserved frescoes.",
+        "details": "The Göreme Open Air Museum is a UNESCO World Heritage Site of rock-cut monasteries and chapels carved into the soft volcanic rock, many painted with frescoes from the tenth to the thirteenth centuries. The Dark Church has the best colours and requires a small extra ticket. Photography is restricted inside some churches. Go early in the day to avoid tour groups.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/hot-air-balloon": {
+        "name": "Hot-air balloon at sunrise",
+        "description": "A dawn flight over Cappadocia's fairy chimneys and valleys with dozens of other balloons.",
+        "details": "Balloon flights lift off before sunrise and drift for about an hour over the fairy chimneys and valleys, usually with a sparkling toast on landing. Flights are cancelled in strong wind, so build in a spare morning and book the first day of a stay. Pickup from the hotel is in the dark, around 4:30 to 5:00. Dress in layers, as it is cold before the sun rises.",
+        "interests": [
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/avanos-pottery": {
+        "name": "Avanos pottery",
+        "description": "A river town known for red-clay pottery, with workshops where visitors try the wheel.",
+        "details": "Avanos sits on the Kızılırmak River, and its potters use the red clay of the riverbank. Many workshops demonstrate throwing and decorating pots, and some let visitors try the wheel. Shops sell ceramics at a range of qualities, so look at the work before buying. Hand-painted pieces take longer to make and are more expensive.",
+        "interests": [
+          "authentic_local",
+          "culture",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/uchisar-castle": {
+        "name": "Uçhisar Castle and sunset viewpoint",
+        "description": "A towering rock fortress with the highest viewpoint in Cappadocia, good for sunset.",
+        "details": "Uçhisar Castle is a huge natural rock outcrop honeycombed with rooms and passages. A stepped path climbs to the top for a panorama of the valleys and Mount Erciyes. Sunset is popular and the light on the rock turns orange and pink. The steps are narrow and uneven, so wear shoes with grip. Pigeon Valley below is a pleasant walk.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/red-rose-valley": {
+        "name": "Red and Rose Valley hike",
+        "description": "A walk along trails among pink and red rock formations, rock churches and fairy chimneys.",
+        "details": "The Red and Rose Valleys are close to Göreme and are known for their rippling pink and red rock, which glows at sunset. Paths pass cave churches, farms and viewpoints. The easiest trails take about two to three hours, with some ups and downs. Take water and sun protection, as there is little shade.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/derinkuyu": {
+        "name": "Derinkuyu underground city",
+        "description": "A multi-level underground city, with narrow tunnels, stables and wine presses, built to shelter thousands.",
+        "details": "Derinkuyu is the deepest of Cappadocia's underground cities, descending around eight levels, with ventilation shafts, kitchens, chapels and rolling stone doors. Tunnels are narrow and low, so it is not suitable for anyone claustrophobic or with limited mobility. Guides explain how the city was used. It is cool inside, even in summer.",
+        "interests": [
+          "culture",
+          "adventure",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/ihlara-valley": {
+        "name": "Ihlara Valley",
+        "description": "A green river canyon with rock-cut churches and a shaded walking trail beside a stream.",
+        "details": "The Ihlara Valley is a deep canyon, about 14 kilometres long, cut by the Melendiz River. A shaded trail passes rock churches and small cafes, and the walk is easy but includes a long staircase at the start. It is cooler than other places in Cappadocia and good in summer. It is about an hour from Göreme, so it is usually part of a day trip.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/ephesus": {
+        "name": "Ephesus",
+        "description": "One of the best-preserved ancient Greek and Roman cities, with the Library of Celsus and a Great Theatre.",
+        "details": "Ephesus was a major port and one of the largest cities of the Roman world. Highlights include the Library of Celsus, the marble-paved Curetes Street and the Great Theatre, which held about 25,000. Go early, as it is hot and busy by midday and there is little shade. The site has two gates; take a taxi to the upper gate and walk downhill.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/ephesus-terrace-houses": {
+        "name": "Terrace Houses of Ephesus",
+        "description": "Covered Roman villas on a hillside with preserved mosaics and wall paintings.",
+        "details": "The Terrace Houses are luxurious Roman dwellings on the slope across from Curetes Street, now sheltered by a modern roof. Mosaic floors, frescoes and marble rooms show how wealthy residents lived. A separate ticket is needed, and numbers on the walkways are limited. They are shaded and quieter than the main site.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/sirince": {
+        "name": "Şirince village",
+        "description": "A hillside village of old stone houses, fruit wines and small shops near Ephesus.",
+        "details": "Şirince is a pretty village in the hills east of Selçuk, with stone and whitewashed houses and a reputation for fruit wines. Shops sell olive oil, soap and local wine, and a few restaurants serve home-style food. It is busy in the middle of the day with tour groups and calm in the early evening.",
+        "interests": [
+          "relax",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/pamukkale-hierapolis": {
+        "name": "Pamukkale travertines and Hierapolis",
+        "description": "White limestone terraces filled with warm mineral water, above the ruins of an ancient spa city.",
+        "details": "Pamukkale, meaning cotton castle, is a hillside of white travertine terraces and pools fed by warm springs. Walk barefoot on the terraces, and visit the ruins of Hierapolis at the top, which has a large theatre and a necropolis. An antique pool lets bathers swim among fallen columns for an extra ticket. Late afternoon is cooler and less crowded.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "relax",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "turkey/antalya-kaleici": {
+        "name": "Kaleiçi old town, Antalya",
+        "description": "Antalya's historic quarter of Ottoman houses, a Roman harbour and Hadrian's Gate.",
+        "details": "Kaleiçi is a walled old quarter of narrow lanes, restored Ottoman houses, cafes and boutique hotels around a small Roman-era harbour. Hadrian's Gate, built in 130 AD, is its best-known monument. Boat trips leave from the harbour, and views from the clifftop gardens look across the bay to the Taurus Mountains.",
+        "interests": [
+          "culture",
+          "relax",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "turkey/aspendos": {
+        "name": "Aspendos",
+        "description": "A remarkably complete Roman theatre east of Antalya that is still used for performances.",
+        "details": "The theatre at Aspendos dates from the second century AD and is one of the best-preserved in the world, still hosting concerts and festivals in summer. It holds around 15,000 people and has excellent acoustics. An aqueduct stands nearby. There is little shade, so go in the morning.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "turkey": {
+        "name": "Turkey",
+        "description": "A country spanning Europe and Asia, known for Istanbul, Cappadocia, ancient ruins and a long Mediterranean coast.",
+        "images": []
+      },
+      "turkey/istanbul": {
+        "name": "Istanbul",
+        "description": "The city on two continents, with Byzantine and Ottoman monuments, bazaars and the Bosphorus.",
+        "images": []
+      },
+      "turkey/nevsehir": {
+        "name": "Nevşehir",
+        "description": "The central Anatolian province that holds Göreme and the heart of Cappadocia.",
+        "images": []
+      },
+      "turkey/goreme": {
+        "name": "Göreme",
+        "description": "The main village of Cappadocia, surrounded by fairy chimneys, cave hotels and balloon flights.",
+        "images": []
+      },
+      "turkey/izmir": {
+        "name": "İzmir",
+        "description": "The Aegean port city and main gateway for Ephesus and the coast.",
+        "images": []
+      },
+      "turkey/selcuk": {
+        "name": "Selçuk",
+        "description": "A small Aegean town beside the ruins of Ephesus, with easy day trips to hill villages.",
+        "images": []
+      },
+      "turkey/denizli": {
+        "name": "Denizli",
+        "description": "The inland province that includes Pamukkale and the ancient city of Hierapolis.",
+        "images": []
+      },
+      "turkey/pamukkale": {
+        "name": "Pamukkale",
+        "description": "A village at the foot of white mineral terraces and the ruins of ancient Hierapolis.",
+        "images": []
+      },
+      "turkey/antalya": {
+        "name": "Antalya",
+        "description": "A Mediterranean resort city with a restored old town and Roman ruins close by.",
+        "images": []
+      }
+    }
+  }
+}

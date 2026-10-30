@@ -1,3 +1,4 @@
+import { addTripItem, goHome, openTab } from './ui';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 // Browser layout tests use the real frontend with isolated, deterministic API data.
@@ -31,9 +32,9 @@ async function boot(page: Page, expenses: unknown[] = []) {
     localStorage.setItem('stp.session', JSON.stringify({ token, name: 'Input Tester', email, role: 'user', page: 'home', tripId: 'input-trip', expiresAt: Date.now() + 3600000 }));
     localStorage.setItem('stp.session.token', token);
   }, { token, email: user.email });
-  await page.goto('/');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('Input regression trip', { exact: true }).first()).toBeVisible({ timeout: 30000 });
-  if (await page.getByLabel('Home', { exact: true }).count()) await page.getByLabel('Home', { exact: true }).click();
+  await goHome(page);
   await expect(page.getByTestId('home-nav-tours')).toBeVisible({ timeout: 30000 });
 }
 
@@ -87,13 +88,40 @@ async function expectReadable(text: Locator) {
 }
 
 for (const width of [390, 1280]) {
+  test(`trip screens expose the correct Add controls at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await boot(page);
+    for (const [tab, addButton, option] of [
+      ['flights', 'transfer-add', 'flight'],
+      ['ground-transfers', 'transfer-add', 'transfer'],
+      ['lodging', 'lodging-add', 'lodging'],
+      ['tours', 'activity-add', 'activity'],
+      ['car', 'car-rental-add', 'rental'],
+      ['expenses', 'expense-add-button', 'expense'],
+    ]) {
+      await openTab(page, tab);
+      if (width < 680) {
+        await expect(page.getByTestId(addButton)).toHaveCount(0);
+        await expect(page.getByTestId(/^(transfer|lodging|activity|car-rental)-table-edit$/)).toHaveCount(0);
+        await expect(page.getByTestId('transfer-paste')).toHaveCount(0);
+        await page.getByTestId('bottom-tab-add').click();
+        await expect(page.getByTestId(`add-option-${option}`)).toBeVisible();
+        await expect(page.getByTestId('add-option-person')).toBeVisible();
+        await page.getByTestId('add-sheet-cancel').click();
+      } else {
+        await expect(page.getByTestId('bottom-tab-bar')).toHaveCount(0);
+        await expect(page.getByTestId(addButton)).toBeVisible();
+      }
+    }
+  });
+
   for (const mode of ['light', 'dark'] as const) {
     test(`shared theme keeps actions and settlement readable in ${mode} mode at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
       await page.emulateMedia({ colorScheme: mode === 'light' ? 'dark' : 'light' });
       await page.addInitScript(mode => localStorage.setItem('stp.appearancePreference', mode), mode);
       await boot(page);
-      await page.getByTestId('home-nav-cost').click();
+      await openTab(page, 'cost');
       await expectReadable(page.getByText('Download Cost Details', { exact: true }));
       await page.getByTestId('cost-settle-up').click();
       const settlement = page.getByTestId('ledger-settlement');
@@ -116,7 +144,7 @@ for (const width of [390, 1280]) {
           title: 'A themed public story', days: [{ localDate: '2027-05-10', headline: 'A day in Kyoto', summary: '', items: [{ id: 'post', kindKey: 'core.text', body: 'A walk through the gardens.' }] }],
         } });
       });
-      await page.goto('/theme-reader/example-trip');
+      await page.goto('/theme-reader/example-trip', { waitUntil: 'domcontentloaded' });
       await expectReadable(page.getByText('A themed public story', { exact: true }));
       await expectReadable(page.getByText('A walk through the gardens.', { exact: true }));
       await page.screenshot({ path: `output/playwright/public-theme-${mode}-${width}.png` });
@@ -131,7 +159,7 @@ for (const width of [390, 1280]) {
       { ...base, id: 'lunch-b', vendor: 'Lunch at market', amount: 20 },
       { ...base, id: 'free', vendor: 'Free meal', amount: 0 },
     ]);
-    await page.getByTestId('home-nav-cost').click();
+    await openTab(page, 'cost');
     const details = page.getByTestId('other-expenses');
     await expect(details.getByTestId(/^other-expense-row-/)).toHaveCount(2);
     await expect(details.getByText('Lunch at cafe', { exact: true })).toBeVisible();
@@ -140,15 +168,15 @@ for (const width of [390, 1280]) {
     const settleBounds = await page.getByTestId('cost-settle-up').boundingBox();
     const detailsBounds = await details.boundingBox();
     expect(detailsBounds!.y).toBeGreaterThan(settleBounds!.y);
-    await page.getByLabel('Home', { exact: true }).click();
-    await page.getByTestId('home-nav-expenses').click();
+    await goHome(page);
+    await openTab(page, 'expenses');
     await expect(page.getByTestId('other-expenses')).toHaveCount(0);
   });
 
   test(`cost details download both CSVs and Settle Up follows the report at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await boot(page);
-    await page.getByTestId('home-nav-cost').click();
+    await openTab(page, 'cost');
     const download = page.getByRole('button', { name: 'Download Cost Details', exact: true });
     await expect(download).toHaveCount(1);
     await expect(page.getByText('Export Paid CSV', { exact: true })).toHaveCount(0);
@@ -171,8 +199,8 @@ for (const width of [390, 1280]) {
   test(`payer dropdowns replace one alphabetized choice at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await boot(page);
-    await page.getByTestId('home-nav-tours').click();
-    await page.getByTestId('activity-add').click();
+    await openTab(page, 'tours');
+    await addTripItem(page, 'activity');
     const activityPayer = page.getByTestId('activity-payer');
     await expect(activityPayer.locator('option')).toHaveText(['Select payer', 'Input Tester', 'Second Traveler', 'Third Traveler']);
     await activityPayer.selectOption('member-b');
@@ -180,9 +208,9 @@ for (const width of [390, 1280]) {
     await expect(activityPayer).toHaveValue('member-c');
     expect(await activityPayer.evaluate((el: HTMLSelectElement) => el.multiple)).toBe(false);
     await page.getByTestId('activity-cancel').click();
-    await page.getByLabel('Home', { exact: true }).click();
-    await page.getByTestId('home-nav-expenses').click();
-    await page.getByTestId('expense-add-button').click();
+    await goHome(page);
+    await openTab(page, 'expenses');
+    await addTripItem(page, 'expense');
     const expensePayer = page.getByTestId('expense-payer');
     await expect(expensePayer.locator('option')).toHaveText(['Select payer', 'Input Tester', 'Second Traveler', 'Third Traveler']);
     await expensePayer.selectOption('member-c');
@@ -194,7 +222,7 @@ for (const width of [390, 1280]) {
   test(`packing traveler names head their own columns before and after scrolling at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await boot(page);
-    await page.getByTestId('home-nav-packing').click();
+    await openTab(page, 'packing');
     const scroll = page.getByTestId('packing-matrix-web-scroll');
     await expect(scroll).toBeVisible();
     await scroll.scrollIntoViewIfNeeded();
@@ -227,17 +255,17 @@ for (const width of [390, 1280]) {
   test(`activity and expense actions remain reachable above the keyboard at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await boot(page);
-    await page.getByTestId('home-nav-tours').click();
-    await page.getByTestId('activity-add').click();
+    await openTab(page, 'tours');
+    await addTripItem(page, 'activity');
     await page.getByRole('textbox', { name: 'Description', exact: true }).fill('Keyboard regression');
     for (const height of [480, 360]) {
       await keyboard(page, height);
       await aboveKeyboard(page, page.getByTestId('activity-save'), height);
     }
     await page.getByTestId('activity-cancel').click();
-    await page.getByLabel('Home', { exact: true }).click();
-    await page.getByTestId('home-nav-expenses').click();
-    await page.getByTestId('expense-add-button').click();
+    await goHome(page);
+    await openTab(page, 'expenses');
+    await addTripItem(page, 'expense');
     await page.getByRole('textbox', { name: 'Amount', exact: true }).fill('60');
     await keyboard(page, 480, 80);
     await aboveKeyboard(page, page.getByTestId('expense-save'), 480, 80);
@@ -253,7 +281,7 @@ for (const width of [390, 1280]) {
   test(`Expense Covering selectors remain clickable and selectable over nearby content at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await boot(page);
-    await page.getByTestId('home-nav-expenses').click();
+    await openTab(page, 'expenses');
     await page.getByTestId('expense-balances-button').click();
     const first = page.getByTestId('covering-select-member-a');
     await first.scrollIntoViewIfNeeded();

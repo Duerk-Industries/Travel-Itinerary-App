@@ -1,0 +1,934 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Where Goes Rose, Hostelworld, Lost World Adventures and Vibe Adventures itineraries for El Salvador",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "el-salvador-san-salvador-el-tunco-4d",
+      "title": "San Salvador and El Tunco in 4 Days",
+      "summary": "A city afternoon and two Pacific beach days.",
+      "days": 4,
+      "route": "San Salvador > El Tunco",
+      "arrive": "San Salvador (SAL)",
+      "depart": "San Salvador (SAL)",
+      "countries": [
+        "El Salvador"
+      ],
+      "regions": [
+        "La Libertad"
+      ],
+      "cities": [
+        "San Salvador",
+        "El Tunco"
+      ],
+      "imageQuery": "El Tunco beach El Salvador",
+      "highlights": [
+        "San Salvador cathedral",
+        "El Tunco surf",
+        "Pacific sunset"
+      ],
+      "destinationKeys": [
+        "el-salvador",
+        "el-salvador/san-salvador",
+        "el-salvador/la-libertad",
+        "el-salvador/el-tunco"
+      ],
+      "hero": "el-salvador/el-tunco",
+      "sources": [
+        "Where Goes Rose",
+        "Hostelworld",
+        "Lost World Adventures",
+        "Vibe Adventures",
+        "Intrepid Travel"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "adventure",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "San Salvador",
+          "hotel": "Hotel in San Salvador",
+          "start": 0,
+          "nights": 1,
+          "area": "In Escalon or Zona Rosa, safe areas with restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Tunco",
+          "hotel": "Hotel in El Tunco",
+          "start": 1,
+          "nights": 2,
+          "area": "In El Tunco, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "San Salvador cathedral and Teatro Nacional",
+          "notes": "Stay in the main plazas in daylight.",
+          "where": "San Salvador",
+          "book": "",
+          "place": "el-salvador/san-salvador-centro"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Surf lesson at El Tunco",
+          "notes": "Beware of strong currents.",
+          "where": "El Tunco",
+          "book": "Yes - book a lesson",
+          "place": "el-salvador/el-tunco-surf"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Monsenor Romero Airport (SAL)",
+          "to": "San Salvador hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Pre-booked transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "San Salvador",
+          "to": "El Tunco",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "El Tunco",
+          "to": "Monsenor Romero Airport (SAL)",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Pre-booked transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "el-salvador-santa-ana-el-tunco-6d",
+      "title": "Volcano and Surf in 6 Days",
+      "summary": "San Salvador, the Santa Ana volcano and Maya sites, then El Tunco.",
+      "days": 6,
+      "route": "San Salvador > Santa Ana > El Tunco",
+      "arrive": "San Salvador (SAL)",
+      "depart": "San Salvador (SAL)",
+      "countries": [
+        "El Salvador"
+      ],
+      "regions": [
+        "La Libertad"
+      ],
+      "cities": [
+        "San Salvador",
+        "Santa Ana",
+        "El Tunco"
+      ],
+      "imageQuery": "Santa Ana volcano crater lake",
+      "highlights": [
+        "Joya de Ceren",
+        "Santa Ana volcano",
+        "Lake Coatepeque",
+        "El Tunco surf"
+      ],
+      "destinationKeys": [
+        "el-salvador",
+        "el-salvador/san-salvador",
+        "el-salvador/santa-ana",
+        "el-salvador/la-libertad",
+        "el-salvador/el-tunco"
+      ],
+      "hero": "el-salvador/santa-ana",
+      "sources": [
+        "Where Goes Rose",
+        "Hostelworld",
+        "Lost World Adventures",
+        "Vibe Adventures",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "San Salvador",
+          "hotel": "Hotel in San Salvador",
+          "start": 0,
+          "nights": 1,
+          "area": "In Escalon or Zona Rosa, safe areas with restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Santa Ana",
+          "hotel": "Hotel in Santa Ana",
+          "start": 1,
+          "nights": 2,
+          "area": "Near the main plaza in Santa Ana",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Tunco",
+          "hotel": "Hotel in El Tunco",
+          "start": 3,
+          "nights": 2,
+          "area": "In El Tunco, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "San Salvador cathedral and Teatro Nacional",
+          "notes": "Stay in the main plazas in daylight.",
+          "where": "San Salvador",
+          "book": "",
+          "place": "el-salvador/san-salvador-centro"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Joya de Ceren and Tazumal",
+          "notes": "Both Maya sites are on the road to Santa Ana.",
+          "where": "Western El Salvador",
+          "book": "",
+          "place": "el-salvador/joya-de-ceren"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Santa Ana city plaza and cathedral",
+          "notes": "An easy evening walk.",
+          "where": "Santa Ana",
+          "book": "",
+          "place": "el-salvador/santa-ana-city"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Santa Ana volcano and Lake Coatepeque",
+          "notes": "Guided hike with a police escort; ends with a lake swim.",
+          "where": "Santa Ana Volcano",
+          "book": "Yes - book the guided hike",
+          "place": "el-salvador/santa-ana-volcano"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Surf lesson at El Tunco",
+          "notes": "Beware of strong currents.",
+          "where": "El Tunco",
+          "book": "Yes - book a lesson",
+          "place": "el-salvador/el-tunco-surf"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Monsenor Romero Airport (SAL)",
+          "to": "San Salvador hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Pre-booked transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "San Salvador",
+          "to": "Santa Ana",
+          "time": "09:00",
+          "minutes": 75,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Santa Ana",
+          "to": "El Tunco",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "El Tunco",
+          "to": "Monsenor Romero Airport (SAL)",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Pre-booked transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "el-salvador-highlights-8d",
+      "title": "El Salvador Highlights in 8 Days",
+      "summary": "The capital, the western volcano, the Ruta de las Flores and the Pacific coast.",
+      "days": 8,
+      "route": "San Salvador > Santa Ana > Juayua > El Tunco",
+      "arrive": "San Salvador (SAL)",
+      "depart": "San Salvador (SAL)",
+      "countries": [
+        "El Salvador"
+      ],
+      "regions": [
+        "Sonsonate",
+        "La Libertad"
+      ],
+      "cities": [
+        "San Salvador",
+        "Santa Ana",
+        "Juayua",
+        "El Tunco"
+      ],
+      "imageQuery": "Ruta de las Flores Ataco mural",
+      "highlights": [
+        "Santa Ana volcano",
+        "Ruta de las Flores",
+        "Seven waterfalls",
+        "El Tunco"
+      ],
+      "destinationKeys": [
+        "el-salvador",
+        "el-salvador/san-salvador",
+        "el-salvador/santa-ana",
+        "el-salvador/sonsonate",
+        "el-salvador/juayua",
+        "el-salvador/la-libertad",
+        "el-salvador/el-tunco"
+      ],
+      "hero": "el-salvador/sonsonate",
+      "sources": [
+        "Where Goes Rose",
+        "Hostelworld",
+        "Lost World Adventures",
+        "Vibe Adventures",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "authentic_local",
+        "adventure",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "San Salvador",
+          "hotel": "Hotel in San Salvador",
+          "start": 0,
+          "nights": 1,
+          "area": "In Escalon or Zona Rosa, safe areas with restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Santa Ana",
+          "hotel": "Hotel in Santa Ana",
+          "start": 1,
+          "nights": 2,
+          "area": "Near the main plaza in Santa Ana",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Juayua",
+          "hotel": "Guesthouse in Juayua",
+          "start": 3,
+          "nights": 2,
+          "area": "In Juayua or Apaneca, in a small hotel with coffee views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Tunco",
+          "hotel": "Hotel in El Tunco",
+          "start": 5,
+          "nights": 2,
+          "area": "In El Tunco, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "San Salvador cathedral and Teatro Nacional",
+          "notes": "Stay in the main plazas in daylight.",
+          "where": "San Salvador",
+          "book": "",
+          "place": "el-salvador/san-salvador-centro"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Joya de Ceren and Tazumal",
+          "notes": "Both Maya sites are on the road to Santa Ana.",
+          "where": "Western El Salvador",
+          "book": "",
+          "place": "el-salvador/joya-de-ceren"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Santa Ana volcano and Lake Coatepeque",
+          "notes": "Guided hike with a police escort; ends with a lake swim.",
+          "where": "Santa Ana Volcano",
+          "book": "Yes - book the guided hike",
+          "place": "el-salvador/santa-ana-volcano"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Seven waterfalls hike",
+          "notes": "Wear water shoes; use a local guide.",
+          "where": "Juayua",
+          "book": "Yes - book a local guide",
+          "place": "el-salvador/siete-cascadas"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Ruta de las Flores villages",
+          "notes": "Weekend food festival at Juayua; Ataco murals.",
+          "where": "Ruta de las Flores",
+          "book": "",
+          "place": "el-salvador/ruta-de-las-flores"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Surf lesson at El Tunco",
+          "notes": "Beware of strong currents.",
+          "where": "El Tunco",
+          "book": "Yes - book a lesson",
+          "place": "el-salvador/el-tunco-surf"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Monsenor Romero Airport (SAL)",
+          "to": "San Salvador hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Pre-booked transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "San Salvador",
+          "to": "Santa Ana",
+          "time": "09:00",
+          "minutes": 75,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Santa Ana",
+          "to": "Juayua",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Juayua",
+          "to": "El Tunco",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "El Tunco",
+          "to": "Monsenor Romero Airport (SAL)",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Pre-booked transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "el-salvador-complete-10d",
+      "title": "Complete El Salvador in 10 Days",
+      "summary": "Add colonial Suchitoto to the volcano, coffee route and Pacific surf.",
+      "days": 10,
+      "route": "San Salvador > Suchitoto > Santa Ana > Juayua > El Tunco",
+      "arrive": "San Salvador (SAL)",
+      "depart": "San Salvador (SAL)",
+      "countries": [
+        "El Salvador"
+      ],
+      "regions": [
+        "Sonsonate",
+        "La Libertad"
+      ],
+      "cities": [
+        "San Salvador",
+        "Suchitoto",
+        "Santa Ana",
+        "Juayua",
+        "El Tunco"
+      ],
+      "imageQuery": "Suchitoto colonial town El Salvador",
+      "highlights": [
+        "Suchitoto",
+        "Santa Ana volcano",
+        "Ruta de las Flores",
+        "Seven waterfalls",
+        "El Tunco surf"
+      ],
+      "destinationKeys": [
+        "el-salvador",
+        "el-salvador/san-salvador",
+        "el-salvador/suchitoto",
+        "el-salvador/santa-ana",
+        "el-salvador/sonsonate",
+        "el-salvador/juayua",
+        "el-salvador/la-libertad",
+        "el-salvador/el-tunco"
+      ],
+      "hero": "el-salvador/suchitoto",
+      "sources": [
+        "Where Goes Rose",
+        "Hostelworld",
+        "Lost World Adventures",
+        "Vibe Adventures",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "adventure",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "San Salvador",
+          "hotel": "Hotel in San Salvador",
+          "start": 0,
+          "nights": 1,
+          "area": "In Escalon or Zona Rosa, safe areas with restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Suchitoto",
+          "hotel": "Hotel in Suchitoto",
+          "start": 1,
+          "nights": 1,
+          "area": "Near the main plaza in Suchitoto",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Santa Ana",
+          "hotel": "Hotel in Santa Ana",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the main plaza in Santa Ana",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Juayua",
+          "hotel": "Guesthouse in Juayua",
+          "start": 4,
+          "nights": 3,
+          "area": "In Juayua or Apaneca, in a small hotel with coffee views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Tunco",
+          "hotel": "Hotel in El Tunco",
+          "start": 7,
+          "nights": 2,
+          "area": "In El Tunco, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "San Salvador cathedral and Teatro Nacional",
+          "notes": "Stay in the main plazas in daylight.",
+          "where": "San Salvador",
+          "book": "",
+          "place": "el-salvador/san-salvador-centro"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Suchitoto old town and reservoir",
+          "notes": "Cobbled lanes, indigo workshops and a boat trip.",
+          "where": "Suchitoto",
+          "book": "",
+          "place": "el-salvador/suchitoto"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Joya de Ceren and Tazumal",
+          "notes": "Both Maya sites are on the road to Santa Ana.",
+          "where": "Western El Salvador",
+          "book": "",
+          "place": "el-salvador/joya-de-ceren"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Santa Ana city plaza and cathedral",
+          "notes": "An easy evening walk.",
+          "where": "Santa Ana",
+          "book": "",
+          "place": "el-salvador/santa-ana-city"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Santa Ana volcano and Lake Coatepeque",
+          "notes": "Guided hike with a police escort; ends with a lake swim.",
+          "where": "Santa Ana Volcano",
+          "book": "Yes - book the guided hike",
+          "place": "el-salvador/santa-ana-volcano"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Seven waterfalls hike",
+          "notes": "Wear water shoes; use a local guide.",
+          "where": "Juayua",
+          "book": "Yes - book a local guide",
+          "place": "el-salvador/siete-cascadas"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Ruta de las Flores villages",
+          "notes": "Weekend food festival at Juayua; Ataco murals.",
+          "where": "Ruta de las Flores",
+          "book": "",
+          "place": "el-salvador/ruta-de-las-flores"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Surf lesson at El Tunco",
+          "notes": "Beware of strong currents.",
+          "where": "El Tunco",
+          "book": "Yes - book a lesson",
+          "place": "el-salvador/el-tunco-surf"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Monsenor Romero Airport (SAL)",
+          "to": "San Salvador hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Pre-booked transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "San Salvador",
+          "to": "Suchitoto",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Suchitoto",
+          "to": "Santa Ana",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Santa Ana",
+          "to": "Juayua",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Juayua",
+          "to": "El Tunco",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Shuttle, rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "El Tunco",
+          "to": "Monsenor Romero Airport (SAL)",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Pre-booked transfer or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "el-salvador/san-salvador-centro": {
+        "name": "San Salvador historic centre",
+        "description": "The cathedral, National Palace and Teatro Nacional in the capital.",
+        "details": "The centre has the Metropolitan Cathedral, which holds the tomb of Archbishop Romero, the National Palace and the Teatro Nacional. Go in daylight and stay in the main plazas. The Museum of Anthropology (MUNA) and the Monument to the Divine Saviour are nearby.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "el-salvador/joya-de-ceren": {
+        "name": "Joya de Ceren and Tazumal",
+        "description": "A buried Maya farming village preserved by volcanic ash, often called the Pompeii of the Americas.",
+        "details": "Joya de Ceren was buried by the eruption of the Loma Caldera volcano about 1,400 years ago, preserving houses and tools. The nearby Tazumal ruins at Chalchuapa are a larger Maya site. Both are UNESCO-related sites and make a half-day on the way to Santa Ana.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "el-salvador/santa-ana-volcano": {
+        "name": "Santa Ana volcano and Lake Coatepeque",
+        "description": "A dawn hike to a turquoise crater lake on the highest volcano in the country, and a nearby caldera lake.",
+        "details": "The Ilamatepec trail climbs about 2,300 metres to a crater with a bright green lake and steam vents. Hikes require an armed police escort and start at about 11am. The nearby Coatepeque caldera lake is good for swimming and kayaking.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "el-salvador/santa-ana-city": {
+        "name": "Santa Ana city and Metapan",
+        "description": "A grand neoclassical city centre with a Gothic cathedral and a theatre.",
+        "details": "Santa Ana has a neo-Gothic cathedral on the main plaza, the Teatro de Santa Ana and a pleasant evening atmosphere. It is a good base for volcanoes, coffee tours and the Ruta de las Flores to the south.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "el-salvador/ruta-de-las-flores": {
+        "name": "Ruta de las Flores",
+        "description": "A scenic route through coffee villages with food festivals, murals and waterfalls.",
+        "details": "The Route of Flowers links Nahuizalco, Juayua, Apaneca, Ataco and Ahuachapan. The Juayua food festival runs on weekends, serving local dishes on the main street. Ataco is known for its murals, and coffee farms offer tours. Flowers bloom between November and February.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "el-salvador/siete-cascadas": {
+        "name": "Los Chorros and the Seven Waterfalls",
+        "description": "Short hikes to waterfalls and pools in the cloud forest near Juayua.",
+        "details": "The Siete Cascadas trail near Juayua has seven waterfalls and swimming pools. It is a short half-day with a local guide. Wear water shoes, and expect to get wet. Nearby is the Los Chorros park with pools.",
+        "interests": [
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "el-salvador/el-tunco-surf": {
+        "name": "El Tunco and Pacific surf",
+        "description": "A surf town with black sand beaches, sunsets and a lively evening scene.",
+        "details": "El Tunco is the centre of surfing in El Salvador, with waves for all levels and lessons on the beach. Sunsets are famous, and bars and restaurants sit along the main street. El Zonte nearby is a Bitcoin beach town. Beware of strong currents.",
+        "interests": [
+          "relax",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "el-salvador/suchitoto": {
+        "name": "Suchitoto colonial town",
+        "description": "A cobbled colonial town on a hill above a reservoir, a centre for arts and culture.",
+        "details": "Suchitoto has cobbled streets, galleries and indigo workshops. The Cerron Grande reservoir offers boat trips, and waterfalls such as Los Tercios are close. It is about 1.5 hours north of San Salvador.",
+        "interests": [
+          "culture",
+          "relax",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "el-salvador": {
+        "name": "El Salvador",
+        "description": "The smallest country in Central America, with volcanoes, coffee villages and Pacific surf.",
+        "images": []
+      },
+      "el-salvador/san-salvador": {
+        "name": "San Salvador",
+        "description": "The capital, at the foot of a volcano.",
+        "images": []
+      },
+      "el-salvador/santa-ana": {
+        "name": "Santa Ana",
+        "description": "A western city and base for the volcano and Maya sites.",
+        "images": []
+      },
+      "el-salvador/sonsonate": {
+        "name": "Sonsonate",
+        "description": "The department of the Ruta de las Flores.",
+        "images": []
+      },
+      "el-salvador/juayua": {
+        "name": "Juayua",
+        "description": "A coffee village with weekend food festival and nearby waterfalls.",
+        "images": []
+      },
+      "el-salvador/la-libertad": {
+        "name": "La Libertad",
+        "description": "The Pacific department of the surf beaches.",
+        "images": []
+      },
+      "el-salvador/el-tunco": {
+        "name": "El Tunco",
+        "description": "A black-sand surf town.",
+        "images": []
+      },
+      "el-salvador/suchitoto": {
+        "name": "Suchitoto",
+        "description": "A cobbled colonial arts town near a large reservoir.",
+        "images": []
+      }
+    }
+  }
+}

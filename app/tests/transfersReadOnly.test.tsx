@@ -10,6 +10,7 @@ import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from '../t
 import { getAppTheme } from '../theme/theme';
 import DateField from '../components/DateField';
 import { Platform } from 'react-native';
+import * as ReactNative from 'react-native';
 
 const styles = {
   card: {},
@@ -110,6 +111,46 @@ describe('FlightsTab read-only mode', () => {
     expect(queryByTestId(`transfer-edit-${transfer.id}`)).toBeNull();
     fireEvent.press(getByText('Cancel'));
     expect(onExternalEditHandled).toHaveBeenCalledTimes(1);
+  });
+
+  test.each<[boolean, 'flights' | 'ground']>([[true, 'flights'], [false, 'flights'], [true, 'ground'], [false, 'ground']])('transfer summaries open details (compact: %s, scope: %s)', (compactTransferCards, transferScope) => {
+    const ground = transferScope === 'ground';
+    const transfer: Flight = ground ? { ...flight, transferType: 'Public Transit', transfer_type: 'Public Transit' } : flight;
+    const listId = ground ? 'ground-transfer-summary-list' : 'flight-summary-list';
+    const { getByTestId, queryByTestId, getByText } = render(
+      <FlightsTab backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+        transferScope={transferScope} compactTransferCards={compactTransferCards}
+        flights={[transfer]} setFlights={jest.fn()} groupMembers={[member]} defaultPayerId={member.id}
+        formatMemberName={(m) => m.id} payerName={() => 'Member'} headers={{}} jsonHeaders={{}}
+        findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}}
+        styles={styles} airportOptions={[]} onSearchAirports={() => {}} />
+    );
+    if (compactTransferCards) {
+      expect(getByTestId(listId)).toBeTruthy();
+      expect(getByText('MXP → OTP')).toBeTruthy();
+      expect(getByText('08:00 → 11:00 · Ryanair FR259')).toBeTruthy();
+      expect(queryByTestId('transfer-table-edit')).toBeNull();
+    } else {
+      expect(queryByTestId(listId)).toBeNull();
+      expect(getByTestId('transfer-table-edit')).toBeTruthy();
+    }
+    fireEvent.press(getByTestId('transfer-row-flight-1'));
+    expect(getByTestId(ground ? 'ground-transfer-screen-details' : 'flight-screen-details')).toBeTruthy();
+  });
+
+  test.each(['flights', 'ground'] as const)('phone %s screen hides duplicate add, paste and table editing', (transferScope) => {
+    const dimensions = jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({ width: 430, height: 900, scale: 1, fontScale: 1 });
+    try {
+      const { queryByTestId } = render(
+        <FlightsTab backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+          transferScope={transferScope} compactTransferCards flights={[]} setFlights={jest.fn()} groupMembers={[member]}
+          defaultPayerId={member.id} formatMemberName={(m) => m.id} payerName={() => 'Member'} headers={{}} jsonHeaders={{}}
+          findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}} styles={styles} airportOptions={[]} onSearchAirports={() => {}} />
+      );
+      expect(queryByTestId('transfer-add')).toBeNull();
+      expect(queryByTestId('transfer-paste')).toBeNull();
+      expect(queryByTestId('transfer-table-edit')).toBeNull();
+    } finally { dimensions.mockRestore(); }
   });
 
   beforeEach(() => {

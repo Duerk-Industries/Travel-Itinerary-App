@@ -65,8 +65,12 @@ test.describe('Keyboard-only accessibility', () => {
     // registration keyboard coverage is a separate future slice.
     const credentials = await registerUser(page.request);
 
-    await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    await expect(page.getByPlaceholder('Email or Username')).toBeVisible({ timeout: 10_000 });
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('button', { name: 'Log In', exact: true })).toBeVisible();
+    await blurFocus(page);
+    await tabUntilFocused(page, d => d.text === 'Log In', 'Open login form');
+    await page.keyboard.press('Enter');
+    await expect(page.getByPlaceholder(/^Email/)).toBeVisible({ timeout: 10_000 });
     await expect(page.getByPlaceholder('Password')).toBeVisible();
 
     await blurFocus(page);
@@ -146,6 +150,6 @@ test.describe('Keyboard-only accessibility', () => {
     await page.keyboard.press('Enter');
 
     // Itinerary tab (formerly "Overview") renders its nav label once activated.
-    await expect(page.getByText('Itinerary', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Select a trip to view its overview.', { exact: true })).toBeVisible({ timeout: 10_000 });
   });
 });

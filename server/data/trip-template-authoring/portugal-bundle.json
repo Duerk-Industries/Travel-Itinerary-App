@@ -1,0 +1,1461 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rick Steves, KimKim, Fora Travel and Journey Beyond Travel itineraries for Portugal",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "portugal-lisbon-5d",
+      "title": "Lisbon and Sintra in 5 Days",
+      "summary": "Tiled hills, palaces, fado and the coast.",
+      "days": 5,
+      "route": "Lisbon",
+      "arrive": "Lisbon (LIS)",
+      "depart": "Lisbon (LIS)",
+      "countries": [
+        "Portugal"
+      ],
+      "regions": [],
+      "cities": [
+        "Lisbon"
+      ],
+      "imageQuery": "Lisbon tram Alfama",
+      "highlights": [
+        "Alfama",
+        "Belem",
+        "Sintra palaces",
+        "Fado dinner"
+      ],
+      "destinationKeys": [
+        "portugal",
+        "portugal/lisbon"
+      ],
+      "hero": "portugal/lisbon",
+      "sources": [
+        "Rick Steves",
+        "KimKim",
+        "Fora Travel",
+        "Journey Beyond Travel",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Lisbon",
+          "hotel": "Hotel in Lisbon",
+          "start": 0,
+          "nights": 4,
+          "area": "In Baixa, Chiado or Alfama; walkable and well connected by metro and tram",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "3h",
+          "name": "Fado dinner and Time Out Market",
+          "notes": "Book a fado house ahead; silence during songs.",
+          "where": "Lisbon",
+          "book": "Yes - book a fado dinner",
+          "place": "portugal/lisbon-fado-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Alfama, tram 28 and Belem",
+          "notes": "Wear flat shoes for the cobbles; custard tarts at Belem.",
+          "where": "Lisbon",
+          "book": "",
+          "place": "portugal/lisbon-alfama-belem"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Sintra palaces, Cabo da Roca and Cascais",
+          "notes": "Queue early for Pena Palace.",
+          "where": "Sintra",
+          "book": "Yes - book palace tickets",
+          "place": "portugal/sintra-cascais"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "Obidos walled village and Nazare",
+          "notes": "Taste ginjinha in a chocolate cup.",
+          "where": "Obidos",
+          "book": "",
+          "place": "portugal/obidos-nazare"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Lisbon Airport (LIS)",
+          "to": "Lisbon hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lisbon hotel",
+          "to": "Lisbon Airport (LIS)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "portugal-lisbon-porto-7d",
+      "title": "Lisbon and Porto in 7 Days",
+      "summary": "The two great cities by train.",
+      "days": 7,
+      "route": "Lisbon > Porto",
+      "arrive": "Lisbon (LIS)",
+      "depart": "Porto (OPO)",
+      "countries": [
+        "Portugal"
+      ],
+      "regions": [],
+      "cities": [
+        "Lisbon",
+        "Porto"
+      ],
+      "imageQuery": "Porto Ribeira Douro bridge",
+      "highlights": [
+        "Alfama",
+        "Sintra",
+        "Porto Ribeira",
+        "Port wine lodges"
+      ],
+      "destinationKeys": [
+        "portugal",
+        "portugal/lisbon",
+        "portugal/porto"
+      ],
+      "hero": "portugal/porto",
+      "sources": [
+        "Rick Steves",
+        "KimKim",
+        "Fora Travel",
+        "Journey Beyond Travel",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Lisbon",
+          "hotel": "Hotel in Lisbon",
+          "start": 0,
+          "nights": 3,
+          "area": "In Baixa, Chiado or Alfama; walkable and well connected by metro and tram",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Porto",
+          "hotel": "Hotel in Porto",
+          "start": 3,
+          "nights": 3,
+          "area": "In Ribeira or Baixa, within walking distance of the river and Sao Bento",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "3h",
+          "name": "Fado dinner and Time Out Market",
+          "notes": "Book a fado house ahead; silence during songs.",
+          "where": "Lisbon",
+          "book": "Yes - book a fado dinner",
+          "place": "portugal/lisbon-fado-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Alfama, tram 28 and Belem",
+          "notes": "Wear flat shoes for the cobbles; custard tarts at Belem.",
+          "where": "Lisbon",
+          "book": "",
+          "place": "portugal/lisbon-alfama-belem"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Sintra palaces, Cabo da Roca and Cascais",
+          "notes": "Queue early for Pena Palace.",
+          "where": "Sintra",
+          "book": "Yes - book palace tickets",
+          "place": "portugal/sintra-cascais"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ribeira, Livraria Lello and Sao Bento",
+          "notes": "Book Livraria Lello online.",
+          "where": "Porto",
+          "book": "",
+          "place": "portugal/porto-ribeira"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Port wine lodges in Vila Nova de Gaia",
+          "notes": "Take the bridge to the south bank.",
+          "where": "Porto",
+          "book": "Yes - book a tasting",
+          "place": "portugal/porto-ribeira"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Lisbon Airport (LIS)",
+          "to": "Lisbon hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Lisbon",
+          "to": "Porto",
+          "time": "09:30",
+          "minutes": 190,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "Direct Alfa Pendular trains run all day.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Porto hotel",
+          "to": "Porto Airport (OPO)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "portugal-lisbon-coimbra-porto-8d",
+      "title": "Lisbon, Coimbra and Porto in 8 Days",
+      "summary": "The classic north-south train line with a stop at Coimbra.",
+      "days": 8,
+      "route": "Lisbon > Coimbra > Porto",
+      "arrive": "Lisbon (LIS)",
+      "depart": "Porto (OPO)",
+      "countries": [
+        "Portugal"
+      ],
+      "regions": [],
+      "cities": [
+        "Lisbon",
+        "Coimbra",
+        "Porto"
+      ],
+      "imageQuery": "Coimbra university library",
+      "highlights": [
+        "Sintra",
+        "Obidos",
+        "Coimbra library",
+        "Porto",
+        "Douro Valley"
+      ],
+      "destinationKeys": [
+        "portugal",
+        "portugal/lisbon",
+        "portugal/coimbra",
+        "portugal/porto"
+      ],
+      "hero": "portugal/coimbra",
+      "sources": [
+        "Rick Steves",
+        "KimKim",
+        "Fora Travel",
+        "Journey Beyond Travel",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Lisbon",
+          "hotel": "Hotel in Lisbon",
+          "start": 0,
+          "nights": 3,
+          "area": "In Baixa, Chiado or Alfama; walkable and well connected by metro and tram",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Coimbra",
+          "hotel": "Hotel in Coimbra",
+          "start": 3,
+          "nights": 1,
+          "area": "In Coimbra, near the university or river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Porto",
+          "hotel": "Hotel in Porto",
+          "start": 4,
+          "nights": 3,
+          "area": "In Ribeira or Baixa, within walking distance of the river and Sao Bento",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "3h",
+          "name": "Fado dinner and Time Out Market",
+          "notes": "Book a fado house ahead; silence during songs.",
+          "where": "Lisbon",
+          "book": "Yes - book a fado dinner",
+          "place": "portugal/lisbon-fado-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Alfama, tram 28 and Belem",
+          "notes": "Wear flat shoes for the cobbles; custard tarts at Belem.",
+          "where": "Lisbon",
+          "book": "",
+          "place": "portugal/lisbon-alfama-belem"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Sintra palaces, Cabo da Roca and Cascais",
+          "notes": "Queue early for Pena Palace.",
+          "where": "Sintra",
+          "book": "Yes - book palace tickets",
+          "place": "portugal/sintra-cascais"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Coimbra University and Biblioteca Joanina",
+          "notes": "Library tickets are timed.",
+          "where": "Coimbra",
+          "book": "Yes - book library entry",
+          "place": "portugal/coimbra"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ribeira, Livraria Lello and Sao Bento",
+          "notes": "Book Livraria Lello online.",
+          "where": "Porto",
+          "book": "",
+          "place": "portugal/porto-ribeira"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Port wine lodges in Vila Nova de Gaia",
+          "notes": "Take the bridge to the south bank.",
+          "where": "Porto",
+          "book": "Yes - book a tasting",
+          "place": "portugal/porto-ribeira"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Douro Valley river cruise and quinta lunch",
+          "notes": "Harvest in autumn is the liveliest.",
+          "where": "Douro Valley",
+          "book": "Yes - book a cruise",
+          "place": "portugal/douro-valley"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Lisbon Airport (LIS)",
+          "to": "Lisbon hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Lisbon",
+          "to": "Coimbra",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Coimbra",
+          "to": "Porto",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Porto hotel",
+          "to": "Porto Airport (OPO)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "portugal-porto-douro-lisbon-algarve-10d",
+      "title": "Portugal North to South in 10 Days",
+      "summary": "Porto, the Douro Valley, Lisbon and the Algarve.",
+      "days": 10,
+      "route": "Porto > Douro Valley > Lisbon > Lagos",
+      "arrive": "Porto (OPO)",
+      "depart": "Faro (FAO)",
+      "countries": [
+        "Portugal"
+      ],
+      "regions": [
+        "Algarve"
+      ],
+      "cities": [
+        "Porto",
+        "Douro Valley",
+        "Lisbon",
+        "Lagos"
+      ],
+      "imageQuery": "Benagil cave Algarve Portugal",
+      "highlights": [
+        "Porto Ribeira",
+        "Douro Valley",
+        "Lisbon",
+        "Sintra",
+        "Benagil Cave"
+      ],
+      "destinationKeys": [
+        "portugal",
+        "portugal/porto",
+        "portugal/douro-valley",
+        "portugal/lisbon",
+        "portugal/algarve",
+        "portugal/lagos"
+      ],
+      "hero": "portugal/algarve",
+      "sources": [
+        "Rick Steves",
+        "KimKim",
+        "Fora Travel",
+        "Journey Beyond Travel",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "culture",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Porto",
+          "hotel": "Hotel in Porto",
+          "start": 0,
+          "nights": 3,
+          "area": "In Ribeira or Baixa, within walking distance of the river and Sao Bento",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Douro Valley",
+          "hotel": "Lodge at a Douro quinta",
+          "start": 3,
+          "nights": 1,
+          "area": "In a quinta (wine estate) in the Douro Valley, with a pool and vineyard views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lisbon",
+          "hotel": "Hotel in Lisbon",
+          "start": 4,
+          "nights": 3,
+          "area": "In Baixa, Chiado or Alfama; walkable and well connected by metro and tram",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lagos",
+          "hotel": "Hotel in Lagos",
+          "start": 7,
+          "nights": 2,
+          "area": "In Lagos old town, a walk from the beaches and the marina",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ribeira, Livraria Lello and Sao Bento",
+          "notes": "Book Livraria Lello online.",
+          "where": "Porto",
+          "book": "",
+          "place": "portugal/porto-ribeira"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Port wine lodges in Vila Nova de Gaia",
+          "notes": "Take the bridge to the south bank.",
+          "where": "Porto",
+          "book": "Yes - book a tasting",
+          "place": "portugal/porto-ribeira"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Douro Valley river cruise and quinta lunch",
+          "notes": "Harvest in autumn is the liveliest.",
+          "where": "Douro Valley",
+          "book": "Yes - book a cruise",
+          "place": "portugal/douro-valley"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Alfama, tram 28 and Belem",
+          "notes": "Wear flat shoes for the cobbles; custard tarts at Belem.",
+          "where": "Lisbon",
+          "book": "",
+          "place": "portugal/lisbon-alfama-belem"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Sintra palaces, Cabo da Roca and Cascais",
+          "notes": "Queue early for Pena Palace.",
+          "where": "Sintra",
+          "book": "Yes - book palace tickets",
+          "place": "portugal/sintra-cascais"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Ponta da Piedade grottoes and Benagil Cave by boat",
+          "notes": "Cave access depends on sea conditions.",
+          "where": "Lagos",
+          "book": "Yes - book a boat or kayak",
+          "place": "portugal/algarve-lagos"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Porto Airport (OPO)",
+          "to": "Porto hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Porto",
+          "to": "Douro Valley",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "Train along the river to Pinhao.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Douro Valley",
+          "to": "Lisbon",
+          "time": "09:00",
+          "minutes": 360,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "Change in Porto.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Lisbon",
+          "to": "Lagos",
+          "time": "09:30",
+          "minutes": 240,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "Train to Tunes then Lagos; or coach.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Lagos",
+          "to": "Faro Airport (FAO)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "portugal-porto-coimbra-lisbon-evora-lagos-12d",
+      "title": "Portugal Classic in 12 Days",
+      "summary": "Porto, Douro, Coimbra, Lisbon, Evora and the Algarve.",
+      "days": 12,
+      "route": "Porto > Douro Valley > Coimbra > Lisbon > Evora > Lagos",
+      "arrive": "Porto (OPO)",
+      "depart": "Faro (FAO)",
+      "countries": [
+        "Portugal"
+      ],
+      "regions": [
+        "Alentejo",
+        "Algarve"
+      ],
+      "cities": [
+        "Porto",
+        "Douro Valley",
+        "Coimbra",
+        "Lisbon",
+        "Evora",
+        "Lagos"
+      ],
+      "imageQuery": "Evora Roman temple Portugal",
+      "highlights": [
+        "Porto",
+        "Douro Valley",
+        "Coimbra",
+        "Sintra",
+        "Evora",
+        "Benagil"
+      ],
+      "destinationKeys": [
+        "portugal",
+        "portugal/porto",
+        "portugal/douro-valley",
+        "portugal/coimbra",
+        "portugal/lisbon",
+        "portugal/alentejo",
+        "portugal/evora",
+        "portugal/algarve",
+        "portugal/lagos"
+      ],
+      "hero": "portugal/evora",
+      "sources": [
+        "Rick Steves",
+        "KimKim",
+        "Fora Travel",
+        "Journey Beyond Travel",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Porto",
+          "hotel": "Hotel in Porto",
+          "start": 0,
+          "nights": 3,
+          "area": "In Ribeira or Baixa, within walking distance of the river and Sao Bento",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Douro Valley",
+          "hotel": "Lodge at a Douro quinta",
+          "start": 3,
+          "nights": 1,
+          "area": "In a quinta (wine estate) in the Douro Valley, with a pool and vineyard views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Coimbra",
+          "hotel": "Hotel in Coimbra",
+          "start": 4,
+          "nights": 1,
+          "area": "In Coimbra, near the university or river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lisbon",
+          "hotel": "Hotel in Lisbon",
+          "start": 5,
+          "nights": 3,
+          "area": "In Baixa, Chiado or Alfama; walkable and well connected by metro and tram",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Evora",
+          "hotel": "Hotel in Evora",
+          "start": 8,
+          "nights": 1,
+          "area": "In Evora historic centre, within the walls",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lagos",
+          "hotel": "Hotel in Lagos",
+          "start": 9,
+          "nights": 2,
+          "area": "In Lagos old town, a walk from the beaches and the marina",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ribeira, Livraria Lello and Sao Bento",
+          "notes": "Book Livraria Lello online.",
+          "where": "Porto",
+          "book": "",
+          "place": "portugal/porto-ribeira"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Port wine lodges in Vila Nova de Gaia",
+          "notes": "Take the bridge to the south bank.",
+          "where": "Porto",
+          "book": "Yes - book a tasting",
+          "place": "portugal/porto-ribeira"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Douro Valley river cruise and quinta lunch",
+          "notes": "Harvest in autumn is the liveliest.",
+          "where": "Douro Valley",
+          "book": "Yes - book a cruise",
+          "place": "portugal/douro-valley"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Coimbra University and Biblioteca Joanina",
+          "notes": "Library tickets are timed.",
+          "where": "Coimbra",
+          "book": "Yes - book library entry",
+          "place": "portugal/coimbra"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Alfama, tram 28 and Belem",
+          "notes": "Wear flat shoes for the cobbles; custard tarts at Belem.",
+          "where": "Lisbon",
+          "book": "",
+          "place": "portugal/lisbon-alfama-belem"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Sintra palaces, Cabo da Roca and Cascais",
+          "notes": "Queue early for Pena Palace.",
+          "where": "Sintra",
+          "book": "Yes - book palace tickets",
+          "place": "portugal/sintra-cascais"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Evora Temple of Diana, cathedral and Chapel of Bones",
+          "notes": "Also stop for Alentejo wine and cheese.",
+          "where": "Evora",
+          "book": "",
+          "place": "portugal/evora"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Ponta da Piedade grottoes and Benagil Cave by boat",
+          "notes": "Cave access depends on sea conditions.",
+          "where": "Lagos",
+          "book": "Yes - book a boat or kayak",
+          "place": "portugal/algarve-lagos"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Porto Airport (OPO)",
+          "to": "Porto hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Porto",
+          "to": "Douro Valley",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Douro Valley",
+          "to": "Coimbra",
+          "time": "09:30",
+          "minutes": 240,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "Change in Porto.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Coimbra",
+          "to": "Lisbon",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Lisbon",
+          "to": "Evora",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Evora",
+          "to": "Lagos",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "Change in Lisbon or take a coach.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Lagos",
+          "to": "Faro Airport (FAO)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "portugal-grand-14d",
+      "title": "Complete Portugal in 14 Days",
+      "summary": "Porto, a longer Douro stay, Coimbra, Lisbon with Obidos, Evora and the Algarve.",
+      "days": 14,
+      "route": "Porto > Douro Valley > Coimbra > Lisbon > Evora > Lagos",
+      "arrive": "Porto (OPO)",
+      "depart": "Faro (FAO)",
+      "countries": [
+        "Portugal"
+      ],
+      "regions": [
+        "Alentejo",
+        "Algarve"
+      ],
+      "cities": [
+        "Porto",
+        "Douro Valley",
+        "Coimbra",
+        "Lisbon",
+        "Evora",
+        "Lagos"
+      ],
+      "imageQuery": "Portugal Douro Valley vineyards",
+      "highlights": [
+        "Douro Valley",
+        "Coimbra",
+        "Obidos",
+        "Sintra",
+        "Evora",
+        "Algarve"
+      ],
+      "destinationKeys": [
+        "portugal",
+        "portugal/porto",
+        "portugal/douro-valley",
+        "portugal/coimbra",
+        "portugal/lisbon",
+        "portugal/alentejo",
+        "portugal/evora",
+        "portugal/algarve",
+        "portugal/lagos"
+      ],
+      "hero": "portugal/douro-valley",
+      "sources": [
+        "Rick Steves",
+        "KimKim",
+        "Fora Travel",
+        "Journey Beyond Travel",
+        "On The Go Tours"
+      ],
+      "pace": "R",
+      "interests": [
+        "food",
+        "culture",
+        "relax",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Porto",
+          "hotel": "Hotel in Porto",
+          "start": 0,
+          "nights": 3,
+          "area": "In Ribeira or Baixa, within walking distance of the river and Sao Bento",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Douro Valley",
+          "hotel": "Lodge at a Douro quinta",
+          "start": 3,
+          "nights": 2,
+          "area": "In a quinta (wine estate) in the Douro Valley, with a pool and vineyard views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Coimbra",
+          "hotel": "Hotel in Coimbra",
+          "start": 5,
+          "nights": 1,
+          "area": "In Coimbra, near the university or river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lisbon",
+          "hotel": "Hotel in Lisbon",
+          "start": 6,
+          "nights": 4,
+          "area": "In Baixa, Chiado or Alfama; walkable and well connected by metro and tram",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Evora",
+          "hotel": "Hotel in Evora",
+          "start": 10,
+          "nights": 1,
+          "area": "In Evora historic centre, within the walls",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lagos",
+          "hotel": "Hotel in Lagos",
+          "start": 11,
+          "nights": 2,
+          "area": "In Lagos old town, a walk from the beaches and the marina",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Ribeira, Livraria Lello and Sao Bento",
+          "notes": "Book Livraria Lello online.",
+          "where": "Porto",
+          "book": "",
+          "place": "portugal/porto-ribeira"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Port wine lodges in Vila Nova de Gaia",
+          "notes": "Take the bridge to the south bank.",
+          "where": "Porto",
+          "book": "Yes - book a tasting",
+          "place": "portugal/porto-ribeira"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Douro Valley river cruise and quinta lunch",
+          "notes": "Harvest in autumn is the liveliest.",
+          "where": "Douro Valley",
+          "book": "Yes - book a cruise",
+          "place": "portugal/douro-valley"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Coimbra University and Biblioteca Joanina",
+          "notes": "Library tickets are timed.",
+          "where": "Coimbra",
+          "book": "Yes - book library entry",
+          "place": "portugal/coimbra"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Alfama, tram 28 and Belem",
+          "notes": "Wear flat shoes for the cobbles; custard tarts at Belem.",
+          "where": "Lisbon",
+          "book": "",
+          "place": "portugal/lisbon-alfama-belem"
+        },
+        {
+          "day": 7,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "3h",
+          "name": "Fado dinner and Time Out Market",
+          "notes": "Book a fado house ahead; silence during songs.",
+          "where": "Lisbon",
+          "book": "Yes - book a fado dinner",
+          "place": "portugal/lisbon-fado-food"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Sintra palaces, Cabo da Roca and Cascais",
+          "notes": "Queue early for Pena Palace.",
+          "where": "Sintra",
+          "book": "Yes - book palace tickets",
+          "place": "portugal/sintra-cascais"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "Obidos walled village and Nazare",
+          "notes": "Taste ginjinha in a chocolate cup.",
+          "where": "Obidos",
+          "book": "",
+          "place": "portugal/obidos-nazare"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Evora Temple of Diana, cathedral and Chapel of Bones",
+          "notes": "Also stop for Alentejo wine and cheese.",
+          "where": "Evora",
+          "book": "",
+          "place": "portugal/evora"
+        },
+        {
+          "day": 12,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Ponta da Piedade grottoes and Benagil Cave by boat",
+          "notes": "Cave access depends on sea conditions.",
+          "where": "Lagos",
+          "book": "Yes - book a boat or kayak",
+          "place": "portugal/algarve-lagos"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Porto Airport (OPO)",
+          "to": "Porto hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Porto",
+          "to": "Douro Valley",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Douro Valley",
+          "to": "Coimbra",
+          "time": "09:30",
+          "minutes": 240,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Coimbra",
+          "to": "Lisbon",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Lisbon",
+          "to": "Evora",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Evora",
+          "to": "Lagos",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "CP Alfa Pendular or Intercity train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Lagos",
+          "to": "Faro Airport (FAO)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Metro, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "portugal/lisbon-alfama-belem": {
+        "name": "Lisbon Alfama, Belem and the trams",
+        "description": "Hilltop castle neighbourhoods, tram 28, the Belem Tower and custard tarts.",
+        "details": "Lisbon spreads over seven hills. Alfama has Sao Jorge Castle and fado bars, and tram 28 climbs the old lanes. Belem has the Jeronimos Monastery and the Belem Tower, plus Pasteis de Belem custard tarts. Wear flat, grippy shoes for the cobbles.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "portugal/lisbon-fado-food": {
+        "name": "Fado dinner and Time Out Market",
+        "description": "An evening of Portuguese fado music, and a market hall for seafood and petiscos.",
+        "details": "Fado is the soulful music of Portugal, performed in small houses in Alfama and Bairro Alto. Book dinner with a show and keep quiet during songs. The Time Out Market at Cais do Sodre is a food hall of top chefs.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "portugal/sintra-cascais": {
+        "name": "Sintra palaces and Cascais coast",
+        "description": "Fairytale hilltop palaces, then a seaside town and the cliffs of Cabo da Roca.",
+        "details": "Sintra has the colourful Pena Palace, the Moorish Castle and Quinta da Regaleira with its initiation well. Queue early, and use the bus or tuk-tuk between sites. Cascais has beaches and a coastal path, and Cabo da Roca is the westernmost point of mainland Europe.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "portugal/evora": {
+        "name": "Evora Roman temple and Chapel of Bones",
+        "description": "A walled Alentejo city with a Roman temple, a cathedral and a chapel of human bones.",
+        "details": "Evora is a UNESCO city with the Temple of Diana, a cathedral with rooftop access and the Capela dos Ossos, a chapel decorated with human skulls. The Alentejo region is known for cork, wine and slow food. A day trip from Lisbon or an overnight.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "portugal/coimbra": {
+        "name": "Coimbra University and Biblioteca Joanina",
+        "description": "Portugal oldest university, with a baroque library and a hilltop old town.",
+        "details": "Coimbra University sits on a hill with a baroque library, the Biblioteca Joanina, which has bat colonies protecting the books. Fado de Coimbra is sung by students. Allow a day. Ticket slots for the library are timed.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "portugal/porto-ribeira": {
+        "name": "Porto Ribeira, Livraria Lello and port cellars",
+        "description": "A riverside old town, a famous bookshop and port wine lodges across the Douro.",
+        "details": "Porto has the Ribeira waterfront, the Dom Luis I bridge, the azulejo-covered Sao Bento station and Livraria Lello. Across the river in Vila Nova de Gaia, port lodges offer tours and tastings. Try a francesinha sandwich.",
+        "interests": [
+          "culture",
+          "food",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "portugal/douro-valley": {
+        "name": "Douro Valley wine and river cruise",
+        "description": "Terraced vineyards along a winding river, with quintas serving lunch and tastings.",
+        "details": "The Douro is the oldest demarcated wine region in the world, with terraced vineyards in a UNESCO landscape. River cruises from Pinhao or Peso da Regua run through the valley, and quintas offer tastings. Harvest in autumn is the liveliest time. A train line follows the river.",
+        "interests": [
+          "food",
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "portugal/obidos-nazare": {
+        "name": "Obidos and Nazare",
+        "description": "A walled medieval village with cherry liqueur, and a surf town famed for giant waves.",
+        "details": "Obidos is a whitewashed village with walls you can walk and ginjinha served in chocolate cups. Nazare has a beach, a funicular to the fishermen quarter and the Praia do Norte, where big waves roll in winter. They sit on the road between Lisbon and Porto.",
+        "interests": [
+          "culture",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "portugal/algarve-lagos": {
+        "name": "Algarve: Lagos, Ponta da Piedade and Benagil Cave",
+        "description": "Golden sea cliffs, grottoes by boat or kayak and warm beaches.",
+        "details": "Lagos has sea stacks and grottoes at Ponta da Piedade, reached by kayak or boat. Benagil Cave, a large sea cave with a skylight, is visited by small boat, subject to sea conditions and access rules. Beaches such as Praia do Camilo are down wooden steps.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "portugal": {
+        "name": "Portugal",
+        "description": "A country of tiled cities, port wine, Atlantic cliffs and sunny beaches.",
+        "images": []
+      },
+      "portugal/lisbon": {
+        "name": "Lisbon",
+        "description": "The hilly capital of trams, fado and custard tarts.",
+        "images": []
+      },
+      "portugal/alentejo": {
+        "name": "Alentejo",
+        "description": "The southern plains region of cork, wine and Evora.",
+        "images": []
+      },
+      "portugal/evora": {
+        "name": "Evora",
+        "description": "A walled UNESCO city of Roman and medieval sights.",
+        "images": []
+      },
+      "portugal/coimbra": {
+        "name": "Coimbra",
+        "description": "A university city on the Mondego river.",
+        "images": []
+      },
+      "portugal/porto": {
+        "name": "Porto",
+        "description": "The northern city of port wine and azulejo tiles.",
+        "images": []
+      },
+      "portugal/douro-valley": {
+        "name": "Douro Valley",
+        "description": "Terraced vineyards along the Douro river.",
+        "images": []
+      },
+      "portugal/algarve": {
+        "name": "Algarve",
+        "description": "The southern coast of cliffs, caves and beaches.",
+        "images": []
+      },
+      "portugal/lagos": {
+        "name": "Lagos",
+        "description": "A walled Algarve town beside sea grottoes.",
+        "images": []
+      }
+    }
+  }
+}

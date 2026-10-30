@@ -1,0 +1,1256 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Interrail, Audley Travel, KimKim and Rough Guides itineraries for Sweden",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "sweden-stockholm-4d",
+      "title": "Stockholm in 4 Days",
+      "summary": "Old town, the Vasa warship, islands and Uppsala.",
+      "days": 4,
+      "route": "Stockholm",
+      "arrive": "Stockholm (ARN)",
+      "depart": "Stockholm (ARN)",
+      "countries": [
+        "Sweden"
+      ],
+      "regions": [],
+      "cities": [
+        "Stockholm"
+      ],
+      "imageQuery": "Stockholm Gamla Stan sunset",
+      "highlights": [
+        "Gamla Stan",
+        "Vasa Museum",
+        "Archipelago",
+        "Uppsala"
+      ],
+      "destinationKeys": [
+        "sweden",
+        "sweden/stockholm"
+      ],
+      "hero": "sweden/stockholm",
+      "sources": [
+        "Interrail",
+        "Audley Travel",
+        "KimKim",
+        "Rough Guides",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Stockholm",
+          "hotel": "Hotel in Stockholm",
+          "start": 0,
+          "nights": 3,
+          "area": "In Norrmalm, Sodermalm or Gamla Stan, walkable to most sights",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Gamla Stan and the Royal Palace",
+          "notes": "The guard change is around noon.",
+          "where": "Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Vasa Museum",
+          "notes": "Ferry or tram to Djurgarden.",
+          "where": "Djurgarden, Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Archipelago boat to Vaxholm or Grinda",
+          "notes": "Pack fika and swimwear in summer.",
+          "where": "Stockholm archipelago",
+          "book": "",
+          "place": "sweden/stockholm-archipelago"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Stockholm Arlanda (ARN)",
+          "to": "Stockholm hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Arlanda Express or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Stockholm hotel",
+          "to": "Stockholm Arlanda (ARN)",
+          "time": "12:00",
+          "minutes": 25,
+          "carrier": "Airport train, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sweden-stockholm-gothenburg-5d",
+      "title": "Stockholm and Gothenburg in 5 Days",
+      "summary": "The capital and the west-coast city by fast train.",
+      "days": 5,
+      "route": "Stockholm > Gothenburg",
+      "arrive": "Stockholm (ARN)",
+      "depart": "Gothenburg (GOT)",
+      "countries": [
+        "Sweden"
+      ],
+      "regions": [],
+      "cities": [
+        "Stockholm",
+        "Gothenburg"
+      ],
+      "imageQuery": "Gothenburg Haga Sweden",
+      "highlights": [
+        "Gamla Stan",
+        "Vasa Museum",
+        "Haga",
+        "Southern archipelago"
+      ],
+      "destinationKeys": [
+        "sweden",
+        "sweden/stockholm",
+        "sweden/gothenburg"
+      ],
+      "hero": "sweden/gothenburg",
+      "sources": [
+        "Interrail",
+        "Audley Travel",
+        "KimKim",
+        "Rough Guides",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Stockholm",
+          "hotel": "Hotel in Stockholm",
+          "start": 0,
+          "nights": 2,
+          "area": "In Norrmalm, Sodermalm or Gamla Stan, walkable to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gothenburg",
+          "hotel": "Hotel in Gothenburg",
+          "start": 2,
+          "nights": 2,
+          "area": "In central Gothenburg or Haga, close to tram lines",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Gamla Stan and the Royal Palace",
+          "notes": "The guard change is around noon.",
+          "where": "Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Vasa Museum",
+          "notes": "Ferry or tram to Djurgarden.",
+          "where": "Djurgarden, Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Haga, Feskekorka fish hall and canal boat",
+          "notes": "Try a Haga cinnamon bun.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Southern archipelago islands by ferry",
+          "notes": "Take tram 11 to Saltholmen.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg-archipelago"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Stockholm Arlanda (ARN)",
+          "to": "Stockholm hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Arlanda Express or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Stockholm",
+          "to": "Gothenburg",
+          "time": "09:30",
+          "minutes": 190,
+          "carrier": "SJ train",
+          "notes": "Fast trains run most of the day.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Gothenburg hotel",
+          "to": "Gothenburg Landvetter (GOT)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Airport train, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sweden-stockholm-gothenburg-7d",
+      "title": "Stockholm and Gothenburg in 7 Days",
+      "summary": "City, archipelago and Uppsala, then Gothenburg.",
+      "days": 7,
+      "route": "Stockholm > Gothenburg",
+      "arrive": "Stockholm (ARN)",
+      "depart": "Gothenburg (GOT)",
+      "countries": [
+        "Sweden"
+      ],
+      "regions": [],
+      "cities": [
+        "Stockholm",
+        "Gothenburg"
+      ],
+      "imageQuery": "Stockholm archipelago Sweden summer",
+      "highlights": [
+        "Gamla Stan",
+        "Archipelago",
+        "Uppsala",
+        "Haga",
+        "Southern archipelago"
+      ],
+      "destinationKeys": [
+        "sweden",
+        "sweden/stockholm",
+        "sweden/gothenburg"
+      ],
+      "hero": "sweden/stockholm",
+      "sources": [
+        "Interrail",
+        "Audley Travel",
+        "KimKim",
+        "Rough Guides",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Stockholm",
+          "hotel": "Hotel in Stockholm",
+          "start": 0,
+          "nights": 3,
+          "area": "In Norrmalm, Sodermalm or Gamla Stan, walkable to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gothenburg",
+          "hotel": "Hotel in Gothenburg",
+          "start": 3,
+          "nights": 3,
+          "area": "In central Gothenburg or Haga, close to tram lines",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Gamla Stan and the Royal Palace",
+          "notes": "The guard change is around noon.",
+          "where": "Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Vasa Museum",
+          "notes": "Ferry or tram to Djurgarden.",
+          "where": "Djurgarden, Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Archipelago boat to Vaxholm or Grinda",
+          "notes": "Pack fika and swimwear in summer.",
+          "where": "Stockholm archipelago",
+          "book": "",
+          "place": "sweden/stockholm-archipelago"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Haga, Feskekorka fish hall and canal boat",
+          "notes": "Try a Haga cinnamon bun.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "10:30",
+          "duration": "5h",
+          "name": "Southern archipelago islands by ferry",
+          "notes": "Take tram 11 to Saltholmen.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg-archipelago"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Stockholm Arlanda (ARN)",
+          "to": "Stockholm hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Arlanda Express or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Stockholm",
+          "to": "Gothenburg",
+          "time": "09:30",
+          "minutes": 190,
+          "carrier": "SJ train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Gothenburg hotel",
+          "to": "Gothenburg Landvetter (GOT)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Airport train, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sweden-stockholm-visby-gothenburg-8d",
+      "title": "Sweden with Gotland in 8 Days",
+      "summary": "Stockholm, a walled island town and Gothenburg.",
+      "days": 8,
+      "route": "Stockholm > Visby > Gothenburg",
+      "arrive": "Stockholm (ARN)",
+      "depart": "Gothenburg (GOT)",
+      "countries": [
+        "Sweden"
+      ],
+      "regions": [],
+      "cities": [
+        "Stockholm",
+        "Visby",
+        "Gothenburg"
+      ],
+      "imageQuery": "Visby Gotland medieval wall",
+      "highlights": [
+        "Gamla Stan",
+        "Visby",
+        "Gothenburg fish hall",
+        "Southern archipelago"
+      ],
+      "destinationKeys": [
+        "sweden",
+        "sweden/stockholm",
+        "sweden/visby",
+        "sweden/gothenburg"
+      ],
+      "hero": "sweden/visby",
+      "sources": [
+        "Interrail",
+        "Audley Travel",
+        "KimKim",
+        "Rough Guides",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Stockholm",
+          "hotel": "Hotel in Stockholm",
+          "start": 0,
+          "nights": 3,
+          "area": "In Norrmalm, Sodermalm or Gamla Stan, walkable to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Visby",
+          "hotel": "Hotel in a Visby medieval house",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside the walls of Visby, in a restored medieval building",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gothenburg",
+          "hotel": "Hotel in Gothenburg",
+          "start": 5,
+          "nights": 2,
+          "area": "In central Gothenburg or Haga, close to tram lines",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Gamla Stan and the Royal Palace",
+          "notes": "The guard change is around noon.",
+          "where": "Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Uppsala Cathedral and Gamla Uppsala mounds",
+          "notes": "Train from Stockholm takes 40 minutes.",
+          "where": "Uppsala",
+          "book": "",
+          "place": "sweden/uppsala"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Visby city wall and old town walk",
+          "notes": "Rent a bike to see Gotland coast.",
+          "where": "Visby",
+          "book": "",
+          "place": "sweden/visby-gotland"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Haga, Feskekorka fish hall and canal boat",
+          "notes": "Try a Haga cinnamon bun.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Southern archipelago islands by ferry",
+          "notes": "Take tram 11 to Saltholmen.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg-archipelago"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Stockholm Arlanda (ARN)",
+          "to": "Stockholm hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Arlanda Express or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Stockholm hotel",
+          "to": "Stockholm Arlanda (ARN)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Visby Airport (VBY)",
+          "to": "Visby hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Visby hotel",
+          "to": "Visby Airport (VBY)",
+          "time": "10:00",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Stockholm.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Gothenburg Landvetter (GOT)",
+          "to": "Gothenburg hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Gothenburg hotel",
+          "to": "Gothenburg Landvetter (GOT)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Airport train, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sweden-stockholm-abisko-gothenburg-10d",
+      "title": "Sweden from Capital to the Arctic in 10 Days",
+      "summary": "Stockholm, three nights in Abisko for aurora and Icehotel, then Gothenburg.",
+      "days": 10,
+      "route": "Stockholm > Abisko > Gothenburg",
+      "arrive": "Stockholm (ARN)",
+      "depart": "Gothenburg (GOT)",
+      "countries": [
+        "Sweden"
+      ],
+      "regions": [],
+      "cities": [
+        "Stockholm",
+        "Abisko",
+        "Gothenburg"
+      ],
+      "imageQuery": "Abisko northern lights Sweden",
+      "highlights": [
+        "Gamla Stan",
+        "Northern lights",
+        "Icehotel",
+        "Husky ride",
+        "Gothenburg"
+      ],
+      "destinationKeys": [
+        "sweden",
+        "sweden/stockholm",
+        "sweden/abisko",
+        "sweden/gothenburg"
+      ],
+      "hero": "sweden/abisko",
+      "sources": [
+        "Interrail",
+        "Audley Travel",
+        "KimKim",
+        "Rough Guides",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "photography",
+        "culture",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Stockholm",
+          "hotel": "Hotel in Stockholm",
+          "start": 0,
+          "nights": 3,
+          "area": "In Norrmalm, Sodermalm or Gamla Stan, walkable to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Abisko",
+          "hotel": "Lodge in Abisko",
+          "start": 3,
+          "nights": 3,
+          "area": "In a lodge near Abisko mountain station, with aurora views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gothenburg",
+          "hotel": "Hotel in Gothenburg",
+          "start": 6,
+          "nights": 3,
+          "area": "In central Gothenburg or Haga, close to tram lines",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Gamla Stan and the Royal Palace",
+          "notes": "The guard change is around noon.",
+          "where": "Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Vasa Museum",
+          "notes": "Ferry or tram to Djurgarden.",
+          "where": "Djurgarden, Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Archipelago or Uppsala day",
+          "notes": "Pack fika and swimwear in summer.",
+          "where": "Stockholm archipelago",
+          "book": "",
+          "place": "sweden/stockholm-archipelago"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "20:30",
+          "duration": "4h",
+          "name": "Aurora Sky Station evening",
+          "notes": "Aurora season is September to March.",
+          "where": "Abisko",
+          "book": "Yes - book Sky Station",
+          "place": "sweden/abisko-aurora"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Icehotel visit and husky ride",
+          "notes": "Open year-round, with the ice rooms rebuilt each winter.",
+          "where": "Jukkasjarvi",
+          "book": "Yes - book a tour",
+          "place": "sweden/kiruna-icehotel"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "20:30",
+          "duration": "4h",
+          "name": "Aurora Sky Station evening",
+          "notes": "Aurora season is September to March.",
+          "where": "Abisko",
+          "book": "Yes - book Sky Station",
+          "place": "sweden/abisko-aurora"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Haga, Feskekorka fish hall and canal boat",
+          "notes": "Try a Haga cinnamon bun.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "10:30",
+          "duration": "5h",
+          "name": "Southern archipelago islands by ferry",
+          "notes": "Take tram 11 to Saltholmen.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg-archipelago"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Stockholm Arlanda (ARN)",
+          "to": "Stockholm hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Arlanda Express or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Stockholm hotel",
+          "to": "Stockholm Arlanda (ARN)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The transfer from Kiruna to Abisko takes about an hour on the train.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kiruna Airport (KRN)",
+          "to": "Abisko lodge",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Abisko lodge",
+          "to": "Kiruna Airport (KRN)",
+          "time": "08:30",
+          "minutes": 90,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Stockholm.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Gothenburg Landvetter (GOT)",
+          "to": "Gothenburg hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Gothenburg hotel",
+          "to": "Gothenburg Landvetter (GOT)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Airport train, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sweden-complete-12d",
+      "title": "Complete Sweden in 12 Days",
+      "summary": "Stockholm, Gotland, the Arctic and Gothenburg.",
+      "days": 12,
+      "route": "Stockholm > Visby > Abisko > Gothenburg",
+      "arrive": "Stockholm (ARN)",
+      "depart": "Gothenburg (GOT)",
+      "countries": [
+        "Sweden"
+      ],
+      "regions": [],
+      "cities": [
+        "Stockholm",
+        "Visby",
+        "Abisko",
+        "Gothenburg"
+      ],
+      "imageQuery": "Sweden Icehotel Lapland",
+      "highlights": [
+        "Stockholm",
+        "Visby",
+        "Abisko aurora",
+        "Icehotel",
+        "Gothenburg archipelago"
+      ],
+      "destinationKeys": [
+        "sweden",
+        "sweden/stockholm",
+        "sweden/visby",
+        "sweden/abisko",
+        "sweden/gothenburg"
+      ],
+      "hero": "sweden/stockholm",
+      "sources": [
+        "Interrail",
+        "Audley Travel",
+        "KimKim",
+        "Rough Guides",
+        "Beyonder"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Stockholm",
+          "hotel": "Hotel in Stockholm",
+          "start": 0,
+          "nights": 3,
+          "area": "In Norrmalm, Sodermalm or Gamla Stan, walkable to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Visby",
+          "hotel": "Hotel in a Visby medieval house",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside the walls of Visby, in a restored medieval building",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Abisko",
+          "hotel": "Lodge in Abisko",
+          "start": 5,
+          "nights": 3,
+          "area": "In a lodge near Abisko mountain station, with aurora views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gothenburg",
+          "hotel": "Hotel in Gothenburg",
+          "start": 8,
+          "nights": 3,
+          "area": "In central Gothenburg or Haga, close to tram lines",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Gamla Stan and the Royal Palace",
+          "notes": "The guard change is around noon.",
+          "where": "Stockholm",
+          "book": "",
+          "place": "sweden/stockholm-gamla-stan"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Uppsala Cathedral and Gamla Uppsala mounds",
+          "notes": "Train from Stockholm takes 40 minutes.",
+          "where": "Uppsala",
+          "book": "",
+          "place": "sweden/uppsala"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Visby city wall and old town walk",
+          "notes": "Rent a bike to see Gotland coast.",
+          "where": "Visby",
+          "book": "",
+          "place": "sweden/visby-gotland"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "20:30",
+          "duration": "4h",
+          "name": "Aurora Sky Station evening",
+          "notes": "Aurora season is September to March.",
+          "where": "Abisko",
+          "book": "Yes - book Sky Station",
+          "place": "sweden/abisko-aurora"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Icehotel visit and husky ride",
+          "notes": "Open year-round, with the ice rooms rebuilt each winter.",
+          "where": "Jukkasjarvi",
+          "book": "Yes - book a tour",
+          "place": "sweden/kiruna-icehotel"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "21:00",
+          "duration": "3h",
+          "name": "Aurora Sky Station evening",
+          "notes": "Aurora season is September to March.",
+          "where": "Abisko",
+          "book": "Yes - book Sky Station",
+          "place": "sweden/abisko-aurora"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Haga, Feskekorka fish hall and canal boat",
+          "notes": "Try a Haga cinnamon bun.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "10:30",
+          "duration": "5h",
+          "name": "Southern archipelago islands by ferry",
+          "notes": "Take tram 11 to Saltholmen.",
+          "where": "Gothenburg",
+          "book": "",
+          "place": "sweden/gothenburg-archipelago"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Stockholm Arlanda (ARN)",
+          "to": "Stockholm hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Arlanda Express or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Stockholm hotel",
+          "to": "Stockholm Arlanda (ARN)",
+          "time": "09:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Visby Airport (VBY)",
+          "to": "Visby hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Visby hotel",
+          "to": "Visby Airport (VBY)",
+          "time": "08:00",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Stockholm.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Kiruna Airport (KRN)",
+          "to": "Abisko lodge",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Abisko lodge",
+          "to": "Kiruna Airport (KRN)",
+          "time": "08:30",
+          "minutes": 90,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Gothenburg Landvetter (GOT)",
+          "to": "Gothenburg hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Gothenburg hotel",
+          "to": "Gothenburg Landvetter (GOT)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Airport train, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "sweden/stockholm-gamla-stan": {
+        "name": "Gamla Stan, the Royal Palace and Vasa Museum",
+        "description": "The medieval island old town, the royal palace and a 17th-century warship raised from the sea.",
+        "details": "Gamla Stan has cobbled lanes and the Stortorget square. The Royal Palace has the changing of the guard. The Vasa Museum on Djurgarden holds a nearly intact warship that sank on her maiden voyage in 1628. Allow half a day for each.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sweden/stockholm-archipelago": {
+        "name": "Stockholm archipelago boat trip",
+        "description": "A ferry through thousands of islands, with swimming, fika and summer houses.",
+        "details": "The Stockholm archipelago has about 30,000 islands. Waxholm boats serve the inner islands such as Vaxholm and Grinda. In summer you can swim and picnic. Take a coffee and cinnamon bun (fika) with you.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sweden/uppsala": {
+        "name": "Uppsala Cathedral and Gamla Uppsala",
+        "description": "Sweden largest cathedral, Linnaeus Garden and the Viking-age royal burial mounds.",
+        "details": "Uppsala Cathedral is a Gothic church and the burial place of kings. Gamla Uppsala has huge burial mounds from the Viking age and a museum. Linnaeus Garden is in the heart of the university town. It is 40 minutes from Stockholm by train.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sweden/gothenburg": {
+        "name": "Gothenburg Haga, Liseberg and seafood",
+        "description": "Wooden-house districts, canals, a big amusement park and fresh fish.",
+        "details": "Gothenburg has the Haga district of cafes with huge cinnamon buns, the Feskekorka fish hall and Liseberg amusement park. Trams and canal boats link everything. The Southern Archipelago is reached by tram and ferry from Saltholmen.",
+        "interests": [
+          "food",
+          "culture",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sweden/gothenburg-archipelago": {
+        "name": "Gothenburg southern archipelago",
+        "description": "Car-free islands reached by tram and ferry, with rocky swimming spots.",
+        "details": "Take tram 11 to Saltholmen and a ferry to Styrso or Branno. Islands are car-free and quiet, with lunch spots and bathing rocks. Ferries are part of the city travel ticket. It is a lovely day trip in summer.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sweden/visby-gotland": {
+        "name": "Visby on Gotland",
+        "description": "A medieval walled town on a Baltic island, with roses, ruins and rauk sea stacks.",
+        "details": "Visby is a UNESCO-listed Hanseatic town with a 3-kilometre wall and cathedral ruins. Gotland has cycle paths, limestone sea stacks at Fårö and beaches. The Medieval Week festival is in August. Ferries run from Nynashamn.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "sweden/abisko-aurora": {
+        "name": "Abisko northern lights and Sky Station",
+        "description": "A dark-sky national park with a mountain station for aurora viewing.",
+        "details": "Abisko has a famously clear microclimate for northern lights, from September to March. The Aurora Sky Station reached by chairlift is a viewing platform. In summer the midnight sun allows hikes along the Kungsleden trail. Dress in layers.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "adventure",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "sweden/kiruna-icehotel": {
+        "name": "Icehotel and Kiruna husky safari",
+        "description": "A hotel rebuilt each winter from ice, and sled-dog rides in Lapland.",
+        "details": "The Icehotel at Jukkasjarvi is rebuilt every winter from ice taken from the Torne River, with art suites and an ice bar. Visits are possible by day tours. Husky sledding and reindeer visits are offered. In summer there is an Icehotel 365 and river rafting.",
+        "interests": [
+          "adventure",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "sweden": {
+        "name": "Sweden",
+        "description": "A land of islands, forests, design and Arctic aurora.",
+        "images": []
+      },
+      "sweden/stockholm": {
+        "name": "Stockholm",
+        "description": "The island capital.",
+        "images": []
+      },
+      "sweden/visby": {
+        "name": "Visby",
+        "description": "A walled medieval town on Gotland.",
+        "images": []
+      },
+      "sweden/abisko": {
+        "name": "Abisko",
+        "description": "An Arctic national park known for aurora.",
+        "images": []
+      },
+      "sweden/gothenburg": {
+        "name": "Gothenburg",
+        "description": "The west-coast city of canals, fish and an archipelago.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -90,9 +91,9 @@ const BlogPublicationChecklist: React.FC<Props> = ({ tripId, backendUrl, headers
     <View testID="blog-publication-checklist">
       <Text style={styles.sectionTitle}>{readiness.ready && readiness.tripStarted ? 'Ready to go public' : 'Before this blog goes public'}</Text>
       {readinessLines(readiness).map((line) => (
-        <Text key={line.key} testID={`blog-publication-check-${line.key}`} style={styles.helperText} accessibilityLabel={`${line.ok ? 'Done' : 'To do'}: ${line.text}`}>
+        <IconText key={line.key} testID={`blog-publication-check-${line.key}`} style={styles.helperText} accessibilityLabel={`${line.ok ? 'Done' : 'To do'}: ${line.text}`}>
           {line.ok ? '☑' : '☐'} {line.text}
-        </Text>
+        </IconText>
       ))}
     </View>
   );

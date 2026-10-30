@@ -1,0 +1,791 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Swiss-Belhotel, Take Your Backpack, MustSeeSpots and Marriott Activities itineraries for Bahrain",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "bahrain-manama-3d",
+      "title": "Manama Quick Break in 3 Days",
+      "summary": "A compact first look: the souq, the museum, the fort and the mosque.",
+      "days": 3,
+      "route": "Manama",
+      "arrive": "Manama (BAH)",
+      "depart": "Manama (BAH)",
+      "countries": [
+        "Bahrain"
+      ],
+      "regions": [],
+      "cities": [
+        "Manama"
+      ],
+      "imageQuery": "Manama Bahrain skyline",
+      "highlights": [
+        "Bahrain Fort",
+        "National Museum",
+        "Manama Souq",
+        "Al Fateh Mosque"
+      ],
+      "destinationKeys": [
+        "bahrain",
+        "bahrain/manama"
+      ],
+      "hero": "bahrain/manama",
+      "sources": [
+        "Swiss-Belhotel Manama guide",
+        "Take Your Backpack",
+        "MustSeeSpots",
+        "Marriott Activities"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Manama",
+          "hotel": "Hotel in Manama",
+          "start": 0,
+          "nights": 2,
+          "area": "In Manama near Bab Al Bahrain for the souq, or on the Seef or Diplomatic Area waterfront",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Manama Souq and Bab Al Bahrain",
+          "notes": "Go in the evening when cooler; bargaining is normal.",
+          "where": "Manama",
+          "book": "",
+          "place": "bahrain/manama-souq"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Bahrain National Museum",
+          "notes": "Gives the context for Dilmun and pearling before touring the island.",
+          "where": "Manama",
+          "book": "",
+          "place": "bahrain/national-museum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Qal'at al-Bahrain at sunset",
+          "notes": "Visit the site museum first, then walk the ramparts as the light softens.",
+          "where": "Qal'at al-Bahrain",
+          "book": "",
+          "place": "bahrain/bahrain-fort"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "1.5h",
+          "name": "Al Fateh Grand Mosque tour",
+          "notes": "Dress modestly; check visitor hours and prayer times.",
+          "where": "Juffair, Manama",
+          "book": "",
+          "place": "bahrain/al-fateh-mosque"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bahrain International Airport (BAH)",
+          "to": "Manama hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Manama hotel area",
+          "to": "Bahrain International Airport (BAH)",
+          "time": "13:00",
+          "minutes": 25,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bahrain-manama-4d",
+      "title": "Manama and the Southern Desert in 4 Days",
+      "summary": "City sights plus the Tree of Life, the wildlife park and the Dilmun mounds.",
+      "days": 4,
+      "route": "Manama",
+      "arrive": "Manama (BAH)",
+      "depart": "Manama (BAH)",
+      "countries": [
+        "Bahrain"
+      ],
+      "regions": [],
+      "cities": [
+        "Manama"
+      ],
+      "imageQuery": "Tree of Life Bahrain desert",
+      "highlights": [
+        "Tree of Life",
+        "Al Areen",
+        "Dilmun mounds",
+        "Bahrain Fort"
+      ],
+      "destinationKeys": [
+        "bahrain",
+        "bahrain/manama"
+      ],
+      "hero": "bahrain/manama",
+      "sources": [
+        "Swiss-Belhotel Manama guide",
+        "Take Your Backpack",
+        "MustSeeSpots",
+        "Marriott Activities"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Manama",
+          "hotel": "Hotel in Manama",
+          "start": 0,
+          "nights": 3,
+          "area": "In Manama near Bab Al Bahrain for the souq, or on the Seef or Diplomatic Area waterfront",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Manama Souq and Bab Al Bahrain",
+          "notes": "Go in the evening when cooler; bargaining is normal.",
+          "where": "Manama",
+          "book": "",
+          "place": "bahrain/manama-souq"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Bahrain National Museum",
+          "notes": "Gives the context for Dilmun and pearling before touring the island.",
+          "where": "Manama",
+          "book": "",
+          "place": "bahrain/national-museum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Qal'at al-Bahrain at sunset",
+          "notes": "Visit the site museum first, then walk the ramparts as the light softens.",
+          "where": "Qal'at al-Bahrain",
+          "book": "",
+          "place": "bahrain/bahrain-fort"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Al Areen Wildlife Park",
+          "notes": "Visit in the morning; take water.",
+          "where": "Al Areen",
+          "book": "",
+          "place": "bahrain/al-areen-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Dilmun burial mounds at A'ali",
+          "notes": "Open and shadeless; take water.",
+          "where": "A'ali",
+          "book": "",
+          "place": "bahrain/dilmun-burial-mounds"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "5h",
+          "name": "Tree of Life and the southern desert",
+          "notes": "Go near sunset for photographs and cooler air.",
+          "where": "Jebel Dukhan",
+          "book": "",
+          "place": "bahrain/tree-of-life"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bahrain International Airport (BAH)",
+          "to": "Manama hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Manama hotel area",
+          "to": "Bahrain International Airport (BAH)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bahrain-manama-muharraq-5d",
+      "title": "Manama and Muharraq Heritage in 5 Days",
+      "summary": "Two nights in the capital then two on Muharraq, home of the UNESCO Pearling Path.",
+      "days": 5,
+      "route": "Manama > Muharraq",
+      "arrive": "Manama (BAH)",
+      "depart": "Muharraq (BAH)",
+      "countries": [
+        "Bahrain"
+      ],
+      "regions": [
+        "Muharraq"
+      ],
+      "cities": [
+        "Manama",
+        "Muharraq"
+      ],
+      "imageQuery": "Muharraq pearling path Bahrain",
+      "highlights": [
+        "Pearling Path",
+        "Bahrain Fort",
+        "Manama Souq",
+        "Al Fateh Mosque"
+      ],
+      "destinationKeys": [
+        "bahrain",
+        "bahrain/manama",
+        "bahrain/muharraq"
+      ],
+      "hero": "bahrain/muharraq",
+      "sources": [
+        "Swiss-Belhotel Manama guide",
+        "Take Your Backpack",
+        "MustSeeSpots",
+        "Marriott Activities"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Manama",
+          "hotel": "Hotel in Manama",
+          "start": 0,
+          "nights": 2,
+          "area": "In Manama near Bab Al Bahrain for the souq, or on the Seef or Diplomatic Area waterfront",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Muharraq",
+          "hotel": "Hotel in Muharraq",
+          "start": 2,
+          "nights": 2,
+          "area": "In Muharraq old town or near the airport for an early flight",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Manama Souq and Bab Al Bahrain",
+          "notes": "Go in the evening when cooler; bargaining is normal.",
+          "where": "Manama",
+          "book": "",
+          "place": "bahrain/manama-souq"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Bahrain National Museum",
+          "notes": "Gives the context for Dilmun and pearling before touring the island.",
+          "where": "Manama",
+          "book": "",
+          "place": "bahrain/national-museum"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Al Fateh Grand Mosque tour",
+          "notes": "Dress modestly; check visitor hours and prayer times.",
+          "where": "Juffair, Manama",
+          "book": "",
+          "place": "bahrain/al-fateh-mosque"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Beit Al Quran",
+          "notes": "Modest dress; allow an hour.",
+          "where": "Hoora, Manama",
+          "book": "",
+          "place": "bahrain/beit-al-quran"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Pearling Path walk in Muharraq",
+          "notes": "Cooler months are best; stop in a restored house cafe.",
+          "where": "Muharraq",
+          "book": "",
+          "place": "bahrain/pearling-path"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Qal'at al-Bahrain at sunset",
+          "notes": "Visit the site museum first, then walk the ramparts as the light softens.",
+          "where": "Qal'at al-Bahrain",
+          "book": "",
+          "place": "bahrain/bahrain-fort"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bahrain International Airport (BAH)",
+          "to": "Manama hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Manama",
+          "to": "Muharraq",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Muharraq old town",
+          "to": "Bahrain International Airport (BAH)",
+          "time": "12:00",
+          "minutes": 10,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bahrain-complete-7d",
+      "title": "Complete Bahrain in 7 Days",
+      "summary": "The whole island at an unhurried pace: the capital, the south and the pearling island.",
+      "days": 7,
+      "route": "Manama > Muharraq",
+      "arrive": "Manama (BAH)",
+      "depart": "Muharraq (BAH)",
+      "countries": [
+        "Bahrain"
+      ],
+      "regions": [
+        "Muharraq"
+      ],
+      "cities": [
+        "Manama",
+        "Muharraq"
+      ],
+      "imageQuery": "Bahrain Fort sunset",
+      "highlights": [
+        "Bahrain Fort",
+        "Tree of Life",
+        "Al Areen Wildlife Park",
+        "Pearling Path",
+        "Circuit tour"
+      ],
+      "destinationKeys": [
+        "bahrain",
+        "bahrain/manama",
+        "bahrain/muharraq"
+      ],
+      "hero": "bahrain/manama",
+      "sources": [
+        "Swiss-Belhotel Manama guide",
+        "Take Your Backpack",
+        "MustSeeSpots",
+        "Marriott Activities"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Manama",
+          "hotel": "Hotel in Manama",
+          "start": 0,
+          "nights": 3,
+          "area": "In Manama near Bab Al Bahrain for the souq, or on the Seef or Diplomatic Area waterfront",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Muharraq",
+          "hotel": "Hotel in Muharraq",
+          "start": 3,
+          "nights": 3,
+          "area": "In Muharraq old town or near the airport for an early flight",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Manama Souq and Bab Al Bahrain",
+          "notes": "Go in the evening when cooler; bargaining is normal.",
+          "where": "Manama",
+          "book": "",
+          "place": "bahrain/manama-souq"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Bahrain National Museum",
+          "notes": "Gives the context for Dilmun and pearling before touring the island.",
+          "where": "Manama",
+          "book": "",
+          "place": "bahrain/national-museum"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Al Fateh Grand Mosque tour",
+          "notes": "Dress modestly; check visitor hours and prayer times.",
+          "where": "Juffair, Manama",
+          "book": "",
+          "place": "bahrain/al-fateh-mosque"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Al Areen Wildlife Park",
+          "notes": "Visit in the morning; take water.",
+          "where": "Al Areen",
+          "book": "",
+          "place": "bahrain/al-areen-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Dilmun burial mounds at A'ali",
+          "notes": "Open and shadeless; take water.",
+          "where": "A'ali",
+          "book": "",
+          "place": "bahrain/dilmun-burial-mounds"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "5h",
+          "name": "Tree of Life and the southern desert",
+          "notes": "Go near sunset for photographs and cooler air.",
+          "where": "Jebel Dukhan",
+          "book": "",
+          "place": "bahrain/tree-of-life"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Bahrain International Circuit tour",
+          "notes": "Check the calendar; tours are limited on race weekends.",
+          "where": "Sakhir",
+          "book": "Yes - book circuit tours",
+          "place": "bahrain/f1-circuit"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Beit Al Quran",
+          "notes": "Modest dress; allow an hour.",
+          "where": "Hoora, Manama",
+          "book": "",
+          "place": "bahrain/beit-al-quran"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Pearling Path walk in Muharraq",
+          "notes": "Cooler months are best; stop in a restored house cafe.",
+          "where": "Muharraq",
+          "book": "",
+          "place": "bahrain/pearling-path"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Qal'at al-Bahrain at sunset",
+          "notes": "Visit the site museum first, then walk the ramparts as the light softens.",
+          "where": "Qal'at al-Bahrain",
+          "book": "",
+          "place": "bahrain/bahrain-fort"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bahrain International Airport (BAH)",
+          "to": "Manama hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Manama",
+          "to": "Muharraq",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Muharraq old town",
+          "to": "Bahrain International Airport (BAH)",
+          "time": "12:00",
+          "minutes": 10,
+          "carrier": "Taxi or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "bahrain/bahrain-fort": {
+        "name": "Qal'at al-Bahrain (Bahrain Fort)",
+        "description": "A UNESCO fortress on a mound that holds layers of settlement dating back more than four thousand years.",
+        "details": "Qal'at al-Bahrain was the capital of the Dilmun civilisation and later held by Portuguese and Arab rulers, whose fort stands on top of the ancient tell. A site museum explains the layers, and the fort looks across the sea to Manama. Sunset is a lovely time to visit. It is about fifteen minutes from the capital.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bahrain/national-museum": {
+        "name": "Bahrain National Museum",
+        "description": "A seafront museum covering Dilmun burial mounds, pearling and traditional crafts.",
+        "details": "The museum has galleries on archaeology, traditional trades and the pearl industry, and gives good background for the rest of the island. Allow about two hours. It is next to the sea, with a cafe, and closes on some religious holidays.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bahrain/al-fateh-mosque": {
+        "name": "Al Fateh Grand Mosque",
+        "description": "One of the largest mosques in the world, with a huge dome and free tours for visitors.",
+        "details": "The Al Fateh mosque in Juffair can hold thousands of worshippers and has a fibreglass dome. Free guided tours are given for non-Muslims at set times, and robes are provided. Dress modestly, covering shoulders and knees, and women cover their hair. Check the opening days, because it closes at prayer times and on Fridays for visitors.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bahrain/manama-souq": {
+        "name": "Manama Souq and Bab Al Bahrain",
+        "description": "A bustling old market of gold, spices, textiles and tea, entered through the historic gate.",
+        "details": "The souq behind Bab Al Bahrain sells spices, perfumes, fabrics and gold, and is best explored on foot in the early evening when it cools. The surrounding lanes have old coffee shops and cheap restaurants, and the area is lively on Thursday evenings. Bargaining is normal.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bahrain/pearling-path": {
+        "name": "Muharraq and the Pearling Path",
+        "description": "A UNESCO trail of restored merchant houses, shops and the old waterfront in Muharraq.",
+        "details": "The Pearling Path is a walking route of about three and a half kilometres through old Muharraq, passing the houses of pearl merchants, a pearling museum and the Siyadi mosque. The oysters were once the source of the island wealth. Much of the route is shaded, and cafes in restored houses make good stops. Cooler months are best.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bahrain/tree-of-life": {
+        "name": "Tree of Life",
+        "description": "A lone mesquite tree standing in the desert, said to be more than four hundred years old.",
+        "details": "The Tree of Life grows alone in the desert near Jebel Dukhan, with no visible source of water. It is a short stop, best combined with a drive through the Southern Governorate and the oil museum. Go near sunset for photographs and cooler air. The site has limited shade.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bahrain/al-areen-wildlife": {
+        "name": "Al Areen Wildlife Park",
+        "description": "A nature reserve for Arabian oryx, gazelles and birds, with a bus safari.",
+        "details": "The park protects Arabian wildlife in a large reserve, including the oryx, which are bred to be returned to the desert. Open buses travel through the reserve. Visit in the morning, because it is hot in the afternoon, and take water.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bahrain/f1-circuit": {
+        "name": "Bahrain International Circuit",
+        "description": "The home of the Bahrain Grand Prix, with tours of the pit lane and track.",
+        "details": "The circuit at Sakhir has guided tours of the paddock, pits and podium on non-race days, and driving experiences. Race weekends in spring sell out well in advance. Check the calendar, because tours are limited during events.",
+        "interests": [
+          "adventure",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bahrain/beit-al-quran": {
+        "name": "Beit Al Quran",
+        "description": "A museum of Quranic manuscripts and Islamic art in a building with a striking design.",
+        "details": "Beit Al Quran holds one of the largest collections of Quranic manuscripts and Islamic calligraphy. It has a library, a mosque and an auditorium, and a modest dress code. Visiting takes about an hour.",
+        "interests": [
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bahrain/dilmun-burial-mounds": {
+        "name": "Dilmun burial mounds at A'ali",
+        "description": "Thousands of ancient burial mounds scattered across the island, some of them royal.",
+        "details": "The Dilmun burial mounds date from about 2000 BC and spread over the island. At A'ali the royal mounds are large, and a small site museum explains the burial customs. The area is flat and open with little shade. Combine with the Tree of Life and Al Areen on a southern drive.",
+        "interests": [
+          "culture",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "bahrain": {
+        "name": "Bahrain",
+        "description": "A small island kingdom of pearling heritage, ancient forts and desert drives.",
+        "images": []
+      },
+      "bahrain/manama": {
+        "name": "Manama",
+        "description": "The capital, with a souq, museums and a modern waterfront.",
+        "images": []
+      },
+      "bahrain/muharraq": {
+        "name": "Muharraq",
+        "description": "The old pearling capital on its own island, reached by causeway, with a UNESCO trail.",
+        "images": []
+      }
+    }
+  }
+}

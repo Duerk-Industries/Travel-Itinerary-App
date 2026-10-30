@@ -1,4 +1,5 @@
 // @ts-nocheck
+import IconText from './IconText';
 import { themeFontFamilies, themeStyle } from '../theme/theme';
 
 
@@ -136,7 +137,7 @@ const PublicReactionChoices: React.FC<{
         accessibilityLabel={`${selectedReaction === emoji ? 'Remove' : 'React with'} ${emoji}${targetLabel ? ` on ${targetLabel}` : ''}`}
         accessibilityState={{ selected: selectedReaction === emoji, disabled: reacting }}
         style={themeStyle('components_PublicTripBlogPage_2', { selectedReaction: selectedReaction, emoji: emoji }, _styleTheme)}>
-        <Text style={themeStyle('components_PublicTripBlogPage_3', {  }, _styleTheme)}>{REACTION_GLYPH[emoji]}</Text>
+        <IconText style={themeStyle('components_PublicTripBlogPage_3', {  }, _styleTheme)}>{REACTION_GLYPH[emoji]}</IconText>
         {(data.reactionCounts[emoji] ?? 0) > 0 ? <Text style={themeStyle('components_PublicTripBlogPage_4', { bodyFont: bodyFont }, _styleTheme)}>{data.reactionCounts[emoji]}</Text> : null}
       </Pressable>
     ))}
@@ -250,9 +251,9 @@ const DayEngagementFooter: React.FC<{
             accessibilityState={{ expanded }}
             style={themeStyle('components_PublicTripBlogPage_8', {  }, _styleTheme)}
           >
-            <Text style={themeStyle('components_PublicTripBlogPage_9', { bodyFont: bodyFont }, _styleTheme)}>
+            <IconText style={themeStyle('components_PublicTripBlogPage_9', { bodyFont: bodyFont }, _styleTheme)}>
               💬 {commentCount ? `${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}` : 'Comment'} {expanded ? '▲' : '▼'}
-            </Text>
+            </IconText>
           </Pressable>
         ) : null}
       </View>

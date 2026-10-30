@@ -61,6 +61,15 @@ test.describe('Keyboard-only trip sharing', () => {
     const tripName = await createTripViaWizard(page);
     expect(tripName).toBeTruthy();
 
+    await blurFocus(page);
+    await tabUntilFocused(page, d => d.testId === 'home-nav-overview', 'Itinerary');
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('overview-actions-menu')).toBeVisible();
+    await blurFocus(page);
+    await tabUntilFocused(page, d => d.testId === 'overview-actions-menu', 'Itinerary actions');
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('itinerary-share-trip-button')).toBeVisible();
+
     // Open the trip actions / share entry. The share surface is reached
     // from the home screen via the "Trip Details" page or a quick-action
     // menu — look for a button accessible as "Share" or containing that
@@ -69,8 +78,7 @@ test.describe('Keyboard-only trip sharing', () => {
     const tabsToShare = await tabUntilFocused(
       page,
       (d) =>
-        (d.role === 'button' || d.tag === 'button') &&
-        Boolean(d.ariaLabel?.toLowerCase().includes('share') || /share/i.test(d.text)),
+        d.testId === 'itinerary-share-trip-button',
       'Share trip button',
     );
     expect(tabsToShare).toBeLessThan(MAX_TAB_PRESSES);
@@ -82,9 +90,9 @@ test.describe('Keyboard-only trip sharing', () => {
     const tabsToEmail = await tabUntilFocused(
       page,
       (d) =>
-        d.tag === 'input' &&
+        (d.tag === 'input' || d.tag === 'textarea') &&
         Boolean(
-          d.placeholder?.toLowerCase().startsWith('email') ||
+          d.placeholder?.toLowerCase().includes('email') ||
             d.ariaLabel?.toLowerCase().includes('email'),
         ),
       'share dialog email input',

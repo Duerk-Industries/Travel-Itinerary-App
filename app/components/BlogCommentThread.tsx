@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, avatarColor as colorForUser } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -312,9 +313,9 @@ const BlogCommentThread: React.FC<ThreadProps> = ({
                   }
                 }}
               >
-                <Text style={themeStyle('components_BlogCommentThread_32', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
+                <IconText style={themeStyle('components_BlogCommentThread_32', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                   ▾ Show {comment.replyCount - previewReplies.length} earlier {comment.replyCount - previewReplies.length === 1 ? 'comment' : 'comments'}
-                </Text>
+                </IconText>
               </TouchableOpacity>
             ) : null}
           </View>

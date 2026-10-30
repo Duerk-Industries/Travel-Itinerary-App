@@ -1,3 +1,4 @@
+import IconText from '../components/IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -368,7 +369,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
                       >
                         <View style={themeStyle('tabs_following_6', {  }, _styleTheme)}>
                           <View style={themeStyle('tabs_following_7', {  }, _styleTheme)}>
-                            <Text style={themeStyle('tabs_following_8', {  }, _styleTheme)}>{EVENT_ICON[event?.type] ?? '•'}</Text>
+                            <IconText style={themeStyle('tabs_following_8', {  }, _styleTheme)}>{EVENT_ICON[event?.type] ?? '•'}</IconText>
                             <View style={themeStyle('tabs_following_9', {  }, _styleTheme)}>
                               <Text style={[styles.bodyText, themeStyle('tabs_following_10', {  }, _styleTheme)]}>{getPrimaryText(event)}</Text>
                               {secondary ? <Text style={styles.helperText}>{secondary}</Text> : null}

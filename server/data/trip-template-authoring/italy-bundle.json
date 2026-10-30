@@ -1,0 +1,3138 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Opus 5), combining Rough Guides, Rick Steves and Italian National Tourist Board itineraries for Italy",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "italy-rome-4d",
+      "title": "Rome in 4 Days",
+      "summary": "A single-base first visit to Rome, split into one day of ancient sites, one of the Vatican, and an evening walk through the baroque centre.",
+      "days": 4,
+      "route": "Rome",
+      "arrive": "Rome (FCO)",
+      "depart": "Rome (FCO)",
+      "countries": [
+        "Italy"
+      ],
+      "regions": [
+        "Lazio"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "imageQuery": "Rome Italy Colosseum",
+      "highlights": [
+        "Colosseum and Forum",
+        "Vatican Museums",
+        "St Peter's Basilica",
+        "Trevi Fountain",
+        "Trastevere dinner"
+      ],
+      "destinationKeys": [
+        "italy",
+        "italy/lazio",
+        "italy/rome"
+      ],
+      "hero": "italy/rome",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves (ricksteves.com)",
+        "Italian National Tourist Board (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Rome",
+          "hotel": "Hotel in Rome",
+          "start": 0,
+          "nights": 3,
+          "area": "Monti, Centro Storico or near Termini: the first two to walk to the sights, Termini for transport",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Pantheon",
+          "notes": "Free-standing in a busy square and quick to see inside; rain falls straight through the opening in the dome onto a drained floor.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/pantheon"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Trevi Fountain",
+          "notes": "A short walk from the Pantheon; the square is small and one of the busiest spots in the city, so late evening is the quiet time.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/trevi-fountain"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Dinner in Trastevere",
+          "notes": "The lanes get busy from early evening; cobbles are uneven, so sensible shoes help.",
+          "where": "Trastevere, Rome",
+          "book": "",
+          "place": "italy/trastevere"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Colosseum",
+          "notes": "Entry is by timed slot and the same ticket covers the Forum and Palatine, so book the earliest slot you can.",
+          "where": "Colosseo, Rome",
+          "book": "Yes - timed entry slots sell out days ahead in season",
+          "place": "italy/colosseum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2.5h",
+          "name": "Roman Forum and Palatine Hill",
+          "notes": "Covered by the Colosseum ticket; shade is scarce and the ancient paving is uneven, so carry water.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/roman-forum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Capitoline Museums",
+          "notes": "Quieter than the Colosseum, with a back terrace looking over the Forum you have just walked.",
+          "where": "Capitoline Hill, Rome",
+          "book": "",
+          "place": "italy/capitoline-museums"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Vatican Museums and Sistine Chapel",
+          "notes": "Book a timed entry; the route is long, largely one-way, and finishes at the Sistine Chapel, where photography is not allowed.",
+          "where": "Vatican City",
+          "book": "Yes - timed tickets are close to essential",
+          "place": "italy/vatican-museums"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "St Peter's Basilica",
+          "notes": "Free to enter but the security queue can be long; shoulders and knees must be covered. The dome climb is ticketed separately.",
+          "where": "Vatican City",
+          "book": "",
+          "place": "italy/st-peters-basilica"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Castel Sant'Angelo",
+          "notes": "A short walk from the Vatican along the river; the spiral ramp climbs continuously to a rooftop terrace.",
+          "where": "Ponte, Rome",
+          "book": "",
+          "place": "italy/castel-sant-angelo"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Borghese Gallery",
+          "notes": "Visits run in fixed two-hour slots with a capped number of visitors, so booking ahead is required rather than optional.",
+          "where": "Villa Borghese, Rome",
+          "book": "Yes - fixed timed slots with a visitor cap, booked well ahead",
+          "place": "italy/borghese-gallery"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Rome Fiumicino Airport (FCO)",
+          "to": "Rome hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Leonardo Express train to Termini, or taxi",
+          "notes": "The Leonardo Express runs non-stop to Termini; city taxis charge a fixed fare from the airport to within the old walls.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Rome hotel area",
+          "to": "Rome Fiumicino Airport (FCO)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Leonardo Express train, or taxi",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "italy-rome-florence-venice-7d",
+      "title": "Rome, Florence and Venice in 7 Days",
+      "summary": "Italy's classic first-visit route at the shortest length that works, linking the three cities by high-speed train. Venice gets a single night, so it is a taste rather than a stay.",
+      "days": 7,
+      "route": "Rome > Florence > Venice",
+      "arrive": "Rome (FCO)",
+      "depart": "Venice (VCE)",
+      "countries": [
+        "Italy"
+      ],
+      "regions": [
+        "Lazio",
+        "Tuscany",
+        "Veneto"
+      ],
+      "cities": [
+        "Rome",
+        "Florence",
+        "Venice"
+      ],
+      "imageQuery": "Venice Italy Grand Canal gondola",
+      "highlights": [
+        "Colosseum and Forum",
+        "Vatican Museums",
+        "Brunelleschi's dome",
+        "Uffizi Gallery",
+        "St Mark's Basilica"
+      ],
+      "destinationKeys": [
+        "italy",
+        "italy/lazio",
+        "italy/rome",
+        "italy/tuscany",
+        "italy/florence",
+        "italy/veneto",
+        "italy/venice"
+      ],
+      "hero": "italy/venice",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves (ricksteves.com)",
+        "Italian National Tourist Board (official tourism site)"
+      ],
+      "pace": "F",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Rome",
+          "hotel": "Hotel in Rome",
+          "start": 0,
+          "nights": 3,
+          "area": "Monti or Centro Storico, both walkable to the ancient sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Florence",
+          "hotel": "Hotel in Florence",
+          "start": 3,
+          "nights": 2,
+          "area": "Centro Storico, inside the ring road: everything in Florence is then a short walk",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Venice",
+          "hotel": "Hotel in Venice",
+          "start": 5,
+          "nights": 1,
+          "area": "Cannaregio, Dorsoduro or San Marco: the first two are quieter and better value than the square itself",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Pantheon",
+          "notes": "Free-standing in a busy square and quick to see inside; rain falls straight through the opening in the dome onto a drained floor.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/pantheon"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Trevi Fountain",
+          "notes": "A short walk from the Pantheon; the square is small and one of the busiest spots in the city, so late evening is the quiet time.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/trevi-fountain"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Dinner in Trastevere",
+          "notes": "",
+          "where": "Trastevere, Rome",
+          "book": "",
+          "place": "italy/trastevere"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Colosseum",
+          "notes": "Book the earliest timed slot you can; the same ticket covers the Forum and Palatine.",
+          "where": "Colosseo, Rome",
+          "book": "Yes - timed entry slots sell out days ahead in season",
+          "place": "italy/colosseum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2.5h",
+          "name": "Roman Forum and Palatine Hill",
+          "notes": "Shade is scarce and the ancient paving is uneven, so carry water.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/roman-forum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1h",
+          "name": "Spanish Steps",
+          "notes": "Sitting on the steps is not allowed and is enforced, so it is a walk up rather than a rest.",
+          "where": "Piazza di Spagna, Rome",
+          "book": "",
+          "place": "italy/spanish-steps"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Vatican Museums and Sistine Chapel",
+          "notes": "Book a timed entry; the route is long and largely one-way.",
+          "where": "Vatican City",
+          "book": "Yes - timed tickets are close to essential",
+          "place": "italy/vatican-museums"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "St Peter's Basilica",
+          "notes": "Free entry, but expect a security queue and a dress code covering shoulders and knees.",
+          "where": "Vatican City",
+          "book": "",
+          "place": "italy/st-peters-basilica"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Castel Sant'Angelo",
+          "notes": "A short riverside walk from the Vatican.",
+          "where": "Ponte, Rome",
+          "book": "",
+          "place": "italy/castel-sant-angelo"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Florence Duomo and Brunelleschi's dome",
+          "notes": "Arrive after the train and see the exterior and interior; the dome climb needs its own timed reservation and over four hundred steps.",
+          "where": "Centro Storico, Florence",
+          "book": "Yes - the dome climb requires a separate timed reservation",
+          "place": "italy/florence-duomo"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Piazza della Signoria",
+          "notes": "The open loggia on one side is free to walk into and full of sculpture.",
+          "where": "Centro Storico, Florence",
+          "book": "",
+          "place": "italy/piazza-signoria"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "1.5h",
+          "name": "Accademia Gallery",
+          "notes": "Small gallery, long queue: book a timed ticket. The unfinished Prisoners line the corridor before David.",
+          "where": "San Marco, Florence",
+          "book": "Yes - timed tickets save a substantial queue",
+          "place": "italy/accademia-david"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Mercato Centrale",
+          "notes": "The ground-floor market is busiest in the morning; the upper food hall keeps longer hours.",
+          "where": "San Lorenzo, Florence",
+          "book": "",
+          "place": "italy/mercato-centrale"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "3h",
+          "name": "Uffizi Gallery",
+          "notes": "Large enough to need a shortlist; timed tickets booked ahead save a long wait.",
+          "where": "Centro Storico, Florence",
+          "book": "Yes - timed tickets save a substantial queue",
+          "place": "italy/uffizi-gallery"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Ponte Vecchio",
+          "notes": "Narrow and crowded; the view of the bridge itself is better from the next bridge along.",
+          "where": "Centro Storico, Florence",
+          "book": "",
+          "place": "italy/ponte-vecchio"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "St Mark's Basilica",
+          "notes": "Book a slot if you can; a dress code is enforced and large bags must be left at a nearby deposit.",
+          "where": "San Marco, Venice",
+          "book": "Yes - timed entry avoids a long queue",
+          "place": "italy/st-marks-basilica"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Grand Canal by vaporetto",
+          "notes": "Line 1 is the slow boat that calls at nearly every stop; an outdoor seat is worth waiting a boat for.",
+          "where": "Grand Canal, Venice",
+          "book": "",
+          "place": "italy/grand-canal-vaporetto"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Cicchetti crawl in Venice",
+          "notes": "Work through two or three bars rather than sitting down for one meal; many close early by Italian standards.",
+          "where": "Cannaregio, Venice",
+          "book": "",
+          "place": "italy/venice-cicchetti"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Rialto Bridge and market",
+          "notes": "The fish market works in the morning and closes on Mondays; keep an eye on the time for the airport transfer.",
+          "where": "San Polo, Venice",
+          "book": "",
+          "place": "italy/rialto-bridge"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Rome Fiumicino Airport (FCO)",
+          "to": "Rome hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Leonardo Express train to Termini, or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Rome Termini Station",
+          "to": "Florence Santa Maria Novella Station",
+          "time": "11:00",
+          "minutes": 95,
+          "carrier": "Frecciarossa or Italo high-speed train",
+          "notes": "Both operators run the route roughly hourly; advance fares are much cheaper than walk-up ones.",
+          "book": "Yes - advance fares are far cheaper and seats are reserved"
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Florence Santa Maria Novella Station",
+          "to": "Venice Santa Lucia Station",
+          "time": "09:30",
+          "minutes": 125,
+          "carrier": "Frecciarossa or Italo high-speed train",
+          "notes": "Make sure the ticket is to Venezia Santa Lucia, on the islands, not Venezia Mestre on the mainland.",
+          "book": "Yes - advance fares are far cheaper and seats are reserved"
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Venice hotel area",
+          "to": "Venice Marco Polo Airport (VCE)",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Alilaguna water bus, or land bus from Piazzale Roma",
+          "notes": "The water bus is slower than the land bus but saves dragging luggage over bridges. Allow extra time either way.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "italy-rome-naples-sorrento-10d",
+      "title": "Rome, Naples and the Amalfi Coast in 10 Days",
+      "summary": "A southern route pairing Rome with Naples, Pompeii and a Sorrento base for day trips to Capri and the Amalfi Coast villages.",
+      "days": 10,
+      "route": "Rome > Naples > Sorrento (Pompeii, Capri, Amalfi Coast)",
+      "arrive": "Rome (FCO)",
+      "depart": "Naples (NAP)",
+      "countries": [
+        "Italy"
+      ],
+      "regions": [
+        "Lazio",
+        "Campania"
+      ],
+      "cities": [
+        "Rome",
+        "Naples",
+        "Sorrento",
+        "Pompeii",
+        "Capri",
+        "Amalfi Coast"
+      ],
+      "imageQuery": "Amalfi Coast Italy Positano cliffs",
+      "highlights": [
+        "Colosseum and Forum",
+        "Vatican Museums",
+        "Pompeii ruins",
+        "Capri day trip",
+        "Positano and Amalfi",
+        "Neapolitan pizza"
+      ],
+      "destinationKeys": [
+        "italy",
+        "italy/lazio",
+        "italy/rome",
+        "italy/campania",
+        "italy/naples",
+        "italy/sorrento",
+        "italy/pompeii",
+        "italy/capri",
+        "italy/amalfi-coast"
+      ],
+      "hero": "italy/amalfi-coast",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves (ricksteves.com)",
+        "Italian National Tourist Board (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Rome",
+          "hotel": "Hotel in Rome",
+          "start": 0,
+          "nights": 4,
+          "area": "Monti or Centro Storico, both walkable to the ancient sites",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Naples",
+          "hotel": "Hotel in Naples",
+          "start": 4,
+          "nights": 2,
+          "area": "Chiaia or near the historic centre: Chiaia quieter, the centro storico louder and closer to the lanes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sorrento",
+          "hotel": "Hotel in Sorrento",
+          "start": 6,
+          "nights": 3,
+          "area": "Near the old town and the Circumvesuviana station, within walking distance of the ferry port lifts",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Pantheon",
+          "notes": "Free-standing in a busy square and quick to see inside; rain falls straight through the opening in the dome onto a drained floor.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/pantheon"
+        },
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Trevi Fountain",
+          "notes": "A short walk from the Pantheon; the square is small and one of the busiest spots in the city, so late evening is the quiet time.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/trevi-fountain"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Dinner in Trastevere",
+          "notes": "",
+          "where": "Trastevere, Rome",
+          "book": "",
+          "place": "italy/trastevere"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Colosseum",
+          "notes": "Book the earliest timed slot you can; the same ticket covers the Forum and Palatine.",
+          "where": "Colosseo, Rome",
+          "book": "Yes - timed entry slots sell out days ahead in season",
+          "place": "italy/colosseum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2.5h",
+          "name": "Roman Forum and Palatine Hill",
+          "notes": "Shade is scarce and the ancient paving is uneven, so carry water.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/roman-forum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Capitoline Museums",
+          "notes": "A back terrace looks over the Forum you have just walked.",
+          "where": "Capitoline Hill, Rome",
+          "book": "",
+          "place": "italy/capitoline-museums"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Vatican Museums and Sistine Chapel",
+          "notes": "Book a timed entry; the route is long and largely one-way.",
+          "where": "Vatican City",
+          "book": "Yes - timed tickets are close to essential",
+          "place": "italy/vatican-museums"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "St Peter's Basilica",
+          "notes": "Free entry, but expect a security queue and a dress code covering shoulders and knees.",
+          "where": "Vatican City",
+          "book": "",
+          "place": "italy/st-peters-basilica"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Castel Sant'Angelo",
+          "notes": "A short riverside walk from the Vatican.",
+          "where": "Ponte, Rome",
+          "book": "",
+          "place": "italy/castel-sant-angelo"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Borghese Gallery",
+          "notes": "Fixed two-hour slots with a visitor cap, so book well ahead.",
+          "where": "Villa Borghese, Rome",
+          "book": "Yes - fixed timed slots with a visitor cap, booked well ahead",
+          "place": "italy/borghese-gallery"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Spanish Steps",
+          "notes": "Sitting on the steps is not allowed and is enforced.",
+          "where": "Piazza di Spagna, Rome",
+          "book": "",
+          "place": "italy/spanish-steps"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Naples National Archaeological Museum",
+          "notes": "Seeing this before Pompeii makes much more sense of the site, since the best mosaics and frescoes were moved here. Check opening days.",
+          "where": "Centro Storico, Naples",
+          "book": "",
+          "place": "italy/naples-archaeological-museum"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Neapolitan pizza in Naples",
+          "notes": "The best-known places take no bookings and run queues, so go early or late in the service.",
+          "where": "Centro Storico, Naples",
+          "book": "",
+          "place": "italy/naples-pizza"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Naples historic centre",
+          "notes": "Follow Spaccanapoli, the straight lane cutting through the old grid; scooters use alleys that feel too narrow for them, so walk defensively.",
+          "where": "Centro Storico, Naples",
+          "book": "",
+          "place": "italy/naples-historic-centre"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Castel dell'Ovo",
+          "notes": "A flat causeway walk out to the islet, with a view across the bay toward Vesuvius.",
+          "where": "Lungomare, Naples",
+          "book": "",
+          "place": "italy/castel-dell-ovo"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Pompeii",
+          "notes": "Stop here on the way to Sorrento, leaving luggage at the station deposit. Very little shade and original basalt paving with high kerbs.",
+          "where": "Pompeii, Campania",
+          "book": "Yes - timed tickets avoid the gate queue in season",
+          "place": "italy/pompeii"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Sorrento",
+          "notes": "An evening walk around the old town grid behind the main square.",
+          "where": "Sorrento, Campania",
+          "book": "",
+          "place": "italy/sorrento-town"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Capri",
+          "notes": "Take an early ferry to beat the midday arrivals; the Blue Grotto can only be entered in calm water and is often closed by swell. The island is steep throughout.",
+          "where": "Capri, Campania",
+          "book": "",
+          "place": "italy/capri"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Amalfi Coast: Positano and Amalfi",
+          "notes": "The ferry is usually quicker and more comfortable than the coast road bus in season; every village involves steep steps between levels.",
+          "where": "Positano and Amalfi, Campania",
+          "book": "",
+          "place": "italy/amalfi-coast"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "Sorrento",
+          "notes": "A short last walk before the transfer back to Naples for the flight.",
+          "where": "Sorrento, Campania",
+          "book": "",
+          "place": "italy/sorrento-town"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Rome Fiumicino Airport (FCO)",
+          "to": "Rome hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Leonardo Express train to Termini, or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Rome Termini Station",
+          "to": "Naples Centrale Station",
+          "time": "11:30",
+          "minutes": 75,
+          "carrier": "Frecciarossa or Italo high-speed train",
+          "notes": "A fast and frequent run south; advance fares are much cheaper.",
+          "book": "Yes - advance fares are far cheaper and seats are reserved"
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Naples Centrale Station",
+          "to": "Pompeii Scavi",
+          "time": "08:45",
+          "minutes": 40,
+          "carrier": "Circumvesuviana local train",
+          "notes": "The Circumvesuviana is a basic commuter line; keep bags close and use the station luggage deposit at Pompeii.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Pompeii Scavi",
+          "to": "Sorrento",
+          "time": "15:00",
+          "minutes": 35,
+          "carrier": "Circumvesuviana local train",
+          "notes": "The same line continues to its terminus at Sorrento.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Sorrento Marina Piccola",
+          "to": "Capri Marina Grande",
+          "time": "08:15",
+          "minutes": 25,
+          "carrier": "Ferry or hydrofoil",
+          "notes": "Sailings are cancelled in rough weather, so keep the day flexible.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Capri Marina Grande",
+          "to": "Sorrento Marina Piccola",
+          "time": "17:00",
+          "minutes": 25,
+          "carrier": "Ferry or hydrofoil",
+          "notes": "Check the last sailing on arrival, as evening services are limited outside high season.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Sorrento",
+          "to": "Positano and Amalfi",
+          "time": "08:30",
+          "minutes": 60,
+          "carrier": "Coastal ferry, or SITA bus along the coast road",
+          "notes": "The ferry does not run year-round; out of season the bus is the only option and is slow.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Amalfi",
+          "to": "Sorrento",
+          "time": "17:00",
+          "minutes": 75,
+          "carrier": "Coastal ferry, or SITA bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Sorrento",
+          "to": "Naples Airport (NAP)",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Curreri direct airport bus",
+          "notes": "A direct coach runs between Sorrento and the airport; allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "italy-venice-florence-cinque-terre-rome-10d",
+      "title": "Venice, Florence, Cinque Terre and Rome in 10 Days",
+      "summary": "The classic north-to-south route with the Ligurian coast added, swapping a third city day for two nights among the Cinque Terre villages.",
+      "days": 10,
+      "route": "Venice > Florence > Cinque Terre > Rome",
+      "arrive": "Venice (VCE)",
+      "depart": "Rome (FCO)",
+      "countries": [
+        "Italy"
+      ],
+      "regions": [
+        "Veneto",
+        "Tuscany",
+        "Liguria",
+        "Lazio"
+      ],
+      "cities": [
+        "Venice",
+        "Florence",
+        "Cinque Terre",
+        "Monterosso al Mare",
+        "Rome"
+      ],
+      "imageQuery": "Cinque Terre Italy cliff village coast",
+      "highlights": [
+        "St Mark's Basilica",
+        "Brunelleschi's dome",
+        "Uffizi Gallery",
+        "Cinque Terre villages",
+        "Colosseum and Forum"
+      ],
+      "destinationKeys": [
+        "italy",
+        "italy/veneto",
+        "italy/venice",
+        "italy/tuscany",
+        "italy/florence",
+        "italy/liguria",
+        "italy/cinque-terre",
+        "italy/monterosso-al-mare",
+        "italy/lazio",
+        "italy/rome"
+      ],
+      "hero": "italy/cinque-terre",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves (ricksteves.com)",
+        "Italian National Tourist Board (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Venice",
+          "hotel": "Hotel in Venice",
+          "start": 0,
+          "nights": 2,
+          "area": "Cannaregio or Dorsoduro: quieter and better value than San Marco, still walkable to it",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Florence",
+          "hotel": "Hotel in Florence",
+          "start": 2,
+          "nights": 2,
+          "area": "Centro Storico, inside the ring road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Monterosso al Mare",
+          "hotel": "Hotel in Monterosso al Mare",
+          "start": 4,
+          "nights": 2,
+          "area": "Monterosso is the flattest of the five villages and the only one with a real beach, which makes it the easiest base",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rome",
+          "hotel": "Hotel in Rome",
+          "start": 6,
+          "nights": 3,
+          "area": "Monti or Centro Storico, both walkable to the ancient sites",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Grand Canal by vaporetto",
+          "notes": "A good orientation on arrival; line 1 is the slow boat that calls at nearly every stop.",
+          "where": "Grand Canal, Venice",
+          "book": "",
+          "place": "italy/grand-canal-vaporetto"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Cicchetti crawl in Venice",
+          "notes": "Work through two or three bars rather than sitting down for one meal.",
+          "where": "Cannaregio, Venice",
+          "book": "",
+          "place": "italy/venice-cicchetti"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "St Mark's Basilica",
+          "notes": "Book a slot if you can; a dress code is enforced and large bags must be left at a nearby deposit.",
+          "where": "San Marco, Venice",
+          "book": "Yes - timed entry avoids a long queue",
+          "place": "italy/st-marks-basilica"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Doge's Palace",
+          "notes": "The route runs through the council chambers and across the Bridge of Sighs into the old prisons.",
+          "where": "San Marco, Venice",
+          "book": "Yes - timed tickets save a long queue",
+          "place": "italy/doges-palace"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Rialto Bridge and market",
+          "notes": "The fish market works mornings only and closes Mondays, so this is the bridge and produce stalls.",
+          "where": "San Polo, Venice",
+          "book": "",
+          "place": "italy/rialto-bridge"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Florence Duomo and Brunelleschi's dome",
+          "notes": "The dome climb needs its own timed reservation and over four hundred steps through the gap between the two shells.",
+          "where": "Centro Storico, Florence",
+          "book": "Yes - the dome climb requires a separate timed reservation",
+          "place": "italy/florence-duomo"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Piazza della Signoria",
+          "notes": "The open loggia on one side is free to walk into and full of sculpture.",
+          "where": "Centro Storico, Florence",
+          "book": "",
+          "place": "italy/piazza-signoria"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "1.5h",
+          "name": "Accademia Gallery",
+          "notes": "Small gallery, long queue: book a timed ticket.",
+          "where": "San Marco, Florence",
+          "book": "Yes - timed tickets save a substantial queue",
+          "place": "italy/accademia-david"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Mercato Centrale",
+          "notes": "The ground-floor market is busiest in the morning.",
+          "where": "San Lorenzo, Florence",
+          "book": "",
+          "place": "italy/mercato-centrale"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "3h",
+          "name": "Uffizi Gallery",
+          "notes": "Large enough to need a shortlist; timed tickets booked ahead save a long wait.",
+          "where": "Centro Storico, Florence",
+          "book": "Yes - timed tickets save a substantial queue",
+          "place": "italy/uffizi-gallery"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Piazzale Michelangelo",
+          "notes": "Reached by a climb of stepped ramps from the river, or by city bus; the terrace fills well before sunset.",
+          "where": "Oltrarno, Florence",
+          "book": "",
+          "place": "italy/piazzale-michelangelo"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "The Cinque Terre villages",
+          "notes": "Arrive and take the local train one or two villages along for an evening look; they are quietest once the day crowds have gone.",
+          "where": "Cinque Terre, Liguria",
+          "book": "",
+          "place": "italy/cinque-terre-villages"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Cinque Terre coastal trail",
+          "notes": "Check which sections are open with the national park before setting out, as landslip closures change; a Cinque Terre card covers the trails and the local train.",
+          "where": "Cinque Terre, Liguria",
+          "book": "",
+          "place": "italy/cinque-terre-trail"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Monterosso al Mare beach",
+          "notes": "Sections of free beach sit alongside rented loungers; a good place to recover after the trail.",
+          "where": "Monterosso al Mare, Liguria",
+          "book": "",
+          "place": "italy/monterosso-beach"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Pantheon",
+          "notes": "Free-standing in a busy square and quick to see inside; rain falls straight through the opening in the dome onto a drained floor.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/pantheon"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Trevi Fountain",
+          "notes": "A short walk from the Pantheon; the square is small and one of the busiest spots in the city, so late evening is the quiet time.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/trevi-fountain"
+        },
+        {
+          "day": 6,
+          "type": "Food & Drink",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Dinner in Trastevere",
+          "notes": "",
+          "where": "Trastevere, Rome",
+          "book": "",
+          "place": "italy/trastevere"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Colosseum",
+          "notes": "Book the earliest timed slot you can; the same ticket covers the Forum and Palatine.",
+          "where": "Colosseo, Rome",
+          "book": "Yes - timed entry slots sell out days ahead in season",
+          "place": "italy/colosseum"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2.5h",
+          "name": "Roman Forum and Palatine Hill",
+          "notes": "Shade is scarce and the ancient paving is uneven, so carry water.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/roman-forum"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Capitoline Museums",
+          "notes": "A back terrace looks over the Forum you have just walked.",
+          "where": "Capitoline Hill, Rome",
+          "book": "",
+          "place": "italy/capitoline-museums"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Vatican Museums and Sistine Chapel",
+          "notes": "Book a timed entry; the route is long and largely one-way.",
+          "where": "Vatican City",
+          "book": "Yes - timed tickets are close to essential",
+          "place": "italy/vatican-museums"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "St Peter's Basilica",
+          "notes": "Free entry, but expect a security queue and a dress code covering shoulders and knees.",
+          "where": "Vatican City",
+          "book": "",
+          "place": "italy/st-peters-basilica"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Castel Sant'Angelo",
+          "notes": "A short riverside walk from the Vatican.",
+          "where": "Ponte, Rome",
+          "book": "",
+          "place": "italy/castel-sant-angelo"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1h",
+          "name": "Spanish Steps",
+          "notes": "A short last stop near the shopping streets before the airport transfer.",
+          "where": "Piazza di Spagna, Rome",
+          "book": "",
+          "place": "italy/spanish-steps"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Venice Marco Polo Airport (VCE)",
+          "to": "Venice hotel area",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Alilaguna water bus, or land bus to Piazzale Roma",
+          "notes": "The water bus is slower but saves dragging luggage over bridges.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Venice Santa Lucia Station",
+          "to": "Florence Santa Maria Novella Station",
+          "time": "11:30",
+          "minutes": 125,
+          "carrier": "Frecciarossa or Italo high-speed train",
+          "notes": "Advance fares are much cheaper than walk-up ones.",
+          "book": "Yes - advance fares are far cheaper and seats are reserved"
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Florence Santa Maria Novella Station",
+          "to": "Monterosso al Mare",
+          "time": "12:00",
+          "minutes": 165,
+          "carrier": "Regional train via Pisa or La Spezia",
+          "notes": "No high-speed line serves the Cinque Terre; the last leg is the local coastal train from La Spezia.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Monterosso al Mare",
+          "to": "Rome Termini Station",
+          "time": "11:00",
+          "minutes": 270,
+          "carrier": "Local train to La Spezia, then Frecciarossa or Intercity",
+          "notes": "A long rail day with one change; book the fast leg ahead for a cheaper fare.",
+          "book": "Yes - advance fares are far cheaper on the fast leg"
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Rome hotel area",
+          "to": "Rome Fiumicino Airport (FCO)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Leonardo Express train, or taxi",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "italy-milan-venice-florence-rome-14d",
+      "title": "Milan, Venice, Florence and Rome in 14 Days",
+      "summary": "A two-week run down the length of northern and central Italy, with enough time in each city for day trips to Verona's lagoon islands, Siena and Pisa.",
+      "days": 14,
+      "route": "Milan > Venice > Florence (Siena and Pisa day trips) > Rome",
+      "arrive": "Milan (MXP)",
+      "depart": "Rome (FCO)",
+      "countries": [
+        "Italy"
+      ],
+      "regions": [
+        "Lombardy",
+        "Veneto",
+        "Tuscany",
+        "Lazio"
+      ],
+      "cities": [
+        "Milan",
+        "Venice",
+        "Florence",
+        "Siena",
+        "Pisa",
+        "Rome"
+      ],
+      "imageQuery": "Florence Italy duomo skyline Tuscany",
+      "highlights": [
+        "Milan Cathedral roof",
+        "The Last Supper",
+        "St Mark's Basilica",
+        "Uffizi Gallery",
+        "Siena day trip",
+        "Colosseum and Forum"
+      ],
+      "destinationKeys": [
+        "italy",
+        "italy/lombardy",
+        "italy/milan",
+        "italy/veneto",
+        "italy/venice",
+        "italy/tuscany",
+        "italy/florence",
+        "italy/siena",
+        "italy/pisa",
+        "italy/lazio",
+        "italy/rome"
+      ],
+      "hero": "italy/florence",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves (ricksteves.com)",
+        "Italian National Tourist Board (official tourism site)"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Milan",
+          "hotel": "Hotel in Milan",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the Duomo or Brera: both central and on the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Venice",
+          "hotel": "Hotel in Venice",
+          "start": 2,
+          "nights": 3,
+          "area": "Cannaregio or Dorsoduro: quieter and better value than San Marco",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Florence",
+          "hotel": "Hotel in Florence",
+          "start": 5,
+          "nights": 4,
+          "area": "Centro Storico, inside the ring road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rome",
+          "hotel": "Hotel in Rome",
+          "start": 9,
+          "nights": 4,
+          "area": "Monti or Centro Storico, both walkable to the ancient sites",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Galleria Vittorio Emanuele II",
+          "notes": "Free to walk through and right beside the cathedral square; an easy first stop on arrival.",
+          "where": "Duomo, Milan",
+          "book": "",
+          "place": "italy/galleria-vittorio-emanuele"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Milan Cathedral",
+          "notes": "The rooftop walkways among the spires are the main draw; stairs and lift are separate tickets, and a dress code is enforced.",
+          "where": "Duomo, Milan",
+          "book": "Yes - rooftop tickets are timed and sell out in season",
+          "place": "italy/milan-duomo"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:00",
+          "duration": "1h",
+          "name": "The Last Supper",
+          "notes": "Entry is a fixed slot of around fifteen minutes with a hard cap on numbers, and tickets are released in batches that sell out far ahead. Book this before anything else in Milan.",
+          "where": "Santa Maria delle Grazie, Milan",
+          "book": "Yes - fixed short slots with a visitor cap, released in batches and sold out far ahead",
+          "place": "italy/last-supper"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Sforza Castle",
+          "notes": "The courtyards are free; the museums inside hold Michelangelo's unfinished Rondanini Pietà. The park behind makes a natural continuation.",
+          "where": "Castello, Milan",
+          "book": "",
+          "place": "italy/sforza-castle"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Grand Canal by vaporetto",
+          "notes": "A good orientation on arrival; an outdoor seat is worth waiting a boat for.",
+          "where": "Grand Canal, Venice",
+          "book": "",
+          "place": "italy/grand-canal-vaporetto"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Cicchetti crawl in Venice",
+          "notes": "",
+          "where": "Cannaregio, Venice",
+          "book": "",
+          "place": "italy/venice-cicchetti"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "St Mark's Basilica",
+          "notes": "The mosaics are best seen when the floodlights are on at set times; a dress code is enforced.",
+          "where": "San Marco, Venice",
+          "book": "Yes - timed entry avoids a long queue",
+          "place": "italy/st-marks-basilica"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Doge's Palace",
+          "notes": "The route crosses the Bridge of Sighs into the old prisons.",
+          "where": "San Marco, Venice",
+          "book": "Yes - timed tickets save a long queue",
+          "place": "italy/doges-palace"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Rialto Bridge and market",
+          "notes": "",
+          "where": "San Polo, Venice",
+          "book": "",
+          "place": "italy/rialto-bridge"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Murano and Burano",
+          "notes": "Public vaporetto from Fondamente Nove; Burano is around forty minutes out. Several Murano workshops run glassblowing demonstrations.",
+          "where": "Venetian Lagoon",
+          "book": "",
+          "place": "italy/murano-burano"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Florence Duomo and Brunelleschi's dome",
+          "notes": "The dome climb needs its own timed reservation and over four hundred steps.",
+          "where": "Centro Storico, Florence",
+          "book": "Yes - the dome climb requires a separate timed reservation",
+          "place": "italy/florence-duomo"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Piazza della Signoria",
+          "notes": "",
+          "where": "Centro Storico, Florence",
+          "book": "",
+          "place": "italy/piazza-signoria"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "1.5h",
+          "name": "Accademia Gallery",
+          "notes": "Small gallery, long queue: book a timed ticket.",
+          "where": "San Marco, Florence",
+          "book": "Yes - timed tickets save a substantial queue",
+          "place": "italy/accademia-david"
+        },
+        {
+          "day": 6,
+          "type": "Food & Drink",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Mercato Centrale",
+          "notes": "Lampredotto, a tripe sandwich, is the Florentine street speciality sold here and from carts nearby.",
+          "where": "San Lorenzo, Florence",
+          "book": "",
+          "place": "italy/mercato-centrale"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "3h",
+          "name": "Uffizi Gallery",
+          "notes": "Large enough to need a shortlist.",
+          "where": "Centro Storico, Florence",
+          "book": "Yes - timed tickets save a substantial queue",
+          "place": "italy/uffizi-gallery"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Piazzale Michelangelo",
+          "notes": "The terrace fills well before sunset; San Miniato al Monte higher up the hill is quieter.",
+          "where": "Oltrarno, Florence",
+          "book": "",
+          "place": "italy/piazzale-michelangelo"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Siena",
+          "notes": "A straightforward bus from Florence; the streets are steep and often stepped. The cathedral's inlaid marble floor is uncovered only part of the year.",
+          "where": "Siena, Tuscany",
+          "book": "",
+          "place": "italy/siena"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Pisa and the Leaning Tower",
+          "notes": "A short train ride; climbing the tower is a timed ticket and means around three hundred steps on a sloping floor.",
+          "where": "Pisa, Tuscany",
+          "book": "Yes - tower climb slots are timed and limited",
+          "place": "italy/pisa-leaning-tower"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Pitti Palace and Boboli Gardens",
+          "notes": "The gardens climb steadily on gravel with limited shade; palace and gardens are ticketed separately.",
+          "where": "Oltrarno, Florence",
+          "book": "",
+          "place": "italy/pitti-palace-boboli"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Pantheon",
+          "notes": "Free-standing in a busy square and quick to see inside; rain falls straight through the opening in the dome onto a drained floor.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/pantheon"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1h",
+          "name": "Trevi Fountain",
+          "notes": "A short walk from the Pantheon; the square is small and one of the busiest spots in the city, so late evening is the quiet time.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/trevi-fountain"
+        },
+        {
+          "day": 9,
+          "type": "Food & Drink",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Dinner in Trastevere",
+          "notes": "",
+          "where": "Trastevere, Rome",
+          "book": "",
+          "place": "italy/trastevere"
+        },
+        {
+          "day": 10,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Colosseum",
+          "notes": "Book the earliest timed slot you can; the same ticket covers the Forum and Palatine.",
+          "where": "Colosseo, Rome",
+          "book": "Yes - timed entry slots sell out days ahead in season",
+          "place": "italy/colosseum"
+        },
+        {
+          "day": 10,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2.5h",
+          "name": "Roman Forum and Palatine Hill",
+          "notes": "Shade is scarce and the ancient paving is uneven.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/roman-forum"
+        },
+        {
+          "day": 10,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Capitoline Museums",
+          "notes": "",
+          "where": "Capitoline Hill, Rome",
+          "book": "",
+          "place": "italy/capitoline-museums"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Vatican Museums and Sistine Chapel",
+          "notes": "Book a timed entry; the route is long and largely one-way.",
+          "where": "Vatican City",
+          "book": "Yes - timed tickets are close to essential",
+          "place": "italy/vatican-museums"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "St Peter's Basilica",
+          "notes": "Free entry, but expect a security queue and a dress code.",
+          "where": "Vatican City",
+          "book": "",
+          "place": "italy/st-peters-basilica"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Castel Sant'Angelo",
+          "notes": "A short riverside walk from the Vatican.",
+          "where": "Ponte, Rome",
+          "book": "",
+          "place": "italy/castel-sant-angelo"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Borghese Gallery",
+          "notes": "Fixed two-hour slots with a visitor cap, so book well ahead.",
+          "where": "Villa Borghese, Rome",
+          "book": "Yes - fixed timed slots with a visitor cap, booked well ahead",
+          "place": "italy/borghese-gallery"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Spanish Steps",
+          "notes": "Sitting on the steps is not allowed and is enforced.",
+          "where": "Piazza di Spagna, Rome",
+          "book": "",
+          "place": "italy/spanish-steps"
+        },
+        {
+          "day": 13,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1h",
+          "name": "Piazza Navona",
+          "notes": "A short last walk before the airport transfer.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/piazza-navona"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Milan Malpensa Airport (MXP)",
+          "to": "Milan hotel area",
+          "time": "",
+          "minutes": 55,
+          "carrier": "Malpensa Express train to Centrale or Cadorna",
+          "notes": "Malpensa is well outside the city; the express train is the simplest link.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Milan Centrale Station",
+          "to": "Venice Santa Lucia Station",
+          "time": "13:30",
+          "minutes": 150,
+          "carrier": "Frecciarossa or Italo high-speed train",
+          "notes": "Make sure the ticket is to Venezia Santa Lucia, on the islands, not Venezia Mestre on the mainland.",
+          "book": "Yes - advance fares are far cheaper and seats are reserved"
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Venice Fondamente Nove",
+          "to": "Burano",
+          "time": "09:00",
+          "minutes": 45,
+          "carrier": "Public vaporetto line 12",
+          "notes": "Murano is an intermediate stop on the same route, so the two combine on one trip.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Burano",
+          "to": "Venice Fondamente Nove",
+          "time": "15:30",
+          "minutes": 45,
+          "carrier": "Public vaporetto line 12",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Venice Santa Lucia Station",
+          "to": "Florence Santa Maria Novella Station",
+          "time": "12:30",
+          "minutes": 125,
+          "carrier": "Frecciarossa or Italo high-speed train",
+          "notes": "",
+          "book": "Yes - advance fares are far cheaper and seats are reserved"
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Florence",
+          "to": "Siena",
+          "time": "08:30",
+          "minutes": 80,
+          "carrier": "SITA or Tiemme coach",
+          "notes": "The coach is faster and more convenient than the train, which leaves you below the old town.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Siena",
+          "to": "Florence",
+          "time": "16:30",
+          "minutes": 80,
+          "carrier": "SITA or Tiemme coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Florence Santa Maria Novella Station",
+          "to": "Pisa Centrale Station",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Regional train",
+          "notes": "Frequent all day; no reservation needed.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Pisa Centrale Station",
+          "to": "Florence Santa Maria Novella Station",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Florence Santa Maria Novella Station",
+          "to": "Rome Termini Station",
+          "time": "13:30",
+          "minutes": 95,
+          "carrier": "Frecciarossa or Italo high-speed train",
+          "notes": "",
+          "book": "Yes - advance fares are far cheaper and seats are reserved"
+        },
+        {
+          "day": 13,
+          "transferType": "Public Transit",
+          "from": "Rome hotel area",
+          "to": "Rome Fiumicino Airport (FCO)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Leonardo Express train, or taxi",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "italy-grand-tour-14d",
+      "title": "Venice, Florence, the Amalfi Coast and Rome in 14 Days",
+      "summary": "A two-week north-to-south circuit covering the three great art cities and the Bay of Naples, with Sorrento as the base for Pompeii and Capri.",
+      "days": 14,
+      "route": "Venice > Florence (Siena and Pisa day trips) > Sorrento (Pompeii, Capri) > Rome",
+      "arrive": "Venice (VCE)",
+      "depart": "Rome (FCO)",
+      "countries": [
+        "Italy"
+      ],
+      "regions": [
+        "Veneto",
+        "Tuscany",
+        "Campania",
+        "Lazio"
+      ],
+      "cities": [
+        "Venice",
+        "Florence",
+        "Siena",
+        "Pisa",
+        "Sorrento",
+        "Pompeii",
+        "Capri",
+        "Rome"
+      ],
+      "imageQuery": "Italy coast ruins Renaissance city",
+      "highlights": [
+        "St Mark's Basilica",
+        "Uffizi Gallery",
+        "Siena day trip",
+        "Pompeii ruins",
+        "Capri day trip",
+        "Colosseum and Forum"
+      ],
+      "destinationKeys": [
+        "italy",
+        "italy/veneto",
+        "italy/venice",
+        "italy/tuscany",
+        "italy/florence",
+        "italy/siena",
+        "italy/pisa",
+        "italy/campania",
+        "italy/sorrento",
+        "italy/pompeii",
+        "italy/capri",
+        "italy/lazio",
+        "italy/rome"
+      ],
+      "hero": "italy/venice",
+      "sources": [
+        "Rough Guides",
+        "Rick Steves (ricksteves.com)",
+        "Italian National Tourist Board (official tourism site)"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Venice",
+          "hotel": "Hotel in Venice",
+          "start": 0,
+          "nights": 3,
+          "area": "Cannaregio or Dorsoduro: quieter and better value than San Marco",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Florence",
+          "hotel": "Hotel in Florence",
+          "start": 3,
+          "nights": 4,
+          "area": "Centro Storico, inside the ring road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sorrento",
+          "hotel": "Hotel in Sorrento",
+          "start": 7,
+          "nights": 3,
+          "area": "Near the old town and the Circumvesuviana station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rome",
+          "hotel": "Hotel in Rome",
+          "start": 10,
+          "nights": 3,
+          "area": "Monti or Centro Storico, both walkable to the ancient sites",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Grand Canal by vaporetto",
+          "notes": "A good orientation on arrival.",
+          "where": "Grand Canal, Venice",
+          "book": "",
+          "place": "italy/grand-canal-vaporetto"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Cicchetti crawl in Venice",
+          "notes": "Work through two or three bars rather than sitting down for one meal.",
+          "where": "Cannaregio, Venice",
+          "book": "",
+          "place": "italy/venice-cicchetti"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "St Mark's Basilica",
+          "notes": "The mosaics are best seen when the floodlights are on at set times.",
+          "where": "San Marco, Venice",
+          "book": "Yes - timed entry avoids a long queue",
+          "place": "italy/st-marks-basilica"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Doge's Palace",
+          "notes": "The route crosses the Bridge of Sighs into the old prisons.",
+          "where": "San Marco, Venice",
+          "book": "Yes - timed tickets save a long queue",
+          "place": "italy/doges-palace"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Rialto Bridge and market",
+          "notes": "The fish market works mornings only and closes Mondays.",
+          "where": "San Polo, Venice",
+          "book": "",
+          "place": "italy/rialto-bridge"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Murano and Burano",
+          "notes": "Public vaporetto from Fondamente Nove; several Murano workshops run glassblowing demonstrations.",
+          "where": "Venetian Lagoon",
+          "book": "",
+          "place": "italy/murano-burano"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Florence Duomo and Brunelleschi's dome",
+          "notes": "The dome climb needs its own timed reservation and over four hundred steps.",
+          "where": "Centro Storico, Florence",
+          "book": "Yes - the dome climb requires a separate timed reservation",
+          "place": "italy/florence-duomo"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Piazza della Signoria",
+          "notes": "",
+          "where": "Centro Storico, Florence",
+          "book": "",
+          "place": "italy/piazza-signoria"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "1.5h",
+          "name": "Accademia Gallery",
+          "notes": "Small gallery, long queue: book a timed ticket.",
+          "where": "San Marco, Florence",
+          "book": "Yes - timed tickets save a substantial queue",
+          "place": "italy/accademia-david"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Mercato Centrale",
+          "notes": "",
+          "where": "San Lorenzo, Florence",
+          "book": "",
+          "place": "italy/mercato-centrale"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "3h",
+          "name": "Uffizi Gallery",
+          "notes": "Large enough to need a shortlist.",
+          "where": "Centro Storico, Florence",
+          "book": "Yes - timed tickets save a substantial queue",
+          "place": "italy/uffizi-gallery"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Piazzale Michelangelo",
+          "notes": "The terrace fills well before sunset.",
+          "where": "Oltrarno, Florence",
+          "book": "",
+          "place": "italy/piazzale-michelangelo"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Siena",
+          "notes": "A straightforward coach from Florence; the streets are steep and often stepped.",
+          "where": "Siena, Tuscany",
+          "book": "",
+          "place": "italy/siena"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Pisa and the Leaning Tower",
+          "notes": "A short train ride; the tower climb is a timed ticket on a sloping floor.",
+          "where": "Pisa, Tuscany",
+          "book": "Yes - tower climb slots are timed and limited",
+          "place": "italy/pisa-leaning-tower"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Pitti Palace and Boboli Gardens",
+          "notes": "The gardens climb steadily on gravel; palace and gardens are ticketed separately.",
+          "where": "Oltrarno, Florence",
+          "book": "",
+          "place": "italy/pitti-palace-boboli"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Sorrento",
+          "notes": "A long rail day south, so keep the evening to the old town grid behind the main square.",
+          "where": "Sorrento, Campania",
+          "book": "",
+          "place": "italy/sorrento-town"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "3.5h",
+          "name": "Pompeii",
+          "notes": "Go early: there is very little shade and the original basalt paving has high kerbs. Three hours or more is normal.",
+          "where": "Pompeii, Campania",
+          "book": "Yes - timed tickets avoid the gate queue in season",
+          "place": "italy/pompeii"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "13:30",
+          "duration": "3h",
+          "name": "Mount Vesuvius",
+          "notes": "A gravel track climbs from the car park to the crater rim in around half an hour on a loose, exposed slope. Entry is timed and the path closes in bad weather.",
+          "where": "Mount Vesuvius, Campania",
+          "book": "Yes - crater entry is by timed ticket",
+          "place": "italy/mount-vesuvius"
+        },
+        {
+          "day": 9,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Capri",
+          "notes": "Take an early ferry to beat the midday arrivals; the Blue Grotto is often closed by swell. The island is steep throughout.",
+          "where": "Capri, Campania",
+          "book": "",
+          "place": "italy/capri"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Pantheon",
+          "notes": "Free-standing in a busy square and quick to see inside; rain falls straight through the opening in the dome onto a drained floor.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/pantheon"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Trevi Fountain",
+          "notes": "A short walk from the Pantheon; the square is small and one of the busiest spots in the city, so late evening is the quiet time.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/trevi-fountain"
+        },
+        {
+          "day": 10,
+          "type": "Food & Drink",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Dinner in Trastevere",
+          "notes": "",
+          "where": "Trastevere, Rome",
+          "book": "",
+          "place": "italy/trastevere"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2h",
+          "name": "Colosseum",
+          "notes": "Book the earliest timed slot you can; the same ticket covers the Forum and Palatine.",
+          "where": "Colosseo, Rome",
+          "book": "Yes - timed entry slots sell out days ahead in season",
+          "place": "italy/colosseum"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2.5h",
+          "name": "Roman Forum and Palatine Hill",
+          "notes": "Shade is scarce and the ancient paving is uneven.",
+          "where": "Centro Storico, Rome",
+          "book": "",
+          "place": "italy/roman-forum"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Capitoline Museums",
+          "notes": "A back terrace looks over the Forum you have just walked.",
+          "where": "Capitoline Hill, Rome",
+          "book": "",
+          "place": "italy/capitoline-museums"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Vatican Museums and Sistine Chapel",
+          "notes": "Book a timed entry; the route is long and largely one-way.",
+          "where": "Vatican City",
+          "book": "Yes - timed tickets are close to essential",
+          "place": "italy/vatican-museums"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "St Peter's Basilica",
+          "notes": "Free entry, but expect a security queue and a dress code.",
+          "where": "Vatican City",
+          "book": "",
+          "place": "italy/st-peters-basilica"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Castel Sant'Angelo",
+          "notes": "A short riverside walk from the Vatican.",
+          "where": "Ponte, Rome",
+          "book": "",
+          "place": "italy/castel-sant-angelo"
+        },
+        {
+          "day": 13,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1h",
+          "name": "Spanish Steps",
+          "notes": "A short last stop before the airport transfer.",
+          "where": "Piazza di Spagna, Rome",
+          "book": "",
+          "place": "italy/spanish-steps"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Venice Marco Polo Airport (VCE)",
+          "to": "Venice hotel area",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Alilaguna water bus, or land bus to Piazzale Roma",
+          "notes": "The water bus is slower but saves dragging luggage over bridges.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Venice Santa Lucia Station",
+          "to": "Florence Santa Maria Novella Station",
+          "time": "12:30",
+          "minutes": 125,
+          "carrier": "Frecciarossa or Italo high-speed train",
+          "notes": "",
+          "book": "Yes - advance fares are far cheaper and seats are reserved"
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Florence",
+          "to": "Siena",
+          "time": "08:30",
+          "minutes": 80,
+          "carrier": "SITA or Tiemme coach",
+          "notes": "The coach is faster and more convenient than the train.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Siena",
+          "to": "Florence",
+          "time": "16:30",
+          "minutes": 80,
+          "carrier": "SITA or Tiemme coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Florence Santa Maria Novella Station",
+          "to": "Pisa Centrale Station",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Pisa Centrale Station",
+          "to": "Florence Santa Maria Novella Station",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Regional train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Florence Santa Maria Novella Station",
+          "to": "Naples Centrale Station",
+          "time": "11:00",
+          "minutes": 180,
+          "carrier": "Frecciarossa or Italo high-speed train",
+          "notes": "A long run south; book ahead for a cheaper fare.",
+          "book": "Yes - advance fares are far cheaper and seats are reserved"
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Naples Centrale Station",
+          "to": "Sorrento",
+          "time": "15:00",
+          "minutes": 70,
+          "carrier": "Circumvesuviana local train",
+          "notes": "A basic commuter line to its terminus at Sorrento; keep bags close.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Sorrento",
+          "to": "Pompeii Scavi",
+          "time": "08:00",
+          "minutes": 35,
+          "carrier": "Circumvesuviana local train",
+          "notes": "Shuttle buses to the Vesuvius car park leave from near the Pompeii site in the afternoon.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Mount Vesuvius car park",
+          "to": "Sorrento",
+          "time": "17:00",
+          "minutes": 90,
+          "carrier": "Shuttle bus then Circumvesuviana train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Sorrento Marina Piccola",
+          "to": "Capri Marina Grande",
+          "time": "08:15",
+          "minutes": 25,
+          "carrier": "Ferry or hydrofoil",
+          "notes": "Sailings are cancelled in rough weather, so keep the day flexible.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Capri Marina Grande",
+          "to": "Sorrento Marina Piccola",
+          "time": "17:00",
+          "minutes": 25,
+          "carrier": "Ferry or hydrofoil",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Sorrento",
+          "to": "Rome Termini Station",
+          "time": "11:30",
+          "minutes": 185,
+          "carrier": "Circumvesuviana to Naples, then Frecciarossa or Italo",
+          "notes": "One change at Naples Centrale; book the fast leg ahead.",
+          "book": "Yes - advance fares are far cheaper on the fast leg"
+        },
+        {
+          "day": 13,
+          "transferType": "Public Transit",
+          "from": "Rome hotel area",
+          "to": "Rome Fiumicino Airport (FCO)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Leonardo Express train, or taxi",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "italy/colosseum": {
+        "name": "Colosseum",
+        "description": "The largest amphitheatre of the Roman world, built in the first century and still standing in the middle of modern Rome.",
+        "details": "The Colosseum was completed around AD 80 under the Flavian emperors and held tens of thousands of spectators for gladiatorial games and public spectacles. Much of the outer wall on one side has gone, quarried for stone over the centuries, which is why the structure looks asymmetrical today. The floor is partly reconstructed, exposing the underground chambers where animals and fighters were held. Entry is by timed slot and the standard ticket also covers the Roman Forum and Palatine Hill, so the three are normally seen together.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/roman-forum": {
+        "name": "Roman Forum and Palatine Hill",
+        "description": "The ruined civic centre of ancient Rome and the hill above it where the emperors built their palaces.",
+        "details": "The Forum was the political and commercial heart of the Roman Republic and later the Empire, and what survives is a dense field of temple platforms, basilica columns, arches and paving. The Palatine Hill rising beside it holds the remains of imperial palaces and looks down over the whole site. Shade is scarce and the ground is uneven ancient paving and gravel with slopes, so it is hard going in high summer heat. The same timed ticket usually covers the Colosseum, and starting here early avoids the worst of both crowds and sun.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/capitoline-museums": {
+        "name": "Capitoline Museums",
+        "description": "A pair of palaces on the Capitoline Hill holding ancient Roman sculpture around a square laid out by Michelangelo.",
+        "details": "The Capitoline Museums occupy two palaces facing each other across the Piazza del Campidoglio, whose paving and façades were designed by Michelangelo in the sixteenth century. The collection is largely ancient sculpture and includes the bronze she-wolf associated with the city's founding myth and the original equestrian statue of Marcus Aurelius, a copy of which stands in the square. A terrace at the back looks out over the Roman Forum. The museums are generally quieter than the Vatican or the Colosseum and involve stairs between floors.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/pantheon": {
+        "name": "Pantheon",
+        "description": "A domed Roman temple turned church, with an unreinforced concrete dome open to the sky at its centre.",
+        "details": "The Pantheon was rebuilt under Hadrian in the second century and has been in continuous use since, converted to a church in the seventh century, which is largely why it survived so intact. Its concrete dome is still the largest unreinforced concrete dome anywhere, and the circular opening at its apex is the only source of light, throwing a moving disc of sun across the interior. Rain falls straight through it onto a slightly convex floor with drainage. It is free-standing in a busy square and the interior is flat and quick to see; an entry fee now applies on most days.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/trevi-fountain": {
+        "name": "Trevi Fountain",
+        "description": "A large baroque fountain filling one wall of a small square, fed by an aqueduct that has supplied the area since antiquity.",
+        "details": "The Trevi Fountain was completed in the mid-eighteenth century against the side of a palace, with a sculpted figure of Oceanus riding a shell chariot drawn by sea horses. Its water arrives by the Acqua Vergine, a channel following the line of an aqueduct built in the first century BC. The square is small and the fountain is one of the busiest spots in the city, so late evening or early morning are the only quiet times. The tradition of throwing a coin over the shoulder means the fountain is cleared of coins regularly, which are donated to charity.",
+        "interests": [
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/piazza-navona": {
+        "name": "Piazza Navona",
+        "description": "A long baroque square built over a Roman stadium, with three fountains and a crowd of cafes and street artists.",
+        "details": "Piazza Navona takes its elongated shape from the stadium of Domitian, built in the first century for athletic contests, whose outline the surrounding buildings still follow. Three fountains run down its length, the central one by Bernini representing four great rivers, facing a church front by his rival Borromini. Cafes line the edges with outdoor tables, and street artists and performers work the middle. It is flat, open and free to walk through, and works well as an evening stroll linked to the nearby Pantheon.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/spanish-steps": {
+        "name": "Spanish Steps",
+        "description": "A wide eighteenth-century staircase climbing from a square of luxury shops to a church at the top of the hill.",
+        "details": "The Spanish Steps link the Piazza di Spagna to the church of Trinità dei Monti above, in a curving sweep of terraces and landings completed in the 1720s. The name comes from the Spanish embassy that stood on the square rather than from anything Spanish about the design. Sitting on the steps is no longer allowed and is enforced with fines, so it is a place to walk up rather than linger. The streets leading off the square below are the city's main luxury shopping district.",
+        "interests": [
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/vatican-museums": {
+        "name": "Vatican Museums and Sistine Chapel",
+        "description": "The papal art collections, ending in the Sistine Chapel beneath Michelangelo's painted ceiling.",
+        "details": "The Vatican Museums run through several kilometres of galleries holding classical sculpture, maps, tapestries and the Raphael Rooms, on a largely one-way route that finishes at the Sistine Chapel. Michelangelo painted the chapel ceiling between 1508 and 1512 and the Last Judgement on its altar wall some two decades later. Photography is not permitted in the chapel and visitors are asked to keep quiet and to cover shoulders and knees throughout. The route is long with stairs and little chance to double back, and timed tickets booked ahead are close to essential.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/st-peters-basilica": {
+        "name": "St Peter's Basilica",
+        "description": "The vast Renaissance church at the centre of Vatican City, with a dome by Michelangelo that can be climbed.",
+        "details": "St Peter's was rebuilt over the sixteenth and seventeenth centuries on the site of a much older basilica, with Michelangelo responsible for the dome and Bernini for the colonnaded square in front and the bronze canopy over the papal altar. Michelangelo's Pietà stands in the first chapel on the right, behind glass. Entry to the church is free but the security queue across the square can be long, and a dress code covering shoulders and knees is enforced. The dome climb is ticketed separately and involves a long spiral stair that narrows and leans near the top.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/castel-sant-angelo": {
+        "name": "Castel Sant'Angelo",
+        "description": "A cylindrical riverside fortress begun as a Roman emperor's tomb, later a papal stronghold and refuge.",
+        "details": "The building started as the mausoleum of Hadrian in the second century and was absorbed into the city walls, becoming a fortress and then a papal residence and prison. A covered passage, the Passetto, links it to the Vatican and was used by popes escaping danger. A spiral ramp from the Roman tomb still runs up through the core of the building to the papal apartments and a rooftop terrace with a wide view along the Tiber. The ramp and upper levels involve a continuous climb and steps.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/borghese-gallery": {
+        "name": "Borghese Gallery",
+        "description": "A compact villa gallery in a Rome park, holding Bernini's best-known sculptures and paintings by Caravaggio and Titian.",
+        "details": "The Galleria Borghese occupies a villa built for Cardinal Scipione Borghese in the early seventeenth century and still shows his collection in its original rooms. Its reputation rests on a group of early Bernini marbles, including Apollo and Daphne and The Rape of Proserpina, carved with a soft, almost yielding surface, alongside Caravaggio paintings and a Titian. Visits run in fixed two-hour slots with a capped number of visitors, so booking ahead is required rather than optional. The surrounding Villa Borghese gardens make a pleasant walk before or after.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/trastevere": {
+        "name": "Trastevere",
+        "description": "A Rome neighbourhood across the Tiber of narrow cobbled lanes, ivy-covered houses and busy evening restaurants.",
+        "details": "Trastevere sits on the west bank of the Tiber and kept its medieval street plan, a tangle of narrow lanes and small squares that is largely closed to through traffic. It was a working-class district for centuries and is now one of the city's main eating and drinking areas, busiest from the early evening onwards. The basilica of Santa Maria in Trastevere on the main square has twelfth-century mosaics on its façade and apse. The cobbles are uneven and the lanes are poorly lit in places, so sensible shoes help.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/florence-duomo": {
+        "name": "Florence Duomo and Brunelleschi's dome",
+        "description": "Florence's cathedral, faced in coloured marble and capped by the brick dome that Brunelleschi raised without scaffolding from below.",
+        "details": "Santa Maria del Fiore was built over nearly two centuries, its exterior faced in green, white and pink marble, with Giotto's bell tower and the octagonal Baptistery standing separately alongside. Brunelleschi's dome, completed in the 1430s, was built in a double shell of brick laid in a herringbone pattern and remains the largest masonry dome ever raised. Climbing it means over four hundred steps through the gap between the two shells, in a narrow passage that leans inward near the top, and a timed reservation is required. The cathedral interior itself is comparatively plain and quick to see.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/uffizi-gallery": {
+        "name": "Uffizi Gallery",
+        "description": "A gallery in a former Medici office building holding one of the world's main collections of Italian Renaissance painting.",
+        "details": "The Uffizi was built in the sixteenth century as administrative offices for the Medici and later converted to display their art collection, which passed to the city on the family's extinction. Its strength is Florentine and Italian painting from the thirteenth to the eighteenth century, with Botticelli's Birth of Venus and Primavera, works by Leonardo, Raphael and Titian, and Caravaggio in the later rooms. The route runs along long corridors on upper floors with windows over the Arno. Timed tickets booked ahead save a substantial queue, and the collection is large enough to need a shortlist.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/accademia-david": {
+        "name": "Accademia Gallery",
+        "description": "A small Florence gallery built around Michelangelo's David, with his unfinished Prisoners lining the approach.",
+        "details": "The Galleria dell'Accademia was founded as a teaching collection and is now visited chiefly for Michelangelo's David, carved in the first years of the sixteenth century and moved here in the 1870s to protect it from the weather. The corridor leading to it holds his unfinished Prisoners, figures still half-buried in their blocks, which show how he worked. Beyond the sculpture there are rooms of Florentine panel painting and a collection of historical musical instruments. The gallery is small, the queue is not, and timed tickets booked ahead are worth having.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/piazza-signoria": {
+        "name": "Piazza della Signoria",
+        "description": "Florence's civic square, fronted by the fortified town hall and an open loggia full of sculpture.",
+        "details": "The Piazza della Signoria has been the centre of Florentine government since the Middle Ages, dominated by the Palazzo Vecchio with its off-centre tower. The Loggia dei Lanzi on one side is an open arcade displaying sculpture including Cellini's bronze Perseus, free to walk into. A copy of Michelangelo's David stands where the original once did, outside the palace door. The square is flat, open and always busy, and works as the natural hinge between the cathedral and the river.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/ponte-vecchio": {
+        "name": "Ponte Vecchio",
+        "description": "Florence's oldest bridge, lined with jewellers' shops and carrying a covered passage above them.",
+        "details": "The Ponte Vecchio has carried shops on its span since the Middle Ages, originally butchers and tanners, replaced by goldsmiths and jewellers in the sixteenth century on the duke's orders to improve the smell. The Vasari Corridor runs above the shops, built so the Medici could cross between the Palazzo Vecchio and the Pitti Palace without using the street. It was the only bridge in the city left standing in 1944. The bridge is flat but narrow and extremely crowded; the views of it are better from the next bridge along.",
+        "interests": [
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/mercato-centrale": {
+        "name": "Mercato Centrale",
+        "description": "Florence's main covered food market, with produce and butchers on the ground floor and cooked food above.",
+        "details": "The Mercato Centrale occupies a cast-iron and glass hall built in the 1870s in the San Lorenzo district. The ground floor remains a working market of butchers, fishmongers, greengrocers and cheese stalls, busiest in the morning. An upper floor was converted into a food hall of counters cooking to order, which keeps longer hours than the market below. Lampredotto, a tripe sandwich that is a Florentine speciality, is sold both here and from street carts nearby. The building is flat with lifts and stairs between floors.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/piazzale-michelangelo": {
+        "name": "Piazzale Michelangelo",
+        "description": "A terrace on the hill south of the Arno giving the standard panoramic view over Florence and its dome.",
+        "details": "The Piazzale Michelangelo was laid out in the 1860s on the slope across the river as a belvedere over the city, and it gives the view of the dome, bell tower and bridges that appears on most pictures of Florence. It is reached on foot by a climb of stepped ramps from the river, or by city bus for anyone who would rather not walk up. Sunset is the busiest time and the terrace fills well before it. The church of San Miniato al Monte, a little higher up the hill, is quieter and worth the extra climb.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/pitti-palace-boboli": {
+        "name": "Pitti Palace and Boboli Gardens",
+        "description": "A large Renaissance palace across the Arno, with terraced formal gardens climbing the hill behind it.",
+        "details": "The Pitti Palace was bought by the Medici in the sixteenth century as their main residence and grew into a complex of galleries, now holding Palatine Gallery paintings, royal apartments and a costume collection. The Boboli Gardens rise behind it in terraces of clipped hedges, gravel avenues, grottoes and fountains, an early and much-copied example of the Italian formal garden. The gardens are extensive and climb steadily, with gravel underfoot and limited shade in places. Palace and gardens are ticketed separately in most combinations.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/siena": {
+        "name": "Siena",
+        "description": "A walled Tuscan hill town built in brick around a sloping shell-shaped square, with a striped marble cathedral.",
+        "details": "Siena was a major rival to Florence until plague and defeat ended its independence, and its centre has changed comparatively little since, a dense brick medieval town on three ridges. The Piazza del Campo slopes in a shell shape toward the town hall and is the site of the Palio, a bareback horse race run twice each summer between the city's districts. The cathedral nearby is faced in bands of dark and light marble with an inlaid marble floor that is uncovered only part of the year. The streets are steep and often stepped, and the town is a straightforward day trip from Florence by bus.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "authentic_local"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/pisa-leaning-tower": {
+        "name": "Pisa and the Leaning Tower",
+        "description": "A walled green beside Pisa's cathedral holding the famously tilted bell tower, baptistery and cemetery.",
+        "details": "The Piazza dei Miracoli holds the cathedral, baptistery, cemetery and the free-standing bell tower that began to lean during construction in the twelfth century because of soft ground beneath its shallow foundations. A long stabilisation project closed the tower through the 1990s and reduced the tilt enough to make it safe. Climbing it is ticketed in timed slots and means a spiral stair of around three hundred steps on a sloping floor, which feels disconcerting. The square itself is flat grass and paving, and Pisa is a short train ride from Florence.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/st-marks-basilica": {
+        "name": "St Mark's Basilica",
+        "description": "Venice's domed cathedral on the main square, its interior lined with gold-ground Byzantine mosaics.",
+        "details": "St Mark's was built from the eleventh century in a Byzantine manner, with five domes on a Greek cross plan, and served as the private chapel of the doge before becoming the city's cathedral. The interior is covered in mosaics on gold grounds across roughly four thousand square metres, best seen when the floodlights are on at set times. Much of the exterior marble and sculpture, including the four bronze horses, was brought back from the sack of Constantinople in 1204. Queues are long, a dress code is enforced, and large bags must be left at a nearby deposit; the loggia and museum upstairs involve a steep stair.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/doges-palace": {
+        "name": "Doge's Palace",
+        "description": "The Gothic seat of Venice's government on the waterfront, linked to its old prison by the Bridge of Sighs.",
+        "details": "The Palazzo Ducale was both the residence of the doge and the seat of the republic's councils and courts, rebuilt repeatedly after fires, with a pink and white Gothic façade over an open arcade. Inside, the route runs through council chambers hung with large Venetian paintings, including a vast Tintoretto in the Hall of the Great Council. The enclosed Bridge of Sighs crosses from the palace to the prisons, and the route passes through both. Timed tickets booked ahead save a long queue, and the visit involves a good deal of walking and stairs.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/rialto-bridge": {
+        "name": "Rialto Bridge and market",
+        "description": "The oldest bridge over Venice's Grand Canal, with a produce and fish market on the bank beside it.",
+        "details": "The Rialto was the commercial centre of Venice long before the present stone bridge replaced earlier wooden ones in the late sixteenth century, carrying two rows of shops up and over its single span. The market on the northern bank still trades, with produce stalls and a covered fish market that works in the morning and closes for the rest of the day, and on Mondays. The bridge gives one of the better views along the canal, and is correspondingly crowded. Crossing it means a flight of steps up and down either side.",
+        "interests": [
+          "iconic_landmarks",
+          "food",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/grand-canal-vaporetto": {
+        "name": "Grand Canal by vaporetto",
+        "description": "A ride the length of Venice's main waterway on a public water bus, past the palace fronts that line both banks.",
+        "details": "The Grand Canal curves through Venice for around three kilometres and is lined with the façades of palaces built between the thirteenth and eighteenth centuries, most of them designed to be seen from the water rather than the land. Line 1, the slow public vaporetto, calls at nearly every stop along it and is the cheapest way to see the whole length. An outdoor seat at the front or back is worth waiting a boat for. Services run late into the evening, when the lit palace fronts look quite different.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/murano-burano": {
+        "name": "Murano and Burano",
+        "description": "Two lagoon islands north of Venice, one known for glassmaking and the other for brightly painted fishermen's houses.",
+        "details": "Murano became the centre of Venetian glassmaking in the thirteenth century when the furnaces were moved off the main islands to reduce fire risk, and workshops there still blow glass, several running demonstrations for visitors. Burano, further out, is a fishing island whose houses are painted in strong contrasting colours, traditionally so they could be told apart from the water, and it has a long lace-making tradition and a conspicuously leaning bell tower. Both are reached by public vaporetto from the Fondamente Nove stop, Burano taking around forty minutes. Visiting both makes a half to full day.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/venice-cicchetti": {
+        "name": "Cicchetti crawl in Venice",
+        "description": "An evening of small Venetian bar snacks and wine by the glass, moving between several bacari.",
+        "details": "Cicchetti are small plates and topped bread served in Venetian bars called bacari, eaten standing at the counter with a glass of wine, often a small one known locally as an ombra. Working through two or three bars in an evening rather than sitting down for a full meal is the normal local pattern. The bars around the Rialto market and in Cannaregio keep more local crowds than those immediately around St Mark's. Many close relatively early by Italian standards, so an evening start of around seven works better than nine.",
+        "interests": [
+          "food",
+          "nightlife",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/naples-archaeological-museum": {
+        "name": "Naples National Archaeological Museum",
+        "description": "The museum holding most of the mosaics, frescoes and bronzes excavated from Pompeii and Herculaneum.",
+        "details": "The National Archaeological Museum in Naples holds the finds removed from Pompeii, Herculaneum and the other Vesuvian sites, which means the best-preserved Roman mosaics, wall paintings, glass and bronze are here rather than at the ruins themselves. The Alexander Mosaic from the House of the Faun and the Farnese collection of monumental sculpture are among the main holdings. Seeing the museum before or after Pompeii makes much more sense of the site. Check opening days, as it closes one day a week, and the galleries involve stairs between floors.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/naples-historic-centre": {
+        "name": "Naples historic centre",
+        "description": "A dense grid of lanes following the Greek and Roman street plan, packed with churches, shrines and shopfronts.",
+        "details": "The historic centre of Naples still follows the street grid of the Greek city of Neapolis, with three long straight decumani crossed by narrow alleys, and is a UNESCO World Heritage Site. Spaccanapoli, the lane that cuts dead straight through it, is the usual spine for a walk, lined with churches, street shrines, pastry shops and nativity-figure workshops. It is loud, crowded and densely lived in rather than tidied up for visitors. Traffic including scooters uses lanes that feel too narrow for it, so walk defensively.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/naples-pizza": {
+        "name": "Neapolitan pizza in Naples",
+        "description": "Pizza in the city where it was created, baked briefly in a very hot wood oven to a soft, blistered base.",
+        "details": "Neapolitan pizza is made with a soft, high-hydration dough baked for a minute or two in a wood-fired oven hot enough to blister the rim, giving a base that stays pliable rather than crisp and is normally eaten with a knife and fork. The two classic versions are the marinara, without cheese, and the margherita. The craft of the Neapolitan pizzaiolo is on UNESCO's intangible heritage list. The best-known places in the historic centre take no bookings and run queues, often with a ticket system, so going early or late in the service helps.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/castel-dell-ovo": {
+        "name": "Castel dell'Ovo",
+        "description": "A seafront castle on a small island in Naples harbour, joined to the shore by a causeway.",
+        "details": "Castel dell'Ovo stands on the islet of Megaride, where Greek settlers founded the first settlement in the area, and the present fortress grew from a Norman castle built on the site of a Roman villa. Its name, meaning egg castle, comes from a legend that the poet Virgil hid a magic egg in its foundations on which the building's survival depended. Entry to the ramparts has generally been free, and they give a view across the bay toward Vesuvius. The approach is along a flat causeway, with ramps and steps up through the castle.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/pompeii": {
+        "name": "Pompeii",
+        "description": "A Roman town buried by the eruption of Vesuvius in AD 79 and excavated to street level, with houses, baths and shops intact.",
+        "details": "Pompeii was a prosperous Roman town of perhaps twenty thousand people when Vesuvius buried it under ash and pumice in AD 79, and the depth and speed of the burial preserved buildings, street layouts, shop counters and wall paintings to an unusual degree. The excavated area is large, several city blocks across, and a visit of three hours or more is normal. There is very little shade, the paving is original Roman basalt with high kerbs and stepping stones, and it is punishing in midsummer. Many of the finest frescoes and mosaics were removed to the museum in Naples.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/mount-vesuvius": {
+        "name": "Mount Vesuvius",
+        "description": "The active volcano above the Bay of Naples, with a gravel path to the rim of its crater.",
+        "details": "Vesuvius is an active volcano whose AD 79 eruption destroyed Pompeii and Herculaneum, and it is closely monitored because of the dense population around its base. A road climbs most of the way and a gravel track continues from the car park to the crater rim, taking around half an hour on foot up a loose, exposed slope. From the rim you look down into the crater and out over the bay. Entry is by timed ticket, the path closes in bad weather, and the summit is often in cloud even when the coast below is clear.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/sorrento-town": {
+        "name": "Sorrento",
+        "description": "A clifftop town on the Bay of Naples with a compact old centre, used as a base for the coast and islands.",
+        "details": "Sorrento sits on a shelf of cliff above the bay, with its old centre a walkable grid of lanes behind the main square and lifts or ramped paths down to the small marinas below. It is less dramatic than the Amalfi Coast villages but far easier to use as a base, with a rail link to Naples and Pompeii and ferries to Capri and along the coast. Lemon groves around the town supply the limoncello sold everywhere in it. The old town is flat, but reaching the water involves a substantial descent and climb.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/capri": {
+        "name": "Capri",
+        "description": "A limestone island off the Sorrentine peninsula, with cliffs, sea caves and two hill towns above the harbour.",
+        "details": "Capri rises steeply out of the bay and has drawn visitors since the Roman emperors Augustus and Tiberius built villas on it. Boats from Sorrento and Naples dock at Marina Grande, from where a funicular climbs to Capri town and its main square, with the quieter village of Anacapri higher up the island. Boat trips circle the cliffs and call at the Blue Grotto, which can only be entered in calm water and is often closed by swell. The island is steep throughout, with stepped lanes, and is at its busiest in the middle of the day when the ferries have all arrived.",
+        "interests": [
+          "outdoors",
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/amalfi-coast": {
+        "name": "Amalfi Coast",
+        "description": "A stretch of cliff coast south of Sorrento where villages including Positano and Amalfi are stacked above the sea.",
+        "details": "The Amalfi Coast runs along the southern side of the Sorrentine peninsula, a UNESCO-listed landscape of terraced cliffs with villages built in tiers down to small beaches. Positano is the most photographed, a cone of pastel houses above its shore, and Amalfi has the coast's main cathedral behind a steep flight of steps. The single coast road is narrow, winding and heavily congested in season, so the ferry is often quicker and more comfortable than the bus. Every village involves steep steps between levels, and cars are more hindrance than help.",
+        "interests": [
+          "outdoors",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/milan-duomo": {
+        "name": "Milan Cathedral",
+        "description": "A vast Gothic cathedral of white marble spires and statues, with a rooftop terrace open to visitors.",
+        "details": "Milan's cathedral took close to six centuries to finish, from the late fourteenth century onward, and is built of pale Candoglia marble bristling with spires, pinnacles and several thousand statues. The interior is dim and enormous, with very tall stained glass in the apse. The main draw for many visitors is the roof, where walkways run among the spires and look out over the city toward the Alps on clear days, reached by stairs or a lift on separate tickets. A dress code covering shoulders and knees is enforced at the door.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/last-supper": {
+        "name": "The Last Supper",
+        "description": "Leonardo's wall painting of the Last Supper, in the refectory of a Milan convent.",
+        "details": "Leonardo painted the Last Supper in the 1490s on the refectory wall of Santa Maria delle Grazie, working in tempera on dry plaster rather than true fresco, which is why it began deteriorating within his lifetime and has been restored repeatedly. What survives is faint in places but the composition and the reaction of each figure remain clear. Visits are strictly controlled: a fixed number of people enter for a slot of around fifteen minutes, and tickets are released in batches and sell out far in advance. Booking is the single most time-sensitive thing to arrange in Milan.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/galleria-vittorio-emanuele": {
+        "name": "Galleria Vittorio Emanuele II",
+        "description": "A nineteenth-century glass-roofed shopping arcade beside Milan's cathedral, built as a cross of iron and glass.",
+        "details": "The Galleria was completed in the 1870s beside the cathedral square, a cross-shaped arcade of four glass-vaulted arms meeting under a central dome, built in iron and glass over stone façades. It houses cafes and luxury shops and functions as a public thoroughfare between the Duomo and the opera house at La Scala. Mosaics set into the floor represent the cities of a newly unified Italy, and a worn patch on the Turin bull marks a local good-luck ritual. It is flat, covered and free to walk through.",
+        "interests": [
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "italy/sforza-castle": {
+        "name": "Sforza Castle",
+        "description": "A large brick fortress in central Milan, now holding several municipal museums and opening onto a public park.",
+        "details": "The Castello Sforzesco was rebuilt in the fifteenth century by the Sforza dukes on the base of an earlier fortification and later served as a barracks under foreign rule before being restored as a civic building. Its courtyards are free to walk through, and the ticketed museums inside include Michelangelo's unfinished Rondanini Pietà, his last work. Parco Sempione stretches out behind the castle, which makes the two a natural pair for an afternoon. The courtyards are flat gravel and paving, with stairs up into the museum rooms.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "italy/cinque-terre-villages": {
+        "name": "The Cinque Terre villages",
+        "description": "Five fishing villages built into the cliffs of the Ligurian coast, linked by train, boat and footpaths.",
+        "details": "The Cinque Terre are five villages, Monterosso al Mare, Vernazza, Corniglia, Manarola and Riomaggiore, strung along a steep stretch of Ligurian coast and listed together with the surrounding terraced hillsides as a UNESCO World Heritage Site. Vineyards and olive terraces climb the slopes behind them on dry-stone walls built up over centuries. A local train tunnels between all five in minutes, and boats call at all but Corniglia, which sits high above its station. The villages are small, steeply built and extremely crowded in the middle of the day in season.",
+        "interests": [
+          "outdoors",
+          "iconic_landmarks",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/cinque-terre-trail": {
+        "name": "Cinque Terre coastal trail",
+        "description": "The footpath network linking the five villages along and above the cliffs, with sections open and closed by landslip.",
+        "details": "A network of waymarked paths connects the Cinque Terre villages, the best known being the low coastal route, parts of which have been closed for years at a time after landslips. The open sections climb and descend steeply on steps and rough ground through vineyard terraces, with long drops to the sea alongside. A Cinque Terre card covers trail access and the local train. Check which sections are open on the day with the national park before setting out, since closures change and the alternatives are considerably harder.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "italy/monterosso-beach": {
+        "name": "Monterosso al Mare beach",
+        "description": "The largest beach in the Cinque Terre, a sand and shingle strip below the only one of the five villages with a real seafront.",
+        "details": "Monterosso al Mare has the only substantial beach in the Cinque Terre, a stretch of sand and shingle along the front of the newer part of the village, with sections of free beach alongside ranks of rented loungers and umbrellas. It makes Monterosso the easiest of the five to use as a base, and it is the flattest of them. The older part of the village lies through a short tunnel at the far end of the beach. The sea shelves quickly and can be choppy when the wind is onshore.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "italy": {
+        "name": "Italy",
+        "description": "A long peninsula of Roman ruins, Renaissance cities, hill towns and cliff coast, tied together by one of Europe's better high-speed rail networks.",
+        "images": []
+      },
+      "italy/lazio": {
+        "name": "Lazio",
+        "description": "The central Italian region around Rome, taking in the capital's ancient core along with hill towns and lakes inland.",
+        "images": []
+      },
+      "italy/rome": {
+        "name": "Rome",
+        "description": "A capital where ancient ruins, baroque fountains and the Vatican's art collections sit within a few walkable kilometres of each other.",
+        "images": []
+      },
+      "italy/tuscany": {
+        "name": "Tuscany",
+        "description": "A region of Renaissance cities, walled hill towns, vineyards and cypress ridges in central Italy.",
+        "images": []
+      },
+      "italy/florence": {
+        "name": "Florence",
+        "description": "A compact Renaissance city on the Arno, holding Brunelleschi's dome, Michelangelo's David and the Uffizi collection.",
+        "images": []
+      },
+      "italy/siena": {
+        "name": "Siena",
+        "description": "A walled brick hill town in Tuscany built around a sloping shell-shaped square, with a striped marble cathedral.",
+        "images": []
+      },
+      "italy/pisa": {
+        "name": "Pisa",
+        "description": "A Tuscan city on the Arno, visited chiefly for the cathedral square and its famously tilted bell tower.",
+        "images": []
+      },
+      "italy/veneto": {
+        "name": "Veneto",
+        "description": "A north-eastern region running from the Adriatic lagoon of Venice inland through Verona to the foothills of the Dolomites.",
+        "images": []
+      },
+      "italy/venice": {
+        "name": "Venice",
+        "description": "A city built across a lagoon on canals instead of streets, with Byzantine mosaics, Gothic palaces and no cars.",
+        "images": []
+      },
+      "italy/campania": {
+        "name": "Campania",
+        "description": "A southern region of volcanic coast, Roman ruins and cliff villages, centred on Naples and the Bay of Naples.",
+        "images": []
+      },
+      "italy/naples": {
+        "name": "Naples",
+        "description": "A loud, densely lived-in port city below Vesuvius, with a Greek street grid, the finest Pompeii finds and the birthplace of pizza.",
+        "images": []
+      },
+      "italy/sorrento": {
+        "name": "Sorrento",
+        "description": "A clifftop town on the Bay of Naples, used as a practical base for Pompeii, Capri and the Amalfi Coast.",
+        "images": []
+      },
+      "italy/pompeii": {
+        "name": "Pompeii",
+        "description": "The excavated Roman town below Vesuvius, buried by the eruption of AD 79 and preserved to street level.",
+        "images": []
+      },
+      "italy/capri": {
+        "name": "Capri",
+        "description": "A steep limestone island off the Sorrentine peninsula, known for sea cliffs, the Blue Grotto and two hill towns.",
+        "images": []
+      },
+      "italy/amalfi-coast": {
+        "name": "Amalfi Coast",
+        "description": "A UNESCO-listed stretch of cliff coast south of Sorrento, with Positano, Amalfi and other villages stacked above the sea.",
+        "images": []
+      },
+      "italy/lombardy": {
+        "name": "Lombardy",
+        "description": "A wealthy northern region of lakes and industrial cities, centred on Milan and reaching up to the Alps.",
+        "images": []
+      },
+      "italy/milan": {
+        "name": "Milan",
+        "description": "Italy's business and fashion capital, with a marble Gothic cathedral, Leonardo's Last Supper and a glass shopping arcade.",
+        "images": []
+      },
+      "italy/liguria": {
+        "name": "Liguria",
+        "description": "A narrow north-western coastal region of terraced cliffs and fishing villages curving along the Italian Riviera.",
+        "images": []
+      },
+      "italy/cinque-terre": {
+        "name": "Cinque Terre",
+        "description": "Five cliffside fishing villages on the Ligurian coast, linked by train, boat and a network of steep footpaths.",
+        "images": []
+      },
+      "italy/monterosso-al-mare": {
+        "name": "Monterosso al Mare",
+        "description": "The westernmost and flattest of the Cinque Terre villages, and the only one with a substantial beach.",
+        "images": []
+      }
+    }
+  }
+}

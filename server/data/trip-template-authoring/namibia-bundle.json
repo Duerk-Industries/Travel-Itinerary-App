@@ -1,0 +1,1307 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, Rickshaw Travel, The Whole World Is A Playground and Namibia 4x4 Rentals itineraries for Namibia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "namibia-sossusvlei-5d",
+      "title": "Sossusvlei Dunes in 5 Days",
+      "summary": "Windhoek and three nights at the red dunes.",
+      "days": 5,
+      "route": "Windhoek > Sossusvlei",
+      "arrive": "Windhoek (WDH)",
+      "depart": "Windhoek (WDH)",
+      "countries": [
+        "Namibia"
+      ],
+      "regions": [],
+      "cities": [
+        "Windhoek",
+        "Sossusvlei"
+      ],
+      "imageQuery": "Sossusvlei red dunes Namibia",
+      "highlights": [
+        "Dune 45",
+        "Deadvlei",
+        "Sesriem Canyon"
+      ],
+      "destinationKeys": [
+        "namibia",
+        "namibia/windhoek",
+        "namibia/sossusvlei"
+      ],
+      "hero": "namibia/sossusvlei",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "The Whole World Is A Playground",
+        "Namibia 4x4 Rentals",
+        "Trafalgar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Windhoek",
+          "hotel": "Hotel in Windhoek",
+          "start": 0,
+          "nights": 1,
+          "area": "In Windhoek central or near the airport road, for a self-drive pick-up",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sossusvlei",
+          "hotel": "Lodge near Sossusvlei",
+          "start": 1,
+          "nights": 3,
+          "area": "In a lodge near Sesriem, close to the park gate for an early start",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Windhoek and Katutura township tour",
+          "notes": "Includes the Soweto Market.",
+          "where": "Windhoek",
+          "book": "",
+          "place": "namibia/windhoek-katutura"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Sesriem Canyon walk",
+          "notes": "A short gorge walk near the park gate.",
+          "where": "Sesriem",
+          "book": "",
+          "place": "namibia/sesriem-canyon"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "5h",
+          "name": "Sossusvlei, Dune 45 and Deadvlei",
+          "notes": "Enter at the gate before sunrise; cold dawn, hot midday.",
+          "where": "Sossusvlei",
+          "book": "",
+          "place": "namibia/sossusvlei"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Sunrise dune walk and Big Daddy climb",
+          "notes": "Enter at the gate before sunrise; cold dawn, hot midday.",
+          "where": "Sossusvlei",
+          "book": "",
+          "place": "namibia/sossusvlei"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hosea Kutako Airport (WDH)",
+          "to": "Windhoek hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Shuttle or rental car pick-up",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Windhoek",
+          "to": "Sossusvlei lodge",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "4x4 rental or private driver",
+          "notes": "Gravel roads; fill the tank at each town.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Sossusvlei lodge",
+          "to": "Hosea Kutako Airport (WDH)",
+          "time": "06:30",
+          "minutes": 390,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "namibia-sossusvlei-swakopmund-7d",
+      "title": "Namibia Desert and Coast in 7 Days",
+      "summary": "Sossusvlei dunes then Swakopmund adventure.",
+      "days": 7,
+      "route": "Windhoek > Sossusvlei > Swakopmund",
+      "arrive": "Windhoek (WDH)",
+      "depart": "Windhoek (WDH)",
+      "countries": [
+        "Namibia"
+      ],
+      "regions": [],
+      "cities": [
+        "Windhoek",
+        "Sossusvlei",
+        "Swakopmund"
+      ],
+      "imageQuery": "Swakopmund Namibia coast dunes",
+      "highlights": [
+        "Dune 45",
+        "Deadvlei",
+        "Swakopmund",
+        "Walvis Bay cruise"
+      ],
+      "destinationKeys": [
+        "namibia",
+        "namibia/windhoek",
+        "namibia/sossusvlei",
+        "namibia/swakopmund"
+      ],
+      "hero": "namibia/swakopmund",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "The Whole World Is A Playground",
+        "Namibia 4x4 Rentals",
+        "Trafalgar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Windhoek",
+          "hotel": "Hotel in Windhoek",
+          "start": 0,
+          "nights": 1,
+          "area": "In Windhoek central or near the airport road, for a self-drive pick-up",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sossusvlei",
+          "hotel": "Lodge near Sossusvlei",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge near Sesriem, close to the park gate for an early start",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Swakopmund",
+          "hotel": "Hotel in Swakopmund",
+          "start": 3,
+          "nights": 3,
+          "area": "In Swakopmund, near the jetty and cafes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Windhoek and Katutura township tour",
+          "notes": "Includes the Soweto Market.",
+          "where": "Windhoek",
+          "book": "",
+          "place": "namibia/windhoek-katutura"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Sesriem Canyon walk",
+          "notes": "A short gorge walk near the park gate.",
+          "where": "Sesriem",
+          "book": "",
+          "place": "namibia/sesriem-canyon"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "5h",
+          "name": "Sossusvlei, Dune 45 and Deadvlei",
+          "notes": "Enter at the gate before sunrise; cold dawn, hot midday.",
+          "where": "Sossusvlei",
+          "book": "",
+          "place": "namibia/sossusvlei"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Walvis Bay dolphin cruise or sandboarding",
+          "notes": "Morning fog is common.",
+          "where": "Swakopmund",
+          "book": "Yes - book the cruise",
+          "place": "namibia/swakopmund"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Cape Cross seal colony",
+          "notes": "Pups arrive in November and December; the smell is strong.",
+          "where": "Cape Cross",
+          "book": "",
+          "place": "namibia/cape-cross"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hosea Kutako Airport (WDH)",
+          "to": "Windhoek hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Shuttle or rental car pick-up",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Windhoek",
+          "to": "Sossusvlei lodge",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Sossusvlei lodge",
+          "to": "Swakopmund",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "4x4 rental or private driver",
+          "notes": "Take the Kuiseb Pass scenic route.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Swakopmund",
+          "to": "Hosea Kutako Airport (WDH)",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "namibia-dunes-coast-etosha-9d",
+      "title": "Namibia Highlights in 9 Days",
+      "summary": "Sossusvlei, Swakopmund and Etosha wildlife.",
+      "days": 9,
+      "route": "Windhoek > Sossusvlei > Swakopmund > Etosha",
+      "arrive": "Windhoek (WDH)",
+      "depart": "Windhoek (WDH)",
+      "countries": [
+        "Namibia"
+      ],
+      "regions": [],
+      "cities": [
+        "Windhoek",
+        "Sossusvlei",
+        "Swakopmund",
+        "Etosha"
+      ],
+      "imageQuery": "Etosha elephants waterhole Namibia",
+      "highlights": [
+        "Dune 45",
+        "Swakopmund",
+        "Cape Cross seals",
+        "Etosha waterholes"
+      ],
+      "destinationKeys": [
+        "namibia",
+        "namibia/windhoek",
+        "namibia/sossusvlei",
+        "namibia/swakopmund",
+        "namibia/etosha"
+      ],
+      "hero": "namibia/etosha",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "The Whole World Is A Playground",
+        "Namibia 4x4 Rentals",
+        "Trafalgar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Windhoek",
+          "hotel": "Hotel in Windhoek",
+          "start": 0,
+          "nights": 1,
+          "area": "In Windhoek central or near the airport road, for a self-drive pick-up",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sossusvlei",
+          "hotel": "Lodge near Sossusvlei",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge near Sesriem, close to the park gate for an early start",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Swakopmund",
+          "hotel": "Hotel in Swakopmund",
+          "start": 3,
+          "nights": 2,
+          "area": "In Swakopmund, near the jetty and cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Etosha",
+          "hotel": "Lodge near Etosha",
+          "start": 5,
+          "nights": 3,
+          "area": "In a lodge or rest camp near the Etosha gates",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Windhoek and Katutura township tour",
+          "notes": "Includes the Soweto Market.",
+          "where": "Windhoek",
+          "book": "",
+          "place": "namibia/windhoek-katutura"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Sesriem Canyon walk",
+          "notes": "A short gorge walk near the park gate.",
+          "where": "Sesriem",
+          "book": "",
+          "place": "namibia/sesriem-canyon"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "5h",
+          "name": "Sossusvlei, Dune 45 and Deadvlei",
+          "notes": "Enter at the gate before sunrise; cold dawn, hot midday.",
+          "where": "Sossusvlei",
+          "book": "",
+          "place": "namibia/sossusvlei"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Walvis Bay dolphin cruise or sandboarding",
+          "notes": "Morning fog is common.",
+          "where": "Swakopmund",
+          "book": "Yes - book the cruise",
+          "place": "namibia/swakopmund"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Cape Cross seal colony",
+          "notes": "Pups arrive in November and December; the smell is strong.",
+          "where": "Cape Cross",
+          "book": "",
+          "place": "namibia/cape-cross"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "5h",
+          "name": "Etosha game drive and waterholes",
+          "notes": "Dry season concentrates the animals.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Floodlit waterhole at the rest camp",
+          "notes": "Rhinos and elephants often come at dusk.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "5h",
+          "name": "Etosha game drive and waterholes",
+          "notes": "Dry season concentrates the animals.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Floodlit waterhole at the rest camp",
+          "notes": "Rhinos and elephants often come at dusk.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hosea Kutako Airport (WDH)",
+          "to": "Windhoek hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Shuttle or rental car pick-up",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Windhoek",
+          "to": "Sossusvlei lodge",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Sossusvlei lodge",
+          "to": "Swakopmund",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Swakopmund",
+          "to": "Etosha lodge",
+          "time": "07:00",
+          "minutes": 450,
+          "carrier": "4x4 rental or private driver",
+          "notes": "A long drive; stop at Cape Cross on the way.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Etosha lodge",
+          "to": "Hosea Kutako Airport (WDH)",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "namibia-damaraland-12d",
+      "title": "Namibia Grand Circuit in 12 Days",
+      "summary": "Windhoek, Sossusvlei, Swakopmund, Damaraland and Etosha.",
+      "days": 12,
+      "route": "Windhoek > Sossusvlei > Swakopmund > Damaraland > Etosha",
+      "arrive": "Windhoek (WDH)",
+      "depart": "Windhoek (WDH)",
+      "countries": [
+        "Namibia"
+      ],
+      "regions": [],
+      "cities": [
+        "Windhoek",
+        "Sossusvlei",
+        "Swakopmund",
+        "Damaraland",
+        "Etosha"
+      ],
+      "imageQuery": "Twyfelfontein Damaraland Namibia",
+      "highlights": [
+        "Sossusvlei",
+        "Swakopmund",
+        "Twyfelfontein",
+        "Desert elephants",
+        "Etosha"
+      ],
+      "destinationKeys": [
+        "namibia",
+        "namibia/windhoek",
+        "namibia/sossusvlei",
+        "namibia/swakopmund",
+        "namibia/damaraland",
+        "namibia/etosha"
+      ],
+      "hero": "namibia/damaraland",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "The Whole World Is A Playground",
+        "Namibia 4x4 Rentals",
+        "Trafalgar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Windhoek",
+          "hotel": "Hotel in Windhoek",
+          "start": 0,
+          "nights": 2,
+          "area": "In Windhoek central or near the airport road, for a self-drive pick-up",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sossusvlei",
+          "hotel": "Lodge near Sossusvlei",
+          "start": 2,
+          "nights": 2,
+          "area": "In a lodge near Sesriem, close to the park gate for an early start",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Swakopmund",
+          "hotel": "Hotel in Swakopmund",
+          "start": 4,
+          "nights": 2,
+          "area": "In Swakopmund, near the jetty and cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Damaraland",
+          "hotel": "Camp in Damaraland",
+          "start": 6,
+          "nights": 2,
+          "area": "In a remote desert camp in Damaraland",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Etosha",
+          "hotel": "Lodge near Etosha",
+          "start": 8,
+          "nights": 3,
+          "area": "In a lodge or rest camp near the Etosha gates",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Windhoek and Katutura township tour",
+          "notes": "Includes the Soweto Market.",
+          "where": "Windhoek",
+          "book": "",
+          "place": "namibia/windhoek-katutura"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Sesriem Canyon walk",
+          "notes": "A short gorge walk near the park gate.",
+          "where": "Sesriem",
+          "book": "",
+          "place": "namibia/sesriem-canyon"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "5h",
+          "name": "Sossusvlei, Dune 45 and Deadvlei",
+          "notes": "Enter at the gate before sunrise; cold dawn, hot midday.",
+          "where": "Sossusvlei",
+          "book": "",
+          "place": "namibia/sossusvlei"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Walvis Bay dolphin cruise or sandboarding",
+          "notes": "Morning fog is common.",
+          "where": "Swakopmund",
+          "book": "Yes - book the cruise",
+          "place": "namibia/swakopmund"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Cape Cross seal colony",
+          "notes": "Pups arrive in November and December; the smell is strong.",
+          "where": "Cape Cross",
+          "book": "",
+          "place": "namibia/cape-cross"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Twyfelfontein rock engravings and Organ Pipes",
+          "notes": "Go with a local guide.",
+          "where": "Twyfelfontein",
+          "book": "",
+          "place": "namibia/twyfelfontein-damaraland"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "5h",
+          "name": "Etosha game drive and waterholes",
+          "notes": "Dry season concentrates the animals.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Floodlit waterhole at the rest camp",
+          "notes": "Rhinos and elephants often come at dusk.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "5h",
+          "name": "Etosha game drive and waterholes",
+          "notes": "Dry season concentrates the animals.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Floodlit waterhole at the rest camp",
+          "notes": "Rhinos and elephants often come at dusk.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hosea Kutako Airport (WDH)",
+          "to": "Windhoek hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Shuttle or rental car pick-up",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Windhoek",
+          "to": "Sossusvlei lodge",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Sossusvlei lodge",
+          "to": "Swakopmund",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Swakopmund",
+          "to": "Damaraland camp",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Damaraland camp",
+          "to": "Etosha lodge",
+          "time": "08:00",
+          "minutes": 270,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Etosha lodge",
+          "to": "Hosea Kutako Airport (WDH)",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "namibia-complete-14d",
+      "title": "Complete Namibia in 14 Days",
+      "summary": "Fish River Canyon in the south, then the dunes, coast, Damaraland and Etosha.",
+      "days": 14,
+      "route": "Windhoek > Fish River Canyon > Sossusvlei > Swakopmund > Damaraland > Etosha",
+      "arrive": "Windhoek (WDH)",
+      "depart": "Windhoek (WDH)",
+      "countries": [
+        "Namibia"
+      ],
+      "regions": [],
+      "cities": [
+        "Windhoek",
+        "Fish River Canyon",
+        "Sossusvlei",
+        "Swakopmund",
+        "Damaraland",
+        "Etosha"
+      ],
+      "imageQuery": "Fish River Canyon sunset Namibia",
+      "highlights": [
+        "Fish River Canyon",
+        "Sossusvlei",
+        "Swakopmund",
+        "Twyfelfontein",
+        "Etosha",
+        "Kolmanskop"
+      ],
+      "destinationKeys": [
+        "namibia",
+        "namibia/windhoek",
+        "namibia/fish-river-canyon",
+        "namibia/sossusvlei",
+        "namibia/swakopmund",
+        "namibia/damaraland",
+        "namibia/etosha"
+      ],
+      "hero": "namibia/fish-river-canyon",
+      "sources": [
+        "KimKim",
+        "Rickshaw Travel",
+        "The Whole World Is A Playground",
+        "Namibia 4x4 Rentals",
+        "Trafalgar"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Windhoek",
+          "hotel": "Hotel in Windhoek",
+          "start": 0,
+          "nights": 2,
+          "area": "In Windhoek central or near the airport road, for a self-drive pick-up",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Fish River Canyon",
+          "hotel": "Lodge near Fish River Canyon",
+          "start": 2,
+          "nights": 2,
+          "area": "In a lodge near the Fish River Canyon viewpoint",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sossusvlei",
+          "hotel": "Lodge near Sossusvlei",
+          "start": 4,
+          "nights": 2,
+          "area": "In a lodge near Sesriem, close to the park gate for an early start",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Swakopmund",
+          "hotel": "Hotel in Swakopmund",
+          "start": 6,
+          "nights": 2,
+          "area": "In Swakopmund, near the jetty and cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Damaraland",
+          "hotel": "Camp in Damaraland",
+          "start": 8,
+          "nights": 2,
+          "area": "In a remote desert camp in Damaraland",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Etosha",
+          "hotel": "Lodge near Etosha",
+          "start": 10,
+          "nights": 3,
+          "area": "In a lodge or rest camp near the Etosha gates",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Windhoek and Katutura township tour",
+          "notes": "Includes the Soweto Market.",
+          "where": "Windhoek",
+          "book": "",
+          "place": "namibia/windhoek-katutura"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Fish River Canyon sunset viewpoint",
+          "notes": "Hobas viewpoint is best at sunset.",
+          "where": "Fish River Canyon",
+          "book": "",
+          "place": "namibia/fish-river-canyon"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Sesriem Canyon walk",
+          "notes": "A short gorge walk near the park gate.",
+          "where": "Sesriem",
+          "book": "",
+          "place": "namibia/sesriem-canyon"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "5h",
+          "name": "Sossusvlei, Dune 45 and Deadvlei",
+          "notes": "Enter at the gate before sunrise; cold dawn, hot midday.",
+          "where": "Sossusvlei",
+          "book": "",
+          "place": "namibia/sossusvlei"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Walvis Bay dolphin cruise or sandboarding",
+          "notes": "Morning fog is common.",
+          "where": "Swakopmund",
+          "book": "Yes - book the cruise",
+          "place": "namibia/swakopmund"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Cape Cross seal colony",
+          "notes": "Pups arrive in November and December; the smell is strong.",
+          "where": "Cape Cross",
+          "book": "",
+          "place": "namibia/cape-cross"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Twyfelfontein rock engravings and Organ Pipes",
+          "notes": "Go with a local guide.",
+          "where": "Twyfelfontein",
+          "book": "",
+          "place": "namibia/twyfelfontein-damaraland"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "5h",
+          "name": "Etosha game drive and waterholes",
+          "notes": "Dry season concentrates the animals.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Floodlit waterhole at the rest camp",
+          "notes": "Rhinos and elephants often come at dusk.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "5h",
+          "name": "Etosha game drive and waterholes",
+          "notes": "Dry season concentrates the animals.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Floodlit waterhole at the rest camp",
+          "notes": "Rhinos and elephants often come at dusk.",
+          "where": "Etosha",
+          "book": "",
+          "place": "namibia/etosha"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hosea Kutako Airport (WDH)",
+          "to": "Windhoek hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Shuttle or rental car pick-up",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Windhoek",
+          "to": "Fish River Canyon lodge",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "4x4 rental or private driver",
+          "notes": "A full driving day; stop at Hardap.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Fish River Canyon lodge",
+          "to": "Sossusvlei lodge",
+          "time": "07:00",
+          "minutes": 480,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Sossusvlei lodge",
+          "to": "Swakopmund",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Swakopmund",
+          "to": "Damaraland camp",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Damaraland camp",
+          "to": "Etosha lodge",
+          "time": "08:00",
+          "minutes": 270,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Etosha lodge",
+          "to": "Hosea Kutako Airport (WDH)",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "4x4 rental or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "namibia/windhoek-katutura": {
+        "name": "Windhoek city and Katutura township tour",
+        "description": "The compact capital, with a German-colonial centre and a township food and culture tour.",
+        "details": "Windhoek has Christuskirche, the Independence Memorial Museum and craft markets. A Katutura township tour includes the Soweto Market, where meat is grilled on the street, and a visit to a community project. Sundays are quiet in the centre.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "namibia/sossusvlei": {
+        "name": "Sossusvlei, Dune 45 and Deadvlei",
+        "description": "The tallest red dunes in the world and a white clay pan of dead camelthorn trees.",
+        "details": "Sossusvlei is reached from the Sesriem gate before sunrise. Dune 45 or Big Daddy can be climbed for the morning light, and Deadvlei is a clay pan with black ancient trees. It is cold at dawn and very hot by midday. Sesriem Canyon is a short stop.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "namibia/sesriem-canyon": {
+        "name": "Sesriem Canyon and Solitaire",
+        "description": "A narrow gorge near the dune park and a bakery at a roadside outpost.",
+        "details": "Sesriem Canyon is a 30-metre-deep gorge carved by the Tsauchab River, a short walk from the dune park gate. Solitaire has apple pie and a collection of rusted cars. Both are easy stops on the road.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "namibia/swakopmund": {
+        "name": "Swakopmund adventure and dolphin cruise",
+        "description": "A German-flavoured coastal town offering sandboarding, quad biking and a Walvis Bay dolphin cruise.",
+        "details": "Swakopmund sits between the cold Atlantic and the Namib dunes. Activities include sandboarding, quad biking and skydiving, plus a catamaran from Walvis Bay to see seals, dolphins and pelicans. The jetty and cafes are pleasant. Mornings can be foggy.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "relax",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "namibia/cape-cross": {
+        "name": "Cape Cross seal colony",
+        "description": "A huge colony of Cape fur seals on the Skeleton Coast, with a strong smell.",
+        "details": "Cape Cross holds tens of thousands of fur seals, with pups in November and December. Boardwalks allow viewing at a close but safe distance. It is about an hour north of Swakopmund and on the way to Damaraland.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "namibia/twyfelfontein-damaraland": {
+        "name": "Twyfelfontein rock engravings and desert elephants",
+        "description": "Thousands of ancient rock carvings and a chance to track desert-adapted elephants.",
+        "details": "Twyfelfontein is a UNESCO site of San rock engravings, visited with a local guide. Damaraland also has the Organ Pipes, a petrified forest and desert elephants and rhinos which can be tracked with specialist guides. Camps are remote and wild.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "namibia/etosha": {
+        "name": "Etosha National Park",
+        "description": "A salt-pan reserve with waterholes where elephants, lions, rhinos and giraffes gather.",
+        "details": "Etosha is Namibia premier safari park, best in the dry season from May to October, when animals concentrate at waterholes. Self-drive and guided drives are possible, and floodlit waterholes at the camps allow night viewing. Entry fees are paid at the gate.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "namibia/fish-river-canyon": {
+        "name": "Fish River Canyon",
+        "description": "The second-largest canyon in the world, with a sunset viewpoint and hot springs at Ai-Ais.",
+        "details": "Fish River Canyon is 160 kilometres long and up to 550 metres deep. The main viewpoint at Hobas is spectacular at sunset. The five-day hiking trail runs from May to September, with permits and fitness required. Ai-Ais hot springs are a nearby soak.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "namibia": {
+        "name": "Namibia",
+        "description": "A land of red dunes, desert wildlife, seal colonies and starry skies.",
+        "images": []
+      },
+      "namibia/windhoek": {
+        "name": "Windhoek",
+        "description": "The capital, at the heart of the country.",
+        "images": []
+      },
+      "namibia/sossusvlei": {
+        "name": "Sossusvlei",
+        "description": "The great dune sea of the Namib desert.",
+        "images": []
+      },
+      "namibia/swakopmund": {
+        "name": "Swakopmund",
+        "description": "A coastal adventure town.",
+        "images": []
+      },
+      "namibia/damaraland": {
+        "name": "Damaraland",
+        "description": "A desert region of rock art and wild elephants.",
+        "images": []
+      },
+      "namibia/etosha": {
+        "name": "Etosha",
+        "description": "Namibia premier game park.",
+        "images": []
+      },
+      "namibia/fish-river-canyon": {
+        "name": "Fish River Canyon",
+        "description": "A vast canyon in the south.",
+        "images": []
+      }
+    }
+  }
+}

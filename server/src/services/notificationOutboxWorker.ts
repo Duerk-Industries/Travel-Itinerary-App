@@ -10,6 +10,7 @@ import { ensureUserCanReadTrip, getUserById } from '../db';
 import { sendNotificationEmail } from '../mailer';
 import { sendExpoPushNotifications } from '../apis/expoPushApi';
 import { decryptPushToken } from '../utils/pushTokenCrypto';
+import { getEnvFlag } from '../env';
 
 // Phase 4.5: Notification outbox worker.
 // Durable, leased provider delivery (architecture §13.3).
@@ -61,6 +62,7 @@ export const drainNotificationOutbox = async (): Promise<void> => {
 
 };
 export const startNotificationOutboxWorker = () => {
+  if (!getEnvFlag('NOTIFICATION_OUTBOX_WORKER_ENABLED', { defaultValue: true })) return;
   setInterval(() => { void drainNotificationOutbox().catch(error => logError('[notification-outbox] worker tick failed', error)); }, TICK_MS);
 };
 

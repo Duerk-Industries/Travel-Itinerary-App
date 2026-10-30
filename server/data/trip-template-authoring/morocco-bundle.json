@@ -1,0 +1,2898 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim and TravelStride itineraries for Morocco",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "morocco-marrakech-4d",
+      "title": "Marrakech in 4 Days",
+      "summary": "A short city break: the medina, palaces and gardens of Marrakech, with a day trip into the High Atlas.",
+      "days": 4,
+      "route": "Marrakech (Imlil day trip)",
+      "arrive": "Marrakech (RAK)",
+      "depart": "Marrakech (RAK)",
+      "countries": [
+        "Morocco"
+      ],
+      "regions": [
+        "Marrakech-Safi"
+      ],
+      "cities": [
+        "Marrakech",
+        "Imlil"
+      ],
+      "imageQuery": "Marrakech Morocco medina Jemaa el-Fnaa",
+      "highlights": [
+        "Jemaa el-Fnaa",
+        "Bahia Palace",
+        "Majorelle Garden",
+        "Souks",
+        "High Atlas village"
+      ],
+      "destinationKeys": [
+        "morocco",
+        "morocco/marrakech-safi",
+        "morocco/marrakech",
+        "morocco/imlil"
+      ],
+      "hero": "morocco/marrakech",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Marrakech",
+          "hotel": "Riad in Marrakech",
+          "start": 0,
+          "nights": 3,
+          "area": "Inside the medina near Jemaa el-Fnaa for atmosphere, or in Gueliz for quiet and easy taxis; riads in the medina are reached on foot down narrow lanes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Jemaa el-Fnaa at dusk",
+          "notes": "Arrive as the food stalls set up; photographing performers usually leads to a request for payment, and touts are persistent. A rooftop cafe gives a calmer view.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/jemaa-el-fnaa"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "0.75h",
+          "name": "Koutoubia Mosque",
+          "notes": "Non-Muslims cannot enter, so this is a look at the minaret and gardens only.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/koutoubia-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "1h",
+          "name": "Bahia Palace",
+          "notes": "Go early before groups arrive; parts are closed to visitors.",
+          "where": "Mellah, Marrakech",
+          "book": "",
+          "place": "morocco/bahia-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Saadian Tombs",
+          "notes": "Small and quickly crowded, so expect a queue at midday.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/saadian-tombs"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Marrakech souks",
+          "notes": "Bargain on everything; the lanes are a maze, so use a map app or a guide for the first visit.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-souks"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Imlil and the High Atlas villages",
+          "notes": "A cooler, clearer break from the city; paths are rocky and can be slippery after rain.",
+          "where": "Imlil, High Atlas",
+          "book": "",
+          "place": "morocco/imlil-atlas-hike"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Majorelle Garden",
+          "notes": "Timed tickets bought online avoid a long queue; an easy last morning before the airport.",
+          "where": "Gueliz, Marrakech",
+          "book": "Yes - timed tickets sell out and queues build quickly",
+          "place": "morocco/majorelle-garden"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Marrakech Menara Airport (RAK)",
+          "to": "Marrakech medina",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Many riads send a driver; vehicles cannot reach most of them, so the last stretch is on foot or by porter.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Marrakech medina",
+          "to": "Imlil",
+          "time": "08:00",
+          "minutes": 90,
+          "carrier": "Car with driver or shared taxi",
+          "notes": "The road climbs through Asni into the mountains.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Imlil",
+          "to": "Marrakech medina",
+          "time": "16:30",
+          "minutes": 90,
+          "carrier": "Car with driver or shared taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Marrakech medina",
+          "to": "Marrakech Menara Airport (RAK)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "morocco-marrakech-fes-7d",
+      "title": "Marrakech and Fes in 7 Days",
+      "summary": "The two great imperial cities in a week: three days in Marrakech, three in Fes, and a day trip to the Roman ruins at Volubilis.",
+      "days": 7,
+      "route": "Marrakech > Fes (Volubilis day trip)",
+      "arrive": "Marrakech (RAK)",
+      "depart": "Fes (FEZ)",
+      "countries": [
+        "Morocco"
+      ],
+      "regions": [
+        "Marrakech-Safi",
+        "Fes-Meknes"
+      ],
+      "cities": [
+        "Marrakech",
+        "Fes",
+        "Volubilis"
+      ],
+      "imageQuery": "Fes Morocco medina tannery rooftops",
+      "highlights": [
+        "Jemaa el-Fnaa",
+        "Majorelle Garden",
+        "Fes medina",
+        "Chouara Tannery",
+        "Volubilis ruins"
+      ],
+      "destinationKeys": [
+        "morocco",
+        "morocco/marrakech-safi",
+        "morocco/marrakech",
+        "morocco/fes-meknes",
+        "morocco/fes",
+        "morocco/volubilis"
+      ],
+      "hero": "morocco/fes",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Marrakech",
+          "hotel": "Riad in Marrakech",
+          "start": 0,
+          "nights": 3,
+          "area": "Inside the medina near Jemaa el-Fnaa for atmosphere, or in Gueliz for quiet and easy taxis; riads in the medina are reached on foot down narrow lanes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Fes",
+          "hotel": "Riad in Fes",
+          "start": 3,
+          "nights": 3,
+          "area": "Inside Fes el-Bali for the medieval atmosphere, though luggage must be carried or wheeled over rough lanes; the Batha area is a good compromise",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Jemaa el-Fnaa at dusk",
+          "notes": "Arrive as the food stalls set up; photographing performers usually leads to a request for payment, and touts are persistent. A rooftop cafe gives a calmer view.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/jemaa-el-fnaa"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "0.75h",
+          "name": "Koutoubia Mosque",
+          "notes": "Non-Muslims cannot enter, so this is a look at the minaret and gardens only.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/koutoubia-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "1h",
+          "name": "Bahia Palace",
+          "notes": "Go early before groups arrive; parts are closed to visitors.",
+          "where": "Mellah, Marrakech",
+          "book": "",
+          "place": "morocco/bahia-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Saadian Tombs",
+          "notes": "Small and quickly crowded, so expect a queue at midday.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/saadian-tombs"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Marrakech souks",
+          "notes": "Bargain on everything; the lanes are a maze, so use a map app or a guide for the first visit.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-souks"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Majorelle Garden",
+          "notes": "Timed tickets bought online avoid a long queue; arriving at opening is calmest.",
+          "where": "Gueliz, Marrakech",
+          "book": "Yes - timed tickets sell out and queues build quickly",
+          "place": "morocco/majorelle-garden"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Ben Youssef Madrasa",
+          "notes": "Light is best in the morning; the narrow stairs to the cells can be crowded.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/ben-youssef-madrasa"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "El Badi Palace",
+          "notes": "Open and exposed, so carry sun protection.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/el-badi-palace"
+        },
+        {
+          "day": 2,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Traditional hammam",
+          "notes": "Separate hours or sections apply for men and women; a private spa version is gentler.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-hammam"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Merenid Tombs viewpoint",
+          "notes": "The classic sunset view over Fes el-Bali; a short steep walk or a taxi up, and breezy in the evening.",
+          "where": "North of the medina, Fes",
+          "book": "",
+          "place": "morocco/merenid-tombs"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Fes el-Bali medina walk with a licensed guide",
+          "notes": "The lanes are steep, uneven and busy, and mules have right of way; a guide makes the first day far easier.",
+          "where": "Fes el-Bali, Fes",
+          "book": "Yes - arrange a licensed guide through your accommodation",
+          "place": "morocco/fes-medina"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1h",
+          "name": "Chouara Tannery",
+          "notes": "Viewed from leather-shop terraces; sprigs of mint are handed out against the smell, which is strong in warm weather.",
+          "where": "Fes el-Bali, Fes",
+          "book": "",
+          "place": "morocco/chouara-tannery"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "Bou Inania Madrasa",
+          "notes": "Still a working religious site, so dress and behave respectfully.",
+          "where": "Fes el-Bali, Fes",
+          "book": "",
+          "place": "morocco/bou-inania-madrasa"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Fes el-Jdid and the Mellah",
+          "notes": "The Royal Palace gates are the main stop; the Mellah's wooden balconies are a distinct style from the rest of the city.",
+          "where": "Fes el-Jdid, Fes",
+          "book": "",
+          "place": "morocco/fes-el-jdid"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Volubilis and Moulay Idriss",
+          "notes": "Little shade at the ruins; the mosaics are still in place, and the nearby pilgrimage town is a popular add-on.",
+          "where": "Volubilis, near Meknes",
+          "book": "",
+          "place": "morocco/volubilis"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Marrakech Menara Airport (RAK)",
+          "to": "Marrakech medina",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Many riads send a driver; vehicles cannot reach most of them, so the last stretch is on foot or by porter.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Marrakech medina",
+          "to": "Marrakech Menara Airport (RAK)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "This covers the ground leg to the departure airport only; Marrakech to Fes is a one-hour domestic flight. The train takes around seven hours with a change at Casablanca.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Fes-Saiss Airport (FEZ)",
+          "to": "Fes medina",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Fes medina",
+          "to": "Volubilis",
+          "time": "08:00",
+          "minutes": 90,
+          "carrier": "Car with driver",
+          "notes": "A driver for the day lets you stop at Meknes on the way.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Volubilis",
+          "to": "Fes medina",
+          "time": "15:00",
+          "minutes": 90,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Fes medina",
+          "to": "Fes-Saiss Airport (FEZ)",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "morocco-marrakech-sahara-7d",
+      "title": "Marrakech and the Sahara in 7 Days",
+      "summary": "Marrakech followed by the classic three-day loop south over the Atlas to the dunes at Merzouga and back, passing Ait Benhaddou and two gorges.",
+      "days": 7,
+      "route": "Marrakech > Dades Valley > Merzouga > Marrakech",
+      "arrive": "Marrakech (RAK)",
+      "depart": "Marrakech (RAK)",
+      "countries": [
+        "Morocco"
+      ],
+      "regions": [
+        "Marrakech-Safi",
+        "Draa-Tafilalet"
+      ],
+      "cities": [
+        "Marrakech",
+        "Ait Benhaddou",
+        "Dades Valley",
+        "Todra Gorge",
+        "Merzouga"
+      ],
+      "imageQuery": "Sahara Merzouga Morocco dunes camel caravan",
+      "highlights": [
+        "Jemaa el-Fnaa",
+        "Ait Benhaddou",
+        "Todra Gorge",
+        "Camel trek at sunset",
+        "Desert camp"
+      ],
+      "destinationKeys": [
+        "morocco",
+        "morocco/marrakech-safi",
+        "morocco/marrakech",
+        "morocco/draa-tafilalet",
+        "morocco/ait-benhaddou",
+        "morocco/dades-valley",
+        "morocco/todra-gorge",
+        "morocco/merzouga"
+      ],
+      "hero": "morocco/merzouga",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Marrakech",
+          "hotel": "Riad in Marrakech",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside the medina near Jemaa el-Fnaa for atmosphere, or in Gueliz for quiet and easy taxis; riads in the medina are reached on foot down narrow lanes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dades Valley",
+          "hotel": "Hotel in the Dades Valley",
+          "start": 2,
+          "nights": 1,
+          "area": "A guesthouse above the valley road for views of the rock formations",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Merzouga",
+          "hotel": "Camp in Merzouga",
+          "start": 3,
+          "nights": 1,
+          "area": "A desert camp or guesthouse at the foot of the Erg Chebbi dunes; nights are cold in winter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Marrakech",
+          "hotel": "Riad in Marrakech",
+          "start": 4,
+          "nights": 2,
+          "area": "Inside the medina near Jemaa el-Fnaa for atmosphere, or in Gueliz for quiet and easy taxis; riads in the medina are reached on foot down narrow lanes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Jemaa el-Fnaa at dusk",
+          "notes": "Arrive as the food stalls set up; photographing performers usually leads to a request for payment, and touts are persistent. A rooftop cafe gives a calmer view.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/jemaa-el-fnaa"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "0.75h",
+          "name": "Koutoubia Mosque",
+          "notes": "Non-Muslims cannot enter, so this is a look at the minaret and gardens only.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/koutoubia-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "1h",
+          "name": "Bahia Palace",
+          "notes": "Go early before groups arrive; parts are closed to visitors.",
+          "where": "Mellah, Marrakech",
+          "book": "",
+          "place": "morocco/bahia-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Saadian Tombs",
+          "notes": "Small and quickly crowded, so expect a queue at midday.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/saadian-tombs"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Marrakech souks",
+          "notes": "Bargain on everything; the lanes are a maze, so use a map app or a guide for the first visit.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-souks"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Ait Benhaddou",
+          "notes": "The walk up through the ksar involves steps and uneven ground; go early or late for fewer groups.",
+          "where": "Ait Benhaddou",
+          "book": "",
+          "place": "morocco/ait-benhaddou"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Dades Gorge",
+          "notes": "Best in the late-afternoon light, with views of the hairpin road from the cafes above.",
+          "where": "Dades Valley",
+          "book": "",
+          "place": "morocco/dades-gorge"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:45",
+          "duration": "1h",
+          "name": "Todra Gorge",
+          "notes": "Walls rise almost straight up on both sides; go before the midday tour groups.",
+          "where": "Todra Gorge, near Tinghir",
+          "book": "",
+          "place": "morocco/todra-gorge"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Camel trek in the Erg Chebbi dunes",
+          "notes": "Ends at a desert camp with dinner and music; nights are cold, camp facilities are basic and sandstorms can change the plan.",
+          "where": "Erg Chebbi, Merzouga",
+          "book": "Yes - camp places are arranged in advance",
+          "place": "morocco/erg-chebbi-camel-trek"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "08:00",
+          "duration": "2.5h",
+          "name": "Dune 4x4 and sandboarding in Merzouga",
+          "notes": "Early morning is cooler and quieter; protect phones and cameras from sand.",
+          "where": "Merzouga",
+          "book": "",
+          "place": "morocco/merzouga-4x4-dunes"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Majorelle Garden",
+          "notes": "Timed tickets bought online avoid a long queue; arriving at opening is calmest.",
+          "where": "Gueliz, Marrakech",
+          "book": "Yes - timed tickets sell out and queues build quickly",
+          "place": "morocco/majorelle-garden"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Ben Youssef Madrasa",
+          "notes": "Light is best in the morning; the narrow stairs to the cells can be crowded.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/ben-youssef-madrasa"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "El Badi Palace",
+          "notes": "Open and exposed, so carry sun protection.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/el-badi-palace"
+        },
+        {
+          "day": 5,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Traditional hammam",
+          "notes": "Separate hours or sections apply for men and women; a private spa version is gentler.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-hammam"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Marrakech Menara Airport (RAK)",
+          "to": "Marrakech medina",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Many riads send a driver; vehicles cannot reach most of them, so the last stretch is on foot or by porter.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Marrakech medina",
+          "to": "Ait Benhaddou",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "The road crosses the Tizi n'Tichka pass; stops for photographs are worth building in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Ait Benhaddou",
+          "to": "Dades Valley",
+          "time": "14:00",
+          "minutes": 170,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Dades Valley",
+          "to": "Todra Gorge",
+          "time": "09:00",
+          "minutes": 75,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Todra Gorge",
+          "to": "Merzouga",
+          "time": "12:30",
+          "minutes": 240,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Merzouga",
+          "to": "Marrakech medina",
+          "time": "10:30",
+          "minutes": 540,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "A very long drive back over the Atlas with comfort stops; many travellers find it the hardest day of the loop.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Marrakech medina",
+          "to": "Marrakech Menara Airport (RAK)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "morocco-marrakech-sahara-fes-10d",
+      "title": "Marrakech, the Sahara and Fes in 10 Days",
+      "summary": "The classic route through the kasbah country: Marrakech, the palm grove at Skoura, two nights in the Sahara, then three in Fes with a trip to Volubilis.",
+      "days": 10,
+      "route": "Marrakech > Skoura > Merzouga > Fes (Volubilis)",
+      "arrive": "Marrakech (RAK)",
+      "depart": "Fes (FEZ)",
+      "countries": [
+        "Morocco"
+      ],
+      "regions": [
+        "Marrakech-Safi",
+        "Draa-Tafilalet",
+        "Fes-Meknes"
+      ],
+      "cities": [
+        "Marrakech",
+        "Ait Benhaddou",
+        "Skoura",
+        "Todra Gorge",
+        "Merzouga",
+        "Fes",
+        "Volubilis"
+      ],
+      "imageQuery": "Morocco Atlas kasbah desert road Fes",
+      "highlights": [
+        "Majorelle Garden",
+        "Ait Benhaddou",
+        "Todra Gorge",
+        "Desert camp",
+        "Fes medina",
+        "Volubilis"
+      ],
+      "destinationKeys": [
+        "morocco",
+        "morocco/marrakech-safi",
+        "morocco/marrakech",
+        "morocco/draa-tafilalet",
+        "morocco/ait-benhaddou",
+        "morocco/skoura",
+        "morocco/todra-gorge",
+        "morocco/merzouga",
+        "morocco/fes-meknes",
+        "morocco/fes",
+        "morocco/volubilis"
+      ],
+      "hero": "morocco/merzouga",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Marrakech",
+          "hotel": "Riad in Marrakech",
+          "start": 0,
+          "nights": 3,
+          "area": "Inside the medina near Jemaa el-Fnaa for atmosphere, or in Gueliz for quiet and easy taxis; riads in the medina are reached on foot down narrow lanes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Skoura",
+          "hotel": "Guesthouse in Skoura",
+          "start": 3,
+          "nights": 1,
+          "area": "In or beside the palm grove, in one of the kasbah guesthouses",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Merzouga",
+          "hotel": "Camp in Merzouga",
+          "start": 4,
+          "nights": 2,
+          "area": "A desert camp or guesthouse at the foot of the Erg Chebbi dunes; nights are cold in winter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Fes",
+          "hotel": "Riad in Fes",
+          "start": 6,
+          "nights": 3,
+          "area": "Inside Fes el-Bali for the medieval atmosphere, though luggage must be carried or wheeled over rough lanes; the Batha area is a good compromise",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Jemaa el-Fnaa at dusk",
+          "notes": "Arrive as the food stalls set up; photographing performers usually leads to a request for payment, and touts are persistent. A rooftop cafe gives a calmer view.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/jemaa-el-fnaa"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "0.75h",
+          "name": "Koutoubia Mosque",
+          "notes": "Non-Muslims cannot enter, so this is a look at the minaret and gardens only.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/koutoubia-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "1h",
+          "name": "Bahia Palace",
+          "notes": "Go early before groups arrive; parts are closed to visitors.",
+          "where": "Mellah, Marrakech",
+          "book": "",
+          "place": "morocco/bahia-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Saadian Tombs",
+          "notes": "Small and quickly crowded, so expect a queue at midday.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/saadian-tombs"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Marrakech souks",
+          "notes": "Bargain on everything; the lanes are a maze, so use a map app or a guide for the first visit.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-souks"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Majorelle Garden",
+          "notes": "Timed tickets bought online avoid a long queue; arriving at opening is calmest.",
+          "where": "Gueliz, Marrakech",
+          "book": "Yes - timed tickets sell out and queues build quickly",
+          "place": "morocco/majorelle-garden"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Ben Youssef Madrasa",
+          "notes": "Light is best in the morning; the narrow stairs to the cells can be crowded.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/ben-youssef-madrasa"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "El Badi Palace",
+          "notes": "Open and exposed, so carry sun protection.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/el-badi-palace"
+        },
+        {
+          "day": 2,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Traditional hammam",
+          "notes": "Separate hours or sections apply for men and women; a private spa version is gentler.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-hammam"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Ait Benhaddou",
+          "notes": "The walk up through the ksar involves steps and uneven ground; go early or late for fewer groups.",
+          "where": "Ait Benhaddou",
+          "book": "",
+          "place": "morocco/ait-benhaddou"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Skoura palm grove and kasbah",
+          "notes": "A quiet walk among date palms and irrigation channels.",
+          "where": "Skoura",
+          "book": "",
+          "place": "morocco/skoura-palm-grove"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Todra Gorge",
+          "notes": "Walls rise almost straight up on both sides; the road in is busy at midday.",
+          "where": "Todra Gorge, near Tinghir",
+          "book": "",
+          "place": "morocco/todra-gorge"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Camel trek in the Erg Chebbi dunes",
+          "notes": "Ends at a desert camp with dinner and music; nights are cold, camp facilities are basic and sandstorms can change the plan.",
+          "where": "Erg Chebbi, Merzouga",
+          "book": "Yes - camp places are arranged in advance",
+          "place": "morocco/erg-chebbi-camel-trek"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Dune 4x4 and sandboarding in Merzouga",
+          "notes": "Early morning is cooler and quieter; protect phones and cameras from sand.",
+          "where": "Merzouga",
+          "book": "",
+          "place": "morocco/merzouga-4x4-dunes"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1h",
+          "name": "Merenid Tombs viewpoint",
+          "notes": "If you arrive after the long drive, this is a short evening look at the city lights from above.",
+          "where": "North of the medina, Fes",
+          "book": "",
+          "place": "morocco/merenid-tombs"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Fes el-Bali medina walk with a licensed guide",
+          "notes": "The lanes are steep, uneven and busy, and mules have right of way; a guide makes the first day far easier.",
+          "where": "Fes el-Bali, Fes",
+          "book": "Yes - arrange a licensed guide through your accommodation",
+          "place": "morocco/fes-medina"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1h",
+          "name": "Chouara Tannery",
+          "notes": "Viewed from leather-shop terraces; sprigs of mint are handed out against the smell, which is strong in warm weather.",
+          "where": "Fes el-Bali, Fes",
+          "book": "",
+          "place": "morocco/chouara-tannery"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "Bou Inania Madrasa",
+          "notes": "Still a working religious site, so dress and behave respectfully.",
+          "where": "Fes el-Bali, Fes",
+          "book": "",
+          "place": "morocco/bou-inania-madrasa"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Fes el-Jdid and the Mellah",
+          "notes": "The Royal Palace gates are the main stop; the Mellah's wooden balconies are a distinct style from the rest of the city.",
+          "where": "Fes el-Jdid, Fes",
+          "book": "",
+          "place": "morocco/fes-el-jdid"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Volubilis and Moulay Idriss",
+          "notes": "Little shade at the ruins; the mosaics are still in place, and the nearby pilgrimage town is a popular add-on.",
+          "where": "Volubilis, near Meknes",
+          "book": "",
+          "place": "morocco/volubilis"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Merenid Tombs viewpoint",
+          "notes": "The classic sunset view over the medina.",
+          "where": "North of the medina, Fes",
+          "book": "",
+          "place": "morocco/merenid-tombs"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Marrakech Menara Airport (RAK)",
+          "to": "Marrakech medina",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Many riads send a driver; vehicles cannot reach most of them, so the last stretch is on foot or by porter.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Marrakech medina",
+          "to": "Ait Benhaddou",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "The road crosses the Tizi n'Tichka pass.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Ait Benhaddou",
+          "to": "Skoura",
+          "time": "14:00",
+          "minutes": 120,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Skoura",
+          "to": "Todra Gorge",
+          "time": "08:30",
+          "minutes": 180,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Todra Gorge",
+          "to": "Merzouga",
+          "time": "12:45",
+          "minutes": 240,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Merzouga",
+          "to": "Fes medina",
+          "time": "08:00",
+          "minutes": 510,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "A long day with stops at Ziz Gorge and the cedar forests around Azrou; the Middle Atlas can be cold and snowy in winter.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Fes medina",
+          "to": "Volubilis",
+          "time": "08:00",
+          "minutes": 90,
+          "carrier": "Car with driver",
+          "notes": "A driver for the day lets you stop at Meknes on the way.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Volubilis",
+          "to": "Fes medina",
+          "time": "15:00",
+          "minutes": 90,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Fes medina",
+          "to": "Fes-Saiss Airport (FEZ)",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "morocco-grand-tour-14d",
+      "title": "Casablanca to Marrakech Grand Tour in 14 Days",
+      "summary": "Two weeks around Morocco in one sweep: Casablanca and Rabat, blue Chefchaouen, Fes, the Sahara, the kasbah country and a final stretch in Marrakech.",
+      "days": 14,
+      "route": "Casablanca > Rabat > Chefchaouen > Fes > Merzouga > Skoura > Marrakech",
+      "arrive": "Casablanca (CMN)",
+      "depart": "Marrakech (RAK)",
+      "countries": [
+        "Morocco"
+      ],
+      "regions": [
+        "Casablanca-Settat",
+        "Rabat-Sale-Kenitra",
+        "Tanger-Tetouan-Al Hoceima",
+        "Fes-Meknes",
+        "Draa-Tafilalet",
+        "Marrakech-Safi"
+      ],
+      "cities": [
+        "Casablanca",
+        "Rabat",
+        "Chefchaouen",
+        "Fes",
+        "Volubilis",
+        "Merzouga",
+        "Todra Gorge",
+        "Skoura",
+        "Ait Benhaddou",
+        "Marrakech"
+      ],
+      "imageQuery": "Chefchaouen Morocco blue medina alley",
+      "highlights": [
+        "Hassan II Mosque",
+        "Chefchaouen blue medina",
+        "Fes medina",
+        "Desert camp",
+        "Ait Benhaddou",
+        "Marrakech"
+      ],
+      "destinationKeys": [
+        "morocco",
+        "morocco/casablanca-settat",
+        "morocco/casablanca",
+        "morocco/rabat-sale-kenitra",
+        "morocco/rabat",
+        "morocco/tanger-tetouan-al-hoceima",
+        "morocco/chefchaouen",
+        "morocco/fes-meknes",
+        "morocco/fes",
+        "morocco/volubilis",
+        "morocco/draa-tafilalet",
+        "morocco/merzouga",
+        "morocco/todra-gorge",
+        "morocco/skoura",
+        "morocco/ait-benhaddou",
+        "morocco/marrakech-safi",
+        "morocco/marrakech"
+      ],
+      "hero": "morocco/chefchaouen",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "photography",
+        "adventure",
+        "outdoors",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Casablanca",
+          "hotel": "Hotel in Casablanca",
+          "start": 0,
+          "nights": 1,
+          "area": "Near the Habous or the Corniche, or by the central station for easy trains",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rabat",
+          "hotel": "Hotel in Rabat",
+          "start": 1,
+          "nights": 1,
+          "area": "Near the medina or Agdal, both close to the main sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chefchaouen",
+          "hotel": "Guesthouse in Chefchaouen",
+          "start": 2,
+          "nights": 2,
+          "area": "Inside or beside the medina, though steep steps make luggage awkward",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Fes",
+          "hotel": "Riad in Fes",
+          "start": 4,
+          "nights": 3,
+          "area": "Inside Fes el-Bali for the medieval atmosphere, though luggage must be carried or wheeled over rough lanes; the Batha area is a good compromise",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Merzouga",
+          "hotel": "Camp in Merzouga",
+          "start": 7,
+          "nights": 2,
+          "area": "A desert camp or guesthouse at the foot of the Erg Chebbi dunes; nights are cold in winter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Skoura",
+          "hotel": "Guesthouse in Skoura",
+          "start": 9,
+          "nights": 1,
+          "area": "In or beside the palm grove, in one of the kasbah guesthouses",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Marrakech",
+          "hotel": "Riad in Marrakech",
+          "start": 10,
+          "nights": 3,
+          "area": "Inside the medina near Jemaa el-Fnaa for atmosphere, or in Gueliz for quiet and easy taxis; riads in the medina are reached on foot down narrow lanes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Hassan II Mosque",
+          "notes": "Non-Muslim visitors enter by guided tour at set times, so check the schedule; the sea wind on the platform is strong.",
+          "where": "Ain Diab, Casablanca",
+          "book": "Yes - guided entry runs only at set times",
+          "place": "morocco/hassan-ii-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "1h",
+          "name": "Habous Quarter",
+          "notes": "Flat, calm streets of pastry makers and bookshops before the train.",
+          "where": "Habous, Casablanca",
+          "book": "",
+          "place": "morocco/habous-quarter"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "Kasbah of the Udayas",
+          "notes": "A calm fortress of blue-and-white lanes above the river mouth.",
+          "where": "Rabat",
+          "book": "",
+          "place": "morocco/kasbah-of-the-udayas"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Hassan Tower and the Mausoleum of Mohammed V",
+          "notes": "Non-Muslim visitors can enter the mausoleum; the esplanade is open and exposed.",
+          "where": "Rabat",
+          "book": "",
+          "place": "morocco/hassan-tower"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1h",
+          "name": "Chellah necropolis",
+          "notes": "Storks nest on the old minaret; paths are uneven.",
+          "where": "Rabat",
+          "book": "",
+          "place": "morocco/chellah"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Chefchaouen blue medina",
+          "notes": "Alleys climb through steps and arches; early morning is best for photographs.",
+          "where": "Medina, Chefchaouen",
+          "book": "",
+          "place": "morocco/chefchaouen-blue-medina"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Spanish Mosque viewpoint",
+          "notes": "A rocky unlit path, around half an hour each way, so allow time to get down before dark.",
+          "where": "East of the medina, Chefchaouen",
+          "book": "",
+          "place": "morocco/spanish-mosque-viewpoint"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Akchour waterfalls hike",
+          "notes": "Rocky paths cross the stream; swimming is possible in the pools in warm months.",
+          "where": "Akchour, near Chefchaouen",
+          "book": "",
+          "place": "morocco/akchour-waterfalls"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Merenid Tombs viewpoint",
+          "notes": "The classic sunset view over Fes el-Bali; a short steep walk or a taxi up, and breezy in the evening.",
+          "where": "North of the medina, Fes",
+          "book": "",
+          "place": "morocco/merenid-tombs"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Fes el-Bali medina walk with a licensed guide",
+          "notes": "The lanes are steep, uneven and busy, and mules have right of way; a guide makes the first day far easier.",
+          "where": "Fes el-Bali, Fes",
+          "book": "Yes - arrange a licensed guide through your accommodation",
+          "place": "morocco/fes-medina"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1h",
+          "name": "Chouara Tannery",
+          "notes": "Viewed from leather-shop terraces; sprigs of mint are handed out against the smell, which is strong in warm weather.",
+          "where": "Fes el-Bali, Fes",
+          "book": "",
+          "place": "morocco/chouara-tannery"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "Bou Inania Madrasa",
+          "notes": "Still a working religious site, so dress and behave respectfully.",
+          "where": "Fes el-Bali, Fes",
+          "book": "",
+          "place": "morocco/bou-inania-madrasa"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Fes el-Jdid and the Mellah",
+          "notes": "The Royal Palace gates are the main stop; the Mellah's wooden balconies are a distinct style from the rest of the city.",
+          "where": "Fes el-Jdid, Fes",
+          "book": "",
+          "place": "morocco/fes-el-jdid"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Volubilis and Moulay Idriss",
+          "notes": "Little shade at the ruins; the mosaics are still in place, and the nearby pilgrimage town is a popular add-on.",
+          "where": "Volubilis, near Meknes",
+          "book": "",
+          "place": "morocco/volubilis"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Camel trek in the Erg Chebbi dunes",
+          "notes": "Ends at a desert camp with dinner and music; nights are cold, camp facilities are basic and sandstorms can change the plan.",
+          "where": "Erg Chebbi, Merzouga",
+          "book": "Yes - camp places are arranged in advance",
+          "place": "morocco/erg-chebbi-camel-trek"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Dune 4x4 and sandboarding in Merzouga",
+          "notes": "Early morning is cooler and quieter; protect phones and cameras from sand.",
+          "where": "Merzouga",
+          "book": "",
+          "place": "morocco/merzouga-4x4-dunes"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "12:45",
+          "duration": "1h",
+          "name": "Todra Gorge",
+          "notes": "The road in is busy at midday.",
+          "where": "Todra Gorge, near Tinghir",
+          "book": "",
+          "place": "morocco/todra-gorge"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Ait Benhaddou",
+          "notes": "The walk up through the ksar involves steps and uneven ground; go early or late for fewer groups.",
+          "where": "Ait Benhaddou",
+          "book": "",
+          "place": "morocco/ait-benhaddou"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Jemaa el-Fnaa at dusk",
+          "notes": "Arrive as the food stalls set up; touts are persistent.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/jemaa-el-fnaa"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "0.75h",
+          "name": "Koutoubia Mosque",
+          "notes": "Non-Muslims cannot enter, so this is a look at the minaret and gardens only.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/koutoubia-mosque"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "1h",
+          "name": "Bahia Palace",
+          "notes": "Go early before groups arrive; parts are closed to visitors.",
+          "where": "Mellah, Marrakech",
+          "book": "",
+          "place": "morocco/bahia-palace"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Saadian Tombs",
+          "notes": "Small and quickly crowded, so expect a queue at midday.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/saadian-tombs"
+        },
+        {
+          "day": 11,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Marrakech souks",
+          "notes": "Bargain on everything; the lanes are a maze, so use a map app or a guide for the first visit.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-souks"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Majorelle Garden",
+          "notes": "Timed tickets bought online avoid a long queue; arriving at opening is calmest.",
+          "where": "Gueliz, Marrakech",
+          "book": "Yes - timed tickets sell out and queues build quickly",
+          "place": "morocco/majorelle-garden"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Ben Youssef Madrasa",
+          "notes": "Light is best in the morning; the narrow stairs to the cells can be crowded.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/ben-youssef-madrasa"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "El Badi Palace",
+          "notes": "Open and exposed, so carry sun protection.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/el-badi-palace"
+        },
+        {
+          "day": 12,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Traditional hammam",
+          "notes": "Separate hours or sections apply for men and women; a private spa version is gentler.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-hammam"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Casablanca Mohammed V Airport (CMN)",
+          "to": "Casablanca hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Airport train to Casa Voyageurs plus taxi, or taxi",
+          "notes": "The airport is some way outside the city; a taxi is simpler with luggage.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Casablanca Casa Voyageurs Station",
+          "to": "Rabat Ville Station",
+          "time": "10:30",
+          "minutes": 60,
+          "carrier": "ONCF train",
+          "notes": "Frequent trains; first class is cheap and gives you a seat.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Rabat hotel area",
+          "to": "Chefchaouen",
+          "time": "08:30",
+          "minutes": 240,
+          "carrier": "Car with driver or CTM coach",
+          "notes": "The CTM coach takes longer but runs on a fixed schedule.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Chefchaouen",
+          "to": "Akchour",
+          "time": "08:15",
+          "minutes": 45,
+          "carrier": "Taxi or shared grand taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Akchour",
+          "to": "Chefchaouen",
+          "time": "15:30",
+          "minutes": 45,
+          "carrier": "Taxi or shared grand taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Chefchaouen",
+          "to": "Fes medina",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Car with driver or CTM coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Fes medina",
+          "to": "Volubilis",
+          "time": "08:00",
+          "minutes": 90,
+          "carrier": "Car with driver",
+          "notes": "A driver for the day lets you stop at Meknes on the way.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Volubilis",
+          "to": "Fes medina",
+          "time": "15:00",
+          "minutes": 90,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Fes medina",
+          "to": "Merzouga",
+          "time": "08:00",
+          "minutes": 510,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "A long day with stops at the cedar forests around Azrou and at Ziz Gorge.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Merzouga",
+          "to": "Todra Gorge",
+          "time": "08:30",
+          "minutes": 240,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Todra Gorge",
+          "to": "Skoura",
+          "time": "14:30",
+          "minutes": 180,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Skoura",
+          "to": "Ait Benhaddou",
+          "time": "08:30",
+          "minutes": 120,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Ait Benhaddou",
+          "to": "Marrakech medina",
+          "time": "12:30",
+          "minutes": 240,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "The road crosses the Tizi n'Tichka pass, with views worth a stop.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Marrakech medina",
+          "to": "Marrakech Menara Airport (RAK)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "morocco-atlas-coast-sahara-14d",
+      "title": "Marrakech, Essaouira, the Atlas and the Sahara in 14 Days",
+      "summary": "A slower fortnight that adds the Atlantic coast and the High Atlas to Marrakech, the Sahara and Fes, with time for village walks and no more than one long drive between each base.",
+      "days": 14,
+      "route": "Marrakech > Essaouira > Imlil (High Atlas) > Skoura > Merzouga > Fes (Volubilis)",
+      "arrive": "Marrakech (RAK)",
+      "depart": "Fes (FEZ)",
+      "countries": [
+        "Morocco"
+      ],
+      "regions": [
+        "Marrakech-Safi",
+        "Draa-Tafilalet",
+        "Fes-Meknes"
+      ],
+      "cities": [
+        "Marrakech",
+        "Essaouira",
+        "Imlil",
+        "Ait Benhaddou",
+        "Skoura",
+        "Todra Gorge",
+        "Merzouga",
+        "Fes",
+        "Volubilis"
+      ],
+      "imageQuery": "Essaouira Morocco ramparts Atlantic fishing boats",
+      "highlights": [
+        "Essaouira medina",
+        "Imlil village hike",
+        "Ait Benhaddou",
+        "Desert camp",
+        "Fes medina"
+      ],
+      "destinationKeys": [
+        "morocco",
+        "morocco/marrakech-safi",
+        "morocco/marrakech",
+        "morocco/essaouira",
+        "morocco/imlil",
+        "morocco/draa-tafilalet",
+        "morocco/ait-benhaddou",
+        "morocco/skoura",
+        "morocco/todra-gorge",
+        "morocco/merzouga",
+        "morocco/fes-meknes",
+        "morocco/fes",
+        "morocco/volubilis"
+      ],
+      "hero": "morocco/essaouira",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "culture",
+        "adventure",
+        "relax",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Marrakech",
+          "hotel": "Riad in Marrakech",
+          "start": 0,
+          "nights": 3,
+          "area": "Inside the medina near Jemaa el-Fnaa for atmosphere, or in Gueliz for quiet and easy taxis; riads in the medina are reached on foot down narrow lanes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Essaouira",
+          "hotel": "Riad in Essaouira",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside the medina near the ramparts, or just outside it for easier parking",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Imlil",
+          "hotel": "Guesthouse in Imlil",
+          "start": 5,
+          "nights": 2,
+          "area": "A mountain guesthouse in or near the village, with terraces facing the valley",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Skoura",
+          "hotel": "Guesthouse in Skoura",
+          "start": 7,
+          "nights": 1,
+          "area": "In or beside the palm grove, in one of the kasbah guesthouses",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Merzouga",
+          "hotel": "Camp in Merzouga",
+          "start": 8,
+          "nights": 2,
+          "area": "A desert camp or guesthouse at the foot of the Erg Chebbi dunes; nights are cold in winter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Fes",
+          "hotel": "Riad in Fes",
+          "start": 10,
+          "nights": 3,
+          "area": "Inside Fes el-Bali for the medieval atmosphere, though luggage must be carried or wheeled over rough lanes; the Batha area is a good compromise",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Jemaa el-Fnaa at dusk",
+          "notes": "Arrive as the food stalls set up; photographing performers usually leads to a request for payment, and touts are persistent. A rooftop cafe gives a calmer view.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/jemaa-el-fnaa"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "0.75h",
+          "name": "Koutoubia Mosque",
+          "notes": "Non-Muslims cannot enter, so this is a look at the minaret and gardens only.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/koutoubia-mosque"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "1h",
+          "name": "Bahia Palace",
+          "notes": "Go early before groups arrive; parts are closed to visitors.",
+          "where": "Mellah, Marrakech",
+          "book": "",
+          "place": "morocco/bahia-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Saadian Tombs",
+          "notes": "Small and quickly crowded, so expect a queue at midday.",
+          "where": "Kasbah, Marrakech",
+          "book": "",
+          "place": "morocco/saadian-tombs"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Marrakech souks",
+          "notes": "Bargain on everything; the lanes are a maze, so use a map app or a guide for the first visit.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/marrakech-souks"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Majorelle Garden",
+          "notes": "Timed tickets bought online avoid a long queue; arriving at opening is calmest.",
+          "where": "Gueliz, Marrakech",
+          "book": "Yes - timed tickets sell out and queues build quickly",
+          "place": "morocco/majorelle-garden"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Ben Youssef Madrasa",
+          "notes": "Light is best in the morning; the narrow stairs to the cells can be crowded.",
+          "where": "Medina, Marrakech",
+          "book": "",
+          "place": "morocco/ben-youssef-madrasa"
+        },
+        {
+          "day": 2,
+          "type": "Class",
+          "time": "14:30",
+          "duration": "3.5h",
+          "name": "Moroccan cooking class",
+          "notes": "Usually starts with a market visit; vegetarian options are available if requested in advance.",
+          "where": "Marrakech",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "morocco/marrakech-cooking-class"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Essaouira medina and ramparts",
+          "notes": "Windy for much of the year, so bring a jacket even in summer.",
+          "where": "Medina, Essaouira",
+          "book": "",
+          "place": "morocco/essaouira-medina"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Fresh fish at Essaouira port",
+          "notes": "Choose from the display, agree the amount and sit at a communal table; the quay is slippery.",
+          "where": "Port, Essaouira",
+          "book": "",
+          "place": "morocco/essaouira-port"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Essaouira beach",
+          "notes": "Windy and cool for swimming, but excellent for kitesurfing and windsurfing lessons.",
+          "where": "Essaouira Beach",
+          "book": "",
+          "place": "morocco/essaouira-beach"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Imlil village walk",
+          "notes": "Cooler and clearer than Marrakech; paths are rocky and can be slippery after rain.",
+          "where": "Imlil, High Atlas",
+          "book": "",
+          "place": "morocco/imlil-village-walk"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "High Atlas village hike",
+          "notes": "A guided route between Berber villages with views of the Toubkal massif; weather in the mountains can change quickly.",
+          "where": "Imlil, High Atlas",
+          "book": "Yes - arrange a local guide through your guesthouse",
+          "place": "morocco/imlil-atlas-hike"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Ait Benhaddou",
+          "notes": "The walk up through the ksar involves steps and uneven ground; go early or late for fewer groups.",
+          "where": "Ait Benhaddou",
+          "book": "",
+          "place": "morocco/ait-benhaddou"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Skoura palm grove and kasbah",
+          "notes": "A quiet walk among date palms before dinner.",
+          "where": "Skoura",
+          "book": "",
+          "place": "morocco/skoura-palm-grove"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "11:15",
+          "duration": "1h",
+          "name": "Todra Gorge",
+          "notes": "Walls rise almost straight up on both sides.",
+          "where": "Todra Gorge, near Tinghir",
+          "book": "",
+          "place": "morocco/todra-gorge"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Camel trek in the Erg Chebbi dunes",
+          "notes": "Ends at a desert camp with dinner and music; nights are cold, camp facilities are basic and sandstorms can change the plan.",
+          "where": "Erg Chebbi, Merzouga",
+          "book": "Yes - camp places are arranged in advance",
+          "place": "morocco/erg-chebbi-camel-trek"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Dune 4x4 and sandboarding in Merzouga",
+          "notes": "Early morning is cooler and quieter; protect phones and cameras from sand.",
+          "where": "Merzouga",
+          "book": "",
+          "place": "morocco/merzouga-4x4-dunes"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Fes el-Bali medina walk with a licensed guide",
+          "notes": "The lanes are steep, uneven and busy, and mules have right of way; a guide makes the first day far easier.",
+          "where": "Fes el-Bali, Fes",
+          "book": "Yes - arrange a licensed guide through your accommodation",
+          "place": "morocco/fes-medina"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1h",
+          "name": "Chouara Tannery",
+          "notes": "Viewed from leather-shop terraces; sprigs of mint are handed out against the smell, which is strong in warm weather.",
+          "where": "Fes el-Bali, Fes",
+          "book": "",
+          "place": "morocco/chouara-tannery"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "Bou Inania Madrasa",
+          "notes": "Still a working religious site, so dress and behave respectfully.",
+          "where": "Fes el-Bali, Fes",
+          "book": "",
+          "place": "morocco/bou-inania-madrasa"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Fes el-Jdid and the Mellah",
+          "notes": "The Royal Palace gates are the main stop; the Mellah's wooden balconies are a distinct style from the rest of the city.",
+          "where": "Fes el-Jdid, Fes",
+          "book": "",
+          "place": "morocco/fes-el-jdid"
+        },
+        {
+          "day": 12,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Volubilis and Moulay Idriss",
+          "notes": "Little shade at the ruins; the mosaics are still in place, and the nearby pilgrimage town is a popular add-on.",
+          "where": "Volubilis, near Meknes",
+          "book": "",
+          "place": "morocco/volubilis"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Merenid Tombs viewpoint",
+          "notes": "The classic sunset view over the medina.",
+          "where": "North of the medina, Fes",
+          "book": "",
+          "place": "morocco/merenid-tombs"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Marrakech Menara Airport (RAK)",
+          "to": "Marrakech medina",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Many riads send a driver; vehicles cannot reach most of them, so the last stretch is on foot or by porter.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Marrakech bus station",
+          "to": "Essaouira",
+          "time": "10:00",
+          "minutes": 180,
+          "carrier": "CTM or Supratours coach",
+          "notes": "Comfortable, air-conditioned coaches run several times a day.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Essaouira",
+          "to": "Imlil",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Car with driver",
+          "notes": "The road skirts Marrakech before climbing into the mountains.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Imlil",
+          "to": "Ait Benhaddou",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "Car with driver",
+          "notes": "The road crosses the Tizi n'Tichka pass.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Ait Benhaddou",
+          "to": "Skoura",
+          "time": "16:30",
+          "minutes": 120,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Skoura",
+          "to": "Todra Gorge",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Todra Gorge",
+          "to": "Merzouga",
+          "time": "12:45",
+          "minutes": 240,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Merzouga",
+          "to": "Fes medina",
+          "time": "08:00",
+          "minutes": 510,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "A long day with stops at Ziz Gorge and the cedar forests around Azrou.",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Fes medina",
+          "to": "Volubilis",
+          "time": "08:00",
+          "minutes": 90,
+          "carrier": "Car with driver",
+          "notes": "A driver for the day lets you stop at Meknes on the way.",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Volubilis",
+          "to": "Fes medina",
+          "time": "15:00",
+          "minutes": 90,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Fes medina",
+          "to": "Fes-Saiss Airport (FEZ)",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (agree the fare first) or pre-arranged transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "morocco/jemaa-el-fnaa": {
+        "name": "Jemaa el-Fnaa",
+        "description": "Marrakech's great main square, quiet by day and by evening filled with food stalls, storytellers, musicians and crowds.",
+        "details": "Jemaa el-Fnaa is the heart of the Marrakech medina and is recognised by UNESCO for its tradition of oral storytelling and street performance. By day it is relatively quiet, with orange-juice sellers and a few entertainers, while from late afternoon rows of food stalls set up and the square fills with smoke, music and onlookers. Photographing performers usually leads to a request for payment, and touts are persistent. Rooftop cafes around the edge give a calm view over the whole scene.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "photography",
+          "nightlife"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/marrakech-souks": {
+        "name": "Marrakech souks",
+        "description": "A maze of covered lanes north of Jemaa el-Fnaa, with stalls grouped by trade selling leather, metalwork, spices and textiles.",
+        "details": "The souks fan out north of the main square in narrow lanes that are traditionally organised by craft, with dyers, metalworkers, leather sellers and spice merchants each in their own area. Bargaining is the norm and a first quoted amount is rarely the final one. The layout is confusing and the lanes are shared with motorbikes, so it is easy to get lost, and a hired guide or a map app helps. Mornings are quieter and cooler than the afternoon.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/koutoubia-mosque": {
+        "name": "Koutoubia Mosque",
+        "description": "The twelfth-century minaret that dominates the Marrakech skyline, a model for later towers in Morocco and Spain.",
+        "details": "The Koutoubia is the largest mosque in Marrakech, and its minaret, about seventy metres high, is built of sandstone with decorative panels that vary on each face. It served as the pattern for the Giralda in Seville and the Hassan Tower in Rabat. Only Muslims may enter the mosque itself, so non-Muslim visitors see the minaret from the gardens around it. It is at its best in the late afternoon light, and the gardens are free and open.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/bahia-palace": {
+        "name": "Bahia Palace",
+        "description": "A nineteenth-century palace of tiled courtyards, painted cedar ceilings and gardens, built for a grand vizier.",
+        "details": "The Bahia Palace was built in the late nineteenth century for a powerful vizier and expanded by his son, in a style that mixes Moroccan and Andalusian traditions. Rooms open onto shaded courtyards of zellige tile, carved stucco and painted cedar ceilings, and a large garden courtyard sits at the centre. Parts of the building are closed to visitors, as it is still used for official purposes. Midday groups can be noisy, so arriving early makes it feel calmer.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/saadian-tombs": {
+        "name": "Saadian Tombs",
+        "description": "A royal burial ground of the sixteenth century, sealed off for centuries and rediscovered in the early twentieth.",
+        "details": "The Saadian Tombs hold members of the dynasty that ruled Morocco in the sixteenth and early seventeenth centuries, in mausoleums with lavish carved stucco and marble. A later ruler walled the complex off, and it was effectively forgotten until it was seen from the air in 1917. The Hall of Twelve Columns is the best-known chamber. The site is small and gets crowded quickly, so queueing is common at midday.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/el-badi-palace": {
+        "name": "El Badi Palace",
+        "description": "The ruins of a vast sixteenth-century palace, with sunken gardens, orange trees and storks nesting on the walls.",
+        "details": "El Badi was built in the late sixteenth century by Sultan Ahmad al-Mansur, and its richest decoration was stripped by a later ruler to adorn his own capital. What survives is a large empty courtyard with sunken gardens and pools, backed by high pisé walls where white storks nest. Underground passages and a small museum with a carved minbar can also be visited. The ruins are open and exposed, so sun protection helps.",
+        "interests": [
+          "culture",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/majorelle-garden": {
+        "name": "Majorelle Garden",
+        "description": "A cactus and bamboo garden with strikingly cobalt-blue buildings, created by a French painter and later restored by Yves Saint Laurent.",
+        "details": "The garden was laid out from the 1920s by the French painter Jacques Majorelle, who painted its buildings in an intense cobalt blue that is now known by his name. It was bought and restored in 1980 by Yves Saint Laurent and Pierre Bergé. Paths wind among cacti, bamboo and water features, and a small museum on Amazigh culture sits inside. It gets very crowded, and timed tickets purchased ahead avoid a long queue.",
+        "interests": [
+          "photography",
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/ben-youssef-madrasa": {
+        "name": "Ben Youssef Madrasa",
+        "description": "A former Islamic college in the medina, with a central courtyard of carved cedar, stucco and tile and rows of tiny student cells.",
+        "details": "The Ben Youssef was a school for Quranic study, rebuilt in the sixteenth century into one of the largest madrasas in Morocco. A central courtyard with a pool is lined with carved cedar, plasterwork and zellige tile, and around it rise two storeys of small cells that once housed students. It reopened after a lengthy restoration and is a good place to see traditional decorative arts up close. Light is best in the morning, and the narrow stairs can be crowded.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/marrakech-hammam": {
+        "name": "Traditional hammam",
+        "description": "A steam bath followed by a scrub, a long-standing part of Moroccan daily life, offered at a local bathhouse or a spa.",
+        "details": "A hammam is a public steam bath where bathers move through rooms of increasing heat, are scrubbed with a rough mitt and black soap, and rinse with buckets of water. Local hammams are communal and simple, while spas in the medina offer a gentler, private version with a massage. Swimwear or disposable underwear is normally worn, and separate hours or sections apply for men and women. It is a good way to relax tired legs.",
+        "interests": [
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/marrakech-cooking-class": {
+        "name": "Moroccan cooking class",
+        "description": "A hands-on class, often starting with a market visit, in which you learn to make tagine, couscous and salads.",
+        "details": "Cooking classes in Marrakech usually begin with a short trip through the market to choose vegetables, spices and meat, then move to a riad kitchen or a garden setting. Typical dishes include a tagine, a selection of cooked salads and a sweet pastry or tea. Groups are small and vegetarian options are generally available if requested ahead. You eat the meal you have prepared at the end.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/imlil-village-walk": {
+        "name": "Imlil village walk",
+        "description": "A gentle walk around a High Atlas village at the foot of Mount Toubkal, on mule tracks between terraces and walnut trees.",
+        "details": "Imlil sits in a valley at the base of the Toubkal massif, around an hour and a half from Marrakech, and is the trailhead for the climb to North Africa's highest peak. Short walks lead from the village to neighbouring settlements across terraced fields and past walnut groves. It is noticeably cooler than Marrakech, and the air is much clearer. Paths are rocky and can be slippery after rain or snow.",
+        "interests": [
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/imlil-atlas-hike": {
+        "name": "High Atlas village hike",
+        "description": "A guided walk of several hours between Berber villages near Imlil, with views toward Mount Toubkal.",
+        "details": "A guided hike from Imlil follows mule paths between villages such as Aremd and Tamatert, climbing through terraced fields and juniper slopes with views of the Toubkal massif. The routes are suitable for reasonably fit walkers without climbing experience. Weather in the mountains can turn quickly, and winter snow can close higher paths. Tea in a village house or on a terrace is usually part of the day.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "morocco/essaouira-medina": {
+        "name": "Essaouira medina and ramparts",
+        "description": "A whitewashed, wind-swept Atlantic port town with an eighteenth-century fortified medina and cannons along its sea wall.",
+        "details": "Essaouira's walled medina was laid out in the eighteenth century and is a UNESCO World Heritage Site, with white and blue buildings and a layout that is easier to follow than in many Moroccan cities. The Skala de la Ville, a sea wall lined with old cannons, gives views over the Atlantic and the island fortress offshore. Craftsmen working thuya wood sell their goods in small workshops. It is windy for much of the year, so a jacket is useful even in summer.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/essaouira-port": {
+        "name": "Essaouira fishing port",
+        "description": "A busy harbour of blue wooden boats, with fish stalls where the day's catch is grilled to order.",
+        "details": "The port at Essaouira is a working harbour where boats unload the catch each afternoon, and rows of stalls sell fresh fish and shellfish that are grilled on the spot. Visitors choose fish from the display, agree the price and sit at communal tables. The harbour is noisy and busy, with seagulls constantly overhead. Care is needed on the slippery quayside.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/essaouira-beach": {
+        "name": "Essaouira beach",
+        "description": "A long, windy Atlantic beach popular with kitesurfers and windsurfers, with camels and horses for hire along the sand.",
+        "details": "The beach stretches south of the town and is famous for its steady winds, which draw kitesurfers and windsurfers for much of the year. The wind makes it better for activity than lounging, and the water is cool. Schools offer lessons and equipment hire. Camel and horse rides are available at the southern end.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/ait-benhaddou": {
+        "name": "Ait Benhaddou",
+        "description": "A fortified earthen village on the old caravan route to the Sahara, a UNESCO site used as a film location.",
+        "details": "Ait Benhaddou is a ksar, a cluster of fortified clay houses climbing a hillside above a river, and it once served as a stop on the caravan route between the Sahara and Marrakech. It is a UNESCO World Heritage Site and has appeared in many films and television series. A handful of families still live inside, but most residents now live in the newer village across the river. The walk up through the ksar involves steps and uneven ground and gives a view over the valley.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/skoura-palm-grove": {
+        "name": "Skoura palm grove and kasbah",
+        "description": "A green oasis of date palms and old mud-brick kasbahs near Ouarzazate, quiet compared with the main tourist route.",
+        "details": "Skoura is a palm grove on the edge of the desert, scattered with fortified kasbahs of earthen brick, some of them converted into guesthouses. Walking or cycling through the grove on shaded tracks gives a look at the irrigation channels and small farms that depend on them. It is much quieter than Ait Benhaddou or Ouarzazate. Some kasbahs can be visited for a small fee.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/todra-gorge": {
+        "name": "Todra Gorge",
+        "description": "A narrow canyon of sheer limestone walls up to about 300 metres high, with a stream and palm groves at the base.",
+        "details": "The Todra Gorge cuts through the High Atlas near Tinghir, and at its narrowest the walls rise almost straight up on both sides with only a stream and a road between them. A palm grove fills the valley below the gorge. Walking up the gorge is easy and flat, and climbers use the cliffs. It is at its best in the morning light and gets crowded when tour groups arrive at midday.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/dades-gorge": {
+        "name": "Dades Gorge",
+        "description": "A winding valley of red rock formations and kasbahs, known for rock towers nicknamed the monkey fingers and a switchback road.",
+        "details": "The Dades valley runs north from Boumalne Dades between kasbahs and green fields, with eroded rock towers that locals call monkey fingers and a road that doubles back in tight hairpin bends. The scenery is best in the early morning and late afternoon light. A good view of the road can be had from a roadside cafe at the top of the hairpins. Roads in the upper gorge can be rough, and winter conditions are cold.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/erg-chebbi-camel-trek": {
+        "name": "Camel trek in the Erg Chebbi dunes",
+        "description": "A late-afternoon camel ride into the Sahara's tallest dunes in Morocco, ending at a camp for the night.",
+        "details": "Erg Chebbi is a sea of orange sand dunes, some rising over a hundred metres, at the edge of the Sahara near Merzouga. Camels carry visitors into the dunes in the afternoon for sunset, and most then stay at a desert camp with dinner, music around a fire and a very dark sky. Sunrise is the other great moment, and it is cold at night. Camp facilities are basic, and sandstorms can interrupt the plan.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/merzouga-4x4-dunes": {
+        "name": "Dune 4x4 and sandboarding in Merzouga",
+        "description": "A morning in 4x4 vehicles across the desert around Merzouga, with a stop to slide down the dunes on a board.",
+        "details": "Local guides drive 4x4s across the flat desert and up to the dunes, stopping at an oasis and sometimes a nomad family's tent. Sandboarding on the dune face is available at most operators and is easier than it looks, but climbing back up is tiring. Early morning is cooler and quieter. Sand gets everywhere, so protect cameras and phones.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/fes-medina": {
+        "name": "Fes el-Bali medina walk",
+        "description": "The old walled city of Fes, a UNESCO site of thousands of lanes and one of the largest car-free urban areas in the world.",
+        "details": "Fes el-Bali was founded around the turn of the ninth century and remains a living city, with workshops, mosques, fountains and homes packed into a maze of narrow lanes that mules still use to haul goods. The al-Qarawiyyin mosque and university, founded in 859, sit at its core, though non-Muslims cannot enter. It is very easy to get lost, and a licensed guide for the first day makes a large difference. The lanes are steep, uneven and busy, and mules have right of way.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "morocco/chouara-tannery": {
+        "name": "Chouara Tannery",
+        "description": "The oldest leather tannery in Fes, a honeycomb of stone dye vats viewed from the terraces of surrounding leather shops.",
+        "details": "Leather has been tanned at Chouara by hand since the medieval period, in rows of stone vats of dye and pigeon-dropping solution used to soften hides. Visitors look down on the work from the upper terraces of the leather shops around it, and staff hand out sprigs of mint to hold against the smell. There is no entry charge but the shops expect that you will look around their goods. The work is hard to watch for some people, and the smell is strong in warm weather.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/bou-inania-madrasa": {
+        "name": "Bou Inania Madrasa",
+        "description": "A fourteenth-century religious college in Fes with a tiled courtyard and carved cedar, open to non-Muslim visitors.",
+        "details": "The Bou Inania was built in the fourteenth century under the Marinid dynasty and is one of few religious buildings in Fes that non-Muslims may enter. Its central courtyard has a fountain, walls covered in zellige tile and carved stucco, and finely carved cedar screens. It is still a working religious site, so visitors are asked to dress and behave respectfully. It is compact and quick to see.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/fes-el-jdid": {
+        "name": "Fes el-Jdid and the Mellah",
+        "description": "The thirteenth-century royal quarter of Fes, with the brass doors of the Royal Palace and the old Jewish quarter behind it.",
+        "details": "Fes el-Jdid, or New Fes, was built by the Marinid dynasty in the thirteenth century as a royal and administrative district beside the older medina. The gilded entrance doors of the Royal Palace are the usual stop, though the palace itself is closed to the public. Behind it lies the Mellah, the former Jewish quarter, with distinctive wooden balconies that differ from the rest of the city. A Jewish cemetery and a restored synagogue can be visited. The district is much quieter than the medina.",
+        "interests": [
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/merenid-tombs": {
+        "name": "Merenid Tombs viewpoint",
+        "description": "The ruins of fourteenth-century royal tombs on a hill above Fes, with the best view over the whole old city.",
+        "details": "The Merenid Tombs are ruined tombs of Marinid rulers on a ridge north of the medina, and the real reason to come is the view from them, which spreads out over the rooftops, minarets and tanneries of Fes el-Bali. It is the classic place to see the city at sunset. There is a short, steep walk up from the road, or a taxi to the top. It is exposed and breezy in the evening.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/volubilis": {
+        "name": "Volubilis and Moulay Idriss",
+        "description": "The best-preserved Roman ruins in Morocco, with mosaic floors still in place, near a hilltop pilgrimage town.",
+        "details": "Volubilis was the main Roman city in the province of Mauretania Tingitana and was later occupied by Idris I, founder of the first Moroccan dynasty. Its ruins, a UNESCO World Heritage Site, include a triumphal arch, a basilica and a number of villas with mosaic floors still on site. The setting among olive groves and cornfields is striking, and shade is limited. Nearby, the hilltop town of Moulay Idriss is a sacred pilgrimage site that is a popular add-on.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/chefchaouen-blue-medina": {
+        "name": "Chefchaouen blue medina",
+        "description": "A small mountain town in the Rif whose medina is washed in shades of blue, with steep alleys and a central square.",
+        "details": "Chefchaouen was founded in the late fifteenth century as a fortress and later became home to Muslim and Jewish refugees from Spain. Its medina is painted in shades of blue and white, the origin of which is debated, and is small enough to explore on foot. Alleys climb through steps and arches to hilltop views. It is cooler than the plains, and early morning is the best time for photography.",
+        "interests": [
+          "photography",
+          "authentic_local",
+          "relax",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/spanish-mosque-viewpoint": {
+        "name": "Spanish Mosque viewpoint",
+        "description": "A hilltop ruin above Chefchaouen reached by a short walk, giving a view over the blue town at sunset.",
+        "details": "The Spanish Mosque is a disused building on a hill east of Chefchaouen that is not really visited for its architecture but for the view down over the town, backed by the Rif mountains. The path is a steady walk of around half an hour from the edge of the medina. Sunset is the popular time, so it gets busy at the viewing point. The path is rocky and unlit, so allow time to get down before dark.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "morocco/akchour-waterfalls": {
+        "name": "Akchour waterfalls hike",
+        "description": "A walk up a river valley in the Rif to waterfalls and swimming pools, with a natural stone arch further on.",
+        "details": "Akchour, about an hour from Chefchaouen, is a village at the start of trails along a river through a wooded valley to a series of waterfalls and pools. The walk to the nearest falls is moderate and popular, and a longer route continues to a natural rock arch known as God's Bridge. Paths are rocky and cross the stream, so good footwear helps. Swimming is possible in the pools in warm months.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "morocco/hassan-ii-mosque": {
+        "name": "Hassan II Mosque",
+        "description": "A vast mosque built partly over the Atlantic in Casablanca, with one of the tallest minarets in the world.",
+        "details": "The Hassan II Mosque was completed in 1993 and stands on a platform extending over the ocean, with a minaret roughly two hundred metres high. The prayer hall holds tens of thousands of worshippers, and has a sliding roof and a glass floor panel. It is one of the few mosques in Morocco that non-Muslims can enter, but only by guided tour at set times, so check the schedule. Its scale is the main impression, and the sea wind on the platform is strong.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/habous-quarter": {
+        "name": "Habous Quarter",
+        "description": "Casablanca's 1930s new medina, laid out by French planners in Moroccan style with arcades, craft shops and pastry stalls.",
+        "details": "The Habous quarter, also called the new medina, was built in the 1930s under the French protectorate to rehouse residents in a traditional style, with arcaded streets, a mosque and a royal palace. Today it is known for its bookshops, craft shops and pastry makers, and is quieter and cleaner than the old medinas elsewhere. It is flat and easy to walk. Most shops close in the middle of the day on Fridays.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/kasbah-of-the-udayas": {
+        "name": "Kasbah of the Udayas",
+        "description": "A twelfth-century fortress above the Rabat estuary, with blue-and-white lanes and a quiet Andalusian garden.",
+        "details": "The Kasbah of the Udayas is a walled fortress at the mouth of the Bou Regreg river, begun by the Almohad dynasty in the twelfth century. Inside, narrow lanes of blue-and-white houses lead to a viewing terrace over the river and Atlantic. An Andalusian garden and a cafe serving mint tea sit within the walls. The kasbah is small and calm and quick to explore.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "morocco/hassan-tower": {
+        "name": "Hassan Tower and the Mausoleum of Mohammed V",
+        "description": "The unfinished minaret of a twelfth-century mosque in Rabat, beside a royal mausoleum guarded by ceremonial horsemen.",
+        "details": "The Hassan Tower was begun in the late twelfth century as the minaret of what would have been one of the largest mosques in the world, but work stopped when the sultan died, leaving rows of columns and an unfinished tower. Across the esplanade stands the white-marble Mausoleum of Mohammed V, built in the 1960s, where ceremonial guards stand at the entrance. Non-Muslim visitors can enter the mausoleum. The esplanade is open and exposed.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "morocco/chellah": {
+        "name": "Chellah necropolis",
+        "description": "A walled complex of Roman and medieval ruins on the edge of Rabat, with storks nesting on its minaret and gardens.",
+        "details": "Chellah sits on the site of the Roman town of Sala Colonia and later became a burial ground of the Marinid dynasty. Inside the walls are Roman streets and monuments next to a ruined mosque and tombs, in an overgrown garden. White storks nest on the old minaret and walls. The paths are uneven and the site is quiet outside peak hours.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "morocco": {
+        "name": "Morocco",
+        "description": "A North African country of walled medinas, High Atlas valleys and Saharan dunes, within easy reach of Europe.",
+        "images": []
+      },
+      "morocco/marrakech-safi": {
+        "name": "Marrakech-Safi",
+        "description": "The region around Marrakech, taking in the High Atlas foothills and the Atlantic port of Essaouira.",
+        "images": []
+      },
+      "morocco/marrakech": {
+        "name": "Marrakech",
+        "description": "A red-walled city of souks, palaces and a vast main square, the usual starting point for trips into the Atlas and Sahara.",
+        "images": []
+      },
+      "morocco/imlil": {
+        "name": "Imlil",
+        "description": "A High Atlas village at the foot of Mount Toubkal, used for walks between Berber villages and as the trailhead for the climb.",
+        "images": []
+      },
+      "morocco/essaouira": {
+        "name": "Essaouira",
+        "description": "A whitewashed Atlantic port with a fortified medina, a busy fishing harbour and steady winds for kitesurfing.",
+        "images": []
+      },
+      "morocco/draa-tafilalet": {
+        "name": "Draa-Tafilalet",
+        "description": "The south-eastern region that stretches from the High Atlas across the kasbah country to the edge of the Sahara.",
+        "images": []
+      },
+      "morocco/ait-benhaddou": {
+        "name": "Ait Benhaddou",
+        "description": "A fortified earthen village on the old Saharan caravan route, listed by UNESCO and used as a film location.",
+        "images": []
+      },
+      "morocco/skoura": {
+        "name": "Skoura",
+        "description": "A palm grove oasis near Ouarzazate scattered with mud-brick kasbahs and far fewer visitors than the main route.",
+        "images": []
+      },
+      "morocco/dades-valley": {
+        "name": "Dades Valley",
+        "description": "A valley of red rock formations, kasbahs and a hairpin road on the route between Ouarzazate and the desert.",
+        "images": []
+      },
+      "morocco/todra-gorge": {
+        "name": "Todra Gorge",
+        "description": "A narrow canyon with limestone walls some 300 metres high, near Tinghir on the route to the desert.",
+        "images": []
+      },
+      "morocco/merzouga": {
+        "name": "Merzouga",
+        "description": "The village at the edge of the Erg Chebbi dunes, where camel treks and desert camps for the night begin.",
+        "images": []
+      },
+      "morocco/fes-meknes": {
+        "name": "Fes-Meknes",
+        "description": "The northern region that holds the imperial cities of Fes and Meknes and the Roman ruins of Volubilis.",
+        "images": []
+      },
+      "morocco/fes": {
+        "name": "Fes",
+        "description": "Morocco's oldest imperial city, with a vast car-free medieval medina, historic madrasas and working tanneries.",
+        "images": []
+      },
+      "morocco/volubilis": {
+        "name": "Volubilis",
+        "description": "The best-preserved Roman site in Morocco, with mosaic floors in place, near the pilgrimage town of Moulay Idriss.",
+        "images": []
+      },
+      "morocco/tanger-tetouan-al-hoceima": {
+        "name": "Tanger-Tetouan-Al Hoceima",
+        "description": "The northern region on the Mediterranean and Rif mountains, home to Tangier, Tetouan and Chefchaouen.",
+        "images": []
+      },
+      "morocco/chefchaouen": {
+        "name": "Chefchaouen",
+        "description": "A small mountain town in the Rif known for its blue-washed medina and hiking in the surrounding hills.",
+        "images": []
+      },
+      "morocco/casablanca-settat": {
+        "name": "Casablanca-Settat",
+        "description": "The Atlantic coast region that centres on Morocco's largest city and its economic hub.",
+        "images": []
+      },
+      "morocco/casablanca": {
+        "name": "Casablanca",
+        "description": "Morocco's biggest city, a modern Atlantic port best known for the vast Hassan II Mosque.",
+        "images": []
+      },
+      "morocco/rabat-sale-kenitra": {
+        "name": "Rabat-Sale-Kenitra",
+        "description": "The coastal region around the national capital, taking in Rabat, its twin city Sale and the Atlantic plain.",
+        "images": []
+      },
+      "morocco/rabat": {
+        "name": "Rabat",
+        "description": "Morocco's calm, tree-lined capital, with a twelfth-century kasbah, an unfinished minaret and Roman ruins at Chellah.",
+        "images": []
+      }
+    }
+  }
+}

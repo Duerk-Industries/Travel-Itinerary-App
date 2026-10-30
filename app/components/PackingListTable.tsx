@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { packingListPrintCss, themeStyle, getAppTheme, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -558,7 +559,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           onPress={addDraftItem}
           testID={`${variant}-packing-add-item`}
         >
-          <Text style={[localStyles((theme ?? _styleTheme)).addButtonText, themeStyle('components_PackingListTable_26', { theme: theme }, (theme ?? _styleTheme))]}>+ Add item</Text>
+          <IconText style={[localStyles((theme ?? _styleTheme)).addButtonText, themeStyle('components_PackingListTable_26', { theme: theme }, (theme ?? _styleTheme))]}>+ Add item</IconText>
         </Pressable>
       ) : null}
       {v2 ? (
@@ -570,7 +571,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           contentContainerStyle={localStyles((theme ?? _styleTheme)).presetActions}
           testID={`${variant}-packing-preset-scroll`}
         >
-          {isTrip ? availableTripSources.map((source) => <Pressable key={source.key} style={[localStyles((theme ?? _styleTheme)).presetButton, themeStyle('components_PackingListTable_27', { theme: theme, source: source }, (theme ?? _styleTheme))]} onPress={() => void toggleTripSource(source)}><Text style={themeStyle('components_PackingListTable_28', { theme: theme, source: source }, (theme ?? _styleTheme))}>{source.active ? '✓ ' : '+ '}{source.label}</Text></Pressable>) : presets.map((preset) => <Pressable key={preset.key} style={[localStyles((theme ?? _styleTheme)).presetButton, themeStyle('components_PackingListTable_29', { theme: theme, selectedPresetKeys: selectedPresetKeys, preset: preset }, (theme ?? _styleTheme))]} onPress={() => void addPreset(preset.key)}><Text style={themeStyle('components_PackingListTable_30', { theme: theme, selectedPresetKeys: selectedPresetKeys, preset: preset }, (theme ?? _styleTheme))}>{selectedPresetKeys.includes(preset.key) ? '✓ ' : ''}{preset.label}</Text></Pressable>)}
+          {isTrip ? availableTripSources.map((source) => <Pressable key={source.key} style={[localStyles((theme ?? _styleTheme)).presetButton, themeStyle('components_PackingListTable_27', { theme: theme, source: source }, (theme ?? _styleTheme))]} onPress={() => void toggleTripSource(source)}><IconText style={themeStyle('components_PackingListTable_28', { theme: theme, source: source }, (theme ?? _styleTheme))}>{source.active ? '✓ ' : '+ '}{source.label}</IconText></Pressable>) : presets.map((preset) => <Pressable key={preset.key} style={[localStyles((theme ?? _styleTheme)).presetButton, themeStyle('components_PackingListTable_29', { theme: theme, selectedPresetKeys: selectedPresetKeys, preset: preset }, (theme ?? _styleTheme))]} onPress={() => void addPreset(preset.key)}><IconText style={themeStyle('components_PackingListTable_30', { theme: theme, selectedPresetKeys: selectedPresetKeys, preset: preset }, (theme ?? _styleTheme))}>{selectedPresetKeys.includes(preset.key) ? '✓ ' : ''}{preset.label}</IconText></Pressable>)}
         </ScrollView>
       ) : null}
       {!(!editMode && isTrip) ? <HorizontalTableScroll>
@@ -632,9 +633,9 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                         disabled={editMode}
                         testID={`packing-check-${item.id}-${traveler.id}`}
                       >
-                        <Text style={[localStyles((theme ?? _styleTheme)).checkText, themeStyle('components_PackingListTable_42', { checked: checked, theme: theme }, (theme ?? _styleTheme))]}>
+                        <IconText style={[localStyles((theme ?? _styleTheme)).checkText, themeStyle('components_PackingListTable_42', { checked: checked, theme: theme }, (theme ?? _styleTheme))]}>
                           {checked ? '✓' : ''}
-                        </Text>
+                        </IconText>
                       </Pressable>
                     );
                   }) : null}
@@ -647,7 +648,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                         accessibilityLabel={`Remove ${item.label || 'packing item'}`}
                         testID={`${variant}-packing-remove-item-${item.id}`}
                       >
-                        <Text style={[localStyles((theme ?? _styleTheme)).orderText, themeStyle('components_PackingListTable_43', { theme: theme }, (theme ?? _styleTheme))]}>×</Text>
+                        <IconText style={[localStyles((theme ?? _styleTheme)).orderText, themeStyle('components_PackingListTable_43', { theme: theme }, (theme ?? _styleTheme))]}>×</IconText>
                       </Pressable>
                     </View>
                   ) : null}

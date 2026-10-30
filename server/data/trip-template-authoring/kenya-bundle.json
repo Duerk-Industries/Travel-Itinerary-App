@@ -1,0 +1,1308 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Monkey Travel, On The Go Tours, Imara Africa Safaris and Kagera Safaris itineraries for Kenya",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "kenya-nairobi-masai-mara-5d",
+      "title": "Masai Mara Safari in 5 Days",
+      "summary": "A night in Nairobi and three nights in the Mara with a balloon flight.",
+      "days": 5,
+      "route": "Nairobi > Masai Mara",
+      "arrive": "Nairobi (NBO)",
+      "depart": "Nairobi (NBO)",
+      "countries": [
+        "Kenya"
+      ],
+      "regions": [],
+      "cities": [
+        "Nairobi",
+        "Masai Mara"
+      ],
+      "imageQuery": "Masai Mara lion Kenya",
+      "highlights": [
+        "Masai Mara game drives",
+        "Hot-air balloon",
+        "Maasai village",
+        "Elephant orphanage"
+      ],
+      "destinationKeys": [
+        "kenya",
+        "kenya/nairobi",
+        "kenya/masai-mara"
+      ],
+      "hero": "kenya/masai-mara",
+      "sources": [
+        "Monkey Travel",
+        "On The Go Tours",
+        "Imara Africa Safaris",
+        "Turkish Airlines Holidays",
+        "Kagera Safaris"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Nairobi",
+          "hotel": "Hotel in Nairobi",
+          "start": 0,
+          "nights": 1,
+          "area": "In Karen or near the park, a quiet area close to the wildlife sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Masai Mara",
+          "hotel": "Camp in the Masai Mara",
+          "start": 1,
+          "nights": 3,
+          "area": "In a tented camp on the Mara or in a conservancy",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Elephant orphanage and Giraffe Centre",
+          "notes": "The public elephant viewing is at 11am; arrive early.",
+          "where": "Nairobi",
+          "book": "Yes - book the orphanage",
+          "place": "kenya/nairobi-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Masai Mara morning game drive",
+          "notes": "Big cats are most active at dawn.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Masai Mara afternoon game drive",
+          "notes": "Return to camp at dusk.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Hot-air balloon safari and bush breakfast",
+          "notes": "Weather-dependent; book early in migration season.",
+          "where": "Masai Mara",
+          "book": "Yes - book the balloon",
+          "place": "kenya/mara-balloon"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Maasai village visit",
+          "notes": "Choose a community-run visit; ask before taking photos.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/maasai-village"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Jomo Kenyatta Airport (NBO)",
+          "to": "Nairobi hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Nairobi hotel",
+          "to": "Wilson Airport (WIL)",
+          "time": "07:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Light-aircraft luggage is limited to soft bags.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Mara airstrip",
+          "to": "Mara camp",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Mara camp",
+          "to": "Mara airstrip",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Wilson Airport (WIL)",
+          "to": "Nairobi airport area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kenya-nakuru-masai-mara-7d",
+      "title": "Rift Valley and Masai Mara in 7 Days",
+      "summary": "Lake Nakuru and Naivasha, then three nights in the Masai Mara.",
+      "days": 7,
+      "route": "Nairobi > Lake Nakuru > Masai Mara",
+      "arrive": "Nairobi (NBO)",
+      "depart": "Nairobi (NBO)",
+      "countries": [
+        "Kenya"
+      ],
+      "regions": [],
+      "cities": [
+        "Nairobi",
+        "Lake Nakuru",
+        "Masai Mara"
+      ],
+      "imageQuery": "Lake Nakuru flamingos",
+      "highlights": [
+        "Lake Nakuru rhinos",
+        "Naivasha boat",
+        "Masai Mara",
+        "Maasai village"
+      ],
+      "destinationKeys": [
+        "kenya",
+        "kenya/nairobi",
+        "kenya/lake-nakuru",
+        "kenya/masai-mara"
+      ],
+      "hero": "kenya/lake-nakuru",
+      "sources": [
+        "Monkey Travel",
+        "On The Go Tours",
+        "Imara Africa Safaris",
+        "Turkish Airlines Holidays",
+        "Kagera Safaris"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Nairobi",
+          "hotel": "Hotel in Nairobi",
+          "start": 0,
+          "nights": 1,
+          "area": "In Karen or near the park, a quiet area close to the wildlife sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Nakuru",
+          "hotel": "Lodge at Lake Nakuru",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge near Lake Nakuru National Park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Masai Mara",
+          "hotel": "Camp in the Masai Mara",
+          "start": 3,
+          "nights": 3,
+          "area": "In a tented camp on the Mara or in a conservancy",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Elephant orphanage and Giraffe Centre",
+          "notes": "The public elephant viewing is at 11am; arrive early.",
+          "where": "Nairobi",
+          "book": "Yes - book the orphanage",
+          "place": "kenya/nairobi-wildlife"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Naivasha boat trip and Hell Gate cycle",
+          "notes": "Cycle or walk among zebras; boats find hippos.",
+          "where": "Naivasha",
+          "book": "",
+          "place": "kenya/naivasha-hells-gate"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Lake Nakuru game drive",
+          "notes": "Check flamingo numbers; Baboon Cliff view.",
+          "where": "Lake Nakuru",
+          "book": "",
+          "place": "kenya/lake-nakuru"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Masai Mara morning game drive",
+          "notes": "Big cats are most active at dawn.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Masai Mara afternoon game drive",
+          "notes": "Return to camp at dusk.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Maasai village visit",
+          "notes": "Choose a community-run visit; ask before taking photos.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/maasai-village"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Jomo Kenyatta Airport (NBO)",
+          "to": "Nairobi hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Nairobi",
+          "to": "Lake Nakuru lodge",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "The road passes the Rift Valley viewpoint.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Lake Nakuru lodge",
+          "to": "Mara camp",
+          "time": "07:30",
+          "minutes": 330,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "A long, bumpy drive; consider a flight.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Mara camp",
+          "to": "Mara airstrip",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Wilson Airport (WIL)",
+          "to": "Nairobi airport area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kenya-amboseli-nakuru-mara-8d",
+      "title": "Kenya Classic Safari in 8 Days",
+      "summary": "Amboseli under Kilimanjaro, Lake Nakuru and the Masai Mara.",
+      "days": 8,
+      "route": "Nairobi > Amboseli > Lake Nakuru > Masai Mara",
+      "arrive": "Nairobi (NBO)",
+      "depart": "Nairobi (NBO)",
+      "countries": [
+        "Kenya"
+      ],
+      "regions": [],
+      "cities": [
+        "Nairobi",
+        "Amboseli",
+        "Lake Nakuru",
+        "Masai Mara"
+      ],
+      "imageQuery": "Amboseli elephants Kilimanjaro",
+      "highlights": [
+        "Amboseli elephants",
+        "Lake Nakuru",
+        "Masai Mara",
+        "Balloon safari"
+      ],
+      "destinationKeys": [
+        "kenya",
+        "kenya/nairobi",
+        "kenya/amboseli",
+        "kenya/lake-nakuru",
+        "kenya/masai-mara"
+      ],
+      "hero": "kenya/amboseli",
+      "sources": [
+        "Monkey Travel",
+        "On The Go Tours",
+        "Imara Africa Safaris",
+        "Turkish Airlines Holidays",
+        "Kagera Safaris"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Nairobi",
+          "hotel": "Hotel in Nairobi",
+          "start": 0,
+          "nights": 1,
+          "area": "In Karen or near the park, a quiet area close to the wildlife sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Amboseli",
+          "hotel": "Lodge in Amboseli",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge in or beside Amboseli with views of Kilimanjaro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Nakuru",
+          "hotel": "Lodge at Lake Nakuru",
+          "start": 3,
+          "nights": 1,
+          "area": "In a lodge near Lake Nakuru National Park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Masai Mara",
+          "hotel": "Camp in the Masai Mara",
+          "start": 4,
+          "nights": 3,
+          "area": "In a tented camp on the Mara or in a conservancy",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Elephant orphanage and Giraffe Centre",
+          "notes": "The public elephant viewing is at 11am; arrive early.",
+          "where": "Nairobi",
+          "book": "Yes - book the orphanage",
+          "place": "kenya/nairobi-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "3.5h",
+          "name": "Amboseli morning game drive",
+          "notes": "Look for Kilimanjaro at dawn; carry a scarf for dust.",
+          "where": "Amboseli",
+          "book": "",
+          "place": "kenya/amboseli"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Amboseli afternoon game drive",
+          "notes": "Elephants gather at the swamps.",
+          "where": "Amboseli",
+          "book": "",
+          "place": "kenya/amboseli"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Lake Nakuru evening drive",
+          "notes": "Check flamingo numbers; Baboon Cliff view.",
+          "where": "Lake Nakuru",
+          "book": "",
+          "place": "kenya/lake-nakuru"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Masai Mara morning game drive",
+          "notes": "Big cats are most active at dawn.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Masai Mara afternoon game drive",
+          "notes": "Return to camp at dusk.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Hot-air balloon safari and bush breakfast",
+          "notes": "Weather-dependent; book early in migration season.",
+          "where": "Masai Mara",
+          "book": "Yes - book the balloon",
+          "place": "kenya/mara-balloon"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Jomo Kenyatta Airport (NBO)",
+          "to": "Nairobi hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Nairobi",
+          "to": "Amboseli lodge",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Amboseli lodge",
+          "to": "Lake Nakuru lodge",
+          "time": "06:30",
+          "minutes": 450,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "A very long drive; the road has bad patches.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lake Nakuru lodge",
+          "to": "Mara camp",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Mara camp",
+          "to": "Mara airstrip",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Wilson Airport (WIL)",
+          "to": "Nairobi airport area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kenya-safari-and-beach-10d",
+      "title": "Kenya Safari and Beach in 10 Days",
+      "summary": "Amboseli, Nakuru and the Mara, then a flight to Diani Beach.",
+      "days": 10,
+      "route": "Nairobi > Amboseli > Lake Nakuru > Masai Mara > Diani Beach",
+      "arrive": "Nairobi (NBO)",
+      "depart": "Ukunda (UKA)",
+      "countries": [
+        "Kenya"
+      ],
+      "regions": [],
+      "cities": [
+        "Nairobi",
+        "Amboseli",
+        "Lake Nakuru",
+        "Masai Mara",
+        "Diani Beach"
+      ],
+      "imageQuery": "Diani Beach Kenya",
+      "highlights": [
+        "Amboseli",
+        "Lake Nakuru",
+        "Masai Mara",
+        "Balloon safari",
+        "Diani Beach"
+      ],
+      "destinationKeys": [
+        "kenya",
+        "kenya/nairobi",
+        "kenya/amboseli",
+        "kenya/lake-nakuru",
+        "kenya/masai-mara",
+        "kenya/diani-beach"
+      ],
+      "hero": "kenya/diani-beach",
+      "sources": [
+        "Monkey Travel",
+        "On The Go Tours",
+        "Imara Africa Safaris",
+        "Turkish Airlines Holidays",
+        "Kagera Safaris"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "relax",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Nairobi",
+          "hotel": "Hotel in Nairobi",
+          "start": 0,
+          "nights": 1,
+          "area": "In Karen or near the park, a quiet area close to the wildlife sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Amboseli",
+          "hotel": "Lodge in Amboseli",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge in or beside Amboseli with views of Kilimanjaro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Nakuru",
+          "hotel": "Lodge at Lake Nakuru",
+          "start": 3,
+          "nights": 1,
+          "area": "In a lodge near Lake Nakuru National Park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Masai Mara",
+          "hotel": "Camp in the Masai Mara",
+          "start": 4,
+          "nights": 3,
+          "area": "In a tented camp on the Mara or in a conservancy",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Diani Beach",
+          "hotel": "Resort on Diani Beach",
+          "start": 7,
+          "nights": 2,
+          "area": "On Diani Beach, a resort with direct beach access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Elephant orphanage and Giraffe Centre",
+          "notes": "The public elephant viewing is at 11am; arrive early.",
+          "where": "Nairobi",
+          "book": "Yes - book the orphanage",
+          "place": "kenya/nairobi-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "3.5h",
+          "name": "Amboseli morning game drive",
+          "notes": "Look for Kilimanjaro at dawn; carry a scarf for dust.",
+          "where": "Amboseli",
+          "book": "",
+          "place": "kenya/amboseli"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Amboseli afternoon game drive",
+          "notes": "Elephants gather at the swamps.",
+          "where": "Amboseli",
+          "book": "",
+          "place": "kenya/amboseli"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Lake Nakuru game drive",
+          "notes": "Check flamingo numbers; Baboon Cliff view.",
+          "where": "Lake Nakuru",
+          "book": "",
+          "place": "kenya/lake-nakuru"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Masai Mara morning game drive",
+          "notes": "Big cats are most active at dawn.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Masai Mara afternoon game drive",
+          "notes": "Return to camp at dusk.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Hot-air balloon safari and bush breakfast",
+          "notes": "Weather-dependent; book early in migration season.",
+          "where": "Masai Mara",
+          "book": "Yes - book the balloon",
+          "place": "kenya/mara-balloon"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Maasai village visit",
+          "notes": "Choose a community-run visit; ask before taking photos.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/maasai-village"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Dhow trip to Kisite Marine Park",
+          "notes": "Dolphins and reef snorkelling; calmer seas January to March.",
+          "where": "Diani",
+          "book": "Yes - book a dhow",
+          "place": "kenya/diani-beach"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Jomo Kenyatta Airport (NBO)",
+          "to": "Nairobi hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Nairobi",
+          "to": "Amboseli lodge",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Amboseli lodge",
+          "to": "Lake Nakuru lodge",
+          "time": "06:30",
+          "minutes": 450,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lake Nakuru lodge",
+          "to": "Mara camp",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Mara camp",
+          "to": "Mara airstrip",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Nairobi Wilson Airport.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Ukunda Airstrip (UKA)",
+          "to": "Diani resort",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Diani resort",
+          "to": "Ukunda Airstrip (UKA)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kenya-grand-safari-beach-12d",
+      "title": "Grand Kenya Safari and Beach in 12 Days",
+      "summary": "The full safari circuit followed by four relaxed nights at Diani.",
+      "days": 12,
+      "route": "Nairobi > Amboseli > Lake Nakuru > Masai Mara > Diani Beach",
+      "arrive": "Nairobi (NBO)",
+      "depart": "Ukunda (UKA)",
+      "countries": [
+        "Kenya"
+      ],
+      "regions": [],
+      "cities": [
+        "Nairobi",
+        "Amboseli",
+        "Lake Nakuru",
+        "Masai Mara",
+        "Diani Beach"
+      ],
+      "imageQuery": "Kenya safari balloon Masai Mara",
+      "highlights": [
+        "Amboseli",
+        "Naivasha",
+        "Masai Mara",
+        "Balloon safari",
+        "Kisite Marine Park"
+      ],
+      "destinationKeys": [
+        "kenya",
+        "kenya/nairobi",
+        "kenya/amboseli",
+        "kenya/lake-nakuru",
+        "kenya/masai-mara",
+        "kenya/diani-beach"
+      ],
+      "hero": "kenya/nairobi",
+      "sources": [
+        "Monkey Travel",
+        "On The Go Tours",
+        "Imara Africa Safaris",
+        "Turkish Airlines Holidays",
+        "Kagera Safaris"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "photography",
+        "relax",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Nairobi",
+          "hotel": "Hotel in Nairobi",
+          "start": 0,
+          "nights": 1,
+          "area": "In Karen or near the park, a quiet area close to the wildlife sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Amboseli",
+          "hotel": "Lodge in Amboseli",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge in or beside Amboseli with views of Kilimanjaro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Nakuru",
+          "hotel": "Lodge at Lake Nakuru",
+          "start": 3,
+          "nights": 1,
+          "area": "In a lodge near Lake Nakuru National Park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Masai Mara",
+          "hotel": "Camp in the Masai Mara",
+          "start": 4,
+          "nights": 3,
+          "area": "In a tented camp on the Mara or in a conservancy",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Diani Beach",
+          "hotel": "Resort on Diani Beach",
+          "start": 7,
+          "nights": 4,
+          "area": "On Diani Beach, a resort with direct beach access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Elephant orphanage and Giraffe Centre",
+          "notes": "The public elephant viewing is at 11am; arrive early.",
+          "where": "Nairobi",
+          "book": "Yes - book the orphanage",
+          "place": "kenya/nairobi-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "3.5h",
+          "name": "Amboseli morning game drive",
+          "notes": "Look for Kilimanjaro at dawn; carry a scarf for dust.",
+          "where": "Amboseli",
+          "book": "",
+          "place": "kenya/amboseli"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Amboseli afternoon game drive",
+          "notes": "Elephants gather at the swamps.",
+          "where": "Amboseli",
+          "book": "",
+          "place": "kenya/amboseli"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Naivasha boat trip and Hell Gate cycle",
+          "notes": "Cycle or walk among zebras; boats find hippos.",
+          "where": "Naivasha",
+          "book": "",
+          "place": "kenya/naivasha-hells-gate"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Masai Mara morning game drive",
+          "notes": "Big cats are most active at dawn.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Masai Mara afternoon game drive",
+          "notes": "Return to camp at dusk.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/masai-mara"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Hot-air balloon safari and bush breakfast",
+          "notes": "Weather-dependent; book early in migration season.",
+          "where": "Masai Mara",
+          "book": "Yes - book the balloon",
+          "place": "kenya/mara-balloon"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Maasai village visit",
+          "notes": "Choose a community-run visit; ask before taking photos.",
+          "where": "Masai Mara",
+          "book": "",
+          "place": "kenya/maasai-village"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Dhow trip to Kisite Marine Park",
+          "notes": "Dolphins and reef snorkelling; calmer seas January to March.",
+          "where": "Diani",
+          "book": "Yes - book a dhow",
+          "place": "kenya/diani-beach"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Jomo Kenyatta Airport (NBO)",
+          "to": "Nairobi hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Nairobi",
+          "to": "Amboseli lodge",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Amboseli lodge",
+          "to": "Lake Nakuru lodge",
+          "time": "06:30",
+          "minutes": 450,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lake Nakuru lodge",
+          "to": "Mara camp",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Mara camp",
+          "to": "Mara airstrip",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Ukunda Airstrip (UKA)",
+          "to": "Diani resort",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Diani resort",
+          "to": "Ukunda Airstrip (UKA)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "kenya/nairobi-wildlife": {
+        "name": "Giraffe Centre and Elephant Orphanage",
+        "description": "Feed Rothschild giraffes by hand and watch orphaned baby elephants being fed.",
+        "details": "The Giraffe Centre on the edge of Nairobi lets visitors feed giraffes from a raised platform. The David Sheldrick elephant orphanage holds a daily one-hour public viewing at 11am, when keepers bottle-feed young elephants. Book ahead for the foster visit. Both are easy half-day stops.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kenya/amboseli": {
+        "name": "Amboseli National Park",
+        "description": "Large elephant herds against the backdrop of snow-capped Mount Kilimanjaro.",
+        "details": "Amboseli is known for big-tusked elephants and open plains with Kilimanjaro rising behind, clearest at dawn and dusk. Game drives also find lions, buffalo and hippos in swamps. Dust is common in the dry season, so carry a scarf. Park fees are paid per person per day.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kenya/lake-nakuru": {
+        "name": "Lake Nakuru National Park",
+        "description": "A soda lake park for rhinos, flamingos and tree-climbing lions.",
+        "details": "Lake Nakuru protects white and black rhino, with thousands of flamingos on the water in some seasons. A small park, it can be covered in a half-day or a full day of drives, with a viewpoint at Baboon Cliff. Water levels change the flamingo numbers.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kenya/naivasha-hells-gate": {
+        "name": "Lake Naivasha and Hell Gate",
+        "description": "A freshwater lake with boat trips and a gorge park where visitors can cycle or walk among zebras.",
+        "details": "Boats on Naivasha get close to hippos and fish eagles. In Hell Gate National Park you can cycle or walk between giraffes and zebra, and hike through the Njorowa Gorge. It is a good half-day on a transfer day.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "kenya/masai-mara": {
+        "name": "Masai Mara game drives",
+        "description": "Kenya premier reserve for lions, leopards, cheetahs and the great migration.",
+        "details": "The Mara has big cats all year, and the wildebeest migration crosses the Mara River from about July to October. Dawn and dusk drives are best. Park fees are higher in the high season, and conservancies offer fewer vehicles and night drives. Bring binoculars.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kenya/mara-balloon": {
+        "name": "Masai Mara balloon safari",
+        "description": "A dawn hot-air balloon flight over the plains, followed by a bush breakfast.",
+        "details": "Balloons lift off at first light and float over the herds for about an hour, then land for a champagne breakfast. Flights depend on weather and carry a limited number of passengers. Book early in the migration season.",
+        "interests": [
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kenya/maasai-village": {
+        "name": "Maasai village visit",
+        "description": "A cultural visit to a Maasai homestead with song, dance and beadwork.",
+        "details": "Visits to a Maasai manyatta show the traditional way of life, with jumping dances, fire-making and crafts. Choose a community-run visit and ask what the fee supports. Dress modestly and ask before photographing people.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kenya/diani-beach": {
+        "name": "Diani Beach",
+        "description": "A long white-sand beach on the Indian Ocean with reef snorkelling, dhow trips and colobus monkeys.",
+        "details": "Diani has soft white sand, warm water and a lagoon behind the reef. Activities include dhow trips to Wasini and Kisite Marine Park for dolphins, kite-surfing and the Colobus Trust. The coast is hot and humid, and calmer from January to March.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "kenya": {
+        "name": "Kenya",
+        "description": "The classic East African safari country, with the Masai Mara, Amboseli and the Indian Ocean coast.",
+        "images": []
+      },
+      "kenya/nairobi": {
+        "name": "Nairobi",
+        "description": "The capital, with a national park on its doorstep.",
+        "images": []
+      },
+      "kenya/amboseli": {
+        "name": "Amboseli",
+        "description": "A park of elephants under Kilimanjaro.",
+        "images": []
+      },
+      "kenya/lake-nakuru": {
+        "name": "Lake Nakuru",
+        "description": "A soda lake and rhino sanctuary in the Rift Valley.",
+        "images": []
+      },
+      "kenya/masai-mara": {
+        "name": "Masai Mara",
+        "description": "Kenya greatest wildlife reserve and migration crossing.",
+        "images": []
+      },
+      "kenya/diani-beach": {
+        "name": "Diani Beach",
+        "description": "A white-sand beach on the south coast.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,0 +1,1846 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining TravelStride, On The Go Tours, The Culture Trip and KimKim itineraries for Australia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "australia-sydney-blue-mountains-7d",
+      "title": "Sydney Harbour and the Blue Mountains in 7 Days",
+      "summary": "Four days of harbour, bridge and beaches in Sydney, then two nights in the Blue Mountains.",
+      "days": 7,
+      "route": "Sydney > Katoomba",
+      "arrive": "Sydney (SYD)",
+      "depart": "Sydney (SYD)",
+      "countries": [
+        "Australia"
+      ],
+      "regions": [
+        "New South Wales"
+      ],
+      "cities": [
+        "Sydney",
+        "Katoomba"
+      ],
+      "imageQuery": "Sydney Opera House harbour",
+      "highlights": [
+        "Opera House",
+        "Harbour Bridge climb",
+        "Bondi to Coogee walk",
+        "Three Sisters",
+        "Blue Mountains"
+      ],
+      "destinationKeys": [
+        "australia",
+        "australia/new-south-wales",
+        "australia/sydney",
+        "australia/katoomba"
+      ],
+      "hero": "australia/sydney",
+      "sources": [
+        "TravelStride",
+        "On The Go Tours",
+        "The Culture Trip",
+        "KimKim"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Sydney",
+          "hotel": "Hotel in Sydney",
+          "start": 0,
+          "nights": 4,
+          "area": "Near Circular Quay, The Rocks or Darling Harbour for walkable harbour sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Katoomba",
+          "hotel": "Guesthouse in Katoomba",
+          "start": 4,
+          "nights": 2,
+          "area": "In Katoomba or Leura close to the Echo Point lookouts",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sydney Opera House and Circular Quay",
+          "notes": "Walk the forecourt at golden hour; book a tour or evening show ahead.",
+          "where": "Circular Quay, Sydney",
+          "book": "",
+          "place": "australia/sydney-opera-house"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Sydney Harbour Bridge climb",
+          "notes": "Small groups climb the arch; the Pylon Lookout is an easier alternative.",
+          "where": "The Rocks, Sydney",
+          "book": "Yes - climbs sell out in peak season",
+          "place": "australia/harbour-bridge-climb"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "The Rocks heritage quarter",
+          "notes": "Lanes, pubs and a weekend market.",
+          "where": "The Rocks, Sydney",
+          "book": "",
+          "place": "australia/the-rocks"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Bondi to Coogee coastal walk",
+          "notes": "Bring sun protection and swimwear; little shade on the path.",
+          "where": "Bondi Beach, Sydney",
+          "book": "",
+          "place": "australia/bondi-coogee-walk"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Manly ferry and beach",
+          "notes": "Take the ferry across the harbour and walk to Shelly Beach.",
+          "where": "Manly, Sydney",
+          "book": "",
+          "place": "australia/manly-ferry"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "11:00",
+          "duration": "7h",
+          "name": "Blue Mountains and the Three Sisters",
+          "notes": "Train or car from Sydney takes about two hours; layers are useful.",
+          "where": "Katoomba",
+          "book": "",
+          "place": "australia/blue-mountains"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Blue Mountains bush walks and Scenic World",
+          "notes": "Choose a walk to suit your fitness; the cableway and railway are a short ride.",
+          "where": "Katoomba",
+          "book": "",
+          "place": "australia/blue-mountains"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sydney Airport (SYD)",
+          "to": "Sydney hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Sydney",
+          "to": "Katoomba",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Blue Mountains train",
+          "notes": "Trains run from Central station.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Katoomba",
+          "to": "Sydney",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Blue Mountains train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Sydney hotel area",
+          "to": "Sydney Airport (SYD)",
+          "time": "13:30",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "australia-cairns-port-douglas-7d",
+      "title": "Great Barrier Reef and Daintree in 7 Days",
+      "summary": "Cairns for reef and rainforest rail, then Port Douglas for the Daintree and relaxed beaches.",
+      "days": 7,
+      "route": "Cairns > Port Douglas",
+      "arrive": "Cairns (CNS)",
+      "depart": "Cairns (CNS)",
+      "countries": [
+        "Australia"
+      ],
+      "regions": [
+        "Queensland"
+      ],
+      "cities": [
+        "Cairns",
+        "Port Douglas"
+      ],
+      "imageQuery": "Great Barrier Reef aerial",
+      "highlights": [
+        "Great Barrier Reef",
+        "Kuranda Skyrail",
+        "Daintree Rainforest",
+        "Cape Tribulation"
+      ],
+      "destinationKeys": [
+        "australia",
+        "australia/queensland",
+        "australia/cairns",
+        "australia/port-douglas"
+      ],
+      "hero": "australia/cairns",
+      "sources": [
+        "TravelStride",
+        "On The Go Tours",
+        "The Culture Trip",
+        "KimKim"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Cairns",
+          "hotel": "Hotel in Cairns",
+          "start": 0,
+          "nights": 3,
+          "area": "On the Esplanade or in the city centre, close to tour pick-ups",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Port Douglas",
+          "hotel": "Hotel in Port Douglas",
+          "start": 3,
+          "nights": 3,
+          "area": "Near Macrossan Street or Four Mile Beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Kuranda Scenic Railway and Skyrail",
+          "notes": "Take the train up and the Skyrail back, or the reverse.",
+          "where": "Kuranda",
+          "book": "Yes - book train and Skyrail",
+          "place": "australia/kuranda"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Great Barrier Reef snorkel or dive day",
+          "notes": "Choose an eco-certified operator; stinger suits are used from about November to May.",
+          "where": "Great Barrier Reef",
+          "book": "Yes - book reef trips ahead",
+          "place": "australia/great-barrier-reef"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Daintree Rainforest and Cape Tribulation",
+          "notes": "Include a river cruise and boardwalk; wet-season roads can flood.",
+          "where": "Daintree",
+          "book": "Yes - book a guided day",
+          "place": "australia/daintree-rainforest"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Low Isles or outer reef cruise",
+          "notes": "Choose an eco-certified operator; stinger suits are used from about November to May.",
+          "where": "Great Barrier Reef",
+          "book": "Yes - book reef trips ahead",
+          "place": "australia/great-barrier-reef"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cairns Airport (CNS)",
+          "to": "Cairns hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cairns",
+          "to": "Port Douglas",
+          "time": "10:00",
+          "minutes": 70,
+          "carrier": "Shuttle or rental car",
+          "notes": "The coastal drive is scenic.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Port Douglas",
+          "to": "Cairns Airport (CNS)",
+          "time": "10:00",
+          "minutes": 70,
+          "carrier": "Shuttle or rental car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "australia-sydney-uluru-cairns-10d",
+      "title": "Sydney, Uluru and the Reef in 10 Days",
+      "summary": "The harbour city, a flight to the Red Centre for Uluru and Kata Tjuta, then Cairns for the reef and rainforest.",
+      "days": 10,
+      "route": "Sydney > Uluru > Cairns",
+      "arrive": "Sydney (SYD)",
+      "depart": "Cairns (CNS)",
+      "countries": [
+        "Australia"
+      ],
+      "regions": [
+        "New South Wales",
+        "Northern Territory",
+        "Queensland"
+      ],
+      "cities": [
+        "Sydney",
+        "Uluru",
+        "Cairns"
+      ],
+      "imageQuery": "Uluru sunrise red desert",
+      "highlights": [
+        "Sydney Harbour",
+        "Uluru",
+        "Kata Tjuta",
+        "Great Barrier Reef",
+        "Kuranda"
+      ],
+      "destinationKeys": [
+        "australia",
+        "australia/new-south-wales",
+        "australia/sydney",
+        "australia/northern-territory",
+        "australia/uluru",
+        "australia/queensland",
+        "australia/cairns"
+      ],
+      "hero": "australia/uluru",
+      "sources": [
+        "TravelStride",
+        "On The Go Tours",
+        "The Culture Trip",
+        "KimKim"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "outdoors",
+        "culture",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Sydney",
+          "hotel": "Hotel in Sydney",
+          "start": 0,
+          "nights": 4,
+          "area": "Near Circular Quay, The Rocks or Darling Harbour for walkable harbour sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Uluru",
+          "hotel": "Resort at Yulara",
+          "start": 4,
+          "nights": 2,
+          "area": "Yulara resort village, the only lodging area near the rock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cairns",
+          "hotel": "Hotel in Cairns",
+          "start": 6,
+          "nights": 3,
+          "area": "On the Esplanade or in the city centre, close to tour pick-ups",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sydney Opera House and Circular Quay",
+          "notes": "Walk the forecourt at golden hour; book a tour or evening show ahead.",
+          "where": "Circular Quay, Sydney",
+          "book": "",
+          "place": "australia/sydney-opera-house"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Sydney Harbour Bridge climb",
+          "notes": "Small groups climb the arch; the Pylon Lookout is an easier alternative.",
+          "where": "The Rocks, Sydney",
+          "book": "Yes - climbs sell out in peak season",
+          "place": "australia/harbour-bridge-climb"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "The Rocks heritage quarter",
+          "notes": "Lanes, pubs and a weekend market.",
+          "where": "The Rocks, Sydney",
+          "book": "",
+          "place": "australia/the-rocks"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Bondi to Coogee coastal walk",
+          "notes": "Bring sun protection and swimwear; little shade on the path.",
+          "where": "Bondi Beach, Sydney",
+          "book": "",
+          "place": "australia/bondi-coogee-walk"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Blue Mountains and the Three Sisters",
+          "notes": "Train or car from Sydney takes about two hours; layers are useful.",
+          "where": "Katoomba",
+          "book": "",
+          "place": "australia/blue-mountains"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Uluru sunset viewing",
+          "notes": "Sunset lookouts are busy; arrive early.",
+          "where": "Uluru-Kata Tjuta National Park",
+          "book": "",
+          "place": "australia/uluru-base-walk"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Uluru sunrise and base walk",
+          "notes": "Start early because of the heat; the climb is closed and some areas ask for no photos.",
+          "where": "Uluru-Kata Tjuta National Park",
+          "book": "",
+          "place": "australia/uluru-base-walk"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Kata Tjuta and Walpa Gorge",
+          "notes": "Take plenty of water; the Valley of the Winds loop closes in extreme heat.",
+          "where": "Kata Tjuta",
+          "book": "",
+          "place": "australia/kata-tjuta"
+        },
+        {
+          "day": 5,
+          "type": "Event",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Field of Light or desert dinner",
+          "notes": "Seats are limited; book ahead.",
+          "where": "Yulara",
+          "book": "Yes - book dinner or installation",
+          "place": "australia/field-of-light"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Great Barrier Reef snorkel or dive day",
+          "notes": "Choose an eco-certified operator; stinger suits are used from about November to May.",
+          "where": "Great Barrier Reef",
+          "book": "Yes - book reef trips ahead",
+          "place": "australia/great-barrier-reef"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Kuranda Scenic Railway and Skyrail",
+          "notes": "Take the train up and the Skyrail back, or the reverse.",
+          "where": "Kuranda",
+          "book": "Yes - book train and Skyrail",
+          "place": "australia/kuranda"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sydney Airport (SYD)",
+          "to": "Sydney hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Sydney hotel area",
+          "to": "Sydney Airport (SYD)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Ayers Rock Airport (AYQ)",
+          "to": "Yulara resort",
+          "time": "",
+          "minutes": 10,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Yulara resort",
+          "to": "Ayers Rock Airport (AYQ)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Cairns Airport (CNS)",
+          "to": "Cairns hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Cairns hotel area",
+          "to": "Cairns Airport (CNS)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "australia-sydney-melbourne-10d",
+      "title": "Sydney and Melbourne with the Great Ocean Road in 10 Days",
+      "summary": "Harbour sights and beaches in Sydney, then laneways, wine, penguins and the Twelve Apostles from Melbourne.",
+      "days": 10,
+      "route": "Sydney > Melbourne",
+      "arrive": "Sydney (SYD)",
+      "depart": "Melbourne (MEL)",
+      "countries": [
+        "Australia"
+      ],
+      "regions": [
+        "New South Wales",
+        "Victoria"
+      ],
+      "cities": [
+        "Sydney",
+        "Melbourne"
+      ],
+      "imageQuery": "Twelve Apostles Great Ocean Road",
+      "highlights": [
+        "Opera House",
+        "Blue Mountains",
+        "Melbourne laneways",
+        "Twelve Apostles",
+        "Phillip Island penguins"
+      ],
+      "destinationKeys": [
+        "australia",
+        "australia/new-south-wales",
+        "australia/sydney",
+        "australia/victoria",
+        "australia/melbourne"
+      ],
+      "hero": "australia/victoria",
+      "sources": [
+        "TravelStride",
+        "On The Go Tours",
+        "The Culture Trip",
+        "KimKim"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "culture",
+        "food",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Sydney",
+          "hotel": "Hotel in Sydney",
+          "start": 0,
+          "nights": 4,
+          "area": "Near Circular Quay, The Rocks or Darling Harbour for walkable harbour sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Melbourne",
+          "hotel": "Hotel in Melbourne",
+          "start": 4,
+          "nights": 5,
+          "area": "In the CBD or Southbank, close to trams and laneways",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sydney Opera House and Circular Quay",
+          "notes": "Walk the forecourt at golden hour; book a tour or evening show ahead.",
+          "where": "Circular Quay, Sydney",
+          "book": "",
+          "place": "australia/sydney-opera-house"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Sydney Harbour Bridge climb",
+          "notes": "Small groups climb the arch; the Pylon Lookout is an easier alternative.",
+          "where": "The Rocks, Sydney",
+          "book": "Yes - climbs sell out in peak season",
+          "place": "australia/harbour-bridge-climb"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "The Rocks heritage quarter",
+          "notes": "Lanes, pubs and a weekend market.",
+          "where": "The Rocks, Sydney",
+          "book": "",
+          "place": "australia/the-rocks"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Bondi to Coogee coastal walk",
+          "notes": "Bring sun protection and swimwear; little shade on the path.",
+          "where": "Bondi Beach, Sydney",
+          "book": "",
+          "place": "australia/bondi-coogee-walk"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Hunter Valley wine day",
+          "notes": "Use a tour or a driver for the tastings.",
+          "where": "Hunter Valley",
+          "book": "Yes - book a tasting tour",
+          "place": "australia/hunter-valley"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Melbourne laneways and street art walk",
+          "notes": "Wander Hosier Lane and Degraves Street; coffee stops are part of the route.",
+          "where": "Melbourne CBD",
+          "book": "",
+          "place": "australia/melbourne-laneways"
+        },
+        {
+          "day": 5,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Queen Victoria Market",
+          "notes": "Closed Monday and Wednesday.",
+          "where": "Queen Victoria Market, Melbourne",
+          "book": "",
+          "place": "australia/queen-victoria-market"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "12h",
+          "name": "Great Ocean Road and the Twelve Apostles",
+          "notes": "A guided day trip is easier than driving; sunset at the Apostles is busy.",
+          "where": "Great Ocean Road",
+          "book": "Yes - book a guided tour",
+          "place": "australia/great-ocean-road"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Yarra Valley wine tasting",
+          "notes": "Take a tour or a driver for the tastings.",
+          "where": "Yarra Valley",
+          "book": "Yes - book a winery tour",
+          "place": "australia/yarra-valley"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "8h",
+          "name": "Phillip Island penguin parade",
+          "notes": "No photography at the penguin parade; dress warmly for the wind.",
+          "where": "Phillip Island",
+          "book": "Yes - book viewing seats",
+          "place": "australia/phillip-island-penguins"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sydney Airport (SYD)",
+          "to": "Sydney hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Sydney hotel area",
+          "to": "Sydney Airport (SYD)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Melbourne Airport (MEL)",
+          "to": "Melbourne hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Melbourne hotel area",
+          "to": "Melbourne Airport (MEL)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "australia-melbourne-uluru-cairns-sydney-12d",
+      "title": "Melbourne, Uluru, Reef and Sydney in 12 Days",
+      "summary": "Start in Melbourne, fly to Uluru, then Cairns for the reef, and finish with the Sydney sights.",
+      "days": 12,
+      "route": "Melbourne > Uluru > Cairns > Sydney",
+      "arrive": "Melbourne (MEL)",
+      "depart": "Sydney (SYD)",
+      "countries": [
+        "Australia"
+      ],
+      "regions": [
+        "Victoria",
+        "Northern Territory",
+        "Queensland",
+        "New South Wales"
+      ],
+      "cities": [
+        "Melbourne",
+        "Uluru",
+        "Cairns",
+        "Sydney"
+      ],
+      "imageQuery": "Great Barrier Reef Cairns",
+      "highlights": [
+        "Melbourne laneways",
+        "Uluru",
+        "Great Barrier Reef",
+        "Sydney Harbour"
+      ],
+      "destinationKeys": [
+        "australia",
+        "australia/victoria",
+        "australia/melbourne",
+        "australia/northern-territory",
+        "australia/uluru",
+        "australia/queensland",
+        "australia/cairns",
+        "australia/new-south-wales",
+        "australia/sydney"
+      ],
+      "hero": "australia/uluru",
+      "sources": [
+        "TravelStride",
+        "On The Go Tours",
+        "The Culture Trip",
+        "KimKim"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "culture",
+        "outdoors",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Melbourne",
+          "hotel": "Hotel in Melbourne",
+          "start": 0,
+          "nights": 4,
+          "area": "In the CBD or Southbank, close to trams and laneways",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Uluru",
+          "hotel": "Resort at Yulara",
+          "start": 4,
+          "nights": 2,
+          "area": "Yulara resort village, the only lodging area near the rock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cairns",
+          "hotel": "Hotel in Cairns",
+          "start": 6,
+          "nights": 3,
+          "area": "On the Esplanade or in the city centre, close to tour pick-ups",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sydney",
+          "hotel": "Hotel in Sydney",
+          "start": 9,
+          "nights": 2,
+          "area": "Near Circular Quay, The Rocks or Darling Harbour for walkable harbour sights",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Royal Botanic Gardens and the Shrine",
+          "notes": "An easy walk or tram ride from the centre.",
+          "where": "South Yarra, Melbourne",
+          "book": "",
+          "place": "australia/melbourne-gardens"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Melbourne laneways and street art walk",
+          "notes": "Wander Hosier Lane and Degraves Street; coffee stops are part of the route.",
+          "where": "Melbourne CBD",
+          "book": "",
+          "place": "australia/melbourne-laneways"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Queen Victoria Market",
+          "notes": "Closed Monday and Wednesday.",
+          "where": "Queen Victoria Market, Melbourne",
+          "book": "",
+          "place": "australia/queen-victoria-market"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "12h",
+          "name": "Great Ocean Road and the Twelve Apostles",
+          "notes": "A guided day trip is easier than driving; sunset at the Apostles is busy.",
+          "where": "Great Ocean Road",
+          "book": "Yes - book a guided tour",
+          "place": "australia/great-ocean-road"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Yarra Valley wine tasting",
+          "notes": "Take a tour or a driver for the tastings.",
+          "where": "Yarra Valley",
+          "book": "Yes - book a winery tour",
+          "place": "australia/yarra-valley"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Uluru sunset viewing",
+          "notes": "Sunset lookouts are busy; arrive early.",
+          "where": "Uluru-Kata Tjuta National Park",
+          "book": "",
+          "place": "australia/uluru-base-walk"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Uluru sunrise and base walk",
+          "notes": "Start early because of the heat; the climb is closed and some areas ask for no photos.",
+          "where": "Uluru-Kata Tjuta National Park",
+          "book": "",
+          "place": "australia/uluru-base-walk"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Kata Tjuta and Walpa Gorge",
+          "notes": "Take plenty of water; the Valley of the Winds loop closes in extreme heat.",
+          "where": "Kata Tjuta",
+          "book": "",
+          "place": "australia/kata-tjuta"
+        },
+        {
+          "day": 5,
+          "type": "Event",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Field of Light or desert dinner",
+          "notes": "Seats are limited; book ahead.",
+          "where": "Yulara",
+          "book": "Yes - book dinner or installation",
+          "place": "australia/field-of-light"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Great Barrier Reef snorkel or dive day",
+          "notes": "Choose an eco-certified operator; stinger suits are used from about November to May.",
+          "where": "Great Barrier Reef",
+          "book": "Yes - book reef trips ahead",
+          "place": "australia/great-barrier-reef"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Kuranda Scenic Railway and Skyrail",
+          "notes": "Take the train up and the Skyrail back, or the reverse.",
+          "where": "Kuranda",
+          "book": "Yes - book train and Skyrail",
+          "place": "australia/kuranda"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Sydney Opera House and Circular Quay",
+          "notes": "Walk the forecourt at golden hour; book a tour or evening show ahead.",
+          "where": "Circular Quay, Sydney",
+          "book": "",
+          "place": "australia/sydney-opera-house"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Sydney Harbour Bridge climb",
+          "notes": "Small groups climb the arch; the Pylon Lookout is an easier alternative.",
+          "where": "The Rocks, Sydney",
+          "book": "Yes - climbs sell out in peak season",
+          "place": "australia/harbour-bridge-climb"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "The Rocks heritage quarter",
+          "notes": "Lanes, pubs and a weekend market.",
+          "where": "The Rocks, Sydney",
+          "book": "",
+          "place": "australia/the-rocks"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Melbourne Airport (MEL)",
+          "to": "Melbourne hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Melbourne hotel area",
+          "to": "Melbourne Airport (MEL)",
+          "time": "08:30",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Ayers Rock Airport (AYQ)",
+          "to": "Yulara resort",
+          "time": "",
+          "minutes": 10,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Yulara resort",
+          "to": "Ayers Rock Airport (AYQ)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Cairns Airport (CNS)",
+          "to": "Cairns hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Cairns hotel area",
+          "to": "Cairns Airport (CNS)",
+          "time": "08:30",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Sydney Airport (SYD)",
+          "to": "Sydney hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Sydney hotel area",
+          "to": "Sydney Airport (SYD)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "australia-grand-tour-14d",
+      "title": "Australia Grand Tour in 14 Days",
+      "summary": "Sydney, Melbourne, Uluru, Cairns and Port Douglas: the four classic stops plus the Daintree.",
+      "days": 14,
+      "route": "Sydney > Melbourne > Uluru > Cairns > Port Douglas",
+      "arrive": "Sydney (SYD)",
+      "depart": "Cairns (CNS)",
+      "countries": [
+        "Australia"
+      ],
+      "regions": [
+        "New South Wales",
+        "Victoria",
+        "Northern Territory",
+        "Queensland"
+      ],
+      "cities": [
+        "Sydney",
+        "Melbourne",
+        "Uluru",
+        "Cairns",
+        "Port Douglas"
+      ],
+      "imageQuery": "Australia Uluru Sydney Barrier Reef",
+      "highlights": [
+        "Opera House",
+        "Great Ocean Road",
+        "Uluru",
+        "Great Barrier Reef",
+        "Daintree"
+      ],
+      "destinationKeys": [
+        "australia",
+        "australia/new-south-wales",
+        "australia/sydney",
+        "australia/victoria",
+        "australia/melbourne",
+        "australia/northern-territory",
+        "australia/uluru",
+        "australia/queensland",
+        "australia/cairns",
+        "australia/port-douglas"
+      ],
+      "hero": "australia/sydney",
+      "sources": [
+        "TravelStride",
+        "On The Go Tours",
+        "The Culture Trip",
+        "KimKim"
+      ],
+      "pace": "F",
+      "interests": [
+        "iconic_landmarks",
+        "outdoors",
+        "culture",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Sydney",
+          "hotel": "Hotel in Sydney",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Circular Quay, The Rocks or Darling Harbour for walkable harbour sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Melbourne",
+          "hotel": "Hotel in Melbourne",
+          "start": 3,
+          "nights": 3,
+          "area": "In the CBD or Southbank, close to trams and laneways",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Uluru",
+          "hotel": "Resort at Yulara",
+          "start": 6,
+          "nights": 2,
+          "area": "Yulara resort village, the only lodging area near the rock",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cairns",
+          "hotel": "Hotel in Cairns",
+          "start": 8,
+          "nights": 3,
+          "area": "On the Esplanade or in the city centre, close to tour pick-ups",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Port Douglas",
+          "hotel": "Hotel in Port Douglas",
+          "start": 11,
+          "nights": 2,
+          "area": "Near Macrossan Street or Four Mile Beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Sydney Opera House and Circular Quay",
+          "notes": "Walk the forecourt at golden hour; book a tour or evening show ahead.",
+          "where": "Circular Quay, Sydney",
+          "book": "",
+          "place": "australia/sydney-opera-house"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Sydney Harbour Bridge climb",
+          "notes": "Small groups climb the arch; the Pylon Lookout is an easier alternative.",
+          "where": "The Rocks, Sydney",
+          "book": "Yes - climbs sell out in peak season",
+          "place": "australia/harbour-bridge-climb"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "The Rocks heritage quarter",
+          "notes": "Lanes, pubs and a weekend market.",
+          "where": "The Rocks, Sydney",
+          "book": "",
+          "place": "australia/the-rocks"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Bondi to Coogee coastal walk",
+          "notes": "Bring sun protection and swimwear; little shade on the path.",
+          "where": "Bondi Beach, Sydney",
+          "book": "",
+          "place": "australia/bondi-coogee-walk"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Melbourne laneways and street art walk",
+          "notes": "Wander Hosier Lane and Degraves Street; coffee stops are part of the route.",
+          "where": "Melbourne CBD",
+          "book": "",
+          "place": "australia/melbourne-laneways"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Queen Victoria Market",
+          "notes": "Closed Monday and Wednesday.",
+          "where": "Queen Victoria Market, Melbourne",
+          "book": "",
+          "place": "australia/queen-victoria-market"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "12h",
+          "name": "Great Ocean Road and the Twelve Apostles",
+          "notes": "A guided day trip is easier than driving; sunset at the Apostles is busy.",
+          "where": "Great Ocean Road",
+          "book": "Yes - book a guided tour",
+          "place": "australia/great-ocean-road"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Uluru sunset viewing",
+          "notes": "Sunset lookouts are busy; arrive early.",
+          "where": "Uluru-Kata Tjuta National Park",
+          "book": "",
+          "place": "australia/uluru-base-walk"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Uluru sunrise and base walk",
+          "notes": "Start early because of the heat; the climb is closed and some areas ask for no photos.",
+          "where": "Uluru-Kata Tjuta National Park",
+          "book": "",
+          "place": "australia/uluru-base-walk"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Kata Tjuta and Walpa Gorge",
+          "notes": "Take plenty of water; the Valley of the Winds loop closes in extreme heat.",
+          "where": "Kata Tjuta",
+          "book": "",
+          "place": "australia/kata-tjuta"
+        },
+        {
+          "day": 7,
+          "type": "Event",
+          "time": "20:00",
+          "duration": "2h",
+          "name": "Field of Light or desert dinner",
+          "notes": "Seats are limited; book ahead.",
+          "where": "Yulara",
+          "book": "Yes - book dinner or installation",
+          "place": "australia/field-of-light"
+        },
+        {
+          "day": 9,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Kuranda Scenic Railway and Skyrail",
+          "notes": "Take the train up and the Skyrail back, or the reverse.",
+          "where": "Kuranda",
+          "book": "Yes - book train and Skyrail",
+          "place": "australia/kuranda"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Great Barrier Reef snorkel or dive day",
+          "notes": "Choose an eco-certified operator; stinger suits are used from about November to May.",
+          "where": "Great Barrier Reef",
+          "book": "Yes - book reef trips ahead",
+          "place": "australia/great-barrier-reef"
+        },
+        {
+          "day": 12,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Daintree Rainforest and Cape Tribulation",
+          "notes": "Include a river cruise and boardwalk; wet-season roads can flood.",
+          "where": "Daintree",
+          "book": "Yes - book a guided day",
+          "place": "australia/daintree-rainforest"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sydney Airport (SYD)",
+          "to": "Sydney hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Sydney hotel area",
+          "to": "Sydney Airport (SYD)",
+          "time": "08:30",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Melbourne Airport (MEL)",
+          "to": "Melbourne hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Melbourne hotel area",
+          "to": "Melbourne Airport (MEL)",
+          "time": "08:30",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Ayers Rock Airport (AYQ)",
+          "to": "Yulara resort",
+          "time": "",
+          "minutes": 10,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Yulara resort",
+          "to": "Ayers Rock Airport (AYQ)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Cairns Airport (CNS)",
+          "to": "Cairns hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Cairns",
+          "to": "Port Douglas",
+          "time": "10:00",
+          "minutes": 70,
+          "carrier": "Shuttle or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Port Douglas",
+          "to": "Cairns Airport (CNS)",
+          "time": "09:30",
+          "minutes": 70,
+          "carrier": "Shuttle or rental car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "australia/sydney-opera-house": {
+        "name": "Sydney Opera House",
+        "description": "The sail-roofed performing arts centre on Sydney Harbour, visited on a tour or for an evening show.",
+        "details": "The Opera House is the most recognisable building in Australia. Guided tours go behind the scenes, and evening concerts, opera and ballet make good use of the setting. The forecourt and Circular Quay promenade are free to wander and give the classic harbour views. Book show seats ahead.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/harbour-bridge-climb": {
+        "name": "Sydney Harbour Bridge climb",
+        "description": "A guided climb over the arch of the bridge, or a walk up to the pylon lookout.",
+        "details": "The BridgeClimb takes small groups up the arch for panoramic views of the harbour and Opera House, lasting about three hours. A less demanding option is the Pylon Lookout on the bridge, reached by stairs. Climbs run at dawn, day, dusk and night, and book out in peak season.",
+        "interests": [
+          "adventure",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "australia/the-rocks": {
+        "name": "The Rocks",
+        "description": "Sydney oldest quarter, with sandstone lanes, pubs, a weekend market and convict history.",
+        "details": "The Rocks sits beside Circular Quay and holds the first European settlement area. Cobbled lanes, heritage pubs, galleries and a weekend market make it easy to explore on foot. The Museum of Contemporary Art is close by.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/bondi-coogee-walk": {
+        "name": "Bondi to Coogee coastal walk",
+        "description": "A clifftop path of about six kilometres linking Sydney best-known beaches, rock pools and sculptures.",
+        "details": "The coastal walk runs past Tamarama, Bronte and Clovelly to Coogee, with ocean pools carved into the rock. Allow two to three hours at an easy pace, with stops for swims and cafes. Bring sun protection, as there is little shade.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "australia/manly-ferry": {
+        "name": "Manly ferry and beach",
+        "description": "A half-hour ferry ride across the harbour to a surf beach and village promenade.",
+        "details": "The Manly ferry is a cheap way to see the harbour, passing the Opera House and Bridge. Manly has a long beach, a pedestrian corso and a coastal walk to Shelly Beach for snorkelling. Ferries are frequent, and the ride is part of the fun.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/blue-mountains": {
+        "name": "Blue Mountains and Three Sisters",
+        "description": "Eucalypt-covered sandstone cliffs and valleys west of Sydney, with lookouts, waterfalls and bush walks.",
+        "details": "The Blue Mountains is a World Heritage area reached by train or car in about two hours. Echo Point at Katoomba looks over the Three Sisters rock formation. Scenic World runs a cableway and the steepest railway in the world, and walks such as the Grand Cliff Top or Wentworth Falls vary in difficulty. The weather is cooler than Sydney.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "australia/hunter-valley": {
+        "name": "Hunter Valley wine country",
+        "description": "Australia oldest wine region, with cellar doors, restaurants and balloon flights two hours north of Sydney.",
+        "details": "The Hunter Valley is known for semillon and shiraz. A tasting day by guided tour or private driver visits several cellar doors with lunch at a winery restaurant. Hot air balloon flights run at dawn. Never drive after tasting, so organise a driver.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/melbourne-laneways": {
+        "name": "Melbourne laneways and street art",
+        "description": "Hidden alleys filled with street art, coffee roasters, bars and small shops in the city centre.",
+        "details": "Hosier Lane, Degraves Street, Centre Place and AC/DC Lane are the heart of Melbourne laneway culture. Street art changes constantly, and the coffee is among the best in the country. Take a walking tour with a local to find hidden bars and the stories behind the art.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/queen-victoria-market": {
+        "name": "Queen Victoria Market",
+        "description": "A huge open-air market with produce, deli halls, street food and Melbourne souvenirs.",
+        "details": "The market has operated since 1878 and covers fresh produce, meats, cheeses, clothing and gifts. The deli hall is the best place for a snack of borek or doughnuts. It is closed on Mondays and Wednesdays, and Thursday evenings in summer have a night market.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/melbourne-gardens": {
+        "name": "Royal Botanic Gardens and the Shrine",
+        "description": "A large garden with a lake and walking paths south of the river, next to the city war memorial.",
+        "details": "The Royal Botanic Gardens Victoria offers shaded lawns, a lake and guided walks. The Shrine of Remembrance nearby has views over the city from its balcony. The gardens are free and an easy walk or tram ride from the centre.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/great-ocean-road": {
+        "name": "Great Ocean Road and the Twelve Apostles",
+        "description": "A coastal drive of limestone stacks, surf beaches and rainforest between Torquay and Warrnambool.",
+        "details": "The Great Ocean Road is a memorial route with Bells Beach, Lorne, Apollo Bay, the Otway rainforest and the Twelve Apostles limestone stacks. Sunset at the Apostles is the classic view, but crowds are large. A full day from Melbourne is long, about 12 hours with stops, so a guided tour is easier than driving yourself.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "australia/phillip-island-penguins": {
+        "name": "Phillip Island penguin parade",
+        "description": "Little penguins waddle ashore at dusk on a beach about 90 minutes from Melbourne.",
+        "details": "Each evening, little penguins come ashore from the sea to their burrows at Summerland Beach. Viewing stands and a visitor centre are provided, and photography is banned to protect the birds. Dress warmly, as the wind is cold. The island also has koalas and a seal colony.",
+        "interests": [
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/yarra-valley": {
+        "name": "Yarra Valley wineries",
+        "description": "Cool-climate vineyards, chocolate and cheese stops around an hour east of Melbourne.",
+        "details": "The Yarra Valley is known for pinot noir, chardonnay and sparkling wine, and tastings are matched with produce from the area. Many tours leave from Melbourne. Hot air balloons float over the valley at sunrise. A designated driver or tour is essential.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/great-barrier-reef": {
+        "name": "Great Barrier Reef day trip",
+        "description": "A boat day from Cairns or Port Douglas for snorkelling or diving on the outer reef.",
+        "details": "The Great Barrier Reef is the largest coral system in the world. Day boats leave Cairns and Port Douglas for outer reef pontoons with snorkelling, glass-bottom boats and introductory dives. The water is clearest in the dry season, from June to October. Stinger suits are required from about November to May. Book an eco-certified operator.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "australia/daintree-rainforest": {
+        "name": "Daintree Rainforest and Cape Tribulation",
+        "description": "One of the oldest rainforests on earth, explored on boardwalks, river cruises and beach walks.",
+        "details": "The Daintree is more than 100 million years old and meets the reef at Cape Tribulation. Guided tours take in Mossman Gorge, a Daintree River crocodile cruise and the Marrdja boardwalk. A cassowary may be seen, but give it space. Wet-season rain can flood roads from December to March.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "australia/kuranda": {
+        "name": "Kuranda Scenic Railway and Skyrail",
+        "description": "A heritage train through rainforest gorges to a village, returning by cable car over the canopy.",
+        "details": "Kuranda is a hillside village in the rainforest above Cairns. The Scenic Railway climbs past Barron Falls through 15 tunnels and the Skyrail returns by gondola above the canopy. The village has a market, a butterfly sanctuary and a wildlife park. Allow most of a day.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "australia/uluru-base-walk": {
+        "name": "Uluru sunrise and base walk",
+        "description": "A walk around the base of the sandstone monolith, sacred to the Anangu people.",
+        "details": "Uluru is a sacred site for the Anangu, and the climb has been closed since 2019. The base walk is about 10 kilometres and takes three to four hours, with the Mala and Kuniya areas explained by signs. Start early because it is very hot, and some areas ask for no photographs. The Cultural Centre explains the stories.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "australia/kata-tjuta": {
+        "name": "Kata Tjuta and the Valley of the Winds",
+        "description": "A group of 36 domed rock formations 50 kilometres from Uluru, with desert walks.",
+        "details": "Kata Tjuta, or the Olgas, is a cluster of red conglomerate domes. The Walpa Gorge walk is short and easy, and the Valley of the Winds loop is longer and more demanding. The Valley of the Winds walk closes in extreme heat in the middle of the day. Take plenty of water.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "australia/field-of-light": {
+        "name": "Field of Light and desert dinner",
+        "description": "A night-time installation of thousands of solar lights in the desert, or a dinner under the stars.",
+        "details": "Bruce Munro Field of Light spreads tens of thousands of glowing stems across the red sand and is walked at sunset or in the evening. Alternatives include a dinner on a dune with an astronomer. Book ahead, as seats are limited.",
+        "interests": [
+          "photography",
+          "relax",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "australia": {
+        "name": "Australia",
+        "description": "A vast island continent of harbour cities, reef, rainforest and the red desert heart.",
+        "images": []
+      },
+      "australia/new-south-wales": {
+        "name": "New South Wales",
+        "description": "The state of Sydney, the Blue Mountains and the Hunter Valley.",
+        "images": []
+      },
+      "australia/sydney": {
+        "name": "Sydney",
+        "description": "A harbour city of beaches, the Opera House and the Bridge.",
+        "images": []
+      },
+      "australia/katoomba": {
+        "name": "Katoomba",
+        "description": "The main town of the Blue Mountains, at the Three Sisters lookout.",
+        "images": []
+      },
+      "australia/victoria": {
+        "name": "Victoria",
+        "description": "The state of Melbourne, the Great Ocean Road and the Yarra Valley.",
+        "images": []
+      },
+      "australia/melbourne": {
+        "name": "Melbourne",
+        "description": "A city of laneways, coffee, markets, sport and art.",
+        "images": []
+      },
+      "australia/queensland": {
+        "name": "Queensland",
+        "description": "The northern state of the Great Barrier Reef and the Daintree.",
+        "images": []
+      },
+      "australia/cairns": {
+        "name": "Cairns",
+        "description": "The gateway city to the Great Barrier Reef and tropical rainforest.",
+        "images": []
+      },
+      "australia/port-douglas": {
+        "name": "Port Douglas",
+        "description": "A relaxed resort town between the reef and the Daintree.",
+        "images": []
+      },
+      "australia/northern-territory": {
+        "name": "Northern Territory",
+        "description": "The Red Centre and Top End, home to Uluru and Kata Tjuta.",
+        "images": []
+      },
+      "australia/uluru": {
+        "name": "Uluru",
+        "description": "The red monolith and Kata Tjuta, sacred to the Anangu, in the desert at Yulara.",
+        "images": []
+      }
+    }
+  }
+}

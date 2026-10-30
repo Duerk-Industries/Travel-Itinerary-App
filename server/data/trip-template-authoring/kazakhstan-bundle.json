@@ -1,0 +1,808 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Bucketlistly, A Social Nomad, About Kazakhstan and WeRoad itineraries for Kazakhstan",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "kazakhstan-almaty-4d",
+      "title": "Almaty and the Mountains in 4 Days",
+      "summary": "The city, Medeu and Big Almaty Lake.",
+      "days": 4,
+      "route": "Almaty",
+      "arrive": "Almaty (ALA)",
+      "depart": "Almaty (ALA)",
+      "countries": [
+        "Kazakhstan"
+      ],
+      "regions": [],
+      "cities": [
+        "Almaty"
+      ],
+      "imageQuery": "Almaty mountains Kazakhstan",
+      "highlights": [
+        "Green Bazaar",
+        "Medeu",
+        "Big Almaty Lake",
+        "Zenkov Cathedral"
+      ],
+      "destinationKeys": [
+        "kazakhstan",
+        "kazakhstan/almaty"
+      ],
+      "hero": "kazakhstan/almaty",
+      "sources": [
+        "Bucketlistly",
+        "A Social Nomad",
+        "About Kazakhstan",
+        "WeRoad",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Almaty",
+          "hotel": "Hotel in Almaty",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Panfilov Park or Dostyk Avenue, with access to the metro",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Panfilov Park, Zenkov Cathedral and Green Bazaar",
+          "notes": "Try dried fruit and kazy at the bazaar.",
+          "where": "Almaty",
+          "book": "",
+          "place": "kazakhstan/almaty-city"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Medeu rink and Shymbulak gondola",
+          "notes": "Dress warmly; the altitude is 2,200 metres or more.",
+          "where": "Almaty",
+          "book": "",
+          "place": "kazakhstan/medeu-shymbulak"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Big Almaty Lake",
+          "notes": "Take ID for the checkpoint; morning light is best.",
+          "where": "Almaty",
+          "book": "",
+          "place": "kazakhstan/big-almaty-lake"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Almaty Airport (ALA)",
+          "to": "Almaty hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex Go) or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Almaty hotel",
+          "to": "Almaty Airport (ALA)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex Go) or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kazakhstan-almaty-kolsai-5d",
+      "title": "Almaty, Charyn and Kolsai in 5 Days",
+      "summary": "Almaty plus the canyon and alpine lakes.",
+      "days": 5,
+      "route": "Almaty > Saty",
+      "arrive": "Almaty (ALA)",
+      "depart": "Almaty (ALA)",
+      "countries": [
+        "Kazakhstan"
+      ],
+      "regions": [],
+      "cities": [
+        "Almaty",
+        "Saty"
+      ],
+      "imageQuery": "Kolsai Lakes Kazakhstan",
+      "highlights": [
+        "Charyn Canyon",
+        "Kolsai Lakes",
+        "Kaindy Lake",
+        "Green Bazaar"
+      ],
+      "destinationKeys": [
+        "kazakhstan",
+        "kazakhstan/almaty",
+        "kazakhstan/saty"
+      ],
+      "hero": "kazakhstan/saty",
+      "sources": [
+        "Bucketlistly",
+        "A Social Nomad",
+        "About Kazakhstan",
+        "WeRoad",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Almaty",
+          "hotel": "Hotel in Almaty",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Panfilov Park or Dostyk Avenue, with access to the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Saty",
+          "hotel": "Guesthouse in Saty",
+          "start": 2,
+          "nights": 2,
+          "area": "In a village guesthouse in Saty, a base for the Kolsai Lakes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Panfilov Park, Zenkov Cathedral and Green Bazaar",
+          "notes": "Try dried fruit and kazy at the bazaar.",
+          "where": "Almaty",
+          "book": "",
+          "place": "kazakhstan/almaty-city"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "07:00",
+          "duration": "10h",
+          "name": "Charyn Canyon",
+          "notes": "Carry water; the climb back is steep.",
+          "where": "Charyn",
+          "book": "Yes - arrange a driver",
+          "place": "kazakhstan/charyn-canyon"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Kolsai Lake hike and Kaindy Lake",
+          "notes": "Check border zone permit rules for the upper lake.",
+          "where": "Kolsai",
+          "book": "",
+          "place": "kazakhstan/kolsai-kaindy"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Almaty Airport (ALA)",
+          "to": "Almaty hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex Go) or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Almaty",
+          "to": "Saty",
+          "time": "07:00",
+          "minutes": 330,
+          "carrier": "Private driver or shared taxi",
+          "notes": "Stop at Charyn Canyon on the way.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Saty",
+          "to": "Almaty Airport (ALA)",
+          "time": "09:00",
+          "minutes": 330,
+          "carrier": "Private driver or shared taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kazakhstan-almaty-saty-astana-7d",
+      "title": "Kazakhstan Highlights in 7 Days",
+      "summary": "Almaty, the Kolsai Lakes and the futuristic capital.",
+      "days": 7,
+      "route": "Almaty > Saty > Astana",
+      "arrive": "Almaty (ALA)",
+      "depart": "Astana (NQZ)",
+      "countries": [
+        "Kazakhstan"
+      ],
+      "regions": [],
+      "cities": [
+        "Almaty",
+        "Saty",
+        "Astana"
+      ],
+      "imageQuery": "Astana Baiterek tower",
+      "highlights": [
+        "Green Bazaar",
+        "Medeu",
+        "Kolsai Lakes",
+        "Baiterek",
+        "Khan Shatyr"
+      ],
+      "destinationKeys": [
+        "kazakhstan",
+        "kazakhstan/almaty",
+        "kazakhstan/saty",
+        "kazakhstan/astana"
+      ],
+      "hero": "kazakhstan/astana",
+      "sources": [
+        "Bucketlistly",
+        "A Social Nomad",
+        "About Kazakhstan",
+        "WeRoad",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Almaty",
+          "hotel": "Hotel in Almaty",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Panfilov Park or Dostyk Avenue, with access to the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Saty",
+          "hotel": "Guesthouse in Saty",
+          "start": 3,
+          "nights": 1,
+          "area": "In a village guesthouse in Saty, a base for the Kolsai Lakes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Astana",
+          "hotel": "Hotel in Astana",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the Left Bank for the main landmarks",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Panfilov Park, Zenkov Cathedral and Green Bazaar",
+          "notes": "Try dried fruit and kazy at the bazaar.",
+          "where": "Almaty",
+          "book": "",
+          "place": "kazakhstan/almaty-city"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Medeu rink and Shymbulak gondola",
+          "notes": "Dress warmly; the altitude is 2,200 metres or more.",
+          "where": "Almaty",
+          "book": "",
+          "place": "kazakhstan/medeu-shymbulak"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Kolsai Lake hike and Kaindy Lake",
+          "notes": "Check border zone permit rules for the upper lake.",
+          "where": "Kolsai",
+          "book": "",
+          "place": "kazakhstan/kolsai-kaindy"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Baiterek, Khan Shatyr and Hazrat Sultan Mosque",
+          "notes": "Winters are extremely cold; plan indoor stops.",
+          "where": "Astana",
+          "book": "",
+          "place": "kazakhstan/astana-center"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Almaty Airport (ALA)",
+          "to": "Almaty hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex Go) or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Almaty",
+          "to": "Saty",
+          "time": "07:30",
+          "minutes": 330,
+          "carrier": "Private driver or shared taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Saty",
+          "to": "Almaty Airport (ALA)",
+          "time": "07:00",
+          "minutes": 330,
+          "carrier": "Private driver or shared taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Almaty airport",
+          "to": "Almaty Airport (ALA)",
+          "time": "16:00",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Astana Airport (NQZ)",
+          "to": "Astana hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Astana hotel",
+          "to": "Astana Airport (NQZ)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex Go) or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kazakhstan-complete-10d",
+      "title": "Complete Kazakhstan in 10 Days",
+      "summary": "Almaty with Charyn and Kolsai, Astana and the Silk Road city of Turkestan.",
+      "days": 10,
+      "route": "Almaty > Saty > Astana > Turkestan",
+      "arrive": "Almaty (ALA)",
+      "depart": "Turkestan (HSA)",
+      "countries": [
+        "Kazakhstan"
+      ],
+      "regions": [],
+      "cities": [
+        "Almaty",
+        "Saty",
+        "Astana",
+        "Turkestan"
+      ],
+      "imageQuery": "Turkestan Yasawi mausoleum",
+      "highlights": [
+        "Charyn Canyon",
+        "Kolsai Lakes",
+        "Baiterek",
+        "Yasawi Mausoleum",
+        "Green Bazaar"
+      ],
+      "destinationKeys": [
+        "kazakhstan",
+        "kazakhstan/almaty",
+        "kazakhstan/saty",
+        "kazakhstan/astana",
+        "kazakhstan/turkestan"
+      ],
+      "hero": "kazakhstan/turkestan",
+      "sources": [
+        "Bucketlistly",
+        "A Social Nomad",
+        "About Kazakhstan",
+        "WeRoad",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Almaty",
+          "hotel": "Hotel in Almaty",
+          "start": 0,
+          "nights": 4,
+          "area": "Near Panfilov Park or Dostyk Avenue, with access to the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Saty",
+          "hotel": "Guesthouse in Saty",
+          "start": 4,
+          "nights": 1,
+          "area": "In a village guesthouse in Saty, a base for the Kolsai Lakes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Astana",
+          "hotel": "Hotel in Astana",
+          "start": 5,
+          "nights": 2,
+          "area": "Near the Left Bank for the main landmarks",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Turkestan",
+          "hotel": "Hotel in Turkestan",
+          "start": 7,
+          "nights": 2,
+          "area": "In central Turkestan near the mausoleum",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Panfilov Park, Zenkov Cathedral and Green Bazaar",
+          "notes": "Try dried fruit and kazy at the bazaar.",
+          "where": "Almaty",
+          "book": "",
+          "place": "kazakhstan/almaty-city"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Medeu rink and Shymbulak gondola",
+          "notes": "Dress warmly; the altitude is 2,200 metres or more.",
+          "where": "Almaty",
+          "book": "",
+          "place": "kazakhstan/medeu-shymbulak"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "07:30",
+          "duration": "10h",
+          "name": "Charyn Canyon",
+          "notes": "Carry water; the climb back is steep.",
+          "where": "Charyn",
+          "book": "Yes - arrange a driver",
+          "place": "kazakhstan/charyn-canyon"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Kolsai Lake hike and Kaindy Lake",
+          "notes": "Check border zone permit rules for the upper lake.",
+          "where": "Kolsai",
+          "book": "",
+          "place": "kazakhstan/kolsai-kaindy"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Baiterek, Khan Shatyr and Hazrat Sultan Mosque",
+          "notes": "Winters are extremely cold; plan indoor stops.",
+          "where": "Astana",
+          "book": "",
+          "place": "kazakhstan/astana-center"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Yasawi Mausoleum and old town",
+          "notes": "Dress modestly at this pilgrimage site.",
+          "where": "Turkestan",
+          "book": "",
+          "place": "kazakhstan/turkestan-yasawi"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Almaty Airport (ALA)",
+          "to": "Almaty hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex Go) or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Almaty",
+          "to": "Saty",
+          "time": "07:30",
+          "minutes": 330,
+          "carrier": "Private driver or shared taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Saty",
+          "to": "Almaty Airport (ALA)",
+          "time": "07:00",
+          "minutes": 330,
+          "carrier": "Private driver or shared taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Almaty airport",
+          "to": "Almaty Airport (ALA)",
+          "time": "16:00",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Astana Airport (NQZ)",
+          "to": "Astana hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Astana hotel",
+          "to": "Astana Airport (NQZ)",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Turkestan Airport (HSA)",
+          "to": "Turkestan hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Turkestan hotel",
+          "to": "Turkestan Airport (HSA)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Taxi (Yandex Go) or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "kazakhstan/almaty-city": {
+        "name": "Almaty Panfilov Park, Zenkov Cathedral and Green Bazaar",
+        "description": "Soviet-era parks, a wooden cathedral and the colourful Green Bazaar market.",
+        "details": "Almaty sits beneath the Tian Shan range. Panfilov Park holds the Zenkov Cathedral, an all-wood Orthodox church built without nails, and a war memorial. The Green Bazaar sells dried fruit, horse sausage and Kazakh sweets. The Kok Tobe hill has a cable car and a view.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "food",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kazakhstan/medeu-shymbulak": {
+        "name": "Medeu and Shymbulak",
+        "description": "A high-altitude skating rink and a ski resort with a gondola to mountain views.",
+        "details": "Medeu is the world highest skating rink, in a valley above Almaty. A cable car continues to Shymbulak, a ski resort that is lively in winter and a hiking base in summer. The Big Almaty Lake further up changes colour with the season and is a half-day trip.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "kazakhstan/big-almaty-lake": {
+        "name": "Big Almaty Lake",
+        "description": "A turquoise alpine lake at 2,500 metres in the mountains above Almaty.",
+        "details": "The lake sits in a restricted zone, so entrance is via a checkpoint. The road is steep, and the best light is in the morning. It is the easiest half-day outing from Almaty. Bring a jacket, as it is cooler at altitude.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kazakhstan/charyn-canyon": {
+        "name": "Charyn Canyon",
+        "description": "A red-rock canyon called the Valley of Castles, 200 kilometres east of Almaty.",
+        "details": "Charyn Canyon has a 3-kilometre trail down to the Charyn River, with eroded rock walls up to 300 metres high. A day trip takes 2.5 to 3 hours each way. It is hot in summer, so carry plenty of water. The trail back up is steep.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "kazakhstan/kolsai-kaindy": {
+        "name": "Kolsai Lakes and Kaindy Lake",
+        "description": "Alpine lakes in spruce forest, plus a sunken forest in a turquoise lake.",
+        "details": "The Kolsai Lakes are three lakes in the Tian Shan, reached by a drive and a hike. Kaindy Lake has dead spruce trunks rising out of the water. Many travellers stay overnight in Saty village. Permits are needed for the border zone around the third lake, so check current rules.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "kazakhstan/astana-center": {
+        "name": "Astana Baiterek and Khan Shatyr",
+        "description": "A futuristic capital of bold buildings, from a tower to a giant tent.",
+        "details": "Astana is a planned city with the Baiterek tower, Khan Shatyr (a tent-shaped mall) and the Hazrat Sultan Mosque. Winters are bitterly cold, down to minus 30, and summers are warm. The National Museum has Golden Man artefacts. Walking along the Ishim river is pleasant.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kazakhstan/turkestan-yasawi": {
+        "name": "Turkestan and the Yasawi Mausoleum",
+        "description": "A medieval Silk Road pilgrimage centre with a vast blue-tiled mausoleum.",
+        "details": "The Mausoleum of Khoja Ahmed Yasawi is an unfinished 14th-century building ordered by Timur, a UNESCO site. The old town has underground chambers and a museum. It is a spiritual centre for Central Asian Muslims. Turkestan lies in the south and is reached by a train or flight.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "kazakhstan": {
+        "name": "Kazakhstan",
+        "description": "A vast Central Asian country of mountain lakes, steppe, Silk Road cities and a futuristic capital.",
+        "images": []
+      },
+      "kazakhstan/almaty": {
+        "name": "Almaty",
+        "description": "The former capital at the foot of the Tian Shan mountains.",
+        "images": []
+      },
+      "kazakhstan/saty": {
+        "name": "Saty",
+        "description": "A mountain village, base for the Kolsai and Kaindy lakes.",
+        "images": []
+      },
+      "kazakhstan/astana": {
+        "name": "Astana",
+        "description": "The futuristic capital on the steppe.",
+        "images": []
+      },
+      "kazakhstan/turkestan": {
+        "name": "Turkestan",
+        "description": "A Silk Road pilgrimage city with a famous mausoleum.",
+        "images": []
+      }
+    }
+  }
+}

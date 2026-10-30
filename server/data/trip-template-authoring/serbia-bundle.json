@@ -1,0 +1,1065 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Miss Tourist, The Culture Trip, Wander-Lush and On The Go Tours itineraries for Serbia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "serbia-belgrade-4d",
+      "title": "Belgrade City Break in 4 Days",
+      "summary": "Fortress, riverside, restaurants and nightlife.",
+      "days": 4,
+      "route": "Belgrade",
+      "arrive": "Belgrade (BEG)",
+      "depart": "Belgrade (BEG)",
+      "countries": [
+        "Serbia"
+      ],
+      "regions": [],
+      "cities": [
+        "Belgrade"
+      ],
+      "imageQuery": "Belgrade Kalemegdan fortress rivers",
+      "highlights": [
+        "Kalemegdan",
+        "Skadarlija",
+        "Zemun",
+        "River clubs"
+      ],
+      "destinationKeys": [
+        "serbia",
+        "serbia/belgrade"
+      ],
+      "hero": "serbia/belgrade",
+      "sources": [
+        "Miss Tourist",
+        "The Culture Trip",
+        "Wander-Lush",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Belgrade",
+          "hotel": "Hotel in Belgrade",
+          "start": 0,
+          "nights": 3,
+          "area": "In Stari Grad near Knez Mihailova, walkable to sights and nightlife",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Kalemegdan Fortress and Knez Mihailova",
+          "notes": "Finish with dinner in Skadarlija.",
+          "where": "Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-kalemegdan"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "4h",
+          "name": "Zemun riverside and Belgrade nightlife",
+          "notes": "Barge clubs run in summer.",
+          "where": "Zemun, Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-nightlife-zemun"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "4h",
+          "name": "Zemun riverside and Belgrade nightlife",
+          "notes": "Barge clubs run in summer.",
+          "where": "Zemun, Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-nightlife-zemun"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Belgrade Airport (BEG)",
+          "to": "Belgrade hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Belgrade hotel",
+          "to": "Belgrade Airport (BEG)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "serbia-belgrade-novi-sad-5d",
+      "title": "Belgrade and Novi Sad in 5 Days",
+      "summary": "The capital and the Danube fortress city.",
+      "days": 5,
+      "route": "Belgrade > Novi Sad",
+      "arrive": "Belgrade (BEG)",
+      "depart": "Belgrade (BEG)",
+      "countries": [
+        "Serbia"
+      ],
+      "regions": [],
+      "cities": [
+        "Belgrade",
+        "Novi Sad"
+      ],
+      "imageQuery": "Petrovaradin fortress Novi Sad",
+      "highlights": [
+        "Kalemegdan",
+        "Petrovaradin",
+        "Sremski Karlovci",
+        "Fruska Gora wine"
+      ],
+      "destinationKeys": [
+        "serbia",
+        "serbia/belgrade",
+        "serbia/novi-sad"
+      ],
+      "hero": "serbia/novi-sad",
+      "sources": [
+        "Miss Tourist",
+        "The Culture Trip",
+        "Wander-Lush",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Belgrade",
+          "hotel": "Hotel in Belgrade",
+          "start": 0,
+          "nights": 2,
+          "area": "In Stari Grad near Knez Mihailova, walkable to sights and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Novi Sad",
+          "hotel": "Hotel in Novi Sad",
+          "start": 2,
+          "nights": 2,
+          "area": "In central Novi Sad near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Kalemegdan Fortress and Knez Mihailova",
+          "notes": "Finish with dinner in Skadarlija.",
+          "where": "Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-kalemegdan"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "4h",
+          "name": "Zemun riverside and Belgrade nightlife",
+          "notes": "Barge clubs run in summer.",
+          "where": "Zemun, Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-nightlife-zemun"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3.5h",
+          "name": "Petrovaradin Fortress and Novi Sad centre",
+          "notes": "Look for the clock with reversed hands.",
+          "where": "Novi Sad",
+          "book": "",
+          "place": "serbia/novi-sad-petrovaradin"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Sremski Karlovci and Fruska Gora wine",
+          "notes": "Use a driver for the tastings.",
+          "where": "Fruska Gora",
+          "book": "",
+          "place": "serbia/sremski-karlovci-fruska-gora"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Belgrade Airport (BEG)",
+          "to": "Belgrade hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Belgrade",
+          "to": "Novi Sad",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Soreg train or intercity bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Novi Sad",
+          "to": "Belgrade Airport (BEG)",
+          "time": "10:00",
+          "minutes": 100,
+          "carrier": "Soreg train or intercity bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "serbia-belgrade-novi-sad-zlatibor-7d",
+      "title": "Serbia West and North in 7 Days",
+      "summary": "Belgrade, Novi Sad and the mountains of Zlatibor and Tara.",
+      "days": 7,
+      "route": "Belgrade > Novi Sad > Zlatibor",
+      "arrive": "Belgrade (BEG)",
+      "depart": "Belgrade (BEG)",
+      "countries": [
+        "Serbia"
+      ],
+      "regions": [],
+      "cities": [
+        "Belgrade",
+        "Novi Sad",
+        "Zlatibor"
+      ],
+      "imageQuery": "Tara National Park Drina house on rock",
+      "highlights": [
+        "Kalemegdan",
+        "Petrovaradin",
+        "Tara National Park",
+        "Drvengrad",
+        "Zlatibor"
+      ],
+      "destinationKeys": [
+        "serbia",
+        "serbia/belgrade",
+        "serbia/novi-sad",
+        "serbia/zlatibor"
+      ],
+      "hero": "serbia/zlatibor",
+      "sources": [
+        "Miss Tourist",
+        "The Culture Trip",
+        "Wander-Lush",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "food",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Belgrade",
+          "hotel": "Hotel in Belgrade",
+          "start": 0,
+          "nights": 3,
+          "area": "In Stari Grad near Knez Mihailova, walkable to sights and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Novi Sad",
+          "hotel": "Hotel in Novi Sad",
+          "start": 3,
+          "nights": 1,
+          "area": "In central Novi Sad near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zlatibor",
+          "hotel": "Lodge in Zlatibor",
+          "start": 4,
+          "nights": 2,
+          "area": "In Zlatibor or a lodge near Tara, for the western mountains",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Kalemegdan Fortress and Knez Mihailova",
+          "notes": "Finish with dinner in Skadarlija.",
+          "where": "Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-kalemegdan"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "4h",
+          "name": "Zemun riverside and Belgrade nightlife",
+          "notes": "Barge clubs run in summer.",
+          "where": "Zemun, Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-nightlife-zemun"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Petrovaradin Fortress and Novi Sad centre",
+          "notes": "Look for the clock with reversed hands.",
+          "where": "Novi Sad",
+          "book": "",
+          "place": "serbia/novi-sad-petrovaradin"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Zlatibor gondola, Sirogojno and Stopica Cave",
+          "notes": "Try kajmak and smoked ham.",
+          "where": "Zlatibor",
+          "book": "",
+          "place": "serbia/zlatibor-resort"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Tara National Park and Banjska Stena",
+          "notes": "Best from May to October.",
+          "where": "Tara",
+          "book": "",
+          "place": "serbia/tara-national-park"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Drvengrad and the Sargan Eight railway",
+          "notes": "Check the heritage train timetable.",
+          "where": "Mokra Gora",
+          "book": "",
+          "place": "serbia/mokra-gora-sargan"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Belgrade Airport (BEG)",
+          "to": "Belgrade hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Belgrade",
+          "to": "Novi Sad",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Soreg train or intercity bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Novi Sad",
+          "to": "Zlatibor",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Zlatibor",
+          "to": "Belgrade Airport (BEG)",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "serbia-belgrade-novi-sad-zlatibor-nis-9d",
+      "title": "Serbia Highlights in 9 Days",
+      "summary": "Belgrade, Novi Sad, the western mountains and Nis.",
+      "days": 9,
+      "route": "Belgrade > Novi Sad > Zlatibor > Nis",
+      "arrive": "Belgrade (BEG)",
+      "depart": "Belgrade (BEG)",
+      "countries": [
+        "Serbia"
+      ],
+      "regions": [],
+      "cities": [
+        "Belgrade",
+        "Novi Sad",
+        "Zlatibor",
+        "Nis"
+      ],
+      "imageQuery": "Studenica monastery Serbia",
+      "highlights": [
+        "Kalemegdan",
+        "Tara",
+        "Studenica",
+        "Nis Skull Tower"
+      ],
+      "destinationKeys": [
+        "serbia",
+        "serbia/belgrade",
+        "serbia/novi-sad",
+        "serbia/zlatibor",
+        "serbia/nis"
+      ],
+      "hero": "serbia/nis",
+      "sources": [
+        "Miss Tourist",
+        "The Culture Trip",
+        "Wander-Lush",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Belgrade",
+          "hotel": "Hotel in Belgrade",
+          "start": 0,
+          "nights": 3,
+          "area": "In Stari Grad near Knez Mihailova, walkable to sights and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Novi Sad",
+          "hotel": "Hotel in Novi Sad",
+          "start": 3,
+          "nights": 1,
+          "area": "In central Novi Sad near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zlatibor",
+          "hotel": "Lodge in Zlatibor",
+          "start": 4,
+          "nights": 2,
+          "area": "In Zlatibor or a lodge near Tara, for the western mountains",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nis",
+          "hotel": "Hotel in Nis",
+          "start": 6,
+          "nights": 2,
+          "area": "In central Nis near the fortress",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Kalemegdan Fortress and Knez Mihailova",
+          "notes": "Finish with dinner in Skadarlija.",
+          "where": "Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-kalemegdan"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "4h",
+          "name": "Zemun riverside and Belgrade nightlife",
+          "notes": "Barge clubs run in summer.",
+          "where": "Zemun, Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-nightlife-zemun"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Petrovaradin Fortress and Novi Sad centre",
+          "notes": "Look for the clock with reversed hands.",
+          "where": "Novi Sad",
+          "book": "",
+          "place": "serbia/novi-sad-petrovaradin"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Zlatibor gondola, Sirogojno and Stopica Cave",
+          "notes": "Try kajmak and smoked ham.",
+          "where": "Zlatibor",
+          "book": "",
+          "place": "serbia/zlatibor-resort"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Tara National Park and Banjska Stena",
+          "notes": "Best from May to October.",
+          "where": "Tara",
+          "book": "",
+          "place": "serbia/tara-national-park"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Studenica and Zica monasteries",
+          "notes": "Dress modestly.",
+          "where": "Kraljevo",
+          "book": "",
+          "place": "serbia/studenica-zica"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Skull Tower and Nis fortress",
+          "notes": "Mediana villa is a short drive away.",
+          "where": "Nis",
+          "book": "",
+          "place": "serbia/nis-skull-tower"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Belgrade Airport (BEG)",
+          "to": "Belgrade hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Belgrade",
+          "to": "Novi Sad",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Soreg train or intercity bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Novi Sad",
+          "to": "Zlatibor",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Zlatibor",
+          "to": "Nis",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Rental car or private driver",
+          "notes": "Stop at Studenica or Zica if time allows.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Nis",
+          "to": "Belgrade Airport (BEG)",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "serbia-complete-11d",
+      "title": "Complete Serbia in 11 Days",
+      "summary": "Three nights in Belgrade, Novi Sad with Fruska Gora, three nights in the west and two in Nis.",
+      "days": 11,
+      "route": "Belgrade > Novi Sad > Zlatibor > Nis",
+      "arrive": "Belgrade (BEG)",
+      "depart": "Belgrade (BEG)",
+      "countries": [
+        "Serbia"
+      ],
+      "regions": [],
+      "cities": [
+        "Belgrade",
+        "Novi Sad",
+        "Zlatibor",
+        "Nis"
+      ],
+      "imageQuery": "Serbia Zlatibor mountain",
+      "highlights": [
+        "Kalemegdan",
+        "Fruska Gora wine",
+        "Tara",
+        "Mokra Gora",
+        "Studenica",
+        "Nis"
+      ],
+      "destinationKeys": [
+        "serbia",
+        "serbia/belgrade",
+        "serbia/novi-sad",
+        "serbia/zlatibor",
+        "serbia/nis"
+      ],
+      "hero": "serbia/belgrade",
+      "sources": [
+        "Miss Tourist",
+        "The Culture Trip",
+        "Wander-Lush",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "food",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Belgrade",
+          "hotel": "Hotel in Belgrade",
+          "start": 0,
+          "nights": 3,
+          "area": "In Stari Grad near Knez Mihailova, walkable to sights and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Novi Sad",
+          "hotel": "Hotel in Novi Sad",
+          "start": 3,
+          "nights": 2,
+          "area": "In central Novi Sad near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zlatibor",
+          "hotel": "Lodge in Zlatibor",
+          "start": 5,
+          "nights": 3,
+          "area": "In Zlatibor or a lodge near Tara, for the western mountains",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nis",
+          "hotel": "Hotel in Nis",
+          "start": 8,
+          "nights": 2,
+          "area": "In central Nis near the fortress",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Kalemegdan Fortress and Knez Mihailova",
+          "notes": "Finish with dinner in Skadarlija.",
+          "where": "Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-kalemegdan"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "4h",
+          "name": "Zemun riverside and Belgrade nightlife",
+          "notes": "Barge clubs run in summer.",
+          "where": "Zemun, Belgrade",
+          "book": "",
+          "place": "serbia/belgrade-nightlife-zemun"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Petrovaradin Fortress and Novi Sad centre",
+          "notes": "Look for the clock with reversed hands.",
+          "where": "Novi Sad",
+          "book": "",
+          "place": "serbia/novi-sad-petrovaradin"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Sremski Karlovci and Fruska Gora wine",
+          "notes": "Use a driver for the tastings.",
+          "where": "Fruska Gora",
+          "book": "",
+          "place": "serbia/sremski-karlovci-fruska-gora"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Zlatibor gondola, Sirogojno and Stopica Cave",
+          "notes": "Try kajmak and smoked ham.",
+          "where": "Zlatibor",
+          "book": "",
+          "place": "serbia/zlatibor-resort"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Tara National Park and Banjska Stena",
+          "notes": "Best from May to October.",
+          "where": "Tara",
+          "book": "",
+          "place": "serbia/tara-national-park"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Drvengrad and the Sargan Eight railway",
+          "notes": "Check the heritage train timetable.",
+          "where": "Mokra Gora",
+          "book": "",
+          "place": "serbia/mokra-gora-sargan"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Studenica and Zica monasteries",
+          "notes": "Dress modestly.",
+          "where": "Kraljevo",
+          "book": "",
+          "place": "serbia/studenica-zica"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Skull Tower and Nis fortress",
+          "notes": "Mediana villa is a short drive away.",
+          "where": "Nis",
+          "book": "",
+          "place": "serbia/nis-skull-tower"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Belgrade Airport (BEG)",
+          "to": "Belgrade hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Belgrade",
+          "to": "Novi Sad",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Soreg train or intercity bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Novi Sad",
+          "to": "Zlatibor",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Zlatibor",
+          "to": "Nis",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Nis",
+          "to": "Belgrade Airport (BEG)",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "serbia/belgrade-kalemegdan": {
+        "name": "Belgrade Kalemegdan Fortress and Knez Mihailova",
+        "description": "A hilltop fortress at the confluence of the Sava and Danube, and the pedestrian street below.",
+        "details": "Kalemegdan is the heart of Belgrade, with walls, a military museum and views of the rivers meeting. Knez Mihailova is the main pedestrian street with cafes. Skadarlija is the bohemian quarter with traditional restaurants and live music.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "serbia/belgrade-nightlife-zemun": {
+        "name": "Zemun, river barges and Belgrade nightlife",
+        "description": "A Danube-side old town and floating clubs known as splavovi.",
+        "details": "Zemun has Austro-Hungarian streets and the Gardos Tower, with riverside fish restaurants. Belgrade is famous for nightlife, including floating barge clubs on the Sava and Danube in summer. Try rakija and grilled meats.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "serbia/novi-sad-petrovaradin": {
+        "name": "Novi Sad and Petrovaradin Fortress",
+        "description": "The Danube Gibraltar fortress with its clock tower, and a lively city centre.",
+        "details": "Petrovaradin Fortress overlooks Novi Sad with tunnels, a clock tower with hands reversed and artists studios. The EXIT festival is held here in July. The pedestrian centre has cafes and a cathedral. Novi Sad is 90 minutes from Belgrade by fast train.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "serbia/sremski-karlovci-fruska-gora": {
+        "name": "Sremski Karlovci and Fruska Gora wineries",
+        "description": "A baroque town, monasteries on a wooded ridge and local wine cellars.",
+        "details": "Sremski Karlovci has a patriarchal court and Orthodox cathedral. Fruska Gora National Park has monasteries and walking trails above the Danube. Wineries offer tastings of Bermet and Sremski wines. Combine them in a day from Novi Sad.",
+        "interests": [
+          "culture",
+          "food",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "serbia/nis-skull-tower": {
+        "name": "Nis Skull Tower and fortress",
+        "description": "A chilling 19th-century tower built of skulls, and a huge Ottoman fortress.",
+        "details": "The Skull Tower at Nis is a monument made from the skulls of Serbian rebels. The Nis Fortress is a park of old walls and cafes. Mediana, the Roman villa of Constantine, is close by, and Nis is the birthplace of the Roman emperor Constantine the Great.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "serbia/tara-national-park": {
+        "name": "Tara National Park and Banjska Stena",
+        "description": "A forest park above the Drina with a famous viewpoint and the little Drina house on a rock.",
+        "details": "Tara has dense forest of fir and spruce, with the Banjska Stena viewpoint over the Perucac Lake and the canyon of the Drina. The tiny house on a rock in the Drina is a well-known sight. Boat trips run on the river. The park is best from May to October.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "serbia/mokra-gora-sargan": {
+        "name": "Mokra Gora, Drvengrad and the Sargan Eight railway",
+        "description": "A wooden village built by film director Emir Kusturica, and a narrow-gauge railway through mountains.",
+        "details": "Drvengrad (Kustendorf) is a timber village built for film, with a cinema and restaurants. The Sargan Eight railway runs a heritage train through tunnels and a figure-of-eight loop. Trains run in season, so check the timetable.",
+        "interests": [
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "serbia/zlatibor-resort": {
+        "name": "Zlatibor mountain, Sirogojno and Stopica Cave",
+        "description": "A mountain resort with a gondola, a village museum and a cave with a waterfall.",
+        "details": "Zlatibor is a leafy plateau with a gondola, open-air Sirogojno Museum of rural life and Stopica Cave with pools. Cafes sell kajmak and smoked ham. Visitors come in all seasons for hiking and skiing.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "serbia/studenica-zica": {
+        "name": "Studenica and Zica monasteries",
+        "description": "Medieval monasteries with frescoes, a UNESCO site and the red church of Zica.",
+        "details": "Studenica is a 12th-century monastery of white marble with frescoes, a UNESCO site, set in forested hills. Zica is the red Serbian Orthodox seat of the first archbishop. Dress modestly and cover shoulders and knees.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "serbia": {
+        "name": "Serbia",
+        "description": "A Balkan country of Danube fortresses, monasteries, mountain forests and lively nightlife.",
+        "images": []
+      },
+      "serbia/belgrade": {
+        "name": "Belgrade",
+        "description": "The capital at the meeting of two great rivers.",
+        "images": []
+      },
+      "serbia/novi-sad": {
+        "name": "Novi Sad",
+        "description": "A Danube city under a fortress.",
+        "images": []
+      },
+      "serbia/zlatibor": {
+        "name": "Zlatibor",
+        "description": "A mountain resort and base for Tara and Mokra Gora.",
+        "images": []
+      },
+      "serbia/nis": {
+        "name": "Nis",
+        "description": "A southern city of Roman history and the Skull Tower.",
+        "images": []
+      }
+    }
+  }
+}

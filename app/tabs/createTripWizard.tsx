@@ -1,3 +1,4 @@
+import IconText from '../components/IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -2089,7 +2090,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <View style={styles.row}>
               <Text style={styles.sectionTitle}>Lodgings</Text>
               <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openWizardLodgingEditor(null)}>
-                <Text style={styles.buttonText}>+</Text>
+                <IconText style={styles.buttonText}>+</IconText>
               </TouchableOpacity>
             </View>
             <HorizontalTableScroll
@@ -2264,7 +2265,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <View style={styles.row}>
               <Text style={styles.sectionTitle}>Car Rentals</Text>
               <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openWizardCarDialog(null)} testID="wizard-car-add" accessibilityRole="button" accessibilityLabel="Add car rental">
-                <Text style={styles.buttonText}>+</Text>
+                <IconText style={styles.buttonText}>+</IconText>
               </TouchableOpacity>
             </View>
             <HorizontalTableScroll
@@ -2558,6 +2559,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               stepIndex === 0 ? styles.dangerButton : (styles.mapOptionButton ?? styles.button),
             ]}
             onPress={quickStartMode || stepIndex === 0 ? cancelWizard : goBack}
+            accessibilityRole="button"
           >
             <Text style={quickStartMode || stepIndex === 0 ? styles.dangerButtonText : (styles.mapOptionText ?? styles.buttonText)}>
               {quickStartMode || stepIndex === 0 ? 'Cancel' : 'Back'}
@@ -2580,6 +2582,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TouchableOpacity
                 style={[styles.button, themeStyle('tabs_createTripWizard_65', {  }, (theme ?? _styleTheme)), !canMoveNext && themeStyle('tabs_createTripWizard_66', {  }, (theme ?? _styleTheme))]}
                 onPress={goNext}
+                accessibilityRole="button"
+                accessibilityLabel="Next"
                 disabled={!canMoveNext}
               >
                 <Text style={styles.buttonText}>Next</Text>

@@ -1,0 +1,1839 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Explorer Tom, The Gone Goat, Salt in Our Hair and Where Goes Rose itineraries for Albania",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "albania-tirana-berat-5d",
+      "title": "Tirana and Berat in 5 Days",
+      "summary": "A short city and heritage break: bunker museums and cable car in Tirana, then the Ottoman town of Berat.",
+      "days": 5,
+      "route": "Tirana > Berat",
+      "arrive": "Tirana (TIA)",
+      "depart": "Tirana (TIA)",
+      "countries": [
+        "Albania"
+      ],
+      "regions": [
+        "Berat"
+      ],
+      "cities": [
+        "Tirana",
+        "Berat"
+      ],
+      "imageQuery": "Berat Albania white houses",
+      "highlights": [
+        "Skanderbeg Square",
+        "Bunk'Art",
+        "Berat castle",
+        "Osum Canyon"
+      ],
+      "destinationKeys": [
+        "albania",
+        "albania/tirana",
+        "albania/berat"
+      ],
+      "hero": "albania/berat",
+      "sources": [
+        "Explorer Tom",
+        "The Gone Goat",
+        "Salt in Our Hair",
+        "Where Goes Rose",
+        "Miss Tourist"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Tirana",
+          "hotel": "Hotel in Tirana",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Skanderbeg Square or Blloku; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Berat",
+          "hotel": "Hotel in Berat",
+          "start": 2,
+          "nights": 2,
+          "area": "In Mangalem or near the river, a short walk to the old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Skanderbeg Square and central Tirana",
+          "notes": "Cover the square, mosque and museum on foot; Blloku cafes are good for lunch.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/skanderbeg-square"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "3.5h",
+          "name": "Dajti Ekspres cable car and plateau",
+          "notes": "The cable car can close in strong wind.",
+          "where": "Mount Dajti, Tirana",
+          "book": "",
+          "place": "albania/mount-dajti"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bunk'Art 1 museum",
+          "notes": "Bring a jumper; tunnels are cool.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/bunkart"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berat castle quarter and old town",
+          "notes": "Steep cobbles; wear sturdy shoes and finish at the Gorica viewpoint.",
+          "where": "Berat",
+          "book": "",
+          "place": "albania/berat-castle"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tirana Airport (TIA)",
+          "to": "Tirana hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tirana",
+          "to": "Berat",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Berat",
+          "to": "Tirana Airport (TIA)",
+          "time": "08:30",
+          "minutes": 100,
+          "carrier": "Taxi, transfer or rental car",
+          "notes": "Allow plenty of time, because roads are slow.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "albania-highlights-7d",
+      "title": "Albania Highlights: Berat, Gjirokaster and the Coast in 7 Days",
+      "summary": "A compact loop through Berat and Gjirokaster to Saranda and the Riviera at Himare.",
+      "days": 7,
+      "route": "Tirana > Berat > Gjirokaster > Saranda > Himare",
+      "arrive": "Tirana (TIA)",
+      "depart": "Tirana (TIA)",
+      "countries": [
+        "Albania"
+      ],
+      "regions": [
+        "Berat",
+        "Gjirokaster",
+        "Vlore"
+      ],
+      "cities": [
+        "Tirana",
+        "Berat",
+        "Gjirokaster",
+        "Saranda",
+        "Himare"
+      ],
+      "imageQuery": "Gjirokaster stone houses Albania",
+      "highlights": [
+        "Berat",
+        "Gjirokaster",
+        "Butrint",
+        "Blue Eye",
+        "Albanian Riviera"
+      ],
+      "destinationKeys": [
+        "albania",
+        "albania/tirana",
+        "albania/berat",
+        "albania/gjirokaster",
+        "albania/saranda",
+        "albania/himare",
+        "albania/vlore"
+      ],
+      "hero": "albania/saranda",
+      "sources": [
+        "Explorer Tom",
+        "The Gone Goat",
+        "Salt in Our Hair",
+        "Where Goes Rose",
+        "Miss Tourist"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tirana",
+          "hotel": "Hotel in Tirana",
+          "start": 0,
+          "nights": 1,
+          "area": "Near Skanderbeg Square or Blloku; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Berat",
+          "hotel": "Hotel in Berat",
+          "start": 1,
+          "nights": 1,
+          "area": "In Mangalem or near the river, a short walk to the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gjirokaster",
+          "hotel": "Hotel in Gjirokaster",
+          "start": 2,
+          "nights": 1,
+          "area": "In the old town bazaar, a steep walk from the main road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Saranda",
+          "hotel": "Hotel in Saranda",
+          "start": 3,
+          "nights": 2,
+          "area": "On the seafront promenade or on the hillside with sea views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Himare",
+          "hotel": "Hotel in Himare",
+          "start": 5,
+          "nights": 1,
+          "area": "In Himare or Dhermi, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Skanderbeg Square and central Tirana",
+          "notes": "Cover the square, mosque and museum on foot; Blloku cafes are good for lunch.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/skanderbeg-square"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berat castle quarter and old town",
+          "notes": "Steep cobbles; wear sturdy shoes and finish at the Gorica viewpoint.",
+          "where": "Berat",
+          "book": "",
+          "place": "albania/berat-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Gjirokaster old town and castle",
+          "notes": "Wear shoes with grip; visit one of the Ottoman houses.",
+          "where": "Gjirokaster",
+          "book": "",
+          "place": "albania/gjirokaster-castle"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Butrint archaeological park",
+          "notes": "Go early in summer for shade and fewer visitors.",
+          "where": "Butrint",
+          "book": "",
+          "place": "albania/butrint"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Blue Eye spring",
+          "notes": "Go early; swimming is not allowed.",
+          "where": "Near Saranda",
+          "book": "",
+          "place": "albania/blue-eye"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "4h",
+          "name": "Ksamil beaches and islands",
+          "notes": "Go early in peak summer; water is clear and calm.",
+          "where": "Ksamil",
+          "book": "",
+          "place": "albania/ksamil-beaches"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Llogara Pass viewpoint",
+          "notes": "The descent to Dhermi is steep and winding.",
+          "where": "Llogara National Park",
+          "book": "",
+          "place": "albania/llogara-pass"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "5h",
+          "name": "Himare, Dhermi and Gjipe beaches",
+          "notes": "Gjipe is reached by a short hike or boat.",
+          "where": "Albanian Riviera",
+          "book": "",
+          "place": "albania/himara-beaches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tirana Airport (TIA)",
+          "to": "Tirana hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Tirana",
+          "to": "Berat",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Berat",
+          "to": "Gjirokaster",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Gjirokaster",
+          "to": "Saranda",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Saranda",
+          "to": "Himare",
+          "time": "09:30",
+          "minutes": 100,
+          "carrier": "Rental car or private transfer",
+          "notes": "The coast road passes the Llogara Pass viewpoint.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Himare",
+          "to": "Tirana Airport (TIA)",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Taxi, transfer or rental car",
+          "notes": "Allow plenty of time, because roads are slow.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "albania-north-alps-8d",
+      "title": "Albanian Alps, Shkoder and Tirana in 8 Days",
+      "summary": "The north: Shkoder castle, the Koman Lake ferry and Theth valley, ending with the capital.",
+      "days": 8,
+      "route": "Shkoder > Theth > Tirana",
+      "arrive": "Tirana (TIA)",
+      "depart": "Tirana (TIA)",
+      "countries": [
+        "Albania"
+      ],
+      "regions": [
+        "Shkoder"
+      ],
+      "cities": [
+        "Shkoder",
+        "Theth",
+        "Tirana"
+      ],
+      "imageQuery": "Theth Albanian Alps",
+      "highlights": [
+        "Rozafa Castle",
+        "Koman Lake ferry",
+        "Theth valley",
+        "Bunk'Art"
+      ],
+      "destinationKeys": [
+        "albania",
+        "albania/shkoder",
+        "albania/theth",
+        "albania/tirana"
+      ],
+      "hero": "albania/theth",
+      "sources": [
+        "Explorer Tom",
+        "The Gone Goat",
+        "Salt in Our Hair",
+        "Where Goes Rose",
+        "Miss Tourist"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "authentic_local",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Shkoder",
+          "hotel": "Hotel in Shkoder",
+          "start": 0,
+          "nights": 2,
+          "area": "In central Shkoder near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Theth",
+          "hotel": "Guesthouse in Theth",
+          "start": 2,
+          "nights": 2,
+          "area": "In a family guesthouse in the valley, usually with dinner included",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tirana",
+          "hotel": "Hotel in Tirana",
+          "start": 4,
+          "nights": 3,
+          "area": "Near Skanderbeg Square or Blloku; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Rozafa Castle and Shkoder old town",
+          "notes": "The view from the walls takes in the lake and Alps.",
+          "where": "Shkoder",
+          "book": "",
+          "place": "albania/rozafa-castle"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "5h",
+          "name": "Koman Lake ferry",
+          "notes": "Sailings are weather dependent; book ahead.",
+          "where": "Lake Koman",
+          "book": "Yes - book the ferry",
+          "place": "albania/koman-ferry"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Theth valley walk to the Blue Eye and Grunas waterfall",
+          "notes": "Roads are open only in summer; a guide helps on longer treks.",
+          "where": "Theth National Park",
+          "book": "",
+          "place": "albania/theth-hike"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Skanderbeg Square and central Tirana",
+          "notes": "Cover the square, mosque and museum on foot; Blloku cafes are good for lunch.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/skanderbeg-square"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Bunk'Art 1 museum",
+          "notes": "Bring a jumper; tunnels are cool.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/bunkart"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Dajti Ekspres cable car and plateau",
+          "notes": "The cable car can close in strong wind.",
+          "where": "Mount Dajti, Tirana",
+          "book": "",
+          "place": "albania/mount-dajti"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tirana Airport (TIA)",
+          "to": "Shkoder hotel",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Shkoder",
+          "to": "Theth",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "The road ends in a rough mountain track; check conditions with the guesthouse.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Theth",
+          "to": "Tirana",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Rental car or private transfer",
+          "notes": "Long transfer on mountain roads; confirm the onward route in advance.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Tirana hotel area",
+          "to": "Tirana Airport (TIA)",
+          "time": "10:00",
+          "minutes": 25,
+          "carrier": "Taxi, transfer or rental car",
+          "notes": "Allow plenty of time, because roads are slow.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "albania-classic-10d",
+      "title": "Albania Classic Loop in 10 Days",
+      "summary": "Tirana, Berat, Gjirokaster, Saranda and the Riviera, the usual balance of culture and beaches.",
+      "days": 10,
+      "route": "Tirana > Berat > Gjirokaster > Saranda > Himare",
+      "arrive": "Tirana (TIA)",
+      "depart": "Tirana (TIA)",
+      "countries": [
+        "Albania"
+      ],
+      "regions": [
+        "Berat",
+        "Gjirokaster",
+        "Vlore"
+      ],
+      "cities": [
+        "Tirana",
+        "Berat",
+        "Gjirokaster",
+        "Saranda",
+        "Himare"
+      ],
+      "imageQuery": "Albanian Riviera Himare beach",
+      "highlights": [
+        "Skanderbeg Square",
+        "Berat",
+        "Gjirokaster",
+        "Butrint",
+        "Ksamil",
+        "Albanian Riviera"
+      ],
+      "destinationKeys": [
+        "albania",
+        "albania/tirana",
+        "albania/berat",
+        "albania/gjirokaster",
+        "albania/saranda",
+        "albania/himare",
+        "albania/vlore"
+      ],
+      "hero": "albania/berat",
+      "sources": [
+        "Explorer Tom",
+        "The Gone Goat",
+        "Salt in Our Hair",
+        "Where Goes Rose",
+        "Miss Tourist"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "outdoors",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Tirana",
+          "hotel": "Hotel in Tirana",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Skanderbeg Square or Blloku; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Berat",
+          "hotel": "Hotel in Berat",
+          "start": 2,
+          "nights": 2,
+          "area": "In Mangalem or near the river, a short walk to the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gjirokaster",
+          "hotel": "Hotel in Gjirokaster",
+          "start": 4,
+          "nights": 1,
+          "area": "In the old town bazaar, a steep walk from the main road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Saranda",
+          "hotel": "Hotel in Saranda",
+          "start": 5,
+          "nights": 2,
+          "area": "On the seafront promenade or on the hillside with sea views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Himare",
+          "hotel": "Hotel in Himare",
+          "start": 7,
+          "nights": 2,
+          "area": "In Himare or Dhermi, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Skanderbeg Square and central Tirana",
+          "notes": "Cover the square, mosque and museum on foot; Blloku cafes are good for lunch.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/skanderbeg-square"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bunk'Art 1 museum",
+          "notes": "Bring a jumper; tunnels are cool.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/bunkart"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berat castle quarter and old town",
+          "notes": "Steep cobbles; wear sturdy shoes and finish at the Gorica viewpoint.",
+          "where": "Berat",
+          "book": "",
+          "place": "albania/berat-castle"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Gjirokaster old town and castle",
+          "notes": "Wear shoes with grip; visit one of the Ottoman houses.",
+          "where": "Gjirokaster",
+          "book": "",
+          "place": "albania/gjirokaster-castle"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Butrint archaeological park",
+          "notes": "Go early in summer for shade and fewer visitors.",
+          "where": "Butrint",
+          "book": "",
+          "place": "albania/butrint"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Blue Eye spring",
+          "notes": "Go early; swimming is not allowed.",
+          "where": "Near Saranda",
+          "book": "",
+          "place": "albania/blue-eye"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "4h",
+          "name": "Ksamil beaches and islands",
+          "notes": "Go early in peak summer; water is clear and calm.",
+          "where": "Ksamil",
+          "book": "",
+          "place": "albania/ksamil-beaches"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Llogara Pass viewpoint",
+          "notes": "The descent to Dhermi is steep and winding.",
+          "where": "Llogara National Park",
+          "book": "",
+          "place": "albania/llogara-pass"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Himare, Dhermi and Gjipe beaches",
+          "notes": "Gjipe is reached by a short hike or boat.",
+          "where": "Albanian Riviera",
+          "book": "",
+          "place": "albania/himara-beaches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tirana Airport (TIA)",
+          "to": "Tirana hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tirana",
+          "to": "Berat",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Berat",
+          "to": "Gjirokaster",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Gjirokaster",
+          "to": "Saranda",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Saranda",
+          "to": "Himare",
+          "time": "09:30",
+          "minutes": 100,
+          "carrier": "Rental car or private transfer",
+          "notes": "The coast road passes the Llogara Pass viewpoint.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Himare",
+          "to": "Tirana Airport (TIA)",
+          "time": "07:30",
+          "minutes": 240,
+          "carrier": "Taxi, transfer or rental car",
+          "notes": "Allow plenty of time, because roads are slow.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "albania-north-south-12d",
+      "title": "Albania from the Alps to the Riviera in 12 Days",
+      "summary": "Theth and Shkoder in the north, then Tirana, Berat, Gjirokaster, Saranda and Himare.",
+      "days": 12,
+      "route": "Shkoder > Theth > Tirana > Berat > Gjirokaster > Saranda > Himare",
+      "arrive": "Tirana (TIA)",
+      "depart": "Tirana (TIA)",
+      "countries": [
+        "Albania"
+      ],
+      "regions": [
+        "Shkoder",
+        "Berat",
+        "Gjirokaster",
+        "Vlore"
+      ],
+      "cities": [
+        "Shkoder",
+        "Theth",
+        "Tirana",
+        "Berat",
+        "Gjirokaster",
+        "Saranda",
+        "Himare"
+      ],
+      "imageQuery": "Albania Theth mountains",
+      "highlights": [
+        "Theth valley",
+        "Koman ferry",
+        "Berat",
+        "Gjirokaster",
+        "Butrint",
+        "Riviera"
+      ],
+      "destinationKeys": [
+        "albania",
+        "albania/shkoder",
+        "albania/theth",
+        "albania/tirana",
+        "albania/berat",
+        "albania/gjirokaster",
+        "albania/saranda",
+        "albania/himare",
+        "albania/vlore"
+      ],
+      "hero": "albania/theth",
+      "sources": [
+        "Explorer Tom",
+        "The Gone Goat",
+        "Salt in Our Hair",
+        "Where Goes Rose",
+        "Miss Tourist"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "adventure",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Shkoder",
+          "hotel": "Hotel in Shkoder",
+          "start": 0,
+          "nights": 1,
+          "area": "In central Shkoder near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Theth",
+          "hotel": "Guesthouse in Theth",
+          "start": 1,
+          "nights": 2,
+          "area": "In a family guesthouse in the valley, usually with dinner included",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tirana",
+          "hotel": "Hotel in Tirana",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Skanderbeg Square or Blloku; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Berat",
+          "hotel": "Hotel in Berat",
+          "start": 5,
+          "nights": 2,
+          "area": "In Mangalem or near the river, a short walk to the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gjirokaster",
+          "hotel": "Hotel in Gjirokaster",
+          "start": 7,
+          "nights": 1,
+          "area": "In the old town bazaar, a steep walk from the main road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Saranda",
+          "hotel": "Hotel in Saranda",
+          "start": 8,
+          "nights": 2,
+          "area": "On the seafront promenade or on the hillside with sea views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Himare",
+          "hotel": "Hotel in Himare",
+          "start": 10,
+          "nights": 1,
+          "area": "In Himare or Dhermi, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Rozafa Castle and Shkoder old town",
+          "notes": "The view from the walls takes in the lake and Alps.",
+          "where": "Shkoder",
+          "book": "",
+          "place": "albania/rozafa-castle"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "5h",
+          "name": "Koman Lake ferry",
+          "notes": "Sailings are weather dependent; book ahead.",
+          "where": "Lake Koman",
+          "book": "Yes - book the ferry",
+          "place": "albania/koman-ferry"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Theth valley walk to the Blue Eye and Grunas waterfall",
+          "notes": "Roads are open only in summer; a guide helps on longer treks.",
+          "where": "Theth National Park",
+          "book": "",
+          "place": "albania/theth-hike"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Skanderbeg Square and central Tirana",
+          "notes": "Cover the square, mosque and museum on foot; Blloku cafes are good for lunch.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/skanderbeg-square"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bunk'Art 1 museum",
+          "notes": "Bring a jumper; tunnels are cool.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/bunkart"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berat castle quarter and old town",
+          "notes": "Steep cobbles; wear sturdy shoes and finish at the Gorica viewpoint.",
+          "where": "Berat",
+          "book": "",
+          "place": "albania/berat-castle"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Osum Canyon rafting or viewpoint",
+          "notes": "Rafting runs in spring; the viewpoint walk is year-round.",
+          "where": "Osum Canyon",
+          "book": "Yes - rafting needs a local operator",
+          "place": "albania/osum-canyon"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Gjirokaster old town and castle",
+          "notes": "Wear shoes with grip; visit one of the Ottoman houses.",
+          "where": "Gjirokaster",
+          "book": "",
+          "place": "albania/gjirokaster-castle"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Butrint archaeological park",
+          "notes": "Go early in summer for shade and fewer visitors.",
+          "where": "Butrint",
+          "book": "",
+          "place": "albania/butrint"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Blue Eye spring",
+          "notes": "Go early; swimming is not allowed.",
+          "where": "Near Saranda",
+          "book": "",
+          "place": "albania/blue-eye"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "4h",
+          "name": "Ksamil beaches and islands",
+          "notes": "Go early in peak summer; water is clear and calm.",
+          "where": "Ksamil",
+          "book": "",
+          "place": "albania/ksamil-beaches"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Llogara Pass viewpoint",
+          "notes": "The descent to Dhermi is steep and winding.",
+          "where": "Llogara National Park",
+          "book": "",
+          "place": "albania/llogara-pass"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "5h",
+          "name": "Himare, Dhermi and Gjipe beaches",
+          "notes": "Gjipe is reached by a short hike or boat.",
+          "where": "Albanian Riviera",
+          "book": "",
+          "place": "albania/himara-beaches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tirana Airport (TIA)",
+          "to": "Shkoder hotel",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Shkoder",
+          "to": "Theth",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "The road ends in a rough mountain track; check conditions with the guesthouse.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Theth",
+          "to": "Tirana",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Rental car or private transfer",
+          "notes": "Long transfer on mountain roads.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Tirana",
+          "to": "Berat",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Berat",
+          "to": "Gjirokaster",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Gjirokaster",
+          "to": "Saranda",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Saranda",
+          "to": "Himare",
+          "time": "09:30",
+          "minutes": 100,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Himare",
+          "to": "Tirana Airport (TIA)",
+          "time": "07:30",
+          "minutes": 240,
+          "carrier": "Taxi, transfer or rental car",
+          "notes": "Allow plenty of time, because roads are slow.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "albania-complete-14d",
+      "title": "Complete Albania in 14 Days",
+      "summary": "The full country at an easier pace: the Alps, the capital, the Ottoman towns, the south coast and the Riviera.",
+      "days": 14,
+      "route": "Shkoder > Theth > Tirana > Berat > Gjirokaster > Saranda > Himare",
+      "arrive": "Tirana (TIA)",
+      "depart": "Tirana (TIA)",
+      "countries": [
+        "Albania"
+      ],
+      "regions": [
+        "Shkoder",
+        "Berat",
+        "Gjirokaster",
+        "Vlore"
+      ],
+      "cities": [
+        "Shkoder",
+        "Theth",
+        "Tirana",
+        "Berat",
+        "Gjirokaster",
+        "Saranda",
+        "Himare"
+      ],
+      "imageQuery": "Albania Ksamil Butrint coast",
+      "highlights": [
+        "Koman ferry",
+        "Theth",
+        "Berat",
+        "Gjirokaster",
+        "Ksamil",
+        "Llogara Pass"
+      ],
+      "destinationKeys": [
+        "albania",
+        "albania/shkoder",
+        "albania/theth",
+        "albania/tirana",
+        "albania/berat",
+        "albania/gjirokaster",
+        "albania/saranda",
+        "albania/himare",
+        "albania/vlore"
+      ],
+      "hero": "albania/saranda",
+      "sources": [
+        "Explorer Tom",
+        "The Gone Goat",
+        "Salt in Our Hair",
+        "Where Goes Rose",
+        "Miss Tourist"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "culture",
+        "relax",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Shkoder",
+          "hotel": "Hotel in Shkoder",
+          "start": 0,
+          "nights": 1,
+          "area": "In central Shkoder near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Theth",
+          "hotel": "Guesthouse in Theth",
+          "start": 1,
+          "nights": 2,
+          "area": "In a family guesthouse in the valley, usually with dinner included",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tirana",
+          "hotel": "Hotel in Tirana",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Skanderbeg Square or Blloku; most sights are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Berat",
+          "hotel": "Hotel in Berat",
+          "start": 5,
+          "nights": 2,
+          "area": "In Mangalem or near the river, a short walk to the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gjirokaster",
+          "hotel": "Hotel in Gjirokaster",
+          "start": 7,
+          "nights": 1,
+          "area": "In the old town bazaar, a steep walk from the main road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Saranda",
+          "hotel": "Hotel in Saranda",
+          "start": 8,
+          "nights": 3,
+          "area": "On the seafront promenade or on the hillside with sea views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Himare",
+          "hotel": "Hotel in Himare",
+          "start": 11,
+          "nights": 2,
+          "area": "In Himare or Dhermi, close to the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Rozafa Castle and Shkoder old town",
+          "notes": "The view from the walls takes in the lake and Alps.",
+          "where": "Shkoder",
+          "book": "",
+          "place": "albania/rozafa-castle"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "07:30",
+          "duration": "5h",
+          "name": "Koman Lake ferry",
+          "notes": "Sailings are weather dependent; book ahead.",
+          "where": "Lake Koman",
+          "book": "Yes - book the ferry",
+          "place": "albania/koman-ferry"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Theth valley walk to the Blue Eye and Grunas waterfall",
+          "notes": "Roads are open only in summer; a guide helps on longer treks.",
+          "where": "Theth National Park",
+          "book": "",
+          "place": "albania/theth-hike"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Kruja castle, museum and bazaar",
+          "notes": "Easy half-day on the road north.",
+          "where": "Kruja",
+          "book": "",
+          "place": "albania/kruja"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Skanderbeg Square and central Tirana",
+          "notes": "Cover the square, mosque and museum on foot; Blloku cafes are good for lunch.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/skanderbeg-square"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bunk'Art 1 museum",
+          "notes": "Bring a jumper; tunnels are cool.",
+          "where": "Tirana",
+          "book": "",
+          "place": "albania/bunkart"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Berat castle quarter and old town",
+          "notes": "Steep cobbles; wear sturdy shoes and finish at the Gorica viewpoint.",
+          "where": "Berat",
+          "book": "",
+          "place": "albania/berat-castle"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Gjirokaster old town and castle",
+          "notes": "Wear shoes with grip; visit one of the Ottoman houses.",
+          "where": "Gjirokaster",
+          "book": "",
+          "place": "albania/gjirokaster-castle"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Butrint archaeological park",
+          "notes": "Go early in summer for shade and fewer visitors.",
+          "where": "Butrint",
+          "book": "",
+          "place": "albania/butrint"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Blue Eye spring",
+          "notes": "Go early; swimming is not allowed.",
+          "where": "Near Saranda",
+          "book": "",
+          "place": "albania/blue-eye"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "4h",
+          "name": "Ksamil beaches and islands",
+          "notes": "Go early in peak summer; water is clear and calm.",
+          "where": "Ksamil",
+          "book": "",
+          "place": "albania/ksamil-beaches"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1h",
+          "name": "Llogara Pass viewpoint",
+          "notes": "The descent to Dhermi is steep and winding.",
+          "where": "Llogara National Park",
+          "book": "",
+          "place": "albania/llogara-pass"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Himare, Dhermi and Gjipe beaches",
+          "notes": "Gjipe is reached by a short hike or boat.",
+          "where": "Albanian Riviera",
+          "book": "",
+          "place": "albania/himara-beaches"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tirana Airport (TIA)",
+          "to": "Shkoder hotel",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Shkoder",
+          "to": "Theth",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "The road ends in a rough mountain track; check conditions with the guesthouse.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Theth",
+          "to": "Tirana",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Rental car or private transfer",
+          "notes": "Long transfer on mountain roads.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Tirana",
+          "to": "Berat",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Berat",
+          "to": "Gjirokaster",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Gjirokaster",
+          "to": "Saranda",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Saranda",
+          "to": "Himare",
+          "time": "09:30",
+          "minutes": 100,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Himare",
+          "to": "Tirana Airport (TIA)",
+          "time": "07:30",
+          "minutes": 240,
+          "carrier": "Taxi, transfer or rental car",
+          "notes": "Allow plenty of time, because roads are slow.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "albania/skanderbeg-square": {
+        "name": "Skanderbeg Square and Tirana centre",
+        "description": "The colourful main square of Tirana, with the Et hem Bey mosque, clock tower and National History Museum.",
+        "details": "Skanderbeg Square is the heart of the capital, framed by the Et hem Bey Mosque, the Clock Tower and the National History Museum with its mosaic. The nearby Blloku district has cafes and bars that were once off-limits to ordinary Albanians. The centre is flat and walkable, and easy to cover on a half-day walk.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "albania/bunkart": {
+        "name": "Bunk'Art 1 and 2",
+        "description": "Communist-era nuclear bunkers turned into museums on the history of Albania under Hoxha.",
+        "details": "Bunk'Art 1 is a huge bunker on the edge of Tirana built for the leadership, with exhibitions on the dictatorship, and Bunk'Art 2 is in the city centre and covers the police and secret service. Exhibits are in English. Wear a jumper, because the tunnels are cool. Allow two hours for the first.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "albania/mount-dajti": {
+        "name": "Dajti Ekspres cable car",
+        "description": "A cable car above Tirana to a mountain plateau with views and walking trails.",
+        "details": "The Dajti Ekspres climbs from the edge of the city to the top of Mount Dajti, with views of Tirana and the plain. Cafes, short trails and a zip line wait at the top. It is cooler than the city in summer. The cable car can close in strong wind.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "albania/kruja": {
+        "name": "Kruja castle and Skanderbeg Museum",
+        "description": "A hilltop town and castle linked with the national hero, with an old bazaar below.",
+        "details": "Kruja is an hour north of Tirana and was the seat of the medieval hero Skanderbeg. The castle holds the Skanderbeg Museum and an ethnographic museum, and the old bazaar sells crafts and carpets. It makes an easy half-day trip from Tirana or on the way north.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "albania/berat-castle": {
+        "name": "Berat, the town of a thousand windows",
+        "description": "An Ottoman hillside town of white houses stacked up a slope, with a living castle at the top.",
+        "details": "Berat is a UNESCO site with the Mangalem quarter on one bank of the Osum and Gorica on the other. The Kala castle quarter is inhabited and has churches and the Onufri museum. Streets are steep and cobbled, so wear good shoes. The view of the stacked windows from the Gorica side is the classic photograph.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "albania/osum-canyon": {
+        "name": "Osum Canyon",
+        "description": "A river canyon near Berat, explored on a rafting trip or from viewpoints.",
+        "details": "The Osum Canyon is about an hour from Berat and has narrow cliffs up to 100 metres high. Rafting trips run in spring when the river is high, and a viewpoint walk is possible all year. Tours may not run in late summer when the river is low.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "albania/gjirokaster-castle": {
+        "name": "Gjirokaster old town and castle",
+        "description": "The stone city, a UNESCO site of tall Ottoman tower houses under a huge fortress.",
+        "details": "Gjirokaster is known as the city of stone for its slate roofs and fortified houses. The castle above holds a military museum with a captured aircraft, and the underground tunnels date from the Cold War. The Zekate and Skenduli houses can be visited. The old bazaar street has crafts and restaurants. Wear shoes with grip on the cobbles.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "albania/butrint": {
+        "name": "Butrint archaeological park",
+        "description": "A UNESCO site of Greek, Roman and Venetian ruins on a wooded lagoon.",
+        "details": "Butrint stands on a peninsula in a national park near Saranda, with a Greek theatre, Roman baths, a baptistery with a mosaic floor and a Venetian tower. Trails are shaded and mostly flat. Visit early or late in summer to avoid the heat. A small ferry on a cable crosses the channel nearby.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "albania/blue-eye": {
+        "name": "Blue Eye spring",
+        "description": "A deep karst spring of vivid blue water in a forest near Saranda.",
+        "details": "The Blue Eye is a natural spring where cold water wells up from a depth that has never been measured, giving a pupil-like ring of deep blue. A shaded path leads to the viewing platform, and swimming is not allowed. It is busy at midday in summer, so go early. It sits about 25 kilometres from Saranda.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "albania/ksamil-beaches": {
+        "name": "Ksamil beaches and islands",
+        "description": "Turquoise bays with small islands, a short drive from Saranda.",
+        "details": "Ksamil has some of the clearest water on the Albanian Riviera, with sandy and rocky coves and small islands that are swimmable or reached by pedalo. Sunbed prices are high in summer, so go early or in the shoulder season. The water is calm and warm from June.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "albania/llogara-pass": {
+        "name": "Llogara Pass and the Riviera road",
+        "description": "A mountain road through pine forest that drops to the Ionian coast, with a famous viewpoint.",
+        "details": "The Llogara Pass climbs to about 1,000 metres in a national park before descending in switchbacks to Dhermi and the coast. The viewpoint over the Ionian Sea is one of the best in the country. The road is winding, and the descent is steep, so drive with care. A paraglider launch is nearby.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "albania/himara-beaches": {
+        "name": "Himare, Dhermi and Gjipe beaches",
+        "description": "The Riviera coast of pebble beaches and clear water backed by mountains.",
+        "details": "Himare and Dhermi are the resort towns of the central Riviera, and beaches such as Livadhi, Palasa and Gjipe canyon beach lie in between. Gjipe is reached by a short hike or boat. Boats to hidden coves run from Himare in summer. Facilities are modest outside the towns.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "albania/rozafa-castle": {
+        "name": "Shkoder and Rozafa Castle",
+        "description": "A fortress on a hill above the lake, with the legend of a woman walled into its stones.",
+        "details": "Rozafa Castle overlooks the meeting of three rivers and Lake Shkoder, with views toward the Albanian Alps. The legend of Rozafa explains the walls. The town below has a pedestrian street, the Marubi photo museum and a bike-friendly lakeside. Shkoder is the gateway to the north.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "albania/koman-ferry": {
+        "name": "Koman Lake ferry",
+        "description": "A scenic ferry between steep fjord-like walls, linking the north with Valbona and Theth by road.",
+        "details": "The ferry on Lake Koman runs between Koman and Fierze through narrow gorges and takes about two to three hours. It is one of the great journeys in the Balkans. Sailings are limited and weather dependent, so book ahead. The ride can be combined with a van transfer to the Albanian Alps.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "albania/theth-hike": {
+        "name": "Theth valley and Blue Eye of Theth",
+        "description": "A mountain valley of stone houses, waterfalls and trails in the Albanian Alps.",
+        "details": "Theth National Park has the Grunas waterfall, the lock tower and the Blue Eye pool, reached by an easy walk. Guesthouses serve home cooking, and the Valbona-Theth pass is a classic full-day trek in summer. The road in is rough and can be closed by snow outside June to September.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      }
+    },
+    "destinations": {
+      "albania": {
+        "name": "Albania",
+        "description": "A small Balkan country of mountains, Ottoman towns and an unspoiled Ionian coast.",
+        "images": []
+      },
+      "albania/tirana": {
+        "name": "Tirana",
+        "description": "The colourful capital, with bunker museums, cafes and a cable car above.",
+        "images": []
+      },
+      "albania/berat": {
+        "name": "Berat",
+        "description": "The town of a thousand windows, a UNESCO site on the Osum river.",
+        "images": []
+      },
+      "albania/gjirokaster": {
+        "name": "Gjirokaster",
+        "description": "A stone city of tower houses under a hilltop fortress.",
+        "images": []
+      },
+      "albania/saranda": {
+        "name": "Saranda",
+        "description": "A seaside town facing Corfu, the base for Butrint and Ksamil.",
+        "images": []
+      },
+      "albania/himare": {
+        "name": "Himare",
+        "description": "A Riviera town of pebble beaches and clear water.",
+        "images": []
+      },
+      "albania/vlore": {
+        "name": "Vlore",
+        "description": "The coastal county that includes Himare and the Llogara Pass.",
+        "images": []
+      },
+      "albania/shkoder": {
+        "name": "Shkoder",
+        "description": "A lakeside city with a castle and the gateway to the Albanian Alps.",
+        "images": []
+      },
+      "albania/theth": {
+        "name": "Theth",
+        "description": "A remote Alpine village of stone houses, waterfalls and trails.",
+        "images": []
+      }
+    }
+  }
+}

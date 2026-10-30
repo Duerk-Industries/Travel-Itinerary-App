@@ -1,0 +1,1564 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Wild Foot Travel, Born Free Safaris, Rickshaw Travel and KimKim itineraries for Botswana",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "botswana-okavango-5d",
+      "title": "Okavango Delta Safari in 5 Days",
+      "summary": "A night in Maun and three nights in a Delta camp for canoes, walks and game drives.",
+      "days": 5,
+      "route": "Maun > Okavango Delta",
+      "arrive": "Maun (MUB)",
+      "depart": "Maun (MUB)",
+      "countries": [
+        "Botswana"
+      ],
+      "regions": [],
+      "cities": [
+        "Maun",
+        "Okavango Delta"
+      ],
+      "imageQuery": "Okavango Delta mokoro canoe",
+      "highlights": [
+        "Delta scenic flight",
+        "Mokoro trip",
+        "Walking safari",
+        "Game drives"
+      ],
+      "destinationKeys": [
+        "botswana",
+        "botswana/maun",
+        "botswana/okavango-delta"
+      ],
+      "hero": "botswana/okavango-delta",
+      "sources": [
+        "Wild Foot Travel",
+        "Born Free Safaris",
+        "Rickshaw Travel",
+        "KimKim",
+        "Sun Destinations"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Maun",
+          "hotel": "Hotel in Maun",
+          "start": 0,
+          "nights": 1,
+          "area": "On the Thamalakane River or near the airport for easy flight connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Okavango Delta",
+          "hotel": "Camp in the Okavango Delta",
+          "start": 1,
+          "nights": 3,
+          "area": "In a tented camp on a Delta island or a water-based mokoro camp",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Other",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Maun river walk and supplies",
+          "notes": "Pack soft bags for the light aircraft; check weight limits.",
+          "where": "Maun",
+          "book": "",
+          "place": "botswana/maun-gateway"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Delta scenic flight",
+          "notes": "Charter limits on luggage apply; flights depend on weather.",
+          "where": "Okavango Delta",
+          "book": "Yes - book a scenic flight",
+          "place": "botswana/delta-scenic-flight"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Mokoro canoe trip and island walk",
+          "notes": "A poler guides the dugout; the flood peaks June to October.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/mokoro-delta"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Delta game drive",
+          "notes": "Night drives only in private concessions, not in the national parks.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/delta-game-drive"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Mokoro canoe trip and island walk",
+          "notes": "A poler guides the dugout; the flood peaks June to October.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/mokoro-delta"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Delta game drive",
+          "notes": "Night drives only in private concessions, not in the national parks.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/delta-game-drive"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maun Airport (MUB)",
+          "to": "Maun hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Maun hotel",
+          "to": "Maun airstrip",
+          "time": "08:30",
+          "minutes": 20,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Delta airstrip",
+          "to": "Delta camp",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Delta camp",
+          "to": "Delta airstrip",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "The flight returns to Maun airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "botswana-delta-moremi-7d",
+      "title": "Delta and Moremi Safari in 7 Days",
+      "summary": "Water-based Delta camp followed by Moremi for predators.",
+      "days": 7,
+      "route": "Maun > Okavango Delta > Moremi",
+      "arrive": "Maun (MUB)",
+      "depart": "Maun (MUB)",
+      "countries": [
+        "Botswana"
+      ],
+      "regions": [],
+      "cities": [
+        "Maun",
+        "Okavango Delta",
+        "Moremi Game Reserve"
+      ],
+      "imageQuery": "Moremi lion safari Botswana",
+      "highlights": [
+        "Mokoro trip",
+        "Walking safari",
+        "Moremi game drives",
+        "Xakanaxa boat safari"
+      ],
+      "destinationKeys": [
+        "botswana",
+        "botswana/maun",
+        "botswana/okavango-delta",
+        "botswana/moremi-game-reserve"
+      ],
+      "hero": "botswana/moremi-game-reserve",
+      "sources": [
+        "Wild Foot Travel",
+        "Born Free Safaris",
+        "Rickshaw Travel",
+        "KimKim",
+        "Sun Destinations"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Maun",
+          "hotel": "Hotel in Maun",
+          "start": 0,
+          "nights": 1,
+          "area": "On the Thamalakane River or near the airport for easy flight connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Okavango Delta",
+          "hotel": "Camp in the Okavango Delta",
+          "start": 1,
+          "nights": 2,
+          "area": "In a tented camp on a Delta island or a water-based mokoro camp",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Moremi Game Reserve",
+          "hotel": "Camp in Moremi",
+          "start": 3,
+          "nights": 3,
+          "area": "In a camp in or beside the Moremi reserve, usually tented and fenced",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Other",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Maun river walk and supplies",
+          "notes": "Pack soft bags for the light aircraft; check weight limits.",
+          "where": "Maun",
+          "book": "",
+          "place": "botswana/maun-gateway"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Delta scenic flight",
+          "notes": "Charter limits on luggage apply; flights depend on weather.",
+          "where": "Okavango Delta",
+          "book": "Yes - book a scenic flight",
+          "place": "botswana/delta-scenic-flight"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Mokoro canoe trip and island walk",
+          "notes": "A poler guides the dugout; the flood peaks June to October.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/mokoro-delta"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Delta game drive",
+          "notes": "Night drives only in private concessions, not in the national parks.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/delta-game-drive"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Moremi morning game drive",
+          "notes": "Predators are most active at dawn.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Moremi afternoon game drive",
+          "notes": "Return to camp before sunset in the park.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Xakanaxa boat safari",
+          "notes": "Look for skimmers, fish eagles and hippos.",
+          "where": "Xakanaxa",
+          "book": "",
+          "place": "botswana/xakanaxa-boat"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Moremi afternoon game drive",
+          "notes": "Return to camp before sunset in the park.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Moremi morning game drive",
+          "notes": "Predators are most active at dawn.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maun Airport (MUB)",
+          "to": "Maun hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Maun hotel",
+          "to": "Maun airstrip",
+          "time": "08:30",
+          "minutes": 20,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Delta airstrip",
+          "to": "Delta camp",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Delta camp",
+          "to": "Delta airstrip",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Moremi airstrip",
+          "to": "Moremi camp",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Moremi camp",
+          "to": "Moremi airstrip",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "The charter returns to Maun airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "botswana-delta-moremi-savute-chobe-8d",
+      "title": "Botswana Highlights Safari in 8 Days",
+      "summary": "Maun, the Delta, Moremi, Savute and Chobe, finishing at Kasane.",
+      "days": 8,
+      "route": "Maun > Okavango Delta > Moremi > Savute > Kasane",
+      "arrive": "Maun (MUB)",
+      "depart": "Kasane (BBK)",
+      "countries": [
+        "Botswana"
+      ],
+      "regions": [],
+      "cities": [
+        "Maun",
+        "Okavango Delta",
+        "Moremi Game Reserve",
+        "Savute",
+        "Kasane"
+      ],
+      "imageQuery": "Chobe elephants river Botswana",
+      "highlights": [
+        "Delta mokoro",
+        "Moremi",
+        "Savute lions",
+        "Chobe River cruise"
+      ],
+      "destinationKeys": [
+        "botswana",
+        "botswana/maun",
+        "botswana/okavango-delta",
+        "botswana/moremi-game-reserve",
+        "botswana/savute",
+        "botswana/kasane",
+        "botswana/chobe"
+      ],
+      "hero": "botswana/chobe",
+      "sources": [
+        "Wild Foot Travel",
+        "Born Free Safaris",
+        "Rickshaw Travel",
+        "KimKim",
+        "Sun Destinations"
+      ],
+      "pace": "F",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Maun",
+          "hotel": "Hotel in Maun",
+          "start": 0,
+          "nights": 1,
+          "area": "On the Thamalakane River or near the airport for easy flight connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Okavango Delta",
+          "hotel": "Camp in the Okavango Delta",
+          "start": 1,
+          "nights": 2,
+          "area": "In a tented camp on a Delta island or a water-based mokoro camp",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Moremi Game Reserve",
+          "hotel": "Camp in Moremi",
+          "start": 3,
+          "nights": 2,
+          "area": "In a camp in or beside the Moremi reserve, usually tented and fenced",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Savute",
+          "hotel": "Camp at Savute",
+          "start": 5,
+          "nights": 1,
+          "area": "In a bush camp in the Savute area; options are limited and remote",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kasane",
+          "hotel": "Lodge in Kasane",
+          "start": 6,
+          "nights": 1,
+          "area": "In a lodge on the Chobe River near Kasane",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Other",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Maun river walk and supplies",
+          "notes": "Pack soft bags for the light aircraft; check weight limits.",
+          "where": "Maun",
+          "book": "",
+          "place": "botswana/maun-gateway"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Delta scenic flight",
+          "notes": "Charter limits on luggage apply; flights depend on weather.",
+          "where": "Okavango Delta",
+          "book": "Yes - book a scenic flight",
+          "place": "botswana/delta-scenic-flight"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Mokoro canoe trip and island walk",
+          "notes": "A poler guides the dugout; the flood peaks June to October.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/mokoro-delta"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Delta game drive",
+          "notes": "Night drives only in private concessions, not in the national parks.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/delta-game-drive"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Moremi afternoon game drive",
+          "notes": "Return to camp before sunset in the park.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Xakanaxa boat safari",
+          "notes": "Look for skimmers, fish eagles and hippos.",
+          "where": "Xakanaxa",
+          "book": "",
+          "place": "botswana/xakanaxa-boat"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Savute Channel game drive",
+          "notes": "Includes the Gubatsa rock paintings if time allows.",
+          "where": "Savute",
+          "book": "",
+          "place": "botswana/savute-drive"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Savute Channel game drive",
+          "notes": "Includes the Gubatsa rock paintings if time allows.",
+          "where": "Savute",
+          "book": "",
+          "place": "botswana/savute-drive"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Chobe River sunset cruise",
+          "notes": "Elephants gather at the water in the dry season.",
+          "where": "Kasane",
+          "book": "",
+          "place": "botswana/chobe-river-cruise"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maun Airport (MUB)",
+          "to": "Maun hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Maun hotel",
+          "to": "Maun airstrip",
+          "time": "08:30",
+          "minutes": 20,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Delta airstrip",
+          "to": "Delta camp",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Delta camp",
+          "to": "Delta airstrip",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Moremi airstrip",
+          "to": "Moremi camp",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Moremi camp",
+          "to": "Savute camp",
+          "time": "07:30",
+          "minutes": 270,
+          "carrier": "4x4 safari vehicle",
+          "notes": "A long, sandy road; enjoy game on the way.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Savute camp",
+          "to": "Kasane lodge",
+          "time": "10:00",
+          "minutes": 300,
+          "carrier": "4x4 safari vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Kasane lodge",
+          "to": "Kasane Airport (BBK)",
+          "time": "09:00",
+          "minutes": 15,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "botswana-classic-11d",
+      "title": "Classic Botswana Safari in 11 Days",
+      "summary": "The classic loop with longer stays in Moremi, Savute and Chobe.",
+      "days": 11,
+      "route": "Maun > Okavango Delta > Moremi > Savute > Kasane",
+      "arrive": "Maun (MUB)",
+      "depart": "Kasane (BBK)",
+      "countries": [
+        "Botswana"
+      ],
+      "regions": [],
+      "cities": [
+        "Maun",
+        "Okavango Delta",
+        "Moremi Game Reserve",
+        "Savute",
+        "Kasane"
+      ],
+      "imageQuery": "Botswana safari elephants Savute",
+      "highlights": [
+        "Okavango mokoro",
+        "Moremi predators",
+        "Savute channel",
+        "Chobe river",
+        "Delta scenic flight"
+      ],
+      "destinationKeys": [
+        "botswana",
+        "botswana/maun",
+        "botswana/okavango-delta",
+        "botswana/moremi-game-reserve",
+        "botswana/savute",
+        "botswana/kasane",
+        "botswana/chobe"
+      ],
+      "hero": "botswana/okavango-delta",
+      "sources": [
+        "Wild Foot Travel",
+        "Born Free Safaris",
+        "Rickshaw Travel",
+        "KimKim",
+        "Sun Destinations"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Maun",
+          "hotel": "Hotel in Maun",
+          "start": 0,
+          "nights": 1,
+          "area": "On the Thamalakane River or near the airport for easy flight connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Okavango Delta",
+          "hotel": "Camp in the Okavango Delta",
+          "start": 1,
+          "nights": 2,
+          "area": "In a tented camp on a Delta island or a water-based mokoro camp",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Moremi Game Reserve",
+          "hotel": "Camp in Moremi",
+          "start": 3,
+          "nights": 3,
+          "area": "In a camp in or beside the Moremi reserve, usually tented and fenced",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Savute",
+          "hotel": "Camp at Savute",
+          "start": 6,
+          "nights": 2,
+          "area": "In a bush camp in the Savute area; options are limited and remote",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kasane",
+          "hotel": "Lodge in Kasane",
+          "start": 8,
+          "nights": 2,
+          "area": "In a lodge on the Chobe River near Kasane",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Other",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Maun river walk and supplies",
+          "notes": "Pack soft bags for the light aircraft; check weight limits.",
+          "where": "Maun",
+          "book": "",
+          "place": "botswana/maun-gateway"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Delta scenic flight",
+          "notes": "Charter limits on luggage apply; flights depend on weather.",
+          "where": "Okavango Delta",
+          "book": "Yes - book a scenic flight",
+          "place": "botswana/delta-scenic-flight"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Mokoro canoe trip and island walk",
+          "notes": "A poler guides the dugout; the flood peaks June to October.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/mokoro-delta"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Delta game drive",
+          "notes": "Night drives only in private concessions, not in the national parks.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/delta-game-drive"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Moremi afternoon game drive",
+          "notes": "Return to camp before sunset in the park.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Xakanaxa boat safari",
+          "notes": "Look for skimmers, fish eagles and hippos.",
+          "where": "Xakanaxa",
+          "book": "",
+          "place": "botswana/xakanaxa-boat"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Moremi morning game drive",
+          "notes": "Predators are most active at dawn.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Moremi afternoon game drive",
+          "notes": "Return to camp before sunset in the park.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Savute Channel game drive",
+          "notes": "Includes the Gubatsa rock paintings if time allows.",
+          "where": "Savute",
+          "book": "",
+          "place": "botswana/savute-drive"
+        },
+        {
+          "day": 8,
+          "type": "Other",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Kasane village and craft market visit",
+          "notes": "A cultural visit before the afternoon cruise.",
+          "where": "Kasane",
+          "book": "",
+          "place": "botswana/kasane-village"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Chobe River sunset cruise",
+          "notes": "Elephants gather at the water in the dry season.",
+          "where": "Kasane",
+          "book": "",
+          "place": "botswana/chobe-river-cruise"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Chobe riverfront game drive",
+          "notes": "The park fee is paid per vehicle; drives start at dawn.",
+          "where": "Chobe National Park",
+          "book": "",
+          "place": "botswana/chobe-game-drive"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maun Airport (MUB)",
+          "to": "Maun hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Maun hotel",
+          "to": "Maun airstrip",
+          "time": "08:30",
+          "minutes": 20,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Delta airstrip",
+          "to": "Delta camp",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Delta camp",
+          "to": "Delta airstrip",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Moremi airstrip",
+          "to": "Moremi camp",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Moremi camp",
+          "to": "Savute camp",
+          "time": "07:30",
+          "minutes": 270,
+          "carrier": "4x4 safari vehicle",
+          "notes": "A long, sandy road; enjoy game on the way.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Savute camp",
+          "to": "Kasane lodge",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "4x4 safari vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Kasane lodge",
+          "to": "Kasane Airport (BBK)",
+          "time": "09:00",
+          "minutes": 15,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "botswana-extended-13d",
+      "title": "Extended Botswana Safari in 13 Days",
+      "summary": "Three nights in the Delta, three in Moremi, Savute and a slow finish in Chobe.",
+      "days": 13,
+      "route": "Maun > Okavango Delta > Moremi > Savute > Kasane",
+      "arrive": "Maun (MUB)",
+      "depart": "Kasane (BBK)",
+      "countries": [
+        "Botswana"
+      ],
+      "regions": [],
+      "cities": [
+        "Maun",
+        "Okavango Delta",
+        "Moremi Game Reserve",
+        "Savute",
+        "Kasane"
+      ],
+      "imageQuery": "Okavango Delta aerial channels",
+      "highlights": [
+        "Okavango Delta",
+        "Moremi",
+        "Savute",
+        "Chobe cruise",
+        "Chobe game drive"
+      ],
+      "destinationKeys": [
+        "botswana",
+        "botswana/maun",
+        "botswana/okavango-delta",
+        "botswana/moremi-game-reserve",
+        "botswana/savute",
+        "botswana/kasane",
+        "botswana/chobe"
+      ],
+      "hero": "botswana/moremi-game-reserve",
+      "sources": [
+        "Wild Foot Travel",
+        "Born Free Safaris",
+        "Rickshaw Travel",
+        "KimKim",
+        "Sun Destinations"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "photography",
+        "adventure",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Maun",
+          "hotel": "Hotel in Maun",
+          "start": 0,
+          "nights": 1,
+          "area": "On the Thamalakane River or near the airport for easy flight connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Okavango Delta",
+          "hotel": "Camp in the Okavango Delta",
+          "start": 1,
+          "nights": 3,
+          "area": "In a tented camp on a Delta island or a water-based mokoro camp",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Moremi Game Reserve",
+          "hotel": "Camp in Moremi",
+          "start": 4,
+          "nights": 3,
+          "area": "In a camp in or beside the Moremi reserve, usually tented and fenced",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Savute",
+          "hotel": "Camp at Savute",
+          "start": 7,
+          "nights": 2,
+          "area": "In a bush camp in the Savute area; options are limited and remote",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kasane",
+          "hotel": "Lodge in Kasane",
+          "start": 9,
+          "nights": 3,
+          "area": "In a lodge on the Chobe River near Kasane",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Other",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Maun river walk and supplies",
+          "notes": "Pack soft bags for the light aircraft; check weight limits.",
+          "where": "Maun",
+          "book": "",
+          "place": "botswana/maun-gateway"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Delta scenic flight",
+          "notes": "Charter limits on luggage apply; flights depend on weather.",
+          "where": "Okavango Delta",
+          "book": "Yes - book a scenic flight",
+          "place": "botswana/delta-scenic-flight"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Mokoro canoe trip and island walk",
+          "notes": "A poler guides the dugout; the flood peaks June to October.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/mokoro-delta"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Delta game drive",
+          "notes": "Night drives only in private concessions, not in the national parks.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/delta-game-drive"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Mokoro canoe trip and island walk",
+          "notes": "A poler guides the dugout; the flood peaks June to October.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/mokoro-delta"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Delta game drive",
+          "notes": "Night drives only in private concessions, not in the national parks.",
+          "where": "Okavango Delta",
+          "book": "",
+          "place": "botswana/delta-game-drive"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Moremi afternoon game drive",
+          "notes": "Return to camp before sunset in the park.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "07:00",
+          "duration": "3h",
+          "name": "Xakanaxa boat safari",
+          "notes": "Look for skimmers, fish eagles and hippos.",
+          "where": "Xakanaxa",
+          "book": "",
+          "place": "botswana/xakanaxa-boat"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Moremi morning game drive",
+          "notes": "Predators are most active at dawn.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Moremi afternoon game drive",
+          "notes": "Return to camp before sunset in the park.",
+          "where": "Moremi Game Reserve",
+          "book": "",
+          "place": "botswana/moremi-game-drive"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Savute Channel game drive",
+          "notes": "Includes the Gubatsa rock paintings if time allows.",
+          "where": "Savute",
+          "book": "",
+          "place": "botswana/savute-drive"
+        },
+        {
+          "day": 9,
+          "type": "Other",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Kasane village and craft market visit",
+          "notes": "A cultural visit before the afternoon cruise.",
+          "where": "Kasane",
+          "book": "",
+          "place": "botswana/kasane-village"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Chobe River sunset cruise",
+          "notes": "Elephants gather at the water in the dry season.",
+          "where": "Kasane",
+          "book": "",
+          "place": "botswana/chobe-river-cruise"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Chobe riverfront game drive",
+          "notes": "The park fee is paid per vehicle; drives start at dawn.",
+          "where": "Chobe National Park",
+          "book": "",
+          "place": "botswana/chobe-game-drive"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Chobe River sunset cruise",
+          "notes": "Elephants gather at the water in the dry season.",
+          "where": "Kasane",
+          "book": "",
+          "place": "botswana/chobe-river-cruise"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Maun Airport (MUB)",
+          "to": "Maun hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Maun hotel",
+          "to": "Maun airstrip",
+          "time": "08:30",
+          "minutes": 20,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Delta airstrip",
+          "to": "Delta camp",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Delta camp",
+          "to": "Delta airstrip",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Moremi airstrip",
+          "to": "Moremi camp",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Charter light aircraft or transfer",
+          "notes": "Charter flights have strict soft-bag luggage limits.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Moremi camp",
+          "to": "Savute camp",
+          "time": "07:30",
+          "minutes": 270,
+          "carrier": "4x4 safari vehicle",
+          "notes": "A long, sandy road; enjoy game on the way.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Savute camp",
+          "to": "Kasane lodge",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "4x4 safari vehicle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Kasane lodge",
+          "to": "Kasane Airport (BBK)",
+          "time": "09:00",
+          "minutes": 15,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "botswana/maun-gateway": {
+        "name": "Maun, gateway to the Okavango",
+        "description": "A dusty safari hub with airstrips, craft shops and last-minute supplies.",
+        "details": "Maun is the starting point for most trips into the Okavango Delta, with the airport, charter flights and safari outfitters. There is little to see in town, though a river walk, a craft market and a cafe stop make a pleasant first evening. Check luggage rules for light aircraft, as soft bags with weight limits are required.",
+        "interests": [
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "botswana/delta-scenic-flight": {
+        "name": "Okavango Delta scenic flight",
+        "description": "A light-aircraft flight over channels, islands and elephant herds in the world largest inland delta.",
+        "details": "The flight from Maun to a camp is a highlight in itself, with the Delta spread below in channels, lagoons and palm islands, often with elephants, hippos and buffalo visible. A dedicated scenic flight of about an hour can be added. Weight limits for luggage apply, and seats are limited.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "botswana/mokoro-delta": {
+        "name": "Mokoro and walking safari in the Delta",
+        "description": "A silent glide through reed channels in a dugout canoe, with guided walks on the islands.",
+        "details": "A poler stands at the back of the mokoro and moves through the lily-covered channels, giving an up-close view of birds, frogs and the odd hippo from water level. Guided bush walks on the islands reveal the smaller wildlife and tracks. The best months are June to October, when the flood waters peak.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "botswana/delta-game-drive": {
+        "name": "Delta island game drive and night drive",
+        "description": "Open-vehicle drives on the Delta islands, including after dark in some camps.",
+        "details": "Camps on larger islands offer game drives for lions, leopards, wild dogs and plains game. Night drives are possible in some private concessions, but not in national parks. Drives start at dawn and late afternoon, when animals are most active.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "botswana/moremi-game-drive": {
+        "name": "Moremi Game Reserve game drives",
+        "description": "Some of the best wildlife viewing in Africa, with lions, wild dogs, leopards and elephants in a mosaic of floodplains and woodland.",
+        "details": "Moremi covers the eastern side of the Delta and is known for predators. Morning and afternoon drives in an open vehicle with a guide cover the lagoons at Third Bridge and Xakanaxa. The dry season from June to October is best for game concentrated around water, while the green season brings birds and young animals.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "botswana/xakanaxa-boat": {
+        "name": "Xakanaxa boat safari",
+        "description": "A boat trip through lagoons and papyrus channels with hippos, crocodiles and a huge variety of birds.",
+        "details": "The Xakanaxa lagoon is a birder paradise, with African skimmers, fish eagles and herons. A boat trip on the Khwai river and lagoon is a quiet way to view elephants drinking at the water. It is usually a morning or afternoon activity.",
+        "interests": [
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "botswana/savute-drive": {
+        "name": "Savute Channel and lion country",
+        "description": "A dry channel that sometimes flows, drawing lions, hyenas and elephants in Chobe National Park.",
+        "details": "Savute is known for its predators, including lion prides that hunt elephants and zebra, and ancient San rock paintings at Gubatsa Hills. The marsh and channel attract game in the dry season. The roads are sandy, so drives are with a guide in a 4x4. Remote camps give a wild atmosphere.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "botswana/chobe-river-cruise": {
+        "name": "Chobe River boat cruise",
+        "description": "A boat trip along the river border with Namibia, with large herds of elephants, buffalo and hippos.",
+        "details": "The Chobe River floodplain holds one of the largest elephant populations in Africa, and in the dry season herds come to drink and swim. Boat cruises put you at water level, with crocodiles, hippos and many birds. Sunset cruises are the most atmospheric.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "botswana/chobe-game-drive": {
+        "name": "Chobe riverfront game drive",
+        "description": "A game drive along the river road of Chobe National Park, home to elephants, lions and giraffe.",
+        "details": "Chobe National Park has a riverfront with huge numbers of elephants, plus lions, buffalo and sable antelope. Drives leave from Kasane at dawn, and the dry season is best. Combine with a river cruise for different perspectives. Entry to the park is paid per vehicle.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "botswana/kasane-village": {
+        "name": "Kasane and village visit",
+        "description": "The town on the Chobe River, with a craft market and cultural visit.",
+        "details": "Kasane is the base for Chobe and is close to the borders of Namibia, Zambia and Zimbabwe. Cultural tours take in a local village, a market and a school. A day trip to Victoria Falls on the Zimbabwe side is a popular extra, with a cross-border transfer.",
+        "interests": [
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "botswana": {
+        "name": "Botswana",
+        "description": "A safari country of the Okavango Delta, Chobe elephants and wild Kalahari landscapes.",
+        "images": []
+      },
+      "botswana/maun": {
+        "name": "Maun",
+        "description": "The safari gateway on the edge of the Okavango Delta.",
+        "images": []
+      },
+      "botswana/okavango-delta": {
+        "name": "Okavango Delta",
+        "description": "A vast inland delta of channels and islands, best explored by mokoro and walking safari.",
+        "images": []
+      },
+      "botswana/moremi-game-reserve": {
+        "name": "Moremi Game Reserve",
+        "description": "A reserve on the eastern Delta known for lions, wild dogs and leopards.",
+        "images": []
+      },
+      "botswana/savute": {
+        "name": "Savute",
+        "description": "A remote part of Chobe National Park famed for its predators.",
+        "images": []
+      },
+      "botswana/kasane": {
+        "name": "Kasane",
+        "description": "The gateway to Chobe and its river full of elephants.",
+        "images": []
+      },
+      "botswana/chobe": {
+        "name": "Chobe National Park",
+        "description": "Botswana elephant stronghold on the river border with Namibia.",
+        "images": []
+      }
+    }
+  }
+}

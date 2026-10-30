@@ -1,3 +1,4 @@
+import IconText from '../IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../../theme/ThemeContext';
@@ -279,7 +280,7 @@ export const TripTemplatesSection: React.FC<Props> = ({ backendUrl, headers, the
                   style={s.groupTitleButton}
                   onPress={() => setCollapsed((prev) => ({ ...prev, [destination]: open }))}
                 >
-                  <Text style={s.groupTitle}>{open ? '▾' : '▸'} {destination}</Text>
+                  <IconText style={s.groupTitle}>{open ? '▾' : '▸'} {destination}</IconText>
                   <Text style={s.mutedText}>{items.length} template{items.length === 1 ? '' : 's'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity

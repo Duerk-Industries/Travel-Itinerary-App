@@ -26,6 +26,7 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import type { ActionDispatchContext } from '../utils/assistantTools';
 import type { Tour } from '../tabs/activities';
 import AssistantChatButton from './AssistantChatButton';
+import { detectAssistantModelCapability } from '../utils/assistantLocalModel';
 
 const AssistantChatPanel = lazy(() => import('./AssistantChatPanel'));
 
@@ -59,12 +60,15 @@ const AssistantChat: React.FC<Props> = ({ theme: _providedTheme, userId, actions
   // first open, exactly as before.
   const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [capability] = useState(detectAssistantModelCapability);
 
   const handleOpen = () => {
     setHasOpenedOnce(true);
     setVisible(true);
   };
   const handleClose = () => setVisible(false);
+
+  if (!capability.supported) return null;
 
   return (
     <>

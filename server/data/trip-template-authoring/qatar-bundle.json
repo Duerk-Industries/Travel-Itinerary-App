@@ -1,0 +1,694 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Agoda Travel Guides, Banyan Tree, Lonely Planet and Magpie Travel itineraries for Qatar",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "qatar-doha-3d",
+      "title": "Doha in 3 Days",
+      "summary": "Museums, the souq and a desert evening.",
+      "days": 3,
+      "route": "Doha",
+      "arrive": "Doha (DOH)",
+      "depart": "Doha (DOH)",
+      "countries": [
+        "Qatar"
+      ],
+      "regions": [],
+      "cities": [
+        "Doha"
+      ],
+      "imageQuery": "Doha skyline Museum Islamic Art",
+      "highlights": [
+        "Museum of Islamic Art",
+        "Souq Waqif",
+        "Katara"
+      ],
+      "destinationKeys": [
+        "qatar",
+        "qatar/doha"
+      ],
+      "hero": "qatar/doha",
+      "sources": [
+        "Agoda Travel Guides",
+        "Banyan Tree",
+        "Lonely Planet",
+        "Zetsim",
+        "Magpie Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Doha",
+          "hotel": "Hotel in Doha",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Souq Waqif or on the West Bay Corniche",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Souq Waqif evening",
+          "notes": "Most atmospheric after sunset.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/souq-waqif"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Museum of Islamic Art and Corniche walk",
+          "notes": "Closed on Tuesdays.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/museum-islamic-art"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "4h",
+          "name": "Katara Cultural Village and The Pearl",
+          "notes": "Cooler in the evening.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/katara-pearl"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hamad International Airport (DOH)",
+          "to": "Doha hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Doha hotel",
+          "to": "Hamad International Airport (DOH)",
+          "time": "12:00",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "qatar-doha-4d",
+      "title": "Doha and the Desert in 4 Days",
+      "summary": "City culture and an Inland Sea desert safari.",
+      "days": 4,
+      "route": "Doha",
+      "arrive": "Doha (DOH)",
+      "depart": "Doha (DOH)",
+      "countries": [
+        "Qatar"
+      ],
+      "regions": [],
+      "cities": [
+        "Doha"
+      ],
+      "imageQuery": "Inland Sea Qatar dunes",
+      "highlights": [
+        "Museum of Islamic Art",
+        "National Museum",
+        "Souq Waqif",
+        "Desert safari"
+      ],
+      "destinationKeys": [
+        "qatar",
+        "qatar/doha"
+      ],
+      "hero": "qatar/doha",
+      "sources": [
+        "Agoda Travel Guides",
+        "Banyan Tree",
+        "Lonely Planet",
+        "Zetsim",
+        "Magpie Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Doha",
+          "hotel": "Hotel in Doha",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Souq Waqif or on the West Bay Corniche",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Museum of Islamic Art and Corniche walk",
+          "notes": "Closed on Tuesdays.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/museum-islamic-art"
+        },
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Souq Waqif evening",
+          "notes": "Most atmospheric after sunset.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/souq-waqif"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "13:30",
+          "duration": "6h",
+          "name": "Inland Sea safari: dunes, camels and sunset",
+          "notes": "Go with a licensed operator.",
+          "where": "Khor Al Adaid",
+          "book": "Yes - book the desert safari",
+          "place": "qatar/inland-sea-safari"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "National Museum of Qatar",
+          "notes": "Allow time for the film rooms.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/national-museum"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Katara Cultural Village and The Pearl",
+          "notes": "Cooler in the evening.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/katara-pearl"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hamad International Airport (DOH)",
+          "to": "Doha hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Doha hotel",
+          "to": "Hamad International Airport (DOH)",
+          "time": "12:00",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "qatar-doha-inland-sea-5d",
+      "title": "Doha and an Inland Sea Camp in 5 Days",
+      "summary": "Three nights in Doha and a night under the stars at the Inland Sea.",
+      "days": 5,
+      "route": "Doha > Inland Sea",
+      "arrive": "Doha (DOH)",
+      "depart": "Doha (DOH)",
+      "countries": [
+        "Qatar"
+      ],
+      "regions": [],
+      "cities": [
+        "Doha",
+        "Inland Sea"
+      ],
+      "imageQuery": "Khor Al Adaid Inland Sea camp",
+      "highlights": [
+        "Museum of Islamic Art",
+        "Souq Waqif",
+        "Inland Sea camp",
+        "Dune bashing"
+      ],
+      "destinationKeys": [
+        "qatar",
+        "qatar/doha",
+        "qatar/inland-sea"
+      ],
+      "hero": "qatar/inland-sea",
+      "sources": [
+        "Agoda Travel Guides",
+        "Banyan Tree",
+        "Lonely Planet",
+        "Zetsim",
+        "Magpie Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "culture",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Doha",
+          "hotel": "Hotel in Doha",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Souq Waqif or on the West Bay Corniche",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Inland Sea",
+          "hotel": "Camp at the Inland Sea",
+          "start": 3,
+          "nights": 1,
+          "area": "In a desert camp at the Inland Sea, with simple tents and dune views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Souq Waqif evening",
+          "notes": "Most atmospheric after sunset.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/souq-waqif"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Museum of Islamic Art and Corniche walk",
+          "notes": "Closed on Tuesdays.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/museum-islamic-art"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "National Museum of Qatar",
+          "notes": "Allow time for the film rooms.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/national-museum"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "4h",
+          "name": "Inland Sea safari: dunes, camels and sunset",
+          "notes": "Go with a licensed operator.",
+          "where": "Khor Al Adaid",
+          "book": "Yes - book the desert safari",
+          "place": "qatar/inland-sea-safari"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hamad International Airport (DOH)",
+          "to": "Doha hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Doha",
+          "to": "Inland Sea camp",
+          "time": "14:00",
+          "minutes": 120,
+          "carrier": "4x4 with desert driver",
+          "notes": "The dunes need a 4x4 and experienced driver.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Inland Sea camp",
+          "to": "Hamad International Airport (DOH)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "4x4 with desert driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "qatar-complete-7d",
+      "title": "Complete Qatar in 7 Days",
+      "summary": "Doha museums and souq, the north-west heritage drive and a desert camp.",
+      "days": 7,
+      "route": "Doha > Inland Sea",
+      "arrive": "Doha (DOH)",
+      "depart": "Doha (DOH)",
+      "countries": [
+        "Qatar"
+      ],
+      "regions": [],
+      "cities": [
+        "Doha",
+        "Inland Sea"
+      ],
+      "imageQuery": "Al Zubarah fort Qatar",
+      "highlights": [
+        "National Museum",
+        "Souq Waqif",
+        "Al Zubarah",
+        "Mangroves",
+        "Inland Sea"
+      ],
+      "destinationKeys": [
+        "qatar",
+        "qatar/doha",
+        "qatar/inland-sea"
+      ],
+      "hero": "qatar/doha",
+      "sources": [
+        "Agoda Travel Guides",
+        "Banyan Tree",
+        "Lonely Planet",
+        "Zetsim",
+        "Magpie Travel"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Doha",
+          "hotel": "Hotel in Doha",
+          "start": 0,
+          "nights": 5,
+          "area": "Near Souq Waqif or on the West Bay Corniche",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Inland Sea",
+          "hotel": "Camp at the Inland Sea",
+          "start": 5,
+          "nights": 1,
+          "area": "In a desert camp at the Inland Sea, with simple tents and dune views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "17:30",
+          "duration": "3h",
+          "name": "Souq Waqif evening",
+          "notes": "Most atmospheric after sunset.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/souq-waqif"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Museum of Islamic Art and Corniche walk",
+          "notes": "Closed on Tuesdays.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/museum-islamic-art"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "National Museum of Qatar",
+          "notes": "Allow time for the film rooms.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/national-museum"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Katara Cultural Village and The Pearl",
+          "notes": "Cooler in the evening.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/katara-pearl"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "07:30",
+          "duration": "3h",
+          "name": "Al Thakira mangroves kayak",
+          "notes": "Calmest in the early morning; bring sun protection.",
+          "where": "Al Thakira",
+          "book": "Yes - book a kayak tour",
+          "place": "qatar/mangroves-purple"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "11:30",
+          "duration": "4h",
+          "name": "Al Zubarah fort and archaeological site",
+          "notes": "Combine with the Al Thakira mangroves.",
+          "where": "Al Zubarah",
+          "book": "",
+          "place": "qatar/al-zubarah"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Falcon souq and spice lanes",
+          "notes": "Most atmospheric after sunset.",
+          "where": "Doha",
+          "book": "",
+          "place": "qatar/souq-waqif"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "4h",
+          "name": "Inland Sea safari: dunes, camels and sunset",
+          "notes": "Go with a licensed operator.",
+          "where": "Khor Al Adaid",
+          "book": "Yes - book the desert safari",
+          "place": "qatar/inland-sea-safari"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hamad International Airport (DOH)",
+          "to": "Doha hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Doha",
+          "to": "Inland Sea camp",
+          "time": "14:00",
+          "minutes": 120,
+          "carrier": "4x4 with desert driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Inland Sea camp",
+          "to": "Hamad International Airport (DOH)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "4x4 with desert driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "qatar/museum-islamic-art": {
+        "name": "Museum of Islamic Art and the Corniche",
+        "description": "The I.M. Pei museum on its own island, with the Doha skyline across the bay.",
+        "details": "The Museum of Islamic Art has a collection spanning 1,400 years, including manuscripts, ceramics and metalwork, in a striking limestone building. The Corniche waterfront promenade offers skyline views and a walk to the dhow harbour. It is closed on Tuesdays.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "qatar/souq-waqif": {
+        "name": "Souq Waqif",
+        "description": "A rebuilt traditional market of spices, textiles, falcons and Arabic coffee.",
+        "details": "Souq Waqif is Doha heritage market, with narrow lanes selling spices, perfume and souvenirs, a falcon souq and a falcon hospital. Evening is the most atmospheric, with shisha cafes and Qatari food. Dress modestly, and shops close in the early afternoon.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "qatar/national-museum": {
+        "name": "National Museum of Qatar",
+        "description": "A desert-rose building by Jean Nouvel telling the story of Qatar from pearls to gas.",
+        "details": "The National Museum is built of interlocking discs like a desert rose, with galleries on nature, pearl diving and modern Qatar. The immersive film rooms are a highlight. Allow three hours. The museum is open every day except Tuesday in some seasons.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "qatar/katara-pearl": {
+        "name": "Katara Cultural Village and The Pearl",
+        "description": "A cultural district with an amphitheatre and beach, and a marina island with fine dining.",
+        "details": "Katara has galleries, a Golden Mosque and an amphitheatre on the sea. The Pearl-Qatar is an artificial island with a marina and Italian-style canals. Evenings are pleasant, as the day heat eases. Both are easy to reach by taxi or the metro.",
+        "interests": [
+          "relax",
+          "food",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "qatar/inland-sea-safari": {
+        "name": "Inland Sea desert safari",
+        "description": "A 4x4 trip over dunes to Khor Al Adaid, where the sea reaches into the desert.",
+        "details": "The Inland Sea is a tidal lagoon surrounded by dunes near the Saudi border, reached by 4x4. Tours include dune bashing, sandboarding, camel rides and a sunset camp. Operators are essential, as navigating the dunes needs expertise. It is hot in summer, so go in winter.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "qatar/al-zubarah": {
+        "name": "Al Zubarah Fort and archaeological site",
+        "description": "A UNESCO pearling and trading town of the 18th century in the north-west, with a fort.",
+        "details": "Al Zubarah was a prosperous pearl and trade town in the 18th and 19th centuries. The fort, built in 1938, houses a small museum, and the ruins spread over the desert. The trip passes Ras Laffan and mangroves at Al Thakira. Allow half a day.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "qatar/mangroves-purple": {
+        "name": "Al Thakira mangroves kayaking",
+        "description": "A quiet kayak trip through mangroves north of Doha, with birds and desert views.",
+        "details": "The Al Thakira mangroves are a calm kayaking spot an hour north of Doha, with herons and flamingos. Tours include paddling through channels. Go in the cooler months and bring sun protection.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "qatar": {
+        "name": "Qatar",
+        "description": "A desert nation with a skyline capital, heritage souq and an inland sea.",
+        "images": []
+      },
+      "qatar/doha": {
+        "name": "Doha",
+        "description": "The capital, on a curving bay with museums and a souq.",
+        "images": []
+      },
+      "qatar/inland-sea": {
+        "name": "Inland Sea",
+        "description": "A dune-ringed tidal lagoon near the Saudi border.",
+        "images": []
+      }
+    }
+  }
+}

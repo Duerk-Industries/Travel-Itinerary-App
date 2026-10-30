@@ -1,3 +1,5 @@
+import IconText from '../components/IconText';
+import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -437,6 +439,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const { isPhoneLayout } = useLayoutBreakpoints();
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
@@ -1007,7 +1010,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         <Text style={styles.sectionTitle}>Activities</Text>
         {!readOnly ? (
           <View style={themeStyle('tabs_activities_4', {  }, (theme ?? _styleTheme))}>
-            {featureGridEditing && !tableEditing ? (
+            {featureGridEditing && !tableEditing && !isPhoneLayout ? (
               <TouchableOpacity style={styles.button} onPress={beginGridEdit} testID="activity-table-edit">
                 <Text style={styles.buttonText}>Edit table</Text>
               </TouchableOpacity>
@@ -1038,7 +1041,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                   accessibilityLabel="Undo activity table change"
                   testID="activity-table-undo"
                 >
-                  <Text style={styles.buttonText}>↶</Text>
+                  <IconText style={styles.buttonText}>↶</IconText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={gridSaving || gridRedo.length === 0}
@@ -1047,13 +1050,13 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                   accessibilityLabel="Redo activity table change"
                   testID="activity-table-redo"
                 >
-                  <Text style={styles.buttonText}>↷</Text>
+                  <IconText style={styles.buttonText}>↷</IconText>
                 </TouchableOpacity>
               </>
             ) : null}
-            {!tableEditing ? (
+            {!tableEditing && (!isPhoneLayout || mode === 'wizard') ? (
               <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()} testID="activity-add">
-                <Text style={styles.buttonText}>+</Text>
+                <IconText style={styles.buttonText}>+</IconText>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -1109,7 +1112,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 accessibilityLabel={`Sort by ${col.label}`}
                 testID={`activity-sort-${col.key}`}
               >
-                <Text style={styles.headerText}>{`${col.label}${activitySort.key === col.key ? (activitySort.direction === 'asc' ? ' ▲' : ' ▼') : ''}`}</Text>
+                <IconText style={styles.headerText}>{`${col.label}${activitySort.key === col.key ? (activitySort.direction === 'asc' ? ' ▲' : ' ▼') : ''}`}</IconText>
               </TouchableOpacity>
             ))}
           </View>
@@ -1239,10 +1242,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                     <View style={styles.actionCell}>
                       <Text style={styles.cellText}>{formatNetVotes(selectedTour.netRating ?? 0)}</Text>
                       <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateTour(selectedTour.id, 1)}>
-                        <Text style={styles.buttonText}>👍</Text>
+                        <IconText style={styles.buttonText}>👍</IconText>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateTour(selectedTour.id, -1)}>
-                        <Text style={styles.dangerButtonText}>👎</Text>
+                        <IconText style={styles.dangerButtonText}>👎</IconText>
                       </TouchableOpacity>
                     </View>
                   ) : normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (

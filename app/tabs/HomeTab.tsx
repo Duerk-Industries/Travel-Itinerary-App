@@ -1,3 +1,4 @@
+import IconText from '../components/IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -255,7 +256,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
         </Pressable>
 
         <View style={styles.homeNavList}>
-          <Pressable accessibilityRole="link" testID="home-all-trips" onPress={() => onNavigate('all-trips')} style={styles.homeNavButton}>
+          <Pressable accessibilityRole="button" testID="home-all-trips" onPress={() => onNavigate('all-trips')} style={styles.homeNavButton}>
             <View style={styles.homeNavIcon}><Icon name="trips" color={navIconColor} size={22} /></View>
             <Text style={styles.homeNavLabel}>Change or Create Trip</Text>
             <Text style={styles.homeNavArrow}>{'>'}</Text>
@@ -290,7 +291,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                   onPress={() => setShowTripPicker(false)}
                   style={({ pressed }: { pressed: boolean }) => [styles.homeModalClose, pressed && styles.homeModalClosePressed]}
                 >
-                  <Text style={styles.homeModalCloseText}>✕</Text>
+                  <IconText style={styles.homeModalCloseText}>✕</IconText>
                 </Pressable>
               </View>
               <ScrollView
@@ -334,7 +335,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                           onDeleteTrip({ id: trip.id, name: trip.name });
                         }}
                       >
-                        <Text style={styles.homeModalRowDeleteText}>🗑 Delete</Text>
+                        <IconText style={styles.homeModalRowDeleteText}>🗑 Delete</IconText>
                       </Pressable>
                     ) : null}
                   </Pressable>
