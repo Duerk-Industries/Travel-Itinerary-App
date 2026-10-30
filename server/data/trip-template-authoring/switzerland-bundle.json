@@ -1,0 +1,1205 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Trainline, Eurail, MySwitzerland and Swiss Travel Centre itineraries for Switzerland",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "switzerland-lucerne-interlaken-5d",
+      "title": "Lucerne and Interlaken in 5 Days",
+      "summary": "Lakes, Pilatus and the Bernese Oberland.",
+      "days": 5,
+      "route": "Lucerne > Interlaken",
+      "arrive": "Zurich (ZRH)",
+      "depart": "Zurich (ZRH)",
+      "countries": [
+        "Switzerland"
+      ],
+      "regions": [],
+      "cities": [
+        "Lucerne",
+        "Interlaken"
+      ],
+      "imageQuery": "Lucerne Chapel Bridge Switzerland",
+      "highlights": [
+        "Chapel Bridge",
+        "Pilatus",
+        "Lauterbrunnen",
+        "Jungfraujoch"
+      ],
+      "destinationKeys": [
+        "switzerland",
+        "switzerland/lucerne",
+        "switzerland/interlaken"
+      ],
+      "hero": "switzerland/interlaken",
+      "sources": [
+        "Trainline",
+        "Eurail",
+        "MySwitzerland",
+        "Stc",
+        "TourRadar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Lucerne",
+          "hotel": "Hotel in Lucerne",
+          "start": 0,
+          "nights": 2,
+          "area": "In the old town of Lucerne near the Chapel Bridge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Interlaken",
+          "hotel": "Hotel in Interlaken",
+          "start": 2,
+          "nights": 2,
+          "area": "In Interlaken or a village such as Wengen or Grindelwald",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chapel Bridge and Mount Pilatus",
+          "notes": "Take the cogwheel up and the cable car down.",
+          "where": "Lucerne",
+          "book": "",
+          "place": "switzerland/lucerne-chapel-bridge"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Lauterbrunnen valley and Trummelbach Falls",
+          "notes": "Visit Wengen or Murren by cable car.",
+          "where": "Lauterbrunnen",
+          "book": "",
+          "place": "switzerland/interlaken-lauterbrunnen"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Jungfraujoch Top of Europe",
+          "notes": "Choose a clear morning; take warm clothes.",
+          "where": "Jungfraujoch",
+          "book": "Yes - book early trains",
+          "place": "switzerland/jungfraujoch"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Zurich Airport (ZRH)",
+          "to": "Lucerne hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "SBB train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Lucerne",
+          "to": "Interlaken",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "SBB train",
+          "notes": "The scenic Lucerne-Interlaken Express.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Interlaken",
+          "to": "Zurich Airport (ZRH)",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "SBB train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "switzerland-zurich-lucerne-interlaken-zermatt-7d",
+      "title": "Switzerland Highlights in 7 Days",
+      "summary": "Zurich, Lucerne, Interlaken and Zermatt.",
+      "days": 7,
+      "route": "Zurich > Lucerne > Interlaken > Zermatt",
+      "arrive": "Zurich (ZRH)",
+      "depart": "Zurich (ZRH)",
+      "countries": [
+        "Switzerland"
+      ],
+      "regions": [],
+      "cities": [
+        "Zurich",
+        "Lucerne",
+        "Interlaken",
+        "Zermatt"
+      ],
+      "imageQuery": "Matterhorn Zermatt Switzerland",
+      "highlights": [
+        "Chapel Bridge",
+        "Jungfraujoch",
+        "Matterhorn",
+        "Gornergrat"
+      ],
+      "destinationKeys": [
+        "switzerland",
+        "switzerland/zurich",
+        "switzerland/lucerne",
+        "switzerland/interlaken",
+        "switzerland/zermatt"
+      ],
+      "hero": "switzerland/zermatt",
+      "sources": [
+        "Trainline",
+        "Eurail",
+        "MySwitzerland",
+        "Stc",
+        "TourRadar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Zurich",
+          "hotel": "Hotel in Zurich",
+          "start": 0,
+          "nights": 1,
+          "area": "Near the main station, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lucerne",
+          "hotel": "Hotel in Lucerne",
+          "start": 1,
+          "nights": 2,
+          "area": "In the old town of Lucerne near the Chapel Bridge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Interlaken",
+          "hotel": "Hotel in Interlaken",
+          "start": 3,
+          "nights": 2,
+          "area": "In Interlaken or a village such as Wengen or Grindelwald",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zermatt",
+          "hotel": "Hotel in Zermatt",
+          "start": 5,
+          "nights": 1,
+          "area": "In Zermatt village, with a Matterhorn view if possible",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Zurich old town and lakeside",
+          "notes": "Cross the Limmat on foot; swim in summer.",
+          "where": "Zurich",
+          "book": "",
+          "place": "switzerland/zurich-old-town"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chapel Bridge and Mount Pilatus",
+          "notes": "Take the cogwheel up and the cable car down.",
+          "where": "Lucerne",
+          "book": "",
+          "place": "switzerland/lucerne-chapel-bridge"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Lauterbrunnen valley and Trummelbach Falls",
+          "notes": "Visit Wengen or Murren by cable car.",
+          "where": "Lauterbrunnen",
+          "book": "",
+          "place": "switzerland/interlaken-lauterbrunnen"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Jungfraujoch Top of Europe",
+          "notes": "Choose a clear morning; take warm clothes.",
+          "where": "Jungfraujoch",
+          "book": "Yes - book early trains",
+          "place": "switzerland/jungfraujoch"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Gornergrat railway and Matterhorn views",
+          "notes": "Clear mornings are best.",
+          "where": "Zermatt",
+          "book": "",
+          "place": "switzerland/zermatt-matterhorn"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Zurich Airport (ZRH)",
+          "to": "Zurich hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "SBB train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Zurich",
+          "to": "Lucerne",
+          "time": "10:00",
+          "minutes": 50,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Lucerne",
+          "to": "Interlaken",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Interlaken",
+          "to": "Zermatt",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "SBB train",
+          "notes": "Change at Spiez and Visp.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Zermatt",
+          "to": "Zurich Airport (ZRH)",
+          "time": "14:00",
+          "minutes": 240,
+          "carrier": "SBB train",
+          "notes": "Change at Visp and Bern.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "switzerland-zurich-lucerne-interlaken-zermatt-8d",
+      "title": "Switzerland Classic in 8 Days",
+      "summary": "Two nights in Zermatt for the Matterhorn and Gornergrat.",
+      "days": 8,
+      "route": "Zurich > Lucerne > Interlaken > Zermatt",
+      "arrive": "Zurich (ZRH)",
+      "depart": "Zurich (ZRH)",
+      "countries": [
+        "Switzerland"
+      ],
+      "regions": [],
+      "cities": [
+        "Zurich",
+        "Lucerne",
+        "Interlaken",
+        "Zermatt"
+      ],
+      "imageQuery": "Grindelwald First cliff walk",
+      "highlights": [
+        "Pilatus",
+        "Grindelwald First",
+        "Jungfraujoch",
+        "Gornergrat"
+      ],
+      "destinationKeys": [
+        "switzerland",
+        "switzerland/zurich",
+        "switzerland/lucerne",
+        "switzerland/interlaken",
+        "switzerland/zermatt"
+      ],
+      "hero": "switzerland/interlaken",
+      "sources": [
+        "Trainline",
+        "Eurail",
+        "MySwitzerland",
+        "Stc",
+        "TourRadar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Zurich",
+          "hotel": "Hotel in Zurich",
+          "start": 0,
+          "nights": 1,
+          "area": "Near the main station, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lucerne",
+          "hotel": "Hotel in Lucerne",
+          "start": 1,
+          "nights": 2,
+          "area": "In the old town of Lucerne near the Chapel Bridge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Interlaken",
+          "hotel": "Hotel in Interlaken",
+          "start": 3,
+          "nights": 2,
+          "area": "In Interlaken or a village such as Wengen or Grindelwald",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zermatt",
+          "hotel": "Hotel in Zermatt",
+          "start": 5,
+          "nights": 2,
+          "area": "In Zermatt village, with a Matterhorn view if possible",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Zurich old town and lakeside",
+          "notes": "Cross the Limmat on foot; swim in summer.",
+          "where": "Zurich",
+          "book": "",
+          "place": "switzerland/zurich-old-town"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chapel Bridge and Mount Pilatus",
+          "notes": "Take the cogwheel up and the cable car down.",
+          "where": "Lucerne",
+          "book": "",
+          "place": "switzerland/lucerne-chapel-bridge"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Grindelwald First Cliff Walk and Bachalpsee",
+          "notes": "Weather can turn quickly.",
+          "where": "Grindelwald",
+          "book": "",
+          "place": "switzerland/grindelwald-first"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Jungfraujoch Top of Europe",
+          "notes": "Choose a clear morning; take warm clothes.",
+          "where": "Jungfraujoch",
+          "book": "Yes - book early trains",
+          "place": "switzerland/jungfraujoch"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Gornergrat railway and Matterhorn views",
+          "notes": "Clear mornings are best.",
+          "where": "Zermatt",
+          "book": "",
+          "place": "switzerland/zermatt-matterhorn"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Zurich Airport (ZRH)",
+          "to": "Zurich hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "SBB train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Zurich",
+          "to": "Lucerne",
+          "time": "10:00",
+          "minutes": 50,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Lucerne",
+          "to": "Interlaken",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Interlaken",
+          "to": "Zermatt",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Zermatt",
+          "to": "Zurich Airport (ZRH)",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "switzerland-grand-10d",
+      "title": "Switzerland Grand Tour in 10 Days",
+      "summary": "Zurich, Lucerne, Interlaken, Zermatt and the Swiss Riviera.",
+      "days": 10,
+      "route": "Zurich > Lucerne > Interlaken > Zermatt > Montreux",
+      "arrive": "Zurich (ZRH)",
+      "depart": "Geneva (GVA)",
+      "countries": [
+        "Switzerland"
+      ],
+      "regions": [],
+      "cities": [
+        "Zurich",
+        "Lucerne",
+        "Interlaken",
+        "Zermatt",
+        "Montreux"
+      ],
+      "imageQuery": "Chillon Castle Montreux Switzerland",
+      "highlights": [
+        "Pilatus",
+        "Jungfraujoch",
+        "Matterhorn",
+        "Chillon Castle",
+        "Lavaux"
+      ],
+      "destinationKeys": [
+        "switzerland",
+        "switzerland/zurich",
+        "switzerland/lucerne",
+        "switzerland/interlaken",
+        "switzerland/zermatt",
+        "switzerland/montreux"
+      ],
+      "hero": "switzerland/montreux",
+      "sources": [
+        "Trainline",
+        "Eurail",
+        "MySwitzerland",
+        "Stc",
+        "TourRadar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "iconic_landmarks",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Zurich",
+          "hotel": "Hotel in Zurich",
+          "start": 0,
+          "nights": 1,
+          "area": "Near the main station, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lucerne",
+          "hotel": "Hotel in Lucerne",
+          "start": 1,
+          "nights": 2,
+          "area": "In the old town of Lucerne near the Chapel Bridge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Interlaken",
+          "hotel": "Hotel in Interlaken",
+          "start": 3,
+          "nights": 2,
+          "area": "In Interlaken or a village such as Wengen or Grindelwald",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zermatt",
+          "hotel": "Hotel in Zermatt",
+          "start": 5,
+          "nights": 2,
+          "area": "In Zermatt village, with a Matterhorn view if possible",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Montreux",
+          "hotel": "Hotel in Montreux",
+          "start": 7,
+          "nights": 2,
+          "area": "On the Montreux lakefront or in a Lavaux village",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Zurich old town and lakeside",
+          "notes": "Cross the Limmat on foot; swim in summer.",
+          "where": "Zurich",
+          "book": "",
+          "place": "switzerland/zurich-old-town"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chapel Bridge and Mount Pilatus",
+          "notes": "Take the cogwheel up and the cable car down.",
+          "where": "Lucerne",
+          "book": "",
+          "place": "switzerland/lucerne-chapel-bridge"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Grindelwald First Cliff Walk and Bachalpsee",
+          "notes": "Weather can turn quickly.",
+          "where": "Grindelwald",
+          "book": "",
+          "place": "switzerland/grindelwald-first"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Jungfraujoch Top of Europe",
+          "notes": "Choose a clear morning; take warm clothes.",
+          "where": "Jungfraujoch",
+          "book": "Yes - book early trains",
+          "place": "switzerland/jungfraujoch"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Gornergrat railway and Matterhorn views",
+          "notes": "Clear mornings are best.",
+          "where": "Zermatt",
+          "book": "",
+          "place": "switzerland/zermatt-matterhorn"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Chillon Castle and Lavaux vineyard walk",
+          "notes": "Walk between wine villages.",
+          "where": "Montreux",
+          "book": "",
+          "place": "switzerland/montreux-chillon"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Zurich Airport (ZRH)",
+          "to": "Zurich hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "SBB train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Zurich",
+          "to": "Lucerne",
+          "time": "10:00",
+          "minutes": 50,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Lucerne",
+          "to": "Interlaken",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Interlaken",
+          "to": "Zermatt",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Zermatt",
+          "to": "Montreux",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "SBB train",
+          "notes": "Change at Visp and Martigny.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Montreux",
+          "to": "Geneva Airport (GVA)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "SBB train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "switzerland-complete-12d",
+      "title": "Complete Switzerland in 12 Days",
+      "summary": "The grand tour with the Glacier Express, Bern and a longer Bernese Oberland stay.",
+      "days": 12,
+      "route": "Zurich > Lucerne > Interlaken > Zermatt > Montreux",
+      "arrive": "Zurich (ZRH)",
+      "depart": "Geneva (GVA)",
+      "countries": [
+        "Switzerland"
+      ],
+      "regions": [],
+      "cities": [
+        "Zurich",
+        "Lucerne",
+        "Interlaken",
+        "Zermatt",
+        "Montreux"
+      ],
+      "imageQuery": "Glacier Express Landwasser Viaduct",
+      "highlights": [
+        "Glacier Express",
+        "Jungfraujoch",
+        "Grindelwald First",
+        "Matterhorn",
+        "Lavaux",
+        "Bern"
+      ],
+      "destinationKeys": [
+        "switzerland",
+        "switzerland/zurich",
+        "switzerland/lucerne",
+        "switzerland/interlaken",
+        "switzerland/zermatt",
+        "switzerland/montreux"
+      ],
+      "hero": "switzerland/zermatt",
+      "sources": [
+        "Trainline",
+        "Eurail",
+        "MySwitzerland",
+        "Stc",
+        "TourRadar"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Zurich",
+          "hotel": "Hotel in Zurich",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the main station, for easy train access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lucerne",
+          "hotel": "Hotel in Lucerne",
+          "start": 2,
+          "nights": 2,
+          "area": "In the old town of Lucerne near the Chapel Bridge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Interlaken",
+          "hotel": "Hotel in Interlaken",
+          "start": 4,
+          "nights": 3,
+          "area": "In Interlaken or a village such as Wengen or Grindelwald",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Zermatt",
+          "hotel": "Hotel in Zermatt",
+          "start": 7,
+          "nights": 2,
+          "area": "In Zermatt village, with a Matterhorn view if possible",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Montreux",
+          "hotel": "Hotel in Montreux",
+          "start": 9,
+          "nights": 2,
+          "area": "On the Montreux lakefront or in a Lavaux village",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Zurich old town and lakeside",
+          "notes": "Cross the Limmat on foot; swim in summer.",
+          "where": "Zurich",
+          "book": "",
+          "place": "switzerland/zurich-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Zurich museums and Uetliberg viewpoint",
+          "notes": "Cross the Limmat on foot; swim in summer.",
+          "where": "Zurich",
+          "book": "",
+          "place": "switzerland/zurich-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chapel Bridge and Mount Pilatus",
+          "notes": "Take the cogwheel up and the cable car down.",
+          "where": "Lucerne",
+          "book": "",
+          "place": "switzerland/lucerne-chapel-bridge"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Bern old town",
+          "notes": "An easy half-day by train.",
+          "where": "Bern",
+          "book": "",
+          "place": "switzerland/bern-old-town"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Lauterbrunnen valley and Trummelbach Falls",
+          "notes": "Visit Wengen or Murren by cable car.",
+          "where": "Lauterbrunnen",
+          "book": "",
+          "place": "switzerland/interlaken-lauterbrunnen"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Grindelwald First Cliff Walk and Bachalpsee",
+          "notes": "Weather can turn quickly.",
+          "where": "Grindelwald",
+          "book": "",
+          "place": "switzerland/grindelwald-first"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Jungfraujoch Top of Europe",
+          "notes": "Choose a clear morning; take warm clothes.",
+          "where": "Jungfraujoch",
+          "book": "Yes - book early trains",
+          "place": "switzerland/jungfraujoch"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Gornergrat railway and Matterhorn views",
+          "notes": "Clear mornings are best.",
+          "where": "Zermatt",
+          "book": "",
+          "place": "switzerland/zermatt-matterhorn"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Scenic Zermatt to Visp ride (Glacier Express route)",
+          "notes": "Reserve a seat; lunch is served on board.",
+          "where": "Glacier Express",
+          "book": "Yes - reserve seats",
+          "place": "switzerland/glacier-express"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Chillon Castle and Lavaux vineyard walk",
+          "notes": "Walk between wine villages.",
+          "where": "Montreux",
+          "book": "",
+          "place": "switzerland/montreux-chillon"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Zurich Airport (ZRH)",
+          "to": "Zurich hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "SBB train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Zurich",
+          "to": "Lucerne",
+          "time": "10:00",
+          "minutes": 50,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Lucerne",
+          "to": "Interlaken",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Interlaken",
+          "to": "Zermatt",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Zermatt",
+          "to": "Montreux",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "SBB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Montreux",
+          "to": "Geneva Airport (GVA)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "SBB train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "switzerland/zurich-old-town": {
+        "name": "Zurich Old Town, Lake Zurich and Bahnhofstrasse",
+        "description": "Guild houses, church spires, a long lakeside promenade and chocolate shops.",
+        "details": "Zurich old town is on both sides of the Limmat river, with the Grossmunster, Fraumunster and Lindenhof viewpoint. Swimming spots on the lake and river are popular in summer. Bahnhofstrasse is a famous shopping street. Zurich is expensive, so book ahead.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "switzerland/lucerne-chapel-bridge": {
+        "name": "Lucerne Chapel Bridge, lake and Mount Pilatus",
+        "description": "A covered wooden bridge, a lakeside old town and a cable-car and cogwheel trip up Pilatus.",
+        "details": "The Kapellbrucke is the symbol of Lucerne. Boats cross Lake Lucerne, and Mount Pilatus is reached by the steepest cogwheel railway in the world and cable cars. Rigi is the other classic mountain. Views depend on clear weather.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "switzerland/interlaken-lauterbrunnen": {
+        "name": "Interlaken, Lauterbrunnen and Trummelbach Falls",
+        "description": "A valley of 72 waterfalls between two lakes, with Alpine villages above.",
+        "details": "Interlaken sits between Lake Thun and Lake Brienz. The Lauterbrunnen valley has the Staubbach Falls and Trummelbach Falls inside a mountain, and Wengen and Murren are car-free villages. Adventure options include paragliding and canyoning.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "switzerland/jungfraujoch": {
+        "name": "Jungfraujoch Top of Europe",
+        "description": "The highest railway station in Europe, with a glacier view and an ice palace.",
+        "details": "The railway climbs through the Eiger to the Jungfraujoch at 3,454 metres, with the Aletsch Glacier, the Sphinx observatory and the Ice Palace. It is cold and thin air at the top. Go on a clear morning, and book tickets for early trains.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "switzerland/grindelwald-first": {
+        "name": "Grindelwald First Cliff Walk",
+        "description": "A cable car above Grindelwald to a cliff-edge walkway and mountain hiking.",
+        "details": "Grindelwald First has the Cliff Walk, a platform hanging from the cliff, a flying fox and hiking trails to Bachalpsee lake. The Eiger north face looms over the valley. Weather can change quickly.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "switzerland/zermatt-matterhorn": {
+        "name": "Zermatt, Gornergrat and the Matterhorn",
+        "description": "A car-free village below the Matterhorn, with a cogwheel train to a panoramic ridge.",
+        "details": "Zermatt is car-free, with electric taxis. The Gornergrat railway climbs to 3,089 metres for views of the Matterhorn and 29 peaks over 4,000 metres. Rothorn paradise has a hiking trail and picnic. Clear mornings give the best views.",
+        "interests": [
+          "iconic_landmarks",
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "switzerland/glacier-express": {
+        "name": "Glacier Express",
+        "description": "A slow scenic train across the Alps from Zermatt to St Moritz or Chur.",
+        "details": "The Glacier Express crosses 291 bridges and 91 tunnels, including the Landwasser Viaduct. The full journey takes about 8 hours with panoramic windows. Reserve a seat, and consider a shorter section if you prefer. Lunch is served at your seat.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "switzerland/montreux-chillon": {
+        "name": "Montreux, Chillon Castle and Lavaux vineyards",
+        "description": "A lakeside promenade, a medieval castle on the water and terraced vineyards.",
+        "details": "Montreux has a lakeside walk past the Freddie Mercury statue, and Chillon Castle sits on a rock in Lake Geneva. The Lavaux vineyards are a UNESCO terraced landscape, with a walk between villages. The Swiss Riviera is mild.",
+        "interests": [
+          "culture",
+          "relax",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "switzerland/bern-old-town": {
+        "name": "Bern old town and the bear park",
+        "description": "A UNESCO medieval city of arcades, fountains and a clock tower, surrounded by a river.",
+        "details": "Bern old town has 6 kilometres of covered arcades, the Zytglogge clock tower and the Rose Garden viewpoint. The Aare river is used for summer swims. It is a very easy half-day trip from Interlaken or Lucerne.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "switzerland": {
+        "name": "Switzerland",
+        "description": "A country of Alpine peaks, lakes, trains and tidy cities.",
+        "images": []
+      },
+      "switzerland/zurich": {
+        "name": "Zurich",
+        "description": "The largest city, on a lake with an old town.",
+        "images": []
+      },
+      "switzerland/lucerne": {
+        "name": "Lucerne",
+        "description": "A lake city with a wooden bridge.",
+        "images": []
+      },
+      "switzerland/interlaken": {
+        "name": "Interlaken",
+        "description": "The gateway to the Bernese Oberland.",
+        "images": []
+      },
+      "switzerland/zermatt": {
+        "name": "Zermatt",
+        "description": "A car-free village under the Matterhorn.",
+        "images": []
+      },
+      "switzerland/montreux": {
+        "name": "Montreux",
+        "description": "A Swiss Riviera town on Lake Geneva.",
+        "images": []
+      }
+    }
+  }
+}

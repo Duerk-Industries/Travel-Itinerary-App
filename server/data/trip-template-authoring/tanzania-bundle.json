@@ -1,0 +1,1403 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim, Porini and Monkey Travel itineraries for Tanzania",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "tanzania-short-safari-5d",
+      "title": "Short Northern Safari in 5 Days",
+      "summary": "Tarangire, the Ngorongoro Crater and a night in the Serengeti.",
+      "days": 5,
+      "route": "Arusha > Tarangire > Ngorongoro > Serengeti",
+      "arrive": "Kilimanjaro (JRO)",
+      "depart": "Arusha (ARK)",
+      "countries": [
+        "Tanzania"
+      ],
+      "regions": [],
+      "cities": [
+        "Arusha",
+        "Tarangire",
+        "Ngorongoro",
+        "Serengeti"
+      ],
+      "imageQuery": "Serengeti lion Tanzania",
+      "highlights": [
+        "Tarangire elephants",
+        "Ngorongoro Crater",
+        "Serengeti game drives"
+      ],
+      "destinationKeys": [
+        "tanzania",
+        "tanzania/arusha",
+        "tanzania/tarangire",
+        "tanzania/ngorongoro",
+        "tanzania/serengeti"
+      ],
+      "hero": "tanzania/serengeti",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Porini",
+        "Monkey Travel",
+        "Skratch"
+      ],
+      "pace": "F",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Arusha",
+          "hotel": "Hotel in Arusha",
+          "start": 0,
+          "nights": 1,
+          "area": "In a quiet lodge outside Arusha with gardens, close to the airport road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tarangire",
+          "hotel": "Lodge at Tarangire",
+          "start": 1,
+          "nights": 1,
+          "area": "In a lodge on the edge of Tarangire, with river views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ngorongoro",
+          "hotel": "Lodge on the Ngorongoro rim",
+          "start": 2,
+          "nights": 1,
+          "area": "In a lodge on the Ngorongoro crater rim, cold at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Serengeti",
+          "hotel": "Camp in the Serengeti",
+          "start": 3,
+          "nights": 1,
+          "area": "In a tented camp in the central Serengeti, positioned to follow the migration",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Tarangire morning game drive",
+          "notes": "Elephants gather at the river from June to October.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Tarangire afternoon game drive",
+          "notes": "Baobabs are best in late light.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Serengeti sundowner drive",
+          "notes": "Follow the herds; light is soft in the evening.",
+          "where": "Serengeti",
+          "book": "",
+          "place": "tanzania/serengeti-game-drive"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kilimanjaro Airport (JRO)",
+          "to": "Arusha lodge",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Arusha",
+          "to": "Tarangire lodge",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tarangire lodge",
+          "to": "Ngorongoro lodge",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Ngorongoro lodge",
+          "to": "Serengeti camp",
+          "time": "12:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Serengeti camp",
+          "to": "Seronera airstrip",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Arusha Airport (ARK)",
+          "to": "Arusha airport area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "tanzania-northern-circuit-6d",
+      "title": "Northern Circuit Safari in 6 Days",
+      "summary": "Tarangire, Ngorongoro and two nights in the Serengeti.",
+      "days": 6,
+      "route": "Arusha > Tarangire > Ngorongoro > Serengeti",
+      "arrive": "Kilimanjaro (JRO)",
+      "depart": "Arusha (ARK)",
+      "countries": [
+        "Tanzania"
+      ],
+      "regions": [],
+      "cities": [
+        "Arusha",
+        "Tarangire",
+        "Ngorongoro",
+        "Serengeti"
+      ],
+      "imageQuery": "Ngorongoro Crater floor wildlife",
+      "highlights": [
+        "Tarangire",
+        "Ngorongoro Crater",
+        "Serengeti",
+        "Balloon safari"
+      ],
+      "destinationKeys": [
+        "tanzania",
+        "tanzania/arusha",
+        "tanzania/tarangire",
+        "tanzania/ngorongoro",
+        "tanzania/serengeti"
+      ],
+      "hero": "tanzania/ngorongoro",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Porini",
+        "Monkey Travel",
+        "Skratch"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Arusha",
+          "hotel": "Hotel in Arusha",
+          "start": 0,
+          "nights": 1,
+          "area": "In a quiet lodge outside Arusha with gardens, close to the airport road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tarangire",
+          "hotel": "Lodge at Tarangire",
+          "start": 1,
+          "nights": 1,
+          "area": "In a lodge on the edge of Tarangire, with river views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ngorongoro",
+          "hotel": "Lodge on the Ngorongoro rim",
+          "start": 2,
+          "nights": 1,
+          "area": "In a lodge on the Ngorongoro crater rim, cold at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Serengeti",
+          "hotel": "Camp in the Serengeti",
+          "start": 3,
+          "nights": 2,
+          "area": "In a tented camp in the central Serengeti, positioned to follow the migration",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Tarangire morning game drive",
+          "notes": "Elephants gather at the river from June to October.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Tarangire afternoon game drive",
+          "notes": "Baobabs are best in late light.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Ngorongoro rim viewpoint and Maasai boma",
+          "notes": "Picnic on the crater floor; the rim is cold.",
+          "where": "Ngorongoro",
+          "book": "",
+          "place": "tanzania/ngorongoro-crater"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Serengeti morning game drive",
+          "notes": "Big cats are most active at dawn.",
+          "where": "Serengeti",
+          "book": "",
+          "place": "tanzania/serengeti-game-drive"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Serengeti sundowner drive",
+          "notes": "Follow the herds; light is soft in the evening.",
+          "where": "Serengeti",
+          "book": "",
+          "place": "tanzania/serengeti-game-drive"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Serengeti balloon safari and bush breakfast",
+          "notes": "Weather-dependent; book early.",
+          "where": "Serengeti",
+          "book": "Yes - book the balloon",
+          "place": "tanzania/serengeti-balloon"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kilimanjaro Airport (JRO)",
+          "to": "Arusha lodge",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Arusha",
+          "to": "Tarangire lodge",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tarangire lodge",
+          "to": "Ngorongoro lodge",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Ngorongoro lodge",
+          "to": "Serengeti camp",
+          "time": "12:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Serengeti camp",
+          "to": "Seronera airstrip",
+          "time": "10:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Arusha Airport (ARK)",
+          "to": "Arusha airport area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "tanzania-classic-safari-8d",
+      "title": "Classic Tanzania Safari in 8 Days",
+      "summary": "Tarangire, Lake Manyara, the Serengeti and Ngorongoro Crater.",
+      "days": 8,
+      "route": "Arusha > Tarangire > Serengeti > Ngorongoro > Lake Manyara",
+      "arrive": "Kilimanjaro (JRO)",
+      "depart": "Kilimanjaro (JRO)",
+      "countries": [
+        "Tanzania"
+      ],
+      "regions": [],
+      "cities": [
+        "Arusha",
+        "Tarangire",
+        "Serengeti",
+        "Ngorongoro",
+        "Lake Manyara"
+      ],
+      "imageQuery": "Tanzania safari elephants baobab",
+      "highlights": [
+        "Tarangire baobabs",
+        "Serengeti",
+        "Ngorongoro Crater",
+        "Lake Manyara",
+        "Materuni waterfall"
+      ],
+      "destinationKeys": [
+        "tanzania",
+        "tanzania/arusha",
+        "tanzania/tarangire",
+        "tanzania/serengeti",
+        "tanzania/ngorongoro",
+        "tanzania/lake-manyara"
+      ],
+      "hero": "tanzania/tarangire",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Porini",
+        "Monkey Travel",
+        "Skratch"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Arusha",
+          "hotel": "Hotel in Arusha",
+          "start": 0,
+          "nights": 1,
+          "area": "In a quiet lodge outside Arusha with gardens, close to the airport road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tarangire",
+          "hotel": "Lodge at Tarangire",
+          "start": 1,
+          "nights": 1,
+          "area": "In a lodge on the edge of Tarangire, with river views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Serengeti",
+          "hotel": "Camp in the Serengeti",
+          "start": 2,
+          "nights": 3,
+          "area": "In a tented camp in the central Serengeti, positioned to follow the migration",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ngorongoro",
+          "hotel": "Lodge on the Ngorongoro rim",
+          "start": 5,
+          "nights": 1,
+          "area": "In a lodge on the Ngorongoro crater rim, cold at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Manyara",
+          "hotel": "Lodge at Lake Manyara",
+          "start": 6,
+          "nights": 1,
+          "area": "In a lodge on the Manyara escarpment",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Coffee farm tour and Materuni waterfall",
+          "notes": "A hike to the falls with Kilimanjaro views on clear days.",
+          "where": "Arusha",
+          "book": "",
+          "place": "tanzania/arusha-materuni"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Tarangire morning game drive",
+          "notes": "Elephants gather at the river from June to October.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Tarangire afternoon game drive",
+          "notes": "Baobabs are best in late light.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Serengeti morning game drive",
+          "notes": "Big cats are most active at dawn.",
+          "where": "Serengeti",
+          "book": "",
+          "place": "tanzania/serengeti-game-drive"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Serengeti sundowner drive",
+          "notes": "Follow the herds; light is soft in the evening.",
+          "where": "Serengeti",
+          "book": "",
+          "place": "tanzania/serengeti-game-drive"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Serengeti balloon safari and bush breakfast",
+          "notes": "Weather-dependent; book early.",
+          "where": "Serengeti",
+          "book": "Yes - book the balloon",
+          "place": "tanzania/serengeti-balloon"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "6h",
+          "name": "Ngorongoro Crater descent and game drive",
+          "notes": "Picnic on the crater floor; the rim is cold.",
+          "where": "Ngorongoro",
+          "book": "",
+          "place": "tanzania/ngorongoro-crater"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "2h",
+          "name": "Lake Manyara game drive",
+          "notes": "Look for flamingos and tree-climbing lions.",
+          "where": "Lake Manyara",
+          "book": "",
+          "place": "tanzania/lake-manyara"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kilimanjaro Airport (JRO)",
+          "to": "Arusha lodge",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Arusha",
+          "to": "Tarangire lodge",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tarangire lodge",
+          "to": "Serengeti camp",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "A long drive via Ngorongoro; a flight is an alternative.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Serengeti camp",
+          "to": "Ngorongoro lodge",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Ngorongoro lodge",
+          "to": "Lake Manyara lodge",
+          "time": "12:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Lake Manyara lodge",
+          "to": "Kilimanjaro Airport (JRO)",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "tanzania-safari-and-zanzibar-10d",
+      "title": "Tanzania Safari and Zanzibar in 10 Days",
+      "summary": "The northern circuit followed by Stone Town and Nungwi beach.",
+      "days": 10,
+      "route": "Arusha > Tarangire > Ngorongoro > Serengeti > Stone Town > Nungwi",
+      "arrive": "Kilimanjaro (JRO)",
+      "depart": "Zanzibar (ZNZ)",
+      "countries": [
+        "Tanzania"
+      ],
+      "regions": [],
+      "cities": [
+        "Arusha",
+        "Tarangire",
+        "Ngorongoro",
+        "Serengeti",
+        "Stone Town",
+        "Nungwi"
+      ],
+      "imageQuery": "Nungwi beach Zanzibar",
+      "highlights": [
+        "Tarangire",
+        "Ngorongoro Crater",
+        "Serengeti",
+        "Stone Town",
+        "Nungwi beach"
+      ],
+      "destinationKeys": [
+        "tanzania",
+        "tanzania/arusha",
+        "tanzania/tarangire",
+        "tanzania/ngorongoro",
+        "tanzania/serengeti",
+        "tanzania/stone-town",
+        "tanzania/nungwi"
+      ],
+      "hero": "tanzania/nungwi",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Porini",
+        "Monkey Travel",
+        "Skratch"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Arusha",
+          "hotel": "Hotel in Arusha",
+          "start": 0,
+          "nights": 1,
+          "area": "In a quiet lodge outside Arusha with gardens, close to the airport road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tarangire",
+          "hotel": "Lodge at Tarangire",
+          "start": 1,
+          "nights": 1,
+          "area": "In a lodge on the edge of Tarangire, with river views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ngorongoro",
+          "hotel": "Lodge on the Ngorongoro rim",
+          "start": 2,
+          "nights": 1,
+          "area": "In a lodge on the Ngorongoro crater rim, cold at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Serengeti",
+          "hotel": "Camp in the Serengeti",
+          "start": 3,
+          "nights": 2,
+          "area": "In a tented camp in the central Serengeti, positioned to follow the migration",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Stone Town",
+          "hotel": "Hotel in a restored Stone Town house",
+          "start": 5,
+          "nights": 1,
+          "area": "In a restored Stone Town house in the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nungwi",
+          "hotel": "Resort at Nungwi",
+          "start": 6,
+          "nights": 3,
+          "area": "In a beach resort at Nungwi",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Tarangire morning game drive",
+          "notes": "Elephants gather at the river from June to October.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Tarangire afternoon game drive",
+          "notes": "Baobabs are best in late light.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Serengeti morning game drive",
+          "notes": "Big cats are most active at dawn.",
+          "where": "Serengeti",
+          "book": "",
+          "place": "tanzania/serengeti-game-drive"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Serengeti sundowner drive",
+          "notes": "Follow the herds; light is soft in the evening.",
+          "where": "Serengeti",
+          "book": "",
+          "place": "tanzania/serengeti-game-drive"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Stone Town walk and spice tour",
+          "notes": "Dress modestly; Forodhani night food market in the evening.",
+          "where": "Stone Town",
+          "book": "",
+          "place": "tanzania/stone-town"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Mnemba snorkelling or dhow sunset cruise",
+          "notes": "Calm water in the dry season.",
+          "where": "Nungwi",
+          "book": "Yes - book a dhow",
+          "place": "tanzania/nungwi-beach"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kilimanjaro Airport (JRO)",
+          "to": "Arusha lodge",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Arusha",
+          "to": "Tarangire lodge",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tarangire lodge",
+          "to": "Ngorongoro lodge",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Ngorongoro lodge",
+          "to": "Serengeti camp",
+          "time": "12:00",
+          "minutes": 240,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Serengeti camp",
+          "to": "Seronera airstrip",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects via Arusha.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Zanzibar Airport (ZNZ)",
+          "to": "Stone Town house",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Stone Town",
+          "to": "Nungwi resort",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Shared shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Nungwi resort",
+          "to": "Zanzibar Airport (ZNZ)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Shared shuttle or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "tanzania-grand-safari-zanzibar-12d",
+      "title": "Grand Tanzania in 12 Days",
+      "summary": "Tarangire, Manyara, the Serengeti with a balloon flight, Ngorongoro and Zanzibar.",
+      "days": 12,
+      "route": "Arusha > Tarangire > Lake Manyara > Serengeti > Stone Town > Nungwi",
+      "arrive": "Kilimanjaro (JRO)",
+      "depart": "Zanzibar (ZNZ)",
+      "countries": [
+        "Tanzania"
+      ],
+      "regions": [],
+      "cities": [
+        "Arusha",
+        "Tarangire",
+        "Lake Manyara",
+        "Serengeti",
+        "Stone Town",
+        "Nungwi"
+      ],
+      "imageQuery": "Serengeti migration wildebeest crossing",
+      "highlights": [
+        "Tarangire",
+        "Lake Manyara",
+        "Serengeti",
+        "Balloon safari",
+        "Stone Town",
+        "Nungwi"
+      ],
+      "destinationKeys": [
+        "tanzania",
+        "tanzania/arusha",
+        "tanzania/tarangire",
+        "tanzania/lake-manyara",
+        "tanzania/serengeti",
+        "tanzania/ngorongoro",
+        "tanzania/stone-town",
+        "tanzania/nungwi"
+      ],
+      "hero": "tanzania/serengeti",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Porini",
+        "Monkey Travel",
+        "Skratch"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Arusha",
+          "hotel": "Hotel in Arusha",
+          "start": 0,
+          "nights": 1,
+          "area": "In a quiet lodge outside Arusha with gardens, close to the airport road",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tarangire",
+          "hotel": "Lodge at Tarangire",
+          "start": 1,
+          "nights": 1,
+          "area": "In a lodge on the edge of Tarangire, with river views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Manyara",
+          "hotel": "Lodge at Lake Manyara",
+          "start": 2,
+          "nights": 1,
+          "area": "In a lodge on the Manyara escarpment",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Serengeti",
+          "hotel": "Camp in the Serengeti",
+          "start": 3,
+          "nights": 3,
+          "area": "In a tented camp in the central Serengeti, positioned to follow the migration",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Stone Town",
+          "hotel": "Hotel in a restored Stone Town house",
+          "start": 6,
+          "nights": 1,
+          "area": "In a restored Stone Town house in the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nungwi",
+          "hotel": "Resort at Nungwi",
+          "start": 7,
+          "nights": 4,
+          "area": "In a beach resort at Nungwi",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Coffee farm tour and Materuni waterfall",
+          "notes": "A hike to the falls with Kilimanjaro views on clear days.",
+          "where": "Arusha",
+          "book": "",
+          "place": "tanzania/arusha-materuni"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Tarangire morning game drive",
+          "notes": "Elephants gather at the river from June to October.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Tarangire afternoon game drive",
+          "notes": "Baobabs are best in late light.",
+          "where": "Tarangire",
+          "book": "",
+          "place": "tanzania/tarangire"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Lake Manyara game drive",
+          "notes": "Look for flamingos and tree-climbing lions.",
+          "where": "Lake Manyara",
+          "book": "",
+          "place": "tanzania/lake-manyara"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Ngorongoro Crater viewpoint stop on the drive",
+          "notes": "Picnic on the crater floor; the rim is cold.",
+          "where": "Ngorongoro",
+          "book": "",
+          "place": "tanzania/ngorongoro-crater"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Serengeti morning game drive",
+          "notes": "Big cats are most active at dawn.",
+          "where": "Serengeti",
+          "book": "",
+          "place": "tanzania/serengeti-game-drive"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Serengeti sundowner drive",
+          "notes": "Follow the herds; light is soft in the evening.",
+          "where": "Serengeti",
+          "book": "",
+          "place": "tanzania/serengeti-game-drive"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "4h",
+          "name": "Serengeti balloon safari and bush breakfast",
+          "notes": "Weather-dependent; book early.",
+          "where": "Serengeti",
+          "book": "Yes - book the balloon",
+          "place": "tanzania/serengeti-balloon"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Stone Town walk and spice tour",
+          "notes": "Dress modestly; Forodhani night food market in the evening.",
+          "where": "Stone Town",
+          "book": "",
+          "place": "tanzania/stone-town"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Mnemba snorkelling or dhow sunset cruise",
+          "notes": "Calm water in the dry season.",
+          "where": "Nungwi",
+          "book": "Yes - book a dhow",
+          "place": "tanzania/nungwi-beach"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Kilimanjaro Airport (JRO)",
+          "to": "Arusha lodge",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Arusha",
+          "to": "Tarangire lodge",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tarangire lodge",
+          "to": "Lake Manyara lodge",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Lake Manyara lodge",
+          "to": "Serengeti camp",
+          "time": "07:00",
+          "minutes": 360,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "Drive via Ngorongoro; stop at the viewpoint.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Serengeti camp",
+          "to": "Seronera airstrip",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Zanzibar Airport (ZNZ)",
+          "to": "Stone Town house",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Stone Town",
+          "to": "Nungwi resort",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Shared shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Nungwi resort",
+          "to": "Zanzibar Airport (ZNZ)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Shared shuttle or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "tanzania/arusha-materuni": {
+        "name": "Arusha town, coffee tour and Materuni Waterfall",
+        "description": "A safari gateway with a coffee farm tour and a waterfall walk on the Kilimanjaro foothills.",
+        "details": "Arusha is the base for northern safaris. Nearby, the Materuni village near Moshi offers a coffee tour and a hike to a 80-metre waterfall with Kilimanjaro views on clear days. Nearby Arusha National Park has giraffes and colobus monkeys.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "authentic_local",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "tanzania/tarangire": {
+        "name": "Tarangire National Park",
+        "description": "Baobab-studded park with huge elephant herds, best in the dry season.",
+        "details": "Tarangire is known for its ancient baobab trees and large herds of elephants gathering by the river from June to October. Tree-climbing lions and pythons are possible. It is a good first stop on a northern circuit.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tanzania/lake-manyara": {
+        "name": "Lake Manyara National Park",
+        "description": "A small park on the Rift Valley escarpment, with a soda lake, flamingos and tree-climbing lions.",
+        "details": "Lake Manyara has groundwater forest with baboons and elephants, and the lake often holds flamingos and pelicans. It is a good half-day stop on the way to Ngorongoro. Tree-climbing lions are sometimes seen.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tanzania/ngorongoro-crater": {
+        "name": "Ngorongoro Crater",
+        "description": "A volcanic caldera with a dense population of wildlife and a rim lodge view.",
+        "details": "The Ngorongoro Crater is a 260-square-kilometre caldera floor with lions, black rhino, hippos and flamingos. Game drives descend at dawn, with a picnic on the floor. The rim is cool and often misty. Only a limited number of vehicles are allowed in at a time.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tanzania/serengeti-game-drive": {
+        "name": "Serengeti game drives",
+        "description": "Endless plains with lions, leopards, cheetahs and the great wildebeest migration.",
+        "details": "The Serengeti has big cats all year. The wildebeest herds move in a circle: calving on the southern plains from January to March, the western corridor in May to June, the northern river crossings from July to October. Your lodge location depends on the season. Game drives run at dawn and late afternoon.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tanzania/serengeti-balloon": {
+        "name": "Serengeti balloon safari",
+        "description": "A dawn hot-air balloon flight over the plains with a champagne breakfast.",
+        "details": "Balloons lift off from the central Serengeti at first light and float for an hour, followed by a bush breakfast. Flights depend on the weather and book early. Allow a morning free.",
+        "interests": [
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tanzania/stone-town": {
+        "name": "Stone Town and spice tour",
+        "description": "A UNESCO old town of carved doors, a sultan palace and spice farms on the island.",
+        "details": "Stone Town has narrow lanes, the House of Wonders, Forodhani night food market and carved Zanzibari doors. A spice tour visits farms to taste cloves, vanilla and cinnamon. The Prison Island tortoise sanctuary is a short boat ride away. Dress modestly in this Muslim town.",
+        "interests": [
+          "culture",
+          "food",
+          "iconic_landmarks",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tanzania/nungwi-beach": {
+        "name": "Nungwi and Kendwa beaches",
+        "description": "White sand beaches on the northern tip of Zanzibar, with dhow cruises and snorkelling.",
+        "details": "Nungwi and Kendwa have white sand and warm water that stays deep at low tide. Dhow sunset cruises, snorkelling at Mnemba atoll and diving are options. Seasons: the long rains in April and May are quieter.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "tanzania": {
+        "name": "Tanzania",
+        "description": "A land of the Serengeti, Ngorongoro Crater, Kilimanjaro and spice-island Zanzibar.",
+        "images": []
+      },
+      "tanzania/arusha": {
+        "name": "Arusha",
+        "description": "The safari gateway town.",
+        "images": []
+      },
+      "tanzania/tarangire": {
+        "name": "Tarangire",
+        "description": "A park of baobabs and elephants.",
+        "images": []
+      },
+      "tanzania/lake-manyara": {
+        "name": "Lake Manyara",
+        "description": "A small escarpment park.",
+        "images": []
+      },
+      "tanzania/ngorongoro": {
+        "name": "Ngorongoro",
+        "description": "A crater of wildlife.",
+        "images": []
+      },
+      "tanzania/serengeti": {
+        "name": "Serengeti",
+        "description": "The great plains and migration.",
+        "images": []
+      },
+      "tanzania/stone-town": {
+        "name": "Stone Town",
+        "description": "The old town of Zanzibar.",
+        "images": []
+      },
+      "tanzania/nungwi": {
+        "name": "Nungwi",
+        "description": "A northern Zanzibar beach.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,0 +1,1185 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining On The Go Tours, A Love Letter to Asia, TakeTours and TravelStride itineraries for South Korea",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "south-korea-seoul-5d",
+      "title": "Seoul in 5 Days",
+      "summary": "Palaces, markets, K-culture and the DMZ.",
+      "days": 5,
+      "route": "Seoul",
+      "arrive": "Seoul (ICN)",
+      "depart": "Seoul (ICN)",
+      "countries": [
+        "South Korea"
+      ],
+      "regions": [],
+      "cities": [
+        "Seoul"
+      ],
+      "imageQuery": "Gyeongbokgung palace Seoul",
+      "highlights": [
+        "Gyeongbokgung",
+        "Gwangjang Market",
+        "Namsan Tower",
+        "DMZ"
+      ],
+      "destinationKeys": [
+        "south-korea",
+        "south-korea/seoul"
+      ],
+      "hero": "south-korea/seoul",
+      "sources": [
+        "On The Go Tours",
+        "A Love Letter to Asia",
+        "TakeTours",
+        "TravelStride",
+        "Frosch Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Seoul",
+          "hotel": "Hotel in Seoul",
+          "start": 0,
+          "nights": 4,
+          "area": "In Jongno or Myeongdong for palaces, or Hongdae for nightlife",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Gwangjang Market and Korean BBQ dinner",
+          "notes": "Order to share; try bindaetteok.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-food-markets"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Gyeongbokgung Palace and Bukchon",
+          "notes": "Watch the guard ceremony; keep quiet in the hanok lanes.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-palaces"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Namsan Tower and Hongdae",
+          "notes": "Take the cable car up Namsan.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-namsan-hongdae"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "DMZ tour",
+          "notes": "Book early and bring your passport.",
+          "where": "Panmunjom area",
+          "book": "Yes - book the tour",
+          "place": "south-korea/dmz"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Korean BBQ and Hongdae night",
+          "notes": "Order to share; try bindaetteok.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-food-markets"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Incheon Airport (ICN)",
+          "to": "Seoul hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "AREX train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Seoul hotel",
+          "to": "Incheon Airport (ICN)",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Airport train, limousine bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-korea-seoul-busan-7d",
+      "title": "Seoul and Busan in 7 Days",
+      "summary": "The capital and the coastal city, linked by KTX.",
+      "days": 7,
+      "route": "Seoul > Busan",
+      "arrive": "Seoul (ICN)",
+      "depart": "Busan (PUS)",
+      "countries": [
+        "South Korea"
+      ],
+      "regions": [],
+      "cities": [
+        "Seoul",
+        "Busan"
+      ],
+      "imageQuery": "Gamcheon culture village Busan",
+      "highlights": [
+        "Gyeongbokgung",
+        "DMZ",
+        "Gamcheon village",
+        "Haedong Yonggungsa"
+      ],
+      "destinationKeys": [
+        "south-korea",
+        "south-korea/seoul",
+        "south-korea/busan"
+      ],
+      "hero": "south-korea/busan",
+      "sources": [
+        "On The Go Tours",
+        "A Love Letter to Asia",
+        "TakeTours",
+        "TravelStride",
+        "Frosch Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Seoul",
+          "hotel": "Hotel in Seoul",
+          "start": 0,
+          "nights": 4,
+          "area": "In Jongno or Myeongdong for palaces, or Hongdae for nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Busan",
+          "hotel": "Hotel in Busan",
+          "start": 4,
+          "nights": 2,
+          "area": "Near Haeundae beach or Seomyeon, with subway access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Gwangjang Market and Korean BBQ dinner",
+          "notes": "Order to share; try bindaetteok.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-food-markets"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Gyeongbokgung Palace and Bukchon",
+          "notes": "Watch the guard ceremony; keep quiet in the hanok lanes.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-palaces"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Namsan Tower and Hongdae",
+          "notes": "Take the cable car up Namsan.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-namsan-hongdae"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "DMZ tour",
+          "notes": "Book early and bring your passport.",
+          "where": "Panmunjom area",
+          "book": "Yes - book the tour",
+          "place": "south-korea/dmz"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Gamcheon village and Jagalchi Market",
+          "notes": "Steep lanes; eat raw fish upstairs at Jagalchi.",
+          "where": "Busan",
+          "book": "",
+          "place": "south-korea/busan-gamcheon"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Haedong Yonggungsa Temple",
+          "notes": "Go early for sunrise light on the sea.",
+          "where": "Busan",
+          "book": "",
+          "place": "south-korea/haedong-yonggungsa"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Incheon Airport (ICN)",
+          "to": "Seoul hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "AREX train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Seoul",
+          "to": "Busan",
+          "time": "09:00",
+          "minutes": 165,
+          "carrier": "KTX high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Busan hotel",
+          "to": "Gimhae Airport, Busan (PUS)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "Airport train, limousine bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-korea-seoul-gyeongju-busan-9d",
+      "title": "Korea Classic: Seoul, Gyeongju and Busan in 9 Days",
+      "summary": "Capital, the old Silla capital and Busan.",
+      "days": 9,
+      "route": "Seoul > Gyeongju > Busan",
+      "arrive": "Seoul (ICN)",
+      "depart": "Busan (PUS)",
+      "countries": [
+        "South Korea"
+      ],
+      "regions": [],
+      "cities": [
+        "Seoul",
+        "Gyeongju",
+        "Busan"
+      ],
+      "imageQuery": "Bulguksa temple Gyeongju",
+      "highlights": [
+        "Gyeongbokgung",
+        "DMZ",
+        "Bulguksa",
+        "Gamcheon",
+        "Haedong Yonggungsa"
+      ],
+      "destinationKeys": [
+        "south-korea",
+        "south-korea/seoul",
+        "south-korea/gyeongju",
+        "south-korea/busan"
+      ],
+      "hero": "south-korea/gyeongju",
+      "sources": [
+        "On The Go Tours",
+        "A Love Letter to Asia",
+        "TakeTours",
+        "TravelStride",
+        "Frosch Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Seoul",
+          "hotel": "Hotel in Seoul",
+          "start": 0,
+          "nights": 3,
+          "area": "In Jongno or Myeongdong for palaces, or Hongdae for nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gyeongju",
+          "hotel": "Guesthouse in Gyeongju",
+          "start": 3,
+          "nights": 2,
+          "area": "In a hanok guesthouse near Daereungwon",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Busan",
+          "hotel": "Hotel in Busan",
+          "start": 5,
+          "nights": 3,
+          "area": "Near Haeundae beach or Seomyeon, with subway access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Gwangjang Market and Korean BBQ dinner",
+          "notes": "Order to share; try bindaetteok.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-food-markets"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Gyeongbokgung Palace and Bukchon",
+          "notes": "Watch the guard ceremony; keep quiet in the hanok lanes.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-palaces"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "DMZ tour",
+          "notes": "Book early and bring your passport.",
+          "where": "Panmunjom area",
+          "book": "Yes - book the tour",
+          "place": "south-korea/dmz"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Bulguksa, Seokguram and Daereungwon tombs",
+          "notes": "Rent a bike for the town; Donggung Palace at night.",
+          "where": "Gyeongju",
+          "book": "",
+          "place": "south-korea/gyeongju"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Gamcheon village and Jagalchi Market",
+          "notes": "Steep lanes; eat raw fish upstairs at Jagalchi.",
+          "where": "Busan",
+          "book": "",
+          "place": "south-korea/busan-gamcheon"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "5h",
+          "name": "Haedong Yonggungsa Temple",
+          "notes": "Go early for sunrise light on the sea.",
+          "where": "Busan",
+          "book": "",
+          "place": "south-korea/haedong-yonggungsa"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Incheon Airport (ICN)",
+          "to": "Seoul hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "AREX train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Seoul",
+          "to": "Gyeongju",
+          "time": "09:00",
+          "minutes": 130,
+          "carrier": "KTX high-speed train",
+          "notes": "KTX to Singyeongju then a bus or taxi.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Gyeongju",
+          "to": "Busan",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "KTX high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Busan hotel",
+          "to": "Gimhae Airport, Busan (PUS)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "Airport train, limousine bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-korea-seoul-gyeongju-busan-jeju-10d",
+      "title": "Korea with Jeju Island in 10 Days",
+      "summary": "Seoul, Gyeongju, Busan and a volcanic island finale.",
+      "days": 10,
+      "route": "Seoul > Gyeongju > Busan > Jeju",
+      "arrive": "Seoul (ICN)",
+      "depart": "Jeju (CJU)",
+      "countries": [
+        "South Korea"
+      ],
+      "regions": [],
+      "cities": [
+        "Seoul",
+        "Gyeongju",
+        "Busan",
+        "Jeju"
+      ],
+      "imageQuery": "Jeju Seongsan Ilchulbong sunrise",
+      "highlights": [
+        "Gyeongbokgung",
+        "Bulguksa",
+        "Gamcheon",
+        "Hallasan",
+        "Seongsan Ilchulbong"
+      ],
+      "destinationKeys": [
+        "south-korea",
+        "south-korea/seoul",
+        "south-korea/gyeongju",
+        "south-korea/busan",
+        "south-korea/jeju"
+      ],
+      "hero": "south-korea/jeju",
+      "sources": [
+        "On The Go Tours",
+        "A Love Letter to Asia",
+        "TakeTours",
+        "TravelStride",
+        "Frosch Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Seoul",
+          "hotel": "Hotel in Seoul",
+          "start": 0,
+          "nights": 4,
+          "area": "In Jongno or Myeongdong for palaces, or Hongdae for nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gyeongju",
+          "hotel": "Guesthouse in Gyeongju",
+          "start": 4,
+          "nights": 1,
+          "area": "In a hanok guesthouse near Daereungwon",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Busan",
+          "hotel": "Hotel in Busan",
+          "start": 5,
+          "nights": 2,
+          "area": "Near Haeundae beach or Seomyeon, with subway access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jeju",
+          "hotel": "Hotel in Jeju",
+          "start": 7,
+          "nights": 2,
+          "area": "In Jeju City or on the south coast near Seogwipo",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Gwangjang Market and Korean BBQ dinner",
+          "notes": "Order to share; try bindaetteok.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-food-markets"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Gyeongbokgung Palace and Bukchon",
+          "notes": "Watch the guard ceremony; keep quiet in the hanok lanes.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-palaces"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "DMZ tour",
+          "notes": "Book early and bring your passport.",
+          "where": "Panmunjom area",
+          "book": "Yes - book the tour",
+          "place": "south-korea/dmz"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Namsan Tower and Hongdae",
+          "notes": "Take the cable car up Namsan.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-namsan-hongdae"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Bulguksa, Seokguram and Daereungwon tombs",
+          "notes": "Rent a bike for the town; Donggung Palace at night.",
+          "where": "Gyeongju",
+          "book": "",
+          "place": "south-korea/gyeongju"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Gamcheon village and Jagalchi Market",
+          "notes": "Steep lanes; eat raw fish upstairs at Jagalchi.",
+          "where": "Busan",
+          "book": "",
+          "place": "south-korea/busan-gamcheon"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Jeju coast afternoon",
+          "notes": "A rental car helps.",
+          "where": "Jeju",
+          "book": "",
+          "place": "south-korea/jeju-coast"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Hallasan crater lake hike",
+          "notes": "Reservations are required; check the weather.",
+          "where": "Hallasan National Park",
+          "book": "Yes - reserve the trail",
+          "place": "south-korea/jeju-hallasan"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Incheon Airport (ICN)",
+          "to": "Seoul hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "AREX train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Seoul",
+          "to": "Gyeongju",
+          "time": "09:00",
+          "minutes": 130,
+          "carrier": "KTX high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Gyeongju",
+          "to": "Busan",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "KTX high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Busan hotel",
+          "to": "Gimhae Airport, Busan (PUS)",
+          "time": "09:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Jeju Airport (CJU)",
+          "to": "Jeju hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Jeju hotel",
+          "to": "Jeju Airport (CJU)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Airport train, limousine bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-korea-grand-12d",
+      "title": "Grand South Korea in 12 Days",
+      "summary": "Seoul, Jeonju, Gyeongju, Busan and Jeju at an easy pace.",
+      "days": 12,
+      "route": "Seoul > Jeonju > Gyeongju > Busan > Jeju",
+      "arrive": "Seoul (ICN)",
+      "depart": "Jeju (CJU)",
+      "countries": [
+        "South Korea"
+      ],
+      "regions": [],
+      "cities": [
+        "Seoul",
+        "Jeonju",
+        "Gyeongju",
+        "Busan",
+        "Jeju"
+      ],
+      "imageQuery": "Jeonju hanok village Korea",
+      "highlights": [
+        "DMZ",
+        "Jeonju hanok",
+        "Bulguksa",
+        "Gamcheon",
+        "Hallasan",
+        "Jeju coast"
+      ],
+      "destinationKeys": [
+        "south-korea",
+        "south-korea/seoul",
+        "south-korea/jeonju",
+        "south-korea/gyeongju",
+        "south-korea/busan",
+        "south-korea/jeju"
+      ],
+      "hero": "south-korea/jeonju",
+      "sources": [
+        "On The Go Tours",
+        "A Love Letter to Asia",
+        "TakeTours",
+        "TravelStride",
+        "Frosch Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Seoul",
+          "hotel": "Hotel in Seoul",
+          "start": 0,
+          "nights": 3,
+          "area": "In Jongno or Myeongdong for palaces, or Hongdae for nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jeonju",
+          "hotel": "Guesthouse in Jeonju hanok village",
+          "start": 3,
+          "nights": 1,
+          "area": "In Jeonju hanok village, in a traditional house",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gyeongju",
+          "hotel": "Guesthouse in Gyeongju",
+          "start": 4,
+          "nights": 2,
+          "area": "In a hanok guesthouse near Daereungwon",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Busan",
+          "hotel": "Hotel in Busan",
+          "start": 6,
+          "nights": 2,
+          "area": "Near Haeundae beach or Seomyeon, with subway access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jeju",
+          "hotel": "Hotel in Jeju",
+          "start": 8,
+          "nights": 3,
+          "area": "In Jeju City or on the south coast near Seogwipo",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "3h",
+          "name": "Gwangjang Market and Korean BBQ dinner",
+          "notes": "Order to share; try bindaetteok.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-food-markets"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Gyeongbokgung Palace and Bukchon",
+          "notes": "Watch the guard ceremony; keep quiet in the hanok lanes.",
+          "where": "Seoul",
+          "book": "",
+          "place": "south-korea/seoul-palaces"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "DMZ tour",
+          "notes": "Book early and bring your passport.",
+          "where": "Panmunjom area",
+          "book": "Yes - book the tour",
+          "place": "south-korea/dmz"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Jeonju Hanok Village and bibimbap",
+          "notes": "Try makgeolli with dinner.",
+          "where": "Jeonju",
+          "book": "",
+          "place": "south-korea/jeonju-hanok"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Bulguksa, Seokguram and Daereungwon tombs",
+          "notes": "Rent a bike for the town; Donggung Palace at night.",
+          "where": "Gyeongju",
+          "book": "",
+          "place": "south-korea/gyeongju"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "06:00",
+          "duration": "3h",
+          "name": "Haedong Yonggungsa Temple",
+          "notes": "Go early for sunrise light on the sea.",
+          "where": "Busan",
+          "book": "",
+          "place": "south-korea/haedong-yonggungsa"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Gamcheon village and Jagalchi Market",
+          "notes": "Steep lanes; eat raw fish upstairs at Jagalchi.",
+          "where": "Busan",
+          "book": "",
+          "place": "south-korea/busan-gamcheon"
+        },
+        {
+          "day": 9,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Hallasan crater lake hike",
+          "notes": "Reservations are required; check the weather.",
+          "where": "Hallasan National Park",
+          "book": "Yes - reserve the trail",
+          "place": "south-korea/jeju-hallasan"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Jeju coast: Seongsan sunrise peak, lava tube and haenyeo",
+          "notes": "A rental car helps.",
+          "where": "Jeju",
+          "book": "",
+          "place": "south-korea/jeju-coast"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Incheon Airport (ICN)",
+          "to": "Seoul hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "AREX train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Seoul",
+          "to": "Jeonju",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "KTX high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Jeonju",
+          "to": "Gyeongju",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Intercity bus",
+          "notes": "Change at Daegu.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Gyeongju",
+          "to": "Busan",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "KTX high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Busan hotel",
+          "to": "Gimhae Airport, Busan (PUS)",
+          "time": "09:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Jeju Airport (CJU)",
+          "to": "Jeju hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Jeju hotel",
+          "to": "Jeju Airport (CJU)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Airport train, limousine bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "south-korea/seoul-palaces": {
+        "name": "Gyeongbokgung Palace and Bukchon Hanok Village",
+        "description": "The main royal palace with a changing of the guard, and a hillside of traditional houses.",
+        "details": "Gyeongbokgung was the grandest Joseon palace, and the guard ceremony happens at the main gate. Renting a hanbok gives free entry to many palaces. Bukchon Hanok Village has traditional houses on lanes, but it is a residential area, so keep voices low.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-korea/seoul-food-markets": {
+        "name": "Gwangjang Market, Myeongdong and Korean BBQ",
+        "description": "A historic food market, a shopping and street-food district, and a barbecue dinner.",
+        "details": "Gwangjang Market is known for bindaetteok (mung bean pancakes), mayak kimbap and raw beef. Myeongdong has cosmetics shops and street food after dark. Korean BBQ at a table grill is a must. Most restaurants serve two or more people.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-korea/seoul-namsan-hongdae": {
+        "name": "Namsan Tower, Hongdae and Dongdaemun",
+        "description": "A hilltop tower, a youth-culture district and a night shopping market.",
+        "details": "N Seoul Tower sits atop Namsan with views over the city and a hiking path. Hongdae has street performers, bars and clubs. Dongdaemun Design Plaza is a Zaha Hadid building and a night market. A cable car reaches Namsan from Myeongdong.",
+        "interests": [
+          "photography",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-korea/dmz": {
+        "name": "DMZ and Joint Security Area",
+        "description": "A guided visit to the heavily guarded border between North and South Korea.",
+        "details": "DMZ tours go from Seoul to the Dora Observatory, the Third Infiltration Tunnel and Imjingak. The Joint Security Area at Panmunjom is a special tour needing early booking and passports. Dress codes apply and photography is restricted in places. Tours are cancelled during tensions.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-korea/gyeongju": {
+        "name": "Gyeongju Bulguksa, Seokguram and Daereungwon",
+        "description": "The old Silla capital, a museum without walls with temples, royal tombs and a hilltop grotto.",
+        "details": "Bulguksa is a UNESCO temple with stone pagodas, and Seokguram Grotto holds a Buddha statue on Mount Toham. Daereungwon is a park of grass-covered Silla royal tombs, and Donggung Palace and Wolji Pond are lovely at night. Rent a bicycle to see the city.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-korea/busan-gamcheon": {
+        "name": "Busan Gamcheon Culture Village and Jagalchi Market",
+        "description": "A hillside village of coloured houses and a huge fish market.",
+        "details": "Gamcheon is a colourful hillside district with murals and cafes, climbing steep lanes. Jagalchi is Korea largest fish market, where you can eat raw fish upstairs. Haeundae and Gwangalli beaches are good for evenings.",
+        "interests": [
+          "culture",
+          "photography",
+          "food",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-korea/haedong-yonggungsa": {
+        "name": "Haedong Yonggungsa Temple",
+        "description": "A rare seaside Buddhist temple on cliffs on the east coast of Busan.",
+        "details": "Haedong Yonggungsa sits on rocks above the sea, with stone lanterns and a dragon pavilion. Sunrise is a special time. It is about an hour from central Busan by bus. Allow half a day with a coastal walk.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-korea/jeonju-hanok": {
+        "name": "Jeonju Hanok Village and bibimbap",
+        "description": "A village of 700 traditional houses, and the home of the dish bibimbap.",
+        "details": "Jeonju is known as the gastronomic capital of Korea. The hanok village has traditional houses, tea rooms and street snacks, and visitors can sleep in a hanok. Try bibimbap in its home town and makgeolli rice wine.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-korea/jeju-hallasan": {
+        "name": "Jeju Hallasan and Seongsan Ilchulbong",
+        "description": "Korea highest mountain with a crater lake, and a sunrise volcanic cone on the coast.",
+        "details": "Hallasan National Park has trails to a crater lake, with the Seongpanak route taking about 9 hours return, and reservations required. Seongsan Ilchulbong is a tuff cone rising from the sea at the east end of Jeju. The haenyeo women divers perform on the coast.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "south-korea/jeju-coast": {
+        "name": "Jeju coast, waterfalls and haenyeo",
+        "description": "Lava tubes, waterfalls and the female free divers of Jeju.",
+        "details": "Jeju has the Manjanggul lava tube, the Cheonjiyeon waterfall and black basalt beaches. The haenyeo women free-divers sell seafood at the coast. A rented car makes the island easy to explore, though buses and tours also operate.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "south-korea": {
+        "name": "South Korea",
+        "description": "A country of palaces, mountain temples, hanok villages and futuristic cities.",
+        "images": []
+      },
+      "south-korea/seoul": {
+        "name": "Seoul",
+        "description": "The capital, a mix of palaces and neon.",
+        "images": []
+      },
+      "south-korea/gyeongju": {
+        "name": "Gyeongju",
+        "description": "The old Silla capital.",
+        "images": []
+      },
+      "south-korea/busan": {
+        "name": "Busan",
+        "description": "A coastal city of beaches and hillside villages.",
+        "images": []
+      },
+      "south-korea/jeonju": {
+        "name": "Jeonju",
+        "description": "A gastronomic city with a hanok village.",
+        "images": []
+      },
+      "south-korea/jeju": {
+        "name": "Jeju",
+        "description": "A volcanic island of hiking and coast.",
+        "images": []
+      }
+    }
+  }
+}

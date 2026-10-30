@@ -1,0 +1,1136 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining On The Go Tours, Didon Tours, Native Eye Travel and Affordable Tours itineraries for Tunisia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "tunisia-tunis-carthage-4d",
+      "title": "Tunis and Carthage in 4 Days",
+      "summary": "The medina, Roman mosaics, Carthage and Sidi Bou Said.",
+      "days": 4,
+      "route": "Tunis",
+      "arrive": "Tunis (TUN)",
+      "depart": "Tunis (TUN)",
+      "countries": [
+        "Tunisia"
+      ],
+      "regions": [],
+      "cities": [
+        "Tunis"
+      ],
+      "imageQuery": "Sidi Bou Said blue white Tunisia",
+      "highlights": [
+        "Tunis medina",
+        "Bardo Museum",
+        "Carthage",
+        "Sidi Bou Said"
+      ],
+      "destinationKeys": [
+        "tunisia",
+        "tunisia/tunis"
+      ],
+      "hero": "tunisia/tunis",
+      "sources": [
+        "On The Go Tours",
+        "Didon Tours",
+        "Native Eye Travel",
+        "Affordable Tours",
+        "Lokalee"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tunis",
+          "hotel": "Hotel in Tunis",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Tunis medina or the Carthage and Sidi Bou Said area",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Carthage ruins and Sidi Bou Said",
+          "notes": "Mint tea at Cafe des Nattes at sunset.",
+          "where": "Carthage",
+          "book": "",
+          "place": "tunisia/carthage-sidi-bou-said"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Tunis medina souks and the Bardo Museum",
+          "notes": "Bargain gently; mosaics at the Bardo.",
+          "where": "Tunis",
+          "book": "",
+          "place": "tunisia/tunis-medina-bardo"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Dougga Roman city",
+          "notes": "Stop on the road south.",
+          "where": "Dougga",
+          "book": "",
+          "place": "tunisia/dougga"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Carthage ruins and Sidi Bou Said",
+          "notes": "Mint tea at Cafe des Nattes at sunset.",
+          "where": "Carthage",
+          "book": "",
+          "place": "tunisia/carthage-sidi-bou-said"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tunis-Carthage Airport (TUN)",
+          "to": "Tunis hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Tunis hotel",
+          "to": "Tunis-Carthage Airport (TUN)",
+          "time": "12:00",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "tunisia-tunis-kairouan-5d",
+      "title": "Tunis and Kairouan in 5 Days",
+      "summary": "The capital, Roman Dougga and the holy city of Kairouan.",
+      "days": 5,
+      "route": "Tunis > Kairouan",
+      "arrive": "Tunis (TUN)",
+      "depart": "Tunis (TUN)",
+      "countries": [
+        "Tunisia"
+      ],
+      "regions": [],
+      "cities": [
+        "Tunis",
+        "Kairouan"
+      ],
+      "imageQuery": "Kairouan Great Mosque Tunisia",
+      "highlights": [
+        "Tunis medina",
+        "Carthage",
+        "Dougga",
+        "Kairouan",
+        "El Jem"
+      ],
+      "destinationKeys": [
+        "tunisia",
+        "tunisia/tunis",
+        "tunisia/kairouan"
+      ],
+      "hero": "tunisia/kairouan",
+      "sources": [
+        "On The Go Tours",
+        "Didon Tours",
+        "Native Eye Travel",
+        "Affordable Tours",
+        "Lokalee"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tunis",
+          "hotel": "Hotel in Tunis",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Tunis medina or the Carthage and Sidi Bou Said area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kairouan",
+          "hotel": "Hotel in Kairouan",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the Kairouan medina",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Tunis medina souks and the Bardo Museum",
+          "notes": "Bargain gently; mosaics at the Bardo.",
+          "where": "Tunis",
+          "book": "",
+          "place": "tunisia/tunis-medina-bardo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Carthage ruins and Sidi Bou Said",
+          "notes": "Mint tea at Cafe des Nattes at sunset.",
+          "where": "Carthage",
+          "book": "",
+          "place": "tunisia/carthage-sidi-bou-said"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Dougga Roman city",
+          "notes": "Stop on the road south.",
+          "where": "Dougga",
+          "book": "",
+          "place": "tunisia/dougga"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3.5h",
+          "name": "Kairouan Great Mosque and medina",
+          "notes": "Dress modestly; try makroudh pastries.",
+          "where": "Kairouan",
+          "book": "",
+          "place": "tunisia/kairouan"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "El Jem amphitheatre",
+          "notes": "Walk the arena and tunnels.",
+          "where": "El Jem",
+          "book": "",
+          "place": "tunisia/el-jem"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tunis-Carthage Airport (TUN)",
+          "to": "Tunis hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tunis",
+          "to": "Kairouan",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Private driver or 4x4",
+          "notes": "Stop at Dougga on the way.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Kairouan",
+          "to": "Tunis-Carthage Airport (TUN)",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Private driver or 4x4",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "tunisia-tunis-kairouan-douz-djerba-7d",
+      "title": "Tunisia Highlights in 7 Days",
+      "summary": "Tunis, Kairouan, the Sahara at Douz and Djerba.",
+      "days": 7,
+      "route": "Tunis > Kairouan > Douz > Djerba",
+      "arrive": "Tunis (TUN)",
+      "depart": "Djerba (DJE)",
+      "countries": [
+        "Tunisia"
+      ],
+      "regions": [],
+      "cities": [
+        "Tunis",
+        "Kairouan",
+        "Douz",
+        "Djerba"
+      ],
+      "imageQuery": "Douz Sahara camel Tunisia",
+      "highlights": [
+        "Tunis medina",
+        "Kairouan",
+        "El Jem",
+        "Sahara camel trek",
+        "Djerba"
+      ],
+      "destinationKeys": [
+        "tunisia",
+        "tunisia/tunis",
+        "tunisia/kairouan",
+        "tunisia/douz",
+        "tunisia/djerba"
+      ],
+      "hero": "tunisia/douz",
+      "sources": [
+        "On The Go Tours",
+        "Didon Tours",
+        "Native Eye Travel",
+        "Affordable Tours",
+        "Lokalee"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tunis",
+          "hotel": "Hotel in Tunis",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Tunis medina or the Carthage and Sidi Bou Said area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kairouan",
+          "hotel": "Hotel in Kairouan",
+          "start": 2,
+          "nights": 1,
+          "area": "Near the Kairouan medina",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Douz",
+          "hotel": "Camp near Douz",
+          "start": 3,
+          "nights": 2,
+          "area": "In Douz or a Berber camp on the edge of the dunes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Djerba",
+          "hotel": "Resort on Djerba",
+          "start": 5,
+          "nights": 1,
+          "area": "On the beach at Djerba Midoun or near Houmt Souk",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Tunis medina souks and the Bardo Museum",
+          "notes": "Bargain gently; mosaics at the Bardo.",
+          "where": "Tunis",
+          "book": "",
+          "place": "tunisia/tunis-medina-bardo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Carthage ruins and Sidi Bou Said",
+          "notes": "Mint tea at Cafe des Nattes at sunset.",
+          "where": "Carthage",
+          "book": "",
+          "place": "tunisia/carthage-sidi-bou-said"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "El Jem amphitheatre",
+          "notes": "Walk the arena and tunnels.",
+          "where": "El Jem",
+          "book": "",
+          "place": "tunisia/el-jem"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Kairouan Great Mosque and medina",
+          "notes": "Dress modestly; try makroudh pastries.",
+          "where": "Kairouan",
+          "book": "",
+          "place": "tunisia/kairouan"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Camel trek and sunset in the Sahara dunes",
+          "notes": "Nights are cold in winter.",
+          "where": "Douz",
+          "book": "Yes - book a camel trek",
+          "place": "tunisia/douz-sahara"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Matmata troglodyte houses",
+          "notes": "Tea inside an underground home.",
+          "where": "Matmata",
+          "book": "",
+          "place": "tunisia/matmata-troglodyte"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Houmt Souk, Borj el Kebir and El Ghriba synagogue",
+          "notes": "Check security guidance for the synagogue.",
+          "where": "Djerba",
+          "book": "",
+          "place": "tunisia/djerba"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tunis-Carthage Airport (TUN)",
+          "to": "Tunis hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tunis",
+          "to": "Kairouan",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Private driver or 4x4",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kairouan",
+          "to": "Douz camp",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Private driver or 4x4",
+          "notes": "A long day across the salt lake Chott el Djerid.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Douz camp",
+          "to": "Djerba resort",
+          "time": "09:30",
+          "minutes": 240,
+          "carrier": "Private driver or 4x4",
+          "notes": "Stop at Matmata on the way.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Djerba resort",
+          "to": "Djerba-Zarzis Airport (DJE)",
+          "time": "15:00",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "tunisia-tunis-kairouan-douz-djerba-9d",
+      "title": "Tunisia Sahara and Island in 9 Days",
+      "summary": "The capital, Kairouan, two nights in the Sahara and three on Djerba.",
+      "days": 9,
+      "route": "Tunis > Kairouan > Douz > Djerba",
+      "arrive": "Tunis (TUN)",
+      "depart": "Djerba (DJE)",
+      "countries": [
+        "Tunisia"
+      ],
+      "regions": [],
+      "cities": [
+        "Tunis",
+        "Kairouan",
+        "Douz",
+        "Djerba"
+      ],
+      "imageQuery": "Djerba Tunisia beach",
+      "highlights": [
+        "Carthage",
+        "Kairouan",
+        "El Jem",
+        "Sahara",
+        "Matmata",
+        "Djerba"
+      ],
+      "destinationKeys": [
+        "tunisia",
+        "tunisia/tunis",
+        "tunisia/kairouan",
+        "tunisia/douz",
+        "tunisia/djerba"
+      ],
+      "hero": "tunisia/djerba",
+      "sources": [
+        "On The Go Tours",
+        "Didon Tours",
+        "Native Eye Travel",
+        "Affordable Tours",
+        "Lokalee"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tunis",
+          "hotel": "Hotel in Tunis",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Tunis medina or the Carthage and Sidi Bou Said area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kairouan",
+          "hotel": "Hotel in Kairouan",
+          "start": 2,
+          "nights": 1,
+          "area": "Near the Kairouan medina",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Douz",
+          "hotel": "Camp near Douz",
+          "start": 3,
+          "nights": 2,
+          "area": "In Douz or a Berber camp on the edge of the dunes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Djerba",
+          "hotel": "Resort on Djerba",
+          "start": 5,
+          "nights": 3,
+          "area": "On the beach at Djerba Midoun or near Houmt Souk",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Tunis medina souks and the Bardo Museum",
+          "notes": "Bargain gently; mosaics at the Bardo.",
+          "where": "Tunis",
+          "book": "",
+          "place": "tunisia/tunis-medina-bardo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Carthage ruins and Sidi Bou Said",
+          "notes": "Mint tea at Cafe des Nattes at sunset.",
+          "where": "Carthage",
+          "book": "",
+          "place": "tunisia/carthage-sidi-bou-said"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "El Jem amphitheatre",
+          "notes": "Walk the arena and tunnels.",
+          "where": "El Jem",
+          "book": "",
+          "place": "tunisia/el-jem"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Kairouan Great Mosque and medina",
+          "notes": "Dress modestly; try makroudh pastries.",
+          "where": "Kairouan",
+          "book": "",
+          "place": "tunisia/kairouan"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Camel trek and sunset in the Sahara dunes",
+          "notes": "Nights are cold in winter.",
+          "where": "Douz",
+          "book": "Yes - book a camel trek",
+          "place": "tunisia/douz-sahara"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Matmata troglodyte houses",
+          "notes": "Tea inside an underground home.",
+          "where": "Matmata",
+          "book": "",
+          "place": "tunisia/matmata-troglodyte"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Houmt Souk, Borj el Kebir and El Ghriba synagogue",
+          "notes": "Check security guidance for the synagogue.",
+          "where": "Djerba",
+          "book": "",
+          "place": "tunisia/djerba"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Chenini and Tataouine ksour",
+          "notes": "Hilltop cave village and fortified granaries.",
+          "where": "Tataouine",
+          "book": "",
+          "place": "tunisia/tataouine-ksour"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tunis-Carthage Airport (TUN)",
+          "to": "Tunis hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Tunis",
+          "to": "Kairouan",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Private driver or 4x4",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kairouan",
+          "to": "Douz camp",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Private driver or 4x4",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Douz camp",
+          "to": "Djerba resort",
+          "time": "09:30",
+          "minutes": 240,
+          "carrier": "Private driver or 4x4",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Djerba resort",
+          "to": "Djerba-Zarzis Airport (DJE)",
+          "time": "12:00",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "tunisia-complete-11d",
+      "title": "Complete Tunisia in 11 Days",
+      "summary": "Three nights in Tunis with Dougga, two in Kairouan, the Sahara and three on Djerba.",
+      "days": 11,
+      "route": "Tunis > Kairouan > Douz > Djerba",
+      "arrive": "Tunis (TUN)",
+      "depart": "Djerba (DJE)",
+      "countries": [
+        "Tunisia"
+      ],
+      "regions": [],
+      "cities": [
+        "Tunis",
+        "Kairouan",
+        "Douz",
+        "Djerba"
+      ],
+      "imageQuery": "Tunisia Roman El Jem amphitheatre",
+      "highlights": [
+        "Bardo Museum",
+        "Dougga",
+        "El Jem",
+        "Sahara",
+        "Chenini",
+        "Djerba"
+      ],
+      "destinationKeys": [
+        "tunisia",
+        "tunisia/tunis",
+        "tunisia/kairouan",
+        "tunisia/douz",
+        "tunisia/djerba"
+      ],
+      "hero": "tunisia/tunis",
+      "sources": [
+        "On The Go Tours",
+        "Didon Tours",
+        "Native Eye Travel",
+        "Affordable Tours",
+        "Lokalee"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Tunis",
+          "hotel": "Hotel in Tunis",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Tunis medina or the Carthage and Sidi Bou Said area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kairouan",
+          "hotel": "Hotel in Kairouan",
+          "start": 3,
+          "nights": 2,
+          "area": "Near the Kairouan medina",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Douz",
+          "hotel": "Camp near Douz",
+          "start": 5,
+          "nights": 2,
+          "area": "In Douz or a Berber camp on the edge of the dunes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Djerba",
+          "hotel": "Resort on Djerba",
+          "start": 7,
+          "nights": 3,
+          "area": "On the beach at Djerba Midoun or near Houmt Souk",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Tunis medina souks and the Bardo Museum",
+          "notes": "Bargain gently; mosaics at the Bardo.",
+          "where": "Tunis",
+          "book": "",
+          "place": "tunisia/tunis-medina-bardo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Carthage ruins and Sidi Bou Said",
+          "notes": "Mint tea at Cafe des Nattes at sunset.",
+          "where": "Carthage",
+          "book": "",
+          "place": "tunisia/carthage-sidi-bou-said"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Dougga Roman city",
+          "notes": "Stop on the road south.",
+          "where": "Dougga",
+          "book": "",
+          "place": "tunisia/dougga"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Kairouan Great Mosque and medina",
+          "notes": "Dress modestly; try makroudh pastries.",
+          "where": "Kairouan",
+          "book": "",
+          "place": "tunisia/kairouan"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "El Jem amphitheatre",
+          "notes": "Walk the arena and tunnels.",
+          "where": "El Jem",
+          "book": "",
+          "place": "tunisia/el-jem"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Camel trek and sunset in the Sahara dunes",
+          "notes": "Nights are cold in winter.",
+          "where": "Douz",
+          "book": "Yes - book a camel trek",
+          "place": "tunisia/douz-sahara"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Matmata troglodyte houses",
+          "notes": "Tea inside an underground home.",
+          "where": "Matmata",
+          "book": "",
+          "place": "tunisia/matmata-troglodyte"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Houmt Souk, Borj el Kebir and El Ghriba synagogue",
+          "notes": "Check security guidance for the synagogue.",
+          "where": "Djerba",
+          "book": "",
+          "place": "tunisia/djerba"
+        },
+        {
+          "day": 9,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Chenini and Tataouine ksour",
+          "notes": "Hilltop cave village and fortified granaries.",
+          "where": "Tataouine",
+          "book": "",
+          "place": "tunisia/tataouine-ksour"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tunis-Carthage Airport (TUN)",
+          "to": "Tunis hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Tunis",
+          "to": "Kairouan",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Private driver or 4x4",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Kairouan",
+          "to": "Douz camp",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Private driver or 4x4",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Douz camp",
+          "to": "Djerba resort",
+          "time": "09:30",
+          "minutes": 240,
+          "carrier": "Private driver or 4x4",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Djerba resort",
+          "to": "Djerba-Zarzis Airport (DJE)",
+          "time": "12:00",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "tunisia/tunis-medina-bardo": {
+        "name": "Tunis medina and the Bardo Museum",
+        "description": "A UNESCO souk-filled old town and one of the greatest Roman mosaic collections.",
+        "details": "The Tunis medina has covered souks, the Zitouna Mosque and rooftop cafes. The Bardo Museum holds an exceptional collection of Roman mosaics in a former palace. Go in the morning. Bargain gently in the souks.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tunisia/carthage-sidi-bou-said": {
+        "name": "Carthage ruins and Sidi Bou Said",
+        "description": "The ruins of the Phoenician and Roman city, and a blue-and-white clifftop village.",
+        "details": "Carthage has the Antonine Baths, Punic ports and Roman villas scattered over suburbs. Sidi Bou Said is a village of whitewashed houses with blue doors and the Cafe des Nattes serving mint tea. A TGM light rail line connects them to Tunis.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tunisia/dougga": {
+        "name": "Dougga Roman city",
+        "description": "A well-preserved Roman town on a hillside, a UNESCO site with a theatre and capitol.",
+        "details": "Dougga is the best-preserved Roman town in North Africa, with a theatre, capitol temple and baths in a setting of olive groves. It is about two hours from Tunis, and a good stop on the way south.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "tunisia/el-jem": {
+        "name": "El Jem amphitheatre",
+        "description": "A huge Roman amphitheatre, among the best preserved in the world, with room for 35,000.",
+        "details": "The El Jem amphitheatre is the third largest in the Roman world and in excellent condition. You can walk the arena and underground passages. It is on the road between Kairouan and Djerba.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tunisia/kairouan": {
+        "name": "Kairouan Great Mosque and medina",
+        "description": "Islam fourth holiest city, with the oldest mosque in North Africa and carpet workshops.",
+        "details": "Kairouan has the Great Mosque of Uqba, a UNESCO site. Non-Muslims can enter the courtyard at certain times. The medina is known for carpets and the pastry makroudh. Dress modestly.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tunisia/matmata-troglodyte": {
+        "name": "Matmata troglodyte houses",
+        "description": "Underground homes dug into pits in the earth, and a Star Wars film location.",
+        "details": "The troglodyte dwellings of Matmata are cool underground houses around courtyards. Hotel Sidi Driss was used in Star Wars. Some houses are open for tea and a tour. It is a stop on the road between Douz and Djerba.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tunisia/douz-sahara": {
+        "name": "Douz and the Sahara camel trek",
+        "description": "The gateway to the Sahara, with a camel ride into the dunes and a night in a desert camp.",
+        "details": "Douz is a palm oasis town on the edge of the Grand Erg Oriental. Camel treks of an hour or overnight go into the dunes for sunset and a night in a Berber camp under stars. The Chott el Djerid salt lake lies on the road. Nights are cold in winter.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "tunisia/djerba": {
+        "name": "Djerba Houmt Souk and El Ghriba synagogue",
+        "description": "A Mediterranean island of white houses, beaches, a market and one of Africa oldest synagogues.",
+        "details": "Djerba has the Houmt Souk market, Borj el Kebir fort and El Ghriba synagogue, still a pilgrimage site. The Guellala pottery village and the flamingo lagoon are other stops. Beaches line the north-east coast. Check current security guidance for the synagogue.",
+        "interests": [
+          "relax",
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "tunisia/tataouine-ksour": {
+        "name": "Tataouine ksour and Chenini",
+        "description": "Fortified granaries of the Berber south and a hilltop cave village.",
+        "details": "The ksour of Ksar Ouled Soltane and the village of Chenini are in the hills near Tataouine. The ksour are multi-storey granaries, and Chenini has cave houses and a white mosque. Several Star Wars scenes were filmed nearby.",
+        "interests": [
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "tunisia": {
+        "name": "Tunisia",
+        "description": "A North African country of Roman amphitheatres, medinas, Sahara dunes and Mediterranean beaches.",
+        "images": []
+      },
+      "tunisia/tunis": {
+        "name": "Tunis",
+        "description": "The capital, close to Carthage.",
+        "images": []
+      },
+      "tunisia/kairouan": {
+        "name": "Kairouan",
+        "description": "A holy city with the oldest mosque in North Africa.",
+        "images": []
+      },
+      "tunisia/douz": {
+        "name": "Douz",
+        "description": "The gateway to the Sahara.",
+        "images": []
+      },
+      "tunisia/djerba": {
+        "name": "Djerba",
+        "description": "A Mediterranean island.",
+        "images": []
+      }
+    }
+  }
+}

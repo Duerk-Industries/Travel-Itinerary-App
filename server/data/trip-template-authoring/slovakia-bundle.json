@@ -1,0 +1,1019 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Travel Slovakia, Rough Guides, Spectacular Slovakia and Slovakation itineraries for Slovakia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "slovakia-bratislava-4d",
+      "title": "Bratislava and Beyond in 4 Days",
+      "summary": "The castle capital with Devin and a day trip to Banska Stiavnica or Vienna.",
+      "days": 4,
+      "route": "Bratislava",
+      "arrive": "Bratislava (BTS)",
+      "depart": "Bratislava (BTS)",
+      "countries": [
+        "Slovakia"
+      ],
+      "regions": [],
+      "cities": [
+        "Bratislava"
+      ],
+      "imageQuery": "Bratislava castle Danube",
+      "highlights": [
+        "Old Town",
+        "Bratislava Castle",
+        "Devin Castle"
+      ],
+      "destinationKeys": [
+        "slovakia",
+        "slovakia/bratislava"
+      ],
+      "hero": "slovakia/bratislava",
+      "sources": [
+        "Travel Slovakia",
+        "Rough Guides",
+        "Spectacular Slovakia",
+        "Slovakation",
+        "Best Slovakia Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bratislava",
+          "hotel": "Hotel in Bratislava",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Old Town of Bratislava, walkable to sights",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bratislava Old Town and Castle",
+          "notes": "Try sheep cheese dumplings.",
+          "where": "Bratislava",
+          "book": "",
+          "place": "slovakia/bratislava-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Devin Castle",
+          "notes": "A short bus ride along the river.",
+          "where": "Devin",
+          "book": "",
+          "place": "slovakia/devin-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Banska Stiavnica castles and mining museum",
+          "notes": "Wear grippy shoes for the hill lanes.",
+          "where": "Banska Stiavnica",
+          "book": "",
+          "place": "slovakia/banska-stiavnica"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bratislava Airport (BTS)",
+          "to": "Bratislava hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Bratislava hotel",
+          "to": "Bratislava Airport (BTS)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "slovakia-bratislava-banska-stiavnica-5d",
+      "title": "Bratislava and Banska Stiavnica in 5 Days",
+      "summary": "The capital and a UNESCO mining town.",
+      "days": 5,
+      "route": "Bratislava > Banska Stiavnica",
+      "arrive": "Bratislava (BTS)",
+      "depart": "Bratislava (BTS)",
+      "countries": [
+        "Slovakia"
+      ],
+      "regions": [],
+      "cities": [
+        "Bratislava",
+        "Banska Stiavnica"
+      ],
+      "imageQuery": "Banska Stiavnica Slovakia town",
+      "highlights": [
+        "Old Town",
+        "Devin Castle",
+        "Banska Stiavnica"
+      ],
+      "destinationKeys": [
+        "slovakia",
+        "slovakia/bratislava",
+        "slovakia/banska-stiavnica"
+      ],
+      "hero": "slovakia/banska-stiavnica",
+      "sources": [
+        "Travel Slovakia",
+        "Rough Guides",
+        "Spectacular Slovakia",
+        "Slovakation",
+        "Best Slovakia Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bratislava",
+          "hotel": "Hotel in Bratislava",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Old Town of Bratislava, walkable to sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banska Stiavnica",
+          "hotel": "Hotel in Banska Stiavnica",
+          "start": 2,
+          "nights": 2,
+          "area": "In the old town of Banska Stiavnica, a steep walk uphill",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bratislava Old Town and Castle",
+          "notes": "Try sheep cheese dumplings.",
+          "where": "Bratislava",
+          "book": "",
+          "place": "slovakia/bratislava-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Devin Castle",
+          "notes": "A short bus ride along the river.",
+          "where": "Devin",
+          "book": "",
+          "place": "slovakia/devin-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Banska Stiavnica castles and mining museum",
+          "notes": "Wear grippy shoes for the hill lanes.",
+          "where": "Banska Stiavnica",
+          "book": "",
+          "place": "slovakia/banska-stiavnica"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Mining lakes and open-air museum",
+          "notes": "Wear grippy shoes for the hill lanes.",
+          "where": "Banska Stiavnica",
+          "book": "",
+          "place": "slovakia/banska-stiavnica"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bratislava Airport (BTS)",
+          "to": "Bratislava hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Bratislava",
+          "to": "Banska Stiavnica",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "ZSSK train or intercity bus",
+          "notes": "Change at Zvolen or Hronska Dubrava.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Banska Stiavnica",
+          "to": "Bratislava Airport (BTS)",
+          "time": "10:00",
+          "minutes": 180,
+          "carrier": "ZSSK train or intercity bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "slovakia-bratislava-banska-tatras-7d",
+      "title": "Slovakia Highlights in 7 Days",
+      "summary": "Bratislava, Banska Stiavnica and the High Tatras.",
+      "days": 7,
+      "route": "Bratislava > Banska Stiavnica > High Tatras",
+      "arrive": "Bratislava (BTS)",
+      "depart": "Kosice (KSC)",
+      "countries": [
+        "Slovakia"
+      ],
+      "regions": [],
+      "cities": [
+        "Bratislava",
+        "Banska Stiavnica",
+        "High Tatras"
+      ],
+      "imageQuery": "High Tatras Slovakia lake",
+      "highlights": [
+        "Bratislava",
+        "Banska Stiavnica",
+        "High Tatras",
+        "Spis Castle"
+      ],
+      "destinationKeys": [
+        "slovakia",
+        "slovakia/bratislava",
+        "slovakia/banska-stiavnica",
+        "slovakia/high-tatras"
+      ],
+      "hero": "slovakia/high-tatras",
+      "sources": [
+        "Travel Slovakia",
+        "Rough Guides",
+        "Spectacular Slovakia",
+        "Slovakation",
+        "Best Slovakia Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bratislava",
+          "hotel": "Hotel in Bratislava",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Old Town of Bratislava, walkable to sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banska Stiavnica",
+          "hotel": "Hotel in Banska Stiavnica",
+          "start": 2,
+          "nights": 1,
+          "area": "In the old town of Banska Stiavnica, a steep walk uphill",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "High Tatras",
+          "hotel": "Lodge in the High Tatras",
+          "start": 3,
+          "nights": 3,
+          "area": "In Strbske Pleso or Smokovec, close to the cable cars and trails",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bratislava Old Town and Castle",
+          "notes": "Try sheep cheese dumplings.",
+          "where": "Bratislava",
+          "book": "",
+          "place": "slovakia/bratislava-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Devin Castle",
+          "notes": "A short bus ride along the river.",
+          "where": "Devin",
+          "book": "",
+          "place": "slovakia/devin-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Banska Stiavnica castles and mining museum",
+          "notes": "Wear grippy shoes for the hill lanes.",
+          "where": "Banska Stiavnica",
+          "book": "",
+          "place": "slovakia/banska-stiavnica"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "High Tatras hike from Strbske Pleso",
+          "notes": "High trails close from November to mid-June; carry waterproofs.",
+          "where": "High Tatras",
+          "book": "",
+          "place": "slovakia/high-tatras"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Spis Castle and Levoca",
+          "notes": "Spis Castle is closed December to March.",
+          "where": "Spis",
+          "book": "",
+          "place": "slovakia/spis-levoca"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bratislava Airport (BTS)",
+          "to": "Bratislava hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Bratislava",
+          "to": "Banska Stiavnica",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Banska Stiavnica",
+          "to": "High Tatras lodge",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "Stop at Orava on a longer route.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "High Tatras lodge",
+          "to": "Kosice Airport (KSC)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "slovakia-bratislava-banska-tatras-kosice-8d",
+      "title": "Slovakia West to East in 8 Days",
+      "summary": "Bratislava, Banska Stiavnica, the High Tatras and Kosice.",
+      "days": 8,
+      "route": "Bratislava > Banska Stiavnica > High Tatras > Kosice",
+      "arrive": "Bratislava (BTS)",
+      "depart": "Kosice (KSC)",
+      "countries": [
+        "Slovakia"
+      ],
+      "regions": [],
+      "cities": [
+        "Bratislava",
+        "Banska Stiavnica",
+        "High Tatras",
+        "Kosice"
+      ],
+      "imageQuery": "Kosice cathedral Slovakia",
+      "highlights": [
+        "Banska Stiavnica",
+        "High Tatras",
+        "Spis Castle",
+        "Kosice"
+      ],
+      "destinationKeys": [
+        "slovakia",
+        "slovakia/bratislava",
+        "slovakia/banska-stiavnica",
+        "slovakia/high-tatras",
+        "slovakia/kosice"
+      ],
+      "hero": "slovakia/kosice",
+      "sources": [
+        "Travel Slovakia",
+        "Rough Guides",
+        "Spectacular Slovakia",
+        "Slovakation",
+        "Best Slovakia Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Bratislava",
+          "hotel": "Hotel in Bratislava",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Old Town of Bratislava, walkable to sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banska Stiavnica",
+          "hotel": "Hotel in Banska Stiavnica",
+          "start": 2,
+          "nights": 1,
+          "area": "In the old town of Banska Stiavnica, a steep walk uphill",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "High Tatras",
+          "hotel": "Lodge in the High Tatras",
+          "start": 3,
+          "nights": 3,
+          "area": "In Strbske Pleso or Smokovec, close to the cable cars and trails",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kosice",
+          "hotel": "Hotel in Kosice",
+          "start": 6,
+          "nights": 1,
+          "area": "In central Kosice near the cathedral",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bratislava Old Town and Castle",
+          "notes": "Try sheep cheese dumplings.",
+          "where": "Bratislava",
+          "book": "",
+          "place": "slovakia/bratislava-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Devin Castle",
+          "notes": "A short bus ride along the river.",
+          "where": "Devin",
+          "book": "",
+          "place": "slovakia/devin-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Banska Stiavnica castles and mining museum",
+          "notes": "Wear grippy shoes for the hill lanes.",
+          "where": "Banska Stiavnica",
+          "book": "",
+          "place": "slovakia/banska-stiavnica"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "High Tatras hike from Strbske Pleso",
+          "notes": "High trails close from November to mid-June; carry waterproofs.",
+          "where": "High Tatras",
+          "book": "",
+          "place": "slovakia/high-tatras"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Spis Castle and Levoca",
+          "notes": "Spis Castle is closed December to March.",
+          "where": "Spis",
+          "book": "",
+          "place": "slovakia/spis-levoca"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3.5h",
+          "name": "Kosice old town and St Elisabeth Cathedral",
+          "notes": "Stroll the long main street.",
+          "where": "Kosice",
+          "book": "",
+          "place": "slovakia/kosice"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bratislava Airport (BTS)",
+          "to": "Bratislava hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Bratislava",
+          "to": "Banska Stiavnica",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Banska Stiavnica",
+          "to": "High Tatras lodge",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "High Tatras lodge",
+          "to": "Kosice",
+          "time": "12:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "Stop at Spis Castle on the way.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Kosice",
+          "to": "Kosice Airport (KSC)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "slovakia-complete-10d",
+      "title": "Complete Slovakia in 10 Days",
+      "summary": "Castles, mining towns, alpine hiking, Slovak Paradise and Kosice.",
+      "days": 10,
+      "route": "Bratislava > Banska Stiavnica > High Tatras > Kosice",
+      "arrive": "Bratislava (BTS)",
+      "depart": "Kosice (KSC)",
+      "countries": [
+        "Slovakia"
+      ],
+      "regions": [],
+      "cities": [
+        "Bratislava",
+        "Banska Stiavnica",
+        "High Tatras",
+        "Kosice"
+      ],
+      "imageQuery": "Slovak Paradise gorge ladders",
+      "highlights": [
+        "Orava Castle",
+        "High Tatras",
+        "Spis Castle",
+        "Slovak Paradise",
+        "Kosice"
+      ],
+      "destinationKeys": [
+        "slovakia",
+        "slovakia/bratislava",
+        "slovakia/banska-stiavnica",
+        "slovakia/high-tatras",
+        "slovakia/kosice"
+      ],
+      "hero": "slovakia/high-tatras",
+      "sources": [
+        "Travel Slovakia",
+        "Rough Guides",
+        "Spectacular Slovakia",
+        "Slovakation",
+        "Best Slovakia Tours"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bratislava",
+          "hotel": "Hotel in Bratislava",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Old Town of Bratislava, walkable to sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banska Stiavnica",
+          "hotel": "Hotel in Banska Stiavnica",
+          "start": 2,
+          "nights": 2,
+          "area": "In the old town of Banska Stiavnica, a steep walk uphill",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "High Tatras",
+          "hotel": "Lodge in the High Tatras",
+          "start": 4,
+          "nights": 3,
+          "area": "In Strbske Pleso or Smokovec, close to the cable cars and trails",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kosice",
+          "hotel": "Hotel in Kosice",
+          "start": 7,
+          "nights": 2,
+          "area": "In central Kosice near the cathedral",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Bratislava Old Town and Castle",
+          "notes": "Try sheep cheese dumplings.",
+          "where": "Bratislava",
+          "book": "",
+          "place": "slovakia/bratislava-old-town"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Devin Castle",
+          "notes": "A short bus ride along the river.",
+          "where": "Devin",
+          "book": "",
+          "place": "slovakia/devin-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Banska Stiavnica castles and mining museum",
+          "notes": "Wear grippy shoes for the hill lanes.",
+          "where": "Banska Stiavnica",
+          "book": "",
+          "place": "slovakia/banska-stiavnica"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "Orava Castle and Vlkolinec village",
+          "notes": "On the road north to the Tatras.",
+          "where": "Orava",
+          "book": "",
+          "place": "slovakia/orava-vlkolinec"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "High Tatras hike from Strbske Pleso",
+          "notes": "High trails close from November to mid-June; carry waterproofs.",
+          "where": "High Tatras",
+          "book": "",
+          "place": "slovakia/high-tatras"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Spis Castle and Levoca",
+          "notes": "Spis Castle is closed December to March.",
+          "where": "Spis",
+          "book": "",
+          "place": "slovakia/spis-levoca"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3.5h",
+          "name": "Kosice old town and St Elisabeth Cathedral",
+          "notes": "Stroll the long main street.",
+          "where": "Kosice",
+          "book": "",
+          "place": "slovakia/kosice"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Slovak Paradise gorge hike and Dobsinska Ice Cave",
+          "notes": "The ice cave opens May to September.",
+          "where": "Slovak Paradise",
+          "book": "",
+          "place": "slovakia/slovak-paradise"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bratislava Airport (BTS)",
+          "to": "Bratislava hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Bratislava",
+          "to": "Banska Stiavnica",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Banska Stiavnica",
+          "to": "High Tatras lodge",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "Stop at Orava Castle and Vlkolinec.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "High Tatras lodge",
+          "to": "Kosice",
+          "time": "12:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Kosice",
+          "to": "Kosice Airport (KSC)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "slovakia/bratislava-old-town": {
+        "name": "Bratislava Old Town and Castle",
+        "description": "A compact old town of pastel squares, a four-towered castle and a UFO-topped bridge.",
+        "details": "Bratislava Old Town is walkable, with St Michael Gate, the Primate Palace and statues on corners. The castle above the Danube gives views toward Austria and Hungary. The UFO observation deck on the bridge is a quirky stop. Try bryndzove halusky, sheep cheese dumplings.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "slovakia/devin-castle": {
+        "name": "Devin Castle",
+        "description": "A ruined castle on a rock at the meeting of the Danube and Morava, the border of old Moravia.",
+        "details": "Devin is a ruin on a cliff, with a long history of Celtic, Roman and Slavic use. It lies a short bus ride from Bratislava along the river. The view of the rivers and the Austrian border is the highlight.",
+        "interests": [
+          "culture",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "slovakia/banska-stiavnica": {
+        "name": "Banska Stiavnica mining town",
+        "description": "A UNESCO hill town of mining lakes, castles and Baroque squares.",
+        "details": "Banska Stiavnica was one of Europe richest silver mining towns. A trail leads through the hillside past the Old and New Castles, and the open-air mining museum offers underground tours. Tajchy, old reservoir lakes, are used for swimming in summer.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "slovakia/orava-vlkolinec": {
+        "name": "Orava Castle and Vlkolinec",
+        "description": "A castle on a high rock above the river, and a folk-architecture village.",
+        "details": "Orava Castle is a Gothic fortress on a cliff, used in the film Nosferatu. Vlkolinec is a UNESCO village of timber houses on a hillside. Both are on the route between Bratislava and the High Tatras.",
+        "interests": [
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "slovakia/high-tatras": {
+        "name": "High Tatras hiking from Strbske Pleso",
+        "description": "Jagged alpine peaks, glacial lakes and mountain huts, accessed from a lakeside resort.",
+        "details": "The High Tatras are the smallest alpine mountain range in the world. From Strbske Pleso, hikes lead to Popradske Pleso, and a cable car reaches Lomnicky Stit for views. Some high trails close from November to mid-June. Weather changes fast, so carry waterproofs.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "slovakia/spis-levoca": {
+        "name": "Spis Castle and Levoca",
+        "description": "One of the largest castle ruins in Central Europe and a medieval walled town with a giant wooden altar.",
+        "details": "Spis Castle is a UNESCO site on a hill above the Hornad plain. Levoca has a square of colourful houses and St Jacob Church with the tallest Gothic wooden altar in the world. The castle closes in winter from December to March.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "slovakia/slovak-paradise": {
+        "name": "Slovak Paradise and Dobsinska Ice Cave",
+        "description": "A gorge national park of ladders and waterfalls, plus an ice cave.",
+        "details": "The Slovak Paradise is a hiking park with trails through canyons by ladders and bridges, notably Sucha Bela. The Dobsinska Ice Cave is a UNESCO cave with ice formations, open from May to September. Bring grippy shoes.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "slovakia/kosice": {
+        "name": "Kosice old town and St Elisabeth Cathedral",
+        "description": "The second city, a European Capital of Culture with a long main street and a Gothic cathedral.",
+        "details": "Kosice has a long pedestrian main square with the Gothic St Elisabeth Cathedral, the Singing Fountain and cafes. The city mixes Hungarian and Slovak influences. It is the eastern gateway of the country.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "food",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "slovakia": {
+        "name": "Slovakia",
+        "description": "A small Central European country of castles, mining towns and alpine peaks.",
+        "images": []
+      },
+      "slovakia/bratislava": {
+        "name": "Bratislava",
+        "description": "The Danube capital, close to Vienna.",
+        "images": []
+      },
+      "slovakia/banska-stiavnica": {
+        "name": "Banska Stiavnica",
+        "description": "A UNESCO mining town on hills.",
+        "images": []
+      },
+      "slovakia/high-tatras": {
+        "name": "High Tatras",
+        "description": "The alpine mountains of northern Slovakia.",
+        "images": []
+      },
+      "slovakia/kosice": {
+        "name": "Kosice",
+        "description": "The eastern cultural city.",
+        "images": []
+      }
+    }
+  }
+}

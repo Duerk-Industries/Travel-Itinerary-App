@@ -1,0 +1,710 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Bucketlistly, Agoda Travel Guides, Islaguru and Goway itineraries for Singapore",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "singapore-3d",
+      "title": "Singapore in 3 Days",
+      "summary": "The bay, the gardens and the heritage districts.",
+      "days": 3,
+      "route": "Singapore",
+      "arrive": "Singapore (SIN)",
+      "depart": "Singapore (SIN)",
+      "countries": [
+        "Singapore"
+      ],
+      "regions": [],
+      "cities": [
+        "Singapore"
+      ],
+      "imageQuery": "Singapore Marina Bay skyline night",
+      "highlights": [
+        "Marina Bay",
+        "Gardens by the Bay",
+        "Chinatown hawkers",
+        "Little India"
+      ],
+      "destinationKeys": [
+        "singapore",
+        "singapore/singapore"
+      ],
+      "hero": "singapore/singapore",
+      "sources": [
+        "Bucketlistly",
+        "Agoda Travel Guides",
+        "Islaguru",
+        "Goway",
+        "Outlook Traveller"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "iconic_landmarks",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Singapore",
+          "hotel": "Hotel in Singapore",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Marina Bay, Chinatown or Bugis, close to an MRT station",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Marina Bay waterfront and Merlion",
+          "notes": "Time it for the 8pm light show.",
+          "where": "Marina Bay",
+          "book": "",
+          "place": "singapore/marina-bay"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chinatown temples and hawker lunch",
+          "notes": "Go hungry and queue at a stall.",
+          "where": "Chinatown",
+          "book": "",
+          "place": "singapore/chinatown-hawker"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3.5h",
+          "name": "Gardens by the Bay and Supertree show",
+          "notes": "Light shows at 7:45pm and 8:45pm.",
+          "where": "Marina Bay",
+          "book": "",
+          "place": "singapore/gardens-by-the-bay"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Little India and Kampong Glam",
+          "notes": "Little India is lively after dark.",
+          "where": "Little India",
+          "book": "",
+          "place": "singapore/little-india-kampong-glam"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Changi Airport (SIN)",
+          "to": "Singapore hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "MRT, taxi or Grab",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Singapore hotel",
+          "to": "Changi Airport (SIN)",
+          "time": "13:00",
+          "minutes": 30,
+          "carrier": "MRT, taxi or Grab",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "singapore-4d",
+      "title": "Singapore and Sentosa in 4 Days",
+      "summary": "The city sights plus a beach island day.",
+      "days": 4,
+      "route": "Singapore",
+      "arrive": "Singapore (SIN)",
+      "depart": "Singapore (SIN)",
+      "countries": [
+        "Singapore"
+      ],
+      "regions": [],
+      "cities": [
+        "Singapore"
+      ],
+      "imageQuery": "Sentosa Singapore beach",
+      "highlights": [
+        "Marina Bay",
+        "Chinatown",
+        "Little India",
+        "Sentosa"
+      ],
+      "destinationKeys": [
+        "singapore",
+        "singapore/singapore"
+      ],
+      "hero": "singapore/singapore",
+      "sources": [
+        "Bucketlistly",
+        "Agoda Travel Guides",
+        "Islaguru",
+        "Goway",
+        "Outlook Traveller"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "culture",
+        "relax",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Singapore",
+          "hotel": "Hotel in Singapore",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Marina Bay, Chinatown or Bugis, close to an MRT station",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Marina Bay waterfront and Merlion",
+          "notes": "Time it for the 8pm light show.",
+          "where": "Marina Bay",
+          "book": "",
+          "place": "singapore/marina-bay"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chinatown temples and hawker lunch",
+          "notes": "Go hungry and queue at a stall.",
+          "where": "Chinatown",
+          "book": "",
+          "place": "singapore/chinatown-hawker"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "4h",
+          "name": "Little India and Kampong Glam",
+          "notes": "Little India is lively after dark.",
+          "where": "Little India",
+          "book": "",
+          "place": "singapore/little-india-kampong-glam"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "8h",
+          "name": "Sentosa beaches and attractions",
+          "notes": "Bring sun protection; book Universal Studios online.",
+          "where": "Sentosa",
+          "book": "",
+          "place": "singapore/sentosa"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Changi Airport (SIN)",
+          "to": "Singapore hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "MRT, taxi or Grab",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Singapore hotel",
+          "to": "Changi Airport (SIN)",
+          "time": "13:00",
+          "minutes": 30,
+          "carrier": "MRT, taxi or Grab",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "singapore-5d",
+      "title": "Singapore Highlights in 5 Days",
+      "summary": "City, gardens, zoo and a bike ride on Pulau Ubin.",
+      "days": 5,
+      "route": "Singapore",
+      "arrive": "Singapore (SIN)",
+      "depart": "Singapore (SIN)",
+      "countries": [
+        "Singapore"
+      ],
+      "regions": [],
+      "cities": [
+        "Singapore"
+      ],
+      "imageQuery": "Gardens by the Bay Supertrees",
+      "highlights": [
+        "Gardens by the Bay",
+        "Night Safari",
+        "Pulau Ubin",
+        "Hawker food"
+      ],
+      "destinationKeys": [
+        "singapore",
+        "singapore/singapore"
+      ],
+      "hero": "singapore/singapore",
+      "sources": [
+        "Bucketlistly",
+        "Agoda Travel Guides",
+        "Islaguru",
+        "Goway",
+        "Outlook Traveller"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Singapore",
+          "hotel": "Hotel in Singapore",
+          "start": 0,
+          "nights": 4,
+          "area": "Near Marina Bay, Chinatown or Bugis, close to an MRT station",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Marina Bay waterfront and Merlion",
+          "notes": "Time it for the 8pm light show.",
+          "where": "Marina Bay",
+          "book": "",
+          "place": "singapore/marina-bay"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chinatown temples and hawker lunch",
+          "notes": "Go hungry and queue at a stall.",
+          "where": "Chinatown",
+          "book": "",
+          "place": "singapore/chinatown-hawker"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3.5h",
+          "name": "Gardens by the Bay and Supertree show",
+          "notes": "Light shows at 7:45pm and 8:45pm.",
+          "where": "Marina Bay",
+          "book": "",
+          "place": "singapore/gardens-by-the-bay"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Pulau Ubin bike ride and Chek Jawa",
+          "notes": "Bumboats leave when full; bring water.",
+          "where": "Pulau Ubin",
+          "book": "",
+          "place": "singapore/pulau-ubin"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Little India and Kampong Glam",
+          "notes": "Little India is lively after dark.",
+          "where": "Little India",
+          "book": "",
+          "place": "singapore/little-india-kampong-glam"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "15:00",
+          "duration": "6h",
+          "name": "Singapore Zoo and Night Safari",
+          "notes": "Stay on for the Night Safari after dusk.",
+          "where": "Mandai",
+          "book": "Yes - book tickets",
+          "place": "singapore/zoo-night-safari"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Changi Airport (SIN)",
+          "to": "Singapore hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "MRT, taxi or Grab",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Singapore hotel",
+          "to": "Changi Airport (SIN)",
+          "time": "13:00",
+          "minutes": 30,
+          "carrier": "MRT, taxi or Grab",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "singapore-sentosa-7d",
+      "title": "Singapore and a Sentosa Beach Stay in 7 Days",
+      "summary": "Three nights exploring the city and three at a Sentosa resort.",
+      "days": 7,
+      "route": "Singapore > Sentosa",
+      "arrive": "Singapore (SIN)",
+      "depart": "Singapore (SIN)",
+      "countries": [
+        "Singapore"
+      ],
+      "regions": [],
+      "cities": [
+        "Singapore",
+        "Sentosa"
+      ],
+      "imageQuery": "Sentosa resort Singapore",
+      "highlights": [
+        "Marina Bay",
+        "Chinatown",
+        "Botanic Gardens",
+        "Pulau Ubin",
+        "Sentosa"
+      ],
+      "destinationKeys": [
+        "singapore",
+        "singapore/singapore",
+        "singapore/sentosa"
+      ],
+      "hero": "singapore/sentosa",
+      "sources": [
+        "Bucketlistly",
+        "Agoda Travel Guides",
+        "Islaguru",
+        "Goway",
+        "Outlook Traveller"
+      ],
+      "pace": "R",
+      "interests": [
+        "food",
+        "relax",
+        "outdoors",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Singapore",
+          "hotel": "Hotel in Singapore",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Marina Bay, Chinatown or Bugis, close to an MRT station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sentosa",
+          "hotel": "Resort on Sentosa",
+          "start": 3,
+          "nights": 3,
+          "area": "On Sentosa, near the beach or the monorail",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Marina Bay waterfront and Merlion",
+          "notes": "Time it for the 8pm light show.",
+          "where": "Marina Bay",
+          "book": "",
+          "place": "singapore/marina-bay"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chinatown temples and hawker lunch",
+          "notes": "Go hungry and queue at a stall.",
+          "where": "Chinatown",
+          "book": "",
+          "place": "singapore/chinatown-hawker"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3.5h",
+          "name": "Gardens by the Bay and Supertree show",
+          "notes": "Light shows at 7:45pm and 8:45pm.",
+          "where": "Marina Bay",
+          "book": "",
+          "place": "singapore/gardens-by-the-bay"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Botanic Gardens and Orchard Road",
+          "notes": "Stay indoors in the midday heat.",
+          "where": "Singapore",
+          "book": "",
+          "place": "singapore/botanic-gardens"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "4h",
+          "name": "Little India and Kampong Glam",
+          "notes": "Little India is lively after dark.",
+          "where": "Little India",
+          "book": "",
+          "place": "singapore/little-india-kampong-glam"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "8h",
+          "name": "Sentosa beaches and attractions",
+          "notes": "Bring sun protection; book Universal Studios online.",
+          "where": "Sentosa",
+          "book": "",
+          "place": "singapore/sentosa"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "17:00",
+          "duration": "4h",
+          "name": "Night Safari evening",
+          "notes": "Stay on for the Night Safari after dusk.",
+          "where": "Mandai",
+          "book": "Yes - book tickets",
+          "place": "singapore/zoo-night-safari"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Pulau Ubin bike ride and Chek Jawa",
+          "notes": "Bumboats leave when full; bring water.",
+          "where": "Pulau Ubin",
+          "book": "",
+          "place": "singapore/pulau-ubin"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Changi Airport (SIN)",
+          "to": "Singapore hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "MRT, taxi or Grab",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Singapore hotel",
+          "to": "Sentosa resort",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Taxi or Grab",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Sentosa resort",
+          "to": "Changi Airport (SIN)",
+          "time": "12:00",
+          "minutes": 35,
+          "carrier": "Taxi or Grab",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "singapore/marina-bay": {
+        "name": "Marina Bay Sands, Merlion and the waterfront",
+        "description": "The skyline icon, the Merlion statue and a walk around the bay at night.",
+        "details": "Marina Bay has the Marina Bay Sands hotel with its rooftop SkyPark, the Merlion, the Helix Bridge and the Spectra light show nightly at 8pm and 9pm. Walk the bayfront at sunset. The ArtScience Museum is close.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "singapore/gardens-by-the-bay": {
+        "name": "Gardens by the Bay and Supertree Grove",
+        "description": "Giant tree-shaped vertical gardens and two cooled conservatories, with an evening light show.",
+        "details": "Gardens by the Bay has the Supertree Grove with its elevated walkway, the Flower Dome and the Cloud Forest. The Garden Rhapsody light show runs at 7:45pm and 8:45pm. Visit in the late afternoon to combine daylight and the show. The outdoor garden is free.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "singapore/chinatown-hawker": {
+        "name": "Chinatown, temples and hawker food",
+        "description": "Heritage shophouses, the Buddha Tooth Relic Temple and the Maxwell and Chinatown Complex food centres.",
+        "details": "Chinatown has the Buddha Tooth Relic Temple, Sri Mariamman Hindu temple and Chinatown Complex Food Centre, where you can eat chicken rice and char kway teow for a few dollars. The Michelin-recognised hawker stalls queue early. Go hungry.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "singapore/little-india-kampong-glam": {
+        "name": "Little India and Kampong Glam",
+        "description": "Colourful temples and spice shops, then the Sultan Mosque and Arab Street cafes.",
+        "details": "Little India has the Sri Veeramakaliamman Temple, flower garlands and Tekka Centre for curry. Nearby Kampong Glam has the golden-domed Sultan Mosque, Haji Lane boutiques and Middle Eastern restaurants. Little India is lively after dark.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "singapore/sentosa": {
+        "name": "Sentosa Island",
+        "description": "A resort island with beaches, theme parks, cable cars and an aquarium.",
+        "details": "Sentosa has Universal Studios, the S.E.A. Aquarium, Siloso Beach and the Skyline Luge. It is reached by cable car, monorail or a walk across the boardwalk from VivoCity. Allow a full day, and bring sun protection.",
+        "interests": [
+          "relax",
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "singapore/pulau-ubin": {
+        "name": "Pulau Ubin by bike",
+        "description": "A rustic island with kampong life, mangroves and the Chek Jawa wetlands, a bumboat ride away.",
+        "details": "Pulau Ubin is a granite island where Singapore used to live. Bumboats leave Changi Point Ferry Terminal when full. Rent a bike on arrival, and ride to the Chek Jawa boardwalk. There are few facilities, so bring water.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "singapore/zoo-night-safari": {
+        "name": "Singapore Zoo and Night Safari",
+        "description": "An open-concept zoo, and the world first nocturnal zoo.",
+        "details": "The Singapore Zoo has orangutans at breakfast and a rainforest setting. The Night Safari opens after dusk with trams through animal habitats and walking trails. The River Wonders and Bird Paradise parks are in the same area. Mosquito repellent is useful.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "singapore/botanic-gardens": {
+        "name": "Singapore Botanic Gardens and Orchard Road",
+        "description": "A UNESCO tropical garden with an orchid collection, and the famous shopping street.",
+        "details": "The Botanic Gardens have the National Orchid Garden and the Rainforest, and are free to enter. Orchard Road is lined with malls and food courts. Both are easy by MRT. Stay in air-conditioning in the midday heat.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "singapore": {
+        "name": "Singapore",
+        "description": "A tropical city-state of skyscrapers, hawker food and gardens.",
+        "images": []
+      },
+      "singapore/singapore": {
+        "name": "Singapore",
+        "description": "The island city centre of Marina Bay, Chinatown and Little India.",
+        "images": []
+      },
+      "singapore/sentosa": {
+        "name": "Sentosa",
+        "description": "A resort island with beaches and attractions.",
+        "images": []
+      }
+    }
+  }
+}

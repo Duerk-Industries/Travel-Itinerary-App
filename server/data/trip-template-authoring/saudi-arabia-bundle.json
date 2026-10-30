@@ -1,0 +1,949 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Intrepid Travel, Remote Lands, Destination2 and Abercrombie and Kent itineraries for Saudi Arabia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "saudi-arabia-riyadh-alula-5d",
+      "title": "Riyadh and AlUla in 5 Days",
+      "summary": "The capital and the Nabataean tombs of Hegra.",
+      "days": 5,
+      "route": "Riyadh > AlUla",
+      "arrive": "Riyadh (RUH)",
+      "depart": "AlUla (ULH)",
+      "countries": [
+        "Saudi Arabia"
+      ],
+      "regions": [],
+      "cities": [
+        "Riyadh",
+        "AlUla"
+      ],
+      "imageQuery": "Hegra Nabataean tombs AlUla",
+      "highlights": [
+        "Masmak Fort",
+        "Diriyah",
+        "Hegra",
+        "Elephant Rock"
+      ],
+      "destinationKeys": [
+        "saudi-arabia",
+        "saudi-arabia/riyadh",
+        "saudi-arabia/alula"
+      ],
+      "hero": "saudi-arabia/alula",
+      "sources": [
+        "Intrepid Travel",
+        "Remote Lands",
+        "Destination2",
+        "Abercrombie and Kent",
+        "Platinum List"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Riyadh",
+          "hotel": "Hotel in Riyadh",
+          "start": 0,
+          "nights": 2,
+          "area": "In central Riyadh, near Olaya or the diplomatic quarter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "AlUla",
+          "hotel": "Lodge in AlUla",
+          "start": 2,
+          "nights": 2,
+          "area": "In the AlUla valley, in a desert lodge or near the old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Diriyah At-Turaif and Bujairi Terrace",
+          "notes": "Go late for cooler air; book tickets online.",
+          "where": "Diriyah",
+          "book": "Yes - book online",
+          "place": "saudi-arabia/diriyah"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Masmak Fort, National Museum and Kingdom Centre",
+          "notes": "Dress modestly; museums close around prayer times.",
+          "where": "Riyadh",
+          "book": "",
+          "place": "saudi-arabia/riyadh-masmak"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "AlUla Old Town, Elephant Rock and Jabal Ikmah",
+          "notes": "Elephant Rock is best at sunset.",
+          "where": "AlUla",
+          "book": "",
+          "place": "saudi-arabia/alula-oasis-rocks"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Hegra guided tour",
+          "notes": "Book timed tours; wear sun protection.",
+          "where": "Hegra",
+          "book": "Yes - book the tour",
+          "place": "saudi-arabia/hegra"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "King Khalid Airport, Riyadh (RUH)",
+          "to": "Riyadh hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Hotel transfer or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Riyadh hotel",
+          "to": "King Khalid Airport, Riyadh (RUH)",
+          "time": "09:00",
+          "minutes": 35,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "AlUla Airport (ULH)",
+          "to": "AlUla lodge",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "AlUla lodge",
+          "to": "AlUla Airport (ULH)",
+          "time": "12:00",
+          "minutes": 40,
+          "carrier": "Hotel transfer or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "saudi-arabia-riyadh-alula-jeddah-7d",
+      "title": "Saudi Arabia Highlights in 7 Days",
+      "summary": "Riyadh, AlUla and Jeddah.",
+      "days": 7,
+      "route": "Riyadh > AlUla > Jeddah",
+      "arrive": "Riyadh (RUH)",
+      "depart": "Jeddah (JED)",
+      "countries": [
+        "Saudi Arabia"
+      ],
+      "regions": [],
+      "cities": [
+        "Riyadh",
+        "AlUla",
+        "Jeddah"
+      ],
+      "imageQuery": "Jeddah Al-Balad old town",
+      "highlights": [
+        "Diriyah",
+        "Hegra",
+        "Elephant Rock",
+        "Al-Balad",
+        "Red Sea Corniche"
+      ],
+      "destinationKeys": [
+        "saudi-arabia",
+        "saudi-arabia/riyadh",
+        "saudi-arabia/alula",
+        "saudi-arabia/jeddah"
+      ],
+      "hero": "saudi-arabia/jeddah",
+      "sources": [
+        "Intrepid Travel",
+        "Remote Lands",
+        "Destination2",
+        "Abercrombie and Kent",
+        "Platinum List"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Riyadh",
+          "hotel": "Hotel in Riyadh",
+          "start": 0,
+          "nights": 2,
+          "area": "In central Riyadh, near Olaya or the diplomatic quarter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "AlUla",
+          "hotel": "Lodge in AlUla",
+          "start": 2,
+          "nights": 2,
+          "area": "In the AlUla valley, in a desert lodge or near the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jeddah",
+          "hotel": "Hotel in Jeddah",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the Corniche, or close to Al-Balad for the old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Diriyah At-Turaif and Bujairi Terrace",
+          "notes": "Go late for cooler air; book tickets online.",
+          "where": "Diriyah",
+          "book": "Yes - book online",
+          "place": "saudi-arabia/diriyah"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Masmak Fort, National Museum and Kingdom Centre",
+          "notes": "Dress modestly; museums close around prayer times.",
+          "where": "Riyadh",
+          "book": "",
+          "place": "saudi-arabia/riyadh-masmak"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "AlUla Old Town, Elephant Rock and Jabal Ikmah",
+          "notes": "Elephant Rock is best at sunset.",
+          "where": "AlUla",
+          "book": "",
+          "place": "saudi-arabia/alula-oasis-rocks"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Hegra guided tour",
+          "notes": "Book timed tours; wear sun protection.",
+          "where": "Hegra",
+          "book": "Yes - book the tour",
+          "place": "saudi-arabia/hegra"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Corniche, Floating Mosque and Red Sea boat",
+          "notes": "Snorkelling trips need booking.",
+          "where": "Jeddah",
+          "book": "",
+          "place": "saudi-arabia/jeddah-corniche"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3.5h",
+          "name": "Al-Balad old town and Souq Al Alawi",
+          "notes": "Evening is lively; dress modestly.",
+          "where": "Jeddah",
+          "book": "",
+          "place": "saudi-arabia/jeddah-al-balad"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "King Khalid Airport, Riyadh (RUH)",
+          "to": "Riyadh hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Hotel transfer or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Riyadh hotel",
+          "to": "King Khalid Airport, Riyadh (RUH)",
+          "time": "09:00",
+          "minutes": 35,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "AlUla Airport (ULH)",
+          "to": "AlUla lodge",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "AlUla lodge",
+          "to": "AlUla Airport (ULH)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "King Abdulaziz Airport, Jeddah (JED)",
+          "to": "Jeddah hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Jeddah hotel",
+          "to": "King Abdulaziz Airport, Jeddah (JED)",
+          "time": "12:00",
+          "minutes": 35,
+          "carrier": "Hotel transfer or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "saudi-arabia-riyadh-alula-jeddah-8d",
+      "title": "Saudi Arabia in 8 Days with the Edge of the World",
+      "summary": "Three days in Riyadh with Diriyah and the cliffs, then AlUla and Jeddah.",
+      "days": 8,
+      "route": "Riyadh > AlUla > Jeddah",
+      "arrive": "Riyadh (RUH)",
+      "depart": "Jeddah (JED)",
+      "countries": [
+        "Saudi Arabia"
+      ],
+      "regions": [],
+      "cities": [
+        "Riyadh",
+        "AlUla",
+        "Jeddah"
+      ],
+      "imageQuery": "Edge of the World Riyadh cliff",
+      "highlights": [
+        "Diriyah",
+        "Edge of the World",
+        "Hegra",
+        "Al-Balad"
+      ],
+      "destinationKeys": [
+        "saudi-arabia",
+        "saudi-arabia/riyadh",
+        "saudi-arabia/alula",
+        "saudi-arabia/jeddah"
+      ],
+      "hero": "saudi-arabia/riyadh",
+      "sources": [
+        "Intrepid Travel",
+        "Remote Lands",
+        "Destination2",
+        "Abercrombie and Kent",
+        "Platinum List"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Riyadh",
+          "hotel": "Hotel in Riyadh",
+          "start": 0,
+          "nights": 3,
+          "area": "In central Riyadh, near Olaya or the diplomatic quarter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "AlUla",
+          "hotel": "Lodge in AlUla",
+          "start": 3,
+          "nights": 2,
+          "area": "In the AlUla valley, in a desert lodge or near the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jeddah",
+          "hotel": "Hotel in Jeddah",
+          "start": 5,
+          "nights": 2,
+          "area": "Near the Corniche, or close to Al-Balad for the old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Diriyah At-Turaif and Bujairi Terrace",
+          "notes": "Go late for cooler air; book tickets online.",
+          "where": "Diriyah",
+          "book": "Yes - book online",
+          "place": "saudi-arabia/diriyah"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Masmak Fort, National Museum and Kingdom Centre",
+          "notes": "Dress modestly; museums close around prayer times.",
+          "where": "Riyadh",
+          "book": "",
+          "place": "saudi-arabia/riyadh-masmak"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "6h",
+          "name": "Edge of the World sunset",
+          "notes": "A 4x4 is required; take layers.",
+          "where": "Jebel Fihrayn",
+          "book": "Yes - book a 4x4 tour",
+          "place": "saudi-arabia/edge-of-the-world"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "AlUla Old Town, Elephant Rock and Jabal Ikmah",
+          "notes": "Elephant Rock is best at sunset.",
+          "where": "AlUla",
+          "book": "",
+          "place": "saudi-arabia/alula-oasis-rocks"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Hegra guided tour",
+          "notes": "Book timed tours; wear sun protection.",
+          "where": "Hegra",
+          "book": "Yes - book the tour",
+          "place": "saudi-arabia/hegra"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Corniche, Floating Mosque and Red Sea boat",
+          "notes": "Snorkelling trips need booking.",
+          "where": "Jeddah",
+          "book": "",
+          "place": "saudi-arabia/jeddah-corniche"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3.5h",
+          "name": "Al-Balad old town and Souq Al Alawi",
+          "notes": "Evening is lively; dress modestly.",
+          "where": "Jeddah",
+          "book": "",
+          "place": "saudi-arabia/jeddah-al-balad"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "King Khalid Airport, Riyadh (RUH)",
+          "to": "Riyadh hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Hotel transfer or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Riyadh hotel",
+          "to": "King Khalid Airport, Riyadh (RUH)",
+          "time": "09:00",
+          "minutes": 35,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "AlUla Airport (ULH)",
+          "to": "AlUla lodge",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "AlUla lodge",
+          "to": "AlUla Airport (ULH)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "King Abdulaziz Airport, Jeddah (JED)",
+          "to": "Jeddah hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Jeddah hotel",
+          "to": "King Abdulaziz Airport, Jeddah (JED)",
+          "time": "12:00",
+          "minutes": 35,
+          "carrier": "Hotel transfer or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "saudi-arabia-complete-10d",
+      "title": "Complete Saudi Arabia in 10 Days",
+      "summary": "Three nights each in Riyadh, AlUla and Jeddah, with balloon, desert and Red Sea time.",
+      "days": 10,
+      "route": "Riyadh > AlUla > Jeddah",
+      "arrive": "Riyadh (RUH)",
+      "depart": "Jeddah (JED)",
+      "countries": [
+        "Saudi Arabia"
+      ],
+      "regions": [],
+      "cities": [
+        "Riyadh",
+        "AlUla",
+        "Jeddah"
+      ],
+      "imageQuery": "AlUla desert Elephant Rock sunset",
+      "highlights": [
+        "Diriyah",
+        "Edge of the World",
+        "Hegra",
+        "AlUla Old Town",
+        "Al-Balad",
+        "Red Sea"
+      ],
+      "destinationKeys": [
+        "saudi-arabia",
+        "saudi-arabia/riyadh",
+        "saudi-arabia/alula",
+        "saudi-arabia/jeddah"
+      ],
+      "hero": "saudi-arabia/alula",
+      "sources": [
+        "Intrepid Travel",
+        "Remote Lands",
+        "Destination2",
+        "Abercrombie and Kent",
+        "Platinum List"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Riyadh",
+          "hotel": "Hotel in Riyadh",
+          "start": 0,
+          "nights": 3,
+          "area": "In central Riyadh, near Olaya or the diplomatic quarter",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "AlUla",
+          "hotel": "Lodge in AlUla",
+          "start": 3,
+          "nights": 3,
+          "area": "In the AlUla valley, in a desert lodge or near the old town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jeddah",
+          "hotel": "Hotel in Jeddah",
+          "start": 6,
+          "nights": 3,
+          "area": "Near the Corniche, or close to Al-Balad for the old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Diriyah At-Turaif and Bujairi Terrace",
+          "notes": "Go late for cooler air; book tickets online.",
+          "where": "Diriyah",
+          "book": "Yes - book online",
+          "place": "saudi-arabia/diriyah"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Masmak Fort, National Museum and Kingdom Centre",
+          "notes": "Dress modestly; museums close around prayer times.",
+          "where": "Riyadh",
+          "book": "",
+          "place": "saudi-arabia/riyadh-masmak"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "14:00",
+          "duration": "6h",
+          "name": "Edge of the World sunset",
+          "notes": "A 4x4 is required; take layers.",
+          "where": "Jebel Fihrayn",
+          "book": "Yes - book a 4x4 tour",
+          "place": "saudi-arabia/edge-of-the-world"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "AlUla Old Town, Elephant Rock and Jabal Ikmah",
+          "notes": "Elephant Rock is best at sunset.",
+          "where": "AlUla",
+          "book": "",
+          "place": "saudi-arabia/alula-oasis-rocks"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Hegra guided tour",
+          "notes": "Book timed tours; wear sun protection.",
+          "where": "Hegra",
+          "book": "Yes - book the tour",
+          "place": "saudi-arabia/hegra"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "06:30",
+          "duration": "5h",
+          "name": "Dadan, Jabal Ikmah and balloon flight",
+          "notes": "Elephant Rock is best at sunset.",
+          "where": "AlUla",
+          "book": "",
+          "place": "saudi-arabia/alula-oasis-rocks"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3.5h",
+          "name": "Al-Balad old town and Souq Al Alawi",
+          "notes": "Evening is lively; dress modestly.",
+          "where": "Jeddah",
+          "book": "",
+          "place": "saudi-arabia/jeddah-al-balad"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Corniche, Floating Mosque and Red Sea boat",
+          "notes": "Snorkelling trips need booking.",
+          "where": "Jeddah",
+          "book": "",
+          "place": "saudi-arabia/jeddah-corniche"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "King Khalid Airport, Riyadh (RUH)",
+          "to": "Riyadh hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Hotel transfer or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Riyadh hotel",
+          "to": "King Khalid Airport, Riyadh (RUH)",
+          "time": "09:00",
+          "minutes": 35,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "AlUla Airport (ULH)",
+          "to": "AlUla lodge",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "AlUla lodge",
+          "to": "AlUla Airport (ULH)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "King Abdulaziz Airport, Jeddah (JED)",
+          "to": "Jeddah hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Jeddah hotel",
+          "to": "King Abdulaziz Airport, Jeddah (JED)",
+          "time": "12:00",
+          "minutes": 35,
+          "carrier": "Hotel transfer or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "saudi-arabia/riyadh-masmak": {
+        "name": "Riyadh Masmak Fort, National Museum and Kingdom Centre",
+        "description": "The mud-brick fort where modern Saudi Arabia began, a large museum and a skybridge over the city.",
+        "details": "Masmak Fort is a clay-and-mud fortress in the old city, and the National Museum gives an overview of the Arabian Peninsula from prehistory to today. The Kingdom Centre has a Sky Bridge viewing deck. Dress modestly, and note that opening hours vary around prayer times.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "saudi-arabia/diriyah": {
+        "name": "Diriyah At-Turaif and Bujairi Terrace",
+        "description": "The UNESCO birthplace of the first Saudi state, with restored mud-brick palaces and restaurants.",
+        "details": "At-Turaif in Diriyah was the capital of the first Saudi state and is a restored district of mud-brick palaces. The Bujairi Terrace has restaurants with views. It is best late in the day when the temperature drops. Tickets are booked online.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "saudi-arabia/edge-of-the-world": {
+        "name": "Edge of the World cliffs",
+        "description": "A dramatic escarpment drop with desert views, a day trip from Riyadh.",
+        "details": "Jebel Fihrayn rises 300 metres above the plain, with a view across the desert. The drive needs a 4x4, and tours leave from Riyadh in the afternoon to see the sunset. Take layers, as it is breezy and cooler at dusk.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "saudi-arabia/hegra": {
+        "name": "Hegra (Mada in Saleh)",
+        "description": "The first Saudi UNESCO site, with over a hundred Nabataean rock-cut tombs in the desert.",
+        "details": "Hegra is the southern sister of Petra, with monumental tomb facades such as Qasr al-Farid. Visits are by guided tour at set times booked through the AlUla authority. Wear sun protection and closed shoes. Tours are not permitted in the heat of midday in summer.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "saudi-arabia/alula-oasis-rocks": {
+        "name": "AlUla Old Town, Elephant Rock and Jabal Ikmah",
+        "description": "A mud-brick old town, a desert rock formation at sunset and an open-air library of inscriptions.",
+        "details": "AlUla Old Town is a maze of abandoned mud-brick houses near the oasis. Elephant Rock is a sandstone arch at sunset. Jabal Ikmah has thousands of ancient inscriptions. Dadan was the capital of the Dadanite kingdom. Hot air balloon flights and the Maraya mirror concert hall are optional extras.",
+        "interests": [
+          "culture",
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "saudi-arabia/jeddah-al-balad": {
+        "name": "Jeddah Al-Balad old town",
+        "description": "A UNESCO historic district of coral-stone merchant houses with wooden balconies.",
+        "details": "Al-Balad has houses with carved wooden roshan windows, the Nassif House and the Souq Al Alawi. Evening is lively, with traditional cafes and street food. The area is being restored, and some streets are rough underfoot. Dress modestly.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "saudi-arabia/jeddah-corniche": {
+        "name": "Jeddah Corniche, Floating Mosque and Red Sea",
+        "description": "A long seafront with a mosque over the water, sculptures and sea breezes.",
+        "details": "The Jeddah Corniche has the Al-Rahma Floating Mosque, the King Fahd Fountain (one of the tallest in the world) and open-air sculptures. Boats offer snorkelling and sailing, and the Red Sea reefs are rich. The evenings are most pleasant.",
+        "interests": [
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "saudi-arabia": {
+        "name": "Saudi Arabia",
+        "description": "A kingdom opening to travellers, with Nabataean tombs, mud-brick cities and a Red Sea coast.",
+        "images": []
+      },
+      "saudi-arabia/riyadh": {
+        "name": "Riyadh",
+        "description": "The capital, a modern city with an old fort at its heart.",
+        "images": []
+      },
+      "saudi-arabia/alula": {
+        "name": "AlUla",
+        "description": "An oasis valley of sandstone canyons and ancient tombs.",
+        "images": []
+      },
+      "saudi-arabia/jeddah": {
+        "name": "Jeddah",
+        "description": "The Red Sea port with a UNESCO old town.",
+        "images": []
+      }
+    }
+  }
+}

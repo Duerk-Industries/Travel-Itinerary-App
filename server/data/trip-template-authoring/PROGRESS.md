@@ -30,7 +30,7 @@ Paste this to a fresh session:
 
 ---
 
-## Done (73 of 91)
+## Done (83 of 91)
 
 | # | Destination | File | Templates | Lengths | Notes |
 |---|---|---|---|---|---|
@@ -107,6 +107,16 @@ Paste this to a fresh session:
 | 71 | Qatar | `qatar-bundle.json` | 4 | 3, 4, 5, 7 | Doha plus an Inland Sea desert camp night; Al Zubarah and mangroves in the 7d |
 | 72 | Romania | `romania-bundle.json` | 5 | 5, 7, 8, 10, 12 | Bucharest+Brasov / +Sibiu / +Sighisoara+Viscri / +Maramures (depart CLJ) / complete 12d |
 | 73 | Rwanda | `rwanda-bundle.json` | 5 | 4, 5, 7, 8, 10 | Gorillas short breaks / +Lake Kivu / +Akagera / complete with Nyungwe. Permits flagged as Yes - book ahead |
+| 74 | Saudi Arabia | `saudi-arabia-bundle.json` | 4 | 5, 7, 8, 10 | Riyadh+AlUla / +Jeddah / +Edge of the World / complete with balloon. Domestic flights as paired legs; Hegra by timed tour |
+| 75 | Serbia | `serbia-bundle.json` | 5 | 4, 5, 7, 9, 11 | Belgrade / +Novi Sad / +Zlatibor+Tara / +Nis / complete 11d. Depart BEG each time |
+| 76 | Singapore | `singapore-bundle.json` | 4 | 3, 4, 5, 7 | Single-city trips plus a Sentosa resort stay in the 7d |
+| 77 | Slovakia | `slovakia-bundle.json` | 5 | 4, 5, 7, 8, 10 | Bratislava / +Banska Stiavnica / +High Tatras (depart KSC) / +Kosice / complete with Slovak Paradise. Spis Castle closed Dec-Mar |
+| 78 | South Korea | `south-korea-bundle.json` | 5 | 5, 7, 9, 10, 12 | Seoul / +Busan (depart PUS) / +Gyeongju / +Jeju (depart CJU) / grand with Jeonju. KTX legs |
+| 79 | Sri Lanka | `sri-lanka-bundle.json` | 6 | 5, 7, 8, 10, 12, 14 | Cultural Triangle / +Ella train / +Galle / +Nuwara Eliya / +Yala+Mirissa / complete 14d from Colombo |
+| 80 | Sweden | `sweden-bundle.json` | 6 | 4, 5, 7, 8, 10, 12 | Stockholm / +Gothenburg / +Gotland (Visby) / +Abisko aurora / complete. Aurora season Sep-Mar noted |
+| 81 | Switzerland | `switzerland-bundle.json` | 5 | 5, 7, 8, 10, 12 | Lucerne+Interlaken / +Zermatt / grand with Montreux (depart GVA) / complete with Bern and Glacier Express route |
+| 82 | Tanzania | `tanzania-bundle.json` | 5 | 5, 6, 8, 10, 12 | Northern circuit safaris, +Zanzibar (depart ZNZ). Serengeti flights as airstrip legs |
+| 83 | Tunisia | `tunisia-bundle.json` | 5 | 4, 5, 7, 9, 11 | Tunis / +Kairouan / +Sahara at Douz / +Djerba (depart DJE) / complete with Tataouine |
 
 ## Queue
 
@@ -114,7 +124,7 @@ Ordered by how many well-documented published itineraries exist, which is what t
 combining method in instructions 2.1 depends on.
 
 ### Next up
-No ordered items left: take the next country from "Remaining" below (Saudi Arabia first).
+No ordered items left: take the next country from "Remaining" below (Uganda first).
 
 ### Remaining (not yet ordered)
 
@@ -123,8 +133,8 @@ No ordered items left: take the next country from "Remaining" below (Saudi Arabi
 
 
 
-Saudi Arabia, Serbia, Singapore, Slovakia, South Korea, Sri Lanka, Sweden,
-Switzerland, Tanzania, Tunisia, Uganda, United Arab Emirates, United Kingdom
+
+Uganda, United Arab Emirates, United Kingdom
 (England / Northern Ireland), United States, Uzbekistan, Zimbabwe
 
 ---
