@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { layoutMetrics, themeStyle, avatarColor as colorForUser } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -65,9 +66,9 @@ const BlogContributorStrip: React.FC<Props> = ({ contributors, reactionTotal = 0
       <View style={themeStyle('components_BlogContributorStrip_7', {  }, _styleTheme)}>
         <Text style={themeStyle('components_BlogContributorStrip_8', { mutedColor: mutedColor }, _styleTheme)}>{summaryParts.join(' · ')}</Text>
         {spotlightUserId ? (
-          <Text testID={testID ? `${testID}-spotlight` : undefined} style={themeStyle('components_BlogContributorStrip_9', {  }, _styleTheme)}>
+          <IconText testID={testID ? `${testID}-spotlight` : undefined} style={themeStyle('components_BlogContributorStrip_9', {  }, _styleTheme)}>
             ✨ Traveler spotlight: {contributors.find((c) => c.userId === spotlightUserId)?.displayName || 'top contributor'}
-          </Text>
+          </IconText>
         ) : null}
       </View>
     </View>

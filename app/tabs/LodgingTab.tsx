@@ -1,4 +1,6 @@
 // @ts-nocheck
+import IconText from '../components/IconText';
+import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import { needsHotelChoice } from '../utils/lodgingPlaceholder';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
@@ -88,6 +90,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const { isPhoneLayout } = useLayoutBreakpoints();
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
@@ -222,7 +225,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   <Text style={[styles.cellText, themeStyle('tabs_LodgingTab_5', {  }, (theme ?? _styleTheme))]}>{lodging.name}</Text>
                 </TouchableOpacity>
                 <View style={themeStyle('tabs_LodgingTab_6', { statusColors: statusColors }, (theme ?? _styleTheme))}>
-                  <Text style={themeStyle('tabs_LodgingTab_7', { statusColors: statusColors }, (theme ?? _styleTheme))}>{status === 'Booked' ? '✓ Booked' : status}</Text>
+                  <IconText style={themeStyle('tabs_LodgingTab_7', { statusColors: statusColors }, (theme ?? _styleTheme))}>{status === 'Booked' ? '✓ Booked' : status}</IconText>
                 </View>
               </View>
               <Text style={styles.helperText}>
@@ -362,14 +365,14 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         <Text style={styles.sectionTitle}>Lodging</Text>
         {!readOnly ? (
           <View style={themeStyle('tabs_LodgingTab_13', {  }, (theme ?? _styleTheme))}>
-            {!tableEditing ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="lodging-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
+            {!tableEditing && !isPhoneLayout ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="lodging-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
             {tableEditing ? <>
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={cancelGridEdit} disabled={gridSaving} testID="lodging-table-cancel"><Text style={styles.dangerButtonText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={styles.button} onPress={saveGridEdit} disabled={gridSaving} testID="lodging-table-save"><Text style={styles.buttonText}>{gridSaving ? 'Saving…' : 'Save changes'}</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, themeStyle('tabs_LodgingTab_14', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="lodging-table-undo"><Text style={styles.buttonText}>↶</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, themeStyle('tabs_LodgingTab_15', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="lodging-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_LodgingTab_14', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="lodging-table-undo"><IconText style={styles.buttonText}>↶</IconText></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('tabs_LodgingTab_15', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="lodging-table-redo"><IconText style={styles.buttonText}>↷</IconText></TouchableOpacity>
             </> : null}
-            {!tableEditing ? <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog} testID="lodging-add"><Text style={styles.buttonText}>+</Text></TouchableOpacity> : null}
+            {!tableEditing && !isPhoneLayout ? <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog} testID="lodging-add"><IconText style={styles.buttonText}>+</IconText></TouchableOpacity> : null}
             {!tableEditing ? <CsvTransferControls entity="lodgings" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={lodgings} styles={styles} theme={theme} enabledImport={featureActivityLodgingCsvImport} enabledExport={featureActivityLodgingCsvExport} readOnly={readOnly} onImported={onRefreshLodgings} /> : null}
           </View>
         ) : null}
@@ -438,10 +441,10 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                 {!readOnly && shouldShowRatingButtons(lodging.status, (lodging as any).userRating) ? (
                   <View style={styles.actionCell}>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnLodging(lodging.id, 1)}>
-                      <Text style={styles.buttonText}>👍</Text>
+                      <IconText style={styles.buttonText}>👍</IconText>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnLodging(lodging.id, -1)}>
-                      <Text style={styles.dangerButtonText}>👎</Text>
+                      <IconText style={styles.dangerButtonText}>👎</IconText>
                     </TouchableOpacity>
                   </View>
                 ) : normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (

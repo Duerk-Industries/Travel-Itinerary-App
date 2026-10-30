@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -116,7 +117,7 @@ const TripRecapCards: React.FC<Props> = ({
               <View style={themeStyle('components_TripRecapCards_14', {  }, (theme ?? _styleTheme))}>{shareButton(true)}</View>
             </View>
             {heroIsMostLoved ? (
-              <Text style={themeStyle('components_TripRecapCards_15', { displayFontItalic: displayFontItalic }, (theme ?? _styleTheme))}>♥ Most-loved photo</Text>
+              <IconText style={themeStyle('components_TripRecapCards_15', { displayFontItalic: displayFontItalic }, (theme ?? _styleTheme))}>♥ Most-loved photo</IconText>
             ) : null}
           </LinearGradient>
         </ImageBackground>
@@ -140,15 +141,15 @@ const TripRecapCards: React.FC<Props> = ({
         {showAwards ? (
           <View testID="trip-awards" style={themeStyle('components_TripRecapCards_25', { borderColor: borderColor }, (theme ?? _styleTheme))}>
             <Text style={themeStyle('components_TripRecapCards_26', { textColor: textColor }, (theme ?? _styleTheme))}>Trip Awards</Text>
-            {recap?.topPhoto ? <Text style={themeStyle('components_TripRecapCards_27', { textColor: textColor }, (theme ?? _styleTheme))}>🏆 Crowd favorite · {recap.topPhoto.reactionTotal} reactions</Text> : null}
-            {recap?.topPhotoContributor ? <Text style={themeStyle('components_TripRecapCards_28', { textColor: textColor }, (theme ?? _styleTheme))}>📸 Shutterbug · {recap.topPhotoContributor.displayName} · {recap.topPhotoContributor.photoCount} photos</Text> : null}
-            {recap?.mostCommentedDay ? <Text style={themeStyle('components_TripRecapCards_29', { textColor: textColor }, (theme ?? _styleTheme))}>💬 Conversation starter · {formatDateLong(recap.mostCommentedDay.dayDate)}</Text> : null}
+            {recap?.topPhoto ? <IconText style={themeStyle('components_TripRecapCards_27', { textColor: textColor }, (theme ?? _styleTheme))}>🏆 Crowd favorite · {recap.topPhoto.reactionTotal} reactions</IconText> : null}
+            {recap?.topPhotoContributor ? <IconText style={themeStyle('components_TripRecapCards_28', { textColor: textColor }, (theme ?? _styleTheme))}>📸 Shutterbug · {recap.topPhotoContributor.displayName} · {recap.topPhotoContributor.photoCount} photos</IconText> : null}
+            {recap?.mostCommentedDay ? <IconText style={themeStyle('components_TripRecapCards_29', { textColor: textColor }, (theme ?? _styleTheme))}>💬 Conversation starter · {formatDateLong(recap.mostCommentedDay.dayDate)}</IconText> : null}
           </View>
         ) : null}
         {spendTotal != null ? <Text testID="trip-recap-spend" style={themeStyle('components_TripRecapCards_30', { textColor: textColor }, (theme ?? _styleTheme))}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(spendTotal)}</Text> : null}
         {shareUrl ? (
           <TouchableOpacity accessibilityRole="link" testID="trip-recap-open-public" onPress={() => { void Linking.openURL(shareUrl).catch(() => {}); }} style={themeStyle('components_TripRecapCards_31', {  }, (theme ?? _styleTheme))}>
-            <Text style={themeStyle('components_TripRecapCards_32', { accentColor: accentColor }, (theme ?? _styleTheme))}>Read the full story ↗</Text>
+            <IconText style={themeStyle('components_TripRecapCards_32', { accentColor: accentColor }, (theme ?? _styleTheme))}>Read the full story ↗</IconText>
           </TouchableOpacity>
         ) : null}
         <Text style={themeStyle('components_TripRecapCards_33', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Generated {new Date(recap?.generatedAt || Date.now()).toLocaleDateString()}</Text>

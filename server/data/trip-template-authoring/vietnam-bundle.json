@@ -1,0 +1,2965 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim and TravelStride itineraries for Vietnam",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "vietnam-hanoi-4d",
+      "title": "Hanoi in 4 Days",
+      "summary": "A short northern city break: the Old Quarter and street food, the capital's main sights, and a day trip to the limestone landscapes of Ninh Binh.",
+      "days": 4,
+      "route": "Hanoi (Ninh Binh day trip)",
+      "arrive": "Hanoi (HAN)",
+      "depart": "Hanoi (HAN)",
+      "countries": [
+        "Vietnam"
+      ],
+      "regions": [
+        "Hanoi",
+        "Ninh Binh"
+      ],
+      "cities": [
+        "Hanoi",
+        "Ninh Binh"
+      ],
+      "imageQuery": "Hanoi Vietnam Hoan Kiem Lake Old Quarter",
+      "highlights": [
+        "Old Quarter street food",
+        "Temple of Literature",
+        "Water puppet show",
+        "Trang An boat tour",
+        "Hoan Kiem Lake"
+      ],
+      "destinationKeys": [
+        "vietnam",
+        "vietnam/hanoi",
+        "vietnam/ninh-binh"
+      ],
+      "hero": "vietnam/hanoi",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "authentic_local",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Hanoi",
+          "hotel": "Hotel in Hanoi",
+          "start": 0,
+          "nights": 3,
+          "area": "Old Quarter or near Hoan Kiem Lake: walkable to the sights and the street food, though noisy at night",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Hanoi Old Quarter",
+          "notes": "Pavements are often blocked by parked scooters, so expect to walk in the street.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-old-quarter"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Hanoi street food",
+          "notes": "Go where locals are queueing; many stalls sell out and close early.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "1.5h",
+          "name": "Ho Chi Minh Mausoleum complex",
+          "notes": "It closes on certain days and for an annual maintenance period, so check dates first; cover shoulders and knees and expect to queue in silence.",
+          "where": "Ba Dinh, Hanoi",
+          "book": "",
+          "place": "vietnam/ho-chi-minh-mausoleum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Temple of Literature",
+          "notes": "Flat, shaded courtyards that give a calm break from the traffic.",
+          "where": "Dong Da, Hanoi",
+          "book": "",
+          "place": "vietnam/temple-of-literature"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Hoa Lo Prison Museum",
+          "notes": "The exhibits are one-sided and some are grim.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "",
+          "place": "vietnam/hoa-lo-prison"
+        },
+        {
+          "day": 1,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "1h",
+          "name": "Water puppet show",
+          "notes": "Seats near the front can get splashed; shows sell out at busy times.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "Yes - evening shows sell out",
+          "place": "vietnam/water-puppet-show"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "10:15",
+          "duration": "2.5h",
+          "name": "Trang An boat tour",
+          "notes": "Rowed boats pass through low caves, so duck your head; carry a hat and water.",
+          "where": "Trang An, Ninh Binh",
+          "book": "",
+          "place": "vietnam/trang-an-boat"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "14:15",
+          "duration": "1.5h",
+          "name": "Hang Mua viewpoint",
+          "notes": "Hundreds of steep stone steps with no shade; best early or late in the day.",
+          "where": "Tam Coc, Ninh Binh",
+          "book": "",
+          "place": "vietnam/hang-mua"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "1h",
+          "name": "Hoan Kiem Lake",
+          "notes": "A calm last walk in the early morning before the airport transfer.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "",
+          "place": "vietnam/hoan-kiem-lake"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hanoi Noi Bai Airport (HAN)",
+          "to": "Hanoi hotel area",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Taxi, ride-hailing app or airport shuttle bus",
+          "notes": "Noi Bai is about forty-five minutes from the Old Quarter in light traffic; agree a fare or use the meter.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Hanoi hotel area",
+          "to": "Ninh Binh",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Car with driver",
+          "notes": "A driver for the day makes it easy to combine the stops.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Ninh Binh",
+          "to": "Hanoi hotel area",
+          "time": "16:30",
+          "minutes": 120,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Hanoi hotel area",
+          "to": "Hanoi Noi Bai Airport (HAN)",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Taxi, ride-hailing app or airport shuttle bus",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "vietnam-north-7d",
+      "title": "Hanoi, Ha Long Bay and Ninh Binh in 7 Days",
+      "summary": "A week in the north only, linking the capital with an overnight cruise in Ha Long Bay and two nights among the karst peaks and rice fields of Ninh Binh.",
+      "days": 7,
+      "route": "Hanoi > Ha Long Bay > Ninh Binh",
+      "arrive": "Hanoi (HAN)",
+      "depart": "Hanoi (HAN)",
+      "countries": [
+        "Vietnam"
+      ],
+      "regions": [
+        "Hanoi",
+        "Quang Ninh",
+        "Ninh Binh"
+      ],
+      "cities": [
+        "Hanoi",
+        "Ha Long Bay",
+        "Ninh Binh"
+      ],
+      "imageQuery": "Ha Long Bay Vietnam limestone karst junk boat",
+      "highlights": [
+        "Old Quarter street food",
+        "Ha Long Bay cruise",
+        "Trang An boat tour",
+        "Hang Mua viewpoint",
+        "Water puppet show"
+      ],
+      "destinationKeys": [
+        "vietnam",
+        "vietnam/hanoi",
+        "vietnam/quang-ninh",
+        "vietnam/ha-long-bay",
+        "vietnam/ninh-binh"
+      ],
+      "hero": "vietnam/ha-long-bay",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Hanoi",
+          "hotel": "Hotel in Hanoi",
+          "start": 0,
+          "nights": 3,
+          "area": "Old Quarter or near Hoan Kiem Lake: walkable to the sights and the street food, though noisy at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ha Long Bay",
+          "hotel": "Stay aboard a cruise ship in Ha Long Bay",
+          "start": 3,
+          "nights": 1,
+          "area": "On board a cruise ship in the bay; choose the operator carefully, as standards vary",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ninh Binh",
+          "hotel": "Hotel in Ninh Binh",
+          "start": 4,
+          "nights": 2,
+          "area": "Near Tam Coc or Trang An, among the rice fields and limestone peaks, rather than in Ninh Binh town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Hanoi Old Quarter",
+          "notes": "Pavements are often blocked by parked scooters, so expect to walk in the street.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-old-quarter"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Hanoi street food",
+          "notes": "Go where locals are queueing; many stalls sell out and close early.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "1.5h",
+          "name": "Ho Chi Minh Mausoleum complex",
+          "notes": "It closes on certain days and for an annual maintenance period, so check dates first; cover shoulders and knees and expect to queue in silence.",
+          "where": "Ba Dinh, Hanoi",
+          "book": "",
+          "place": "vietnam/ho-chi-minh-mausoleum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Temple of Literature",
+          "notes": "Flat, shaded courtyards that give a calm break from the traffic.",
+          "where": "Dong Da, Hanoi",
+          "book": "",
+          "place": "vietnam/temple-of-literature"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Hoa Lo Prison Museum",
+          "notes": "The exhibits are one-sided and some are grim.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "",
+          "place": "vietnam/hoa-lo-prison"
+        },
+        {
+          "day": 1,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "1h",
+          "name": "Water puppet show",
+          "notes": "Seats near the front can get splashed; shows sell out at busy times.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "Yes - evening shows sell out",
+          "place": "vietnam/water-puppet-show"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "1h",
+          "name": "Hoan Kiem Lake",
+          "notes": "Early morning is the best time, when locals exercise around the shore.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "",
+          "place": "vietnam/hoan-kiem-lake"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Vietnam Museum of Ethnology",
+          "notes": "Some distance from the Old Quarter, so allow time for the taxi; useful background before the northern hills.",
+          "where": "Cau Giay, Hanoi",
+          "book": "",
+          "place": "vietnam/ethnology-museum"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "12:00",
+          "duration": "overnight",
+          "name": "Overnight cruise in Ha Long Bay",
+          "notes": "Cruises are cancelled in storm and typhoon weather; check the operator's cancellation terms.",
+          "where": "Ha Long Bay, Quang Ninh",
+          "book": "Yes - cruises book up well ahead in high season",
+          "place": "vietnam/ha-long-cruise"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Hoa Lu ancient capital",
+          "notes": "A small, quiet site that gives some context to the landscape you are about to see.",
+          "where": "Hoa Lu, Ninh Binh",
+          "book": "",
+          "place": "vietnam/hoa-lu"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Trang An boat tour",
+          "notes": "Rowed boats pass through low caves, so duck your head; carry a hat and water.",
+          "where": "Trang An, Ninh Binh",
+          "book": "",
+          "place": "vietnam/trang-an-boat"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "13:00",
+          "duration": "2.5h",
+          "name": "Tam Coc and Bich Dong",
+          "notes": "A quieter river ride between rice fields and cliffs; rowers may press for tips.",
+          "where": "Tam Coc, Ninh Binh",
+          "book": "",
+          "place": "vietnam/tam-coc"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Hang Mua viewpoint",
+          "notes": "Hundreds of steep stone steps with no shade; the view is best in the late afternoon.",
+          "where": "Tam Coc, Ninh Binh",
+          "book": "",
+          "place": "vietnam/hang-mua"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hanoi Noi Bai Airport (HAN)",
+          "to": "Hanoi hotel area",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Taxi, ride-hailing app or airport shuttle bus",
+          "notes": "Noi Bai is about forty-five minutes from the Old Quarter in light traffic; agree a fare or use the meter.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Hanoi hotel area",
+          "to": "Ha Long Bay harbour",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Cruise shuttle bus or private car",
+          "notes": "Most cruise packages include the road transfer from Hanoi.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Ha Long Bay harbour",
+          "to": "Ninh Binh",
+          "time": "11:00",
+          "minutes": 220,
+          "carrier": "Private car or shuttle bus",
+          "notes": "Cruises dock around mid-morning; the road to Ninh Binh passes Hanoi's outskirts.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Ninh Binh",
+          "to": "Hanoi Noi Bai Airport (HAN)",
+          "time": "",
+          "minutes": 160,
+          "carrier": "Car with driver",
+          "notes": "Allow three hours before an international flight; the drive takes longer in heavy traffic.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "vietnam-hanoi-hoi-an-7d",
+      "title": "Hanoi and Hoi An in 7 Days",
+      "summary": "The north's capital and the central coast's lantern-lit trading town, a good pairing for culture, food and a little beach time.",
+      "days": 7,
+      "route": "Hanoi > Hoi An (My Son)",
+      "arrive": "Hanoi (HAN)",
+      "depart": "Da Nang (DAD)",
+      "countries": [
+        "Vietnam"
+      ],
+      "regions": [
+        "Hanoi",
+        "Da Nang"
+      ],
+      "cities": [
+        "Hanoi",
+        "Hoi An",
+        "My Son"
+      ],
+      "imageQuery": "Hoi An Vietnam lanterns river evening",
+      "highlights": [
+        "Old Quarter street food",
+        "Hoi An Ancient Town",
+        "My Son Sanctuary",
+        "Cooking class",
+        "An Bang Beach"
+      ],
+      "destinationKeys": [
+        "vietnam",
+        "vietnam/hanoi",
+        "vietnam/da-nang",
+        "vietnam/hoi-an",
+        "vietnam/my-son"
+      ],
+      "hero": "vietnam/hoi-an",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "authentic_local",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Hanoi",
+          "hotel": "Hotel in Hanoi",
+          "start": 0,
+          "nights": 3,
+          "area": "Old Quarter or near Hoan Kiem Lake: walkable to the sights and the street food, though noisy at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hoi An",
+          "hotel": "Hotel in Hoi An",
+          "start": 3,
+          "nights": 3,
+          "area": "Within a short walk or cycle of the Ancient Town; An Bang beach is a quieter alternative",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Hanoi Old Quarter",
+          "notes": "Pavements are often blocked by parked scooters, so expect to walk in the street.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-old-quarter"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Hanoi street food",
+          "notes": "Go where locals are queueing; many stalls sell out and close early.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "1.5h",
+          "name": "Ho Chi Minh Mausoleum complex",
+          "notes": "It closes on certain days and for an annual maintenance period, so check dates first; cover shoulders and knees and expect to queue in silence.",
+          "where": "Ba Dinh, Hanoi",
+          "book": "",
+          "place": "vietnam/ho-chi-minh-mausoleum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Temple of Literature",
+          "notes": "Flat, shaded courtyards that give a calm break from the traffic.",
+          "where": "Dong Da, Hanoi",
+          "book": "",
+          "place": "vietnam/temple-of-literature"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Hoa Lo Prison Museum",
+          "notes": "The exhibits are one-sided and some are grim.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "",
+          "place": "vietnam/hoa-lo-prison"
+        },
+        {
+          "day": 1,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "1h",
+          "name": "Water puppet show",
+          "notes": "Seats near the front can get splashed; shows sell out at busy times.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "Yes - evening shows sell out",
+          "place": "vietnam/water-puppet-show"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "1h",
+          "name": "Hoan Kiem Lake",
+          "notes": "Early morning is the best time, when locals exercise around the shore.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "",
+          "place": "vietnam/hoan-kiem-lake"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Vietnam Museum of Ethnology",
+          "notes": "Some distance from the Old Quarter, so allow time for the taxi; useful background before the northern hills.",
+          "where": "Cau Giay, Hanoi",
+          "book": "",
+          "place": "vietnam/ethnology-museum"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Hoi An Ancient Town",
+          "notes": "A ticket admits you to a choice of the heritage buildings; the centre is closed to motor traffic.",
+          "where": "Ancient Town, Hoi An",
+          "book": "",
+          "place": "vietnam/hoi-an-ancient-town"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Hoi An evening and lantern lights",
+          "notes": "Riverside tables book up early in the evening.",
+          "where": "Riverfront, Hoi An",
+          "book": "",
+          "place": "vietnam/hoi-an-lantern-night"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "06:30",
+          "duration": "3.5h",
+          "name": "My Son Sanctuary",
+          "notes": "Go early, before the heat and the tour buses; paths are flat but muddy after rain.",
+          "where": "My Son, near Hoi An",
+          "book": "",
+          "place": "vietnam/my-son"
+        },
+        {
+          "day": 4,
+          "type": "Class",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cooking class in Hoi An",
+          "notes": "Usually starts at the market; book ahead and mention any dietary restrictions.",
+          "where": "Hoi An",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "vietnam/hoi-an-cooking-class"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "An Bang Beach",
+          "notes": "Check the flags before swimming; the sea can be rough outside the dry season.",
+          "where": "An Bang, Hoi An",
+          "book": "",
+          "place": "vietnam/an-bang-beach"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Cam Thanh coconut basket boats",
+          "notes": "Agree the rate and any tip with the boatman before you set off.",
+          "where": "Cam Thanh, Hoi An",
+          "book": "",
+          "place": "vietnam/cam-thanh-basket-boat"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hanoi Noi Bai Airport (HAN)",
+          "to": "Hanoi hotel area",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Taxi, ride-hailing app or airport shuttle bus",
+          "notes": "Noi Bai is about forty-five minutes from the Old Quarter in light traffic; agree a fare or use the meter.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Hanoi hotel area",
+          "to": "Hanoi Noi Bai Airport (HAN)",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Taxi, ride-hailing app or airport shuttle bus",
+          "notes": "This covers the ground leg to the departure airport only; Hanoi to Da Nang is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Da Nang Airport (DAD)",
+          "to": "Hoi An hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, ride-hailing app or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "My Son",
+          "time": "05:30",
+          "minutes": 60,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "My Son",
+          "to": "Hoi An hotel area",
+          "time": "10:15",
+          "minutes": 60,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "Da Nang Airport (DAD)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, ride-hailing app or hotel shuttle",
+          "notes": "Flights home usually connect through Ho Chi Minh City or Hanoi; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "vietnam-hanoi-hue-hoi-an-saigon-10d",
+      "title": "Hanoi, Hue, Hoi An and Saigon in 10 Days",
+      "summary": "The length of the country in ten days: Hanoi, an overnight in Ha Long Bay, the imperial city of Hue, Hoi An, and Ho Chi Minh City with a Mekong Delta day trip.",
+      "days": 10,
+      "route": "Hanoi > Ha Long Bay > Hue > Hoi An > Ho Chi Minh City (Mekong Delta)",
+      "arrive": "Hanoi (HAN)",
+      "depart": "Ho Chi Minh City (SGN)",
+      "countries": [
+        "Vietnam"
+      ],
+      "regions": [
+        "Hanoi",
+        "Quang Ninh",
+        "Hue",
+        "Da Nang",
+        "Ho Chi Minh City"
+      ],
+      "cities": [
+        "Hanoi",
+        "Ha Long Bay",
+        "Hue",
+        "Hoi An",
+        "My Son",
+        "Ho Chi Minh City",
+        "Mekong Delta"
+      ],
+      "imageQuery": "Hue imperial city Vietnam citadel",
+      "highlights": [
+        "Ha Long Bay cruise",
+        "Hue Imperial City",
+        "Hoi An Ancient Town",
+        "War Remnants Museum",
+        "Mekong Delta"
+      ],
+      "destinationKeys": [
+        "vietnam",
+        "vietnam/hanoi",
+        "vietnam/quang-ninh",
+        "vietnam/ha-long-bay",
+        "vietnam/hue",
+        "vietnam/da-nang",
+        "vietnam/hoi-an",
+        "vietnam/my-son",
+        "vietnam/ho-chi-minh-city",
+        "vietnam/mekong-delta"
+      ],
+      "hero": "vietnam/hue",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "F",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Hanoi",
+          "hotel": "Hotel in Hanoi",
+          "start": 0,
+          "nights": 2,
+          "area": "Old Quarter or near Hoan Kiem Lake: walkable to the sights and the street food, though noisy at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ha Long Bay",
+          "hotel": "Stay aboard a cruise ship in Ha Long Bay",
+          "start": 2,
+          "nights": 1,
+          "area": "On board a cruise ship in the bay; choose the operator carefully, as standards vary",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hue",
+          "hotel": "Hotel in Hue",
+          "start": 3,
+          "nights": 2,
+          "area": "South of the Perfume River near the pedestrian streets, or inside the citadel walls for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hoi An",
+          "hotel": "Hotel in Hoi An",
+          "start": 5,
+          "nights": 2,
+          "area": "Within a short walk or cycle of the Ancient Town; An Bang beach is a quieter alternative",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ho Chi Minh City",
+          "hotel": "Hotel in Ho Chi Minh City",
+          "start": 7,
+          "nights": 2,
+          "area": "District 1 near Dong Khoi or Ben Thanh Market: central, walkable and close to the food",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Hanoi Old Quarter",
+          "notes": "Pavements are often blocked by parked scooters, so expect to walk in the street.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-old-quarter"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Hanoi street food",
+          "notes": "Go where locals are queueing; many stalls sell out and close early.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "1.5h",
+          "name": "Ho Chi Minh Mausoleum complex",
+          "notes": "It closes on certain days and for an annual maintenance period, so check dates first; cover shoulders and knees and expect to queue in silence.",
+          "where": "Ba Dinh, Hanoi",
+          "book": "",
+          "place": "vietnam/ho-chi-minh-mausoleum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Temple of Literature",
+          "notes": "Flat, shaded courtyards that give a calm break from the traffic.",
+          "where": "Dong Da, Hanoi",
+          "book": "",
+          "place": "vietnam/temple-of-literature"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Hoa Lo Prison Museum",
+          "notes": "The exhibits are one-sided and some are grim.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "",
+          "place": "vietnam/hoa-lo-prison"
+        },
+        {
+          "day": 1,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "1h",
+          "name": "Water puppet show",
+          "notes": "Seats near the front can get splashed; shows sell out at busy times.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "Yes - evening shows sell out",
+          "place": "vietnam/water-puppet-show"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "12:00",
+          "duration": "overnight",
+          "name": "Overnight cruise in Ha Long Bay",
+          "notes": "Cruises are cancelled in storm and typhoon weather; check the operator's cancellation terms.",
+          "where": "Ha Long Bay, Quang Ninh",
+          "book": "Yes - cruises book up well ahead in high season",
+          "place": "vietnam/ha-long-cruise"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Hue Imperial City",
+          "notes": "There is little shade, and some areas are bare ground and rubble after wartime damage.",
+          "where": "Citadel, Hue",
+          "book": "",
+          "place": "vietnam/hue-imperial-city"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3.5h",
+          "name": "Royal tombs of Hue",
+          "notes": "Two or three are enough; the sites involve steps and are spread over several kilometres.",
+          "where": "Perfume River south bank, Hue",
+          "book": "",
+          "place": "vietnam/hue-royal-tombs"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Bun bo Hue lunch",
+          "notes": "Many specialist restaurants close in the afternoon; ask for chilli on the side if unsure about the heat.",
+          "where": "Hue",
+          "book": "",
+          "place": "vietnam/bun-bo-hue"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Perfume River dragon boat",
+          "notes": "Agree the route and length before boarding; the late afternoon light is gentler.",
+          "where": "Perfume River, Hue",
+          "book": "",
+          "place": "vietnam/perfume-river-cruise"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:15",
+          "duration": "1h",
+          "name": "Thien Mu Pagoda",
+          "notes": "Modest dress is expected in the grounds.",
+          "where": "Perfume River bank, Hue",
+          "book": "",
+          "place": "vietnam/thien-mu-pagoda"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "0.75h",
+          "name": "Hai Van Pass",
+          "notes": "Stop at the old fort at the summit; mist can hide the view, so a clear morning is best.",
+          "where": "Hai Van Pass, between Hue and Da Nang",
+          "book": "",
+          "place": "vietnam/hai-van-pass"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Hoi An Ancient Town",
+          "notes": "A ticket admits you to a choice of the heritage buildings.",
+          "where": "Ancient Town, Hoi An",
+          "book": "",
+          "place": "vietnam/hoi-an-ancient-town"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Hoi An evening and lantern lights",
+          "notes": "Riverside tables book up early in the evening.",
+          "where": "Riverfront, Hoi An",
+          "book": "",
+          "place": "vietnam/hoi-an-lantern-night"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "06:30",
+          "duration": "3.5h",
+          "name": "My Son Sanctuary",
+          "notes": "Go early, before the heat and the tour buses; paths are flat but muddy after rain.",
+          "where": "My Son, near Hoi An",
+          "book": "",
+          "place": "vietnam/my-son"
+        },
+        {
+          "day": 6,
+          "type": "Class",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cooking class in Hoi An",
+          "notes": "Usually starts at the market; book ahead and mention any dietary restrictions.",
+          "where": "Hoi An",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "vietnam/hoi-an-cooking-class"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "War Remnants Museum",
+          "notes": "Many images are graphic and distressing; check opening hours, as it may close for a midday break.",
+          "where": "District 3, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/war-remnants-museum"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Notre-Dame Cathedral and Central Post Office",
+          "notes": "The cathedral has been under long-running restoration, so the interior may be closed; the post office is free to enter.",
+          "where": "District 1, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/saigon-notre-dame-post-office"
+        },
+        {
+          "day": 7,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2.5h",
+          "name": "Saigon street food tour",
+          "notes": "Choose a company with good safety reviews and mention any dietary restrictions.",
+          "where": "District 1, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/saigon-street-food-tour"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Mekong Delta day trip",
+          "notes": "Typically My Tho or Ben Tre by motorboat and small rowing boats; most itineraries are similar. Bring sun protection.",
+          "where": "My Tho or Ben Tre, Mekong Delta",
+          "book": "",
+          "place": "vietnam/mekong-delta-day-trip"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "1h",
+          "name": "Reunification Palace",
+          "notes": "Closed for official events from time to time, so check before going.",
+          "where": "District 1, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/reunification-palace"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hanoi Noi Bai Airport (HAN)",
+          "to": "Hanoi hotel area",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Taxi, ride-hailing app or airport shuttle bus",
+          "notes": "Noi Bai is about forty-five minutes from the Old Quarter in light traffic; agree a fare or use the meter.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Hanoi hotel area",
+          "to": "Ha Long Bay harbour",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Cruise shuttle bus or private car",
+          "notes": "Most cruise packages include the road transfer from Hanoi.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Ha Long Bay harbour",
+          "to": "Hanoi Noi Bai Airport (HAN)",
+          "time": "11:00",
+          "minutes": 180,
+          "carrier": "Cruise shuttle bus or private car",
+          "notes": "This covers the ground leg to the departure airport only; Hanoi to Hue is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Hue Phu Bai Airport (HUI)",
+          "to": "Hue hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hue hotel area",
+          "to": "Royal tombs",
+          "time": "08:30",
+          "minutes": 30,
+          "carrier": "Car with driver or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Royal tombs",
+          "to": "Hue hotel area",
+          "time": "12:30",
+          "minutes": 30,
+          "carrier": "Car with driver or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Hue hotel area",
+          "to": "Hoi An hotel area",
+          "time": "08:30",
+          "minutes": 240,
+          "carrier": "Car with driver",
+          "notes": "Go by the old road over the pass rather than through the tunnel; the drive is a highlight in itself.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "My Son",
+          "time": "05:30",
+          "minutes": 60,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "My Son",
+          "to": "Hoi An hotel area",
+          "time": "10:15",
+          "minutes": 60,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "Da Nang Airport (DAD)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, ride-hailing app or hotel shuttle",
+          "notes": "This covers the ground leg to the departure airport only; Da Nang to Ho Chi Minh City is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Tan Son Nhat Airport (SGN)",
+          "to": "Ho Chi Minh City hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi, ride-hailing app or bus",
+          "notes": "The airport is close to the centre; traffic is the main variable.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Ho Chi Minh City hotel area",
+          "to": "My Tho",
+          "time": "07:30",
+          "minutes": 100,
+          "carrier": "Tour minibus or private car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "My Tho",
+          "to": "Ho Chi Minh City hotel area",
+          "time": "17:00",
+          "minutes": 100,
+          "carrier": "Tour minibus or private car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Ho Chi Minh City hotel area",
+          "to": "Tan Son Nhat Airport (SGN)",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi, ride-hailing app or bus",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "vietnam-north-hoi-an-14d",
+      "title": "Hanoi, Sapa, Ninh Binh, Ha Long Bay and Hoi An in 14 Days",
+      "summary": "A two-week route through the north's scenery, from the terraced mountains of Sapa to the karst peaks of Ninh Binh and Ha Long Bay, finishing with five easy days around Hoi An.",
+      "days": 14,
+      "route": "Hanoi > Sapa > Ninh Binh > Ha Long Bay > Hoi An (My Son)",
+      "arrive": "Hanoi (HAN)",
+      "depart": "Da Nang (DAD)",
+      "countries": [
+        "Vietnam"
+      ],
+      "regions": [
+        "Hanoi",
+        "Lao Cai",
+        "Ninh Binh",
+        "Quang Ninh",
+        "Da Nang"
+      ],
+      "cities": [
+        "Hanoi",
+        "Sapa",
+        "Ninh Binh",
+        "Ha Long Bay",
+        "Hoi An",
+        "My Son"
+      ],
+      "imageQuery": "Sapa Vietnam rice terraces mountains",
+      "highlights": [
+        "Sapa rice terraces",
+        "Fansipan",
+        "Trang An boat tour",
+        "Ha Long Bay cruise",
+        "Hoi An Ancient Town"
+      ],
+      "destinationKeys": [
+        "vietnam",
+        "vietnam/hanoi",
+        "vietnam/lao-cai",
+        "vietnam/sapa",
+        "vietnam/ninh-binh",
+        "vietnam/quang-ninh",
+        "vietnam/ha-long-bay",
+        "vietnam/da-nang",
+        "vietnam/hoi-an",
+        "vietnam/my-son"
+      ],
+      "hero": "vietnam/sapa",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "culture",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Hanoi",
+          "hotel": "Hotel in Hanoi",
+          "start": 0,
+          "nights": 2,
+          "area": "Old Quarter or near Hoan Kiem Lake: walkable to the sights and the street food, though noisy at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sapa",
+          "hotel": "Hotel in Sapa",
+          "start": 2,
+          "nights": 3,
+          "area": "In or just outside Sapa town, ideally with a view over the valley",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ninh Binh",
+          "hotel": "Hotel in Ninh Binh",
+          "start": 5,
+          "nights": 2,
+          "area": "Near Tam Coc or Trang An, among the rice fields and limestone peaks, rather than in Ninh Binh town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ha Long Bay",
+          "hotel": "Stay aboard a cruise ship in Ha Long Bay",
+          "start": 7,
+          "nights": 1,
+          "area": "On board a cruise ship in the bay; choose the operator carefully, as standards vary",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hoi An",
+          "hotel": "Hotel in Hoi An",
+          "start": 8,
+          "nights": 5,
+          "area": "Within a short walk or cycle of the Ancient Town; An Bang beach is a quieter alternative",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Hanoi Old Quarter",
+          "notes": "Pavements are often blocked by parked scooters, so expect to walk in the street.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-old-quarter"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Hanoi street food",
+          "notes": "Go where locals are queueing; many stalls sell out and close early.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "1.5h",
+          "name": "Ho Chi Minh Mausoleum complex",
+          "notes": "It closes on certain days and for an annual maintenance period, so check dates first; cover shoulders and knees and expect to queue in silence.",
+          "where": "Ba Dinh, Hanoi",
+          "book": "",
+          "place": "vietnam/ho-chi-minh-mausoleum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Temple of Literature",
+          "notes": "Flat, shaded courtyards that give a calm break from the traffic.",
+          "where": "Dong Da, Hanoi",
+          "book": "",
+          "place": "vietnam/temple-of-literature"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Hoa Lo Prison Museum",
+          "notes": "The exhibits are one-sided and some are grim.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "",
+          "place": "vietnam/hoa-lo-prison"
+        },
+        {
+          "day": 1,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "1h",
+          "name": "Water puppet show",
+          "notes": "Seats near the front can get splashed; shows sell out at busy times.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "Yes - evening shows sell out",
+          "place": "vietnam/water-puppet-show"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Sapa town",
+          "notes": "Bring warm layers; mist often covers the mountains and views are not guaranteed.",
+          "where": "Sapa",
+          "book": "",
+          "place": "vietnam/sapa-town"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Muong Hoa Valley trek",
+          "notes": "Mostly level and downhill on muddy tracks; the terraces are golden around September and early October and flooded in late spring. Paths are slippery after rain.",
+          "where": "Lao Chai and Ta Van, Sapa",
+          "book": "Yes - guided treks are arranged in advance",
+          "place": "vietnam/muong-hoa-valley-trek"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "4h",
+          "name": "Fansipan cable car",
+          "notes": "Go in the morning when the sky is most likely clear; it is far colder at the top.",
+          "where": "Sapa",
+          "book": "",
+          "place": "vietnam/fansipan"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Cat Cat Village",
+          "notes": "A stepped path down to a waterfall; the way back is uphill.",
+          "where": "Cat Cat, Sapa",
+          "book": "",
+          "place": "vietnam/cat-cat-village"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Trang An boat tour",
+          "notes": "Rowed boats pass through low caves, so duck your head; carry a hat and water.",
+          "where": "Trang An, Ninh Binh",
+          "book": "",
+          "place": "vietnam/trang-an-boat"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "1.5h",
+          "name": "Hoa Lu ancient capital",
+          "notes": "A small, quiet site that gives context to the landscape.",
+          "where": "Hoa Lu, Ninh Binh",
+          "book": "",
+          "place": "vietnam/hoa-lu"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Hang Mua viewpoint",
+          "notes": "Hundreds of steep stone steps with no shade; the view is best in the late afternoon.",
+          "where": "Tam Coc, Ninh Binh",
+          "book": "",
+          "place": "vietnam/hang-mua"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "13:00",
+          "duration": "overnight",
+          "name": "Overnight cruise in Ha Long Bay",
+          "notes": "Cruises are cancelled in storm and typhoon weather.",
+          "where": "Ha Long Bay, Quang Ninh",
+          "book": "Yes - cruises book up well ahead in high season",
+          "place": "vietnam/ha-long-cruise"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Hoi An evening and lantern lights",
+          "notes": "Riverside tables book up early in the evening.",
+          "where": "Riverfront, Hoi An",
+          "book": "",
+          "place": "vietnam/hoi-an-lantern-night"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Hoi An Ancient Town",
+          "notes": "Go early before the crowds; a ticket admits you to a choice of heritage buildings.",
+          "where": "Ancient Town, Hoi An",
+          "book": "",
+          "place": "vietnam/hoi-an-ancient-town"
+        },
+        {
+          "day": 9,
+          "type": "Class",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cooking class in Hoi An",
+          "notes": "Usually starts at the market; book ahead and mention any dietary restrictions.",
+          "where": "Hoi An",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "vietnam/hoi-an-cooking-class"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "06:30",
+          "duration": "3.5h",
+          "name": "My Son Sanctuary",
+          "notes": "Go early, before the heat and the tour buses; paths are flat but muddy after rain.",
+          "where": "My Son, near Hoi An",
+          "book": "",
+          "place": "vietnam/my-son"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "Marble Mountains",
+          "notes": "Steps are steep and uneven; a lift covers part of the way up the main hill.",
+          "where": "Marble Mountains, Da Nang",
+          "book": "",
+          "place": "vietnam/marble-mountains"
+        },
+        {
+          "day": 11,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Ba Na Hills and the Golden Bridge",
+          "notes": "Theme-park feel and very crowded at weekends; cloud can hide the view at the top.",
+          "where": "Ba Na Hills, Da Nang",
+          "book": "",
+          "place": "vietnam/ba-na-hills"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "An Bang Beach",
+          "notes": "Check the flags before swimming; the sea can be rough outside the dry season.",
+          "where": "An Bang, Hoi An",
+          "book": "",
+          "place": "vietnam/an-bang-beach"
+        },
+        {
+          "day": 12,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Cam Thanh coconut basket boats",
+          "notes": "Agree the rate and any tip with the boatman before you set off.",
+          "where": "Cam Thanh, Hoi An",
+          "book": "",
+          "place": "vietnam/cam-thanh-basket-boat"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hanoi Noi Bai Airport (HAN)",
+          "to": "Hanoi hotel area",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Taxi, ride-hailing app or airport shuttle bus",
+          "notes": "Noi Bai is about forty-five minutes from the Old Quarter in light traffic; agree a fare or use the meter.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Hanoi hotel area",
+          "to": "Sapa",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Limousine minibus via the expressway",
+          "notes": "The expressway has cut the journey a lot; the overnight train to Lao Cai plus a transfer is the slower alternative.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Sapa",
+          "to": "Hanoi hotel area",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Limousine minibus via the expressway",
+          "notes": "A long travel day; break it with lunch in Hanoi.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Hanoi hotel area",
+          "to": "Ninh Binh",
+          "time": "15:00",
+          "minutes": 120,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Ninh Binh",
+          "to": "Ha Long Bay harbour",
+          "time": "08:00",
+          "minutes": 220,
+          "carrier": "Private car or shuttle bus",
+          "notes": "Boarding is around midday.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Ha Long Bay harbour",
+          "to": "Hanoi Noi Bai Airport (HAN)",
+          "time": "11:00",
+          "minutes": 180,
+          "carrier": "Cruise shuttle bus or private car",
+          "notes": "This covers the ground leg to the departure airport only; Hanoi to Da Nang is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Da Nang Airport (DAD)",
+          "to": "Hoi An hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, ride-hailing app or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "My Son",
+          "time": "05:30",
+          "minutes": 60,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "My Son",
+          "to": "Hoi An hotel area",
+          "time": "10:15",
+          "minutes": 60,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "Marble Mountains",
+          "time": "12:30",
+          "minutes": 30,
+          "carrier": "Taxi or ride-hailing app",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Marble Mountains",
+          "to": "Hoi An hotel area",
+          "time": "15:00",
+          "minutes": 30,
+          "carrier": "Taxi or ride-hailing app",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "Ba Na Hills",
+          "time": "07:45",
+          "minutes": 75,
+          "carrier": "Taxi or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Ba Na Hills",
+          "to": "Hoi An hotel area",
+          "time": "15:00",
+          "minutes": 75,
+          "carrier": "Taxi or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "Da Nang Airport (DAD)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, ride-hailing app or hotel shuttle",
+          "notes": "Flights home usually connect through Ho Chi Minh City or Hanoi; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "vietnam-grand-tour-14d",
+      "title": "Vietnam End to End in 14 Days",
+      "summary": "The full length of the country at a measured pace: Hanoi, Ha Long Bay, Hue, Hoi An, Ho Chi Minh City and two nights in the Mekong Delta around Can Tho.",
+      "days": 14,
+      "route": "Hanoi > Ha Long Bay > Hue > Hoi An > Ho Chi Minh City (Cu Chi) > Can Tho (Mekong Delta)",
+      "arrive": "Hanoi (HAN)",
+      "depart": "Ho Chi Minh City (SGN)",
+      "countries": [
+        "Vietnam"
+      ],
+      "regions": [
+        "Hanoi",
+        "Quang Ninh",
+        "Hue",
+        "Da Nang",
+        "Ho Chi Minh City",
+        "Can Tho"
+      ],
+      "cities": [
+        "Hanoi",
+        "Ha Long Bay",
+        "Hue",
+        "Hoi An",
+        "My Son",
+        "Ho Chi Minh City",
+        "Cu Chi",
+        "Can Tho",
+        "Mekong Delta"
+      ],
+      "imageQuery": "Mekong Delta Vietnam floating market boats",
+      "highlights": [
+        "Ha Long Bay cruise",
+        "Hue royal tombs",
+        "Hoi An lantern nights",
+        "Cu Chi Tunnels",
+        "Cai Rang floating market"
+      ],
+      "destinationKeys": [
+        "vietnam",
+        "vietnam/hanoi",
+        "vietnam/quang-ninh",
+        "vietnam/ha-long-bay",
+        "vietnam/hue",
+        "vietnam/da-nang",
+        "vietnam/hoi-an",
+        "vietnam/my-son",
+        "vietnam/ho-chi-minh-city",
+        "vietnam/cu-chi",
+        "vietnam/can-tho",
+        "vietnam/mekong-delta"
+      ],
+      "hero": "vietnam/mekong-delta",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "food",
+        "authentic_local",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Hanoi",
+          "hotel": "Hotel in Hanoi",
+          "start": 0,
+          "nights": 2,
+          "area": "Old Quarter or near Hoan Kiem Lake: walkable to the sights and the street food, though noisy at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ha Long Bay",
+          "hotel": "Stay aboard a cruise ship in Ha Long Bay",
+          "start": 2,
+          "nights": 1,
+          "area": "On board a cruise ship in the bay; choose the operator carefully, as standards vary",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hue",
+          "hotel": "Hotel in Hue",
+          "start": 3,
+          "nights": 2,
+          "area": "South of the Perfume River near the pedestrian streets, or inside the citadel walls for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hoi An",
+          "hotel": "Hotel in Hoi An",
+          "start": 5,
+          "nights": 3,
+          "area": "Within a short walk or cycle of the Ancient Town; An Bang beach is a quieter alternative",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ho Chi Minh City",
+          "hotel": "Hotel in Ho Chi Minh City",
+          "start": 8,
+          "nights": 3,
+          "area": "District 1 near Dong Khoi or Ben Thanh Market: central, walkable and close to the food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Can Tho",
+          "hotel": "Hotel in Can Tho",
+          "start": 11,
+          "nights": 2,
+          "area": "Near the Ninh Kieu riverfront, which is the easiest place to start early-morning boat trips",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Hanoi Old Quarter",
+          "notes": "Pavements are often blocked by parked scooters, so expect to walk in the street.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-old-quarter"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Hanoi street food",
+          "notes": "Go where locals are queueing; many stalls sell out and close early.",
+          "where": "Old Quarter, Hanoi",
+          "book": "",
+          "place": "vietnam/hanoi-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "1.5h",
+          "name": "Ho Chi Minh Mausoleum complex",
+          "notes": "It closes on certain days and for an annual maintenance period, so check dates first; cover shoulders and knees and expect to queue in silence.",
+          "where": "Ba Dinh, Hanoi",
+          "book": "",
+          "place": "vietnam/ho-chi-minh-mausoleum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1.5h",
+          "name": "Temple of Literature",
+          "notes": "Flat, shaded courtyards that give a calm break from the traffic.",
+          "where": "Dong Da, Hanoi",
+          "book": "",
+          "place": "vietnam/temple-of-literature"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Hoa Lo Prison Museum",
+          "notes": "The exhibits are one-sided and some are grim.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "",
+          "place": "vietnam/hoa-lo-prison"
+        },
+        {
+          "day": 1,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "1h",
+          "name": "Water puppet show",
+          "notes": "Seats near the front can get splashed; shows sell out at busy times.",
+          "where": "Hoan Kiem, Hanoi",
+          "book": "Yes - evening shows sell out",
+          "place": "vietnam/water-puppet-show"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "12:00",
+          "duration": "overnight",
+          "name": "Overnight cruise in Ha Long Bay",
+          "notes": "Cruises are cancelled in storm and typhoon weather; check the operator's cancellation terms.",
+          "where": "Ha Long Bay, Quang Ninh",
+          "book": "Yes - cruises book up well ahead in high season",
+          "place": "vietnam/ha-long-cruise"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Hue Imperial City",
+          "notes": "There is little shade, and some areas are bare ground and rubble after wartime damage.",
+          "where": "Citadel, Hue",
+          "book": "",
+          "place": "vietnam/hue-imperial-city"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3.5h",
+          "name": "Royal tombs of Hue",
+          "notes": "Two or three are enough; the sites involve steps and are spread over several kilometres.",
+          "where": "Perfume River south bank, Hue",
+          "book": "",
+          "place": "vietnam/hue-royal-tombs"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Bun bo Hue lunch",
+          "notes": "Many specialist restaurants close in the afternoon; ask for chilli on the side if unsure about the heat.",
+          "where": "Hue",
+          "book": "",
+          "place": "vietnam/bun-bo-hue"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Perfume River dragon boat",
+          "notes": "Agree the route and length before boarding; the late afternoon light is gentler.",
+          "where": "Perfume River, Hue",
+          "book": "",
+          "place": "vietnam/perfume-river-cruise"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:15",
+          "duration": "1h",
+          "name": "Thien Mu Pagoda",
+          "notes": "Modest dress is expected in the grounds.",
+          "where": "Perfume River bank, Hue",
+          "book": "",
+          "place": "vietnam/thien-mu-pagoda"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "0.75h",
+          "name": "Hai Van Pass",
+          "notes": "Stop at the old fort at the summit; mist can hide the view, so a clear morning is best.",
+          "where": "Hai Van Pass, between Hue and Da Nang",
+          "book": "",
+          "place": "vietnam/hai-van-pass"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Hoi An Ancient Town",
+          "notes": "A ticket admits you to a choice of the heritage buildings.",
+          "where": "Ancient Town, Hoi An",
+          "book": "",
+          "place": "vietnam/hoi-an-ancient-town"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Hoi An evening and lantern lights",
+          "notes": "Riverside tables book up early in the evening.",
+          "where": "Riverfront, Hoi An",
+          "book": "",
+          "place": "vietnam/hoi-an-lantern-night"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "06:30",
+          "duration": "3.5h",
+          "name": "My Son Sanctuary",
+          "notes": "Go early, before the heat and the tour buses; paths are flat but muddy after rain.",
+          "where": "My Son, near Hoi An",
+          "book": "",
+          "place": "vietnam/my-son"
+        },
+        {
+          "day": 6,
+          "type": "Class",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cooking class in Hoi An",
+          "notes": "Usually starts at the market; book ahead and mention any dietary restrictions.",
+          "where": "Hoi An",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "vietnam/hoi-an-cooking-class"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "An Bang Beach",
+          "notes": "Check the flags before swimming; the sea can be rough outside the dry season.",
+          "where": "An Bang, Hoi An",
+          "book": "",
+          "place": "vietnam/an-bang-beach"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Cam Thanh coconut basket boats",
+          "notes": "Agree the rate and any tip with the boatman before you set off.",
+          "where": "Cam Thanh, Hoi An",
+          "book": "",
+          "place": "vietnam/cam-thanh-basket-boat"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "War Remnants Museum",
+          "notes": "Many images are graphic and distressing; check opening hours, as it may close for a midday break.",
+          "where": "District 3, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/war-remnants-museum"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Notre-Dame Cathedral and Central Post Office",
+          "notes": "The cathedral has been under long-running restoration, so the interior may be closed; the post office is free to enter.",
+          "where": "District 1, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/saigon-notre-dame-post-office"
+        },
+        {
+          "day": 9,
+          "type": "Day Trip",
+          "time": "08:45",
+          "duration": "3h",
+          "name": "Cu Chi Tunnels",
+          "notes": "Crawling through a short section is optional and very tight and hot; a firing range nearby can be loud.",
+          "where": "Cu Chi",
+          "book": "",
+          "place": "vietnam/cu-chi-tunnels"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1h",
+          "name": "Reunification Palace",
+          "notes": "Closed for official events from time to time, so check before going.",
+          "where": "District 1, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/reunification-palace"
+        },
+        {
+          "day": 9,
+          "type": "Shopping",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Ben Thanh Market",
+          "notes": "Bargaining is expected, and asking amounts at the outer stalls start high.",
+          "where": "District 1, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/ben-thanh-market"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Cholon (Chinatown)",
+          "notes": "Crowded and busy; Thien Hau Temple is full of hanging incense coils.",
+          "where": "District 5, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/cholon"
+        },
+        {
+          "day": 10,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2.5h",
+          "name": "Saigon street food tour",
+          "notes": "Choose a company with good safety reviews and mention any dietary restrictions.",
+          "where": "District 1, Ho Chi Minh City",
+          "book": "",
+          "place": "vietnam/saigon-street-food-tour"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Cycling the canals around Can Tho",
+          "notes": "Flat and easy but hot and humid; carry water and wear a hat.",
+          "where": "Can Tho",
+          "book": "",
+          "place": "vietnam/can-tho-canal-cycling"
+        },
+        {
+          "day": 12,
+          "type": "Tour",
+          "time": "06:00",
+          "duration": "2.5h",
+          "name": "Cai Rang Floating Market",
+          "notes": "Busiest from around six in the morning, so an early start is needed.",
+          "where": "Cai Rang, Can Tho",
+          "book": "",
+          "place": "vietnam/cai-rang-floating-market"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Hanoi Noi Bai Airport (HAN)",
+          "to": "Hanoi hotel area",
+          "time": "",
+          "minutes": 50,
+          "carrier": "Taxi, ride-hailing app or airport shuttle bus",
+          "notes": "Noi Bai is about forty-five minutes from the Old Quarter in light traffic; agree a fare or use the meter.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Hanoi hotel area",
+          "to": "Ha Long Bay harbour",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Cruise shuttle bus or private car",
+          "notes": "Most cruise packages include the road transfer from Hanoi.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Ha Long Bay harbour",
+          "to": "Hanoi Noi Bai Airport (HAN)",
+          "time": "11:00",
+          "minutes": 180,
+          "carrier": "Cruise shuttle bus or private car",
+          "notes": "This covers the ground leg to the departure airport only; Hanoi to Hue is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Hue Phu Bai Airport (HUI)",
+          "to": "Hue hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hue hotel area",
+          "to": "Royal tombs",
+          "time": "08:30",
+          "minutes": 30,
+          "carrier": "Car with driver or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Royal tombs",
+          "to": "Hue hotel area",
+          "time": "12:30",
+          "minutes": 30,
+          "carrier": "Car with driver or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Hue hotel area",
+          "to": "Hoi An hotel area",
+          "time": "08:30",
+          "minutes": 240,
+          "carrier": "Car with driver",
+          "notes": "Go by the old road over the pass rather than through the tunnel; the drive is a highlight in itself.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "My Son",
+          "time": "05:30",
+          "minutes": 60,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "My Son",
+          "to": "Hoi An hotel area",
+          "time": "10:15",
+          "minutes": 60,
+          "carrier": "Car with driver or tour minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Hoi An hotel area",
+          "to": "Da Nang Airport (DAD)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, ride-hailing app or hotel shuttle",
+          "notes": "This covers the ground leg to the departure airport only; Da Nang to Ho Chi Minh City is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Tan Son Nhat Airport (SGN)",
+          "to": "Ho Chi Minh City hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi, ride-hailing app or bus",
+          "notes": "The airport is close to the centre; traffic is the main variable.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Ho Chi Minh City hotel area",
+          "to": "Cu Chi",
+          "time": "07:15",
+          "minutes": 90,
+          "carrier": "Tour minibus or private car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Cu Chi",
+          "to": "Ho Chi Minh City hotel area",
+          "time": "11:45",
+          "minutes": 90,
+          "carrier": "Tour minibus or private car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Ho Chi Minh City hotel area",
+          "to": "Can Tho",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Private car or limousine minibus via the expressway",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Can Tho hotel area",
+          "to": "Tan Son Nhat Airport (SGN)",
+          "time": "",
+          "minutes": 210,
+          "carrier": "Private car or limousine minibus",
+          "notes": "A long drive on departure day, so book a flight in the afternoon or evening; allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "vietnam/hanoi-old-quarter": {
+        "name": "Hanoi Old Quarter",
+        "description": "A tight grid of ancient streets in central Hanoi, each historically given over to one trade, packed with shops, shrines and cafes.",
+        "details": "The Old Quarter is often called the 36 streets, since each street was traditionally home to a single guild or craft, and many names still reflect it, such as Hang Bac for silver and Hang Gai for silk. Today it is a crowded mix of shops, noodle stalls, cafes and tall narrow tube houses, with motorbikes filling the lanes. Pavements are often blocked by parked scooters, so you end up walking in the street. It is busiest in the evening, when the surrounding streets close to traffic at weekends.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/hanoi-street-food": {
+        "name": "Hanoi street food",
+        "description": "A meal of the city's signature dishes, such as pho and bun cha, eaten on low plastic stools at a pavement stall.",
+        "details": "Hanoi is the home of pho, the beef or chicken noodle soup, and of bun cha, grilled pork patties served with rice noodles and a sweet dipping broth. Many of the best places are specialists that serve only one or two dishes, from small stalls on low stools to simple shopfront restaurants. Egg coffee, a sweetened frothy drink, was also invented in the city. Go where locals are queueing, and note that many stalls sell out and close by early afternoon or early evening.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/hoan-kiem-lake": {
+        "name": "Hoan Kiem Lake",
+        "description": "The small lake at the centre of Hanoi, with a red bridge to the Ngoc Son Temple and a legend of a returned sword.",
+        "details": "Hoan Kiem Lake, whose name means the lake of the returned sword, sits just beside the Old Quarter and is the social centre of the city. Local legend says a golden turtle took a magic sword back from an emperor here after he used it to defeat invaders. A red wooden bridge leads to Ngoc Son Temple on a small island. Early morning is the best time, when people exercise around the shore, and the streets around the lake are closed to traffic at weekends.",
+        "interests": [
+          "relax",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/temple-of-literature": {
+        "name": "Temple of Literature",
+        "description": "A walled Confucian temple complex in Hanoi, founded as the country's first university, with courtyards, pavilions and stone stelae.",
+        "details": "The Temple of Literature was founded in the eleventh century and became a national university for the scholar class, and its quiet courtyards, gates and gardens are well preserved. Rows of stone stelae, each set on the back of a stone turtle, record the names of doctoral graduates from past examinations. The complex is flat and shaded in places, a calm contrast to the traffic outside. Graduates still come to have their photographs taken here.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/ho-chi-minh-mausoleum": {
+        "name": "Ho Chi Minh Mausoleum complex",
+        "description": "The granite mausoleum of Ho Chi Minh, set in a large formal square near the One Pillar Pagoda and his stilt house.",
+        "details": "The mausoleum in Ba Dinh Square holds the embalmed body of Ho Chi Minh and is a place of pilgrimage for many Vietnamese. Visitors queue in silence, dress respectfully with shoulders and knees covered, and may not carry cameras inside. It is closed on certain days of the week and for an annual maintenance period, so check dates before planning around it. The grounds nearby include the simple stilt house where he lived and the One Pillar Pagoda, which dates from the eleventh century.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/hoa-lo-prison": {
+        "name": "Hoa Lo Prison Museum",
+        "description": "The remains of a French colonial prison in Hanoi, later used to hold American pilots during the Vietnam War.",
+        "details": "Hoa Lo was built by the French in the late nineteenth century to hold political prisoners, and much of it was later demolished for development, leaving one section as a museum. The exhibits tell the story from the viewpoint of the Vietnamese prisoners held under colonial rule. A later section covers the American pilots held here during the war, who nicknamed it the Hanoi Hilton. The presentation is one-sided and some exhibits are grim.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/water-puppet-show": {
+        "name": "Water puppet show",
+        "description": "A traditional Vietnamese theatre in which lacquered wooden puppets move across a pool of water, accompanied by live folk music.",
+        "details": "Water puppetry developed in the villages of the Red River Delta, where performers stood waist-deep in flooded rice fields. Today it is staged in a theatre pool with a screen behind it, and the puppets act out rural scenes and legends to live music. The show runs for about fifty minutes with commentary in English on a handset in some theatres. Seats near the front can get splashed, and shows sell out at busy times.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/ethnology-museum": {
+        "name": "Vietnam Museum of Ethnology",
+        "description": "A museum outside central Hanoi about the country's 54 ethnic groups, with a garden of full-sized traditional houses.",
+        "details": "The Museum of Ethnology presents the many ethnic groups of Vietnam, most of them minorities living in the highlands, through costume, tools, ritual objects and photographs. Outside, a garden holds full-size reconstructions of traditional houses, including a stilt house and a Bahnar communal house. It gives helpful background before a trip to Sapa or the northern hills. It is some distance from the Old Quarter, so allow time for the taxi.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/ha-long-cruise": {
+        "name": "Overnight cruise in Ha Long Bay",
+        "description": "A boat trip among thousands of limestone islets in the bay, with kayaking, a cave visit and a night on board.",
+        "details": "Ha Long Bay is a UNESCO World Heritage Site of limestone karst towers rising from green water in the Gulf of Tonkin. Overnight cruises on traditional-style junks leave from the main harbour, with set programmes of kayaking or swimming, a cave visit and meals on board. Standards, group sizes and safety vary widely between operators, so choose carefully. Cruises are cancelled in storm and typhoon weather, and the bay can be hazy; quieter Lan Ha Bay nearby is an option for avoiding the largest crowds.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/trang-an-boat": {
+        "name": "Trang An boat tour",
+        "description": "A rowed boat trip through limestone caves and flooded valleys in the Trang An landscape near Ninh Binh.",
+        "details": "Trang An is a UNESCO-listed landscape of limestone peaks, rivers and caves near Ninh Binh. Rowers take small boats of four or five passengers along set routes that pass through low caves and past temples and rice fields, in about two to three hours. The rowing is slow and quiet and the scenery is the highlight. Duck your head in the caves, and carry a hat and water, as there is little shade on the open stretches.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/tam-coc": {
+        "name": "Tam Coc and Bich Dong",
+        "description": "A boat trip down the Ngo Dong river between rice fields and limestone cliffs, ending near the cave pagodas of Bich Dong.",
+        "details": "Tam Coc, which means three caves, is a stretch of river that runs through three limestone caves between rice paddies backed by karst peaks. Rowers, who sometimes steer with their feet, take visitors on a ride of about two hours, and the scenery is at its best when the rice is green or golden. Bich Dong, a pagoda complex built into the hillside, lies nearby. The route is busy, and boat rowers may press for tips.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/hang-mua": {
+        "name": "Hang Mua viewpoint",
+        "description": "A climb of hundreds of stone steps to a mountaintop pagoda with a panoramic view over Ninh Binh's river and rice fields.",
+        "details": "Hang Mua, or Mua Cave, is a limestone hill near Tam Coc with a stone staircase of several hundred steps that climbs to a ridge-top pavilion. The view looks across winding rivers and rice fields backed by karst peaks and is one of the most photographed in northern Vietnam. The climb is steep and exposed with no shade, so it is best early or late in the day. The ridge path beyond the pavilion is narrow, with drop-offs.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "vietnam/hoa-lu": {
+        "name": "Hoa Lu ancient capital",
+        "description": "The remains of Vietnam's capital in the tenth century, with two temples to former emperors among limestone hills.",
+        "details": "Hoa Lu was the capital of Vietnam under the Dinh and early Le dynasties in the tenth century, chosen for its natural defences among the karst hills. Little of the old city survives apart from two temples dedicated to emperors of those dynasties, which stand in quiet courtyards. It is a small, easily seen site, quiet outside the busiest tour hours. It is often combined with a boat trip at Tam Coc or Trang An.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/sapa-town": {
+        "name": "Sapa town",
+        "description": "A mountain town in the far north, with a lake, a stone church and a market that draws people from surrounding hill villages.",
+        "details": "Sapa began as a French hill station in the colonial era and sits at around 1,500 metres, noticeably cooler than Hanoi. The town centre has a small stone church, a lake and a market where people from the Hmong and Red Dao communities trade. Mist often covers the mountains in the mornings and sometimes all day, so views are not guaranteed. Bring warm layers, as evenings can be cold even in summer.",
+        "interests": [
+          "authentic_local",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/cat-cat-village": {
+        "name": "Cat Cat Village",
+        "description": "A Hmong village close to Sapa with stepped paths, a waterfall and weaving workshops.",
+        "details": "Cat Cat is a village a short walk down from Sapa town, where Hmong residents still weave and dye hemp and indigo cloth. A paved, stepped path leads down through small houses and shops to a waterfall. It is much more geared to visitors than the villages further out, but is a convenient first look. The way back is uphill all the way, so allow time for it.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/muong-hoa-valley-trek": {
+        "name": "Muong Hoa Valley trek",
+        "description": "A guided walk through terraced rice fields and minority villages in the Muong Hoa valley below Sapa.",
+        "details": "The valley below Sapa is cut into steps of rice terraces, with villages of the Hmong, Dao and Tay peoples such as Lao Chai and Ta Van strung along the route. A guided day walk covers several hours of mostly downhill and level path on muddy tracks, usually with a homestay or lunch stop. The terraces are at their most photogenic when the rice is golden around September and early October, or flooded and reflective in late spring. Paths can be slippery after rain.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "vietnam/fansipan": {
+        "name": "Fansipan cable car",
+        "description": "A cable car to near the summit of Fansipan, the highest mountain in Indochina, with a short final climb.",
+        "details": "Fansipan rises to 3,143 metres and is the highest peak in Vietnam and in Indochina as a whole. A cable car, one of the longest in the world, runs from Sapa to near the top, followed by a funicular or a staircase and then a final climb of several hundred steps to the summit. Cloud often hides the view, and the top is far colder than the town. Go in the morning, when the sky is most likely to be clear.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "vietnam/hue-imperial-city": {
+        "name": "Hue Imperial City",
+        "description": "The walled citadel of the Nguyen emperors, with gates, halls and a ruined Forbidden Purple City.",
+        "details": "Hue was the capital of Vietnam under the Nguyen dynasty from the early nineteenth century until 1945, and its moated citadel is a UNESCO World Heritage Site. Within the walls are throne halls, temples and courtyards, as well as the remains of the Forbidden Purple City, once reserved for the emperor and his household. Much of it was badly damaged in the fighting of 1968 and restoration is ongoing, so some areas are bare ground and rubble. There is little shade, so go early or late.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/thien-mu-pagoda": {
+        "name": "Thien Mu Pagoda",
+        "description": "A seven-storey pagoda tower on a bluff above the Perfume River, long a symbol of Hue.",
+        "details": "Thien Mu is a Buddhist monastery whose octagonal seven-storey tower rises above the Perfume River west of the citadel. It is one of the best-known images of Hue and is reached by dragon boat or by road. A car in the grounds belonged to a monk who drove to Saigon in 1963 to protest against the government. The grounds are quiet and shaded, with modest dress expected.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/hue-royal-tombs": {
+        "name": "Royal tombs of Hue",
+        "description": "The elaborate tombs of the Nguyen emperors, set in landscaped grounds along the Perfume River south of the city.",
+        "details": "The Nguyen emperors built themselves tomb complexes in the hills along the river, each reflecting the character of its owner. Tu Duc's is a tranquil garden with lakes and pavilions, while Khai Dinh's is a compact concrete structure covered in mosaic of broken ceramic and glass. Minh Mang's is a more formal, symmetrical layout. The tombs are spread over several kilometres, so most visitors see two or three with a driver, and the sites involve steps.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/perfume-river-cruise": {
+        "name": "Perfume River dragon boat",
+        "description": "A slow trip on a traditional-style boat along the river through Hue, past pagodas and riverside life.",
+        "details": "Dragon boats ply the Perfume River between the city and sites such as Thien Mu Pagoda, and a trip along the river is the traditional way to arrive there. The river is broad and slow, and in the late afternoon the light is softer than in the middle of the day. Boats are generally booked as a whole boat shared among a group, so agree the route and length first. Evening trips sometimes include traditional music.",
+        "interests": [
+          "relax",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/bun-bo-hue": {
+        "name": "Bun bo Hue and imperial cuisine",
+        "description": "Hue's spicy beef noodle soup and the small, ornate dishes that grew out of the royal kitchens.",
+        "details": "Bun bo Hue is a spicy beef and pork noodle soup flavoured with lemongrass and chilli, and it is the dish most associated with the city. Hue's cooking also draws on the court tradition, with small, decorative dishes such as steamed rice cakes served in little portions. Restaurants specialising in one dish are common, and many close in the afternoon. Ask for chilli on the side if you are unsure about the heat.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/hai-van-pass": {
+        "name": "Hai Van Pass",
+        "description": "A winding coastal road over a mountain headland between Hue and Da Nang, with views of the bay.",
+        "details": "The Hai Van Pass, whose name means sea cloud, climbs over a spur of the Truong Son range that drops into the sea between Hue and Da Nang. The road has views down over the coast and Lang Co bay, and a tunnel now carries most traffic underneath, leaving the old road quiet. Travellers by car or motorbike usually stop at the old fort at the summit. Mist can hide the view, so it is best on a clear morning.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/hoi-an-ancient-town": {
+        "name": "Hoi An Ancient Town",
+        "description": "A preserved trading port of old merchant houses, assembly halls and a Japanese covered bridge, strung with lanterns.",
+        "details": "Hoi An was a major trading port from the fifteenth to the nineteenth century, and its old centre has survived largely intact as a UNESCO World Heritage Site. Merchant houses, Chinese assembly halls and a roofed Japanese bridge line the narrow streets, and the town is closed to motor traffic in the centre. A ticket admits visitors to a choice of the heritage buildings. It is crowded by midday and at its best in the early morning and evening.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/hoi-an-lantern-night": {
+        "name": "Hoi An evening and lantern lights",
+        "description": "An evening on the riverbank in Hoi An, when silk lanterns light the streets and small candle boats float on the water.",
+        "details": "After dark Hoi An's streets and riverfront glow with silk lanterns, and vendors sell candle-lit paper boats to float on the Thu Bon river. Restaurants and cafes along the water fill up, and a night market sets up across the bridge. It is very popular and busy, so tables by the river book up early. The old town is flat, and the streets are pleasantly cooler after sunset.",
+        "interests": [
+          "photography",
+          "relax",
+          "food",
+          "nightlife"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/my-son": {
+        "name": "My Son Sanctuary",
+        "description": "The ruins of a Cham Hindu temple complex in a jungle valley, built over many centuries and damaged in the Vietnam War.",
+        "details": "My Son was a religious centre of the Champa kingdom from the fourth century to the thirteenth, with red-brick towers dedicated to Shiva set in a forested valley. It is a UNESCO World Heritage Site. Much of it was destroyed by bombing during the Vietnam War, and some craters and damaged towers remain. Going early avoids both the heat and the tour buses. Paths are flat, but there is little shade and the ground can be muddy.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/hoi-an-cooking-class": {
+        "name": "Cooking class in Hoi An",
+        "description": "A half-day class starting at the market, then a boat or garden setting to cook central Vietnamese dishes.",
+        "details": "Hoi An is one of the best places in Vietnam to learn to cook, with classes that begin at the central market, continue with a boat ride or a visit to a herb village, and finish in an open kitchen. Typical dishes include fresh spring rolls, banh xeo pancakes and local noodle dishes such as cao lau. Groups are small and classes are held in the morning or afternoon. Booking ahead is wise.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/an-bang-beach": {
+        "name": "An Bang Beach",
+        "description": "A relaxed beach a short ride from Hoi An with seafood restaurants and sunbeds right on the sand.",
+        "details": "An Bang is the beach most Hoi An visitors use, a long stretch of sand a few kilometres from the old town, with casual restaurants and bars offering sunbeds. It is calmer and less commercial than the resort beaches nearer Da Nang. Swimming can be rough, and red flags mean stay out, particularly outside the dry season. Bicycles and taxis make the trip easy.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/cam-thanh-basket-boat": {
+        "name": "Cam Thanh coconut basket boats",
+        "description": "A ride in a round woven basket boat among the water coconut palms of the Cam Thanh village delta.",
+        "details": "Cam Thanh is a water-coconut forest village a short way from Hoi An, where visitors ride in round woven basket boats paddled by local fishermen along narrow channels. It is part tourist attraction and part demonstration of fishing life, with performances of basket spinning by the paddlers. The shade of the palms makes it pleasant. Agree on the price and tip upfront, as some boatmen push for extras.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/marble-mountains": {
+        "name": "Marble Mountains",
+        "description": "A group of five limestone and marble hills near Da Nang with cave pagodas, tunnels and viewpoints.",
+        "details": "The Marble Mountains, or Ngu Hanh Son, are five rocky hills named for the elements, rising from the plain between Da Nang and Hoi An. Caves inside hold Buddhist and Hindu shrines, and stairways lead to lookouts over the coast. Stone carvers in the village at the foot still work marble. Steps are steep and uneven, and a lift is available for part of the way up the main hill.",
+        "interests": [
+          "culture",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "vietnam/ba-na-hills": {
+        "name": "Ba Na Hills and the Golden Bridge",
+        "description": "A hilltop resort near Da Nang reached by a long cable car, known for the Golden Bridge held up by giant stone hands.",
+        "details": "Ba Na Hills is a mountain resort built on the site of a French hill station, reached by one of the longest cable car rides in the world. Its best-known feature is a pedestrian bridge held up by two giant sculpted hands. The site has a theme-park feel, with a replica French village, and is crowded, especially at weekends. The temperature is cooler at the top, and cloud can hide the view.",
+        "interests": [
+          "photography",
+          "adventure",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/war-remnants-museum": {
+        "name": "War Remnants Museum",
+        "description": "A museum in Ho Chi Minh City on the Vietnam War, with photographs, military equipment and civilian accounts.",
+        "details": "The museum presents the Vietnam War from the Vietnamese perspective, with photographs by war correspondents, military vehicles and aircraft in the courtyard and exhibitions about the effects of chemical defoliants. Many images are graphic and distressing, which is worth bearing in mind with children. It is one of the most visited museums in the country. Check opening hours, as it may close for a midday break.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/reunification-palace": {
+        "name": "Reunification Palace",
+        "description": "The 1960s presidential palace of South Vietnam, preserved as it was when North Vietnamese tanks arrived in 1975.",
+        "details": "The Reunification Palace, built in the 1960s, was the home and workplace of the president of South Vietnam. On 30 April 1975 North Vietnamese tanks smashed through its gates, bringing the war to an end. It has been kept largely as it was, with a war room, a rooftop helipad and a basement command bunker, and two tanks stand on the lawn. Guided tours are available, and the building is closed for official events from time to time.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/saigon-notre-dame-post-office": {
+        "name": "Notre-Dame Cathedral and Central Post Office",
+        "description": "Two French colonial landmarks facing each other in central Saigon: a red-brick cathedral and a grand arched post office.",
+        "details": "The red-brick Notre-Dame Cathedral Basilica was built by the French in the late nineteenth century with materials shipped from France, and has been undergoing long-running restoration, so the interior may be closed. Opposite it, the Central Post Office, from the same period, has a high arched hall with old maps and a portrait of Ho Chi Minh, and still operates as a working post office. Both are in the middle of the old French district, within walking distance of each other. The post office is free to enter.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/ben-thanh-market": {
+        "name": "Ben Thanh Market",
+        "description": "Ho Chi Minh City's central covered market, selling souvenirs, clothing, coffee and cooked food.",
+        "details": "Ben Thanh Market is a covered hall in the centre of the city that has stood on its site in some form for more than a century, with its landmark clock tower over the south gate. Stalls sell clothing, souvenirs, spices, dried fruit and coffee, and a food section serves noodle soups and desserts. Bargaining is expected and prices at the outer stalls are usually inflated. It is busy and hot in the middle of the day, and a night market opens around it in the evening.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/cu-chi-tunnels": {
+        "name": "Cu Chi Tunnels",
+        "description": "A network of narrow underground tunnels used by Viet Cong fighters, northwest of Ho Chi Minh City.",
+        "details": "The Cu Chi tunnels were a network of underground passages used by Viet Cong fighters during the war for communication, supply and shelter, stretching for hundreds of kilometres. Parts have been widened for visitors, and tours show hidden entrances, booby traps and underground rooms. Crawling through a short section is optional and very tight and hot. It is usually a half-day trip from the city, about an hour and a half each way, and the site has a firing range nearby that can be loud.",
+        "interests": [
+          "culture",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/cholon": {
+        "name": "Cholon (Chinatown)",
+        "description": "Ho Chi Minh City's Chinese quarter, with busy markets, temples and herbal medicine shops.",
+        "details": "Cholon, which means big market, is the historic Chinese district of the city, with narrow streets of wholesale shops, medicinal herb dealers and temples. Thien Hau Temple, dedicated to the sea goddess Mazu, is full of incense coils hanging from the ceiling. Binh Tay Market is the main wholesale hall. It is crowded and busy and less polished than the central districts, which is the appeal.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "vietnam/saigon-street-food-tour": {
+        "name": "Saigon street food tour",
+        "description": "An evening food tour of the city's stalls and small restaurants, often by scooter with a local guide.",
+        "details": "Saigon's food culture is based on street stalls and tiny restaurants specialising in one dish, from banh mi sandwiches to grilled meat and seafood. Guided tours, many on the back of a scooter driven by a guide, visit several places in an evening and explain what you are eating. It is a good way to try dishes without a language barrier. Choose a company with good safety reviews, and let them know about any dietary restrictions.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "nightlife"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/mekong-delta-day-trip": {
+        "name": "Mekong Delta day trip",
+        "description": "A day among the canals, orchards and floating villages of the Mekong Delta south of Ho Chi Minh City.",
+        "details": "The Mekong Delta is a vast area of waterways, rice paddies and fruit orchards south of Ho Chi Minh City where the great river reaches the sea. Day trips from the city typically go to My Tho or Ben Tre and use motorboats and small rowing sampans to travel along narrow canals, with stops at coconut candy workshops and orchards. It is a pleasant look at rural life, though itineraries are often quite similar. The delta is hot and humid, so bring sun protection.",
+        "interests": [
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/cai-rang-floating-market": {
+        "name": "Cai Rang Floating Market",
+        "description": "A morning wholesale market on the river near Can Tho, where boats sell produce displayed on tall poles.",
+        "details": "Cai Rang is the largest floating market in the Mekong Delta, where traders anchor boats on the river and hang samples of their produce from tall poles to show what is for sale. It is busiest in the early morning, usually from around six, so an early start is needed. Visitors go out by hired boat and buy fruit or noodles from smaller vessels. It is smaller than it once was, as bridges and roads have drawn trade away.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "vietnam/can-tho-canal-cycling": {
+        "name": "Cycling the canals around Can Tho",
+        "description": "A bicycle ride along small paths between canals, fruit orchards and village houses outside Can Tho.",
+        "details": "The countryside around Can Tho is crossed by canals and lined with orchards of longan, mango and rambutan. A guided ride on a bicycle follows narrow paths and small bridges, with stops at a rice noodle workshop or an orchard. It is flat and easy, though hot and humid. A homestay in the delta is an alternative, and it is wise to carry water and wear a hat.",
+        "interests": [
+          "outdoors",
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "vietnam": {
+        "name": "Vietnam",
+        "description": "A long, narrow country of limestone bays, imperial cities, terraced mountains and a food culture that changes from north to south.",
+        "images": []
+      },
+      "vietnam/hanoi": {
+        "name": "Hanoi",
+        "description": "Vietnam's capital in the north, a city of lakes, French colonial streets, a crowded Old Quarter and exceptional street food.",
+        "images": []
+      },
+      "vietnam/quang-ninh": {
+        "name": "Quang Ninh",
+        "description": "The north-eastern coastal province that holds Ha Long Bay and its thousands of limestone islands.",
+        "images": []
+      },
+      "vietnam/ha-long-bay": {
+        "name": "Ha Long Bay",
+        "description": "A UNESCO-listed bay of limestone karst islands in the Gulf of Tonkin, explored on overnight junk cruises.",
+        "images": []
+      },
+      "vietnam/ninh-binh": {
+        "name": "Ninh Binh",
+        "description": "A province south of Hanoi of rivers, caves and limestone peaks rising from rice fields, with a former capital at Hoa Lu.",
+        "images": []
+      },
+      "vietnam/lao-cai": {
+        "name": "Lao Cai",
+        "description": "The far northern province on the Chinese border that holds Sapa, Fansipan and some of Vietnam's best-known rice terraces.",
+        "images": []
+      },
+      "vietnam/sapa": {
+        "name": "Sapa",
+        "description": "A cool mountain town in the far north, base for treks through terraced valleys and hill-tribe villages.",
+        "images": []
+      },
+      "vietnam/hue": {
+        "name": "Hue",
+        "description": "The former imperial capital in central Vietnam, with a walled citadel, royal tombs and a river lined with pagodas.",
+        "images": []
+      },
+      "vietnam/da-nang": {
+        "name": "Da Nang",
+        "description": "A central coastal city with a long beach, the Marble Mountains and the airport that serves Hoi An and Hue.",
+        "images": []
+      },
+      "vietnam/hoi-an": {
+        "name": "Hoi An",
+        "description": "A preserved port town of old merchant houses, tailors, cooking classes and lantern-lit evenings, close to the coast.",
+        "images": []
+      },
+      "vietnam/my-son": {
+        "name": "My Son",
+        "description": "A ruined Cham temple complex in a forested valley inland from Hoi An, listed by UNESCO.",
+        "images": []
+      },
+      "vietnam/ho-chi-minh-city": {
+        "name": "Ho Chi Minh City",
+        "description": "Vietnam's biggest city in the south, still widely called Saigon, with French colonial landmarks, war museums, markets and street food.",
+        "images": []
+      },
+      "vietnam/cu-chi": {
+        "name": "Cu Chi",
+        "description": "A district north-west of Ho Chi Minh City known for the underground tunnel network used in the Vietnam War.",
+        "images": []
+      },
+      "vietnam/mekong-delta": {
+        "name": "Mekong Delta",
+        "description": "A region of rivers, canals, orchards and floating markets in southern Vietnam where the Mekong meets the sea.",
+        "images": []
+      },
+      "vietnam/can-tho": {
+        "name": "Can Tho",
+        "description": "The main city of the Mekong Delta, the usual base for early-morning floating market trips.",
+        "images": []
+      }
+    }
+  }
+}

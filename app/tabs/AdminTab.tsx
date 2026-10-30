@@ -1,3 +1,4 @@
+import IconText from '../components/IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, getAppTheme, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -699,7 +700,7 @@ const UsersSection: React.FC<{
                 accessibilityLabel={`${checked ? 'Deselect' : 'Select'} ${u.email ?? u.id}`}
                 testID={`admin-users-row-select-${u.id}`}
               >
-                <Text style={themeStyle('tabs_AdminTab_47', { theme: theme }, (theme ?? _styleTheme))}>{checked ? '☑' : '☐'}</Text>
+                <IconText style={themeStyle('tabs_AdminTab_47', { theme: theme }, (theme ?? _styleTheme))}>{checked ? '☑' : '☐'}</IconText>
               </TouchableOpacity>
               <TouchableOpacity style={localStyles((theme ?? _styleTheme)).flex} onPress={() => onViewUser(u)}>
                 <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_48', { theme: theme }, (theme ?? _styleTheme))]}>{u.email ?? u.id}</Text>
@@ -3383,7 +3384,7 @@ const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<
           ))}
           <View style={themeStyle('tabs_AdminTab_299', {  }, (theme ?? _styleTheme))}>
             <Pressable onPress={addEditableItem} testID={`admin-packing-preset-item-add-${preset.key}`}>
-              <Text style={themeStyle('tabs_AdminTab_300', { theme: theme }, (theme ?? _styleTheme))}>+ Add item</Text>
+              <IconText style={themeStyle('tabs_AdminTab_300', { theme: theme }, (theme ?? _styleTheme))}>+ Add item</IconText>
             </Pressable>
             <Pressable onPress={() => void saveItems(preset.key)} testID={`admin-packing-preset-save-${preset.key}`}>
               <Text style={themeStyle('tabs_AdminTab_301', { theme: theme }, (theme ?? _styleTheme))}>Save items</Text>

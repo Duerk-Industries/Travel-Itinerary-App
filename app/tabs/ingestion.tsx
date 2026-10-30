@@ -1,3 +1,4 @@
+import IconText from '../components/IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -741,7 +742,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                   accessibilityState={{ checked }}
                   accessibilityLabel={`${checked ? 'Deselect' : 'Select'} ${item.itemType} from ${item.providerVendor || 'Unknown provider'}`}
                 >
-                  <Text style={styles.buttonText}>{checked ? '☑' : '☐'}</Text>
+                  <IconText style={styles.buttonText}>{checked ? '☑' : '☐'}</IconText>
                 </TouchableOpacity>
               ) : null}
               <TouchableOpacity

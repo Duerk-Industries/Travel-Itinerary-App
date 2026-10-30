@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -81,10 +82,10 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
           {activity?.userRating == null ? (
             <View style={themeStyle('components_ActivityRecapDialog_5', {  }, (theme ?? _styleTheme))}>
               <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: rating === 1 }} onPress={() => setRating(1)} style={[styles.button, rating === 1 && themeStyle('components_ActivityRecapDialog_6', { theme: theme }, (theme ?? _styleTheme))]}>
-                <Text style={[styles.buttonText, rating === 1 && themeStyle('selectionLabel', {}, (theme ?? _styleTheme))]}>👍 Loved it</Text>
+                <IconText style={[styles.buttonText, rating === 1 && themeStyle('selectionLabel', {}, (theme ?? _styleTheme))]}>👍 Loved it</IconText>
               </TouchableOpacity>
               <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: rating === -1 }} onPress={() => setRating(-1)} style={[styles.button, rating === -1 && themeStyle('components_ActivityRecapDialog_7', {  }, (theme ?? _styleTheme))]}>
-                <Text style={[styles.buttonText, rating === -1 && themeStyle('components_ActivityRecapDialog_8', {  }, (theme ?? _styleTheme))]}>👎 Not for me</Text>
+                <IconText style={[styles.buttonText, rating === -1 && themeStyle('components_ActivityRecapDialog_8', {  }, (theme ?? _styleTheme))]}>👎 Not for me</IconText>
               </TouchableOpacity>
             </View>
           ) : <Text style={themeStyle('components_ActivityRecapDialog_9', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>You already rated this activity.</Text>}

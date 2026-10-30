@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useMemo, useState } from 'react';
@@ -29,7 +30,7 @@ export default function HotelAddressPicker({ hotels, activities = [], date, onSe
     <TouchableOpacity testID={testID} accessibilityRole="button" accessibilityLabel={actionLabel} disabled={disabled}
       accessibilityState={{ disabled, expanded: open && !disabled }} onPress={() => setOpen(value => !value)}
       style={[styles.input, themeStyle('components_HotelAddressPicker_3', { disabled: disabled }, _styleTheme)]}>
-      <Text style={styles.cellText}>{label} ▾</Text>
+      <IconText style={styles.cellText}>{label} ▾</IconText>
     </TouchableOpacity>
     {open && !disabled && options.map(hotel => <TouchableOpacity key={hotel.id} testID={`${testID}-${hotel.id}`} accessibilityRole="button"
       onPress={() => { onSelect(hotel.address.trim()); setOpen(false); }} style={[styles.input, themeStyle('components_HotelAddressPicker_4', {  }, _styleTheme)]}>

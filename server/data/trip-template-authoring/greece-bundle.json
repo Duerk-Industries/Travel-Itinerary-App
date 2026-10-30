@@ -1,0 +1,2833 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim and TravelStride itineraries for Greece",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "greece-athens-4d",
+      "title": "Athens in 4 Days",
+      "summary": "A city break built around the Acropolis and its museums, with a full day trip to the ancient oracle at Delphi.",
+      "days": 4,
+      "route": "Athens (Delphi day trip)",
+      "arrive": "Athens (ATH)",
+      "depart": "Athens (ATH)",
+      "countries": [
+        "Greece"
+      ],
+      "regions": [
+        "Attica",
+        "Central Greece"
+      ],
+      "cities": [
+        "Athens",
+        "Delphi"
+      ],
+      "imageQuery": "Athens Acropolis Parthenon Greece",
+      "highlights": [
+        "Acropolis and Parthenon",
+        "Acropolis Museum",
+        "Ancient Agora",
+        "Delphi day trip",
+        "Plaka"
+      ],
+      "destinationKeys": [
+        "greece",
+        "greece/attica",
+        "greece/athens",
+        "greece/central-greece",
+        "greece/delphi"
+      ],
+      "hero": "greece/athens",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Athens",
+          "hotel": "Hotel in Athens",
+          "start": 0,
+          "nights": 3,
+          "area": "Plaka, Monastiraki or Koukaki: walkable to the Acropolis and on the metro",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Plaka and Anafiotika",
+          "notes": "An easy first walk under the Acropolis; the lanes are steep and cobbled in places.",
+          "where": "Plaka, Athens",
+          "book": "",
+          "place": "greece/plaka-anafiotika"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Greek taverna dinner",
+          "notes": "Dinner is late and unhurried; avoid the places with touts at the door.",
+          "where": "Athens",
+          "book": "",
+          "place": "greece/greek-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Acropolis and the Parthenon",
+          "notes": "Book a timed slot online; wear flat shoes with grip, as the marble is slippery, and in summer heat go as soon as it opens.",
+          "where": "Acropolis, Athens",
+          "book": "Yes - timed entry slots with daily limits",
+          "place": "greece/acropolis"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Acropolis Museum",
+          "notes": "A comfortable, air-conditioned break in the middle of the day.",
+          "where": "Makrygianni, Athens",
+          "book": "",
+          "place": "greece/acropolis-museum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Ancient Agora of Athens",
+          "notes": "The Temple of Hephaestus is the highlight; the site is shaded in parts and ground is uneven.",
+          "where": "Monastiraki, Athens",
+          "book": "",
+          "place": "greece/ancient-agora"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Lycabettus Hill sunset",
+          "notes": "Take the funicular up if the climb looks steep; the terrace is busiest at sunset.",
+          "where": "Kolonaki, Athens",
+          "book": "",
+          "place": "greece/lycabettus-hill"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Delphi archaeological site",
+          "notes": "Steep, uneven paths with little shade; go in the morning.",
+          "where": "Delphi",
+          "book": "",
+          "place": "greece/delphi-sanctuary"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "Delphi Archaeological Museum",
+          "notes": "See the site first; the bronze Charioteer is the highlight.",
+          "where": "Delphi",
+          "book": "",
+          "place": "greece/delphi-museum"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1h",
+          "name": "Panathenaic Stadium",
+          "notes": "A quick, easy last visit before the airport; the white marble is bright and hot in summer.",
+          "where": "Pangrati, Athens",
+          "book": "",
+          "place": "greece/panathenaic-stadium"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Athens Airport (ATH)",
+          "to": "Athens hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "The metro is the cheapest and least affected by traffic; a taxi is simplest with luggage.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Athens hotel area",
+          "to": "Delphi",
+          "time": "07:30",
+          "minutes": 160,
+          "carrier": "Car with driver or KTEL coach",
+          "notes": "The road winds through the mountains; a driver lets you stop at Arachova.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Delphi",
+          "to": "Athens hotel area",
+          "time": "15:30",
+          "minutes": 160,
+          "carrier": "Car with driver or KTEL coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Athens hotel area",
+          "to": "Athens Airport (ATH)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "greece-athens-santorini-7d",
+      "title": "Athens and Santorini in 7 Days",
+      "summary": "The classic one-island week: three days in Athens, then three on Santorini for the caldera, the wineries and the Bronze Age ruins at Akrotiri.",
+      "days": 7,
+      "route": "Athens (Sounion) > Santorini",
+      "arrive": "Athens (ATH)",
+      "depart": "Santorini (JTR), connecting via Athens",
+      "countries": [
+        "Greece"
+      ],
+      "regions": [
+        "Attica",
+        "Cyclades"
+      ],
+      "cities": [
+        "Athens",
+        "Cape Sounion",
+        "Santorini"
+      ],
+      "imageQuery": "Santorini Oia blue dome caldera Greece",
+      "highlights": [
+        "Acropolis and Parthenon",
+        "Cape Sounion sunset",
+        "Caldera hike",
+        "Oia sunset",
+        "Akrotiri"
+      ],
+      "destinationKeys": [
+        "greece",
+        "greece/attica",
+        "greece/athens",
+        "greece/cape-sounion",
+        "greece/cyclades",
+        "greece/santorini"
+      ],
+      "hero": "greece/santorini",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Athens",
+          "hotel": "Hotel in Athens",
+          "start": 0,
+          "nights": 3,
+          "area": "Plaka, Monastiraki or Koukaki: walkable to the Acropolis and on the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Santorini",
+          "hotel": "Hotel in Santorini",
+          "start": 3,
+          "nights": 3,
+          "area": "Fira or Imerovigli on the caldera edge for views and walkability; Oia is the quietest but the most expensive and crowded",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Plaka and Anafiotika",
+          "notes": "An easy first walk under the Acropolis; the lanes are steep and cobbled in places.",
+          "where": "Plaka, Athens",
+          "book": "",
+          "place": "greece/plaka-anafiotika"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Greek taverna dinner",
+          "notes": "Dinner is late and unhurried; avoid the places with touts at the door.",
+          "where": "Athens",
+          "book": "",
+          "place": "greece/greek-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Acropolis and the Parthenon",
+          "notes": "Book a timed slot online; wear flat shoes with grip, as the marble is slippery, and in summer heat go as soon as it opens.",
+          "where": "Acropolis, Athens",
+          "book": "Yes - timed entry slots with daily limits",
+          "place": "greece/acropolis"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Acropolis Museum",
+          "notes": "A comfortable, air-conditioned break in the middle of the day.",
+          "where": "Makrygianni, Athens",
+          "book": "",
+          "place": "greece/acropolis-museum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Ancient Agora of Athens",
+          "notes": "The Temple of Hephaestus is the highlight; the site is shaded in parts and ground is uneven.",
+          "where": "Monastiraki, Athens",
+          "book": "",
+          "place": "greece/ancient-agora"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Lycabettus Hill sunset",
+          "notes": "Take the funicular up if the climb looks steep; the terrace is busiest at sunset.",
+          "where": "Kolonaki, Athens",
+          "book": "",
+          "place": "greece/lycabettus-hill"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "National Archaeological Museum",
+          "notes": "Large, so choose a few rooms; check opening days and hours.",
+          "where": "Exarcheia, Athens",
+          "book": "",
+          "place": "greece/national-archaeological-museum"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Temple of Poseidon at Cape Sounion",
+          "notes": "The site is exposed and windy and closes around sunset; the drive takes about an hour and a half.",
+          "where": "Cape Sounion, Attica",
+          "book": "",
+          "place": "greece/cape-sounion"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Santorini winery tasting",
+          "notes": "Sunset slots book up, so reserve ahead; the volcanic-soil Assyrtiko is the one to try.",
+          "where": "Santorini",
+          "book": "Yes - sunset tastings book up",
+          "place": "greece/santorini-winery"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Fira to Oia caldera hike",
+          "notes": "Almost no shade and rough in places, so start early and carry water; buses return to Fira from Oia.",
+          "where": "Caldera rim, Santorini",
+          "book": "",
+          "place": "greece/fira-oia-hike"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Oia sunset",
+          "notes": "Very crowded in summer; claim a spot on the western walls early, or watch from a quieter lookout.",
+          "where": "Oia, Santorini",
+          "book": "",
+          "place": "greece/oia-sunset"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Akrotiri archaeological site",
+          "notes": "The excavated town is under a large roof, so it is shaded and cool; check opening arrangements first.",
+          "where": "Akrotiri, Santorini",
+          "book": "",
+          "place": "greece/akrotiri-excavation"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "13:00",
+          "duration": "5h",
+          "name": "Caldera sailing cruise",
+          "notes": "Swimming stops and a volcanic islet; departures can change on windy days.",
+          "where": "Santorini caldera",
+          "book": "Yes - cruises book up in season",
+          "place": "greece/caldera-sailing-cruise"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Athens Airport (ATH)",
+          "to": "Athens hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "The metro is the cheapest and least affected by traffic; a taxi is simplest with luggage.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Athens hotel area",
+          "to": "Cape Sounion",
+          "time": "15:00",
+          "minutes": 90,
+          "carrier": "Car with driver or KTEL coach",
+          "notes": "The coast road is busy in the late afternoon.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cape Sounion",
+          "to": "Athens hotel area",
+          "time": "19:30",
+          "minutes": 90,
+          "carrier": "Car with driver or KTEL coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Athens hotel area",
+          "to": "Athens Airport (ATH)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "This covers the ground leg to the departure airport only; Athens to Santorini is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Santorini Airport (JTR)",
+          "to": "Santorini hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Oia",
+          "to": "Fira",
+          "time": "20:30",
+          "minutes": 30,
+          "carrier": "KTEL local bus",
+          "notes": "Buses run until late but are crowded after sunset.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Santorini hotel area",
+          "to": "Santorini Airport (JTR)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Flights home usually connect through Athens; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "greece-athens-mykonos-santorini-7d",
+      "title": "Athens, Mykonos and Santorini in 7 Days",
+      "summary": "Athens plus two of the best-known islands, with a boat trip to the sacred island of Delos from Mykonos.",
+      "days": 7,
+      "route": "Athens > Mykonos (Delos) > Santorini",
+      "arrive": "Athens (ATH)",
+      "depart": "Santorini (JTR), connecting via Athens",
+      "countries": [
+        "Greece"
+      ],
+      "regions": [
+        "Attica",
+        "Cyclades"
+      ],
+      "cities": [
+        "Athens",
+        "Mykonos",
+        "Delos",
+        "Santorini"
+      ],
+      "imageQuery": "Mykonos windmills Little Venice Greece",
+      "highlights": [
+        "Acropolis and Parthenon",
+        "Mykonos Little Venice",
+        "Delos ruins",
+        "Oia sunset",
+        "Caldera cruise"
+      ],
+      "destinationKeys": [
+        "greece",
+        "greece/attica",
+        "greece/athens",
+        "greece/cyclades",
+        "greece/mykonos",
+        "greece/delos",
+        "greece/santorini"
+      ],
+      "hero": "greece/mykonos",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "photography",
+        "nightlife"
+      ],
+      "stays": [
+        {
+          "base": "Athens",
+          "hotel": "Hotel in Athens",
+          "start": 0,
+          "nights": 2,
+          "area": "Plaka, Monastiraki or Koukaki: walkable to the Acropolis and on the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Mykonos",
+          "hotel": "Hotel in Mykonos",
+          "start": 2,
+          "nights": 2,
+          "area": "Near Mykonos Town for walkability, or a beachside village on the south coast for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Santorini",
+          "hotel": "Hotel in Santorini",
+          "start": 4,
+          "nights": 2,
+          "area": "Fira or Imerovigli on the caldera edge for views and walkability; Oia is the quietest but the most expensive and crowded",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Plaka and Anafiotika",
+          "notes": "An easy first walk under the Acropolis; the lanes are steep and cobbled in places.",
+          "where": "Plaka, Athens",
+          "book": "",
+          "place": "greece/plaka-anafiotika"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Greek taverna dinner",
+          "notes": "Dinner is late and unhurried; avoid the places with touts at the door.",
+          "where": "Athens",
+          "book": "",
+          "place": "greece/greek-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Acropolis and the Parthenon",
+          "notes": "Book a timed slot online; wear flat shoes with grip, as the marble is slippery, and in summer heat go as soon as it opens.",
+          "where": "Acropolis, Athens",
+          "book": "Yes - timed entry slots with daily limits",
+          "place": "greece/acropolis"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Acropolis Museum",
+          "notes": "A comfortable, air-conditioned break in the middle of the day.",
+          "where": "Makrygianni, Athens",
+          "book": "",
+          "place": "greece/acropolis-museum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Ancient Agora of Athens",
+          "notes": "The Temple of Hephaestus is the highlight; the site is shaded in parts and ground is uneven.",
+          "where": "Monastiraki, Athens",
+          "book": "",
+          "place": "greece/ancient-agora"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Lycabettus Hill sunset",
+          "notes": "Take the funicular up if the climb looks steep; the terrace is busiest at sunset.",
+          "where": "Kolonaki, Athens",
+          "book": "",
+          "place": "greece/lycabettus-hill"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Mykonos Town and Little Venice",
+          "notes": "Watch the sunset from the windmills; the lanes are cobbled and easy to get lost in.",
+          "where": "Mykonos Town",
+          "book": "",
+          "place": "greece/mykonos-town"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Delos",
+          "notes": "No shade or permanent inhabitants, so bring water and a hat; boats do not run every day in the shoulder season.",
+          "where": "Delos",
+          "book": "Yes - boats are limited and sell out in season",
+          "place": "greece/delos-day-trip"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Mykonos beach day",
+          "notes": "The summer north wind can make some beaches rough; the south coast is more sheltered.",
+          "where": "Southern beaches, Mykonos",
+          "book": "",
+          "place": "greece/mykonos-beach-day"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "1.5h",
+          "name": "Oia sunset",
+          "notes": "Very crowded in summer; claim a spot on the western walls early.",
+          "where": "Oia, Santorini",
+          "book": "",
+          "place": "greece/oia-sunset"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Akrotiri archaeological site",
+          "notes": "The excavated town is under a large roof, so it is shaded and cool; check opening arrangements first.",
+          "where": "Akrotiri, Santorini",
+          "book": "",
+          "place": "greece/akrotiri-excavation"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "13:00",
+          "duration": "5h",
+          "name": "Caldera sailing cruise",
+          "notes": "Swimming stops and a volcanic islet; departures can change on windy days.",
+          "where": "Santorini caldera",
+          "book": "Yes - cruises book up in season",
+          "place": "greece/caldera-sailing-cruise"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Athens Airport (ATH)",
+          "to": "Athens hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "The metro is the cheapest and least affected by traffic; a taxi is simplest with luggage.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Athens hotel area",
+          "to": "Athens Airport (ATH)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "This covers the ground leg to the departure airport only; Athens to Mykonos is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Mykonos Airport (JMK)",
+          "to": "Mykonos hotel area",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Mykonos Old Port",
+          "to": "Delos",
+          "time": "09:00",
+          "minutes": 30,
+          "carrier": "Excursion boat",
+          "notes": "The boats leave from the Old Port in Mykonos Town.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Delos",
+          "to": "Mykonos Old Port",
+          "time": "13:30",
+          "minutes": 30,
+          "carrier": "Excursion boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Mykonos hotel area",
+          "to": "Mykonos Port",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Mykonos Port",
+          "to": "Santorini (Athinios Port)",
+          "time": "11:00",
+          "minutes": 150,
+          "carrier": "High-speed ferry",
+          "notes": "Fast boats run mainly from late spring to early autumn and are cancelled in high winds; check the timetable.",
+          "book": "Yes - ferry seats sell out in summer"
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Athinios Port",
+          "to": "Santorini hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "The ferry port is at the foot of the cliff and the road up is steep and winding.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Santorini hotel area",
+          "to": "Santorini Airport (JTR)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Flights home usually connect through Athens; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "greece-athens-naxos-paros-santorini-10d",
+      "title": "Athens, Naxos, Paros and Santorini in 10 Days",
+      "summary": "A proper island-hopping route: two nights in Athens, then ferries through Naxos, Paros and Santorini for beaches, villages and the caldera.",
+      "days": 10,
+      "route": "Athens > Naxos > Paros > Santorini",
+      "arrive": "Athens (ATH)",
+      "depart": "Santorini (JTR), connecting via Athens",
+      "countries": [
+        "Greece"
+      ],
+      "regions": [
+        "Attica",
+        "Cyclades"
+      ],
+      "cities": [
+        "Athens",
+        "Naxos",
+        "Paros",
+        "Santorini"
+      ],
+      "imageQuery": "Naxos Portara Greece sunset island",
+      "highlights": [
+        "Acropolis and Parthenon",
+        "Naxos Portara",
+        "Naxos mountain villages",
+        "Naoussa harbour",
+        "Akrotiri"
+      ],
+      "destinationKeys": [
+        "greece",
+        "greece/attica",
+        "greece/athens",
+        "greece/cyclades",
+        "greece/naxos",
+        "greece/paros",
+        "greece/santorini"
+      ],
+      "hero": "greece/naxos",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "relax",
+        "culture",
+        "photography",
+        "authentic_local",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Athens",
+          "hotel": "Hotel in Athens",
+          "start": 0,
+          "nights": 2,
+          "area": "Plaka, Monastiraki or Koukaki: walkable to the Acropolis and on the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Naxos",
+          "hotel": "Hotel in Naxos",
+          "start": 2,
+          "nights": 3,
+          "area": "Naxos Town (Chora) near the harbour, or Agios Prokopios beach for a seaside stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Paros",
+          "hotel": "Hotel in Paros",
+          "start": 5,
+          "nights": 2,
+          "area": "Naoussa for restaurants and harbour life, or Parikia for ferry connections",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Santorini",
+          "hotel": "Hotel in Santorini",
+          "start": 7,
+          "nights": 2,
+          "area": "Fira or Imerovigli on the caldera edge for views and walkability; Oia is the quietest but the most expensive and crowded",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Plaka and Anafiotika",
+          "notes": "An easy first walk under the Acropolis; the lanes are steep and cobbled in places.",
+          "where": "Plaka, Athens",
+          "book": "",
+          "place": "greece/plaka-anafiotika"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Greek taverna dinner",
+          "notes": "Dinner is late and unhurried; avoid the places with touts at the door.",
+          "where": "Athens",
+          "book": "",
+          "place": "greece/greek-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Acropolis and the Parthenon",
+          "notes": "Book a timed slot online; wear flat shoes with grip, as the marble is slippery, and in summer heat go as soon as it opens.",
+          "where": "Acropolis, Athens",
+          "book": "Yes - timed entry slots with daily limits",
+          "place": "greece/acropolis"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Acropolis Museum",
+          "notes": "A comfortable, air-conditioned break in the middle of the day.",
+          "where": "Makrygianni, Athens",
+          "book": "",
+          "place": "greece/acropolis-museum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Ancient Agora of Athens",
+          "notes": "The Temple of Hephaestus is the highlight; the site is shaded in parts and ground is uneven.",
+          "where": "Monastiraki, Athens",
+          "book": "",
+          "place": "greece/ancient-agora"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Lycabettus Hill sunset",
+          "notes": "Take the funicular up if the climb looks steep; the terrace is busiest at sunset.",
+          "where": "Kolonaki, Athens",
+          "book": "",
+          "place": "greece/lycabettus-hill"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Naxos Chora and the Portara",
+          "notes": "Walk the causeway to the marble gate for sunset; it is windy and the paving uneven.",
+          "where": "Chora, Naxos",
+          "book": "",
+          "place": "greece/naxos-portara"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Naxos mountain villages tour",
+          "notes": "The roads are narrow and winding, so a driver or tour is easier than driving yourself.",
+          "where": "Tragaia valley, Naxos",
+          "book": "",
+          "place": "greece/naxos-villages"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Naxos beach day",
+          "notes": "Long sandy beaches on the west coast; the summer wind suits windsurfers more than sunbathers.",
+          "where": "Agios Prokopios, Naxos",
+          "book": "",
+          "place": "greece/naxos-beach-day"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Dinner at Naoussa harbour",
+          "notes": "Fresh fish is the speciality; the cobbles are uneven.",
+          "where": "Naoussa, Paros",
+          "book": "",
+          "place": "greece/paros-naoussa"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Parikia and the Church of 100 Doors",
+          "notes": "The church complex has a quiet courtyard; Parikia is easy on foot.",
+          "where": "Parikia, Paros",
+          "book": "",
+          "place": "greece/paros-parikia"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Paros beach day",
+          "notes": "In summer the north wind makes the north coast rougher, so choose according to the wind.",
+          "where": "Kolymbithres, Paros",
+          "book": "",
+          "place": "greece/paros-beach-day"
+        },
+        {
+          "day": 7,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Santorini winery tasting",
+          "notes": "Sunset slots book up, so reserve ahead; the volcanic-soil Assyrtiko is the one to try.",
+          "where": "Santorini",
+          "book": "Yes - sunset tastings book up",
+          "place": "greece/santorini-winery"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Akrotiri archaeological site",
+          "notes": "The excavated town is under a large roof, so it is shaded and cool; check opening arrangements first.",
+          "where": "Akrotiri, Santorini",
+          "book": "",
+          "place": "greece/akrotiri-excavation"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "13:00",
+          "duration": "5h",
+          "name": "Caldera sailing cruise",
+          "notes": "Swimming stops and a volcanic islet; departures can change on windy days.",
+          "where": "Santorini caldera",
+          "book": "Yes - cruises book up in season",
+          "place": "greece/caldera-sailing-cruise"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Athens Airport (ATH)",
+          "to": "Athens hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "The metro is the cheapest and least affected by traffic; a taxi is simplest with luggage.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Athens hotel area",
+          "to": "Piraeus Port",
+          "time": "06:30",
+          "minutes": 45,
+          "carrier": "Metro line 1 or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Piraeus Port",
+          "to": "Naxos Port",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Conventional ferry (fast boats take about 3.5 hours)",
+          "notes": "Sailings change by season and weather; book ahead in summer.",
+          "book": "Yes - ferry seats sell out in summer"
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Naxos Port",
+          "to": "Naxos hotel area",
+          "time": "",
+          "minutes": 10,
+          "carrier": "Taxi or walk",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Naxos Port",
+          "to": "Paros (Parikia or Naoussa)",
+          "time": "11:00",
+          "minutes": 50,
+          "carrier": "Ferry",
+          "notes": "A short crossing; check which Paros port the ferry uses.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Paros port",
+          "to": "Paros hotel area",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Paros (Parikia)",
+          "to": "Santorini (Athinios Port)",
+          "time": "10:00",
+          "minutes": 180,
+          "carrier": "Ferry",
+          "notes": "Check the timetable, as services change with the season and wind.",
+          "book": "Yes - ferry seats sell out in summer"
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Athinios Port",
+          "to": "Santorini hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "The ferry port is at the foot of the cliff and the road up is steep and winding.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Santorini hotel area",
+          "to": "Santorini Airport (JTR)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Flights home usually connect through Athens; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "greece-mainland-santorini-naxos-14d",
+      "title": "Athens, Delphi, Meteora, Santorini and Naxos in 14 Days",
+      "summary": "A fortnight that mixes the mainland's ancient and monastic sites with two very different Cycladic islands.",
+      "days": 14,
+      "route": "Athens > Delphi > Meteora > Athens > Santorini > Naxos",
+      "arrive": "Athens (ATH)",
+      "depart": "Naxos (JNX), connecting via Athens",
+      "countries": [
+        "Greece"
+      ],
+      "regions": [
+        "Attica",
+        "Central Greece",
+        "Thessaly",
+        "Cyclades"
+      ],
+      "cities": [
+        "Athens",
+        "Delphi",
+        "Kalambaka",
+        "Meteora",
+        "Santorini",
+        "Naxos"
+      ],
+      "imageQuery": "Meteora monasteries Greece rock pillars",
+      "highlights": [
+        "Acropolis and Parthenon",
+        "Delphi",
+        "Meteora monasteries",
+        "Oia sunset",
+        "Naxos beaches"
+      ],
+      "destinationKeys": [
+        "greece",
+        "greece/attica",
+        "greece/athens",
+        "greece/central-greece",
+        "greece/delphi",
+        "greece/thessaly",
+        "greece/kalambaka",
+        "greece/meteora",
+        "greece/cyclades",
+        "greece/santorini",
+        "greece/naxos"
+      ],
+      "hero": "greece/meteora",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Athens",
+          "hotel": "Hotel in Athens",
+          "start": 0,
+          "nights": 3,
+          "area": "Plaka, Monastiraki or Koukaki: walkable to the Acropolis and on the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Delphi",
+          "hotel": "Hotel in Delphi",
+          "start": 3,
+          "nights": 1,
+          "area": "In the village of Delphi, within walking distance of the site and with valley views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kalambaka",
+          "hotel": "Hotel in Kalambaka",
+          "start": 4,
+          "nights": 2,
+          "area": "Below the Meteora rocks, in Kalambaka or Kastraki, within reach of the monasteries",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Athens",
+          "hotel": "Hotel in Athens",
+          "start": 6,
+          "nights": 1,
+          "area": "Plaka, Monastiraki or Koukaki: walkable to the Acropolis and on the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Santorini",
+          "hotel": "Hotel in Santorini",
+          "start": 7,
+          "nights": 3,
+          "area": "Fira or Imerovigli on the caldera edge for views and walkability; Oia is the quietest but the most expensive and crowded",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Naxos",
+          "hotel": "Hotel in Naxos",
+          "start": 10,
+          "nights": 3,
+          "area": "Naxos Town (Chora) near the harbour, or Agios Prokopios beach for a seaside stay",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Plaka and Anafiotika",
+          "notes": "An easy first walk under the Acropolis; the lanes are steep and cobbled in places.",
+          "where": "Plaka, Athens",
+          "book": "",
+          "place": "greece/plaka-anafiotika"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Greek taverna dinner",
+          "notes": "Dinner is late and unhurried; avoid the places with touts at the door.",
+          "where": "Athens",
+          "book": "",
+          "place": "greece/greek-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Acropolis and the Parthenon",
+          "notes": "Book a timed slot online; wear flat shoes with grip, as the marble is slippery, and in summer heat go as soon as it opens.",
+          "where": "Acropolis, Athens",
+          "book": "Yes - timed entry slots with daily limits",
+          "place": "greece/acropolis"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Acropolis Museum",
+          "notes": "A comfortable, air-conditioned break in the middle of the day.",
+          "where": "Makrygianni, Athens",
+          "book": "",
+          "place": "greece/acropolis-museum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Ancient Agora of Athens",
+          "notes": "The Temple of Hephaestus is the highlight; the site is shaded in parts and ground is uneven.",
+          "where": "Monastiraki, Athens",
+          "book": "",
+          "place": "greece/ancient-agora"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Lycabettus Hill sunset",
+          "notes": "Take the funicular up if the climb looks steep; the terrace is busiest at sunset.",
+          "where": "Kolonaki, Athens",
+          "book": "",
+          "place": "greece/lycabettus-hill"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "National Archaeological Museum",
+          "notes": "Large, so choose a few rooms; check opening days and hours.",
+          "where": "Exarcheia, Athens",
+          "book": "",
+          "place": "greece/national-archaeological-museum"
+        },
+        {
+          "day": 2,
+          "type": "Shopping",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "Monastiraki and the flea market",
+          "notes": "Crowded, so watch for pickpockets; the Sunday flea market is the liveliest.",
+          "where": "Monastiraki, Athens",
+          "book": "",
+          "place": "greece/monastiraki"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "2h",
+          "name": "Delphi archaeological site",
+          "notes": "Steep, uneven paths with little shade; go in the morning.",
+          "where": "Delphi",
+          "book": "",
+          "place": "greece/delphi-sanctuary"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Delphi Archaeological Museum",
+          "notes": "See the site first; the bronze Charioteer is the highlight.",
+          "where": "Delphi",
+          "book": "",
+          "place": "greece/delphi-museum"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Meteora sunset viewpoint",
+          "notes": "Arrive early for a good spot; paths are rocky and unlit.",
+          "where": "Meteora",
+          "book": "",
+          "place": "greece/meteora-sunset"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3.5h",
+          "name": "Meteora monasteries",
+          "notes": "Each monastery closes one day a week; shoulders and knees must be covered, and wraparound skirts are usually lent at the entrance. Many steps.",
+          "where": "Meteora",
+          "book": "",
+          "place": "greece/meteora-monasteries"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Hike among the Meteora rocks",
+          "notes": "Rocky, often steep paths with limited waymarking; carry water.",
+          "where": "Meteora",
+          "book": "",
+          "place": "greece/meteora-rock-hike"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Plaka and Anafiotika",
+          "notes": "A relaxed last evening in the capital before the islands.",
+          "where": "Plaka, Athens",
+          "book": "",
+          "place": "greece/plaka-anafiotika"
+        },
+        {
+          "day": 7,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Santorini winery tasting",
+          "notes": "Sunset slots book up, so reserve ahead; the volcanic-soil Assyrtiko is the one to try.",
+          "where": "Santorini",
+          "book": "Yes - sunset tastings book up",
+          "place": "greece/santorini-winery"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Fira to Oia caldera hike",
+          "notes": "Almost no shade and rough in places, so start early and carry water; buses return to Fira from Oia.",
+          "where": "Caldera rim, Santorini",
+          "book": "",
+          "place": "greece/fira-oia-hike"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Oia sunset",
+          "notes": "Very crowded in summer; claim a spot on the western walls early, or watch from a quieter lookout.",
+          "where": "Oia, Santorini",
+          "book": "",
+          "place": "greece/oia-sunset"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Akrotiri archaeological site",
+          "notes": "The excavated town is under a large roof, so it is shaded and cool; check opening arrangements first.",
+          "where": "Akrotiri, Santorini",
+          "book": "",
+          "place": "greece/akrotiri-excavation"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "13:00",
+          "duration": "5h",
+          "name": "Caldera sailing cruise",
+          "notes": "Swimming stops and a volcanic islet; departures can change on windy days.",
+          "where": "Santorini caldera",
+          "book": "Yes - cruises book up in season",
+          "place": "greece/caldera-sailing-cruise"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Naxos Chora and the Portara",
+          "notes": "Walk the causeway to the marble gate for sunset; it is windy and the paving uneven.",
+          "where": "Chora, Naxos",
+          "book": "",
+          "place": "greece/naxos-portara"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Naxos mountain villages tour",
+          "notes": "The roads are narrow and winding, so a driver or tour is easier than driving yourself.",
+          "where": "Tragaia valley, Naxos",
+          "book": "",
+          "place": "greece/naxos-villages"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Naxos beach day",
+          "notes": "Long sandy beaches on the west coast; the summer wind suits windsurfers more than sunbathers.",
+          "where": "Agios Prokopios, Naxos",
+          "book": "",
+          "place": "greece/naxos-beach-day"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Athens Airport (ATH)",
+          "to": "Athens hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "The metro is the cheapest and least affected by traffic; a taxi is simplest with luggage.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Athens hotel area",
+          "to": "Delphi",
+          "time": "08:30",
+          "minutes": 160,
+          "carrier": "Car with driver or KTEL coach",
+          "notes": "The road winds through the mountains; stop at Arachova if time allows.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Delphi",
+          "to": "Kalambaka",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Car with driver or KTEL coach",
+          "notes": "A long day by road across central Greece.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Kalambaka",
+          "to": "Athens",
+          "time": "09:00",
+          "minutes": 300,
+          "carrier": "Train or KTEL coach",
+          "notes": "The train is comfortable but check the timetable, which has changed in recent years; a coach is the alternative.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Athens hotel area",
+          "to": "Athens Airport (ATH)",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "This covers the ground leg to the departure airport only; Athens to Santorini is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Santorini Airport (JTR)",
+          "to": "Santorini hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Oia",
+          "to": "Fira",
+          "time": "20:30",
+          "minutes": 30,
+          "carrier": "KTEL local bus",
+          "notes": "Buses run until late but are crowded after sunset.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Santorini hotel area",
+          "to": "Athinios Port",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Santorini (Athinios Port)",
+          "to": "Naxos Port",
+          "time": "11:00",
+          "minutes": 180,
+          "carrier": "Ferry",
+          "notes": "Check the timetable, as services change with the season and wind.",
+          "book": "Yes - ferry seats sell out in summer"
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Naxos Port",
+          "to": "Naxos hotel area",
+          "time": "",
+          "minutes": 10,
+          "carrier": "Taxi or walk",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Naxos hotel area",
+          "to": "Naxos Airport (JNX)",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi",
+          "notes": "Flights home usually connect through Athens; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "greece-peloponnese-santorini-crete-14d",
+      "title": "Athens, Nafplio, Santorini and Crete in 14 Days",
+      "summary": "Athens and the Peloponnese's ancient sites, then Santorini by plane and Crete by ferry for Minoan palaces, a Venetian harbour and the Samaria Gorge.",
+      "days": 14,
+      "route": "Athens > Nafplio > Santorini > Heraklion > Chania",
+      "arrive": "Athens (ATH)",
+      "depart": "Chania (CHQ), connecting via Athens",
+      "countries": [
+        "Greece"
+      ],
+      "regions": [
+        "Attica",
+        "Peloponnese",
+        "Cyclades",
+        "Crete"
+      ],
+      "cities": [
+        "Athens",
+        "Cape Sounion",
+        "Nafplio",
+        "Epidaurus",
+        "Mycenae",
+        "Santorini",
+        "Heraklion",
+        "Chania"
+      ],
+      "imageQuery": "Chania Crete Venetian harbour lighthouse Greece",
+      "highlights": [
+        "Acropolis and Parthenon",
+        "Epidaurus theatre",
+        "Mycenae",
+        "Knossos",
+        "Samaria Gorge",
+        "Chania old town"
+      ],
+      "destinationKeys": [
+        "greece",
+        "greece/attica",
+        "greece/athens",
+        "greece/cape-sounion",
+        "greece/peloponnese",
+        "greece/nafplio",
+        "greece/epidaurus",
+        "greece/mycenae",
+        "greece/cyclades",
+        "greece/santorini",
+        "greece/crete",
+        "greece/heraklion",
+        "greece/chania"
+      ],
+      "hero": "greece/crete",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Athens",
+          "hotel": "Hotel in Athens",
+          "start": 0,
+          "nights": 3,
+          "area": "Plaka, Monastiraki or Koukaki: walkable to the Acropolis and on the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nafplio",
+          "hotel": "Hotel in Nafplio",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside the old town, within walking distance of the harbour and Syntagma Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Santorini",
+          "hotel": "Hotel in Santorini",
+          "start": 5,
+          "nights": 3,
+          "area": "Fira or Imerovigli on the caldera edge for views and walkability; Oia is the quietest but the most expensive and crowded",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Heraklion",
+          "hotel": "Hotel in Heraklion",
+          "start": 8,
+          "nights": 2,
+          "area": "Near the old harbour and Venetian walls, a short taxi from Knossos",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chania",
+          "hotel": "Hotel in Chania",
+          "start": 10,
+          "nights": 3,
+          "area": "In the old town around the Venetian harbour, a short walk from the waterfront",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Plaka and Anafiotika",
+          "notes": "An easy first walk under the Acropolis; the lanes are steep and cobbled in places.",
+          "where": "Plaka, Athens",
+          "book": "",
+          "place": "greece/plaka-anafiotika"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Greek taverna dinner",
+          "notes": "Dinner is late and unhurried; avoid the places with touts at the door.",
+          "where": "Athens",
+          "book": "",
+          "place": "greece/greek-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Acropolis and the Parthenon",
+          "notes": "Book a timed slot online; wear flat shoes with grip, as the marble is slippery, and in summer heat go as soon as it opens.",
+          "where": "Acropolis, Athens",
+          "book": "Yes - timed entry slots with daily limits",
+          "place": "greece/acropolis"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "12:30",
+          "duration": "2h",
+          "name": "Acropolis Museum",
+          "notes": "A comfortable, air-conditioned break in the middle of the day.",
+          "where": "Makrygianni, Athens",
+          "book": "",
+          "place": "greece/acropolis-museum"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Ancient Agora of Athens",
+          "notes": "The Temple of Hephaestus is the highlight; the site is shaded in parts and ground is uneven.",
+          "where": "Monastiraki, Athens",
+          "book": "",
+          "place": "greece/ancient-agora"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Lycabettus Hill sunset",
+          "notes": "Take the funicular up if the climb looks steep; the terrace is busiest at sunset.",
+          "where": "Kolonaki, Athens",
+          "book": "",
+          "place": "greece/lycabettus-hill"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "National Archaeological Museum",
+          "notes": "Large, so choose a few rooms; check opening days and hours.",
+          "where": "Exarcheia, Athens",
+          "book": "",
+          "place": "greece/national-archaeological-museum"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Temple of Poseidon at Cape Sounion",
+          "notes": "The site is exposed and windy and closes around sunset; the drive takes about an hour and a half.",
+          "where": "Cape Sounion, Attica",
+          "book": "",
+          "place": "greece/cape-sounion"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Nafplio old town",
+          "notes": "A relaxed town of Venetian and neoclassical houses; the lanes are cobbled.",
+          "where": "Old Town, Nafplio",
+          "book": "",
+          "place": "greece/nafplio-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Palamidi Fortress",
+          "notes": "Reached by a long stairway of several hundred steps or by road; go late in the day in summer.",
+          "where": "Palamidi, Nafplio",
+          "book": "",
+          "place": "greece/palamidi-fortress"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Ancient Theatre of Epidaurus",
+          "notes": "Steps are high and uneven; the stone is bright and hot at midday.",
+          "where": "Epidaurus",
+          "book": "",
+          "place": "greece/epidaurus-theatre"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "2h",
+          "name": "Mycenae",
+          "notes": "An exposed hill with little shade; the Lion Gate is the highlight.",
+          "where": "Mycenae",
+          "book": "",
+          "place": "greece/mycenae"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Santorini winery tasting",
+          "notes": "Sunset slots book up, so reserve ahead; the volcanic-soil Assyrtiko is the one to try.",
+          "where": "Santorini",
+          "book": "Yes - sunset tastings book up",
+          "place": "greece/santorini-winery"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "4h",
+          "name": "Fira to Oia caldera hike",
+          "notes": "Almost no shade and rough in places, so start early and carry water; buses return to Fira from Oia.",
+          "where": "Caldera rim, Santorini",
+          "book": "",
+          "place": "greece/fira-oia-hike"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Oia sunset",
+          "notes": "Very crowded in summer; claim a spot on the western walls early, or watch from a quieter lookout.",
+          "where": "Oia, Santorini",
+          "book": "",
+          "place": "greece/oia-sunset"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Akrotiri archaeological site",
+          "notes": "The excavated town is under a large roof, so it is shaded and cool; check opening arrangements first.",
+          "where": "Akrotiri, Santorini",
+          "book": "",
+          "place": "greece/akrotiri-excavation"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "3h",
+          "name": "Perissa black sand beach",
+          "notes": "The dark sand gets very hot, so beach shoes help.",
+          "where": "Perissa, Santorini",
+          "book": "",
+          "place": "greece/perissa-beach"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Heraklion Archaeological Museum",
+          "notes": "Galleries have been rearranged in recent years, so check what is on show; a good prelude to Knossos.",
+          "where": "Heraklion",
+          "book": "",
+          "place": "greece/heraklion-museum"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Palace of Knossos",
+          "notes": "Go at opening: it is exposed, hot and crowded by midday. The reconstructions are controversial but vivid.",
+          "where": "Knossos, Heraklion",
+          "book": "",
+          "place": "greece/knossos"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Chania old town and the Venetian harbour",
+          "notes": "A flat evening walk along the quayside; the lanes behind are cobbled.",
+          "where": "Old Town, Chania",
+          "book": "",
+          "place": "greece/chania-old-town"
+        },
+        {
+          "day": 11,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "7h",
+          "name": "Samaria Gorge hike",
+          "notes": "A 16-kilometre one-way walk that is open only in the dry season, usually May to October; rocky with little shade, so wear sturdy shoes and carry water.",
+          "where": "Samaria Gorge, Chania",
+          "book": "",
+          "place": "greece/samaria-gorge"
+        },
+        {
+          "day": 12,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Elafonisi beach",
+          "notes": "Very crowded from late morning; bring shade, as there is little cover.",
+          "where": "Elafonisi, Chania",
+          "book": "",
+          "place": "greece/elafonisi-beach"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Athens Airport (ATH)",
+          "to": "Athens hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Metro line 3, the X95 express bus or a taxi",
+          "notes": "The metro is the cheapest and least affected by traffic; a taxi is simplest with luggage.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Athens hotel area",
+          "to": "Cape Sounion",
+          "time": "15:00",
+          "minutes": 90,
+          "carrier": "Car with driver or KTEL coach",
+          "notes": "The coast road is busy in the late afternoon.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cape Sounion",
+          "to": "Athens hotel area",
+          "time": "19:30",
+          "minutes": 90,
+          "carrier": "Car with driver or KTEL coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Athens hotel area",
+          "to": "Nafplio",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "KTEL coach from the Kifissos terminal, or car with driver",
+          "notes": "Coaches run several times a day.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Nafplio",
+          "to": "Epidaurus",
+          "time": "08:45",
+          "minutes": 45,
+          "carrier": "Car with driver or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Epidaurus",
+          "to": "Mycenae",
+          "time": "11:45",
+          "minutes": 60,
+          "carrier": "Car with driver or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Mycenae",
+          "to": "Nafplio",
+          "time": "15:30",
+          "minutes": 40,
+          "carrier": "Car with driver or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Nafplio",
+          "to": "Athens Airport (ATH)",
+          "time": "07:30",
+          "minutes": 135,
+          "carrier": "Car with driver",
+          "notes": "This covers the ground leg to the departure airport only; Athens to Santorini is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Santorini Airport (JTR)",
+          "to": "Santorini hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Oia",
+          "to": "Fira",
+          "time": "20:30",
+          "minutes": 30,
+          "carrier": "KTEL local bus",
+          "notes": "Buses run until late but are crowded after sunset.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Santorini hotel area",
+          "to": "Athinios Port",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Santorini (Athinios Port)",
+          "to": "Heraklion Port",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "High-speed ferry",
+          "notes": "Fast boats run mainly in the warmer months and are cancelled in high winds; check the timetable.",
+          "book": "Yes - ferry seats sell out in summer"
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Heraklion Port",
+          "to": "Heraklion hotel area",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Heraklion bus station",
+          "to": "Chania",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "KTEL Crete coach",
+          "notes": "Coaches run frequently along the north coast.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Chania",
+          "to": "Omalos (Samaria Gorge start)",
+          "time": "06:00",
+          "minutes": 75,
+          "carrier": "KTEL early gorge bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Agia Roumeli",
+          "to": "Sfakia",
+          "time": "16:30",
+          "minutes": 65,
+          "carrier": "Ferry",
+          "notes": "The boat is the only way out from the end of the gorge.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Sfakia",
+          "to": "Chania",
+          "time": "18:00",
+          "minutes": 120,
+          "carrier": "KTEL coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Chania",
+          "to": "Elafonisi",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Car with driver or tour coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Elafonisi",
+          "to": "Chania",
+          "time": "16:30",
+          "minutes": 120,
+          "carrier": "Car with driver or tour coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Chania hotel area",
+          "to": "Chania Airport (CHQ)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi",
+          "notes": "Flights home usually connect through Athens; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "greece/acropolis": {
+        "name": "Acropolis and the Parthenon",
+        "description": "The ancient citadel above Athens, crowned by the Parthenon and the other fifth-century BC temples of the Periclean building programme.",
+        "details": "The Acropolis is a limestone rock above Athens that was the religious centre of the ancient city, and the Parthenon, completed in the 430s BC for the goddess Athena, is its most famous building. Other monuments include the small Temple of Athena Nike and the Erechtheion with its caryatid porch. Entry is by timed slot with daily limits, and the marble paths are polished and slippery, so flat shoes with grip are best. In peak summer heat the site can close in the middle of the day, so go as soon as it opens.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "greece/acropolis-museum": {
+        "name": "Acropolis Museum",
+        "description": "A modern museum at the foot of the Acropolis holding the sculptures and finds from the rock, with a top-floor gallery aligned to the Parthenon.",
+        "details": "The Acropolis Museum opened in 2009 and stands directly beside the excavated remains of an ancient neighbourhood, visible through glass floors. Its upper floor is laid out to match the dimensions of the Parthenon, with the surviving frieze and metopes displayed at the correct angle and plaster casts filling the gaps where originals are in London. The caryatids from the Erechtheion are also here. It is a comfortable, air-conditioned choice for the hottest part of the day.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/ancient-agora": {
+        "name": "Ancient Agora of Athens",
+        "description": "The civic heart of ancient Athens, with the best-preserved Doric temple in Greece and a reconstructed colonnade now used as a museum.",
+        "details": "The Agora was the marketplace and meeting place of classical Athens, where Socrates talked and democracy was practised. The Temple of Hephaestus on its western edge, built in the fifth century BC, is among the best-preserved Greek temples anywhere. The Stoa of Attalos, rebuilt in the 1950s, houses a museum of finds from the site. It is a shaded, green and calmer alternative to the Acropolis crowds, with uneven ground underfoot.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/plaka-anafiotika": {
+        "name": "Plaka and Anafiotika",
+        "description": "Athens's oldest quarter below the Acropolis, with neoclassical houses, tavernas and whitewashed island-style alleys.",
+        "details": "Plaka sits on the slopes beneath the Acropolis and has been inhabited continuously since antiquity, with narrow, pedestrian lanes of neoclassical houses, small churches and cafes. Above it, Anafiotika is a cluster of whitewashed cottages built by workers from the island of Anafi in the nineteenth century, which feels more like the Cyclades than the capital. The streets are touristy but pleasant in the evening. Lanes are steep and cobbled in places.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/monastiraki": {
+        "name": "Monastiraki and the flea market",
+        "description": "A lively square and market area below the Acropolis, known for souvlaki, souvenirs and a Sunday flea market.",
+        "details": "Monastiraki is a district of narrow streets and small shops around a square that holds a mosque, a Byzantine church and the metro station. Stalls and shops sell leather goods, souvenirs and antiques, and the Sunday flea market spills over the surrounding streets. It is also a classic place for a souvlaki or gyros at one of the long-established grill shops. It is crowded and busy, so watch for pickpockets.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/national-archaeological-museum": {
+        "name": "National Archaeological Museum",
+        "description": "Greece's largest archaeological museum, holding the Mask of Agamemnon, the Antikythera Mechanism and bronze statues from the sea.",
+        "details": "The National Archaeological Museum brings together antiquities from across Greece from prehistory to late antiquity. Highlights include the gold funerary mask from Mycenae, the Antikythera Mechanism, an ancient astronomical calculator recovered from a shipwreck, and bronzes such as the Artemision Poseidon. It is large, so pick a few rooms. Opening days and hours vary, so check them ahead.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/lycabettus-hill": {
+        "name": "Lycabettus Hill sunset",
+        "description": "A pine-covered hill in central Athens topped by a white chapel, with a view across the city to the Acropolis and the sea.",
+        "details": "Mount Lycabettus rises to about 277 metres above the city centre and is reached on foot by a steep path or by a funicular from the foot of the hill. At the top, the small chapel of St George and a terrace give a panorama over Athens, the Acropolis and out to the Saronic Gulf. Sunset is the most popular time, so the terrace gets busy. The walking path is steep and rocky.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "greece/panathenaic-stadium": {
+        "name": "Panathenaic Stadium",
+        "description": "The all-marble stadium that hosted the first modern Olympic Games in 1896, built on an ancient site.",
+        "details": "The Panathenaic Stadium, known in Greek as the Kallimarmaro, was rebuilt in white Pentelic marble for the first modern Olympics in 1896 on the site of an ancient stadium. Visitors can walk the track and stand on the podium, and a small museum of Olympic torches sits underneath. It is a quick, easy visit, and the finish line of the Athens marathon. The marble is bright and reflects the sun, so it is hot in summer.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/greek-dinner": {
+        "name": "Greek taverna dinner",
+        "description": "A relaxed evening meal of shared meze, grilled meat or fish and local wine in a traditional taverna.",
+        "details": "Greek tavernas serve dishes such as grilled meats, moussaka, fried cheese, salads with feta, and fresh fish, often ordered for sharing in the middle of the table. Dinner is eaten late and unhurried, often after nine in the evening. Menus in the busiest tourist areas can be more expensive and less distinctive than those in neighbourhoods just beyond them. Ask what the kitchen recommends or what is fresh.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/cape-sounion": {
+        "name": "Temple of Poseidon at Cape Sounion",
+        "description": "A fifth-century BC temple on a headland at the southern tip of Attica, known for its sunset over the Aegean.",
+        "details": "The Temple of Poseidon stands on a cliff at the tip of the Attic peninsula, about 60 metres above the sea, built in the fifth century BC as a landmark for ships. Many of its Doric columns survive, and the site is best known for sunset views across the Aegean. Lord Byron's name is carved on one of the columns, though visitors are now kept back from them. The site is exposed and windy, and the drive from Athens takes about an hour and a half.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/delphi-sanctuary": {
+        "name": "Delphi archaeological site",
+        "description": "The ancient sanctuary of Apollo on the slopes of Mount Parnassus, where the oracle was consulted by rulers across the ancient world.",
+        "details": "Delphi was regarded by the ancient Greeks as the centre of the world, and its oracle, the Pythia, gave advice to cities and kings from the eighth century BC. A winding Sacred Way climbs past treasuries built by city-states to the Temple of Apollo, with the theatre and stadium higher up the slope. The setting among cliffs and olive trees is as memorable as the ruins. It is a UNESCO World Heritage Site, with steep, uneven paths and little shade.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "greece/delphi-museum": {
+        "name": "Delphi Archaeological Museum",
+        "description": "The museum beside the site holding the bronze Charioteer, the Sphinx of the Naxians and sculptures from the sanctuary.",
+        "details": "The museum displays finds from the sanctuary of Apollo, among them the bronze Charioteer of Delphi from around 470 BC, one of the finest surviving Greek bronzes. The Sphinx of the Naxians and friezes from the treasuries are also here. It is small enough to see in about ninety minutes and is best visited with the site fresh in mind. Air-conditioned galleries make a welcome break from the heat.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/meteora-monasteries": {
+        "name": "Meteora monasteries",
+        "description": "Six working Orthodox monasteries built on towering sandstone pillars in the plain of Thessaly.",
+        "details": "The Meteora monasteries were built from the fourteenth century on sheer rock pillars, in part to be out of reach, and six are still inhabited. They are a UNESCO World Heritage Site, reached by steps cut into the rock. Each monastery closes on one day a week, different for each, so check the schedule. A dress code applies: shoulders and knees covered, and long skirts for women, which are often available at the entrance. The steps are numerous and steep.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "greece/meteora-sunset": {
+        "name": "Meteora sunset viewpoint",
+        "description": "A rock-top lookout above the plain of Thessaly where the monasteries are lit orange by the setting sun.",
+        "details": "Several viewpoints on the road around the pillars give a view of the monasteries in the evening light, the best known being a rocky promontory with a view across the valley to the largest rocks. It gets crowded around sunset, so arrive early for a spot. The paths are uneven and unlit, so a torch helps on the way back. Evening is cool even in summer.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/meteora-rock-hike": {
+        "name": "Hike among the Meteora rocks",
+        "description": "A walk on old monks' paths between the rock pillars, with views of the monasteries from below.",
+        "details": "Old paths used by monks and villagers link the monasteries and Kalambaka, running through oak woods and below the sandstone cliffs. A half-day walk gives a quieter perspective than the road-side lookouts. The routes are rocky and often steep in places, and waymarking is limited, so a map or guide helps. Carry water, as there is little on the way.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "greece/nafplio-old-town": {
+        "name": "Nafplio old town",
+        "description": "A neoclassical and Venetian harbour town, the first capital of modern Greece, with a seafront castle on a small island.",
+        "details": "Nafplio served as the first capital of the modern Greek state in the 1820s and 1830s, and its old town of Venetian and neoclassical houses, flower-draped balconies and squares is one of the most appealing in the country. The Bourtzi, a small fortress on an islet, sits in the harbour, and cafes line Syntagma Square. It is a relaxed place that is easy to explore on foot. A coastal path, Arvanitia promenade, circles the base of the rock.",
+        "interests": [
+          "relax",
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/palamidi-fortress": {
+        "name": "Palamidi Fortress",
+        "description": "A Venetian hilltop fortress above Nafplio, reached by a long stairway or by road, with views over the gulf.",
+        "details": "The Palamidi fortress was built by the Venetians in the early eighteenth century on a hill above Nafplio and was later important in the Greek War of Independence. Its walls and bastions can be explored, with a view over the Argolic Gulf. It can be reached by a long stairway of several hundred steps or by road. Sun exposure is high, so go early or late in summer.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "greece/epidaurus-theatre": {
+        "name": "Ancient Theatre of Epidaurus",
+        "description": "A fourth-century BC theatre famous for its acoustics, still used for performances in summer.",
+        "details": "The theatre at Epidaurus was built in the fourth century BC as part of a healing sanctuary of Asklepios, and seats about 14,000 people on a steep slope. Its acoustics are famous: a whisper or a dropped coin on the central stage can be heard from the top row. Ancient dramas are staged here during the summer festival. The steps are high and uneven, and the stone is hot and bright at midday.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/mycenae": {
+        "name": "Mycenae",
+        "description": "The Bronze Age citadel of the legendary King Agamemnon, entered through the Lion Gate, with royal beehive tombs nearby.",
+        "details": "Mycenae was the centre of a powerful Bronze Age civilisation in the second millennium BC and gave its name to the Mycenaean period. The citadel is entered through the Lion Gate, a monumental doorway topped with two carved lionesses, and inside are grave circles and the remains of a palace. Nearby, the Treasury of Atreus is a vast beehive-shaped tomb. It is a UNESCO World Heritage Site, set on an exposed hill with little shade.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/oia-sunset": {
+        "name": "Oia sunset",
+        "description": "A clifftop village on the northern tip of Santorini famous for blue-domed churches, white houses and its sunset.",
+        "details": "Oia is the most photographed village on Santorini, built into the caldera rim with whitewashed houses and the blue-domed churches that have come to symbolise the Greek islands. Visitors gather in the evening along the western walls and at the ruined castle to watch the sunset. It is extremely crowded in summer and the lanes are narrow, so securing a spot early or watching from a quieter lookout works better. The paving is smooth, polished marble and steps are frequent.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/fira-oia-hike": {
+        "name": "Fira to Oia caldera hike",
+        "description": "A cliff-edge walk of several hours along the rim of the Santorini caldera between the island's two main villages.",
+        "details": "The path from Fira through Firostefani and Imerovigli to Oia follows the top of the caldera cliff for about ten kilometres and takes three to four hours. Views of the volcanic crater and the sea open at almost every turn. There is almost no shade and the path is rough in places, so it is best in the morning with plenty of water. A local bus brings you back to Fira from Oia.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "greece/akrotiri-excavation": {
+        "name": "Akrotiri archaeological site",
+        "description": "A Bronze Age town on Santorini buried by the volcanic eruption of around 1600 BC and preserved under ash.",
+        "details": "Akrotiri was a thriving Minoan-era port town until the great eruption of the Santorini volcano buried it in ash in the second millennium BC, preserving multi-storey houses, streets and wall paintings. The excavated area is covered by a large roof, which keeps it shaded and cool. The finest frescoes are in the museum in Athens, but the houses and drains are impressive. Opening arrangements have changed after roof repairs, so check ahead.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/caldera-sailing-cruise": {
+        "name": "Caldera sailing cruise",
+        "description": "A day or sunset sail around the Santorini caldera, with swimming stops at hot springs and the volcanic islands.",
+        "details": "Catamaran and traditional boat cruises circle the flooded caldera, stopping to swim in the sea and at the volcanic islet of Nea Kameni, where a short, rough path leads up to the crater. A hot-springs stop and a meal on board are usually included. The sea can be rough on windy days, when departures change or are cancelled. Sun protection is important, and the decks are slippery when wet.",
+        "interests": [
+          "adventure",
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/santorini-winery": {
+        "name": "Santorini winery tasting",
+        "description": "A tasting of Assyrtiko and other wines grown in volcanic soil, with vines trained into low baskets to resist the wind.",
+        "details": "Santorini's vineyards grow in pumice and ash soil, and vines are trained into low circular baskets called kouloura to protect the grapes from the wind and hold moisture from sea mist. The white Assyrtiko grape produces crisp, mineral wines, and sweet Vinsanto is the island's dessert wine. Many wineries offer tastings with a caldera view. Tastings are best booked in advance for sunset slots, and drivers should choose carefully.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/perissa-beach": {
+        "name": "Perissa black sand beach",
+        "description": "A long black volcanic sand and pebble beach on Santorini's east coast with tavernas and loungers behind.",
+        "details": "Perissa is a long stretch of dark volcanic sand and pebbles at the foot of Mesa Vouno mountain, with rows of sunbeds and tavernas along the back. The sand gets very hot, so beach shoes are useful. The sea is clearer and calmer than at some of the other beaches. It is a more relaxed break from the clifftop villages.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/mykonos-town": {
+        "name": "Mykonos Town and Little Venice",
+        "description": "A maze of whitewashed lanes in the island's main town, with a row of windmills and balconied houses over the water.",
+        "details": "Mykonos Town is a labyrinth of narrow whitewashed alleys, designed in part to confuse pirates and shield from the wind, with chapels, boutiques and bars. Little Venice is the row of old captains' houses with wooden balconies overhanging the sea, and the windmills above it are a popular sunset spot. It is busy and expensive in summer. Cobbled lanes are uneven, and getting lost is part of the experience.",
+        "interests": [
+          "photography",
+          "nightlife",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/delos-day-trip": {
+        "name": "Delos",
+        "description": "A small island near Mykonos that was a major sacred centre of the ancient Greek world, now an open-air archaeological site.",
+        "details": "Delos was regarded in myth as the birthplace of Apollo and Artemis and became a major religious and commercial centre in antiquity. Its ruins include houses with mosaics, a row of marble lions and a theatre, and are a UNESCO World Heritage Site. The island has no shade and no permanent inhabitants, so bring water and a hat. Boats from Mykonos take about half an hour, and in the shoulder seasons the schedule is limited, so check the days of operation.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/mykonos-beach-day": {
+        "name": "Mykonos beach day",
+        "description": "A day on one of the sandy south-coast beaches of Mykonos, such as Psarou or Paradise, with sunbeds and music.",
+        "details": "The beaches along the southern coast of Mykonos are some of the island's most popular, with fine sand, clear water, sunbeds and beach clubs. Some are quiet by day and lively by evening. The north wind, the meltemi, blows strongly in July and August and can make the north-facing beaches rough, while the southern beaches are more sheltered. Hiring a sunbed can be a major expense, so look for quieter, free sections.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "nightlife"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/naxos-portara": {
+        "name": "Naxos Chora and the Portara",
+        "description": "Naxos's main town, with a Venetian castle quarter and a giant marble doorway from an unfinished temple of Apollo on a harbour islet.",
+        "details": "The Portara is a huge marble doorway on the islet of Palatia, all that was ever built of a temple of Apollo begun in the sixth century BC. It is linked to the harbour by a causeway, and sunset here is one of the island's highlights. Behind the harbour, the Venetian-era Kastro quarter and the maze of Chora's lanes are good for an evening stroll. Paving is uneven, and the causeway is windy.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/naxos-villages": {
+        "name": "Naxos mountain villages tour",
+        "description": "A drive through the island's green interior, with marble-paved villages, olive groves and unfinished ancient statues.",
+        "details": "Inland Naxos is greener than most Cycladic islands, with olive groves, orchards and hillside villages such as Halki and Apiranthos, where the streets are paved in marble. Halki has an old distillery producing kitron, a citrus liqueur unique to the island. Near the coast, unfinished ancient kouros statues lie where they were abandoned in the quarry. Roads are narrow and winding, so a driver or tour makes the day easier.",
+        "interests": [
+          "authentic_local",
+          "culture",
+          "photography",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/naxos-beach-day": {
+        "name": "Naxos beach day",
+        "description": "A day on the long white sand beaches south of Naxos Town, among the best in the Cyclades.",
+        "details": "Naxos has long beaches of fine sand along its west coast, including Agios Prokopios, Agia Anna and Plaka, with shallow, clear water and tavernas along the back. They are generally less crowded and cheaper than on Mykonos or Santorini. Winds can be strong in summer, which suits windsurfers and kiteboarders more than sunbathers. Beach cafes serve local potatoes and cheeses.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/paros-naoussa": {
+        "name": "Naoussa harbour",
+        "description": "A picturesque fishing village on Paros with a small harbour, a ruined Venetian fort and waterfront restaurants.",
+        "details": "Naoussa is a whitewashed fishing village on the north coast of Paros, built around a small harbour with colourful boats and the remains of a Venetian fortress in the water. Narrow lanes behind the quay are lined with tavernas, bars and boutiques. It is lively in the evening and a good place for a seafood dinner. The cobbles are uneven.",
+        "interests": [
+          "food",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/paros-parikia": {
+        "name": "Parikia and the Church of 100 Doors",
+        "description": "Paros's port town, with a huge early Byzantine church complex and a maze of old whitewashed streets.",
+        "details": "Parikia is the main port of Paros, with a small old town of whitewashed lanes and a Venetian castle built with columns from an ancient temple. The Ekatontapyliani, or Church of the Hundred Doors, dates from the fourth century AD and is one of the oldest in Greece, with a quiet courtyard and a baptistery. The town is easy to explore on foot, and cafes line the waterfront.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/paros-beach-day": {
+        "name": "Paros beach day",
+        "description": "A day at one of Paros's sheltered beaches, such as Kolymbithres or Golden Beach.",
+        "details": "Paros has a range of beaches, from Kolymbithres, with smooth granite boulders and sheltered coves, to Golden Beach, which is long and often windy and popular with windsurfers. Sunbeds and tavernas are available at the larger ones. In summer, the meltemi wind makes the north coast rougher, so choose according to the wind direction.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/knossos": {
+        "name": "Palace of Knossos",
+        "description": "The largest Minoan palace in Crete, with partly reconstructed colourful rooms, throne room and wall paintings.",
+        "details": "Knossos was the ceremonial and political centre of Minoan Crete in the Bronze Age, with a palace complex dated to between about 1900 and 1450 BC. The English archaeologist Arthur Evans excavated and partly reconstructed it in the early twentieth century, adding painted columns and concrete restorations that remain controversial. The throne room and the reproductions of the frescoes are the highlights. It is very hot and exposed in summer, and it is best visited right at opening.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "greece/heraklion-museum": {
+        "name": "Heraklion Archaeological Museum",
+        "description": "The foremost museum of Minoan civilisation, with frescoes, jewellery, the snake goddess figurines and the Phaistos Disc.",
+        "details": "The museum in Heraklion holds the finest collection of Minoan art, including frescoes from Knossos, gold jewellery, pottery and the faience snake goddess figures. The Phaistos Disc, a clay disc stamped with an undeciphered script, is one of its best-known objects. It makes sense of the ruins that you see at Knossos. Galleries have been rearranged in recent years, so check what is on show.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/chania-old-town": {
+        "name": "Chania old town and Venetian harbour",
+        "description": "A picturesque port town in western Crete, with a Venetian lighthouse, Ottoman mosque and narrow lanes of tavernas.",
+        "details": "Chania's old town is the most atmospheric on Crete, with Venetian houses and arsenals around an inner harbour, a lighthouse at the end of the breakwater and a domed Ottoman mosque on the waterfront. Narrow lanes behind the harbour hold tavernas, craft shops and small museums. The harbour promenade is a pleasant evening walk. It is flat, with some cobbled lanes.",
+        "interests": [
+          "photography",
+          "food",
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "greece/samaria-gorge": {
+        "name": "Samaria Gorge hike",
+        "description": "A long one-way walk through one of the longest gorges in Europe, ending at the sea at Agia Roumeli.",
+        "details": "The Samaria Gorge in the White Mountains is a national park and a 16-kilometre one-way walk that descends from the Omalos plateau through pine forest and between sheer walls to the coast. It takes most people five to seven hours and ends at the village of Agia Roumeli, from where a boat goes to Sfakia and a bus returns to Chania. It is open only in the dry season, usually from May to October, and closes in high winds or heat. The path is rocky with little shade, so sturdy shoes and plenty of water are essential.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "greece/elafonisi-beach": {
+        "name": "Elafonisi beach",
+        "description": "A beach of pale pink-tinged sand and a shallow turquoise lagoon on the south-west coast of Crete.",
+        "details": "Elafonisi is a protected area where fine sand with a pink tint from crushed shells fringes a shallow lagoon that can be waded across to a small island. It is one of the most photographed beaches in Crete and gets very crowded between late morning and afternoon. The road from Chania takes about two hours each way. Protect the dunes by keeping to marked paths and bring shade, as there is little natural cover.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "greece": {
+        "name": "Greece",
+        "description": "A country of ancient ruins, whitewashed island villages, mountain monasteries and long, late meals by the sea.",
+        "images": []
+      },
+      "greece/attica": {
+        "name": "Attica",
+        "description": "The region around Athens, taking in the Acropolis, the Saronic coast and the temple at Cape Sounion.",
+        "images": []
+      },
+      "greece/athens": {
+        "name": "Athens",
+        "description": "Greece's capital, where the Acropolis dominates a dense modern city of museums, markets and tavernas.",
+        "images": []
+      },
+      "greece/cape-sounion": {
+        "name": "Cape Sounion",
+        "description": "A headland at the southern tip of Attica, crowned by the fifth-century BC Temple of Poseidon and known for its sunsets.",
+        "images": []
+      },
+      "greece/central-greece": {
+        "name": "Central Greece",
+        "description": "A mountainous mainland region that includes Delphi and Mount Parnassus.",
+        "images": []
+      },
+      "greece/delphi": {
+        "name": "Delphi",
+        "description": "The ancient sanctuary of Apollo and seat of the oracle, high on the slopes of Mount Parnassus.",
+        "images": []
+      },
+      "greece/thessaly": {
+        "name": "Thessaly",
+        "description": "A mainland region of plains and mountains that holds the monasteries of Meteora.",
+        "images": []
+      },
+      "greece/kalambaka": {
+        "name": "Kalambaka",
+        "description": "The town at the foot of the Meteora rocks, used as a base for the monasteries.",
+        "images": []
+      },
+      "greece/meteora": {
+        "name": "Meteora",
+        "description": "A cluster of sandstone pillars crowned by medieval Orthodox monasteries, in the plain of Thessaly.",
+        "images": []
+      },
+      "greece/peloponnese": {
+        "name": "Peloponnese",
+        "description": "The large southern peninsula of ancient sites, Venetian fortress towns and mountains, joined to the mainland by a narrow isthmus.",
+        "images": []
+      },
+      "greece/nafplio": {
+        "name": "Nafplio",
+        "description": "A Venetian and neoclassical harbour town and the first capital of modern Greece, a relaxed base for the Argolid.",
+        "images": []
+      },
+      "greece/epidaurus": {
+        "name": "Epidaurus",
+        "description": "An ancient healing sanctuary with a famously well-preserved theatre, in the northeast Peloponnese.",
+        "images": []
+      },
+      "greece/mycenae": {
+        "name": "Mycenae",
+        "description": "A Bronze Age citadel and the centre of Mycenaean civilisation, entered through the Lion Gate.",
+        "images": []
+      },
+      "greece/cyclades": {
+        "name": "Cyclades",
+        "description": "The Aegean island group of whitewashed villages, blue-domed churches, windmills and ferry-linked beaches.",
+        "images": []
+      },
+      "greece/santorini": {
+        "name": "Santorini",
+        "description": "A crescent-shaped volcanic island with caldera-edge villages, black beaches and wines grown in ash.",
+        "images": []
+      },
+      "greece/mykonos": {
+        "name": "Mykonos",
+        "description": "A cosmopolitan island of windmills, whitewashed lanes, beach clubs and the starting point for Delos.",
+        "images": []
+      },
+      "greece/delos": {
+        "name": "Delos",
+        "description": "A small uninhabited island that was a sacred centre of the ancient Greek world, now an open-air archaeological site.",
+        "images": []
+      },
+      "greece/naxos": {
+        "name": "Naxos",
+        "description": "The largest Cyclades island, with long sandy beaches, a green mountain interior and a hilltop Venetian old town.",
+        "images": []
+      },
+      "greece/paros": {
+        "name": "Paros",
+        "description": "A Cyclades island of whitewashed villages, sheltered beaches and a fishing-harbour town at Naoussa.",
+        "images": []
+      },
+      "greece/crete": {
+        "name": "Crete",
+        "description": "Greece's largest island, with Minoan palaces, Venetian harbours, mountain gorges and long beaches.",
+        "images": []
+      },
+      "greece/heraklion": {
+        "name": "Heraklion",
+        "description": "Crete's biggest city, home to the Minoan collections in the archaeological museum and the palace of Knossos nearby.",
+        "images": []
+      },
+      "greece/chania": {
+        "name": "Chania",
+        "description": "A Venetian harbour town in west Crete, the base for the Samaria Gorge and the south-west beaches.",
+        "images": []
+      }
+    }
+  }
+}

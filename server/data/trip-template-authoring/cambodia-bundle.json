@@ -1,0 +1,1163 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Big World Small Pockets, Sommertage, Mad Monkey Hostels and Erika Travel Ventures itineraries for Cambodia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "cambodia-siem-reap-4d",
+      "title": "Angkor Temples in 4 Days",
+      "summary": "Sunrise at Angkor Wat, the Bayon and Ta Prohm, the grand circuit and the floating villages.",
+      "days": 4,
+      "route": "Siem Reap",
+      "arrive": "Siem Reap (SAI)",
+      "depart": "Siem Reap (SAI)",
+      "countries": [
+        "Cambodia"
+      ],
+      "regions": [],
+      "cities": [
+        "Siem Reap"
+      ],
+      "imageQuery": "Angkor Wat sunrise",
+      "highlights": [
+        "Angkor Wat sunrise",
+        "Bayon",
+        "Ta Prohm",
+        "Banteay Srei"
+      ],
+      "destinationKeys": [
+        "cambodia",
+        "cambodia/siem-reap"
+      ],
+      "hero": "cambodia/siem-reap",
+      "sources": [
+        "Big World Small Pockets",
+        "Sommertage",
+        "Mad Monkey Hostels",
+        "KimKim",
+        "Erika Travel Ventures"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Siem Reap",
+          "hotel": "Hotel in Siem Reap",
+          "start": 0,
+          "nights": 3,
+          "area": "In central Siem Reap near Pub Street or on a quieter street towards Angkor",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "1.5h",
+          "name": "Phare, The Cambodian Circus",
+          "notes": "Seats are limited; book ahead.",
+          "where": "Siem Reap",
+          "book": "Yes - book tickets",
+          "place": "cambodia/phare-circus"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "05:00",
+          "duration": "4h",
+          "name": "Angkor Wat at sunrise",
+          "notes": "Cover shoulders and knees; buy a pass in advance.",
+          "where": "Angkor Archaeological Park",
+          "book": "Yes - buy the Angkor pass",
+          "place": "cambodia/angkor-wat"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "4h",
+          "name": "Tonle Sap floating village at sunset",
+          "notes": "Choose a community-run trip; water levels change with the season.",
+          "where": "Tonle Sap",
+          "book": "Yes - book a boat tour",
+          "place": "cambodia/tonle-sap"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Angkor Thom and the Bayon",
+          "notes": "A tuk-tuk day on the small circuit.",
+          "where": "Angkor Archaeological Park",
+          "book": "",
+          "place": "cambodia/angkor-thom-bayon"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Ta Prohm",
+          "notes": "Visit early or late for fewer groups; paths are uneven.",
+          "where": "Angkor Archaeological Park",
+          "book": "",
+          "place": "cambodia/ta-prohm"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Siem Reap-Angkor International Airport (SAI)",
+          "to": "Siem Reap hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Tuk-tuk, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Siem Reap hotel area",
+          "to": "Siem Reap-Angkor International Airport (SAI)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Tuk-tuk, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cambodia-siem-reap-phnom-penh-5d",
+      "title": "Siem Reap and Phnom Penh in 5 Days",
+      "summary": "Angkor, then the capital with its palace and memorials.",
+      "days": 5,
+      "route": "Siem Reap > Phnom Penh",
+      "arrive": "Siem Reap (SAI)",
+      "depart": "Phnom Penh (PNH)",
+      "countries": [
+        "Cambodia"
+      ],
+      "regions": [],
+      "cities": [
+        "Siem Reap",
+        "Phnom Penh"
+      ],
+      "imageQuery": "Phnom Penh Royal Palace",
+      "highlights": [
+        "Angkor Wat",
+        "Bayon",
+        "Royal Palace",
+        "Tuol Sleng"
+      ],
+      "destinationKeys": [
+        "cambodia",
+        "cambodia/siem-reap",
+        "cambodia/phnom-penh"
+      ],
+      "hero": "cambodia/phnom-penh",
+      "sources": [
+        "Big World Small Pockets",
+        "Sommertage",
+        "Mad Monkey Hostels",
+        "KimKim",
+        "Erika Travel Ventures"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Siem Reap",
+          "hotel": "Hotel in Siem Reap",
+          "start": 0,
+          "nights": 2,
+          "area": "In central Siem Reap near Pub Street or on a quieter street towards Angkor",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Phnom Penh",
+          "hotel": "Hotel in Phnom Penh",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the riverside or Royal Palace for easy access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "1.5h",
+          "name": "Phare, The Cambodian Circus",
+          "notes": "Seats are limited; book ahead.",
+          "where": "Siem Reap",
+          "book": "Yes - book tickets",
+          "place": "cambodia/phare-circus"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "05:00",
+          "duration": "4h",
+          "name": "Angkor Wat at sunrise",
+          "notes": "Cover shoulders and knees; buy a pass in advance.",
+          "where": "Angkor Archaeological Park",
+          "book": "Yes - buy the Angkor pass",
+          "place": "cambodia/angkor-wat"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Royal Palace and Silver Pagoda",
+          "notes": "Cover shoulders and knees.",
+          "where": "Phnom Penh",
+          "book": "",
+          "place": "cambodia/royal-palace"
+        },
+        {
+          "day": 3,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Central Market and Russian Market",
+          "notes": "Good for silk, crafts and street food.",
+          "where": "Phnom Penh",
+          "book": "",
+          "place": "cambodia/phnom-penh-markets"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "17:45",
+          "duration": "2h",
+          "name": "Tuol Sleng and the Killing Fields",
+          "notes": "A sobering visit; dress respectfully.",
+          "where": "Phnom Penh",
+          "book": "",
+          "place": "cambodia/khmer-rouge-history"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Siem Reap-Angkor International Airport (SAI)",
+          "to": "Siem Reap hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Tuk-tuk, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Siem Reap",
+          "to": "Phnom Penh",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Tourist bus or minivan",
+          "notes": "The bus is the usual way; a short flight is an alternative.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Phnom Penh hotel",
+          "to": "Phnom Penh International Airport (PNH)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Tuk-tuk, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cambodia-siem-reap-battambang-phnom-penh-7d",
+      "title": "Cambodia Highlights in 7 Days",
+      "summary": "Angkor, Battambang countryside and the capital.",
+      "days": 7,
+      "route": "Siem Reap > Battambang > Phnom Penh",
+      "arrive": "Siem Reap (SAI)",
+      "depart": "Phnom Penh (PNH)",
+      "countries": [
+        "Cambodia"
+      ],
+      "regions": [],
+      "cities": [
+        "Siem Reap",
+        "Battambang",
+        "Phnom Penh"
+      ],
+      "imageQuery": "Battambang bamboo train",
+      "highlights": [
+        "Angkor Wat",
+        "Ta Prohm",
+        "Bamboo train",
+        "Royal Palace",
+        "Killing Fields"
+      ],
+      "destinationKeys": [
+        "cambodia",
+        "cambodia/siem-reap",
+        "cambodia/battambang",
+        "cambodia/phnom-penh"
+      ],
+      "hero": "cambodia/siem-reap",
+      "sources": [
+        "Big World Small Pockets",
+        "Sommertage",
+        "Mad Monkey Hostels",
+        "KimKim",
+        "Erika Travel Ventures"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Siem Reap",
+          "hotel": "Hotel in Siem Reap",
+          "start": 0,
+          "nights": 3,
+          "area": "In central Siem Reap near Pub Street or on a quieter street towards Angkor",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Battambang",
+          "hotel": "Hotel in Battambang",
+          "start": 3,
+          "nights": 1,
+          "area": "Near the river in Battambang, within reach of cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Phnom Penh",
+          "hotel": "Hotel in Phnom Penh",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the riverside or Royal Palace for easy access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "1.5h",
+          "name": "Phare, The Cambodian Circus",
+          "notes": "Seats are limited; book ahead.",
+          "where": "Siem Reap",
+          "book": "Yes - book tickets",
+          "place": "cambodia/phare-circus"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "05:00",
+          "duration": "4h",
+          "name": "Angkor Wat at sunrise",
+          "notes": "Cover shoulders and knees; buy a pass in advance.",
+          "where": "Angkor Archaeological Park",
+          "book": "Yes - buy the Angkor pass",
+          "place": "cambodia/angkor-wat"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Angkor Thom and the Bayon",
+          "notes": "A tuk-tuk day on the small circuit.",
+          "where": "Angkor Archaeological Park",
+          "book": "",
+          "place": "cambodia/angkor-thom-bayon"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Ta Prohm",
+          "notes": "Visit early or late for fewer groups; paths are uneven.",
+          "where": "Angkor Archaeological Park",
+          "book": "",
+          "place": "cambodia/ta-prohm"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "5h",
+          "name": "Bamboo train, bat cave and countryside",
+          "notes": "Tuk-tuk loop; the bats leave the cave at dusk.",
+          "where": "Battambang",
+          "book": "",
+          "place": "cambodia/battambang-countryside"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Royal Palace and Silver Pagoda",
+          "notes": "Cover shoulders and knees.",
+          "where": "Phnom Penh",
+          "book": "",
+          "place": "cambodia/royal-palace"
+        },
+        {
+          "day": 5,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Central Market and Russian Market",
+          "notes": "Good for silk, crafts and street food.",
+          "where": "Phnom Penh",
+          "book": "",
+          "place": "cambodia/phnom-penh-markets"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Siem Reap-Angkor International Airport (SAI)",
+          "to": "Siem Reap hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Tuk-tuk, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Siem Reap",
+          "to": "Battambang",
+          "time": "08:30",
+          "minutes": 200,
+          "carrier": "Tourist bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Battambang",
+          "to": "Phnom Penh",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Tourist bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Phnom Penh hotel",
+          "to": "Phnom Penh International Airport (PNH)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Tuk-tuk, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cambodia-classic-10d",
+      "title": "Cambodia Classic with Kampot in 10 Days",
+      "summary": "Angkor, Battambang, Phnom Penh and the riverside town of Kampot with a day at Kep.",
+      "days": 10,
+      "route": "Siem Reap > Battambang > Phnom Penh > Kampot",
+      "arrive": "Siem Reap (SAI)",
+      "depart": "Phnom Penh (PNH)",
+      "countries": [
+        "Cambodia"
+      ],
+      "regions": [],
+      "cities": [
+        "Siem Reap",
+        "Battambang",
+        "Phnom Penh",
+        "Kampot"
+      ],
+      "imageQuery": "Kampot river sunset Cambodia",
+      "highlights": [
+        "Angkor Wat",
+        "Battambang",
+        "Royal Palace",
+        "Kampot pepper",
+        "Rabbit Island"
+      ],
+      "destinationKeys": [
+        "cambodia",
+        "cambodia/siem-reap",
+        "cambodia/battambang",
+        "cambodia/phnom-penh",
+        "cambodia/kampot"
+      ],
+      "hero": "cambodia/kampot",
+      "sources": [
+        "Big World Small Pockets",
+        "Sommertage",
+        "Mad Monkey Hostels",
+        "KimKim",
+        "Erika Travel Ventures"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "food",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Siem Reap",
+          "hotel": "Hotel in Siem Reap",
+          "start": 0,
+          "nights": 3,
+          "area": "In central Siem Reap near Pub Street or on a quieter street towards Angkor",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Battambang",
+          "hotel": "Hotel in Battambang",
+          "start": 3,
+          "nights": 2,
+          "area": "Near the river in Battambang, within reach of cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Phnom Penh",
+          "hotel": "Hotel in Phnom Penh",
+          "start": 5,
+          "nights": 2,
+          "area": "Near the riverside or Royal Palace for easy access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kampot",
+          "hotel": "Hotel in Kampot",
+          "start": 7,
+          "nights": 2,
+          "area": "Near the river on the Kampot waterfront",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "1.5h",
+          "name": "Phare, The Cambodian Circus",
+          "notes": "Seats are limited; book ahead.",
+          "where": "Siem Reap",
+          "book": "Yes - book tickets",
+          "place": "cambodia/phare-circus"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "05:00",
+          "duration": "4h",
+          "name": "Angkor Wat at sunrise",
+          "notes": "Cover shoulders and knees; buy a pass in advance.",
+          "where": "Angkor Archaeological Park",
+          "book": "Yes - buy the Angkor pass",
+          "place": "cambodia/angkor-wat"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Angkor Thom and the Bayon",
+          "notes": "A tuk-tuk day on the small circuit.",
+          "where": "Angkor Archaeological Park",
+          "book": "",
+          "place": "cambodia/angkor-thom-bayon"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Ta Prohm",
+          "notes": "Visit early or late for fewer groups; paths are uneven.",
+          "where": "Angkor Archaeological Park",
+          "book": "",
+          "place": "cambodia/ta-prohm"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "5h",
+          "name": "Bamboo train, bat cave and countryside",
+          "notes": "Tuk-tuk loop; the bats leave the cave at dusk.",
+          "where": "Battambang",
+          "book": "",
+          "place": "cambodia/battambang-countryside"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Royal Palace and Silver Pagoda",
+          "notes": "Cover shoulders and knees.",
+          "where": "Phnom Penh",
+          "book": "",
+          "place": "cambodia/royal-palace"
+        },
+        {
+          "day": 6,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Central Market and Russian Market",
+          "notes": "Good for silk, crafts and street food.",
+          "where": "Phnom Penh",
+          "book": "",
+          "place": "cambodia/phnom-penh-markets"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Kampot pepper farms and sunset river cruise",
+          "notes": "Includes a river boat at sunset.",
+          "where": "Kampot",
+          "book": "",
+          "place": "cambodia/kampot-river"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Siem Reap-Angkor International Airport (SAI)",
+          "to": "Siem Reap hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Tuk-tuk, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Siem Reap",
+          "to": "Battambang",
+          "time": "08:30",
+          "minutes": 200,
+          "carrier": "Tourist bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Battambang",
+          "to": "Phnom Penh",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Tourist bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Phnom Penh",
+          "to": "Kampot",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Tourist bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Kampot",
+          "to": "Phnom Penh International Airport (PNH)",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Tourist bus or minivan",
+          "notes": "Allow a buffer for traffic on the way to the airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cambodia-complete-12d",
+      "title": "Complete Cambodia in 12 Days",
+      "summary": "Four days at Angkor, the quieter west, the capital and three nights on the south coast.",
+      "days": 12,
+      "route": "Siem Reap > Battambang > Phnom Penh > Kampot",
+      "arrive": "Siem Reap (SAI)",
+      "depart": "Phnom Penh (PNH)",
+      "countries": [
+        "Cambodia"
+      ],
+      "regions": [],
+      "cities": [
+        "Siem Reap",
+        "Battambang",
+        "Phnom Penh",
+        "Kampot"
+      ],
+      "imageQuery": "Ta Prohm roots Cambodia",
+      "highlights": [
+        "Angkor Wat",
+        "Ta Prohm",
+        "Floating village",
+        "Tuol Sleng",
+        "Kep and Rabbit Island"
+      ],
+      "destinationKeys": [
+        "cambodia",
+        "cambodia/siem-reap",
+        "cambodia/battambang",
+        "cambodia/phnom-penh",
+        "cambodia/kampot"
+      ],
+      "hero": "cambodia/siem-reap",
+      "sources": [
+        "Big World Small Pockets",
+        "Sommertage",
+        "Mad Monkey Hostels",
+        "KimKim",
+        "Erika Travel Ventures"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "photography",
+        "relax",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Siem Reap",
+          "hotel": "Hotel in Siem Reap",
+          "start": 0,
+          "nights": 4,
+          "area": "In central Siem Reap near Pub Street or on a quieter street towards Angkor",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Battambang",
+          "hotel": "Hotel in Battambang",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the river in Battambang, within reach of cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Phnom Penh",
+          "hotel": "Hotel in Phnom Penh",
+          "start": 6,
+          "nights": 2,
+          "area": "Near the riverside or Royal Palace for easy access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kampot",
+          "hotel": "Hotel in Kampot",
+          "start": 8,
+          "nights": 3,
+          "area": "Near the river on the Kampot waterfront",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "1.5h",
+          "name": "Phare, The Cambodian Circus",
+          "notes": "Seats are limited; book ahead.",
+          "where": "Siem Reap",
+          "book": "Yes - book tickets",
+          "place": "cambodia/phare-circus"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "05:00",
+          "duration": "4h",
+          "name": "Angkor Wat at sunrise",
+          "notes": "Cover shoulders and knees; buy a pass in advance.",
+          "where": "Angkor Archaeological Park",
+          "book": "Yes - buy the Angkor pass",
+          "place": "cambodia/angkor-wat"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Angkor Thom and the Bayon",
+          "notes": "A tuk-tuk day on the small circuit.",
+          "where": "Angkor Archaeological Park",
+          "book": "",
+          "place": "cambodia/angkor-thom-bayon"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Ta Prohm",
+          "notes": "Visit early or late for fewer groups; paths are uneven.",
+          "where": "Angkor Archaeological Park",
+          "book": "",
+          "place": "cambodia/ta-prohm"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Banteay Srei and the Grand Circuit",
+          "notes": "Start early to avoid the heat.",
+          "where": "Angkor Archaeological Park",
+          "book": "",
+          "place": "cambodia/banteay-srei"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "5h",
+          "name": "Bamboo train, bat cave and countryside",
+          "notes": "Tuk-tuk loop; the bats leave the cave at dusk.",
+          "where": "Battambang",
+          "book": "",
+          "place": "cambodia/battambang-countryside"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2.5h",
+          "name": "Royal Palace and Silver Pagoda",
+          "notes": "Cover shoulders and knees.",
+          "where": "Phnom Penh",
+          "book": "",
+          "place": "cambodia/royal-palace"
+        },
+        {
+          "day": 7,
+          "type": "Shopping",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Central Market and Russian Market",
+          "notes": "Good for silk, crafts and street food.",
+          "where": "Phnom Penh",
+          "book": "",
+          "place": "cambodia/phnom-penh-markets"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Kampot pepper farms and sunset river cruise",
+          "notes": "Includes a river boat at sunset.",
+          "where": "Kampot",
+          "book": "",
+          "place": "cambodia/kampot-river"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Kep crab market and Rabbit Island",
+          "notes": "Boats run to the island in about 20 minutes.",
+          "where": "Kep",
+          "book": "",
+          "place": "cambodia/kep-rabbit-island"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Siem Reap-Angkor International Airport (SAI)",
+          "to": "Siem Reap hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Tuk-tuk, taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Siem Reap",
+          "to": "Battambang",
+          "time": "08:30",
+          "minutes": 200,
+          "carrier": "Tourist bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Battambang",
+          "to": "Phnom Penh",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Tourist bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Phnom Penh",
+          "to": "Kampot",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Tourist bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Kampot",
+          "to": "Phnom Penh International Airport (PNH)",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Tourist bus or minivan",
+          "notes": "Allow a buffer for traffic on the way to the airport.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "cambodia/angkor-wat": {
+        "name": "Angkor Wat at sunrise",
+        "description": "The largest religious monument in the world, with five towers rising above a moat.",
+        "details": "Angkor Wat was built in the twelfth century for Suryavarman II and faces west. Sunrise from the causeway is the classic view, though it is crowded, and the galleries of bas-reliefs are quieter later in the morning. Cover shoulders and knees, as the temple is still a place of worship. Tickets are bought in advance at the Angkor ticket centre.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "cambodia/angkor-thom-bayon": {
+        "name": "Angkor Thom and the Bayon",
+        "description": "A walled royal city with the Bayon temple of 200 smiling stone faces.",
+        "details": "Angkor Thom was the last great capital of the Khmer empire, entered through a gate lined with giant statues. The Bayon temple has towers carved with smiling faces, and the Terrace of the Elephants and Baphuon are nearby. A tuk-tuk day around the small circuit passes all of them.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "cambodia/ta-prohm": {
+        "name": "Ta Prohm",
+        "description": "The temple left to the jungle, where giant tree roots grip the stone.",
+        "details": "Ta Prohm was kept largely as it was found, with silk-cotton and strangler fig trees growing over the ruins. It is made famous by the Tomb Raider film. Visit first thing in the morning to avoid the tour groups. The paths are uneven and can be slippery.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "cambodia/banteay-srei": {
+        "name": "Banteay Srei and the Grand Circuit",
+        "description": "The finely carved pink sandstone temple known as the citadel of women, with further temples on the way.",
+        "details": "Banteay Srei is small but has the most delicate carving in Angkor. It lies about 25 kilometres from Siem Reap, and a day trip can include Banteay Samre and Pre Rup temples on the grand circuit. Starting early avoids the heat.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "cambodia/tonle-sap": {
+        "name": "Tonle Sap floating village",
+        "description": "A boat trip to a stilted village on the great lake, at its best in the wet season.",
+        "details": "Floating and stilted villages around Kompong Phluk and Kampong Khleang rise out of the lake, with houses on tall poles in the dry season. A small boat visits flooded forests during the high-water months, from about August to November. Choose a community-run tour and keep any donations responsible.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cambodia/phare-circus": {
+        "name": "Phare, The Cambodian Circus",
+        "description": "An evening of acrobatics, music and theatre by graduates of an arts school in Battambang.",
+        "details": "Phare tells stories through dance, acrobatics and music by young Cambodian artists trained at a charity school, with a nightly show in Siem Reap. Tickets are limited, so book ahead. The show lasts about an hour and is held in a tent.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cambodia/battambang-countryside": {
+        "name": "Battambang bamboo train, bat cave and countryside",
+        "description": "A rickety bamboo train, a bat cave at sunset and rural villages around a quiet French-era town.",
+        "details": "Battambang has colonial architecture and a young arts scene. The bamboo train is a wooden platform on rails running through fields, now a short tourist ride. Phnom Sampeau offers a cave where bats stream out at dusk, and the Killing Caves memorial. A tuk-tuk loop covers the sights.",
+        "interests": [
+          "authentic_local",
+          "culture",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "cambodia/royal-palace": {
+        "name": "Royal Palace and Silver Pagoda",
+        "description": "The residence of the king in Phnom Penh, with a pagoda floor of silver tiles.",
+        "details": "The Royal Palace has gilded roofs and the Silver Pagoda with its floor of more than 5,000 silver tiles and an emerald Buddha. Dress modestly, covering shoulders and knees. Parts of the palace are closed when the king is present. The riverfront promenade is close by.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cambodia/khmer-rouge-history": {
+        "name": "Tuol Sleng and the Killing Fields",
+        "description": "Memorials to the victims of the Khmer Rouge regime, a sobering but important visit.",
+        "details": "Tuol Sleng (S-21) was a school turned prison and now a genocide museum, and Choeung Ek is a mass-grave site outside the city with an audio guide. The visits are harrowing, so allow a quiet evening afterwards. Dress respectfully, and do not take inappropriate photographs.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cambodia/phnom-penh-markets": {
+        "name": "Central Market and Russian Market",
+        "description": "Art Deco halls and busy stalls for crafts, silk and street food.",
+        "details": "The Central Market (Psar Thmei) is a domed Art Deco building with jewellery and goods, and the Russian Market (Psar Toul Tom Poung) is better for souvenirs, silk and antiques. Evening at the riverside is a lively time for food and a walk.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cambodia/kampot-river": {
+        "name": "Kampot river and pepper farms",
+        "description": "A sleepy riverside town with colonial buildings, famous for its pepper, and a sunset river cruise.",
+        "details": "Kampot is a laid-back town on the Praek Tuek Chhu river, known for its pepper and salt farms. Day trips visit pepper plantations, caves and the Bokor hill station. A sunset boat trip on the river with a drink is a favourite. The town has hostels, cafes and guesthouses with river views.",
+        "interests": [
+          "relax",
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "cambodia/kep-rabbit-island": {
+        "name": "Kep crab market and Rabbit Island",
+        "description": "A quiet seaside town known for crab and a nearby island with beach huts.",
+        "details": "Kep is famous for its crab market, where fresh crab is cooked with Kampot pepper. Boats cross to Rabbit Island in about 20 minutes, with hammocks, simple huts and calm swimming. Kep is about 30 minutes from Kampot and works as a day trip.",
+        "interests": [
+          "food",
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "cambodia": {
+        "name": "Cambodia",
+        "description": "The land of Angkor, with Mekong river towns, a capital on the water and a quiet south coast.",
+        "images": []
+      },
+      "cambodia/siem-reap": {
+        "name": "Siem Reap",
+        "description": "The base for the Angkor temples, with lively street food and night markets.",
+        "images": []
+      },
+      "cambodia/battambang": {
+        "name": "Battambang",
+        "description": "A calm provincial town of French colonial buildings and countryside tours.",
+        "images": []
+      },
+      "cambodia/phnom-penh": {
+        "name": "Phnom Penh",
+        "description": "The capital at the meeting of the Mekong and Tonle Sap rivers.",
+        "images": []
+      },
+      "cambodia/kampot": {
+        "name": "Kampot",
+        "description": "A riverside town known for pepper farms and sunsets.",
+        "images": []
+      }
+    }
+  }
+}

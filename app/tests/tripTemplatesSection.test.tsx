@@ -98,8 +98,8 @@ describe('TripTemplatesSection', () => {
     const ui = mount();
     await ui.findByText('Lisbon in 4 days');
     const japan = within(ui.getByTestId('trip-templates-group-japan'));
-    expect(ui.getByText('▾ Japan')).toBeTruthy();
-    expect(ui.getByText('▾ Portugal')).toBeTruthy();
+    expect(ui.getByLabelText('Hide Japan templates')).toBeTruthy();
+    expect(ui.getByLabelText('Hide Portugal templates')).toBeTruthy();
     expect(japan.getByText('2 templates')).toBeTruthy();
     expect(within(ui.getByTestId('trip-templates-group-portugal')).getByText('1 template')).toBeTruthy();
     // Japan lists its 7-day template before its 10-day one, and not Portugal's.
@@ -117,7 +117,7 @@ describe('TripTemplatesSection', () => {
     await ui.findByText('Lisbon in 4 days');
     fireEvent.press(ui.getByTestId('trip-templates-group-toggle-japan'));
     expect(ui.queryByTestId('trip-templates-row-japan-t01')).toBeNull();
-    expect(ui.getByText('▸ Japan')).toBeTruthy();
+    expect(ui.getByLabelText('Show Japan templates')).toBeTruthy();
     expect(ui.getByTestId('trip-templates-download-group-japan')).toBeTruthy();
     expect(ui.getByTestId('trip-templates-row-portugal-lisbon-4d')).toBeTruthy();
     fireEvent.press(ui.getByTestId('trip-templates-group-toggle-japan'));

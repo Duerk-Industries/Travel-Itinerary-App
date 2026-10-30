@@ -112,7 +112,7 @@ describe('DailyExpensesTab', () => {
       />
     );
 
-    fireEvent.press(getByText('+ Add Expense'));
+    fireEvent.press(getByText('Add Expense'));
     expect(getByText('EUR')).toBeTruthy();
     expect(queryByTestId('expense-detail-modal')).toBeNull();
     fireEvent.press(getAllByText('$12.00')[0]);
@@ -493,7 +493,7 @@ describe('DailyExpensesTab', () => {
         />
       );
 
-      fireEvent.press(getByText('+ Add Expense'));
+      fireEvent.press(getByText('Add Expense'));
       fireEvent.changeText(getByPlaceholderText('Amount'), '18.75');
       fireEvent.changeText(getByPlaceholderText('Description'), 'Flour Bakery');
       expect(() => getByPlaceholderText('Notes')).toThrow();

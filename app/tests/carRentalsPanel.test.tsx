@@ -5,6 +5,7 @@
 /// <reference types="node" />
 
 import React from 'react';
+import * as ReactNative from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import CarRentalsPanel from '../components/CarRentalsPanel';
 import { createInitialCarRentalDraft, type CarRental } from '../tabs/carRentals';
@@ -114,6 +115,34 @@ beforeEach(() => {
 });
 
 describe('CarRentalsPanel', () => {
+  it('leaves adding and table editing to the bottom bar on a phone', () => {
+    const dimensions = jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({ width: 430, height: 900, scale: 1, fontScale: 1 });
+    try {
+      const { queryByTestId } = render(<CarRentalsPanel {...baseProps} carRentals={[makeCarRental()]} compactCards />);
+      expect(queryByTestId('car-rental-add')).toBeNull();
+      expect(queryByTestId('car-rental-table-edit')).toBeNull();
+    } finally { dimensions.mockRestore(); }
+  });
+
+  it.each([false, true])('compact rental summaries open details (read-only: %s)', (isFollowingMode) => {
+    const { getByTestId, getByText, queryByTestId } = render(
+      <CarRentalsPanel {...baseProps} carRentals={[makeCarRental()]} compactCards isFollowingMode={isFollowingMode} />,
+    );
+    expect(getByTestId('car-rental-summary-list')).toBeTruthy();
+    expect(queryByTestId('car-rentals-table')).toBeNull();
+    expect(queryByTestId('car-rental-table-edit')).toBeNull();
+    expect(getByText('LAX → SFO')).toBeTruthy();
+    fireEvent.press(getByTestId('car-rental-summary-car-1'));
+    expect(getByTestId('car-rental-details')).toBeTruthy();
+    if (isFollowingMode) {
+      expect(queryByTestId('car-rental-details-edit')).toBeNull();
+    } else {
+      fireEvent.press(getByTestId('car-rental-details-edit'));
+      expect(queryByTestId('car-rental-details')).toBeNull();
+      expect(getByTestId('car-rental-form-modal')).toBeTruthy();
+    }
+  });
+
   it('opens the edit dialog when a table row is tapped', () => {
     const rental = makeCarRental();
     const { getByTestId, getByText } = render(

@@ -4,6 +4,7 @@
 /// <reference types="jest" />
 /// <reference types="node" />
 
+import * as ReactNative from 'react-native';
 import React, { useState } from 'react';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { ActivityTab, type Tour } from '../tabs/activities';
@@ -12,6 +13,7 @@ import EditableDataGrid from '../components/EditableDataGrid';
 jest.mock('react-native', () => {
   return {
     Platform: { OS: 'ios' },
+    useWindowDimensions: jest.fn(() => ({ width: 1024, height: 768, scale: 1, fontScale: 1 })),
     ScrollView: 'ScrollView',
     Text: 'Text',
     TextInput: 'TextInput',
@@ -154,6 +156,15 @@ const renderActivityHarness = (initialTours: Tour[], extraProps: Record<string, 
 };
 
 describe('Activities grid editing', () => {
+  it('hides the separate add and table-edit buttons on a phone', () => {
+    const dimensions = jest.mocked(ReactNative.useWindowDimensions).mockReturnValue({ width: 430, height: 900, scale: 1, fontScale: 1 });
+    try {
+      const view = renderActivityHarness([tourOne]);
+      expect(view.queryByTestId('activity-table-edit')).toBeNull();
+      expect(view.queryByTestId('activity-add')).toBeNull();
+    } finally { dimensions.mockReturnValue({ width: 1024, height: 768, scale: 1, fontScale: 1 }); }
+  });
+
   it('replaces a payer from the dropdown and rejects multiple pasted payers', () => {
     const view = renderActivityHarness([tourOne], { groupMembers: [
       { id: 'member-2', firstName: 'Zoe', status: 'active' }, ...members,

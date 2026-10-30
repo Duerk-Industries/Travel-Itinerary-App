@@ -1,0 +1,1445 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, The Culture Trip, Traverse Blog and Jetsetting Fools itineraries for Belgium",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "belgium-brussels-bruges-4d",
+      "title": "Brussels and Bruges in 4 Days",
+      "summary": "A quick taste of Belgium: the Grand-Place, then a medieval canal town.",
+      "days": 4,
+      "route": "Brussels > Bruges",
+      "arrive": "Brussels (BRU)",
+      "depart": "Brussels (BRU)",
+      "countries": [
+        "Belgium"
+      ],
+      "regions": [
+        "Flanders"
+      ],
+      "cities": [
+        "Brussels",
+        "Bruges"
+      ],
+      "imageQuery": "Bruges canal belfry",
+      "highlights": [
+        "Grand-Place",
+        "Bruges Belfry",
+        "Canal boat tour",
+        "Belgian chocolate"
+      ],
+      "destinationKeys": [
+        "belgium",
+        "belgium/brussels",
+        "belgium/flanders",
+        "belgium/bruges"
+      ],
+      "hero": "belgium/bruges",
+      "sources": [
+        "KimKim",
+        "The Culture Trip",
+        "Traverse Blog",
+        "Jetsetting Fools",
+        "Next Level of Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Brussels",
+          "hotel": "Hotel in Brussels",
+          "start": 0,
+          "nights": 1,
+          "area": "Near the Grand-Place or Sablon; the centre is walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bruges",
+          "hotel": "Hotel in Bruges",
+          "start": 1,
+          "nights": 2,
+          "area": "In the old town within walking distance of the Markt, ideally away from the busiest streets",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Grand-Place and old centre",
+          "notes": "Visit early or at night when it is lit; look for the Manneken Pis nearby.",
+          "where": "Brussels",
+          "book": "",
+          "place": "belgium/grand-place"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Chocolate and beer tasting walk",
+          "notes": "Try a lambic brewery or a guided tasting; pace the strong beers.",
+          "where": "Brussels",
+          "book": "Yes - book tastings or brewery tours",
+          "place": "belgium/chocolate-beer"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Markt square and Belfry climb",
+          "notes": "The climb is 366 steps with timed tickets.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-belfry"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "0.5h",
+          "name": "Canal boat tour",
+          "notes": "Quiet in the morning and evening.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-canal-boat"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Begijnhof and Minnewater",
+          "notes": "A quiet walled court and park by the lake.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/begijnhof"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "De Halve Maan brewery tour",
+          "notes": "Timed tickets sell out in summer.",
+          "where": "Bruges",
+          "book": "Yes - book brewery tours",
+          "place": "belgium/bruges-beer-brewery"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Brussels Airport (BRU)",
+          "to": "Brussels hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Brussels",
+          "to": "Bruges",
+          "time": "09:30",
+          "minutes": 65,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Bruges",
+          "to": "Brussels Airport (BRU)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "SNCB train",
+          "notes": "Change in Brussels-Midi or take a direct airport train.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "belgium-brussels-bruges-5d",
+      "title": "Brussels and Bruges in 5 Days",
+      "summary": "Two nights in the capital and two in Bruges, with art, chocolate and canals.",
+      "days": 5,
+      "route": "Brussels > Bruges",
+      "arrive": "Brussels (BRU)",
+      "depart": "Brussels (BRU)",
+      "countries": [
+        "Belgium"
+      ],
+      "regions": [
+        "Flanders"
+      ],
+      "cities": [
+        "Brussels",
+        "Bruges"
+      ],
+      "imageQuery": "Brussels Grand-Place",
+      "highlights": [
+        "Grand-Place",
+        "Magritte Museum",
+        "Bruges Belfry",
+        "Halve Maan brewery"
+      ],
+      "destinationKeys": [
+        "belgium",
+        "belgium/brussels",
+        "belgium/flanders",
+        "belgium/bruges"
+      ],
+      "hero": "belgium/brussels",
+      "sources": [
+        "KimKim",
+        "The Culture Trip",
+        "Traverse Blog",
+        "Jetsetting Fools",
+        "Next Level of Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Brussels",
+          "hotel": "Hotel in Brussels",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the Grand-Place or Sablon; the centre is walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bruges",
+          "hotel": "Hotel in Bruges",
+          "start": 2,
+          "nights": 2,
+          "area": "In the old town within walking distance of the Markt, ideally away from the busiest streets",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Atomium",
+          "notes": "Go up to the top sphere for the city panorama.",
+          "where": "Heysel, Brussels",
+          "book": "",
+          "place": "belgium/atomium"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Grand-Place and old centre",
+          "notes": "Visit early or at night when it is lit; look for the Manneken Pis nearby.",
+          "where": "Brussels",
+          "book": "",
+          "place": "belgium/grand-place"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Magritte Museum or comic-strip murals",
+          "notes": "Choose art or comics; allow half a day for either.",
+          "where": "Brussels",
+          "book": "",
+          "place": "belgium/brussels-museums"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Chocolate and beer tasting walk",
+          "notes": "Try a lambic brewery or a guided tasting; pace the strong beers.",
+          "where": "Brussels",
+          "book": "Yes - book tastings or brewery tours",
+          "place": "belgium/chocolate-beer"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Markt square and Belfry climb",
+          "notes": "The climb is 366 steps with timed tickets.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-belfry"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "17:30",
+          "duration": "0.5h",
+          "name": "Canal boat tour",
+          "notes": "Quiet in the morning and evening.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-canal-boat"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Begijnhof and Minnewater",
+          "notes": "A quiet walled court and park by the lake.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/begijnhof"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "De Halve Maan brewery tour",
+          "notes": "Timed tickets sell out in summer.",
+          "where": "Bruges",
+          "book": "Yes - book brewery tours",
+          "place": "belgium/bruges-beer-brewery"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Brussels Airport (BRU)",
+          "to": "Brussels hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Brussels",
+          "to": "Bruges",
+          "time": "10:00",
+          "minutes": 65,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Bruges",
+          "to": "Brussels Airport (BRU)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "SNCB train",
+          "notes": "Change in Brussels-Midi or take a direct airport train.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "belgium-four-cities-7d",
+      "title": "Brussels, Bruges, Ghent and Antwerp in 7 Days",
+      "summary": "The classic Belgian loop by train: capital, canal town, castle city and diamond port.",
+      "days": 7,
+      "route": "Brussels > Bruges > Ghent > Antwerp",
+      "arrive": "Brussels (BRU)",
+      "depart": "Brussels (BRU)",
+      "countries": [
+        "Belgium"
+      ],
+      "regions": [
+        "Flanders"
+      ],
+      "cities": [
+        "Brussels",
+        "Bruges",
+        "Ghent",
+        "Antwerp"
+      ],
+      "imageQuery": "Ghent Graslei Korenlei",
+      "highlights": [
+        "Grand-Place",
+        "Bruges Belfry",
+        "Ghent Altarpiece",
+        "Antwerp cathedral"
+      ],
+      "destinationKeys": [
+        "belgium",
+        "belgium/brussels",
+        "belgium/flanders",
+        "belgium/bruges",
+        "belgium/ghent",
+        "belgium/antwerp"
+      ],
+      "hero": "belgium/ghent",
+      "sources": [
+        "KimKim",
+        "The Culture Trip",
+        "Traverse Blog",
+        "Jetsetting Fools",
+        "Next Level of Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Brussels",
+          "hotel": "Hotel in Brussels",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the Grand-Place or Sablon; the centre is walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bruges",
+          "hotel": "Hotel in Bruges",
+          "start": 2,
+          "nights": 2,
+          "area": "In the old town within walking distance of the Markt, ideally away from the busiest streets",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ghent",
+          "hotel": "Hotel in Ghent",
+          "start": 4,
+          "nights": 1,
+          "area": "Near Graslei and Korenlei in the old centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Antwerp",
+          "hotel": "Hotel in Antwerp",
+          "start": 5,
+          "nights": 1,
+          "area": "Near the cathedral or Central Station",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Grand-Place and old centre",
+          "notes": "Visit early or at night when it is lit; look for the Manneken Pis nearby.",
+          "where": "Brussels",
+          "book": "",
+          "place": "belgium/grand-place"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Magritte Museum or comic-strip murals",
+          "notes": "Choose art or comics; allow half a day for either.",
+          "where": "Brussels",
+          "book": "",
+          "place": "belgium/brussels-museums"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Chocolate and beer tasting walk",
+          "notes": "Try a lambic brewery or a guided tasting; pace the strong beers.",
+          "where": "Brussels",
+          "book": "Yes - book tastings or brewery tours",
+          "place": "belgium/chocolate-beer"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Markt square and Belfry climb",
+          "notes": "The climb is 366 steps with timed tickets.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-belfry"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "17:00",
+          "duration": "0.5h",
+          "name": "Canal boat tour",
+          "notes": "Quiet in the morning and evening.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-canal-boat"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Begijnhof and Minnewater",
+          "notes": "A quiet walled court and park by the lake.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/begijnhof"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "De Halve Maan brewery tour",
+          "notes": "Timed tickets sell out in summer.",
+          "where": "Bruges",
+          "book": "Yes - book brewery tours",
+          "place": "belgium/bruges-beer-brewery"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Gravensteen castle",
+          "notes": "Climb the walls for the view over the old centre.",
+          "where": "Ghent",
+          "book": "",
+          "place": "belgium/ghent-gravensteen"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "1.5h",
+          "name": "St Bavo Cathedral and the Ghent Altarpiece",
+          "notes": "Timed tickets are required.",
+          "where": "Ghent",
+          "book": "Yes - book altarpiece timed entry",
+          "place": "belgium/ghent-altarpiece"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Graslei and Korenlei at dusk",
+          "notes": "Walk the quays when the guild houses are lit.",
+          "where": "Ghent",
+          "book": "",
+          "place": "belgium/graslei-korenlei"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Cathedral of Our Lady and Grote Markt",
+          "notes": "See the Rubens paintings inside; the Rubenshuis is nearby.",
+          "where": "Antwerp",
+          "book": "",
+          "place": "belgium/antwerp-cathedral"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Diamond district and fashion quarter",
+          "notes": "Look at Central Station on the way.",
+          "where": "Antwerp",
+          "book": "",
+          "place": "belgium/antwerp-diamond-fashion"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Brussels Airport (BRU)",
+          "to": "Brussels hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Brussels",
+          "to": "Bruges",
+          "time": "10:00",
+          "minutes": 65,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Bruges",
+          "to": "Ghent",
+          "time": "09:30",
+          "minutes": 25,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Ghent",
+          "to": "Antwerp",
+          "time": "09:30",
+          "minutes": 50,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Antwerp",
+          "to": "Brussels Airport (BRU)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "SNCB train",
+          "notes": "Direct trains serve the airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "belgium-ghent-bruges-brussels-8d",
+      "title": "Ghent, Bruges, Antwerp and Brussels in 8 Days",
+      "summary": "A different order with more time in Ghent: start in the capital, then the lively canal cities.",
+      "days": 8,
+      "route": "Brussels > Ghent > Bruges > Antwerp",
+      "arrive": "Brussels (BRU)",
+      "depart": "Brussels (BRU)",
+      "countries": [
+        "Belgium"
+      ],
+      "regions": [
+        "Flanders"
+      ],
+      "cities": [
+        "Brussels",
+        "Ghent",
+        "Bruges",
+        "Antwerp"
+      ],
+      "imageQuery": "Antwerp Grote Markt",
+      "highlights": [
+        "Atomium",
+        "Gravensteen",
+        "Bruges brewery",
+        "Ostend coast",
+        "Antwerp"
+      ],
+      "destinationKeys": [
+        "belgium",
+        "belgium/brussels",
+        "belgium/flanders",
+        "belgium/ghent",
+        "belgium/bruges",
+        "belgium/antwerp"
+      ],
+      "hero": "belgium/flanders",
+      "sources": [
+        "KimKim",
+        "The Culture Trip",
+        "Traverse Blog",
+        "Jetsetting Fools",
+        "Next Level of Travel"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "food",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Brussels",
+          "hotel": "Hotel in Brussels",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the Grand-Place or Sablon; the centre is walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ghent",
+          "hotel": "Hotel in Ghent",
+          "start": 2,
+          "nights": 2,
+          "area": "Near Graslei and Korenlei in the old centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bruges",
+          "hotel": "Hotel in Bruges",
+          "start": 4,
+          "nights": 2,
+          "area": "In the old town within walking distance of the Markt, ideally away from the busiest streets",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Antwerp",
+          "hotel": "Hotel in Antwerp",
+          "start": 6,
+          "nights": 1,
+          "area": "Near the cathedral or Central Station",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Atomium",
+          "notes": "Go up to the top sphere for the city panorama.",
+          "where": "Heysel, Brussels",
+          "book": "",
+          "place": "belgium/atomium"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Grand-Place and old centre",
+          "notes": "Visit early or at night when it is lit; look for the Manneken Pis nearby.",
+          "where": "Brussels",
+          "book": "",
+          "place": "belgium/grand-place"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Chocolate and beer tasting walk",
+          "notes": "Try a lambic brewery or a guided tasting; pace the strong beers.",
+          "where": "Brussels",
+          "book": "Yes - book tastings or brewery tours",
+          "place": "belgium/chocolate-beer"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Gravensteen castle",
+          "notes": "Climb the walls for the view over the old centre.",
+          "where": "Ghent",
+          "book": "",
+          "place": "belgium/ghent-gravensteen"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "1.5h",
+          "name": "St Bavo Cathedral and the Ghent Altarpiece",
+          "notes": "Timed tickets are required.",
+          "where": "Ghent",
+          "book": "Yes - book altarpiece timed entry",
+          "place": "belgium/ghent-altarpiece"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Graslei and Korenlei at dusk",
+          "notes": "Walk the quays when the guild houses are lit.",
+          "where": "Ghent",
+          "book": "",
+          "place": "belgium/graslei-korenlei"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Markt square and Belfry climb",
+          "notes": "The climb is 366 steps with timed tickets.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-belfry"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "17:00",
+          "duration": "0.5h",
+          "name": "Canal boat tour",
+          "notes": "Quiet in the morning and evening.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-canal-boat"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Ostend and the coast tram",
+          "notes": "Windy on the promenade; bring a layer.",
+          "where": "Ostend",
+          "book": "",
+          "place": "belgium/ostend-coast"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Cathedral of Our Lady and Grote Markt",
+          "notes": "See the Rubens paintings inside; the Rubenshuis is nearby.",
+          "where": "Antwerp",
+          "book": "",
+          "place": "belgium/antwerp-cathedral"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Diamond district and fashion quarter",
+          "notes": "Look at Central Station on the way.",
+          "where": "Antwerp",
+          "book": "",
+          "place": "belgium/antwerp-diamond-fashion"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Brussels Airport (BRU)",
+          "to": "Brussels hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Brussels",
+          "to": "Ghent",
+          "time": "10:00",
+          "minutes": 35,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Ghent",
+          "to": "Bruges",
+          "time": "09:30",
+          "minutes": 25,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Bruges",
+          "to": "Antwerp",
+          "time": "09:30",
+          "minutes": 80,
+          "carrier": "SNCB train",
+          "notes": "Change in Ghent or Brussels.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Antwerp",
+          "to": "Brussels Airport (BRU)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "belgium-complete-10d",
+      "title": "Complete Belgium in 10 Days",
+      "summary": "Three nights each in Brussels and Bruges plus Ghent and Antwerp, with side trips to Ypres and the coast.",
+      "days": 10,
+      "route": "Brussels > Bruges > Ghent > Antwerp",
+      "arrive": "Brussels (BRU)",
+      "depart": "Brussels (BRU)",
+      "countries": [
+        "Belgium"
+      ],
+      "regions": [
+        "Flanders"
+      ],
+      "cities": [
+        "Brussels",
+        "Bruges",
+        "Ghent",
+        "Antwerp"
+      ],
+      "imageQuery": "Ypres Menin Gate Belgium",
+      "highlights": [
+        "Atomium",
+        "Bruges canals",
+        "Flanders Fields",
+        "Ghent Altarpiece",
+        "Antwerp"
+      ],
+      "destinationKeys": [
+        "belgium",
+        "belgium/brussels",
+        "belgium/flanders",
+        "belgium/bruges",
+        "belgium/ghent",
+        "belgium/antwerp"
+      ],
+      "hero": "belgium/bruges",
+      "sources": [
+        "KimKim",
+        "The Culture Trip",
+        "Traverse Blog",
+        "Jetsetting Fools",
+        "Next Level of Travel"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "food",
+        "authentic_local",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Brussels",
+          "hotel": "Hotel in Brussels",
+          "start": 0,
+          "nights": 3,
+          "area": "Near the Grand-Place or Sablon; the centre is walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bruges",
+          "hotel": "Hotel in Bruges",
+          "start": 3,
+          "nights": 3,
+          "area": "In the old town within walking distance of the Markt, ideally away from the busiest streets",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Ghent",
+          "hotel": "Hotel in Ghent",
+          "start": 6,
+          "nights": 2,
+          "area": "Near Graslei and Korenlei in the old centre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Antwerp",
+          "hotel": "Hotel in Antwerp",
+          "start": 8,
+          "nights": 1,
+          "area": "Near the cathedral or Central Station",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Grand-Place and old centre",
+          "notes": "Visit early or at night when it is lit; look for the Manneken Pis nearby.",
+          "where": "Brussels",
+          "book": "",
+          "place": "belgium/grand-place"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Magritte Museum or comic-strip murals",
+          "notes": "Choose art or comics; allow half a day for either.",
+          "where": "Brussels",
+          "book": "",
+          "place": "belgium/brussels-museums"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Atomium",
+          "notes": "Go up to the top sphere for the city panorama.",
+          "where": "Heysel, Brussels",
+          "book": "",
+          "place": "belgium/atomium"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Chocolate and beer tasting walk",
+          "notes": "Try a lambic brewery or a guided tasting; pace the strong beers.",
+          "where": "Brussels",
+          "book": "Yes - book tastings or brewery tours",
+          "place": "belgium/chocolate-beer"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Markt square and Belfry climb",
+          "notes": "The climb is 366 steps with timed tickets.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-belfry"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "17:00",
+          "duration": "0.5h",
+          "name": "Canal boat tour",
+          "notes": "Quiet in the morning and evening.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/bruges-canal-boat"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Ypres and Flanders Fields",
+          "notes": "Time the evening for the Last Post at the Menin Gate if staying on.",
+          "where": "Ypres",
+          "book": "Yes - book a guided battlefield tour",
+          "place": "belgium/ypres-flanders-fields"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Begijnhof and Minnewater",
+          "notes": "A quiet walled court and park by the lake.",
+          "where": "Bruges",
+          "book": "",
+          "place": "belgium/begijnhof"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "De Halve Maan brewery tour",
+          "notes": "Timed tickets sell out in summer.",
+          "where": "Bruges",
+          "book": "Yes - book brewery tours",
+          "place": "belgium/bruges-beer-brewery"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Gravensteen castle",
+          "notes": "Climb the walls for the view over the old centre.",
+          "where": "Ghent",
+          "book": "",
+          "place": "belgium/ghent-gravensteen"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "St Bavo Cathedral and the Ghent Altarpiece",
+          "notes": "Timed tickets are required.",
+          "where": "Ghent",
+          "book": "Yes - book altarpiece timed entry",
+          "place": "belgium/ghent-altarpiece"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Graslei and Korenlei at dusk",
+          "notes": "Walk the quays when the guild houses are lit.",
+          "where": "Ghent",
+          "book": "",
+          "place": "belgium/graslei-korenlei"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Ostend and the coast tram",
+          "notes": "Windy on the promenade; bring a layer.",
+          "where": "Ostend",
+          "book": "",
+          "place": "belgium/ostend-coast"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "Cathedral of Our Lady and Grote Markt",
+          "notes": "See the Rubens paintings inside; the Rubenshuis is nearby.",
+          "where": "Antwerp",
+          "book": "",
+          "place": "belgium/antwerp-cathedral"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Diamond district and fashion quarter",
+          "notes": "Look at Central Station on the way.",
+          "where": "Antwerp",
+          "book": "",
+          "place": "belgium/antwerp-diamond-fashion"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Brussels Airport (BRU)",
+          "to": "Brussels hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Brussels",
+          "to": "Bruges",
+          "time": "10:00",
+          "minutes": 65,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Bruges",
+          "to": "Ghent",
+          "time": "10:00",
+          "minutes": 25,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Ghent",
+          "to": "Antwerp",
+          "time": "09:30",
+          "minutes": 50,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Antwerp",
+          "to": "Brussels Airport (BRU)",
+          "time": "10:00",
+          "minutes": 40,
+          "carrier": "SNCB train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "belgium/grand-place": {
+        "name": "Grand-Place, Brussels",
+        "description": "The gilded guildhall square at the heart of Brussels, a UNESCO site.",
+        "details": "The Grand-Place is ringed by ornate guildhalls and the Gothic town hall, and is lit up at night. Biennial flower carpets cover it in August in some years. The surrounding lanes hold chocolate shops, waffle stands and beer bars, and nearby is the Manneken Pis. It is best early morning or after dark.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/brussels-museums": {
+        "name": "Magritte Museum and comic-strip walls",
+        "description": "Surrealist art and Belgian comic heritage in the capital.",
+        "details": "The Magritte Museum holds the largest collection of the surrealist painter work. Brussels is also the home of the comic strip, with murals of Tintin, the Smurfs and Lucky Luke on walls around the centre and a Comic Strip Museum. Allow half a day for either.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/atomium": {
+        "name": "Atomium",
+        "description": "The giant atom-shaped building from the 1958 World Expo, with views from the top sphere.",
+        "details": "The Atomium is a stainless steel model of an iron crystal, with spheres linked by tubes and escalators. The top sphere has a panorama of Brussels. Exhibitions fill the other spheres. It is on the northern edge of the city, reached by metro.",
+        "interests": [
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/chocolate-beer": {
+        "name": "Belgian chocolate and beer tasting",
+        "description": "A walking tasting of pralines, waffles and Belgian beers in the old centre.",
+        "details": "Brussels is full of chocolatiers and bars with long beer lists. A guided tasting walk or a small brewery visit, such as the Cantillon lambic brewery, links the history to what you taste. Beers can be strong, so pace yourself.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/bruges-belfry": {
+        "name": "Bruges Markt and Belfry",
+        "description": "The medieval market square with a 83-metre belfry that visitors can climb.",
+        "details": "The Belfry of Bruges has 366 steps to a view over the red roofs, and a carillon that rings on the hour. The Markt below is lined with step-gabled houses and horse carriages. Climb early, because tickets are timed. It is next to the Burg square and the Basilica of the Holy Blood.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "belgium/bruges-canal-boat": {
+        "name": "Bruges canal boat tour",
+        "description": "A thirty-minute boat ride along the medieval waterways, passing bridges and gardens.",
+        "details": "Small open boats leave from several jetties around the centre, with guides in several languages. The ride passes the Rozenhoedkaai, one of the most photographed views in the city. Queues are shortest in the morning or the evening. Bring a layer in cool weather.",
+        "interests": [
+          "relax",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/begijnhof": {
+        "name": "Begijnhof and Minnewater",
+        "description": "A peaceful walled almshouse court and the Lake of Love on the south side of Bruges.",
+        "details": "The Begijnhof is a tranquil enclosure of whitewashed houses around a lawn that blooms with daffodils in spring. Minnewater park has a lake with swans and a lock house. Together they offer a quiet respite from the busy centre, a short walk from the train station.",
+        "interests": [
+          "relax",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/bruges-beer-brewery": {
+        "name": "De Halve Maan brewery",
+        "description": "The last working brewery in the centre of Bruges, with tours and a rooftop terrace.",
+        "details": "De Halve Maan has been brewing in the heart of Bruges for generations and makes the Brugse Zot and Straffe Hendrik beers. Tours show the brewery, finishing with a beer on the roof terrace. Tickets are timed and sell out in summer.",
+        "interests": [
+          "food",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/ghent-gravensteen": {
+        "name": "Gravensteen castle, Ghent",
+        "description": "A moated medieval castle of the Counts of Flanders in the middle of the city.",
+        "details": "Gravensteen has towers, a keep, dungeons and a collection of medieval weapons, with views over Ghent from the walls. An audio guide tells the story with some humour. It is on the edge of the old centre near the Graslei.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "belgium/ghent-altarpiece": {
+        "name": "St Bavo Cathedral and the Ghent Altarpiece",
+        "description": "The medieval cathedral that houses the Van Eyck masterpiece Adoration of the Mystic Lamb.",
+        "details": "The Ghent Altarpiece, completed in 1432, is one of the most important paintings in Europe and is displayed in a dedicated area of the cathedral after a long restoration. Timed tickets are needed. Allow an hour for the visit with the audio guide.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/graslei-korenlei": {
+        "name": "Graslei and Korenlei",
+        "description": "The two quays along the Leie that are the most photogenic spot in Ghent.",
+        "details": "The guild houses along the Graslei and Korenlei date from the Middle Ages and look best at dusk when lit. Terraces and boat tours line the canal. Ghent is livelier and less crowded than Bruges, with a large student population.",
+        "interests": [
+          "photography",
+          "food",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/antwerp-cathedral": {
+        "name": "Cathedral of Our Lady and Rubens",
+        "description": "Belgium largest Gothic cathedral, with paintings by Rubens inside.",
+        "details": "The cathedral in Antwerp has a tall spire visible across the city and four paintings by Rubens, including The Descent from the Cross. The Grote Markt sits next to it, with guildhalls and the town hall. The Rubenshuis, the artist home, is a short walk away.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/antwerp-diamond-fashion": {
+        "name": "Antwerp diamond district and fashion",
+        "description": "The world centre of the diamond trade, plus the stylish shops of the fashion quarter.",
+        "details": "Antwerp handles most of the world rough diamonds, and the DIVA museum tells the story. The Nationalestraat and surrounding streets are the heart of its fashion scene. Central Station is a showpiece of train architecture and worth a look.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/ypres-flanders-fields": {
+        "name": "Ypres and Flanders Fields",
+        "description": "A rebuilt town and battlefield memorials from the First World War, including the Menin Gate.",
+        "details": "Ypres was destroyed in 1914 to 1918 and rebuilt. The In Flanders Fields Museum in the Cloth Hall tells the story, and the Menin Gate holds a nightly Last Post ceremony at 8pm. Nearby are the Tyne Cot cemetery and Passchendaele museum. It is a moving day, best with a guide.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "belgium/ostend-coast": {
+        "name": "Ostend and the Belgian coast tram",
+        "description": "A seaside town on the North Sea, with a long beach and a coastal tram.",
+        "details": "The Kusttram runs the length of the Belgian coast, and Ostend has a promenade, seafood restaurants and the Mercator sailing ship. It is easy to reach by train from Bruges or Ghent. The water is cold, and the wind off the sea is strong.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "belgium": {
+        "name": "Belgium",
+        "description": "A compact country of medieval cities, chocolate, beer and art.",
+        "images": []
+      },
+      "belgium/brussels": {
+        "name": "Brussels",
+        "description": "The capital, with the Grand-Place, comics and surrealist art.",
+        "images": []
+      },
+      "belgium/flanders": {
+        "name": "Flanders",
+        "description": "The Dutch-speaking north, home of Bruges, Ghent and Antwerp.",
+        "images": []
+      },
+      "belgium/bruges": {
+        "name": "Bruges",
+        "description": "A medieval canal town with a belfry and cobbled lanes.",
+        "images": []
+      },
+      "belgium/ghent": {
+        "name": "Ghent",
+        "description": "A lively canal city with a castle and the Van Eyck altarpiece.",
+        "images": []
+      },
+      "belgium/antwerp": {
+        "name": "Antwerp",
+        "description": "A port city of diamonds, fashion and Rubens.",
+        "images": []
+      }
+    }
+  }
+}

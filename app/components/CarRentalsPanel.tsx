@@ -1,3 +1,8 @@
+import IconText from './IconText';
+import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
+import CarRentalSummaryCard from './CarRentalSummaryCard';
+import DialogShell from './DialogShell';
+import { formatRentalDetails } from '../utils/carRentalDetails';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -49,6 +54,7 @@ export type CarRentalsPanelProps = {
   externalEditCarRentalId?: string | null;
   onExternalEditHandled?: () => void;
   showList?: boolean;
+  compactCards?: boolean;
   /** Kill switch for row-tap-to-edit + sticky identity/actions columns
    * (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`. */
   featureTapToEditTables?: boolean;
@@ -92,11 +98,14 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   externalEditCarRentalId,
   onExternalEditHandled,
   showList = true,
+  compactCards = false,
   featureTapToEditTables = true,
   csvTransfer,
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const { isPhoneLayout } = useLayoutBreakpoints();
+  const [selectedRental, setSelectedRental] = React.useState<CarRental | null>(null);
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [editingCarId, setEditingCarId] = React.useState<string | null>(null);
   const [tableEditing, setTableEditing] = React.useState(false);
@@ -229,14 +238,14 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
         ) : null}
         {!isFollowingMode ? (
           <View style={themeStyle('components_CarRentalsPanel_1', {  }, (theme ?? _styleTheme))}>
-            {!tableEditing ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="car-rental-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
+            {!tableEditing && !compactCards && !isPhoneLayout ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="car-rental-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
             {tableEditing ? <>
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={cancelGridEdit} disabled={gridSaving} testID="car-rental-table-cancel"><Text style={styles.dangerButtonText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={styles.button} onPress={saveGridEdit} disabled={gridSaving} testID="car-rental-table-save"><Text style={styles.buttonText}>{gridSaving ? 'Saving…' : 'Save changes'}</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, themeStyle('components_CarRentalsPanel_2', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="car-rental-table-undo"><Text style={styles.buttonText}>↶</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, themeStyle('components_CarRentalsPanel_3', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="car-rental-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('components_CarRentalsPanel_2', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="car-rental-table-undo"><IconText style={styles.buttonText}>↶</IconText></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, themeStyle('components_CarRentalsPanel_3', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="car-rental-table-redo"><IconText style={styles.buttonText}>↷</IconText></TouchableOpacity>
             </> : null}
-            {!tableEditing ? <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={openAddDialog} testID="car-rental-add"><Text style={styles.buttonText}>+ Add Rental</Text></TouchableOpacity> : null}
+            {!tableEditing && !isPhoneLayout ? <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={openAddDialog} testID="car-rental-add"><IconText style={styles.buttonText}>+ Add Rental</IconText></TouchableOpacity> : null}
           </View>
         ) : null}
       </View>
@@ -244,7 +253,12 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
       {tableEditing ? <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
         <EditableDataGrid rows={sortedGridRows} columns={gridColumns} disabled={gridSaving} cellErrors={gridErrors} stagedDeleteIds={gridDeleteIds} onCellChange={changeGridCell} onDeleteRow={toggleGridDelete} onUndo={undoGridChange} onRedo={redoGridChange} sortKey={carSort.key} sortDirection={carSort.direction} onSort={sortCarTable} styles={styles} theme={theme} />
       </HorizontalTableScroll> : null}
-      {!tableEditing ? <>
+      {!tableEditing && compactCards ? <View style={themeStyle('compactItemList', {}, theme)} testID="car-rental-summary-list">
+        {sortedCarRentals.map(car => <View key={car.id} style={styles.dayInfoCard}>
+          <CarRentalSummaryCard rental={car} theme={theme} testID={`car-rental-summary-${car.id}`} onPress={() => setSelectedRental(car)} />
+        </View>)}
+      </View> : null}
+      {!tableEditing && !compactCards && !isPhoneLayout ? <>
       <HorizontalTableScroll
         style={styles.tableScroll}
         contentContainerStyle={styles.tableScrollContent}
@@ -314,7 +328,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                       <Text style={styles.buttonText}>⭐</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => onRateCarRental(car.id, -1)}>
-                      <Text style={styles.dangerButtonText}>✖</Text>
+                      <IconText style={styles.dangerButtonText}>✖</IconText>
                     </TouchableOpacity>
                   </>
                 ) : null}
@@ -340,6 +354,23 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
         </>
       ) : null}
 
+      {selectedRental ? <DialogShell visible title="Rental Car Details" styles={styles} testID="car-rental-details" onClose={() => setSelectedRental(null)}>
+        {formatRentalDetails(selectedRental).map(row => <View key={row.label} style={styles.row}>
+          <Text style={styles.headerText}>{row.label}: </Text><Text style={styles.bodyText}>{row.value}</Text>
+        </View>)}
+        <AddToCalendarButton event={rentalCalendarEvent(selectedRental)} styles={styles} />
+        {!isFollowingMode && shouldShowRatingButtons(selectedRental.status, selectedRental.userRating) ? <View style={styles.actionCell}>
+          <TouchableOpacity style={styles.button} onPress={() => onRateCarRental(selectedRental.id, 1)}><Text style={styles.buttonText}>⭐</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => onRateCarRental(selectedRental.id, -1)}><IconText style={styles.dangerButtonText}>✖</IconText></TouchableOpacity>
+        </View> : null}
+        {!isFollowingMode ? <TouchableOpacity style={styles.button} testID="car-rental-details-edit" onPress={() => { openEditDialog(selectedRental); setSelectedRental(null); }}>
+          <Text style={styles.buttonText}>Edit</Text>
+        </TouchableOpacity> : null}
+        {!isFollowingMode ? <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => { void onRemoveCarRental(selectedRental.id); setSelectedRental(null); }}>
+          <Text style={styles.dangerButtonText}>Delete</Text>
+        </TouchableOpacity> : null}
+        <TouchableOpacity style={styles.button} onPress={() => setSelectedRental(null)}><Text style={styles.buttonText}>Close</Text></TouchableOpacity>
+      </DialogShell> : null}
       {editorOpen ? (
         <CarRentalEditForm
           draft={carDraft}

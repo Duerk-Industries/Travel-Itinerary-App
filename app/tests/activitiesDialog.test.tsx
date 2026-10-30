@@ -11,6 +11,7 @@ import { ActivityTab, type Tour } from '../tabs/activities';
 jest.mock('react-native', () => {
   return {
     Platform: { OS: 'ios' },
+    useWindowDimensions: () => ({ width: 1024, height: 768, scale: 1, fontScale: 1 }),
     ScrollView: 'ScrollView',
     Text: 'Text',
     TextInput: 'TextInput',

@@ -1,0 +1,2996 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim and TravelStride itineraries for Thailand",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "thailand-bangkok-4d",
+      "title": "Bangkok in 4 Days",
+      "summary": "A city break built around the royal temples, the river and street food, with one day trip north to the ruins of Ayutthaya.",
+      "days": 4,
+      "route": "Bangkok (Ayutthaya day trip)",
+      "arrive": "Bangkok (BKK)",
+      "depart": "Bangkok (BKK)",
+      "countries": [
+        "Thailand"
+      ],
+      "regions": [
+        "Bangkok",
+        "Ayutthaya"
+      ],
+      "cities": [
+        "Bangkok",
+        "Ayutthaya"
+      ],
+      "imageQuery": "Bangkok Thailand Wat Arun temple river",
+      "highlights": [
+        "Grand Palace",
+        "Wat Pho reclining Buddha",
+        "Wat Arun",
+        "Chinatown street food",
+        "Ayutthaya ruins"
+      ],
+      "destinationKeys": [
+        "thailand",
+        "thailand/bangkok",
+        "thailand/ayutthaya"
+      ],
+      "hero": "thailand/bangkok",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Bangkok",
+          "hotel": "Hotel in Bangkok",
+          "start": 0,
+          "nights": 3,
+          "area": "Silom, Sukhumvit or Riverside: all on the BTS, MRT or river boat, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Yaowarat Chinatown street food",
+          "notes": "Go after dark when the stalls set up; pick busy stalls with a fast turnover.",
+          "where": "Chinatown, Bangkok",
+          "book": "",
+          "place": "thailand/yaowarat-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Grand Palace and Wat Phra Kaew",
+          "notes": "Go at opening; shoulders and knees must be covered, and ignore strangers who say the palace is closed.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/grand-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Wat Pho",
+          "notes": "A short walk from the palace; the reclining Buddha is the highlight.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/wat-pho"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Wat Arun",
+          "notes": "Take the short cross-river ferry from Tha Tien; the upper steps are very steep.",
+          "where": "Thonburi, Bangkok",
+          "book": "",
+          "place": "thailand/wat-arun"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Traditional Thai massage",
+          "notes": "A good way to ease tired legs after a day of temples.",
+          "where": "Bangkok",
+          "book": "",
+          "place": "thailand/thai-massage"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Ayutthaya Historical Park",
+          "notes": "The ruins are spread out, so hire a bicycle or tuk-tuk; there is little shade, so go early and carry water.",
+          "where": "Ayutthaya",
+          "book": "",
+          "place": "thailand/ayutthaya-historical-park"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Chao Phraya river ferry",
+          "notes": "A relaxed way back through the city at golden hour.",
+          "where": "Chao Phraya River, Bangkok",
+          "book": "",
+          "place": "thailand/chao-phraya-ferry"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Jim Thompson House",
+          "notes": "A calm last visit before the airport; entry is by guided tour.",
+          "where": "Pathum Wan, Bangkok",
+          "book": "",
+          "place": "thailand/jim-thompson-house"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Bangkok Airport (BKK)",
+          "to": "Bangkok hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS or taxi",
+          "notes": "The Airport Rail Link avoids road traffic; a taxi is simpler with luggage but can be slow at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Bangkok main rail station",
+          "to": "Ayutthaya Station",
+          "time": "07:30",
+          "minutes": 90,
+          "carrier": "State Railway of Thailand train",
+          "notes": "Check which Bangkok terminal your service uses; third-class trains are slow and basic, and a minivan is an alternative.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Ayutthaya Station",
+          "to": "Bangkok main rail station",
+          "time": "15:30",
+          "minutes": 90,
+          "carrier": "State Railway of Thailand train",
+          "notes": "Check the last useful return train before you head out for the day.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Bangkok hotel area",
+          "to": "Bangkok Airport (BKK)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS, or taxi",
+          "notes": "Allow three hours before an international flight; Bangkok traffic is unpredictable.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "thailand-bangkok-chiang-mai-7d",
+      "title": "Bangkok and Chiang Mai in 7 Days",
+      "summary": "A culture-focused week pairing the capital with the northern city of Chiang Mai, for temples, cooking and an elephant sanctuary.",
+      "days": 7,
+      "route": "Bangkok > Chiang Mai",
+      "arrive": "Bangkok (BKK)",
+      "depart": "Chiang Mai (CNX), connecting via Bangkok",
+      "countries": [
+        "Thailand"
+      ],
+      "regions": [
+        "Bangkok",
+        "Chiang Mai"
+      ],
+      "cities": [
+        "Bangkok",
+        "Chiang Mai"
+      ],
+      "imageQuery": "Chiang Mai Thailand Doi Suthep temple",
+      "highlights": [
+        "Grand Palace",
+        "Wat Pho",
+        "Doi Suthep",
+        "Cooking class",
+        "Elephant sanctuary"
+      ],
+      "destinationKeys": [
+        "thailand",
+        "thailand/bangkok",
+        "thailand/chiang-mai"
+      ],
+      "hero": "thailand/chiang-mai",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "authentic_local",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Bangkok",
+          "hotel": "Hotel in Bangkok",
+          "start": 0,
+          "nights": 3,
+          "area": "Silom, Sukhumvit or Riverside: all on the BTS, MRT or river boat, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chiang Mai",
+          "hotel": "Hotel in Chiang Mai",
+          "start": 3,
+          "nights": 3,
+          "area": "Inside or just outside the old city moat: walkable to the temples, with night markets nearby",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Yaowarat Chinatown street food",
+          "notes": "Go after dark when the stalls set up; pick busy stalls with a fast turnover.",
+          "where": "Chinatown, Bangkok",
+          "book": "",
+          "place": "thailand/yaowarat-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Grand Palace and Wat Phra Kaew",
+          "notes": "Go at opening; shoulders and knees must be covered, and ignore strangers who say the palace is closed.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/grand-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Wat Pho",
+          "notes": "A short walk from the palace; the reclining Buddha is the highlight.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/wat-pho"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Wat Arun",
+          "notes": "Take the short cross-river ferry from Tha Tien; the upper steps are very steep.",
+          "where": "Thonburi, Bangkok",
+          "book": "",
+          "place": "thailand/wat-arun"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Traditional Thai massage",
+          "notes": "A good way to ease tired legs after a day of temples.",
+          "where": "Bangkok",
+          "book": "",
+          "place": "thailand/thai-massage"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Thonburi canal tour by longtail boat",
+          "notes": "Early morning is the coolest and quietest time; do not touch the canal water.",
+          "where": "Thonburi, Bangkok",
+          "book": "",
+          "place": "thailand/thonburi-canals"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "12:00",
+          "duration": "1.5h",
+          "name": "Jim Thompson House",
+          "notes": "Entry is by guided tour, which runs regularly in English and takes about forty minutes.",
+          "where": "Pathum Wan, Bangkok",
+          "book": "",
+          "place": "thailand/jim-thompson-house"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Chao Phraya river ferry",
+          "notes": "Sunset gives the best light on the riverside temples.",
+          "where": "Chao Phraya River, Bangkok",
+          "book": "",
+          "place": "thailand/chao-phraya-ferry"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Chiang Mai Old City temples",
+          "notes": "Dress modestly and remove shoes before entering the halls; many temples are free or charge a small fee.",
+          "where": "Old City, Chiang Mai",
+          "book": "",
+          "place": "thailand/chiang-mai-old-city-temples"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Khao soi dinner in Chiang Mai",
+          "notes": "Many places stop serving by mid-evening, so do not leave it late.",
+          "where": "Old City, Chiang Mai",
+          "book": "",
+          "place": "thailand/khao-soi-dinner"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Wat Phra That Doi Suthep",
+          "notes": "Go early for clearer views before the haze builds; a funicular is an alternative to the long staircase.",
+          "where": "Doi Suthep, Chiang Mai",
+          "book": "",
+          "place": "thailand/doi-suthep"
+        },
+        {
+          "day": 4,
+          "type": "Class",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Thai cooking class in Chiang Mai",
+          "notes": "Includes a market visit; vegetarian options are usually available if requested in advance.",
+          "where": "Chiang Mai",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "thailand/chiang-mai-cooking-class"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Chiang Mai Night Bazaar",
+          "notes": "Haggling is expected; quality and prices vary a great deal between stalls.",
+          "where": "Chang Khlan, Chiang Mai",
+          "book": "",
+          "place": "thailand/chiang-mai-night-bazaar"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Ethical elephant sanctuary visit",
+          "notes": "Choose an operator that offers no riding, chains or shows; standards vary widely, so research before booking. The ground is rough, hot and muddy.",
+          "where": "Chiang Mai hills",
+          "book": "Yes - ethical sanctuaries have limited daily places",
+          "place": "thailand/elephant-sanctuary"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Bangkok Airport (BKK)",
+          "to": "Bangkok hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS or taxi",
+          "notes": "The Airport Rail Link avoids road traffic; a taxi is simpler with luggage but can be slow at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Bangkok hotel area",
+          "to": "Bangkok Airport (BKK)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS, or taxi",
+          "notes": "This covers the ground leg to the departure airport only; the onward leg is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai Airport (CNX)",
+          "to": "Chiang Mai hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "The airport is very close to the old city.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Chiang Mai Old City",
+          "to": "Doi Suthep",
+          "time": "07:45",
+          "minutes": 40,
+          "carrier": "Red songthaew shared truck",
+          "notes": "Songthaews wait at the foot of the mountain for the return trip.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Doi Suthep",
+          "to": "Chiang Mai Old City",
+          "time": "11:30",
+          "minutes": 40,
+          "carrier": "Red songthaew shared truck",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai hotel area",
+          "to": "Elephant sanctuary",
+          "time": "07:00",
+          "minutes": 60,
+          "carrier": "Sanctuary pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Elephant sanctuary",
+          "to": "Chiang Mai hotel area",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Sanctuary pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai hotel area",
+          "to": "Chiang Mai Airport (CNX)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Flights home usually connect through Bangkok; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "thailand-bangkok-phuket-7d",
+      "title": "Bangkok and Phuket in 7 Days",
+      "summary": "The straightforward city-and-beach week: three days in Bangkok followed by three on Phuket, with a boat day in Phang Nga Bay.",
+      "days": 7,
+      "route": "Bangkok > Phuket (Phang Nga Bay)",
+      "arrive": "Bangkok (BKK)",
+      "depart": "Phuket (HKT), connecting via Bangkok",
+      "countries": [
+        "Thailand"
+      ],
+      "regions": [
+        "Bangkok",
+        "Phuket"
+      ],
+      "cities": [
+        "Bangkok",
+        "Phuket",
+        "Phang Nga Bay"
+      ],
+      "imageQuery": "Phuket Thailand beach longtail boat",
+      "highlights": [
+        "Grand Palace",
+        "Wat Arun",
+        "Old Phuket Town",
+        "Phang Nga Bay",
+        "Phuket Big Buddha"
+      ],
+      "destinationKeys": [
+        "thailand",
+        "thailand/bangkok",
+        "thailand/phuket",
+        "thailand/phang-nga-bay"
+      ],
+      "hero": "thailand/phuket",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "outdoors",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Bangkok",
+          "hotel": "Hotel in Bangkok",
+          "start": 0,
+          "nights": 3,
+          "area": "Silom, Sukhumvit or Riverside: all on the BTS, MRT or river boat, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Phuket",
+          "hotel": "Hotel in Phuket",
+          "start": 3,
+          "nights": 3,
+          "area": "Kata, Karon or Phuket Old Town: calmer than Patong and closer to the beaches or the old quarter",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Yaowarat Chinatown street food",
+          "notes": "Go after dark when the stalls set up; pick busy stalls with a fast turnover.",
+          "where": "Chinatown, Bangkok",
+          "book": "",
+          "place": "thailand/yaowarat-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Grand Palace and Wat Phra Kaew",
+          "notes": "Go at opening; shoulders and knees must be covered, and ignore strangers who say the palace is closed.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/grand-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Wat Pho",
+          "notes": "A short walk from the palace; the reclining Buddha is the highlight.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/wat-pho"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Wat Arun",
+          "notes": "Take the short cross-river ferry from Tha Tien; the upper steps are very steep.",
+          "where": "Thonburi, Bangkok",
+          "book": "",
+          "place": "thailand/wat-arun"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Traditional Thai massage",
+          "notes": "A good way to ease tired legs after a day of temples.",
+          "where": "Bangkok",
+          "book": "",
+          "place": "thailand/thai-massage"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Thonburi canal tour by longtail boat",
+          "notes": "Early morning is the coolest and quietest time; do not touch the canal water.",
+          "where": "Thonburi, Bangkok",
+          "book": "",
+          "place": "thailand/thonburi-canals"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "12:00",
+          "duration": "1.5h",
+          "name": "Jim Thompson House",
+          "notes": "Entry is by guided tour, which runs regularly in English and takes about forty minutes.",
+          "where": "Pathum Wan, Bangkok",
+          "book": "",
+          "place": "thailand/jim-thompson-house"
+        },
+        {
+          "day": 2,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Chatuchak Weekend Market",
+          "notes": "Open mainly on Saturdays and Sundays, with some sections on Friday, so on a weekday swap it for another stop; go early in the heat.",
+          "where": "Chatuchak, Bangkok",
+          "book": "",
+          "place": "thailand/chatuchak-market"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Chao Phraya river ferry",
+          "notes": "Sunset gives the best light on the riverside temples.",
+          "where": "Chao Phraya River, Bangkok",
+          "book": "",
+          "place": "thailand/chao-phraya-ferry"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Old Phuket Town",
+          "notes": "Flat and easy on foot; a Sunday walking street fills the main road on Sunday evenings.",
+          "where": "Old Phuket Town, Phuket",
+          "book": "",
+          "place": "thailand/old-phuket-town"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Phang Nga Bay boat tour",
+          "notes": "The famous island is very crowded; the canoe stretches through the caves are the quieter highlight. Tours are cancelled in rough seas.",
+          "where": "Phang Nga Bay",
+          "book": "Yes - boat tours need advance booking in high season",
+          "place": "thailand/phang-nga-bay"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Phuket Big Buddha",
+          "notes": "Dress modestly; the road to the viewing terrace is steep, so take a taxi or tuk-tuk.",
+          "where": "Chalong, Phuket",
+          "book": "",
+          "place": "thailand/phuket-big-buddha"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "4h",
+          "name": "Beach day on Phuket's west coast",
+          "notes": "Swimming is safe mainly from about November to April; obey the flags in the wet season.",
+          "where": "Kata or Nai Harn, Phuket",
+          "book": "",
+          "place": "thailand/phuket-beach-day"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Bangkok Airport (BKK)",
+          "to": "Bangkok hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS or taxi",
+          "notes": "The Airport Rail Link avoids road traffic; a taxi is simpler with luggage but can be slow at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Bangkok hotel area",
+          "to": "Bangkok Airport (BKK)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS, or taxi",
+          "notes": "This covers the ground leg to the departure airport only; the onward leg is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Phuket Airport (HKT)",
+          "to": "Phuket hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Phuket hotel area",
+          "to": "Phang Nga Bay pier",
+          "time": "07:00",
+          "minutes": 60,
+          "carrier": "Tour pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Phang Nga Bay pier",
+          "to": "Phuket hotel area",
+          "time": "16:30",
+          "minutes": 60,
+          "carrier": "Tour pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Phuket hotel area",
+          "to": "Phuket Big Buddha",
+          "time": "08:30",
+          "minutes": 35,
+          "carrier": "Taxi or tuk-tuk",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Phuket Big Buddha",
+          "to": "West coast beach",
+          "time": "10:30",
+          "minutes": 40,
+          "carrier": "Taxi or tuk-tuk",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Phuket hotel area",
+          "to": "Phuket Airport (HKT)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport shuttle or taxi",
+          "notes": "Flights home usually connect through Bangkok; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "thailand-bangkok-chiang-mai-krabi-10d",
+      "title": "Bangkok, Chiang Mai and Krabi in 10 Days",
+      "summary": "The classic first trip: the capital, the northern hills and temples, then a few days of beach and islands on the Andaman coast.",
+      "days": 10,
+      "route": "Bangkok (Ayutthaya) > Chiang Mai > Krabi (Phi Phi)",
+      "arrive": "Bangkok (BKK)",
+      "depart": "Krabi (KBV), connecting via Bangkok",
+      "countries": [
+        "Thailand"
+      ],
+      "regions": [
+        "Bangkok",
+        "Ayutthaya",
+        "Chiang Mai",
+        "Krabi"
+      ],
+      "cities": [
+        "Bangkok",
+        "Ayutthaya",
+        "Chiang Mai",
+        "Krabi",
+        "Railay Beach",
+        "Koh Phi Phi"
+      ],
+      "imageQuery": "Krabi Thailand limestone cliffs longtail boat",
+      "highlights": [
+        "Grand Palace",
+        "Ayutthaya ruins",
+        "Doi Suthep",
+        "Railay Beach",
+        "Phi Phi Islands"
+      ],
+      "destinationKeys": [
+        "thailand",
+        "thailand/bangkok",
+        "thailand/ayutthaya",
+        "thailand/chiang-mai",
+        "thailand/krabi",
+        "thailand/railay-beach",
+        "thailand/koh-phi-phi"
+      ],
+      "hero": "thailand/krabi",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax",
+        "food",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Bangkok",
+          "hotel": "Hotel in Bangkok",
+          "start": 0,
+          "nights": 3,
+          "area": "Silom, Sukhumvit or Riverside: all on the BTS, MRT or river boat, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chiang Mai",
+          "hotel": "Hotel in Chiang Mai",
+          "start": 3,
+          "nights": 3,
+          "area": "Inside or just outside the old city moat: walkable to the temples, with night markets nearby",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Krabi",
+          "hotel": "Hotel in Krabi",
+          "start": 6,
+          "nights": 3,
+          "area": "Ao Nang for restaurants and boat trips, or Railay for a quieter beach-and-cliffs stay reached only by boat",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Yaowarat Chinatown street food",
+          "notes": "Go after dark when the stalls set up; pick busy stalls with a fast turnover.",
+          "where": "Chinatown, Bangkok",
+          "book": "",
+          "place": "thailand/yaowarat-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Grand Palace and Wat Phra Kaew",
+          "notes": "Go at opening; shoulders and knees must be covered, and ignore strangers who say the palace is closed.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/grand-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Wat Pho",
+          "notes": "A short walk from the palace; the reclining Buddha is the highlight.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/wat-pho"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Wat Arun",
+          "notes": "Take the short cross-river ferry from Tha Tien; the upper steps are very steep.",
+          "where": "Thonburi, Bangkok",
+          "book": "",
+          "place": "thailand/wat-arun"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Traditional Thai massage",
+          "notes": "A good way to ease tired legs after a day of temples.",
+          "where": "Bangkok",
+          "book": "",
+          "place": "thailand/thai-massage"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Ayutthaya Historical Park",
+          "notes": "The ruins are spread out, so hire a bicycle or tuk-tuk; there is little shade, so go early and carry water.",
+          "where": "Ayutthaya",
+          "book": "",
+          "place": "thailand/ayutthaya-historical-park"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Chao Phraya river ferry",
+          "notes": "A relaxed way back through the city at golden hour.",
+          "where": "Chao Phraya River, Bangkok",
+          "book": "",
+          "place": "thailand/chao-phraya-ferry"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Chiang Mai Old City temples",
+          "notes": "Dress modestly and remove shoes before entering the halls; many temples are free or charge a small fee.",
+          "where": "Old City, Chiang Mai",
+          "book": "",
+          "place": "thailand/chiang-mai-old-city-temples"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Khao soi dinner in Chiang Mai",
+          "notes": "Many places stop serving by mid-evening, so do not leave it late.",
+          "where": "Old City, Chiang Mai",
+          "book": "",
+          "place": "thailand/khao-soi-dinner"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Wat Phra That Doi Suthep",
+          "notes": "Go early for clearer views before the haze builds; a funicular is an alternative to the long staircase.",
+          "where": "Doi Suthep, Chiang Mai",
+          "book": "",
+          "place": "thailand/doi-suthep"
+        },
+        {
+          "day": 4,
+          "type": "Class",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Thai cooking class in Chiang Mai",
+          "notes": "Includes a market visit; vegetarian options are usually available if requested in advance.",
+          "where": "Chiang Mai",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "thailand/chiang-mai-cooking-class"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Chiang Mai Night Bazaar",
+          "notes": "Haggling is expected; quality and prices vary a great deal between stalls.",
+          "where": "Chang Khlan, Chiang Mai",
+          "book": "",
+          "place": "thailand/chiang-mai-night-bazaar"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Ethical elephant sanctuary visit",
+          "notes": "Choose an operator that offers no riding, chains or shows; standards vary widely, so research before booking. The ground is rough, hot and muddy.",
+          "where": "Chiang Mai hills",
+          "book": "Yes - ethical sanctuaries have limited daily places",
+          "place": "thailand/elephant-sanctuary"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Ao Nang beach",
+          "notes": "Settle in and catch the sunset behind the cliffs.",
+          "where": "Ao Nang, Krabi",
+          "book": "",
+          "place": "thailand/ao-nang-beach"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Phi Phi Islands day trip",
+          "notes": "Access to Maya Bay has been limited to protect the reef, so check current rules; trips are cancelled in rough weather.",
+          "where": "Koh Phi Phi",
+          "book": "Yes - boat day trips book up in high season",
+          "place": "thailand/phi-phi-islands"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "2.5h",
+          "name": "Tiger Cave Temple",
+          "notes": "A long, steep climb best done early before the heat; the cave temple at the base is easier.",
+          "where": "Krabi",
+          "book": "",
+          "place": "thailand/tiger-cave-temple"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "11:00",
+          "duration": "4h",
+          "name": "Railay Beach",
+          "notes": "Reached by longtail boat; at low tide you may need to wade, so check the tide.",
+          "where": "Railay, Krabi",
+          "book": "",
+          "place": "thailand/railay-beach"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Bangkok Airport (BKK)",
+          "to": "Bangkok hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS or taxi",
+          "notes": "The Airport Rail Link avoids road traffic; a taxi is simpler with luggage but can be slow at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Bangkok main rail station",
+          "to": "Ayutthaya Station",
+          "time": "07:30",
+          "minutes": 90,
+          "carrier": "State Railway of Thailand train",
+          "notes": "Check which Bangkok terminal your service uses; third-class trains are slow and basic, and a minivan is an alternative.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Ayutthaya Station",
+          "to": "Bangkok main rail station",
+          "time": "15:30",
+          "minutes": 90,
+          "carrier": "State Railway of Thailand train",
+          "notes": "Check the last useful return train before you head out for the day.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Bangkok hotel area",
+          "to": "Bangkok Airport (BKK)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS, or taxi",
+          "notes": "This covers the ground leg to the departure airport only; the onward leg is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai Airport (CNX)",
+          "to": "Chiang Mai hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "The airport is very close to the old city.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Chiang Mai Old City",
+          "to": "Doi Suthep",
+          "time": "07:45",
+          "minutes": 40,
+          "carrier": "Red songthaew shared truck",
+          "notes": "Songthaews wait at the foot of the mountain for the return trip.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Doi Suthep",
+          "to": "Chiang Mai Old City",
+          "time": "11:30",
+          "minutes": 40,
+          "carrier": "Red songthaew shared truck",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai hotel area",
+          "to": "Elephant sanctuary",
+          "time": "07:00",
+          "minutes": 60,
+          "carrier": "Sanctuary pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Elephant sanctuary",
+          "to": "Chiang Mai hotel area",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Sanctuary pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai hotel area",
+          "to": "Chiang Mai Airport (CNX)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "This covers the ground leg to the departure airport only; Chiang Mai to Krabi is usually a domestic flight via Bangkok.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Krabi Airport (KBV)",
+          "to": "Krabi hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Ao Nang",
+          "to": "Koh Phi Phi",
+          "time": "07:30",
+          "minutes": 90,
+          "carrier": "Speedboat or ferry",
+          "notes": "Boats leave from the pier at Nopparat Thara or Ao Nang; sea conditions affect the schedule.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Koh Phi Phi",
+          "to": "Ao Nang",
+          "time": "16:00",
+          "minutes": 90,
+          "carrier": "Speedboat or ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Ao Nang",
+          "to": "Tiger Cave Temple",
+          "time": "06:30",
+          "minutes": 30,
+          "carrier": "Taxi or hired car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Tiger Cave Temple",
+          "to": "Ao Nang",
+          "time": "09:30",
+          "minutes": 30,
+          "carrier": "Taxi or hired car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Ao Nang",
+          "to": "Railay Beach",
+          "time": "10:30",
+          "minutes": 15,
+          "carrier": "Longtail boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Railay Beach",
+          "to": "Ao Nang",
+          "time": "15:00",
+          "minutes": 15,
+          "carrier": "Longtail boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Krabi hotel area",
+          "to": "Krabi Airport (KBV)",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport shuttle or taxi",
+          "notes": "Flights home usually connect through Bangkok; allow time for the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "thailand-north-andaman-14d",
+      "title": "Bangkok, Chiang Mai, Chiang Rai and Krabi in 14 Days",
+      "summary": "A north-to-south loop at a comfortable pace: Bangkok, Ayutthaya, Chiang Mai and Chiang Rai's temples and border country, then four days on the Andaman coast.",
+      "days": 14,
+      "route": "Bangkok (Ayutthaya) > Chiang Mai > Chiang Rai > Krabi (Hong Islands) > Bangkok",
+      "arrive": "Bangkok (BKK)",
+      "depart": "Bangkok (BKK)",
+      "countries": [
+        "Thailand"
+      ],
+      "regions": [
+        "Bangkok",
+        "Ayutthaya",
+        "Chiang Mai",
+        "Chiang Rai",
+        "Krabi"
+      ],
+      "cities": [
+        "Bangkok",
+        "Ayutthaya",
+        "Chiang Mai",
+        "Chiang Rai",
+        "Golden Triangle",
+        "Krabi",
+        "Railay Beach"
+      ],
+      "imageQuery": "Chiang Rai White Temple Thailand",
+      "highlights": [
+        "Ayutthaya ruins",
+        "Doi Suthep",
+        "White Temple",
+        "Golden Triangle",
+        "Hong Islands"
+      ],
+      "destinationKeys": [
+        "thailand",
+        "thailand/bangkok",
+        "thailand/ayutthaya",
+        "thailand/chiang-mai",
+        "thailand/chiang-rai",
+        "thailand/golden-triangle",
+        "thailand/krabi",
+        "thailand/railay-beach"
+      ],
+      "hero": "thailand/chiang-rai",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "relax",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Bangkok",
+          "hotel": "Hotel in Bangkok",
+          "start": 0,
+          "nights": 3,
+          "area": "Silom, Sukhumvit or Riverside: all on the BTS, MRT or river boat, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chiang Mai",
+          "hotel": "Hotel in Chiang Mai",
+          "start": 3,
+          "nights": 3,
+          "area": "Inside or just outside the old city moat: walkable to the temples, with night markets nearby",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chiang Rai",
+          "hotel": "Hotel in Chiang Rai",
+          "start": 6,
+          "nights": 2,
+          "area": "Central Chiang Rai near the clock tower and night bazaar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Krabi",
+          "hotel": "Hotel in Krabi",
+          "start": 8,
+          "nights": 4,
+          "area": "Ao Nang for restaurants and boat trips, or Railay for a quieter beach-and-cliffs stay reached only by boat",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bangkok",
+          "hotel": "Hotel in Bangkok",
+          "start": 12,
+          "nights": 1,
+          "area": "Silom, Sukhumvit or Riverside: all on the BTS, MRT or river boat, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Yaowarat Chinatown street food",
+          "notes": "Go after dark when the stalls set up; pick busy stalls with a fast turnover.",
+          "where": "Chinatown, Bangkok",
+          "book": "",
+          "place": "thailand/yaowarat-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Grand Palace and Wat Phra Kaew",
+          "notes": "Go at opening; shoulders and knees must be covered, and ignore strangers who say the palace is closed.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/grand-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Wat Pho",
+          "notes": "A short walk from the palace; the reclining Buddha is the highlight.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/wat-pho"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Wat Arun",
+          "notes": "Take the short cross-river ferry from Tha Tien; the upper steps are very steep.",
+          "where": "Thonburi, Bangkok",
+          "book": "",
+          "place": "thailand/wat-arun"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Traditional Thai massage",
+          "notes": "A good way to ease tired legs after a day of temples.",
+          "where": "Bangkok",
+          "book": "",
+          "place": "thailand/thai-massage"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Ayutthaya Historical Park",
+          "notes": "The ruins are spread out, so hire a bicycle or tuk-tuk; there is little shade, so go early and carry water.",
+          "where": "Ayutthaya",
+          "book": "",
+          "place": "thailand/ayutthaya-historical-park"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Chao Phraya river ferry",
+          "notes": "A relaxed way back through the city at golden hour.",
+          "where": "Chao Phraya River, Bangkok",
+          "book": "",
+          "place": "thailand/chao-phraya-ferry"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Chiang Mai Old City temples",
+          "notes": "Dress modestly and remove shoes before entering the halls; many temples are free or charge a small fee.",
+          "where": "Old City, Chiang Mai",
+          "book": "",
+          "place": "thailand/chiang-mai-old-city-temples"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Khao soi dinner in Chiang Mai",
+          "notes": "Many places stop serving by mid-evening, so do not leave it late.",
+          "where": "Old City, Chiang Mai",
+          "book": "",
+          "place": "thailand/khao-soi-dinner"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Wat Phra That Doi Suthep",
+          "notes": "Go early for clearer views before the haze builds; a funicular is an alternative to the long staircase.",
+          "where": "Doi Suthep, Chiang Mai",
+          "book": "",
+          "place": "thailand/doi-suthep"
+        },
+        {
+          "day": 4,
+          "type": "Class",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Thai cooking class in Chiang Mai",
+          "notes": "Includes a market visit; vegetarian options are usually available if requested in advance.",
+          "where": "Chiang Mai",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "thailand/chiang-mai-cooking-class"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Chiang Mai Night Bazaar",
+          "notes": "Haggling is expected; quality and prices vary a great deal between stalls.",
+          "where": "Chang Khlan, Chiang Mai",
+          "book": "",
+          "place": "thailand/chiang-mai-night-bazaar"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Ethical elephant sanctuary visit",
+          "notes": "Choose an operator that offers no riding, chains or shows; standards vary widely, so research before booking. The ground is rough, hot and muddy.",
+          "where": "Chiang Mai hills",
+          "book": "Yes - ethical sanctuaries have limited daily places",
+          "place": "thailand/elephant-sanctuary"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "12:30",
+          "duration": "1.5h",
+          "name": "Wat Rong Khun (White Temple)",
+          "notes": "Best early or late; photography is restricted inside the main hall.",
+          "where": "Rong Khun, Chiang Rai",
+          "book": "",
+          "place": "thailand/white-temple"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "1h",
+          "name": "Wat Rong Suea Ten (Blue Temple)",
+          "notes": "Smaller and quieter than the White Temple, in town.",
+          "where": "Chiang Rai",
+          "book": "",
+          "place": "thailand/blue-temple"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Baan Dam (Black House)",
+          "notes": "The grounds are spread out and some buildings have steps.",
+          "where": "Chiang Rai",
+          "book": "",
+          "place": "thailand/black-house"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "11:30",
+          "duration": "4.5h",
+          "name": "Golden Triangle viewpoint",
+          "notes": "About an hour north of Chiang Rai, usually combined with a stop in Chiang Saen on the way.",
+          "where": "Golden Triangle, Chiang Rai",
+          "book": "",
+          "place": "thailand/golden-triangle"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Ao Nang beach",
+          "notes": "Settle in and catch the sunset behind the cliffs.",
+          "where": "Ao Nang, Krabi",
+          "book": "",
+          "place": "thailand/ao-nang-beach"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Hong Islands boat trip",
+          "notes": "Quieter than Phi Phi; a sheltered lagoon makes good snorkelling. Choppy water in the wet season can cancel trips.",
+          "where": "Hong Islands, Krabi",
+          "book": "Yes - boat trips book up in high season",
+          "place": "thailand/hong-islands"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Railay Beach",
+          "notes": "Reached by longtail boat; check the tide before landing.",
+          "where": "Railay, Krabi",
+          "book": "",
+          "place": "thailand/railay-beach"
+        },
+        {
+          "day": 11,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "2.5h",
+          "name": "Tiger Cave Temple",
+          "notes": "A long, steep climb best done early before the heat.",
+          "where": "Krabi",
+          "book": "",
+          "place": "thailand/tiger-cave-temple"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Ao Nang beach",
+          "notes": "A last relaxed afternoon on the sand.",
+          "where": "Ao Nang, Krabi",
+          "book": "",
+          "place": "thailand/ao-nang-beach"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "1.5h",
+          "name": "Jim Thompson House",
+          "notes": "Entry is by guided tour.",
+          "where": "Pathum Wan, Bangkok",
+          "book": "",
+          "place": "thailand/jim-thompson-house"
+        },
+        {
+          "day": 12,
+          "type": "Spa/Wellness",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Traditional Thai massage",
+          "notes": "A good last-night treat before the flight home.",
+          "where": "Bangkok",
+          "book": "",
+          "place": "thailand/thai-massage"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Bangkok Airport (BKK)",
+          "to": "Bangkok hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS or taxi",
+          "notes": "The Airport Rail Link avoids road traffic; a taxi is simpler with luggage but can be slow at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Bangkok main rail station",
+          "to": "Ayutthaya Station",
+          "time": "07:30",
+          "minutes": 90,
+          "carrier": "State Railway of Thailand train",
+          "notes": "Check which Bangkok terminal your service uses; third-class trains are slow and basic, and a minivan is an alternative.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Ayutthaya Station",
+          "to": "Bangkok main rail station",
+          "time": "15:30",
+          "minutes": 90,
+          "carrier": "State Railway of Thailand train",
+          "notes": "Check the last useful return train before you head out for the day.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Bangkok hotel area",
+          "to": "Bangkok Airport (BKK)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS, or taxi",
+          "notes": "This covers the ground leg to the departure airport only; the onward leg is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai Airport (CNX)",
+          "to": "Chiang Mai hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "The airport is very close to the old city.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Chiang Mai Old City",
+          "to": "Doi Suthep",
+          "time": "07:45",
+          "minutes": 40,
+          "carrier": "Red songthaew shared truck",
+          "notes": "Songthaews wait at the foot of the mountain for the return trip.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Doi Suthep",
+          "to": "Chiang Mai Old City",
+          "time": "11:30",
+          "minutes": 40,
+          "carrier": "Red songthaew shared truck",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai hotel area",
+          "to": "Elephant sanctuary",
+          "time": "07:00",
+          "minutes": 60,
+          "carrier": "Sanctuary pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Elephant sanctuary",
+          "to": "Chiang Mai hotel area",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Sanctuary pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai hotel area",
+          "to": "Wat Rong Khun",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "Car with driver or Greenbus",
+          "notes": "A private driver lets you stop at the White Temple on the way.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Wat Rong Khun",
+          "to": "Chiang Rai hotel area",
+          "time": "14:00",
+          "minutes": 20,
+          "carrier": "Car with driver or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Chiang Rai hotel area",
+          "to": "Golden Triangle",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Golden Triangle",
+          "to": "Chiang Rai hotel area",
+          "time": "15:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Chiang Rai hotel area",
+          "to": "Chiang Rai Airport (CEI)",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "This covers the ground leg to the departure airport only; Chiang Rai to Krabi is a domestic flight via Bangkok.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Krabi Airport (KBV)",
+          "to": "Krabi hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport shuttle or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Ao Nang",
+          "to": "Hong Islands",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Longtail or speedboat",
+          "notes": "Departures follow the tide and sea state.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Hong Islands",
+          "to": "Ao Nang",
+          "time": "15:15",
+          "minutes": 45,
+          "carrier": "Longtail or speedboat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Ao Nang",
+          "to": "Railay Beach",
+          "time": "09:00",
+          "minutes": 15,
+          "carrier": "Longtail boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Railay Beach",
+          "to": "Ao Nang",
+          "time": "14:00",
+          "minutes": 15,
+          "carrier": "Longtail boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Ao Nang",
+          "to": "Tiger Cave Temple",
+          "time": "06:30",
+          "minutes": 30,
+          "carrier": "Taxi or hired car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Tiger Cave Temple",
+          "to": "Ao Nang",
+          "time": "09:30",
+          "minutes": 30,
+          "carrier": "Taxi or hired car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Krabi hotel area",
+          "to": "Krabi Airport (KBV)",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport shuttle or taxi",
+          "notes": "This covers the ground leg to the departure airport only; Krabi to Bangkok is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Public Transit",
+          "from": "Bangkok Airport (BKK)",
+          "to": "Bangkok hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Public Transit",
+          "from": "Bangkok hotel area",
+          "to": "Bangkok Airport (BKK)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS, or taxi",
+          "notes": "Allow three hours before an international flight; Bangkok traffic is unpredictable.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "thailand-north-koh-samui-14d",
+      "title": "Bangkok, Chiang Mai and Koh Samui in 14 Days",
+      "summary": "A two-week route that pairs the northern hills with Koh Samui on the Gulf coast, a good choice for months when the Andaman side is rainy.",
+      "days": 14,
+      "route": "Bangkok > Chiang Mai (Doi Inthanon) > Koh Samui (Ang Thong) > Bangkok (Ayutthaya)",
+      "arrive": "Bangkok (BKK)",
+      "depart": "Bangkok (BKK)",
+      "countries": [
+        "Thailand"
+      ],
+      "regions": [
+        "Bangkok",
+        "Ayutthaya",
+        "Chiang Mai",
+        "Surat Thani"
+      ],
+      "cities": [
+        "Bangkok",
+        "Ayutthaya",
+        "Chiang Mai",
+        "Doi Inthanon",
+        "Koh Samui",
+        "Ang Thong Marine Park"
+      ],
+      "imageQuery": "Koh Samui Thailand beach palm trees",
+      "highlights": [
+        "Grand Palace",
+        "Doi Inthanon",
+        "Elephant sanctuary",
+        "Ang Thong Marine Park",
+        "Samui Big Buddha"
+      ],
+      "destinationKeys": [
+        "thailand",
+        "thailand/bangkok",
+        "thailand/ayutthaya",
+        "thailand/chiang-mai",
+        "thailand/doi-inthanon",
+        "thailand/surat-thani",
+        "thailand/koh-samui",
+        "thailand/ang-thong-marine-park"
+      ],
+      "hero": "thailand/koh-samui",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax",
+        "food",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Bangkok",
+          "hotel": "Hotel in Bangkok",
+          "start": 0,
+          "nights": 3,
+          "area": "Silom, Sukhumvit or Riverside: all on the BTS, MRT or river boat, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Chiang Mai",
+          "hotel": "Hotel in Chiang Mai",
+          "start": 3,
+          "nights": 4,
+          "area": "Inside or just outside the old city moat: walkable to the temples, with night markets nearby",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Koh Samui",
+          "hotel": "Hotel in Koh Samui",
+          "start": 7,
+          "nights": 4,
+          "area": "Bophut or Chaweng: Bophut for a relaxed village feel, Chaweng for the busiest beach and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bangkok",
+          "hotel": "Hotel in Bangkok",
+          "start": 11,
+          "nights": 2,
+          "area": "Silom, Sukhumvit or Riverside: all on the BTS, MRT or river boat, which avoids the worst of the traffic",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2h",
+          "name": "Yaowarat Chinatown street food",
+          "notes": "Go after dark when the stalls set up; pick busy stalls with a fast turnover.",
+          "where": "Chinatown, Bangkok",
+          "book": "",
+          "place": "thailand/yaowarat-street-food"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Grand Palace and Wat Phra Kaew",
+          "notes": "Go at opening; shoulders and knees must be covered, and ignore strangers who say the palace is closed.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/grand-palace"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Wat Pho",
+          "notes": "A short walk from the palace; the reclining Buddha is the highlight.",
+          "where": "Phra Nakhon, Bangkok",
+          "book": "",
+          "place": "thailand/wat-pho"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1h",
+          "name": "Wat Arun",
+          "notes": "Take the short cross-river ferry from Tha Tien; the upper steps are very steep.",
+          "where": "Thonburi, Bangkok",
+          "book": "",
+          "place": "thailand/wat-arun"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Traditional Thai massage",
+          "notes": "A good way to ease tired legs after a day of temples.",
+          "where": "Bangkok",
+          "book": "",
+          "place": "thailand/thai-massage"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Thonburi canal tour by longtail boat",
+          "notes": "Early morning is the coolest and quietest time; do not touch the canal water.",
+          "where": "Thonburi, Bangkok",
+          "book": "",
+          "place": "thailand/thonburi-canals"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "12:00",
+          "duration": "1.5h",
+          "name": "Jim Thompson House",
+          "notes": "Entry is by guided tour, which runs regularly in English and takes about forty minutes.",
+          "where": "Pathum Wan, Bangkok",
+          "book": "",
+          "place": "thailand/jim-thompson-house"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Chao Phraya river ferry",
+          "notes": "Sunset gives the best light on the riverside temples.",
+          "where": "Chao Phraya River, Bangkok",
+          "book": "",
+          "place": "thailand/chao-phraya-ferry"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Chiang Mai Old City temples",
+          "notes": "Dress modestly and remove shoes before entering the halls; many temples are free or charge a small fee.",
+          "where": "Old City, Chiang Mai",
+          "book": "",
+          "place": "thailand/chiang-mai-old-city-temples"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Khao soi dinner in Chiang Mai",
+          "notes": "Many places stop serving by mid-evening, so do not leave it late.",
+          "where": "Old City, Chiang Mai",
+          "book": "",
+          "place": "thailand/khao-soi-dinner"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Wat Phra That Doi Suthep",
+          "notes": "Go early for clearer views before the haze builds; a funicular is an alternative to the long staircase.",
+          "where": "Doi Suthep, Chiang Mai",
+          "book": "",
+          "place": "thailand/doi-suthep"
+        },
+        {
+          "day": 4,
+          "type": "Class",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Thai cooking class in Chiang Mai",
+          "notes": "Includes a market visit; vegetarian options are usually available if requested in advance.",
+          "where": "Chiang Mai",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "thailand/chiang-mai-cooking-class"
+        },
+        {
+          "day": 4,
+          "type": "Shopping",
+          "time": "19:30",
+          "duration": "2h",
+          "name": "Chiang Mai Night Bazaar",
+          "notes": "Haggling is expected; quality and prices vary a great deal between stalls.",
+          "where": "Chang Khlan, Chiang Mai",
+          "book": "",
+          "place": "thailand/chiang-mai-night-bazaar"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Ethical elephant sanctuary visit",
+          "notes": "Choose an operator that offers no riding, chains or shows; standards vary widely, so research before booking. The ground is rough, hot and muddy.",
+          "where": "Chiang Mai hills",
+          "book": "Yes - ethical sanctuaries have limited daily places",
+          "place": "thailand/elephant-sanctuary"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Doi Inthanon National Park",
+          "notes": "The summit is often in mist and noticeably cooler than the city, so carry a layer.",
+          "where": "Doi Inthanon, Chiang Mai",
+          "book": "",
+          "place": "thailand/doi-inthanon"
+        },
+        {
+          "day": 7,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Fisherman's Village, Bophut",
+          "notes": "A relaxed first evening on the north coast; a walking street fills the main road on Fridays.",
+          "where": "Bophut, Koh Samui",
+          "book": "",
+          "place": "thailand/fishermans-village"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "9h",
+          "name": "Ang Thong Marine National Park",
+          "notes": "Includes kayaking, snorkelling and a steep climb to a lagoon viewpoint; trips are cancelled in rough weather.",
+          "where": "Ang Thong, Surat Thani",
+          "book": "Yes - day boats book up in high season",
+          "place": "thailand/ang-thong-marine-park"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Big Buddha Temple (Wat Phra Yai)",
+          "notes": "Dress modestly; a short stairway climbs to the base of the statue.",
+          "where": "Bophut, Koh Samui",
+          "book": "",
+          "place": "thailand/samui-big-buddha"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "13:00",
+          "duration": "4h",
+          "name": "Chaweng Beach",
+          "notes": "Calm, clear water for most of the year, though rougher in the wetter months.",
+          "where": "Chaweng, Koh Samui",
+          "book": "",
+          "place": "thailand/chaweng-beach"
+        },
+        {
+          "day": 10,
+          "type": "Spa/Wellness",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Traditional Thai massage",
+          "notes": "A slow last day on the island.",
+          "where": "Koh Samui",
+          "book": "",
+          "place": "thailand/thai-massage"
+        },
+        {
+          "day": 11,
+          "type": "Class",
+          "time": "15:00",
+          "duration": "3.5h",
+          "name": "Thai cooking class in Bangkok",
+          "notes": "Includes a market visit; vegetarian options are usually available if requested in advance.",
+          "where": "Bangkok",
+          "book": "Yes - small group classes need booking ahead",
+          "place": "thailand/bangkok-cooking-class"
+        },
+        {
+          "day": 12,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Ayutthaya Historical Park",
+          "notes": "The ruins are spread out, so hire a bicycle or tuk-tuk; there is little shade, so go early and carry water.",
+          "where": "Ayutthaya",
+          "book": "",
+          "place": "thailand/ayutthaya-historical-park"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Public Transit",
+          "from": "Bangkok Airport (BKK)",
+          "to": "Bangkok hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS or taxi",
+          "notes": "The Airport Rail Link avoids road traffic; a taxi is simpler with luggage but can be slow at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Bangkok hotel area",
+          "to": "Bangkok Airport (BKK)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS, or taxi",
+          "notes": "This covers the ground leg to the departure airport only; the onward leg is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai Airport (CNX)",
+          "to": "Chiang Mai hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "The airport is very close to the old city.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Chiang Mai Old City",
+          "to": "Doi Suthep",
+          "time": "07:45",
+          "minutes": 40,
+          "carrier": "Red songthaew shared truck",
+          "notes": "Songthaews wait at the foot of the mountain for the return trip.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Doi Suthep",
+          "to": "Chiang Mai Old City",
+          "time": "11:30",
+          "minutes": 40,
+          "carrier": "Red songthaew shared truck",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai hotel area",
+          "to": "Elephant sanctuary",
+          "time": "07:00",
+          "minutes": 60,
+          "carrier": "Sanctuary pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Elephant sanctuary",
+          "to": "Chiang Mai hotel area",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Sanctuary pickup van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai hotel area",
+          "to": "Doi Inthanon",
+          "time": "07:00",
+          "minutes": 100,
+          "carrier": "Car with driver or tour van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Doi Inthanon",
+          "to": "Chiang Mai hotel area",
+          "time": "15:30",
+          "minutes": 100,
+          "carrier": "Car with driver or tour van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Chiang Mai hotel area",
+          "to": "Chiang Mai Airport (CNX)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "This covers the ground leg to the departure airport only; Chiang Mai to Koh Samui is usually a domestic flight via Bangkok.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Samui Airport (USM)",
+          "to": "Koh Samui hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Airport shuttle or taxi",
+          "notes": "The airport is small and open-air; transfers are quick.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Koh Samui hotel area",
+          "to": "Ang Thong Marine Park",
+          "time": "07:30",
+          "minutes": 75,
+          "carrier": "Tour boat",
+          "notes": "Hotel pickup is usually included; the sea can be rough in the wetter months.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Ang Thong Marine Park",
+          "to": "Koh Samui hotel area",
+          "time": "16:00",
+          "minutes": 75,
+          "carrier": "Tour boat",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Koh Samui hotel area",
+          "to": "Samui Big Buddha",
+          "time": "08:30",
+          "minutes": 25,
+          "carrier": "Taxi or songthaew",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Samui Big Buddha",
+          "to": "Chaweng Beach",
+          "time": "10:30",
+          "minutes": 25,
+          "carrier": "Taxi or songthaew",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Koh Samui hotel area",
+          "to": "Samui Airport (USM)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Airport shuttle or taxi",
+          "notes": "This covers the ground leg to the departure airport only; the onward leg is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Bangkok Airport (BKK)",
+          "to": "Bangkok hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Public Transit",
+          "from": "Bangkok main rail station",
+          "to": "Ayutthaya Station",
+          "time": "07:30",
+          "minutes": 90,
+          "carrier": "State Railway of Thailand train",
+          "notes": "Check which Bangkok terminal your service uses; third-class trains are slow and basic, and a minivan is an alternative.",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Public Transit",
+          "from": "Ayutthaya Station",
+          "to": "Bangkok main rail station",
+          "time": "15:30",
+          "minutes": 90,
+          "carrier": "State Railway of Thailand train",
+          "notes": "Check the last useful return train before you head out for the day.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Public Transit",
+          "from": "Bangkok hotel area",
+          "to": "Bangkok Airport (BKK)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Airport Rail Link plus BTS, or taxi",
+          "notes": "Allow three hours before an international flight; Bangkok traffic is unpredictable.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "thailand/yaowarat-street-food": {
+        "name": "Yaowarat Chinatown street food",
+        "description": "Bangkok's Chinatown main road, which fills after dark with stalls grilling seafood, noodles, dim sum and sweets.",
+        "details": "Yaowarat Road runs through the heart of Bangkok's Chinatown and changes character after sunset, when pavement stalls set up tables and the neon signs come on. Roast duck, fish-ball noodles, grilled seafood, steamed buns and dessert stalls are the staples, many cooked in a single wok or pot. Prices and hygiene vary, so busy stalls with a fast turnover are the safer choice. The pavements are narrow and crowded, and some stalls close on Mondays.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "nightlife"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/grand-palace": {
+        "name": "Grand Palace and Wat Phra Kaew",
+        "description": "The former royal residence of Bangkok, with gilded halls and the temple that holds the Emerald Buddha.",
+        "details": "The Grand Palace was begun in 1782 when Bangkok became the capital and served as the royal residence for generations. Within its walls, Wat Phra Kaew houses the Emerald Buddha, a small figure carved from green stone that is the most revered image in the country. A strict dress code applies, with shoulders and knees covered and no sleeveless tops or ripped clothing. The palace closes for royal ceremonies, and strangers who say it is closed in order to steer you to a shop should be ignored.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/wat-pho": {
+        "name": "Wat Pho",
+        "description": "A large Bangkok temple known for its 46-metre gilded reclining Buddha and as the home of traditional Thai massage.",
+        "details": "Wat Pho, next to the Grand Palace, holds a gilded reclining Buddha about 46 metres long, with feet inlaid with mother-of-pearl. The temple is also regarded as the birthplace of traditional Thai massage teaching, and a massage school still operates in the grounds. The compound is large, with many chedis and courtyards, and the same dress code as the palace applies. It is at its quietest early in the morning.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/wat-arun": {
+        "name": "Wat Arun",
+        "description": "The Temple of Dawn on the Thonburi bank of the Chao Phraya, a tall spired temple decorated with porcelain.",
+        "details": "Wat Arun stands on the west bank of the river, its central prang rising steeply and covered in tiny pieces of Chinese porcelain and shell that catch the light. Visitors can climb part of the way up on very steep, narrow steps. It is reached by a short cross-river ferry from the Tha Tien pier, and looks best from the water at sunset. The same dress code applies as at other temples.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "thailand/chao-phraya-ferry": {
+        "name": "Chao Phraya river ferry",
+        "description": "A ride on the public river boats that run along Bangkok's main waterway, past temples, old warehouses and new towers.",
+        "details": "The Chao Phraya Express Boat is a cheap and fast way to move along the river between piers close to many of the sights, and the ride itself is a good look at the city from the water. Different coloured flags mark different services, some of which skip stops. Boats are busiest at the morning and evening rush, and sunset gives the best light on the riverside temples. Piers have steps and gaps between boat and platform, so mind your footing.",
+        "interests": [
+          "photography",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/thonburi-canals": {
+        "name": "Thonburi canal tour by longtail boat",
+        "description": "A morning in a longtail boat along the narrow khlongs of Thonburi, past stilt houses, gardens and small temples.",
+        "details": "Thonburi, on the west side of the river, is crossed by a network of narrow canals called khlongs, lined with wooden houses on stilts, orchards and small temples. A longtail boat tour covers a short loop and gives a very different view of Bangkok from the temples and malls on the other bank. Boats are noisy and low to the water, and the canal water should not be touched. Early morning is the quietest and coolest time to go.",
+        "interests": [
+          "authentic_local",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/jim-thompson-house": {
+        "name": "Jim Thompson House",
+        "description": "A cluster of traditional teak houses in central Bangkok, built by an American silk entrepreneur to hold his Asian art collection.",
+        "details": "Jim Thompson helped revive the Thai silk industry after the Second World War and assembled six traditional teak houses, brought from several parts of Thailand, into a single garden compound beside a canal. They now hold his collection of Southeast Asian art and antiques. Entry is by guided tour, which usually runs in English at regular intervals and takes about forty minutes. He disappeared while walking in the Malaysian highlands in 1967, a story the guides will often tell.",
+        "interests": [
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/chatuchak-market": {
+        "name": "Chatuchak Weekend Market",
+        "description": "One of the world's largest street markets, with thousands of stalls selling clothes, plants, antiques, art and street food.",
+        "details": "Chatuchak is a huge market of narrow covered lanes divided into numbered sections, selling everything from clothing and homewares to pets, antiques and plants. It runs mainly on Saturdays and Sundays, with some sections open on Fridays, so the day of the week matters. It gets very hot and crowded by midday, and going early makes it far more manageable. A map at the entrance helps, as it is easy to lose your bearings.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/thai-massage": {
+        "name": "Traditional Thai massage",
+        "description": "A session of Thai massage, which uses stretching and pressure along the body's lines, usually done fully clothed on a floor mat.",
+        "details": "Traditional Thai massage involves a therapist applying pressure and stretching to the body, usually with the client lying on a mat on the floor in loose clothing provided by the shop. It is firmer than most Western styles and is sometimes described as assisted yoga. Reputable shops show their rates in advance and let you say how hard you want it. It is an easy way to ease tired legs after a day of temples.",
+        "interests": [
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/bangkok-cooking-class": {
+        "name": "Thai cooking class in Bangkok",
+        "description": "A half-day class that usually starts at a market and then covers several classic Thai dishes at a cooking station.",
+        "details": "Most Bangkok cooking classes begin with a short visit to a local market to look at ingredients, then move to a kitchen where each student prepares several dishes such as a stir-fry, a curry and a soup, plus a dessert. Groups are small and the instructors speak English. Vegetarian and allergy-friendly options are usually available if requested in advance. You eat what you cook at the end of the session.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/ayutthaya-historical-park": {
+        "name": "Ayutthaya Historical Park",
+        "description": "The ruined former capital of Siam, with brick prangs, toppled Buddha statues and a Buddha head in tree roots.",
+        "details": "Ayutthaya was the capital of the Siamese kingdom for some four centuries until Burmese forces sacked it in 1767, and its surviving temples are now a UNESCO World Heritage Site. The ruins are spread across an island and the area around it, so most visitors hire a bicycle, tuk-tuk or boat to get between them. Wat Mahathat, with a stone Buddha head wrapped in tree roots, is the best-known image. It is hot and shaded in few places, so go early. Day trips from Bangkok by train or minivan take around an hour and a half each way.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/chiang-mai-old-city-temples": {
+        "name": "Chiang Mai Old City temples",
+        "description": "A walk through the moated old town of Chiang Mai, visiting its large teak and brick Lanna-style temples.",
+        "details": "The old city of Chiang Mai was founded in the late thirteenth century as the capital of the Lanna kingdom, and its square of moat and partly surviving walls still defines the centre. Wat Chedi Luang, with its huge partly ruined brick chedi, and Wat Phra Singh, with its elegant Lanna-style halls, are the best known of dozens of temples. Many are free to enter or charge a small fee. Dress modestly and remove shoes before entering the halls.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/khao-soi-dinner": {
+        "name": "Khao soi dinner in Chiang Mai",
+        "description": "The north's signature dish: egg noodles in a spiced coconut curry broth, topped with crisp noodles and served with pickles and lime.",
+        "details": "Khao soi is a northern Thai dish of soft egg noodles in a rich, mildly spiced coconut curry broth, topped with a nest of crisp fried noodles and eaten with pickled mustard greens, shallots and lime. It originated in the north and the Burmese border region and is found in simple restaurants and stalls across Chiang Mai. Chicken and beef are the usual versions. Many places stop serving by mid-afternoon or early evening.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/doi-suthep": {
+        "name": "Wat Phra That Doi Suthep",
+        "description": "A gilded hilltop temple above Chiang Mai, reached by a long staircase flanked by serpent balustrades, with views over the city.",
+        "details": "Doi Suthep sits on a forested mountain west of Chiang Mai and is one of the north's most sacred temples, with a gilded chedi at its centre and a terrace looking out over the city. A long naga staircase leads up from the car park, and a funicular is available for anyone who would rather not climb. Red songthaew trucks run from the city, and the temple is busiest at weekends. On clear mornings the view is best, as haze often builds later.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/chiang-mai-night-bazaar": {
+        "name": "Chiang Mai Night Bazaar",
+        "description": "An evening market of craft stalls, clothing and street food in the east of the old city.",
+        "details": "The Night Bazaar fills the streets and a number of covered halls near Chang Khlan Road each evening, selling clothing, silverwork, lacquerware, souvenirs and food. It is a convenient place to look for gifts and handmade goods, and haggling is expected. Quality and prices vary a great deal from stall to stall. Street food courts nearby serve northern dishes alongside the usual noodle and rice plates.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "nightlife"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/elephant-sanctuary": {
+        "name": "Ethical elephant sanctuary visit",
+        "description": "A day at a sanctuary where rescued elephants roam freely and visitors observe and feed them rather than ride.",
+        "details": "A number of sanctuaries in the hills around Chiang Mai care for elephants retired from logging, trekking and street begging. At the better ones, visitors prepare food, walk with the herd and watch them bathe, with no riding, chains or shows. Because standards vary widely, it is worth researching operators' practices before booking. Visits are usually a full day with hotel pickup and lunch included, and are on rough ground in a hot, muddy setting.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/chiang-mai-cooking-class": {
+        "name": "Thai cooking class in Chiang Mai",
+        "description": "A day or half-day class including a market visit and several northern Thai dishes cooked from scratch.",
+        "details": "Chiang Mai is one of the most popular places in Thailand to take a cooking class, and many schools run in farm or garden settings just outside the old city. A typical session visits a local market to explain ingredients, then moves to individual cooking stations where each student prepares a soup, curry, stir-fry and dessert. Northern dishes such as khao soi or a mild herby sausage often feature. Places are limited, so booking ahead is sensible.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/doi-inthanon": {
+        "name": "Doi Inthanon National Park",
+        "description": "Thailand's highest mountain, with cool cloud forest, big waterfalls and twin royal pagodas near the summit.",
+        "details": "Doi Inthanon reaches 2,565 metres and is the highest point in Thailand, rising south-west of Chiang Mai. The road climbs through waterfalls, hill-tribe villages and cooler forest to the summit, and twin pagodas built to honour the king and queen stand on the slope below it. A short boardwalk at the top runs through mossy forest. It is noticeably cooler than the city, and the summit is often in mist, so a layer is worth carrying. It is usually a full-day trip by hired car or tour.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/white-temple": {
+        "name": "Wat Rong Khun (White Temple)",
+        "description": "A fantastical white temple near Chiang Rai, covered in mirrored mosaic and built by a contemporary Thai artist.",
+        "details": "Wat Rong Khun is an ornate, all-white temple designed and still being added to by the artist Chalermchai Kositpipat, who began it in the late 1990s. A bridge across a pool of reaching hands leads to the main hall, whose interior murals mix Buddhist imagery with modern references. It is a working art project more than a traditional temple, and photography is restricted inside the main hall. It sits south of Chiang Rai town and is at its quietest in the early morning.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/blue-temple": {
+        "name": "Wat Rong Suea Ten (Blue Temple)",
+        "description": "A strikingly decorated blue and gold temple in Chiang Rai town, with an interior dominated by a white Buddha.",
+        "details": "The Blue Temple was rebuilt in recent years in vivid cobalt blue with gold detailing, and inside sits a large white Buddha image against a deep blue mural. It is smaller and quieter than the White Temple and sits in town, so it is easy to add on the way. The grounds are flat, and the usual dress and shoe rules for temples apply.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/black-house": {
+        "name": "Baan Dam (Black House)",
+        "description": "An art compound of dark wooden buildings on the edge of Chiang Rai, filled with carved furniture, animal skins and bones.",
+        "details": "Baan Dam is a collection of dark timber buildings in several styles, created by the late Thai artist Thawan Duchanee as both his home and a showcase for his work. Inside are large carved pieces, furniture, animal horns and skins, laid out in a deliberately theatrical way. It is the opposite in mood to the White Temple, which makes the two a popular pairing. The grounds are spread out over uneven ground and some buildings have steps.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/golden-triangle": {
+        "name": "Golden Triangle viewpoint",
+        "description": "The point where the Mekong and Ruak rivers meet and Thailand, Laos and Myanmar come together.",
+        "details": "The Golden Triangle takes its name from the meeting of the Mekong and Ruak rivers, with Thailand on one bank, Laos across the Mekong and Myanmar across the Ruak. The area was long associated with opium production, a history told in the nearby museum. A viewpoint and riverside promenade look across the water, and boat trips run on the Mekong. It is about an hour north of Chiang Rai by road and usually combined with a stop in Chiang Saen on the way.",
+        "interests": [
+          "culture",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/ao-nang-beach": {
+        "name": "Ao Nang beach",
+        "description": "The main resort beach of Krabi, with limestone cliffs at either end, longtail boats and a promenade of restaurants.",
+        "details": "Ao Nang is the busiest beach resort on the Krabi coast and the usual base for boat trips, with a long curve of sand, rocky headlands at each end and a strip of restaurants and shops along the back. Longtail boats leave from the beach for the neighbouring bays and islands. Swimming can be limited at low tide, when the sea retreats a long way, and the beach is quietest early in the morning. It is a good place for a sunset drink with the cliffs in silhouette.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/railay-beach": {
+        "name": "Railay Beach",
+        "description": "A beach on a peninsula cut off by limestone cliffs, reachable only by boat and known for rock climbing.",
+        "details": "Railay is a small peninsula near Ao Nang that has no road connection, so everything arrives by longtail boat. Sheer limestone cliffs surround the beaches and make it one of Thailand's main rock-climbing areas, with beginners' courses on offer. Phra Nang Beach, on the south side, is the postcard version, and a short, steep trail leads to a hidden lagoon. Boats can only land at the east side at high tide, and at low tide you may need to wade, so check the tide.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/phi-phi-islands": {
+        "name": "Phi Phi Islands day trip",
+        "description": "A boat day to the limestone islands of Koh Phi Phi, with snorkelling, lagoons and the famous Maya Bay.",
+        "details": "The Phi Phi Islands lie roughly in the sea between Phuket and Krabi and are popular for snorkelling, viking caves and sheltered lagoons under steep cliffs. Maya Bay, made famous by a film in 2000, was closed to visitors for several years to let its reef recover and now operates with strict visitor limits, so rules may change. Day trips run by speedboat or ferry from Krabi, Ao Nang and Phuket and can be crowded. The sea can be rough in the wet season, and trips are cancelled in bad weather.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/hong-islands": {
+        "name": "Hong Islands boat trip",
+        "description": "A longtail or speedboat trip to a group of limestone islands off Krabi, with a hidden lagoon and clear water for snorkelling.",
+        "details": "The Hong Islands, a short boat ride from Ao Nang, are a group of limestone islets with a sheltered central lagoon, small beaches and reefs that are good for snorkelling. They are less crowded than the Phi Phi group, though still busy in high season. Trips usually stop at two or three islands and include lunch on board or on a beach. Choppy sea in the wet season can cancel departures, and sun protection matters.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/tiger-cave-temple": {
+        "name": "Tiger Cave Temple",
+        "description": "A forest monastery outside Krabi with a very long, steep staircase up to a hilltop shrine and views over the countryside.",
+        "details": "Wat Tham Suea sits on a wooded hill and has a staircase of well over a thousand steps up to a golden Buddha and viewing terrace at the top. The climb is steep, humid and relentless, and monkeys live along the route. It is best attempted early in the morning, before the heat. The cave temple at the base, which gives it its name, is much easier to visit and is worth seeing even if you skip the climb.",
+        "interests": [
+          "culture",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "thailand/old-phuket-town": {
+        "name": "Old Phuket Town",
+        "description": "A quiet quarter of Sino-Portuguese shophouses, shrines and cafes, a calmer side of Phuket than the beach resorts.",
+        "details": "Old Phuket Town grew rich on tin mining and rubber in the nineteenth century, and its streets are lined with colourful Sino-Portuguese shophouses and clan houses. Thalang Road is the best-known street, with cafes and galleries. A weekly Sunday walking street fills the main road with market stalls and food. It makes a good evening out, and the streets are flat and easy to walk.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/phuket-big-buddha": {
+        "name": "Phuket Big Buddha",
+        "description": "A 45-metre white marble Buddha on a hilltop in southern Phuket, with wide views of the island and coast.",
+        "details": "The Big Buddha sits on the top of Nakkerd Hill and is visible from much of the south of the island. It is built from white marble and is about 45 metres tall. A road climbs to a viewing terrace around the base, with views over Chalong Bay and the surrounding hills. Visitors are expected to dress modestly, and the site is busiest in the middle of the day.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/phang-nga-bay": {
+        "name": "Phang Nga Bay boat tour",
+        "description": "A day among the limestone towers of Phang Nga Bay, with sea canoeing into caves and a stop at James Bond Island.",
+        "details": "Phang Nga Bay is a sheltered bay north-east of Phuket studded with steep limestone islands covered in vegetation. Day tours typically include a stop at Khao Phing Kan, known as James Bond Island after a 1974 film, and sea canoeing through caves into hidden lagoons. The island itself is very crowded, so the quieter canoe stretches are often the best part. Boat trips are cancelled when the sea is rough.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/phuket-beach-day": {
+        "name": "Beach day on Phuket's west coast",
+        "description": "A relaxed day at one of Phuket's west-coast beaches, with soft sand and warm water in the dry season.",
+        "details": "Phuket's west coast has a series of beaches, from busy Patong to calmer Kata, Karon and Nai Harn, each with its own character. Swimming is generally safe from about November to April, but in the wet season strong currents and red flags make it risky. Sunbeds and umbrellas can be rented, and beach vendors sell food and drink. Nai Harn is a good choice for a quieter day.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/ang-thong-marine-park": {
+        "name": "Ang Thong Marine National Park",
+        "description": "A park of around forty limestone islands off Koh Samui, visited on a day boat for kayaking, snorkelling and a viewpoint hike.",
+        "details": "Ang Thong is a protected group of limestone islands in the Gulf of Thailand, reached by speedboat or larger boat from Koh Samui. A day trip usually combines kayaking along the cliffs, snorkelling, a beach stop and a steep climb to a viewpoint above an emerald-green lagoon on Koh Wua Talap. Departure depends on weather and sea state, so allow a spare day if you can. The viewpoint climb is steep and rough.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "thailand/samui-big-buddha": {
+        "name": "Big Buddha Temple (Wat Phra Yai)",
+        "description": "A 12-metre seated golden Buddha on a small islet linked to Koh Samui by a causeway, visible from the airport approach.",
+        "details": "Wat Phra Yai on Koh Samui centres on a seated Buddha about 12 metres high, sitting on a small island connected to the shore by a short causeway. A stairway climbs to the base of the statue, from where the view takes in the coast and the neighbouring islands. It is a quick stop of about an hour, and modest dress is expected. It sits close to Fisherman's Village, so the two combine easily.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "thailand/fishermans-village": {
+        "name": "Fisherman's Village, Bophut",
+        "description": "A restored fishing village on Samui's north coast, with old shophouses, beachfront restaurants and a Friday night market.",
+        "details": "Bophut's old village has a single main street of Chinese-style wooden shophouses that now hold restaurants, bars, boutiques and small guesthouses, facing a quiet beach. A walking street market fills the road on Friday evenings. It is more relaxed than Chaweng and suits an easy dinner. The beach is sheltered but the water is shallow and less clear than the open parts of the island.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "thailand/chaweng-beach": {
+        "name": "Chaweng Beach",
+        "description": "Samui's longest and busiest beach, with white sand, clear water and a strip of restaurants and bars behind it.",
+        "details": "Chaweng is the main beach resort on Koh Samui, a long sweep of fine white sand with calm water and a busy strip of restaurants, shops and bars behind it. The northern end is more relaxed and the southern end quieter. Swimming conditions are good for most of the year, though the sea can be rougher during the wetter months. Sunbeds are available at many of the beachfront places.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "nightlife"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "thailand": {
+        "name": "Thailand",
+        "description": "A country of golden temples, northern mountains, street food and island beaches on two different coasts.",
+        "images": []
+      },
+      "thailand/bangkok": {
+        "name": "Bangkok",
+        "description": "Thailand's sprawling capital, a mix of royal temples, river life, street food and malls that rewards an early start and a lot of water.",
+        "images": []
+      },
+      "thailand/ayutthaya": {
+        "name": "Ayutthaya",
+        "description": "The ruined former capital of Siam, an hour or two north of Bangkok, with brick prangs and temples spread across an island.",
+        "images": []
+      },
+      "thailand/chiang-mai": {
+        "name": "Chiang Mai",
+        "description": "A moated northern city of Lanna-style temples, night markets and cooking classes, with forested mountains close by.",
+        "images": []
+      },
+      "thailand/doi-inthanon": {
+        "name": "Doi Inthanon",
+        "description": "Thailand's highest mountain, in a national park with cloud forest, waterfalls and twin royal pagodas.",
+        "images": []
+      },
+      "thailand/chiang-rai": {
+        "name": "Chiang Rai",
+        "description": "A northern town known for the White Temple, the Black House and the Golden Triangle border country.",
+        "images": []
+      },
+      "thailand/golden-triangle": {
+        "name": "Golden Triangle",
+        "description": "The point north of Chiang Rai where Thailand, Laos and Myanmar meet at the confluence of the Mekong and Ruak rivers.",
+        "images": []
+      },
+      "thailand/krabi": {
+        "name": "Krabi",
+        "description": "A province of limestone cliffs, beaches and island boat trips on the Andaman coast, centred on Ao Nang.",
+        "images": []
+      },
+      "thailand/railay-beach": {
+        "name": "Railay Beach",
+        "description": "A beach peninsula in Krabi reached only by longtail boat, backed by limestone cliffs popular with climbers.",
+        "images": []
+      },
+      "thailand/koh-phi-phi": {
+        "name": "Koh Phi Phi",
+        "description": "A pair of Andaman islands under steep limestone cliffs, known for snorkelling, lagoons and Maya Bay.",
+        "images": []
+      },
+      "thailand/phuket": {
+        "name": "Phuket",
+        "description": "Thailand's largest island, with west-coast beaches, an old Sino-Portuguese town and boat trips into Phang Nga Bay.",
+        "images": []
+      },
+      "thailand/phang-nga-bay": {
+        "name": "Phang Nga Bay",
+        "description": "A sheltered bay north-east of Phuket studded with limestone islands, caves and sea canoe routes.",
+        "images": []
+      },
+      "thailand/surat-thani": {
+        "name": "Surat Thani",
+        "description": "The Gulf of Thailand province that holds Koh Samui, Koh Phangan and the Ang Thong island group.",
+        "images": []
+      },
+      "thailand/koh-samui": {
+        "name": "Koh Samui",
+        "description": "A Gulf of Thailand island of palm-lined beaches, fishing villages and golden temples, driest when the Andaman coast is wet.",
+        "images": []
+      },
+      "thailand/ang-thong-marine-park": {
+        "name": "Ang Thong Marine Park",
+        "description": "A protected group of limestone islands off Koh Samui, visited by day boat for kayaking, snorkelling and a lagoon viewpoint.",
+        "images": []
+      }
+    }
+  }
+}

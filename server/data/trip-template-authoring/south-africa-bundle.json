@@ -1,0 +1,2527 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, TravelStride, Fodor's and Afar itineraries for South Africa",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "south-africa-cape-town-winelands-5d",
+      "title": "Cape Town and the Winelands in 5 Days",
+      "summary": "Table Mountain and Camps Bay in Cape Town, then two nights among the vineyards of Stellenbosch and Franschhoek.",
+      "days": 5,
+      "route": "Cape Town > Stellenbosch",
+      "arrive": "Cape Town (CPT)",
+      "depart": "Cape Town (CPT)",
+      "countries": [
+        "South Africa"
+      ],
+      "regions": [
+        "Western Cape"
+      ],
+      "cities": [
+        "Cape Town",
+        "Stellenbosch",
+        "Franschhoek"
+      ],
+      "imageQuery": "Table Mountain Cape Town South Africa",
+      "highlights": [
+        "Table Mountain",
+        "Camps Bay sunset",
+        "Stellenbosch wineries",
+        "Franschhoek",
+        "Kirstenbosch Gardens"
+      ],
+      "destinationKeys": [
+        "south-africa",
+        "south-africa/western-cape",
+        "south-africa/cape-town",
+        "south-africa/stellenbosch",
+        "south-africa/franschhoek"
+      ],
+      "hero": "south-africa/cape-town",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "Fodor's",
+        "Afar"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "relax",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Cape Town",
+          "hotel": "Hotel in Cape Town",
+          "start": 0,
+          "nights": 2,
+          "area": "Around the V&A Waterfront or Sea Point for sea views and restaurants; Gardens or the City Bowl for being close to the mountain",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Stellenbosch",
+          "hotel": "Hotel in Stellenbosch",
+          "start": 2,
+          "nights": 2,
+          "area": "In Stellenbosch town for walking to cafes, or on a wine estate among the vines for quiet",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "V&A Waterfront",
+          "notes": "Seals often rest on the quay; the Zeitz Museum is in a converted grain silo.",
+          "where": "V&A Waterfront, Cape Town",
+          "book": "",
+          "place": "south-africa/waterfront"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Sunset at Camps Bay",
+          "notes": "A strip of cafes and bars lines the beach; the Atlantic is very cold and the wind can be strong.",
+          "where": "Camps Bay, Cape Town",
+          "book": "",
+          "place": "south-africa/camps-bay-sunset"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Table Mountain by cable car",
+          "notes": "The cable car stops in wind or cloud, so check the day before; buying tickets online saves queuing.",
+          "where": "Table Mountain, Cape Town",
+          "book": "",
+          "place": "south-africa/table-mountain"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Kirstenbosch National Botanical Garden",
+          "notes": "Paths slope gently; a shuttle carries visitors around the garden.",
+          "where": "Kirstenbosch, Cape Town",
+          "book": "",
+          "place": "south-africa/kirstenbosch"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Stellenbosch town walk",
+          "notes": "Flat and easy on foot; the Village Museum on Ryneveld Street spans several old houses.",
+          "where": "Stellenbosch",
+          "book": "",
+          "place": "south-africa/stellenbosch-town"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "10:30",
+          "duration": "3.5h",
+          "name": "Stellenbosch wine estates",
+          "notes": "Plan two or three estates and arrange a driver or tour so no one drives after tasting.",
+          "where": "Stellenbosch winelands",
+          "book": "Yes - book tastings ahead in high season",
+          "place": "south-africa/stellenbosch-wine-estates"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Franschhoek village and wine tram",
+          "notes": "The hop-on hop-off wine tram links several estates; booking ahead is wise.",
+          "where": "Franschhoek",
+          "book": "",
+          "place": "south-africa/franschhoek"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cape Town International Airport (CPT)",
+          "to": "Cape Town hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or ride-hailing app",
+          "notes": "Use a registered taxi or app; the city bowl is about thirty minutes from the airport.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cape Town",
+          "to": "Stellenbosch",
+          "time": "10:00",
+          "minutes": 50,
+          "carrier": "Rental car or private transfer",
+          "notes": "Roads can be busy at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Stellenbosch",
+          "to": "Cape Town International Airport (CPT)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-africa-cape-town-hermanus-7d",
+      "title": "Cape Town, Peninsula and Hermanus in 7 Days",
+      "summary": "Four nights in Cape Town covering Table Mountain, the Cape Peninsula and Robben Island, then a coastal base at Hermanus for whales and cool-climate wines.",
+      "days": 7,
+      "route": "Cape Town > Hermanus",
+      "arrive": "Cape Town (CPT)",
+      "depart": "Cape Town (CPT)",
+      "countries": [
+        "South Africa"
+      ],
+      "regions": [
+        "Western Cape"
+      ],
+      "cities": [
+        "Cape Town",
+        "Cape Point",
+        "Hermanus"
+      ],
+      "imageQuery": "Hermanus whale watching South Africa coast",
+      "highlights": [
+        "Table Mountain",
+        "Cape Point",
+        "Boulders Beach penguins",
+        "Robben Island",
+        "Whale watching at Hermanus"
+      ],
+      "destinationKeys": [
+        "south-africa",
+        "south-africa/western-cape",
+        "south-africa/cape-town",
+        "south-africa/cape-point",
+        "south-africa/hermanus"
+      ],
+      "hero": "south-africa/hermanus",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "Fodor's",
+        "Afar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "culture",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Cape Town",
+          "hotel": "Hotel in Cape Town",
+          "start": 0,
+          "nights": 4,
+          "area": "Around the V&A Waterfront or Sea Point for sea views and restaurants; Gardens or the City Bowl for being close to the mountain",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hermanus",
+          "hotel": "Hotel in Hermanus",
+          "start": 4,
+          "nights": 2,
+          "area": "Along the Hermanus cliff path for whale views from the room, or near the old harbour",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Bo-Kaap",
+          "notes": "Stay respectful when photographing residents; the streets are steep and cobbled.",
+          "where": "Bo-Kaap, Cape Town",
+          "book": "",
+          "place": "south-africa/bo-kaap"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "17:45",
+          "duration": "2h",
+          "name": "Sunset at Camps Bay",
+          "notes": "A strip of cafes and bars lines the beach; the Atlantic is very cold and the wind can be strong.",
+          "where": "Camps Bay, Cape Town",
+          "book": "",
+          "place": "south-africa/camps-bay-sunset"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Table Mountain by cable car",
+          "notes": "The cable car stops in wind or cloud, so check the day before; buying tickets online saves queuing.",
+          "where": "Table Mountain, Cape Town",
+          "book": "",
+          "place": "south-africa/table-mountain"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Kirstenbosch National Botanical Garden",
+          "notes": "Paths slope gently; a shuttle carries visitors around the garden.",
+          "where": "Kirstenbosch, Cape Town",
+          "book": "",
+          "place": "south-africa/kirstenbosch"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Cape Point and the Cape of Good Hope",
+          "notes": "Chapman's Peak Drive can close in high wind; baboons will steal food, so do not feed them.",
+          "where": "Cape of Good Hope Nature Reserve",
+          "book": "",
+          "place": "south-africa/cape-point"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Boulders Beach penguins",
+          "notes": "Best before the tour buses arrive; keep a distance, as the birds can bite.",
+          "where": "Simon's Town",
+          "book": "",
+          "place": "south-africa/boulders-penguins"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Robben Island",
+          "notes": "Allow about four hours with the ferry; trips are cancelled in rough seas and sell out well ahead.",
+          "where": "Robben Island",
+          "book": "Yes - tickets sell out in high season",
+          "place": "south-africa/robben-island"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "V&A Waterfront",
+          "notes": "Seals often rest on the quay; the Zeitz Museum is in a converted grain silo.",
+          "where": "V&A Waterfront, Cape Town",
+          "book": "",
+          "place": "south-africa/waterfront"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Stony Point penguin colony",
+          "notes": "A quieter colony than Boulders, on the scenic Clarence Drive.",
+          "where": "Betty's Bay",
+          "book": "",
+          "place": "south-africa/bettys-bay-penguins"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Hermanus Cliff Path",
+          "notes": "Southern right whales calve in the bay from roughly June to November; the path has steps and uneven stretches.",
+          "where": "Hermanus",
+          "book": "",
+          "place": "south-africa/hermanus-cliff-path"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "Hemel-en-Aarde wine valley",
+          "notes": "Tastings may need booking; arrange a designated driver.",
+          "where": "Hermanus",
+          "book": "Yes - some estates need booked tastings",
+          "place": "south-africa/hemel-en-aarde"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cape Town International Airport (CPT)",
+          "to": "Cape Town hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or ride-hailing app",
+          "notes": "Use a registered taxi or app; the city bowl is about thirty minutes from the airport.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Cape Town",
+          "to": "Hermanus",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "The coast road along Clarence Drive is scenic and slower than the highway.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Hermanus",
+          "to": "Cape Town International Airport (CPT)",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-africa-cape-town-garden-route-7d",
+      "title": "Cape Town and the Garden Route in 7 Days",
+      "summary": "Three nights in Cape Town, then Route 62 through the Little Karoo to Oudtshoorn and the lagoon town of Knysna, finishing at George.",
+      "days": 7,
+      "route": "Cape Town > Oudtshoorn > Knysna",
+      "arrive": "Cape Town (CPT)",
+      "depart": "George (GRJ)",
+      "countries": [
+        "South Africa"
+      ],
+      "regions": [
+        "Western Cape"
+      ],
+      "cities": [
+        "Cape Town",
+        "Cape Point",
+        "Oudtshoorn",
+        "Knysna",
+        "Tsitsikamma"
+      ],
+      "imageQuery": "Knysna Heads Garden Route South Africa",
+      "highlights": [
+        "Table Mountain",
+        "Cape Point",
+        "Route 62",
+        "Cango Caves",
+        "Knysna lagoon"
+      ],
+      "destinationKeys": [
+        "south-africa",
+        "south-africa/western-cape",
+        "south-africa/cape-town",
+        "south-africa/cape-point",
+        "south-africa/oudtshoorn",
+        "south-africa/knysna",
+        "south-africa/tsitsikamma"
+      ],
+      "hero": "south-africa/knysna",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "Fodor's",
+        "Afar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "relax",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Cape Town",
+          "hotel": "Hotel in Cape Town",
+          "start": 0,
+          "nights": 3,
+          "area": "Around the V&A Waterfront or Sea Point for sea views and restaurants; Gardens or the City Bowl for being close to the mountain",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oudtshoorn",
+          "hotel": "Hotel in Oudtshoorn",
+          "start": 3,
+          "nights": 1,
+          "area": "In or near Oudtshoorn, with a guesthouse on a farm for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Knysna",
+          "hotel": "Hotel in Knysna",
+          "start": 4,
+          "nights": 2,
+          "area": "On the Knysna waterfront or the lagoon shore, close to oysters and the Heads viewpoints",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Bo-Kaap",
+          "notes": "Stay respectful when photographing residents; the streets are steep and cobbled.",
+          "where": "Bo-Kaap, Cape Town",
+          "book": "",
+          "place": "south-africa/bo-kaap"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "17:45",
+          "duration": "2h",
+          "name": "Sunset at Camps Bay",
+          "notes": "A strip of cafes and bars lines the beach; the Atlantic is very cold and the wind can be strong.",
+          "where": "Camps Bay, Cape Town",
+          "book": "",
+          "place": "south-africa/camps-bay-sunset"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Table Mountain by cable car",
+          "notes": "The cable car stops in wind or cloud, so check the day before; buying tickets online saves queuing.",
+          "where": "Table Mountain, Cape Town",
+          "book": "",
+          "place": "south-africa/table-mountain"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Kirstenbosch National Botanical Garden",
+          "notes": "Paths slope gently; a shuttle carries visitors around the garden.",
+          "where": "Kirstenbosch, Cape Town",
+          "book": "",
+          "place": "south-africa/kirstenbosch"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Cape Point and the Cape of Good Hope",
+          "notes": "Chapman's Peak Drive can close in high wind; baboons will steal food, so do not feed them.",
+          "where": "Cape of Good Hope Nature Reserve",
+          "book": "",
+          "place": "south-africa/cape-point"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Boulders Beach penguins",
+          "notes": "Best before the tour buses arrive; keep a distance, as the birds can bite.",
+          "where": "Simon's Town",
+          "book": "",
+          "place": "south-africa/boulders-penguins"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Cango Caves",
+          "notes": "The adventure tour includes very tight passages, so it is not for the claustrophobic; guided tours run at set times.",
+          "where": "Oudtshoorn",
+          "book": "",
+          "place": "south-africa/cango-caves"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "1.5h",
+          "name": "Ostrich farm visit",
+          "notes": "Skip ostrich rides if animal welfare is a concern; mornings are cooler.",
+          "where": "Oudtshoorn",
+          "book": "",
+          "place": "south-africa/oudtshoorn-ostrich-farm"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Knysna Lagoon and the Heads",
+          "notes": "Viewpoints on the eastern head look over the entrance; try fresh oysters at a waterfront restaurant.",
+          "where": "Knysna",
+          "book": "",
+          "place": "south-africa/knysna-lagoon"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Tsitsikamma and the Storms River Mouth",
+          "notes": "The suspension bridge walk is short with some stairs; rocks near the sea are slippery.",
+          "where": "Tsitsikamma National Park",
+          "book": "",
+          "place": "south-africa/tsitsikamma"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cape Town International Airport (CPT)",
+          "to": "Cape Town hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or ride-hailing app",
+          "notes": "Use a registered taxi or app; the city bowl is about thirty minutes from the airport.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cape Town",
+          "to": "Oudtshoorn",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car or private transfer",
+          "notes": "The scenic Route 62 passes through the Little Karoo; allow stops.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Oudtshoorn",
+          "to": "Knysna",
+          "time": "11:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "The road crosses the Outeniqua Pass.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Knysna",
+          "to": "George Airport (GRJ)",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Rental car or private transfer",
+          "notes": "Allow time for the drive and check-in at the small regional airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-africa-johannesburg-panorama-kruger-10d",
+      "title": "Johannesburg, Panorama Route and Kruger in 10 Days",
+      "summary": "Apartheid-era history in Johannesburg, the viewpoints of the Panorama Route, then four nights of Big Five safari beside Kruger National Park.",
+      "days": 10,
+      "route": "Johannesburg > Graskop > Kruger National Park > Johannesburg",
+      "arrive": "Johannesburg (JNB)",
+      "depart": "Johannesburg (JNB)",
+      "countries": [
+        "South Africa"
+      ],
+      "regions": [
+        "Gauteng",
+        "Mpumalanga"
+      ],
+      "cities": [
+        "Johannesburg",
+        "Graskop",
+        "Kruger National Park"
+      ],
+      "imageQuery": "Kruger National Park elephant safari South Africa",
+      "highlights": [
+        "Apartheid Museum",
+        "Soweto",
+        "Blyde River Canyon",
+        "God's Window",
+        "Big Five game drives"
+      ],
+      "destinationKeys": [
+        "south-africa",
+        "south-africa/gauteng",
+        "south-africa/johannesburg",
+        "south-africa/mpumalanga",
+        "south-africa/graskop",
+        "south-africa/kruger-national-park"
+      ],
+      "hero": "south-africa/kruger-national-park",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "Fodor's",
+        "Afar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Johannesburg",
+          "hotel": "Hotel in Johannesburg",
+          "start": 0,
+          "nights": 1,
+          "area": "In Sandton, Rosebank or near the airport: safe, with restaurants and quick airport access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Graskop",
+          "hotel": "Hotel in Graskop",
+          "start": 1,
+          "nights": 2,
+          "area": "In Graskop village, close to restaurants, with the waterfalls and viewpoints a short drive away",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kruger National Park",
+          "hotel": "Lodge near Kruger National Park",
+          "start": 3,
+          "nights": 4,
+          "area": "A safari lodge in a private reserve beside Kruger, or a camp inside the park; game drives are normally included",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Johannesburg",
+          "hotel": "Hotel in Johannesburg",
+          "start": 7,
+          "nights": 2,
+          "area": "In Sandton, Rosebank or near the airport: safe, with restaurants and quick airport access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Apartheid Museum",
+          "notes": "Allow at least two to three hours; some images are upsetting.",
+          "where": "Johannesburg",
+          "book": "",
+          "place": "south-africa/apartheid-museum"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "God's Window and Lisbon Falls",
+          "notes": "Views are often hidden by cloud, so allow time for it to clear; a short stepped path climbs to the upper viewpoint.",
+          "where": "Panorama Route, Mpumalanga",
+          "book": "",
+          "place": "south-africa/gods-window"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Blyde River Canyon and the Three Rondavels",
+          "notes": "Early morning is clearest; paths between the lookouts are short and paved.",
+          "where": "Blyde River Canyon",
+          "book": "",
+          "place": "south-africa/blyde-river-canyon"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "1h",
+          "name": "Bourke's Luck Potholes",
+          "notes": "The rock near the water is slippery; best in morning light.",
+          "where": "Bourke's Luck, Mpumalanga",
+          "book": "",
+          "place": "south-africa/bourkes-luck-potholes"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Evening game drive and sundowner",
+          "notes": "Bring a jacket for after dark; use insect repellent in the evening.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-evening-drive"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3.5h",
+          "name": "Dawn game drive",
+          "notes": "Warm clothes are needed even in a hot season; sightings are never guaranteed.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-morning-drive"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Evening game drive and sundowner",
+          "notes": "Bring a jacket for after dark; use insect repellent in the evening.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-evening-drive"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3.5h",
+          "name": "Dawn game drive",
+          "notes": "Warm clothes are needed even in a hot season; sightings are never guaranteed.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-morning-drive"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Guided bush walk",
+          "notes": "Led by an armed ranger; children are usually not allowed, and the pace is slow.",
+          "where": "Kruger National Park area",
+          "book": "Yes - walks are guided and limited",
+          "place": "south-africa/kruger-bush-walk"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3.5h",
+          "name": "Dawn game drive",
+          "notes": "Warm clothes are needed even in a hot season; sightings are never guaranteed.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-morning-drive"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Evening game drive and sundowner",
+          "notes": "Bring a jacket for after dark; use insect repellent in the evening.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-evening-drive"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Soweto tour",
+          "notes": "A local guide gives far better context than a self-drive; go with a reputable operator.",
+          "where": "Soweto, Johannesburg",
+          "book": "Yes - guided tours are booked ahead",
+          "place": "south-africa/soweto-tour"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "O. R. Tambo International Airport (JNB)",
+          "to": "Johannesburg hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Use a registered taxi or ride-hailing app.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Johannesburg",
+          "to": "Graskop",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "Rental car or private transfer",
+          "notes": "A long drive east into Mpumalanga on good highways.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Graskop",
+          "to": "Kruger National Park area",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "Lodge transfer or private transfer",
+          "notes": "Lodges often arrange pick-up from the Panorama Route.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Kruger National Park area",
+          "to": "Johannesburg",
+          "time": "09:00",
+          "minutes": 360,
+          "carrier": "Rental car or private transfer",
+          "notes": "A long drive after the dawn drive; return rental cars before the evening.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Johannesburg hotel area",
+          "to": "O. R. Tambo International Airport (JNB)",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-africa-cape-winelands-garden-route-10d",
+      "title": "Cape Town, Winelands and Garden Route in 10 Days",
+      "summary": "Cape Town and the Peninsula, wine estates in Stellenbosch, Route 62 through the Karoo and three nights on the Garden Route.",
+      "days": 10,
+      "route": "Cape Town > Stellenbosch > Oudtshoorn > Knysna",
+      "arrive": "Cape Town (CPT)",
+      "depart": "George (GRJ)",
+      "countries": [
+        "South Africa"
+      ],
+      "regions": [
+        "Western Cape"
+      ],
+      "cities": [
+        "Cape Town",
+        "Cape Point",
+        "Stellenbosch",
+        "Franschhoek",
+        "Oudtshoorn",
+        "Knysna",
+        "Tsitsikamma",
+        "Plettenberg Bay"
+      ],
+      "imageQuery": "Stellenbosch vineyards Cape Dutch South Africa",
+      "highlights": [
+        "Table Mountain",
+        "Cape Point",
+        "Stellenbosch wineries",
+        "Cango Caves",
+        "Garden Route coast"
+      ],
+      "destinationKeys": [
+        "south-africa",
+        "south-africa/western-cape",
+        "south-africa/cape-town",
+        "south-africa/cape-point",
+        "south-africa/stellenbosch",
+        "south-africa/franschhoek",
+        "south-africa/oudtshoorn",
+        "south-africa/knysna",
+        "south-africa/tsitsikamma",
+        "south-africa/plettenberg-bay"
+      ],
+      "hero": "south-africa/stellenbosch",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "Fodor's",
+        "Afar"
+      ],
+      "pace": "B",
+      "interests": [
+        "food",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Cape Town",
+          "hotel": "Hotel in Cape Town",
+          "start": 0,
+          "nights": 3,
+          "area": "Around the V&A Waterfront or Sea Point for sea views and restaurants; Gardens or the City Bowl for being close to the mountain",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Stellenbosch",
+          "hotel": "Hotel in Stellenbosch",
+          "start": 3,
+          "nights": 2,
+          "area": "In Stellenbosch town for walking to cafes, or on a wine estate among the vines for quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oudtshoorn",
+          "hotel": "Hotel in Oudtshoorn",
+          "start": 5,
+          "nights": 1,
+          "area": "In or near Oudtshoorn, with a guesthouse on a farm for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Knysna",
+          "hotel": "Hotel in Knysna",
+          "start": 6,
+          "nights": 3,
+          "area": "On the Knysna waterfront or the lagoon shore, close to oysters and the Heads viewpoints",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Bo-Kaap",
+          "notes": "Stay respectful when photographing residents; the streets are steep and cobbled.",
+          "where": "Bo-Kaap, Cape Town",
+          "book": "",
+          "place": "south-africa/bo-kaap"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "17:45",
+          "duration": "2h",
+          "name": "Sunset at Camps Bay",
+          "notes": "A strip of cafes and bars lines the beach; the Atlantic is very cold and the wind can be strong.",
+          "where": "Camps Bay, Cape Town",
+          "book": "",
+          "place": "south-africa/camps-bay-sunset"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Table Mountain by cable car",
+          "notes": "The cable car stops in wind or cloud, so check the day before; buying tickets online saves queuing.",
+          "where": "Table Mountain, Cape Town",
+          "book": "",
+          "place": "south-africa/table-mountain"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Kirstenbosch National Botanical Garden",
+          "notes": "Paths slope gently; a shuttle carries visitors around the garden.",
+          "where": "Kirstenbosch, Cape Town",
+          "book": "",
+          "place": "south-africa/kirstenbosch"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Cape Point and the Cape of Good Hope",
+          "notes": "Chapman's Peak Drive can close in high wind; baboons will steal food, so do not feed them.",
+          "where": "Cape of Good Hope Nature Reserve",
+          "book": "",
+          "place": "south-africa/cape-point"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Boulders Beach penguins",
+          "notes": "Best before the tour buses arrive; keep a distance, as the birds can bite.",
+          "where": "Simon's Town",
+          "book": "",
+          "place": "south-africa/boulders-penguins"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Stellenbosch town walk",
+          "notes": "Flat and easy on foot; the Village Museum on Ryneveld Street spans several old houses.",
+          "where": "Stellenbosch",
+          "book": "",
+          "place": "south-africa/stellenbosch-town"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "10:30",
+          "duration": "3.5h",
+          "name": "Stellenbosch wine estates",
+          "notes": "Plan two or three estates and arrange a driver or tour so no one drives after tasting.",
+          "where": "Stellenbosch winelands",
+          "book": "Yes - book tastings ahead in high season",
+          "place": "south-africa/stellenbosch-wine-estates"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Franschhoek village and wine tram",
+          "notes": "The hop-on hop-off wine tram links several estates; booking ahead is wise.",
+          "where": "Franschhoek",
+          "book": "",
+          "place": "south-africa/franschhoek"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Cango Caves",
+          "notes": "The adventure tour includes very tight passages, so it is not for the claustrophobic; guided tours run at set times.",
+          "where": "Oudtshoorn",
+          "book": "",
+          "place": "south-africa/cango-caves"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "1.5h",
+          "name": "Ostrich farm visit",
+          "notes": "Skip ostrich rides if animal welfare is a concern; mornings are cooler.",
+          "where": "Oudtshoorn",
+          "book": "",
+          "place": "south-africa/oudtshoorn-ostrich-farm"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Knysna Lagoon and the Heads",
+          "notes": "Viewpoints on the eastern head look over the entrance; try fresh oysters at a waterfront restaurant.",
+          "where": "Knysna",
+          "book": "",
+          "place": "south-africa/knysna-lagoon"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Tsitsikamma and the Storms River Mouth",
+          "notes": "The suspension bridge walk is short with some stairs; rocks near the sea are slippery.",
+          "where": "Tsitsikamma National Park",
+          "book": "",
+          "place": "south-africa/tsitsikamma"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Robberg Nature Reserve",
+          "notes": "Choose a trail length; the path has steep dunes and rocky sections, and wind can be strong.",
+          "where": "Plettenberg Bay",
+          "book": "",
+          "place": "south-africa/robberg"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cape Town International Airport (CPT)",
+          "to": "Cape Town hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or ride-hailing app",
+          "notes": "Use a registered taxi or app; the city bowl is about thirty minutes from the airport.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cape Town",
+          "to": "Stellenbosch",
+          "time": "10:00",
+          "minutes": 50,
+          "carrier": "Rental car or private transfer",
+          "notes": "Roads can be busy at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Stellenbosch",
+          "to": "Oudtshoorn",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "Rental car or private transfer",
+          "notes": "The scenic Route 62 passes through the Little Karoo; allow stops.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Oudtshoorn",
+          "to": "Knysna",
+          "time": "11:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "The road crosses the Outeniqua Pass.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Knysna",
+          "to": "George Airport (GRJ)",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Rental car or private transfer",
+          "notes": "Allow time for the drive and check-in at the small regional airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-africa-cape-garden-route-addo-14d",
+      "title": "Cape Town, Garden Route and Addo in 14 Days",
+      "summary": "A coastal journey from Cape Town via the whales of Hermanus and the Garden Route to elephants at Addo, a malaria-free safari.",
+      "days": 14,
+      "route": "Cape Town > Hermanus > Oudtshoorn > Knysna > Addo",
+      "arrive": "Cape Town (CPT)",
+      "depart": "Gqeberha (PLZ)",
+      "countries": [
+        "South Africa"
+      ],
+      "regions": [
+        "Western Cape",
+        "Eastern Cape"
+      ],
+      "cities": [
+        "Cape Town",
+        "Cape Point",
+        "Hermanus",
+        "Oudtshoorn",
+        "Knysna",
+        "Tsitsikamma",
+        "Plettenberg Bay",
+        "Addo"
+      ],
+      "imageQuery": "Addo Elephant National Park South Africa",
+      "highlights": [
+        "Table Mountain",
+        "Robben Island",
+        "Whale watching at Hermanus",
+        "Garden Route",
+        "Addo elephants"
+      ],
+      "destinationKeys": [
+        "south-africa",
+        "south-africa/western-cape",
+        "south-africa/cape-town",
+        "south-africa/cape-point",
+        "south-africa/hermanus",
+        "south-africa/oudtshoorn",
+        "south-africa/knysna",
+        "south-africa/tsitsikamma",
+        "south-africa/plettenberg-bay",
+        "south-africa/eastern-cape",
+        "south-africa/addo"
+      ],
+      "hero": "south-africa/addo",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "Fodor's",
+        "Afar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Cape Town",
+          "hotel": "Hotel in Cape Town",
+          "start": 0,
+          "nights": 4,
+          "area": "Around the V&A Waterfront or Sea Point for sea views and restaurants; Gardens or the City Bowl for being close to the mountain",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hermanus",
+          "hotel": "Hotel in Hermanus",
+          "start": 4,
+          "nights": 2,
+          "area": "Along the Hermanus cliff path for whale views from the room, or near the old harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oudtshoorn",
+          "hotel": "Hotel in Oudtshoorn",
+          "start": 6,
+          "nights": 1,
+          "area": "In or near Oudtshoorn, with a guesthouse on a farm for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Knysna",
+          "hotel": "Hotel in Knysna",
+          "start": 7,
+          "nights": 3,
+          "area": "On the Knysna waterfront or the lagoon shore, close to oysters and the Heads viewpoints",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Addo",
+          "hotel": "Lodge near Addo Elephant National Park",
+          "start": 10,
+          "nights": 3,
+          "area": "Near the Addo main gate, or in a lodge inside the park for early game drives",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Bo-Kaap",
+          "notes": "Stay respectful when photographing residents; the streets are steep and cobbled.",
+          "where": "Bo-Kaap, Cape Town",
+          "book": "",
+          "place": "south-africa/bo-kaap"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "17:45",
+          "duration": "2h",
+          "name": "Sunset at Camps Bay",
+          "notes": "A strip of cafes and bars lines the beach; the Atlantic is very cold and the wind can be strong.",
+          "where": "Camps Bay, Cape Town",
+          "book": "",
+          "place": "south-africa/camps-bay-sunset"
+        },
+        {
+          "day": 1,
+          "type": "Hike",
+          "time": "06:00",
+          "duration": "2.5h",
+          "name": "Lion's Head sunrise hike",
+          "notes": "The last section has chains and ladders; start with a head torch and go in company.",
+          "where": "Lion's Head, Cape Town",
+          "book": "",
+          "place": "south-africa/lions-head"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "11:00",
+          "duration": "2.5h",
+          "name": "Table Mountain by cable car",
+          "notes": "The cable car stops in wind or cloud, so check the day before.",
+          "where": "Table Mountain, Cape Town",
+          "book": "",
+          "place": "south-africa/table-mountain"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Kirstenbosch National Botanical Garden",
+          "notes": "Paths slope gently; a shuttle carries visitors around the garden.",
+          "where": "Kirstenbosch, Cape Town",
+          "book": "",
+          "place": "south-africa/kirstenbosch"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Cape Point and the Cape of Good Hope",
+          "notes": "Chapman's Peak Drive can close in high wind; baboons will steal food, so do not feed them.",
+          "where": "Cape of Good Hope Nature Reserve",
+          "book": "",
+          "place": "south-africa/cape-point"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Boulders Beach penguins",
+          "notes": "Best before the tour buses arrive; keep a distance, as the birds can bite.",
+          "where": "Simon's Town",
+          "book": "",
+          "place": "south-africa/boulders-penguins"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Robben Island",
+          "notes": "Allow about four hours with the ferry; trips are cancelled in rough seas and sell out well ahead.",
+          "where": "Robben Island",
+          "book": "Yes - tickets sell out in high season",
+          "place": "south-africa/robben-island"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "V&A Waterfront",
+          "notes": "Seals often rest on the quay; the Zeitz Museum is in a converted grain silo.",
+          "where": "V&A Waterfront, Cape Town",
+          "book": "",
+          "place": "south-africa/waterfront"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1.5h",
+          "name": "Stony Point penguin colony",
+          "notes": "A quieter colony than Boulders, on the scenic Clarence Drive.",
+          "where": "Betty's Bay",
+          "book": "",
+          "place": "south-africa/bettys-bay-penguins"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Hermanus Cliff Path",
+          "notes": "Southern right whales calve in the bay from roughly June to November.",
+          "where": "Hermanus",
+          "book": "",
+          "place": "south-africa/hermanus-cliff-path"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "3h",
+          "name": "Hemel-en-Aarde wine valley",
+          "notes": "Tastings may need booking; arrange a designated driver.",
+          "where": "Hermanus",
+          "book": "Yes - some estates need booked tastings",
+          "place": "south-africa/hemel-en-aarde"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Cango Caves",
+          "notes": "The adventure tour includes very tight passages, so it is not for the claustrophobic; guided tours run at set times.",
+          "where": "Oudtshoorn",
+          "book": "",
+          "place": "south-africa/cango-caves"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "1.5h",
+          "name": "Ostrich farm visit",
+          "notes": "Skip ostrich rides if animal welfare is a concern; mornings are cooler.",
+          "where": "Oudtshoorn",
+          "book": "",
+          "place": "south-africa/oudtshoorn-ostrich-farm"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Knysna Lagoon and the Heads",
+          "notes": "Viewpoints on the eastern head look over the entrance; try fresh oysters at a waterfront restaurant.",
+          "where": "Knysna",
+          "book": "",
+          "place": "south-africa/knysna-lagoon"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Tsitsikamma and the Storms River Mouth",
+          "notes": "The suspension bridge walk is short with some stairs; rocks near the sea are slippery.",
+          "where": "Tsitsikamma National Park",
+          "book": "",
+          "place": "south-africa/tsitsikamma"
+        },
+        {
+          "day": 9,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Robberg Nature Reserve",
+          "notes": "Choose a trail length; the path has steep dunes and rocky sections, and wind can be strong.",
+          "where": "Plettenberg Bay",
+          "book": "",
+          "place": "south-africa/robberg"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Addo afternoon game drive",
+          "notes": "All of the Big Five are present; early and late drives find the most animals.",
+          "where": "Addo Elephant National Park",
+          "book": "",
+          "place": "south-africa/addo-elephant-park"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Addo morning game drive",
+          "notes": "A guided drive usually finds more than a self-drive.",
+          "where": "Addo Elephant National Park",
+          "book": "",
+          "place": "south-africa/addo-elephant-park"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Addo late-afternoon drive",
+          "notes": "Elephants gather at waterholes in the heat of the day and in the evening.",
+          "where": "Addo Elephant National Park",
+          "book": "",
+          "place": "south-africa/addo-elephant-park"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cape Town International Airport (CPT)",
+          "to": "Cape Town hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or ride-hailing app",
+          "notes": "Use a registered taxi or app; the city bowl is about thirty minutes from the airport.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Cape Town",
+          "to": "Hermanus",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "The coast road along Clarence Drive is scenic and slower than the highway.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Hermanus",
+          "to": "Oudtshoorn",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "Rental car or private transfer",
+          "notes": "The scenic Route 62 passes through the Little Karoo; allow stops.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Oudtshoorn",
+          "to": "Knysna",
+          "time": "11:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "The road crosses the Outeniqua Pass.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Knysna",
+          "to": "Addo",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "Rental car or private transfer",
+          "notes": "A long drive east into the Eastern Cape, away from the coast for much of the way.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Addo",
+          "to": "Gqeberha Airport (PLZ)",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Rental car or private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "south-africa-cape-garden-route-kruger-14d",
+      "title": "Cape Town, Garden Route and Kruger in 14 Days",
+      "summary": "The Cape, the winelands and the Garden Route, a fly-in to Johannesburg, the Panorama Route and a final three nights on safari near Kruger.",
+      "days": 14,
+      "route": "Cape Town > Stellenbosch > Knysna > Johannesburg > Graskop > Kruger",
+      "arrive": "Cape Town (CPT)",
+      "depart": "Hoedspruit (HDS)",
+      "countries": [
+        "South Africa"
+      ],
+      "regions": [
+        "Western Cape",
+        "Gauteng",
+        "Mpumalanga"
+      ],
+      "cities": [
+        "Cape Town",
+        "Cape Point",
+        "Stellenbosch",
+        "Franschhoek",
+        "Knysna",
+        "Tsitsikamma",
+        "Johannesburg",
+        "Graskop",
+        "Kruger National Park"
+      ],
+      "imageQuery": "Kruger leopard safari South Africa",
+      "highlights": [
+        "Table Mountain",
+        "Stellenbosch wineries",
+        "Knysna lagoon",
+        "Blyde River Canyon",
+        "Kruger Big Five"
+      ],
+      "destinationKeys": [
+        "south-africa",
+        "south-africa/western-cape",
+        "south-africa/cape-town",
+        "south-africa/cape-point",
+        "south-africa/stellenbosch",
+        "south-africa/franschhoek",
+        "south-africa/knysna",
+        "south-africa/tsitsikamma",
+        "south-africa/gauteng",
+        "south-africa/johannesburg",
+        "south-africa/mpumalanga",
+        "south-africa/graskop",
+        "south-africa/kruger-national-park"
+      ],
+      "hero": "south-africa/kruger-national-park",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "Fodor's",
+        "Afar"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Cape Town",
+          "hotel": "Hotel in Cape Town",
+          "start": 0,
+          "nights": 3,
+          "area": "Around the V&A Waterfront or Sea Point for sea views and restaurants; Gardens or the City Bowl for being close to the mountain",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Stellenbosch",
+          "hotel": "Hotel in Stellenbosch",
+          "start": 3,
+          "nights": 2,
+          "area": "In Stellenbosch town for walking to cafes, or on a wine estate among the vines for quiet",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Knysna",
+          "hotel": "Hotel in Knysna",
+          "start": 5,
+          "nights": 2,
+          "area": "On the Knysna waterfront or the lagoon shore, close to oysters and the Heads viewpoints",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Johannesburg",
+          "hotel": "Hotel in Johannesburg",
+          "start": 7,
+          "nights": 1,
+          "area": "In Sandton, Rosebank or near the airport: safe, with restaurants and quick airport access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Graskop",
+          "hotel": "Hotel in Graskop",
+          "start": 8,
+          "nights": 2,
+          "area": "In Graskop village, close to restaurants, with the waterfalls and viewpoints a short drive away",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kruger National Park",
+          "hotel": "Lodge near Kruger National Park",
+          "start": 10,
+          "nights": 3,
+          "area": "A safari lodge in a private reserve beside Kruger, or a camp inside the park; game drives are normally included",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Bo-Kaap",
+          "notes": "Stay respectful when photographing residents; the streets are steep and cobbled.",
+          "where": "Bo-Kaap, Cape Town",
+          "book": "",
+          "place": "south-africa/bo-kaap"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "17:45",
+          "duration": "2h",
+          "name": "Sunset at Camps Bay",
+          "notes": "A strip of cafes and bars lines the beach; the Atlantic is very cold and the wind can be strong.",
+          "where": "Camps Bay, Cape Town",
+          "book": "",
+          "place": "south-africa/camps-bay-sunset"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Table Mountain by cable car",
+          "notes": "The cable car stops in wind or cloud, so check the day before; buying tickets online saves queuing.",
+          "where": "Table Mountain, Cape Town",
+          "book": "",
+          "place": "south-africa/table-mountain"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Kirstenbosch National Botanical Garden",
+          "notes": "Paths slope gently; a shuttle carries visitors around the garden.",
+          "where": "Kirstenbosch, Cape Town",
+          "book": "",
+          "place": "south-africa/kirstenbosch"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Cape Point and the Cape of Good Hope",
+          "notes": "Chapman's Peak Drive can close in high wind; baboons will steal food, so do not feed them.",
+          "where": "Cape of Good Hope Nature Reserve",
+          "book": "",
+          "place": "south-africa/cape-point"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Boulders Beach penguins",
+          "notes": "Best before the tour buses arrive; keep a distance, as the birds can bite.",
+          "where": "Simon's Town",
+          "book": "",
+          "place": "south-africa/boulders-penguins"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Stellenbosch town walk",
+          "notes": "Flat and easy on foot; the Village Museum on Ryneveld Street spans several old houses.",
+          "where": "Stellenbosch",
+          "book": "",
+          "place": "south-africa/stellenbosch-town"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "10:30",
+          "duration": "3.5h",
+          "name": "Stellenbosch wine estates",
+          "notes": "Plan two or three estates and arrange a driver or tour so no one drives after tasting.",
+          "where": "Stellenbosch winelands",
+          "book": "Yes - book tastings ahead in high season",
+          "place": "south-africa/stellenbosch-wine-estates"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Franschhoek village and wine tram",
+          "notes": "The hop-on hop-off wine tram links several estates; booking ahead is wise.",
+          "where": "Franschhoek",
+          "book": "",
+          "place": "south-africa/franschhoek"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Knysna Lagoon and the Heads",
+          "notes": "Viewpoints on the eastern head look over the entrance; try fresh oysters at a waterfront restaurant.",
+          "where": "Knysna",
+          "book": "",
+          "place": "south-africa/knysna-lagoon"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Tsitsikamma and the Storms River Mouth",
+          "notes": "The suspension bridge walk is short with some stairs; rocks near the sea are slippery.",
+          "where": "Tsitsikamma National Park",
+          "book": "",
+          "place": "south-africa/tsitsikamma"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Apartheid Museum",
+          "notes": "Allow at least two to three hours; some images are upsetting.",
+          "where": "Johannesburg",
+          "book": "",
+          "place": "south-africa/apartheid-museum"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "God's Window and Lisbon Falls",
+          "notes": "Views are often hidden by cloud, so allow time for it to clear; a short stepped path climbs to the upper viewpoint.",
+          "where": "Panorama Route, Mpumalanga",
+          "book": "",
+          "place": "south-africa/gods-window"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "2.5h",
+          "name": "Blyde River Canyon and the Three Rondavels",
+          "notes": "Early morning is clearest; paths between the lookouts are short and paved.",
+          "where": "Blyde River Canyon",
+          "book": "",
+          "place": "south-africa/blyde-river-canyon"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "1h",
+          "name": "Bourke's Luck Potholes",
+          "notes": "The rock near the water is slippery; best in morning light.",
+          "where": "Bourke's Luck, Mpumalanga",
+          "book": "",
+          "place": "south-africa/bourkes-luck-potholes"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Evening game drive and sundowner",
+          "notes": "Bring a jacket for after dark; use insect repellent in the evening.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-evening-drive"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3.5h",
+          "name": "Dawn game drive",
+          "notes": "Warm clothes are needed even in a hot season; sightings are never guaranteed.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-morning-drive"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Evening game drive and sundowner",
+          "notes": "Bring a jacket for after dark; use insect repellent in the evening.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-evening-drive"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "2.5h",
+          "name": "Guided bush walk",
+          "notes": "Led by an armed ranger; children are usually not allowed, and the pace is slow.",
+          "where": "Kruger National Park area",
+          "book": "Yes - walks are guided and limited",
+          "place": "south-africa/kruger-bush-walk"
+        },
+        {
+          "day": 13,
+          "type": "Outdoor Activity",
+          "time": "05:30",
+          "duration": "3h",
+          "name": "Final dawn game drive",
+          "notes": "The last chance for a leopard or lion sighting before the transfer to the airport.",
+          "where": "Kruger National Park area",
+          "book": "",
+          "place": "south-africa/kruger-morning-drive"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cape Town International Airport (CPT)",
+          "to": "Cape Town hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or ride-hailing app",
+          "notes": "Use a registered taxi or app; the city bowl is about thirty minutes from the airport.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cape Town",
+          "to": "Stellenbosch",
+          "time": "10:00",
+          "minutes": 50,
+          "carrier": "Rental car or private transfer",
+          "notes": "Roads can be busy at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Stellenbosch",
+          "to": "Knysna",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "Rental car or private transfer",
+          "notes": "The Garden Route road passes through the mountains and coastal towns.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Knysna",
+          "to": "George Airport (GRJ)",
+          "time": "09:30",
+          "minutes": 75,
+          "carrier": "Rental car or private transfer",
+          "notes": "Allow time for the drive and check-in at the small regional airport.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "O. R. Tambo International Airport (JNB)",
+          "to": "Johannesburg hotel area",
+          "time": "14:30",
+          "minutes": 30,
+          "carrier": "Taxi or hotel shuttle",
+          "notes": "Use a registered taxi or ride-hailing app.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Johannesburg",
+          "to": "Graskop",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "Rental car or private transfer",
+          "notes": "A long drive east into Mpumalanga on good highways.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Graskop",
+          "to": "Kruger National Park area",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "Lodge transfer or private transfer",
+          "notes": "Lodges often arrange pick-up from the Panorama Route.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Kruger National Park area",
+          "to": "Hoedspruit Eastgate Airport (HDS)",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Lodge transfer",
+          "notes": "Lodges can arrange the short transfer to the airport after the morning drive.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "south-africa/waterfront": {
+        "name": "V&A Waterfront",
+        "description": "Cape Town's working harbour turned visitor district, with shops, restaurants, an aquarium and views of Table Mountain.",
+        "details": "The V&A Waterfront is a former dock area that blends shops, restaurants and entertainment with a working harbour, with Table Mountain as a backdrop. It holds the Two Oceans Aquarium, the Zeitz Museum of Contemporary Art Africa in a converted grain silo, and the ferry terminal for Robben Island. Seals often rest on the quay. It is busy and safe by city standards, a convenient first stop after arrival.",
+        "interests": [
+          "relax",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/table-mountain": {
+        "name": "Table Mountain",
+        "description": "The flat-topped mountain above Cape Town, reached by rotating cable car or a steep hike, with views over the city and sea.",
+        "details": "Table Mountain rises about 1,085 metres above the city and is the defining landmark of Cape Town. A cable car with a rotating floor climbs to the summit in a few minutes, and there are hiking routes up for the fit, the Platteklip Gorge route being the most direct and steep. The cable car stops running in strong wind or when cloud covers the top, so check conditions on the day. Buying tickets online saves queueing, and a warm layer is useful at the top.",
+        "interests": [
+          "outdoors",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/robben-island": {
+        "name": "Robben Island",
+        "description": "The island prison where Nelson Mandela spent many years, visited by ferry from the waterfront.",
+        "details": "Robben Island was used as a prison for political detainees during the apartheid era, and Nelson Mandela spent eighteen of his twenty-seven years in custody here. It is a UNESCO World Heritage Site, and tours are guided, in many cases by former prisoners, taking in the cells and the lime quarry. The trip takes about three and a half hours including the ferry, which is cancelled in rough seas. Tickets sell out well ahead in season.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/bo-kaap": {
+        "name": "Bo-Kaap",
+        "description": "A hillside neighbourhood of brightly painted houses and cobbled streets, the historic home of Cape Town's Cape Malay community.",
+        "details": "Bo-Kaap sits on the slope of Signal Hill above the city centre, known for rows of houses painted in strong pinks, greens and blues. It has been home to the Cape Malay community, descended from enslaved and exiled people brought from Southeast Asia, since the eighteenth century, and has several old mosques and a small museum. It is a living neighbourhood, so be respectful about photographing residents. Cape Malay cooking is a speciality, with spiced curries and sweet koesisters.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/camps-bay-sunset": {
+        "name": "Camps Bay sunset",
+        "description": "A palm-lined beach promenade on the Atlantic seaboard backed by the Twelve Apostles, popular for sunset drinks.",
+        "details": "Camps Bay is a white-sand beach at the foot of the Twelve Apostles mountain range, with a strip of cafes and bars along the road behind it. It is the classic place for a sunset drink, and the light on the mountains is excellent. The Atlantic water is very cold, and in summer the strong south-easter wind can blow sand along the beach. It is a short drive from the city centre.",
+        "interests": [
+          "relax",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/kirstenbosch": {
+        "name": "Kirstenbosch National Botanical Garden",
+        "description": "A botanical garden on the slopes of Table Mountain showing the region's fynbos plants, with a treetop walkway.",
+        "details": "Kirstenbosch was established in 1913 and displays plants from across southern Africa on the eastern flank of Table Mountain, including the fynbos vegetation that makes the Cape floral region so distinctive. A curved treetop walkway called the Boomslang rises among the canopy of the arboretum. In summer, Sunday-evening concerts are held on the lawn. Paths slope gently, and a shuttle carries visitors around the garden.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/lions-head": {
+        "name": "Lion's Head hike",
+        "description": "A popular sunrise or sunset walk up a peak beside Table Mountain, finishing with chains and ladders.",
+        "details": "Lion's Head is a 669-metre peak between Table Mountain and the sea, with a spiralling path that gives a view over the city, the Atlantic coast and the mountain. The last section includes chains and ladders and needs a steady head. It takes about two hours return and is especially popular around sunrise and at full moon. Start with a head torch if going in the dark, and go in company.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "south-africa/cape-point": {
+        "name": "Cape Point and the Cape of Good Hope",
+        "description": "A nature reserve at the tip of the Cape Peninsula, with a lighthouse, funicular and dramatic cliffs.",
+        "details": "Cape Point lies at the southern end of the Cape Peninsula in the Cape of Good Hope Nature Reserve. A funicular and a short path climb to the old lighthouse, with views along the cliffs to the Atlantic and Indian oceans. The reserve also has baboons, which will steal food, so do not feed them and keep bags closed. The drive from Cape Town often follows Chapman's Peak Drive, a coastal road that closes at times for rockfalls or high winds.",
+        "interests": [
+          "outdoors",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/boulders-penguins": {
+        "name": "Boulders Beach penguins",
+        "description": "A sheltered cove near Simon's Town where a colony of African penguins nests and swims.",
+        "details": "Boulders Beach is a sheltered cove among granite boulders, where African penguins settled in the 1980s and now number in the thousands. Boardwalks lead through the colony, and a small beach lets visitors swim in the same waters. The birds are endangered and can bite, so keep your distance. It is best in the morning, before the tour buses arrive.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/stellenbosch-wine-estates": {
+        "name": "Stellenbosch wine estates",
+        "description": "A day of tastings at wine farms in the valleys around Stellenbosch, many with Cape Dutch buildings and mountain views.",
+        "details": "The Stellenbosch region holds dozens of wine estates producing reds such as cabernet sauvignon and pinotage, a grape developed in the area in the 1920s, along with chenin blanc and other whites. Tasting rooms often sit in Cape Dutch farm buildings with gardens and mountain views, and many serve lunch. Plan two or three estates rather than more, and arrange a driver or a tour so that no one has to drive after tasting.",
+        "interests": [
+          "food",
+          "relax",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/stellenbosch-town": {
+        "name": "Stellenbosch town walk",
+        "description": "A walk through South Africa's second-oldest town, with oak-lined streets, Cape Dutch houses and a university.",
+        "details": "Stellenbosch was founded in 1679 and has some of the best-preserved Cape Dutch architecture in the country, white-gabled houses lining oak-shaded streets. The Village Museum on Ryneveld Street is made up of several historic houses. The university gives the town a youthful feel, with cafes and galleries around Dorp Street. It is flat and easy to explore on foot.",
+        "interests": [
+          "culture",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/franschhoek": {
+        "name": "Franschhoek",
+        "description": "A valley village settled by French Huguenots, known for its restaurants and a hop-on hop-off wine tram.",
+        "details": "Franschhoek, meaning French corner, was settled in the late seventeenth century by Huguenot refugees who brought winemaking skills, and the name is still seen in the estates around it. It has a reputation for some of the best restaurants in the Cape, set against a ring of mountains. A hop-on hop-off wine tram links several estates, and booking ahead is wise. The village is compact and walkable.",
+        "interests": [
+          "food",
+          "relax",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/bettys-bay-penguins": {
+        "name": "Stony Point penguin colony",
+        "description": "A small breeding colony of African penguins and cormorants on the coast at Betty's Bay.",
+        "details": "Stony Point is a nature reserve on the False Bay coast where African penguins breed among the ruins of an old whaling station, viewed from a short boardwalk. It is quieter and less commercial than the Boulders colony near Cape Town. Birds can be seen moulting or nesting, depending on the season. The nearby Clarence Drive is a scenic coastal road that makes a good approach.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/hermanus-cliff-path": {
+        "name": "Hermanus Cliff Path and whale watching",
+        "description": "A coastal walking path above the bay where southern right whales can be watched from the shore in season.",
+        "details": "Hermanus is one of the best places in the world to watch whales from land, as southern right whales come into the bay to calve between roughly June and November, peaking in September and October. The Cliff Path runs along the shore for about twelve kilometres with benches and viewpoints, and the town even has a whale crier who blows a kelp horn to announce sightings. Outside the whale season the walk is still a pleasant coastal stroll. The path has some steps and uneven stretches.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/hemel-en-aarde": {
+        "name": "Hemel-en-Aarde wine valley",
+        "description": "A cool-climate wine valley near Hermanus known for pinot noir and chardonnay, with tastings and views.",
+        "details": "The Hemel-en-Aarde valley, meaning heaven and earth, is a cool-climate wine area close to the Atlantic that produces some of the country's best pinot noir and chardonnay. Its estates are smaller and quieter than those around Stellenbosch, with tasting rooms looking over vineyards. Tastings may need to be booked ahead, and as ever a designated driver is essential.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/oudtshoorn-ostrich-farm": {
+        "name": "Ostrich farm visit",
+        "description": "A guided visit to an ostrich farm in the Little Karoo, where birds are fed and the industry's history is explained.",
+        "details": "Oudtshoorn grew rich on ostrich feathers in the early twentieth century, and farms around the town still raise the birds for meat, leather and feathers. Guided tours explain the life cycle, show eggs and chicks and usually let visitors feed the ostriches. Some farms offer rides, which raise animal welfare questions, so many travellers skip them. Mornings are cooler for a visit.",
+        "interests": [
+          "authentic_local",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/cango-caves": {
+        "name": "Cango Caves",
+        "description": "A limestone cave system north of Oudtshoorn with large chambers and, for the adventurous, tight crawling passages.",
+        "details": "The Cango Caves are a series of vast limestone chambers with stalactites and stalagmites, reached by guided tour. The standard heritage tour covers the large halls, while the adventure tour goes through narrow passages and squeezes that can be very tight, so it is not for anyone claustrophobic or large-framed. Temperatures are steady and cool. Tours run at set times, so check them on arrival.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/knysna-lagoon": {
+        "name": "Knysna Lagoon and the Heads",
+        "description": "A tidal lagoon ringed by forest, guarded at its mouth by two sandstone cliffs known as the Knysna Heads.",
+        "details": "Knysna sits on a large lagoon that meets the Indian Ocean through a narrow channel flanked by the high sandstone cliffs called the Heads. Viewpoints on the eastern head look over the entrance, and boat cruises run on the lagoon. The town is known for its oysters, eaten fresh at waterfront restaurants. The forests behind are part of the Garden Route and home to Knysna's rare forest elephants, which are almost never seen.",
+        "interests": [
+          "relax",
+          "food",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/robberg": {
+        "name": "Robberg Nature Reserve",
+        "description": "A rocky peninsula near Plettenberg Bay with coastal hiking trails and a colony of Cape fur seals.",
+        "details": "Robberg is a narrow peninsula reaching into the Indian Ocean, with trails of varying lengths from about two to five hours, passing dunes, cliffs and a seal colony at the tip. It is a UNESCO-listed heritage site, and whales and dolphins can sometimes be seen from the path. The trail includes steep sand dunes and rocky sections, and wind can be strong. Take water and sun protection.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "south-africa/tsitsikamma": {
+        "name": "Tsitsikamma and the Storms River Mouth",
+        "description": "A coastal forest park with a suspension bridge over the Storms River mouth and trails along the shore.",
+        "details": "Tsitsikamma National Park protects a rugged strip of forest and rocky coast on the Garden Route. At the Storms River Mouth a short trail leads to a suspension bridge across the river as it meets the sea, with longer paths along the coast. Spray and waves make the rocks slippery. It is a fairly short walk and suits most fitness levels, though stairs are involved.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/addo-elephant-park": {
+        "name": "Addo Elephant National Park",
+        "description": "A malaria-free park near Port Elizabeth with several hundred elephants and the Big Five.",
+        "details": "Addo was created in the 1930s to protect a tiny remnant population of elephants and now holds several hundred of them, along with lions, buffalo, rhino and leopard, so that all of the Big Five are present. It is free of malaria, which suits families and those who prefer not to take medication. Visitors can self-drive on its roads or take guided game drives, which tend to find more. Early morning and late afternoon give the best viewing.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/kruger-morning-drive": {
+        "name": "Dawn game drive in the Kruger area",
+        "description": "An open-vehicle drive at first light with a ranger, the time when predators and other animals are most active.",
+        "details": "Kruger National Park and the private reserves beside it are home to the Big Five and many other species, and the most productive time to see them is dawn, when it is cool and animals are active. A ranger drives and tracks in an open vehicle, with a spotter, and explains what you see. Warm clothes are needed even in a hot season. Sightings are never guaranteed but are often outstanding. The Kruger area is a malaria-risk region, so seek medical advice before travelling.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/kruger-evening-drive": {
+        "name": "Evening game drive and sundowner",
+        "description": "An afternoon drive in the bush that ends with drinks as the sun sets, then a short night drive back.",
+        "details": "The late-afternoon drive follows animals as they emerge in the cooler hours, usually stopping at a viewpoint for a sundowner, drinks and snacks at sunset. On the way back, rangers use a spotlight to look for nocturnal animals such as leopards, civets and owls. It is cool after dark, so bring a jacket. Insect repellent is important in the evenings.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/kruger-bush-walk": {
+        "name": "Guided bush walk",
+        "description": "A walk through the bush with an armed ranger, learning to read tracks, plants and insects rather than seeing the big animals from a vehicle.",
+        "details": "On a guided walking safari, a trained, armed ranger leads a small group on foot, stopping to explain tracks, dung, trees and insects and reading signs that are missed from a vehicle. Big animals may be encountered, and the ranger gives clear instructions on what to do. Walks are early in the morning and last a few hours. They are not allowed for young children, and the pace is slow.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/blyde-river-canyon": {
+        "name": "Blyde River Canyon and the Three Rondavels",
+        "description": "One of the largest green canyons in the world, with sheer cliffs and three rounded rock peaks above a reservoir.",
+        "details": "The Blyde River Canyon is a huge, vegetated gorge in Mpumalanga, about twenty-five kilometres long and reaching depths of up to a kilometre. The Three Rondavels, a trio of round-topped rock peaks, are the best-known viewpoint, looking down to the Blyde River Dam. Mist often covers the escarpment, so views vary greatly, and early morning is usually clearest. Paths between the lookouts are short and paved.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/gods-window": {
+        "name": "God's Window and Lisbon Falls",
+        "description": "A clifftop viewpoint over the Lowveld plain on the Panorama Route, close to a series of waterfalls.",
+        "details": "God's Window is a lookout on the edge of the Drakensberg escarpment from which the land drops about 900 metres to the Lowveld, with Kruger visible far away on a clear day. It is often covered in cloud, in which case it is worth waiting. A short stepped path climbs to a higher viewpoint. Nearby waterfalls such as Lisbon Falls can be reached on short walks.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "south-africa/bourkes-luck-potholes": {
+        "name": "Bourke's Luck Potholes",
+        "description": "Cylindrical holes worn into the rock where the Treur and Blyde rivers meet, crossed by footbridges.",
+        "details": "At Bourke's Luck, swirling water has ground deep, smooth cylindrical potholes into the rock over millions of years, at the meeting of the Treur and Blyde rivers. A series of footbridges and paths lead across and around them. It is a short and easy stop on the Panorama Route and best in the morning light. The rock is wet and slippery near the water.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/apartheid-museum": {
+        "name": "Apartheid Museum",
+        "description": "A museum in Johannesburg tracing the rise and fall of apartheid through film, photographs and personal stories.",
+        "details": "The Apartheid Museum opened in 2001 and tells the story of segregation and the struggle against it through archive film, photographs, documents and personal testimony. Visitors enter through separate gates marked for white and non-white people, a stark start to the exhibits. Allow at least two to three hours; some images are upsetting. It is a quiet, reflective place and a good first stop in Johannesburg.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "south-africa/soweto-tour": {
+        "name": "Soweto tour",
+        "description": "A guided visit to Johannesburg's best-known township, with Vilakazi Street and the Hector Pieterson Memorial.",
+        "details": "Soweto is a large township south-west of central Johannesburg that played a central role in the anti-apartheid struggle. Guided tours usually include Vilakazi Street, once home to both Nelson Mandela and Desmond Tutu, and the Hector Pieterson Memorial, which marks the 1976 student uprising. Local guides give much better context than a self-drive, and a visit often includes a meal in a family-run restaurant. Go with a reputable operator.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "south-africa": {
+        "name": "South Africa",
+        "description": "A country of Big Five safaris, vineyards, dramatic coasts and the city of Cape Town beneath Table Mountain.",
+        "images": []
+      },
+      "south-africa/western-cape": {
+        "name": "Western Cape",
+        "description": "The south-western province that holds Cape Town, the Winelands, Hermanus and the Garden Route.",
+        "images": []
+      },
+      "south-africa/cape-town": {
+        "name": "Cape Town",
+        "description": "A harbour city beneath Table Mountain, with beaches, vineyards, a penguin colony and the Cape Peninsula close by.",
+        "images": []
+      },
+      "south-africa/cape-point": {
+        "name": "Cape Point",
+        "description": "The cliff-edged tip of the Cape Peninsula within the Cape of Good Hope Nature Reserve.",
+        "images": []
+      },
+      "south-africa/stellenbosch": {
+        "name": "Stellenbosch",
+        "description": "The Cape's oldest wine town, with oak-lined streets, Cape Dutch houses and many wine estates close by.",
+        "images": []
+      },
+      "south-africa/franschhoek": {
+        "name": "Franschhoek",
+        "description": "A valley village settled by French Huguenots, known for its restaurants and wine estates.",
+        "images": []
+      },
+      "south-africa/hermanus": {
+        "name": "Hermanus",
+        "description": "A seaside town and one of the world's best places to watch southern right whales from the shore.",
+        "images": []
+      },
+      "south-africa/oudtshoorn": {
+        "name": "Oudtshoorn",
+        "description": "The ostrich capital of the Little Karoo, close to the Cango Caves and reached by Route 62.",
+        "images": []
+      },
+      "south-africa/knysna": {
+        "name": "Knysna",
+        "description": "A Garden Route town on a forest-ringed lagoon, known for oysters and the sandstone Knysna Heads.",
+        "images": []
+      },
+      "south-africa/plettenberg-bay": {
+        "name": "Plettenberg Bay",
+        "description": "A beach resort on the Garden Route, close to the Robberg Nature Reserve with its seal colony.",
+        "images": []
+      },
+      "south-africa/tsitsikamma": {
+        "name": "Tsitsikamma",
+        "description": "A coastal forest and rocky shoreline on the Garden Route, with a suspension bridge at the Storms River Mouth.",
+        "images": []
+      },
+      "south-africa/eastern-cape": {
+        "name": "Eastern Cape",
+        "description": "The province east of the Garden Route, with the malaria-free Addo Elephant National Park near Port Elizabeth.",
+        "images": []
+      },
+      "south-africa/addo": {
+        "name": "Addo",
+        "description": "The area around Addo Elephant National Park, a malaria-free safari destination near Port Elizabeth.",
+        "images": []
+      },
+      "south-africa/mpumalanga": {
+        "name": "Mpumalanga",
+        "description": "The north-eastern province of the Panorama Route and the southern part of Kruger National Park.",
+        "images": []
+      },
+      "south-africa/kruger-national-park": {
+        "name": "Kruger National Park",
+        "description": "South Africa's flagship safari park, home to the Big Five and best seen in the dry winter months.",
+        "images": []
+      },
+      "south-africa/graskop": {
+        "name": "Graskop",
+        "description": "A small town on the Panorama Route, close to Blyde River Canyon, God's Window and several waterfalls.",
+        "images": []
+      },
+      "south-africa/gauteng": {
+        "name": "Gauteng",
+        "description": "South Africa's smallest and most urban province, home to Johannesburg and Pretoria.",
+        "images": []
+      },
+      "south-africa/johannesburg": {
+        "name": "Johannesburg",
+        "description": "South Africa's largest city and main international gateway, with powerful apartheid-era history and the township of Soweto.",
+        "images": []
+      }
+    }
+  }
+}

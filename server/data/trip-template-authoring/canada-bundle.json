@@ -1,0 +1,1452 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, TravelStride, North America Travel Service and Canada Spirit itineraries for Canada",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "canada-vancouver-banff-6d",
+      "title": "Vancouver and Banff in 6 Days",
+      "summary": "The Pacific city, then a flight to Calgary for Banff and Lake Louise.",
+      "days": 6,
+      "route": "Vancouver > Banff",
+      "arrive": "Vancouver (YVR)",
+      "depart": "Calgary (YYC)",
+      "countries": [
+        "Canada"
+      ],
+      "regions": [
+        "British Columbia",
+        "Alberta"
+      ],
+      "cities": [
+        "Vancouver",
+        "Banff"
+      ],
+      "imageQuery": "Moraine Lake Banff",
+      "highlights": [
+        "Stanley Park",
+        "Granville Island",
+        "Lake Louise",
+        "Moraine Lake",
+        "Banff Gondola"
+      ],
+      "destinationKeys": [
+        "canada",
+        "canada/british-columbia",
+        "canada/vancouver",
+        "canada/alberta",
+        "canada/banff"
+      ],
+      "hero": "canada/banff",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "North America Travel Service",
+        "Canada Spirit",
+        "Contiki"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Vancouver",
+          "hotel": "Hotel in Vancouver",
+          "start": 0,
+          "nights": 2,
+          "area": "Downtown near Robson Street or Gastown, with easy access to the seawall",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banff",
+          "hotel": "Hotel in Banff",
+          "start": 2,
+          "nights": 3,
+          "area": "In Banff town, within walking distance of restaurants and the bus stop",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Stanley Park seawall",
+          "notes": "Walk or cycle the 9-kilometre path.",
+          "where": "Stanley Park, Vancouver",
+          "book": "",
+          "place": "canada/stanley-park"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Granville Island Public Market",
+          "notes": "Go on a weekday for fewer crowds.",
+          "where": "Granville Island, Vancouver",
+          "book": "",
+          "place": "canada/granville-island"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Banff town and Sulphur Mountain Gondola",
+          "notes": "A park pass is needed for the area.",
+          "where": "Banff",
+          "book": "",
+          "place": "canada/banff-gondola"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Lake Louise and Moraine Lake",
+          "notes": "Reserve the Moraine Lake shuttle ahead; arrive early.",
+          "where": "Banff National Park",
+          "book": "Yes - reserve shuttle in summer",
+          "place": "canada/lake-louise-moraine"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Johnston Canyon",
+          "notes": "Start early; the catwalk is busy in summer.",
+          "where": "Banff National Park",
+          "book": "",
+          "place": "canada/johnston-canyon"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vancouver Airport (YVR)",
+          "to": "Vancouver hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Vancouver hotel area",
+          "to": "Vancouver Airport (YVR)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Calgary Airport (YYC)",
+          "to": "Banff",
+          "time": "12:00",
+          "minutes": 90,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Banff",
+          "to": "Calgary Airport (YYC)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "canada-east-toronto-montreal-quebec-7d",
+      "title": "Toronto, Montreal and Quebec City in 7 Days",
+      "summary": "Eastern Canada by train: skyline and Niagara, bilingual Montreal, and the walled old town.",
+      "days": 7,
+      "route": "Toronto > Montreal > Quebec City",
+      "arrive": "Toronto (YYZ)",
+      "depart": "Quebec City (YQB)",
+      "countries": [
+        "Canada"
+      ],
+      "regions": [
+        "Ontario",
+        "Quebec"
+      ],
+      "cities": [
+        "Toronto",
+        "Montreal",
+        "Quebec City"
+      ],
+      "imageQuery": "Quebec City Chateau Frontenac",
+      "highlights": [
+        "CN Tower",
+        "Niagara Falls",
+        "Old Montreal",
+        "Quebec City"
+      ],
+      "destinationKeys": [
+        "canada",
+        "canada/ontario",
+        "canada/toronto",
+        "canada/quebec",
+        "canada/montreal",
+        "canada/quebec-city"
+      ],
+      "hero": "canada/quebec-city",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "North America Travel Service",
+        "Canada Spirit",
+        "Contiki"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Toronto",
+          "hotel": "Hotel in Toronto",
+          "start": 0,
+          "nights": 3,
+          "area": "In downtown Toronto near the subway, ideally near Union Station for Niagara tours",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Montreal",
+          "hotel": "Hotel in Montreal",
+          "start": 3,
+          "nights": 2,
+          "area": "In Old Montreal or the Plateau for restaurants and walking",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Quebec City",
+          "hotel": "Hotel in Quebec City",
+          "start": 5,
+          "nights": 1,
+          "area": "Inside the walls of Old Quebec or in Petit-Champlain",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "CN Tower and waterfront",
+          "notes": "Book timed entry for sunset.",
+          "where": "Toronto",
+          "book": "",
+          "place": "canada/cn-tower"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "St Lawrence Market and Distillery District",
+          "notes": "The market is closed on Mondays.",
+          "where": "Toronto",
+          "book": "",
+          "place": "canada/st-lawrence-market"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "9h",
+          "name": "Niagara Falls boat tour and Niagara-on-the-Lake",
+          "notes": "Bring a waterproof layer; add a winery stop.",
+          "where": "Niagara",
+          "book": "Yes - book a tour or train",
+          "place": "canada/niagara-falls"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Old Montreal and Notre-Dame Basilica",
+          "notes": "Cobbled lanes and the old port.",
+          "where": "Old Montreal",
+          "book": "",
+          "place": "canada/old-montreal"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Mount Royal and Jean-Talon Market",
+          "notes": "Try a bagel and local cheese.",
+          "where": "Montreal",
+          "book": "",
+          "place": "canada/mount-royal-jean-talon"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Old Quebec, Chateau Frontenac and Petit-Champlain",
+          "notes": "Walk the ramparts and ride the funicular.",
+          "where": "Quebec City",
+          "book": "",
+          "place": "canada/quebec-city"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Toronto Pearson (YYZ)",
+          "to": "Toronto hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Toronto",
+          "to": "Montreal",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "VIA Rail train or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Montreal",
+          "to": "Quebec City",
+          "time": "09:00",
+          "minutes": 190,
+          "carrier": "VIA Rail train or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Quebec City",
+          "to": "Quebec City Airport (YQB)",
+          "time": "16:00",
+          "minutes": 25,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "canada-rockies-8d",
+      "title": "Canadian Rockies and Vancouver in 8 Days",
+      "summary": "Banff, the Icefields Parkway and Jasper, finishing in Vancouver.",
+      "days": 8,
+      "route": "Banff > Jasper > Vancouver",
+      "arrive": "Calgary (YYC)",
+      "depart": "Vancouver (YVR)",
+      "countries": [
+        "Canada"
+      ],
+      "regions": [
+        "Alberta",
+        "British Columbia"
+      ],
+      "cities": [
+        "Banff",
+        "Jasper",
+        "Vancouver"
+      ],
+      "imageQuery": "Icefields Parkway Canada",
+      "highlights": [
+        "Lake Louise",
+        "Icefields Parkway",
+        "Maligne Lake",
+        "Stanley Park"
+      ],
+      "destinationKeys": [
+        "canada",
+        "canada/alberta",
+        "canada/banff",
+        "canada/jasper",
+        "canada/british-columbia",
+        "canada/vancouver"
+      ],
+      "hero": "canada/jasper",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "North America Travel Service",
+        "Canada Spirit",
+        "Contiki"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "iconic_landmarks",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Banff",
+          "hotel": "Hotel in Banff",
+          "start": 0,
+          "nights": 3,
+          "area": "In Banff town, within walking distance of restaurants and the bus stop",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jasper",
+          "hotel": "Hotel in Jasper",
+          "start": 3,
+          "nights": 2,
+          "area": "In Jasper town, a short walk from the train station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Vancouver",
+          "hotel": "Hotel in Vancouver",
+          "start": 5,
+          "nights": 2,
+          "area": "Downtown near Robson Street or Gastown, with easy access to the seawall",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Banff town and Sulphur Mountain Gondola",
+          "notes": "A park pass is needed for the area.",
+          "where": "Banff",
+          "book": "",
+          "place": "canada/banff-gondola"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Lake Louise and Moraine Lake",
+          "notes": "Reserve the Moraine Lake shuttle ahead; arrive early.",
+          "where": "Banff National Park",
+          "book": "Yes - reserve shuttle in summer",
+          "place": "canada/lake-louise-moraine"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Icefields Parkway and Columbia Icefield",
+          "notes": "Stops at Peyto Lake and the glacier; fill the tank first.",
+          "where": "Icefields Parkway",
+          "book": "Yes - book the glacier experience",
+          "place": "canada/icefields-parkway"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Maligne Lake cruise to Spirit Island",
+          "notes": "Cruises run roughly May to October.",
+          "where": "Jasper National Park",
+          "book": "Yes - book the cruise",
+          "place": "canada/maligne-lake"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Jasper SkyTram and town",
+          "notes": "Keep a safe distance from elk and bears.",
+          "where": "Jasper",
+          "book": "",
+          "place": "canada/jasper-wildlife"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Stanley Park seawall",
+          "notes": "Walk or cycle the 9-kilometre path.",
+          "where": "Stanley Park, Vancouver",
+          "book": "",
+          "place": "canada/stanley-park"
+        },
+        {
+          "day": 6,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Granville Island Public Market",
+          "notes": "Go on a weekday for fewer crowds.",
+          "where": "Granville Island, Vancouver",
+          "book": "",
+          "place": "canada/granville-island"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Calgary Airport (YYC)",
+          "to": "Banff",
+          "time": "",
+          "minutes": 90,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Banff",
+          "to": "Jasper",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car or shuttle",
+          "notes": "Follow the Icefields Parkway; stops add time.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Jasper",
+          "to": "Edmonton Airport (YEG)",
+          "time": "07:00",
+          "minutes": 270,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Edmonton Airport",
+          "to": "Vancouver hotel area",
+          "time": "13:00",
+          "minutes": 30,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Vancouver hotel area",
+          "to": "Vancouver Airport (YVR)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "canada-west-to-toronto-10d",
+      "title": "Vancouver, the Rockies and Toronto in 10 Days",
+      "summary": "West coast, the Rocky Mountain parks and a final stretch in Toronto with Niagara.",
+      "days": 10,
+      "route": "Vancouver > Banff > Jasper > Toronto",
+      "arrive": "Vancouver (YVR)",
+      "depart": "Toronto (YYZ)",
+      "countries": [
+        "Canada"
+      ],
+      "regions": [
+        "British Columbia",
+        "Alberta",
+        "Ontario"
+      ],
+      "cities": [
+        "Vancouver",
+        "Banff",
+        "Jasper",
+        "Toronto"
+      ],
+      "imageQuery": "Lake Louise canoe Canada",
+      "highlights": [
+        "Stanley Park",
+        "Lake Louise",
+        "Icefields Parkway",
+        "Maligne Lake",
+        "Niagara Falls"
+      ],
+      "destinationKeys": [
+        "canada",
+        "canada/british-columbia",
+        "canada/vancouver",
+        "canada/alberta",
+        "canada/banff",
+        "canada/jasper",
+        "canada/ontario",
+        "canada/toronto"
+      ],
+      "hero": "canada/vancouver",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "North America Travel Service",
+        "Canada Spirit",
+        "Contiki"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "iconic_landmarks",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Vancouver",
+          "hotel": "Hotel in Vancouver",
+          "start": 0,
+          "nights": 2,
+          "area": "Downtown near Robson Street or Gastown, with easy access to the seawall",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banff",
+          "hotel": "Hotel in Banff",
+          "start": 2,
+          "nights": 3,
+          "area": "In Banff town, within walking distance of restaurants and the bus stop",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jasper",
+          "hotel": "Hotel in Jasper",
+          "start": 5,
+          "nights": 1,
+          "area": "In Jasper town, a short walk from the train station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Toronto",
+          "hotel": "Hotel in Toronto",
+          "start": 6,
+          "nights": 3,
+          "area": "In downtown Toronto near the subway, ideally near Union Station for Niagara tours",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Stanley Park seawall",
+          "notes": "Walk or cycle the 9-kilometre path.",
+          "where": "Stanley Park, Vancouver",
+          "book": "",
+          "place": "canada/stanley-park"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Granville Island Public Market",
+          "notes": "Go on a weekday for fewer crowds.",
+          "where": "Granville Island, Vancouver",
+          "book": "",
+          "place": "canada/granville-island"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Banff town and Sulphur Mountain Gondola",
+          "notes": "A park pass is needed for the area.",
+          "where": "Banff",
+          "book": "",
+          "place": "canada/banff-gondola"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Lake Louise and Moraine Lake",
+          "notes": "Reserve the Moraine Lake shuttle ahead; arrive early.",
+          "where": "Banff National Park",
+          "book": "Yes - reserve shuttle in summer",
+          "place": "canada/lake-louise-moraine"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Icefields Parkway and Columbia Icefield",
+          "notes": "Stops at Peyto Lake and the glacier; fill the tank first.",
+          "where": "Icefields Parkway",
+          "book": "Yes - book the glacier experience",
+          "place": "canada/icefields-parkway"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "CN Tower and waterfront",
+          "notes": "Book timed entry for sunset.",
+          "where": "Toronto",
+          "book": "",
+          "place": "canada/cn-tower"
+        },
+        {
+          "day": 7,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "St Lawrence Market and Distillery District",
+          "notes": "The market is closed on Mondays.",
+          "where": "Toronto",
+          "book": "",
+          "place": "canada/st-lawrence-market"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "9h",
+          "name": "Niagara Falls boat tour and Niagara-on-the-Lake",
+          "notes": "Bring a waterproof layer; add a winery stop.",
+          "where": "Niagara",
+          "book": "Yes - book a tour or train",
+          "place": "canada/niagara-falls"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vancouver Airport (YVR)",
+          "to": "Vancouver hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Vancouver hotel area",
+          "to": "Vancouver Airport (YVR)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Calgary Airport (YYC)",
+          "to": "Banff",
+          "time": "12:00",
+          "minutes": 90,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Banff",
+          "to": "Jasper",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car or shuttle",
+          "notes": "Follow the Icefields Parkway; stops add time.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Jasper",
+          "to": "Edmonton Airport (YEG)",
+          "time": "06:00",
+          "minutes": 270,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Toronto Pearson (YYZ)",
+          "to": "Toronto hotel area",
+          "time": "16:00",
+          "minutes": 40,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Toronto hotel area",
+          "to": "Toronto Pearson (YYZ)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "canada-coast-to-coast-14d",
+      "title": "Coast to Coast Canada in 14 Days",
+      "summary": "Vancouver, Banff and Jasper, then Toronto with Niagara and Montreal.",
+      "days": 14,
+      "route": "Vancouver > Banff > Jasper > Toronto > Montreal",
+      "arrive": "Vancouver (YVR)",
+      "depart": "Montreal (YUL)",
+      "countries": [
+        "Canada"
+      ],
+      "regions": [
+        "British Columbia",
+        "Alberta",
+        "Ontario",
+        "Quebec"
+      ],
+      "cities": [
+        "Vancouver",
+        "Banff",
+        "Jasper",
+        "Toronto",
+        "Montreal"
+      ],
+      "imageQuery": "Canada Rockies Montreal Toronto",
+      "highlights": [
+        "Stanley Park",
+        "Moraine Lake",
+        "Columbia Icefield",
+        "Niagara Falls",
+        "Old Montreal"
+      ],
+      "destinationKeys": [
+        "canada",
+        "canada/british-columbia",
+        "canada/vancouver",
+        "canada/alberta",
+        "canada/banff",
+        "canada/jasper",
+        "canada/ontario",
+        "canada/toronto",
+        "canada/quebec",
+        "canada/montreal"
+      ],
+      "hero": "canada/banff",
+      "sources": [
+        "KimKim",
+        "TravelStride",
+        "North America Travel Service",
+        "Canada Spirit",
+        "Contiki"
+      ],
+      "pace": "F",
+      "interests": [
+        "outdoors",
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Vancouver",
+          "hotel": "Hotel in Vancouver",
+          "start": 0,
+          "nights": 3,
+          "area": "Downtown near Robson Street or Gastown, with easy access to the seawall",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Banff",
+          "hotel": "Hotel in Banff",
+          "start": 3,
+          "nights": 3,
+          "area": "In Banff town, within walking distance of restaurants and the bus stop",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jasper",
+          "hotel": "Hotel in Jasper",
+          "start": 6,
+          "nights": 2,
+          "area": "In Jasper town, a short walk from the train station",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Toronto",
+          "hotel": "Hotel in Toronto",
+          "start": 8,
+          "nights": 3,
+          "area": "In downtown Toronto near the subway, ideally near Union Station for Niagara tours",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Montreal",
+          "hotel": "Hotel in Montreal",
+          "start": 11,
+          "nights": 2,
+          "area": "In Old Montreal or the Plateau for restaurants and walking",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Stanley Park seawall",
+          "notes": "Walk or cycle the 9-kilometre path.",
+          "where": "Stanley Park, Vancouver",
+          "book": "",
+          "place": "canada/stanley-park"
+        },
+        {
+          "day": 1,
+          "type": "Shopping",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Granville Island Public Market",
+          "notes": "Go on a weekday for fewer crowds.",
+          "where": "Granville Island, Vancouver",
+          "book": "",
+          "place": "canada/granville-island"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Capilano Suspension Bridge or Grouse Mountain",
+          "notes": "Choose by weather; both are on the North Shore.",
+          "where": "North Vancouver",
+          "book": "",
+          "place": "canada/capilano"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Banff town and Sulphur Mountain Gondola",
+          "notes": "A park pass is needed for the area.",
+          "where": "Banff",
+          "book": "",
+          "place": "canada/banff-gondola"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Lake Louise and Moraine Lake",
+          "notes": "Reserve the Moraine Lake shuttle ahead; arrive early.",
+          "where": "Banff National Park",
+          "book": "Yes - reserve shuttle in summer",
+          "place": "canada/lake-louise-moraine"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Johnston Canyon",
+          "notes": "Start early; the catwalk is busy in summer.",
+          "where": "Banff National Park",
+          "book": "",
+          "place": "canada/johnston-canyon"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "5h",
+          "name": "Icefields Parkway and Columbia Icefield",
+          "notes": "Stops at Peyto Lake and the glacier; fill the tank first.",
+          "where": "Icefields Parkway",
+          "book": "Yes - book the glacier experience",
+          "place": "canada/icefields-parkway"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Maligne Lake cruise to Spirit Island",
+          "notes": "Cruises run roughly May to October.",
+          "where": "Jasper National Park",
+          "book": "Yes - book the cruise",
+          "place": "canada/maligne-lake"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Jasper SkyTram and town",
+          "notes": "Keep a safe distance from elk and bears.",
+          "where": "Jasper",
+          "book": "",
+          "place": "canada/jasper-wildlife"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "CN Tower and waterfront",
+          "notes": "Book timed entry for sunset.",
+          "where": "Toronto",
+          "book": "",
+          "place": "canada/cn-tower"
+        },
+        {
+          "day": 9,
+          "type": "Shopping",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "St Lawrence Market and Distillery District",
+          "notes": "The market is closed on Mondays.",
+          "where": "Toronto",
+          "book": "",
+          "place": "canada/st-lawrence-market"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "9h",
+          "name": "Niagara Falls boat tour and Niagara-on-the-Lake",
+          "notes": "Bring a waterproof layer; add a winery stop.",
+          "where": "Niagara",
+          "book": "Yes - book a tour or train",
+          "place": "canada/niagara-falls"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Old Montreal and Notre-Dame Basilica",
+          "notes": "Cobbled lanes and the old port.",
+          "where": "Old Montreal",
+          "book": "",
+          "place": "canada/old-montreal"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Mount Royal and Jean-Talon Market",
+          "notes": "Try a bagel and local cheese.",
+          "where": "Montreal",
+          "book": "",
+          "place": "canada/mount-royal-jean-talon"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vancouver Airport (YVR)",
+          "to": "Vancouver hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Vancouver hotel area",
+          "to": "Vancouver Airport (YVR)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Calgary Airport (YYC)",
+          "to": "Banff",
+          "time": "12:00",
+          "minutes": 90,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Banff",
+          "to": "Jasper",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car or shuttle",
+          "notes": "Follow the Icefields Parkway; stops add time.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Jasper",
+          "to": "Edmonton Airport (YEG)",
+          "time": "06:00",
+          "minutes": 270,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Toronto Pearson (YYZ)",
+          "to": "Toronto hotel area",
+          "time": "16:00",
+          "minutes": 40,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Public Transit",
+          "from": "Toronto",
+          "to": "Montreal",
+          "time": "08:00",
+          "minutes": 330,
+          "carrier": "VIA Rail train or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Montreal hotel area",
+          "to": "Montreal Airport (YUL)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Airport shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "canada/stanley-park": {
+        "name": "Stanley Park seawall",
+        "description": "A forested peninsula ringed by a flat seawall path, with totem poles and city views.",
+        "details": "Stanley Park covers over 400 hectares at the edge of downtown Vancouver. The 9-kilometre seawall is walked or cycled, passing Brockton Point totem poles, beaches and the Lions Gate Bridge. Bike rentals are plentiful nearby. Allow half a day.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/granville-island": {
+        "name": "Granville Island Public Market",
+        "description": "A food market and arts district under a bridge, reached by small ferry.",
+        "details": "Granville Island has the Public Market with produce, smoked salmon and bakeries, plus studios, theatres and a brewery. Aqua-Bus ferries cross False Creek. It is busy at weekends, so go on a weekday morning.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/capilano": {
+        "name": "Capilano Suspension Bridge and Grouse Mountain",
+        "description": "Forest walks and cable-car views on the North Shore mountains.",
+        "details": "Capilano Suspension Bridge Park has a 137-metre swaying bridge over a canyon, with treetop walkways in a rainforest. Grouse Mountain has a gondola for city views and, in winter, skiing and snowshoeing. Both are 20 to 30 minutes north of downtown.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "canada/banff-gondola": {
+        "name": "Banff town and Sulphur Mountain Gondola",
+        "description": "A mountain town with a gondola to a ridge-top boardwalk and hot springs nearby.",
+        "details": "Banff is a lively town in the Rockies, with shops, restaurants and a view of Cascade Mountain. The gondola rises to the Sulphur Mountain summit with a boardwalk and a panorama. The Upper Hot Springs are close. The area is in Banff National Park, and a park pass is needed.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/lake-louise-moraine": {
+        "name": "Lake Louise and Moraine Lake",
+        "description": "The two most famous turquoise lakes in the Canadian Rockies.",
+        "details": "Lake Louise sits beneath a glacier and has a shoreline walk and the grand lodge. Moraine Lake lies in the Valley of the Ten Peaks. Access to Moraine Lake is by shuttle or tour only in summer, so reserve ahead. Arrive early for parking, and expect snow into early summer.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/johnston-canyon": {
+        "name": "Johnston Canyon",
+        "description": "A catwalk trail up a limestone canyon to waterfalls.",
+        "details": "A well-built walkway is attached to the canyon walls and leads to the Lower Falls in about 20 minutes and the Upper Falls after 45 minutes. In winter people join guided ice walks. It is busy in summer, so start early.",
+        "interests": [
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "canada/icefields-parkway": {
+        "name": "Icefields Parkway and Columbia Icefield",
+        "description": "One of the most scenic drives in the world, with glaciers, lakes and wildlife viewing.",
+        "details": "The Icefields Parkway links Lake Louise and Jasper over 230 kilometres, passing Peyto Lake, Bow Lake and Athabasca Falls. At the Columbia Icefield, special buses drive onto the Athabasca Glacier, and a glass-floored skywalk looks into the valley. Allow a full day with stops. Services are limited, so fill up with fuel.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/maligne-lake": {
+        "name": "Maligne Lake and Spirit Island",
+        "description": "A long mountain lake near Jasper, visited by boat cruise to a tiny island.",
+        "details": "Maligne Lake is the largest in the Rockies. A 90-minute cruise reaches Spirit Island, one of the most photographed spots in Canada. The road passes Maligne Canyon and wildlife is often seen along the way. Cruises run from about May to October.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/jasper-wildlife": {
+        "name": "Jasper town and wildlife",
+        "description": "A relaxed mountain town with elk in the streets and hot springs, gondola and dark skies.",
+        "details": "Jasper is quieter than Banff and in a dark-sky preserve. The SkyTram gives views of six mountain ranges, and the Miette hot springs are a short drive. Wildlife such as elk, bighorn sheep and bears is common, so keep a safe distance and carry bear spray when hiking.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/cn-tower": {
+        "name": "CN Tower and Toronto waterfront",
+        "description": "The 553-metre tower with an EdgeWalk and a glass floor, over the harbour.",
+        "details": "The CN Tower is a Toronto landmark with an observation deck and a revolving restaurant, and a thrilling outdoor EdgeWalk. The waterfront has the ferry to the Toronto Islands, Harbourfront and the Ripley aquarium. Book timed entry for sunset.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/st-lawrence-market": {
+        "name": "St Lawrence Market and Distillery District",
+        "description": "A historic food hall and a pedestrian neighbourhood of Victorian industrial buildings.",
+        "details": "St Lawrence Market has stalls of cheese, seafood and the famous peameal bacon sandwich. The Distillery District has cobbled streets, galleries and cafes. Both are good for a relaxed afternoon, and the market is closed on Mondays.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/niagara-falls": {
+        "name": "Niagara Falls boat tour",
+        "description": "A boat ride to the foot of the Horseshoe Falls, with a view from the Canadian side.",
+        "details": "The Hornblower boat takes visitors up close to the base of the Horseshoe Falls, with ponchos given out. The Canadian side has the best views, and the town is touristy. Niagara-on-the-Lake nearby has wineries and a pretty main street. Allow a full day from Toronto.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/old-montreal": {
+        "name": "Old Montreal and Notre-Dame Basilica",
+        "description": "Cobbled streets, a grand basilica and the old port in a French-speaking city.",
+        "details": "Vieux-Montreal has stone buildings, galleries and restaurants, and the Notre-Dame Basilica has a spectacular blue-and-gold interior. The Old Port has a promenade and a ferris wheel. The city is French first, and a few words of French are appreciated.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/mount-royal-jean-talon": {
+        "name": "Mount Royal and Jean-Talon Market",
+        "description": "A park hill with city views and a big market of produce and Quebec cheese.",
+        "details": "Mount Royal is the park in the middle of Montreal with a lookout over downtown, easy to walk up. Jean-Talon Market is a lively market in Little Italy with fruit, cheese, maple products and food stalls. Try a bagel and poutine along the way.",
+        "interests": [
+          "outdoors",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "canada/quebec-city": {
+        "name": "Old Quebec and Chateau Frontenac",
+        "description": "The only walled city north of Mexico, with a fairytale hotel above the St Lawrence.",
+        "details": "Old Quebec is a UNESCO site with cobbled lanes, ramparts and the Chateau Frontenac overlooking the river. The Dufferin Terrace gives views, and Petit-Champlain is the shopping quarter. Montmorency Falls is just outside the city. The funicular links upper and lower town.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "canada": {
+        "name": "Canada",
+        "description": "A vast country of Rocky Mountain lakes, big cities, waterfalls and French-speaking Quebec.",
+        "images": []
+      },
+      "canada/british-columbia": {
+        "name": "British Columbia",
+        "description": "The Pacific province of Vancouver, mountains and coast.",
+        "images": []
+      },
+      "canada/vancouver": {
+        "name": "Vancouver",
+        "description": "A coastal city between mountains and sea, with a huge seawall park.",
+        "images": []
+      },
+      "canada/alberta": {
+        "name": "Alberta",
+        "description": "The province of Banff, Jasper and the Rocky Mountain parks.",
+        "images": []
+      },
+      "canada/banff": {
+        "name": "Banff",
+        "description": "A mountain town in the Rockies and the gateway to Lake Louise.",
+        "images": []
+      },
+      "canada/jasper": {
+        "name": "Jasper",
+        "description": "A quieter mountain town with elk, lakes and dark skies.",
+        "images": []
+      },
+      "canada/ontario": {
+        "name": "Ontario",
+        "description": "The central province of Toronto and Niagara Falls.",
+        "images": []
+      },
+      "canada/toronto": {
+        "name": "Toronto",
+        "description": "The big, multicultural city on Lake Ontario with the CN Tower.",
+        "images": []
+      },
+      "canada/quebec": {
+        "name": "Quebec",
+        "description": "The French-speaking province of Montreal and Quebec City.",
+        "images": []
+      },
+      "canada/montreal": {
+        "name": "Montreal",
+        "description": "A bilingual city of old stone streets, food and festivals.",
+        "images": []
+      },
+      "canada/quebec-city": {
+        "name": "Quebec City",
+        "description": "The walled old town above the St Lawrence river.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,0 +1,1330 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Frommers, KimKim, TravelStride and Private Guide Bulgaria itineraries for Bulgaria",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "bulgaria-sofia-plovdiv-4d",
+      "title": "Sofia and Plovdiv in 4 Days",
+      "summary": "The capital, then the old town of Plovdiv, with a stop at Koprivshtitsa.",
+      "days": 4,
+      "route": "Sofia > Plovdiv",
+      "arrive": "Sofia (SOF)",
+      "depart": "Sofia (SOF)",
+      "countries": [
+        "Bulgaria"
+      ],
+      "regions": [],
+      "cities": [
+        "Sofia",
+        "Plovdiv"
+      ],
+      "imageQuery": "Plovdiv Roman theatre",
+      "highlights": [
+        "Alexander Nevsky",
+        "Plovdiv Old Town",
+        "Roman theatre",
+        "Koprivshtitsa"
+      ],
+      "destinationKeys": [
+        "bulgaria",
+        "bulgaria/sofia",
+        "bulgaria/plovdiv"
+      ],
+      "hero": "bulgaria/plovdiv",
+      "sources": [
+        "Frommers",
+        "KimKim",
+        "TravelStride",
+        "Private Guide Bulgaria",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Sofia",
+          "hotel": "Hotel in Sofia",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Vitosha Boulevard or the central cathedral area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Plovdiv",
+          "hotel": "Hotel in Plovdiv",
+          "start": 2,
+          "nights": 1,
+          "area": "In Plovdiv Old Town for atmosphere, or near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Sofia walking tour and Alexander Nevsky Cathedral",
+          "notes": "Includes the Serdika Roman ruins and the churches of the centre.",
+          "where": "Sofia",
+          "book": "",
+          "place": "bulgaria/alexander-nevsky"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Boyana Church and Vitosha foothills",
+          "notes": "Entry is limited to small groups.",
+          "where": "Boyana, Sofia",
+          "book": "",
+          "place": "bulgaria/boyana-vitosha"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Koprivshtitsa museum houses",
+          "notes": "Stop on the road between Sofia and Plovdiv.",
+          "where": "Koprivshtitsa",
+          "book": "",
+          "place": "bulgaria/koprivshtitsa"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Kapana quarter dinner",
+          "notes": "Best in the evening.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/kapana"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Plovdiv Old Town and Roman theatre",
+          "notes": "The hill streets are cobbled and steep.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/plovdiv-old-town"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sofia Airport (SOF)",
+          "to": "Sofia hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Sofia",
+          "to": "Plovdiv",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Rental car or private transfer",
+          "notes": "Stop at Koprivshtitsa on a longer route.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Plovdiv",
+          "to": "Sofia Airport (SOF)",
+          "time": "13:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bulgaria-sofia-plovdiv-veliko-tarnovo-6d",
+      "title": "Sofia, Plovdiv and Veliko Tarnovo in 6 Days",
+      "summary": "Three historic cities in a short loop.",
+      "days": 6,
+      "route": "Sofia > Plovdiv > Veliko Tarnovo",
+      "arrive": "Sofia (SOF)",
+      "depart": "Sofia (SOF)",
+      "countries": [
+        "Bulgaria"
+      ],
+      "regions": [],
+      "cities": [
+        "Sofia",
+        "Plovdiv",
+        "Veliko Tarnovo"
+      ],
+      "imageQuery": "Veliko Tarnovo Tsarevets fortress",
+      "highlights": [
+        "Alexander Nevsky",
+        "Plovdiv Old Town",
+        "Kapana",
+        "Tsarevets Fortress"
+      ],
+      "destinationKeys": [
+        "bulgaria",
+        "bulgaria/sofia",
+        "bulgaria/plovdiv",
+        "bulgaria/veliko-tarnovo"
+      ],
+      "hero": "bulgaria/veliko-tarnovo",
+      "sources": [
+        "Frommers",
+        "KimKim",
+        "TravelStride",
+        "Private Guide Bulgaria",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Sofia",
+          "hotel": "Hotel in Sofia",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Vitosha Boulevard or the central cathedral area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Plovdiv",
+          "hotel": "Hotel in Plovdiv",
+          "start": 2,
+          "nights": 2,
+          "area": "In Plovdiv Old Town for atmosphere, or near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Veliko Tarnovo",
+          "hotel": "Hotel in Veliko Tarnovo",
+          "start": 4,
+          "nights": 1,
+          "area": "In the old town with views over the Yantra river and fortress",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Sofia walking tour and Alexander Nevsky Cathedral",
+          "notes": "Includes the Serdika Roman ruins and the churches of the centre.",
+          "where": "Sofia",
+          "book": "",
+          "place": "bulgaria/alexander-nevsky"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Boyana Church and Vitosha foothills",
+          "notes": "Entry is limited to small groups.",
+          "where": "Boyana, Sofia",
+          "book": "",
+          "place": "bulgaria/boyana-vitosha"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Plovdiv Old Town and Roman theatre",
+          "notes": "The hill streets are cobbled and steep.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/plovdiv-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Kapana quarter dinner",
+          "notes": "Best in the evening.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/kapana"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Tsarevets Fortress",
+          "notes": "Walk the walls; a light show runs on summer evenings.",
+          "where": "Veliko Tarnovo",
+          "book": "",
+          "place": "bulgaria/veliko-tarnovo-tsarevets"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sofia Airport (SOF)",
+          "to": "Sofia hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Sofia",
+          "to": "Plovdiv",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Plovdiv",
+          "to": "Veliko Tarnovo",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Rental car or private transfer",
+          "notes": "Stop at Kazanlak if time allows.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Veliko Tarnovo",
+          "to": "Sofia Airport (SOF)",
+          "time": "09:00",
+          "minutes": 220,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bulgaria-sofia-melnik-plovdiv-veliko-tarnovo-7d",
+      "title": "Bulgaria Highlights with Rila and Melnik in 7 Days",
+      "summary": "Sofia, Rila Monastery, Melnik wine, Plovdiv and Veliko Tarnovo.",
+      "days": 7,
+      "route": "Sofia > Melnik > Plovdiv > Veliko Tarnovo",
+      "arrive": "Sofia (SOF)",
+      "depart": "Sofia (SOF)",
+      "countries": [
+        "Bulgaria"
+      ],
+      "regions": [
+        "Blagoevgrad"
+      ],
+      "cities": [
+        "Sofia",
+        "Melnik",
+        "Plovdiv",
+        "Veliko Tarnovo"
+      ],
+      "imageQuery": "Rila Monastery Bulgaria",
+      "highlights": [
+        "Rila Monastery",
+        "Melnik wine",
+        "Plovdiv Old Town",
+        "Tsarevets Fortress"
+      ],
+      "destinationKeys": [
+        "bulgaria",
+        "bulgaria/sofia",
+        "bulgaria/blagoevgrad",
+        "bulgaria/melnik",
+        "bulgaria/plovdiv",
+        "bulgaria/veliko-tarnovo"
+      ],
+      "hero": "bulgaria/blagoevgrad",
+      "sources": [
+        "Frommers",
+        "KimKim",
+        "TravelStride",
+        "Private Guide Bulgaria",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Sofia",
+          "hotel": "Hotel in Sofia",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Vitosha Boulevard or the central cathedral area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Melnik",
+          "hotel": "Guesthouse in Melnik",
+          "start": 2,
+          "nights": 1,
+          "area": "In Melnik village in a family guesthouse with a cellar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Plovdiv",
+          "hotel": "Hotel in Plovdiv",
+          "start": 3,
+          "nights": 2,
+          "area": "In Plovdiv Old Town for atmosphere, or near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Veliko Tarnovo",
+          "hotel": "Hotel in Veliko Tarnovo",
+          "start": 5,
+          "nights": 1,
+          "area": "In the old town with views over the Yantra river and fortress",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Sofia walking tour and Alexander Nevsky Cathedral",
+          "notes": "Includes the Serdika Roman ruins and the churches of the centre.",
+          "where": "Sofia",
+          "book": "",
+          "place": "bulgaria/alexander-nevsky"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Rila Monastery",
+          "notes": "Dress modestly; no photography inside the church.",
+          "where": "Rila",
+          "book": "",
+          "place": "bulgaria/rila-monastery"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Melnik cellar wine tasting",
+          "notes": "Visit a family cellar; arrange a driver.",
+          "where": "Melnik",
+          "book": "",
+          "place": "bulgaria/melnik"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Plovdiv Old Town and Roman theatre",
+          "notes": "The hill streets are cobbled and steep.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/plovdiv-old-town"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Kapana quarter dinner",
+          "notes": "Best in the evening.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/kapana"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Tsarevets Fortress",
+          "notes": "Walk the walls; a light show runs on summer evenings.",
+          "where": "Veliko Tarnovo",
+          "book": "",
+          "place": "bulgaria/veliko-tarnovo-tsarevets"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sofia Airport (SOF)",
+          "to": "Sofia hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Sofia",
+          "to": "Melnik",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "A stop at Rila Monastery fits on a longer route.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Melnik",
+          "to": "Plovdiv",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Plovdiv",
+          "to": "Veliko Tarnovo",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Veliko Tarnovo",
+          "to": "Sofia Airport (SOF)",
+          "time": "09:00",
+          "minutes": 220,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bulgaria-sofia-black-sea-9d",
+      "title": "Bulgaria from Sofia to the Black Sea in 9 Days",
+      "summary": "Rila, Melnik, Plovdiv, Veliko Tarnovo and a finish in Varna.",
+      "days": 9,
+      "route": "Sofia > Melnik > Plovdiv > Veliko Tarnovo > Varna",
+      "arrive": "Sofia (SOF)",
+      "depart": "Varna (VAR)",
+      "countries": [
+        "Bulgaria"
+      ],
+      "regions": [
+        "Blagoevgrad"
+      ],
+      "cities": [
+        "Sofia",
+        "Melnik",
+        "Plovdiv",
+        "Veliko Tarnovo",
+        "Varna"
+      ],
+      "imageQuery": "Varna Sea Garden Black Sea",
+      "highlights": [
+        "Rila Monastery",
+        "Melnik",
+        "Plovdiv",
+        "Tsarevets",
+        "Varna"
+      ],
+      "destinationKeys": [
+        "bulgaria",
+        "bulgaria/sofia",
+        "bulgaria/blagoevgrad",
+        "bulgaria/melnik",
+        "bulgaria/plovdiv",
+        "bulgaria/veliko-tarnovo",
+        "bulgaria/varna"
+      ],
+      "hero": "bulgaria/varna",
+      "sources": [
+        "Frommers",
+        "KimKim",
+        "TravelStride",
+        "Private Guide Bulgaria",
+        "On The Go Tours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Sofia",
+          "hotel": "Hotel in Sofia",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Vitosha Boulevard or the central cathedral area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Melnik",
+          "hotel": "Guesthouse in Melnik",
+          "start": 2,
+          "nights": 1,
+          "area": "In Melnik village in a family guesthouse with a cellar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Plovdiv",
+          "hotel": "Hotel in Plovdiv",
+          "start": 3,
+          "nights": 2,
+          "area": "In Plovdiv Old Town for atmosphere, or near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Veliko Tarnovo",
+          "hotel": "Hotel in Veliko Tarnovo",
+          "start": 5,
+          "nights": 2,
+          "area": "In the old town with views over the Yantra river and fortress",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Varna",
+          "hotel": "Hotel in Varna",
+          "start": 7,
+          "nights": 1,
+          "area": "Near the Sea Garden or central Varna",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Sofia walking tour and Alexander Nevsky Cathedral",
+          "notes": "Includes the Serdika Roman ruins and the churches of the centre.",
+          "where": "Sofia",
+          "book": "",
+          "place": "bulgaria/alexander-nevsky"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Rila Monastery",
+          "notes": "Dress modestly; no photography inside the church.",
+          "where": "Rila",
+          "book": "",
+          "place": "bulgaria/rila-monastery"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Melnik cellar wine tasting",
+          "notes": "Visit a family cellar; arrange a driver.",
+          "where": "Melnik",
+          "book": "",
+          "place": "bulgaria/melnik"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Plovdiv Old Town and Roman theatre",
+          "notes": "The hill streets are cobbled and steep.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/plovdiv-old-town"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Kapana quarter dinner",
+          "notes": "Best in the evening.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/kapana"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Tsarevets Fortress",
+          "notes": "Walk the walls; a light show runs on summer evenings.",
+          "where": "Veliko Tarnovo",
+          "book": "",
+          "place": "bulgaria/veliko-tarnovo-tsarevets"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Arbanasi village churches",
+          "notes": "The Nativity Church frescoes are a highlight.",
+          "where": "Arbanasi",
+          "book": "",
+          "place": "bulgaria/arbanasi"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Varna Archaeological Museum",
+          "notes": "Home of the Varna gold treasure.",
+          "where": "Varna",
+          "book": "",
+          "place": "bulgaria/varna-sea-garden"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Sea Garden and beach",
+          "notes": "Beaches are busy June to August.",
+          "where": "Varna",
+          "book": "",
+          "place": "bulgaria/varna-sea-garden"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sofia Airport (SOF)",
+          "to": "Sofia hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Sofia",
+          "to": "Melnik",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Melnik",
+          "to": "Plovdiv",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Plovdiv",
+          "to": "Veliko Tarnovo",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Veliko Tarnovo",
+          "to": "Varna",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Varna hotel area",
+          "to": "Varna Airport (VAR)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "bulgaria-complete-11d",
+      "title": "Complete Bulgaria in 11 Days",
+      "summary": "Mountains, wine, Roman cities, the medieval capital and the sea, with the Rose Valley and Nessebar.",
+      "days": 11,
+      "route": "Sofia > Melnik > Plovdiv > Veliko Tarnovo > Varna",
+      "arrive": "Sofia (SOF)",
+      "depart": "Varna (VAR)",
+      "countries": [
+        "Bulgaria"
+      ],
+      "regions": [
+        "Blagoevgrad"
+      ],
+      "cities": [
+        "Sofia",
+        "Melnik",
+        "Plovdiv",
+        "Veliko Tarnovo",
+        "Varna"
+      ],
+      "imageQuery": "Seven Rila Lakes Bulgaria",
+      "highlights": [
+        "Seven Rila Lakes",
+        "Rila Monastery",
+        "Koprivshtitsa",
+        "Rose Valley",
+        "Nessebar",
+        "Varna"
+      ],
+      "destinationKeys": [
+        "bulgaria",
+        "bulgaria/sofia",
+        "bulgaria/blagoevgrad",
+        "bulgaria/melnik",
+        "bulgaria/plovdiv",
+        "bulgaria/veliko-tarnovo",
+        "bulgaria/varna"
+      ],
+      "hero": "bulgaria/sofia",
+      "sources": [
+        "Frommers",
+        "KimKim",
+        "TravelStride",
+        "Private Guide Bulgaria",
+        "On The Go Tours"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "food",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Sofia",
+          "hotel": "Hotel in Sofia",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Vitosha Boulevard or the central cathedral area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Melnik",
+          "hotel": "Guesthouse in Melnik",
+          "start": 3,
+          "nights": 1,
+          "area": "In Melnik village in a family guesthouse with a cellar",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Plovdiv",
+          "hotel": "Hotel in Plovdiv",
+          "start": 4,
+          "nights": 2,
+          "area": "In Plovdiv Old Town for atmosphere, or near the pedestrian street",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Veliko Tarnovo",
+          "hotel": "Hotel in Veliko Tarnovo",
+          "start": 6,
+          "nights": 2,
+          "area": "In the old town with views over the Yantra river and fortress",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Varna",
+          "hotel": "Hotel in Varna",
+          "start": 8,
+          "nights": 2,
+          "area": "Near the Sea Garden or central Varna",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Sofia walking tour and Alexander Nevsky Cathedral",
+          "notes": "Includes the Serdika Roman ruins and the churches of the centre.",
+          "where": "Sofia",
+          "book": "",
+          "place": "bulgaria/alexander-nevsky"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Rila Monastery",
+          "notes": "Dress modestly; no photography inside the church.",
+          "where": "Rila",
+          "book": "",
+          "place": "bulgaria/rila-monastery"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Seven Rila Lakes hike",
+          "notes": "Open mainly June to October; carry warm layers.",
+          "where": "Rila Mountains",
+          "book": "",
+          "place": "bulgaria/seven-rila-lakes"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Melnik cellar wine tasting",
+          "notes": "Visit a family cellar; arrange a driver.",
+          "where": "Melnik",
+          "book": "",
+          "place": "bulgaria/melnik"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3.5h",
+          "name": "Plovdiv Old Town and Roman theatre",
+          "notes": "The hill streets are cobbled and steep.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/plovdiv-old-town"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Kapana quarter dinner",
+          "notes": "Best in the evening.",
+          "where": "Plovdiv",
+          "book": "",
+          "place": "bulgaria/kapana"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "11:30",
+          "duration": "2h",
+          "name": "Rose Valley and Kazanlak stop",
+          "notes": "Rose harvest runs May to early June.",
+          "where": "Kazanlak",
+          "book": "",
+          "place": "bulgaria/rose-valley"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Tsarevets Fortress",
+          "notes": "Walk the walls; a light show runs on summer evenings.",
+          "where": "Veliko Tarnovo",
+          "book": "",
+          "place": "bulgaria/veliko-tarnovo-tsarevets"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Arbanasi village churches",
+          "notes": "The Nativity Church frescoes are a highlight.",
+          "where": "Arbanasi",
+          "book": "",
+          "place": "bulgaria/arbanasi"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Varna Archaeological Museum",
+          "notes": "Home of the Varna gold treasure.",
+          "where": "Varna",
+          "book": "",
+          "place": "bulgaria/varna-sea-garden"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Sea Garden and beach",
+          "notes": "Beaches are busy June to August.",
+          "where": "Varna",
+          "book": "",
+          "place": "bulgaria/varna-sea-garden"
+        },
+        {
+          "day": 9,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Nessebar old town",
+          "notes": "Go in the evening or off-season to avoid crowds.",
+          "where": "Nessebar",
+          "book": "",
+          "place": "bulgaria/nessebar"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sofia Airport (SOF)",
+          "to": "Sofia hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Sofia",
+          "to": "Melnik",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Melnik",
+          "to": "Plovdiv",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Plovdiv",
+          "to": "Veliko Tarnovo",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or private transfer",
+          "notes": "The road passes Kazanlak and the Shipka pass.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Veliko Tarnovo",
+          "to": "Varna",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Varna hotel area",
+          "to": "Varna Airport (VAR)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi or metro",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "bulgaria/alexander-nevsky": {
+        "name": "Alexander Nevsky Cathedral and central Sofia",
+        "description": "The gold-domed cathedral and the compact centre of Sofia, with Roman ruins at Serdika.",
+        "details": "Alexander Nevsky is one of the largest Orthodox cathedrals in the Balkans, with a vast interior of mosaics and icons. The nearby centre holds the Roman Serdika ruins, the Banya Bashi mosque and the Sofia Synagogue within a few minutes walk. The area is easily explored on a free walking tour.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bulgaria/boyana-vitosha": {
+        "name": "Boyana Church and Vitosha mountain",
+        "description": "A medieval church with remarkable frescoes and a mountain park on the edge of Sofia.",
+        "details": "The Boyana Church is a UNESCO site with frescoes from 1259, well before the Renaissance. Entry is limited to small groups. Vitosha mountain offers a cable car and walking trails close to the city, giving a half-day outdoor option.",
+        "interests": [
+          "culture",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bulgaria/rila-monastery": {
+        "name": "Rila Monastery",
+        "description": "The largest and most famous monastery in Bulgaria, in a forest valley, with striped arches and frescoed church.",
+        "details": "Rila Monastery was founded in the tenth century and has a courtyard with arcades of black and white stripes and a church covered in frescoes. It is a UNESCO site two hours from Sofia. Monks still live there. Dress modestly, and avoid photography inside the church.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bulgaria/seven-rila-lakes": {
+        "name": "Seven Rila Lakes",
+        "description": "A chain of glacial lakes reached by a chairlift and an easy hike in the Rila mountains.",
+        "details": "The Seven Rila Lakes are a favourite mountain day out in summer, from about June to October. A chairlift from the road gives access, and a loop walk passes all seven lakes. The weather turns cold quickly and snow may remain into early summer.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "bulgaria/melnik": {
+        "name": "Melnik wine village",
+        "description": "The smallest town in Bulgaria, among sandstone pyramids, with cellars cut into the rock.",
+        "details": "Melnik is known for its red wines, notably the local Shiroka Melnishka, aged in cellars dug into the hillside. Old Bulgarian houses line the lanes beneath sand pyramids. Tastings at family cellars are the main activity. The Rozhen Monastery is close.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bulgaria/plovdiv-old-town": {
+        "name": "Plovdiv old town and Roman theatre",
+        "description": "A hilltop old town of Revival houses and a restored Roman theatre, one of the oldest living cities in Europe.",
+        "details": "Plovdiv was a Thracian and Roman city. The Roman theatre still hosts concerts, and the old town on the hill has colourful nineteenth-century merchant houses, galleries and cafes. The cobbles are steep. The Roman stadium lies below the main pedestrian street.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "bulgaria/kapana": {
+        "name": "Kapana creative quarter, Plovdiv",
+        "description": "A lively district of craft shops, bars and street food beside the pedestrian centre.",
+        "details": "Kapana means the trap, and the maze of small streets is full of artists, cafes, bakeries and cocktail bars. It is best in the evening. The area was renewed for Plovdiv European Capital of Culture year.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bulgaria/veliko-tarnovo-tsarevets": {
+        "name": "Tsarevets Fortress, Veliko Tarnovo",
+        "description": "The ruined medieval capital on a hill above a river loop, the heart of the Second Bulgarian Empire.",
+        "details": "Tsarevets is a fortified hill with walls, a patriarch church and the ruins of the royal palace, above the Yantra river meander. The old town lanes below are full of craft shops. A light and sound show lights up the fortress at night in season.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "bulgaria/arbanasi": {
+        "name": "Arbanasi village",
+        "description": "A hill village of fortified stone houses and richly painted churches near Veliko Tarnovo.",
+        "details": "Arbanasi was a prosperous merchant village, and the Nativity Church has frescoes covering the walls and ceilings. The old houses behind high stone walls have been preserved. It is a quiet half-day trip with views and village restaurants.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bulgaria/koprivshtitsa": {
+        "name": "Koprivshtitsa museum town",
+        "description": "A hillside village of nineteenth-century houses linked to the 1876 April Uprising.",
+        "details": "Koprivshtitsa is a preserved village of coloured timber houses with bridges over a stream. Many houses are open as museums, and the village was where the uprising against the Ottomans began. It lies about 100 kilometres east of Sofia, and makes a pleasant stop between Sofia and Plovdiv.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bulgaria/rose-valley": {
+        "name": "Rose Valley and Kazanlak",
+        "description": "A valley famous for rose oil and Thracian tombs, with a rose festival in early June.",
+        "details": "Kazanlak lies in the Valley of the Roses, where Damask roses are harvested in May and June for oil. The nearby Thracian tomb is a UNESCO site, preserved in a replica for visitors. The Shipka Memorial Church is a golden-domed landmark on the pass.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bulgaria/nessebar": {
+        "name": "Nessebar old town",
+        "description": "A UNESCO peninsula town on the Black Sea with Byzantine churches and windmills.",
+        "details": "Nessebar is a small walled peninsula with ruined churches from the Byzantine era and wooden houses, joined to the mainland by a causeway. It is busy in summer, so go in the evening or in the shoulder season. The modern resort of Sunny Beach is nearby.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "bulgaria/varna-sea-garden": {
+        "name": "Varna Sea Garden and archaeological museum",
+        "description": "The seaside capital with a long park, the beach and the museum that holds the oldest gold treasure in the world.",
+        "details": "The Varna Archaeological Museum displays the Varna Necropolis gold, the oldest worked gold known, from about 4,500 BC. The Sea Garden runs for kilometres above the beach. The Roman baths and the cathedral are in the centre. Beaches are busy from June to August.",
+        "interests": [
+          "culture",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "bulgaria": {
+        "name": "Bulgaria",
+        "description": "A Balkan country of monasteries, Thracian history, mountains and a Black Sea coast.",
+        "images": []
+      },
+      "bulgaria/sofia": {
+        "name": "Sofia",
+        "description": "The capital, with a golden cathedral, Roman ruins and mountains nearby.",
+        "images": []
+      },
+      "bulgaria/blagoevgrad": {
+        "name": "Blagoevgrad",
+        "description": "The south-west province of Rila, Melnik and the Pirin mountains.",
+        "images": []
+      },
+      "bulgaria/melnik": {
+        "name": "Melnik",
+        "description": "The smallest town in Bulgaria, a wine village below sandstone pyramids.",
+        "images": []
+      },
+      "bulgaria/plovdiv": {
+        "name": "Plovdiv",
+        "description": "A city of Roman ruins, an old town and a creative quarter.",
+        "images": []
+      },
+      "bulgaria/veliko-tarnovo": {
+        "name": "Veliko Tarnovo",
+        "description": "The medieval capital on a cliff above a river bend.",
+        "images": []
+      },
+      "bulgaria/varna": {
+        "name": "Varna",
+        "description": "The Black Sea capital, with gardens, beaches and an archaeological museum.",
+        "images": []
+      }
+    }
+  }
+}

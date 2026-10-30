@@ -1,0 +1,2133 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, TravelStride, On The Go Tours and Magnificent Travel itineraries for Jordan",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "jordan-amman-petra-wadi-rum-6d",
+      "title": "Amman, Petra and Wadi Rum in 6 Days",
+      "summary": "The short version of Jordan's highlights: the capital, a full day in Petra and a night in a Bedouin desert camp.",
+      "days": 6,
+      "route": "Amman > Petra > Wadi Rum",
+      "arrive": "Amman (AMM)",
+      "depart": "Aqaba (AQJ)",
+      "countries": [
+        "Jordan"
+      ],
+      "regions": [
+        "Amman",
+        "Ma'an"
+      ],
+      "cities": [
+        "Amman",
+        "Petra",
+        "Wadi Rum"
+      ],
+      "imageQuery": "Petra Treasury Jordan",
+      "highlights": [
+        "Amman Citadel",
+        "Petra Treasury",
+        "Petra by Night",
+        "Wadi Rum jeep tour",
+        "Bedouin camp"
+      ],
+      "destinationKeys": [
+        "jordan",
+        "jordan/amman",
+        "jordan/ma-an",
+        "jordan/petra",
+        "jordan/wadi-rum"
+      ],
+      "hero": "jordan/petra",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "On The Go Tours",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Amman",
+          "hotel": "Hotel in Amman",
+          "start": 0,
+          "nights": 2,
+          "area": "Around Jabal Amman or Rainbow Street for cafes and walking; downtown for budget stays near the Roman Theatre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Petra",
+          "hotel": "Hotel in Petra",
+          "start": 2,
+          "nights": 2,
+          "area": "In Wadi Musa near the Petra entrance, to walk to the gate for early starts and the evening show",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wadi Rum",
+          "hotel": "Camp in Wadi Rum",
+          "start": 4,
+          "nights": 1,
+          "area": "A desert camp within the protected area; simple to comfortable tents, with dinner and breakfast provided",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Amman Citadel",
+          "notes": "Late afternoon light is best; paths are uneven.",
+          "where": "Jabal al-Qala'a, Amman",
+          "book": "",
+          "place": "jordan/amman-citadel"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Evening on Rainbow Street",
+          "notes": "Lively at weekends; rooftops offer sunset views.",
+          "where": "Jabal Amman",
+          "book": "",
+          "place": "jordan/rainbow-street"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "3.5h",
+          "name": "Jerash Roman city",
+          "notes": "Almost no shade, so go early and bring water; the hippodrome show runs on a schedule.",
+          "where": "Jerash",
+          "book": "",
+          "place": "jordan/jerash"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Petra by Night",
+          "notes": "Runs on selected evenings of the week, usually Monday, Wednesday and Thursday; tickets are bought at the visitor centre.",
+          "where": "Petra",
+          "book": "Yes - runs only on selected evenings",
+          "place": "jordan/petra-by-night"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Petra: Siq and the Treasury",
+          "notes": "Go as the gates open, before the groups; the walk back is uphill and shade is limited.",
+          "where": "Petra",
+          "book": "",
+          "place": "jordan/petra-treasury"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Wadi Rum jeep tour",
+          "notes": "Dust and glare are strong; bring a scarf and sunglasses.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-jeep"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2.5h",
+          "name": "Desert camp dinner and stargazing",
+          "notes": "Nights get cold in winter; bring warm layers.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-sunset-camp"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Queen Alia International Airport (AMM)",
+          "to": "Amman hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "The airport is about 35 km south of the city; pre-booking avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Amman",
+          "to": "Petra (Wadi Musa)",
+          "time": "08:30",
+          "minutes": 230,
+          "carrier": "Private transfer or rental car",
+          "notes": "The Desert Highway is quick; the longer King's Highway adds stops.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Petra (Wadi Musa)",
+          "to": "Wadi Rum",
+          "time": "14:00",
+          "minutes": 105,
+          "carrier": "Private transfer",
+          "notes": "Camps arrange pick-up from the Wadi Rum visitor centre.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Wadi Rum",
+          "to": "King Hussein International Airport, Aqaba (AQJ)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Private transfer or taxi",
+          "notes": "Aqaba airport is small; allow two to three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "jordan-petra-rum-dead-sea-7d",
+      "title": "Petra, Wadi Rum and the Dead Sea in 7 Days",
+      "summary": "A compact tour of Jordan's big three, finishing with two nights floating on the Dead Sea.",
+      "days": 7,
+      "route": "Amman > Petra > Wadi Rum > Dead Sea",
+      "arrive": "Amman (AMM)",
+      "depart": "Amman (AMM)",
+      "countries": [
+        "Jordan"
+      ],
+      "regions": [
+        "Amman",
+        "Ma'an"
+      ],
+      "cities": [
+        "Amman",
+        "Petra",
+        "Wadi Rum",
+        "Dead Sea"
+      ],
+      "imageQuery": "Wadi Rum Jordan desert camp",
+      "highlights": [
+        "Amman Citadel",
+        "Petra Treasury",
+        "Petra Monastery",
+        "Wadi Rum",
+        "Dead Sea float"
+      ],
+      "destinationKeys": [
+        "jordan",
+        "jordan/amman",
+        "jordan/ma-an",
+        "jordan/petra",
+        "jordan/wadi-rum",
+        "jordan/dead-sea"
+      ],
+      "hero": "jordan/wadi-rum",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "On The Go Tours",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Amman",
+          "hotel": "Hotel in Amman",
+          "start": 0,
+          "nights": 1,
+          "area": "Around Jabal Amman or Rainbow Street for cafes and walking; downtown for budget stays near the Roman Theatre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Petra",
+          "hotel": "Hotel in Petra",
+          "start": 1,
+          "nights": 2,
+          "area": "In Wadi Musa near the Petra entrance, to walk to the gate for early starts and the evening show",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wadi Rum",
+          "hotel": "Camp in Wadi Rum",
+          "start": 3,
+          "nights": 1,
+          "area": "A desert camp within the protected area; simple to comfortable tents, with dinner and breakfast provided",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dead Sea",
+          "hotel": "Resort on the Dead Sea",
+          "start": 4,
+          "nights": 2,
+          "area": "A resort on the Dead Sea shore, with direct access to the water and spa",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Amman Citadel",
+          "notes": "Late afternoon light is best; paths are uneven.",
+          "where": "Jabal al-Qala'a, Amman",
+          "book": "",
+          "place": "jordan/amman-citadel"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Evening on Rainbow Street",
+          "notes": "Lively at weekends; rooftops offer sunset views.",
+          "where": "Jabal Amman",
+          "book": "",
+          "place": "jordan/rainbow-street"
+        },
+        {
+          "day": 1,
+          "type": "Concert/Show",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Petra by Night",
+          "notes": "Runs on selected evenings of the week, usually Monday, Wednesday and Thursday; tickets are bought at the visitor centre.",
+          "where": "Petra",
+          "book": "Yes - runs only on selected evenings",
+          "place": "jordan/petra-by-night"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Petra: Siq and the Treasury",
+          "notes": "Go as the gates open, before the groups; the walk back is uphill and shade is limited.",
+          "where": "Petra",
+          "book": "",
+          "place": "jordan/petra-treasury"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Wadi Rum jeep tour",
+          "notes": "Dust and glare are strong; bring a scarf and sunglasses.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-jeep"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2.5h",
+          "name": "Desert camp dinner and stargazing",
+          "notes": "Nights get cold in winter; bring warm layers.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-sunset-camp"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Camel ride at sunset",
+          "notes": "Check that the animals look healthy and well cared for.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-camel"
+        },
+        {
+          "day": 5,
+          "type": "Spa/Wellness",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Float in the Dead Sea",
+          "notes": "Do not shave beforehand and keep water out of the eyes; rinse in the fresh-water showers.",
+          "where": "Dead Sea",
+          "book": "",
+          "place": "jordan/dead-sea-float"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Queen Alia International Airport (AMM)",
+          "to": "Amman hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "The airport is about 35 km south of the city; pre-booking avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Amman",
+          "to": "Petra (Wadi Musa)",
+          "time": "08:30",
+          "minutes": 230,
+          "carrier": "Private transfer or rental car",
+          "notes": "The Desert Highway is quick; the longer King's Highway adds stops.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Petra (Wadi Musa)",
+          "to": "Wadi Rum",
+          "time": "14:00",
+          "minutes": 105,
+          "carrier": "Private transfer",
+          "notes": "Camps arrange pick-up from the Wadi Rum visitor centre.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Wadi Rum",
+          "to": "Dead Sea",
+          "time": "10:00",
+          "minutes": 290,
+          "carrier": "Private transfer",
+          "notes": "A long drive north on the Desert Highway; stop for lunch.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Dead Sea",
+          "to": "Queen Alia International Airport (AMM)",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "jordan-golden-triangle-8d",
+      "title": "Jordan's Golden Triangle in 8 Days",
+      "summary": "Amman and Jerash, two nights at Petra, a desert night in Wadi Rum and two relaxing nights at the Dead Sea.",
+      "days": 8,
+      "route": "Amman > Petra > Wadi Rum > Dead Sea",
+      "arrive": "Amman (AMM)",
+      "depart": "Amman (AMM)",
+      "countries": [
+        "Jordan"
+      ],
+      "regions": [
+        "Amman",
+        "Jerash",
+        "Ma'an"
+      ],
+      "cities": [
+        "Amman",
+        "Jerash",
+        "Petra",
+        "Wadi Rum",
+        "Dead Sea"
+      ],
+      "imageQuery": "Jerash Roman ruins Jordan",
+      "highlights": [
+        "Jerash",
+        "Petra Treasury",
+        "Petra Monastery",
+        "Wadi Rum",
+        "Dead Sea"
+      ],
+      "destinationKeys": [
+        "jordan",
+        "jordan/amman",
+        "jordan/jerash",
+        "jordan/ma-an",
+        "jordan/petra",
+        "jordan/wadi-rum",
+        "jordan/dead-sea"
+      ],
+      "hero": "jordan/petra",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "On The Go Tours",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Amman",
+          "hotel": "Hotel in Amman",
+          "start": 0,
+          "nights": 2,
+          "area": "Around Jabal Amman or Rainbow Street for cafes and walking; downtown for budget stays near the Roman Theatre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Petra",
+          "hotel": "Hotel in Petra",
+          "start": 2,
+          "nights": 2,
+          "area": "In Wadi Musa near the Petra entrance, to walk to the gate for early starts and the evening show",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wadi Rum",
+          "hotel": "Camp in Wadi Rum",
+          "start": 4,
+          "nights": 1,
+          "area": "A desert camp within the protected area; simple to comfortable tents, with dinner and breakfast provided",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dead Sea",
+          "hotel": "Resort on the Dead Sea",
+          "start": 5,
+          "nights": 2,
+          "area": "A resort on the Dead Sea shore, with direct access to the water and spa",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Amman Citadel",
+          "notes": "Late afternoon light is best; paths are uneven.",
+          "where": "Jabal al-Qala'a, Amman",
+          "book": "",
+          "place": "jordan/amman-citadel"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Evening on Rainbow Street",
+          "notes": "Lively at weekends; rooftops offer sunset views.",
+          "where": "Jabal Amman",
+          "book": "",
+          "place": "jordan/rainbow-street"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "3.5h",
+          "name": "Jerash Roman city",
+          "notes": "Almost no shade, so go early and bring water; the hippodrome show runs on a schedule.",
+          "where": "Jerash",
+          "book": "",
+          "place": "jordan/jerash"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Ajloun Castle",
+          "notes": "A short stop in pine-covered hills; the castle has steps and uneven floors.",
+          "where": "Ajloun",
+          "book": "",
+          "place": "jordan/ajloun-castle"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Roman Theatre and downtown Amman",
+          "notes": "Shops close on Friday mornings; the climb to the top row is steep.",
+          "where": "Downtown Amman",
+          "book": "",
+          "place": "jordan/roman-theatre-amman"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Petra by Night",
+          "notes": "Runs on selected evenings of the week, usually Monday, Wednesday and Thursday; tickets are bought at the visitor centre.",
+          "where": "Petra",
+          "book": "Yes - runs only on selected evenings",
+          "place": "jordan/petra-by-night"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Petra: Siq and the Treasury",
+          "notes": "Go as the gates open, before the groups; the walk back is uphill and shade is limited.",
+          "where": "Petra",
+          "book": "",
+          "place": "jordan/petra-treasury"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Wadi Rum jeep tour",
+          "notes": "Dust and glare are strong; bring a scarf and sunglasses.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-jeep"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2.5h",
+          "name": "Desert camp dinner and stargazing",
+          "notes": "Nights get cold in winter; bring warm layers.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-sunset-camp"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "2h",
+          "name": "Bethany Beyond the Jordan",
+          "notes": "A guide is required and the walk is exposed; go in the morning.",
+          "where": "Jordan River",
+          "book": "Yes - a guided visit is required",
+          "place": "jordan/bethany-baptism-site"
+        },
+        {
+          "day": 6,
+          "type": "Spa/Wellness",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Float in the Dead Sea",
+          "notes": "Do not shave beforehand and keep water out of the eyes; rinse in the fresh-water showers.",
+          "where": "Dead Sea",
+          "book": "",
+          "place": "jordan/dead-sea-float"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Queen Alia International Airport (AMM)",
+          "to": "Amman hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "The airport is about 35 km south of the city; pre-booking avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Amman",
+          "to": "Petra (Wadi Musa)",
+          "time": "08:30",
+          "minutes": 230,
+          "carrier": "Private transfer or rental car",
+          "notes": "The Desert Highway is quick; the longer King's Highway adds stops.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Petra (Wadi Musa)",
+          "to": "Wadi Rum",
+          "time": "14:00",
+          "minutes": 105,
+          "carrier": "Private transfer",
+          "notes": "Camps arrange pick-up from the Wadi Rum visitor centre.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Wadi Rum",
+          "to": "Dead Sea",
+          "time": "10:00",
+          "minutes": 290,
+          "carrier": "Private transfer",
+          "notes": "A long drive north on the Desert Highway; stop for lunch.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Dead Sea",
+          "to": "Queen Alia International Airport (AMM)",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "jordan-madaba-petra-aqaba-8d",
+      "title": "Amman, Madaba, Petra and Aqaba in 8 Days",
+      "summary": "A mosaic town, Mount Nebo and Kerak Castle on the King's Highway, then Petra, the desert and a finish on the Red Sea.",
+      "days": 8,
+      "route": "Amman > Madaba > Petra > Wadi Rum > Aqaba",
+      "arrive": "Amman (AMM)",
+      "depart": "Aqaba (AQJ)",
+      "countries": [
+        "Jordan"
+      ],
+      "regions": [
+        "Amman",
+        "Madaba",
+        "Ma'an",
+        "Aqaba"
+      ],
+      "cities": [
+        "Amman",
+        "Madaba",
+        "Petra",
+        "Wadi Rum",
+        "Aqaba"
+      ],
+      "imageQuery": "Madaba mosaic map Jordan",
+      "highlights": [
+        "Madaba mosaic map",
+        "Mount Nebo",
+        "Kerak Castle",
+        "Petra",
+        "Aqaba snorkelling"
+      ],
+      "destinationKeys": [
+        "jordan",
+        "jordan/amman",
+        "jordan/madaba",
+        "jordan/ma-an",
+        "jordan/petra",
+        "jordan/wadi-rum",
+        "jordan/aqaba"
+      ],
+      "hero": "jordan/madaba",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "On The Go Tours",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "relax",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Amman",
+          "hotel": "Hotel in Amman",
+          "start": 0,
+          "nights": 2,
+          "area": "Around Jabal Amman or Rainbow Street for cafes and walking; downtown for budget stays near the Roman Theatre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Madaba",
+          "hotel": "Hotel in Madaba",
+          "start": 2,
+          "nights": 1,
+          "area": "In the centre of Madaba, close to the mosaics and restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Petra",
+          "hotel": "Hotel in Petra",
+          "start": 3,
+          "nights": 2,
+          "area": "In Wadi Musa near the Petra entrance, to walk to the gate for early starts and the evening show",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wadi Rum",
+          "hotel": "Camp in Wadi Rum",
+          "start": 5,
+          "nights": 1,
+          "area": "A desert camp within the protected area; simple to comfortable tents, with dinner and breakfast provided",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aqaba",
+          "hotel": "Hotel in Aqaba",
+          "start": 6,
+          "nights": 1,
+          "area": "Near the seafront or the marina, close to restaurants and the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Amman Citadel",
+          "notes": "Late afternoon light is best; paths are uneven.",
+          "where": "Jabal al-Qala'a, Amman",
+          "book": "",
+          "place": "jordan/amman-citadel"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Evening on Rainbow Street",
+          "notes": "Lively at weekends; rooftops offer sunset views.",
+          "where": "Jabal Amman",
+          "book": "",
+          "place": "jordan/rainbow-street"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "3.5h",
+          "name": "Jerash Roman city",
+          "notes": "Almost no shade, so go early and bring water; the hippodrome show runs on a schedule.",
+          "where": "Jerash",
+          "book": "",
+          "place": "jordan/jerash"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Ajloun Castle",
+          "notes": "A short stop in pine-covered hills; the castle has steps and uneven floors.",
+          "where": "Ajloun",
+          "book": "",
+          "place": "jordan/ajloun-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Madaba mosaic map",
+          "notes": "Dress modestly in churches; the mosaic map is in St George's Church.",
+          "where": "Madaba",
+          "book": "",
+          "place": "jordan/madaba-mosaics"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:45",
+          "duration": "1h",
+          "name": "Mount Nebo",
+          "notes": "A short stop with fine views over the Jordan Valley on a clear day.",
+          "where": "Mount Nebo",
+          "book": "",
+          "place": "jordan/mount-nebo"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Petra: Siq and the Treasury",
+          "notes": "Go as the gates open, before the groups; the walk back is uphill and shade is limited.",
+          "where": "Petra",
+          "book": "",
+          "place": "jordan/petra-treasury"
+        },
+        {
+          "day": 3,
+          "type": "Concert/Show",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Petra by Night",
+          "notes": "Runs on selected evenings of the week, usually Monday, Wednesday and Thursday; tickets are bought at the visitor centre.",
+          "where": "Petra",
+          "book": "Yes - runs only on selected evenings",
+          "place": "jordan/petra-by-night"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "5h",
+          "name": "Petra: climb to the Monastery",
+          "notes": "About 800 steps, steep in places; start early and carry water.",
+          "where": "Petra",
+          "book": "",
+          "place": "jordan/petra-monastery"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Wadi Rum jeep tour",
+          "notes": "Dust and glare are strong; bring a scarf and sunglasses.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-jeep"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2.5h",
+          "name": "Desert camp dinner and stargazing",
+          "notes": "Nights get cold in winter; bring warm layers.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-sunset-camp"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Red Sea snorkelling in Aqaba",
+          "notes": "Boat trips include snorkel stops; hire equipment locally.",
+          "where": "Aqaba",
+          "book": "",
+          "place": "jordan/aqaba-snorkel"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Queen Alia International Airport (AMM)",
+          "to": "Amman hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "The airport is about 35 km south of the city; pre-booking avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Amman",
+          "to": "Madaba",
+          "time": "13:00",
+          "minutes": 45,
+          "carrier": "Private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Madaba",
+          "to": "Petra (Wadi Musa)",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "Private transfer or rental car",
+          "notes": "The King's Highway route adds a stop at Kerak Castle.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Petra (Wadi Musa)",
+          "to": "Wadi Rum",
+          "time": "14:00",
+          "minutes": 105,
+          "carrier": "Private transfer",
+          "notes": "Camps arrange pick-up from the Wadi Rum visitor centre.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Wadi Rum",
+          "to": "Aqaba",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Aqaba",
+          "to": "King Hussein International Airport, Aqaba (AQJ)",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Private transfer or taxi",
+          "notes": "Aqaba airport is small; allow two to three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "jordan-dana-petra-aqaba-dead-sea-10d",
+      "title": "Jordan from Amman to the Dead Sea with Dana in 10 Days",
+      "summary": "A road trip along the King's Highway to hiking at Dana, then Petra, the desert, the Red Sea at Aqaba and a final soak in the Dead Sea.",
+      "days": 10,
+      "route": "Amman > Dana > Petra > Wadi Rum > Aqaba > Dead Sea",
+      "arrive": "Amman (AMM)",
+      "depart": "Amman (AMM)",
+      "countries": [
+        "Jordan"
+      ],
+      "regions": [
+        "Amman",
+        "Madaba",
+        "Ma'an",
+        "Aqaba"
+      ],
+      "cities": [
+        "Amman",
+        "Madaba",
+        "Dana",
+        "Petra",
+        "Wadi Rum",
+        "Aqaba",
+        "Dead Sea"
+      ],
+      "imageQuery": "Dana Biosphere Reserve Jordan hiking",
+      "highlights": [
+        "Mount Nebo",
+        "Kerak Castle",
+        "Dana hike",
+        "Petra",
+        "Wadi Rum",
+        "Dead Sea"
+      ],
+      "destinationKeys": [
+        "jordan",
+        "jordan/amman",
+        "jordan/madaba",
+        "jordan/dana",
+        "jordan/ma-an",
+        "jordan/petra",
+        "jordan/wadi-rum",
+        "jordan/aqaba",
+        "jordan/dead-sea"
+      ],
+      "hero": "jordan/dana",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "On The Go Tours",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "adventure",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Amman",
+          "hotel": "Hotel in Amman",
+          "start": 0,
+          "nights": 2,
+          "area": "Around Jabal Amman or Rainbow Street for cafes and walking; downtown for budget stays near the Roman Theatre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dana",
+          "hotel": "Guesthouse in Dana",
+          "start": 2,
+          "nights": 1,
+          "area": "In the stone village of Dana or a nature lodge on the edge of the reserve; facilities are simple",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Petra",
+          "hotel": "Hotel in Petra",
+          "start": 3,
+          "nights": 2,
+          "area": "In Wadi Musa near the Petra entrance, to walk to the gate for early starts and the evening show",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wadi Rum",
+          "hotel": "Camp in Wadi Rum",
+          "start": 5,
+          "nights": 1,
+          "area": "A desert camp within the protected area; simple to comfortable tents, with dinner and breakfast provided",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aqaba",
+          "hotel": "Hotel in Aqaba",
+          "start": 6,
+          "nights": 1,
+          "area": "Near the seafront or the marina, close to restaurants and the beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dead Sea",
+          "hotel": "Resort on the Dead Sea",
+          "start": 7,
+          "nights": 2,
+          "area": "A resort on the Dead Sea shore, with direct access to the water and spa",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Amman Citadel",
+          "notes": "Late afternoon light is best; paths are uneven.",
+          "where": "Jabal al-Qala'a, Amman",
+          "book": "",
+          "place": "jordan/amman-citadel"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Evening on Rainbow Street",
+          "notes": "Lively at weekends; rooftops offer sunset views.",
+          "where": "Jabal Amman",
+          "book": "",
+          "place": "jordan/rainbow-street"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "3.5h",
+          "name": "Jerash Roman city",
+          "notes": "Almost no shade, so go early and bring water; the hippodrome show runs on a schedule.",
+          "where": "Jerash",
+          "book": "",
+          "place": "jordan/jerash"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Ajloun Castle",
+          "notes": "A short stop in pine-covered hills; the castle has steps and uneven floors.",
+          "where": "Ajloun",
+          "book": "",
+          "place": "jordan/ajloun-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Madaba mosaic map",
+          "notes": "Dress modestly in churches; the mosaic map is in St George's Church.",
+          "where": "Madaba",
+          "book": "",
+          "place": "jordan/madaba-mosaics"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:30",
+          "duration": "1h",
+          "name": "Mount Nebo",
+          "notes": "A short stop with fine views over the Jordan Valley on a clear day.",
+          "where": "Mount Nebo",
+          "book": "",
+          "place": "jordan/mount-nebo"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Kerak Castle",
+          "notes": "Bring a torch for the dark vaulted passages; wear shoes with good grip.",
+          "where": "Kerak",
+          "book": "",
+          "place": "jordan/kerak-castle"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Evening walk in Dana village",
+          "notes": "Gentle paths through the old stone village and above Wadi Dana.",
+          "where": "Dana",
+          "book": "",
+          "place": "jordan/dana-reserve"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Petra: Siq and the Treasury",
+          "notes": "Go as the gates open, before the groups; the walk back is uphill and shade is limited.",
+          "where": "Petra",
+          "book": "",
+          "place": "jordan/petra-treasury"
+        },
+        {
+          "day": 4,
+          "type": "Concert/Show",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Petra by Night",
+          "notes": "Runs on selected evenings of the week, usually Monday, Wednesday and Thursday; tickets are bought at the visitor centre.",
+          "where": "Petra",
+          "book": "Yes - runs only on selected evenings",
+          "place": "jordan/petra-by-night"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Wadi Rum jeep tour",
+          "notes": "Dust and glare are strong; bring a scarf and sunglasses.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-jeep"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2.5h",
+          "name": "Desert camp dinner and stargazing",
+          "notes": "Nights get cold in winter; bring warm layers.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-sunset-camp"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Red Sea snorkelling in Aqaba",
+          "notes": "Boat trips include snorkel stops; hire equipment locally.",
+          "where": "Aqaba",
+          "book": "",
+          "place": "jordan/aqaba-snorkel"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Wadi Mujib canyon trek",
+          "notes": "Open roughly April to October only, because of flash-flood risk; wear water shoes and expect to get wet.",
+          "where": "Wadi Mujib",
+          "book": "Yes - permits and guides are arranged in advance",
+          "place": "jordan/wadi-mujib"
+        },
+        {
+          "day": 8,
+          "type": "Spa/Wellness",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Float in the Dead Sea",
+          "notes": "Do not shave beforehand and keep water out of the eyes; rinse in the fresh-water showers.",
+          "where": "Dead Sea",
+          "book": "",
+          "place": "jordan/dead-sea-float"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Queen Alia International Airport (AMM)",
+          "to": "Amman hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "The airport is about 35 km south of the city; pre-booking avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Amman",
+          "to": "Dana",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Private transfer or rental car",
+          "notes": "The King's Highway route stops at Madaba, Mount Nebo and Kerak.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Dana",
+          "to": "Petra (Wadi Musa)",
+          "time": "09:00",
+          "minutes": 100,
+          "carrier": "Private transfer or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Petra (Wadi Musa)",
+          "to": "Wadi Rum",
+          "time": "14:00",
+          "minutes": 105,
+          "carrier": "Private transfer",
+          "notes": "Camps arrange pick-up from the Wadi Rum visitor centre.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Wadi Rum",
+          "to": "Aqaba",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Aqaba",
+          "to": "Dead Sea",
+          "time": "10:00",
+          "minutes": 270,
+          "carrier": "Private transfer",
+          "notes": "The Desert Highway north is fast and mostly empty.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Dead Sea",
+          "to": "Queen Alia International Airport (AMM)",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Private transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "jordan-complete-12d",
+      "title": "Complete Jordan with Petra and Wadi Rum in 12 Days",
+      "summary": "A slow journey: Amman with Jerash and the desert castles, Madaba, Dana, three nights at Petra with Little Petra and two nights in Wadi Rum, ending in Aqaba.",
+      "days": 12,
+      "route": "Amman > Madaba > Dana > Petra > Wadi Rum > Aqaba",
+      "arrive": "Amman (AMM)",
+      "depart": "Aqaba (AQJ)",
+      "countries": [
+        "Jordan"
+      ],
+      "regions": [
+        "Amman",
+        "Jerash",
+        "Madaba",
+        "Ma'an",
+        "Aqaba"
+      ],
+      "cities": [
+        "Amman",
+        "Jerash",
+        "Madaba",
+        "Dana",
+        "Petra",
+        "Wadi Rum",
+        "Aqaba"
+      ],
+      "imageQuery": "Wadi Rum sunset camel Jordan",
+      "highlights": [
+        "Jerash",
+        "Umm Qais",
+        "Wadi Mujib",
+        "Petra Monastery",
+        "Wadi Rum",
+        "Aqaba"
+      ],
+      "destinationKeys": [
+        "jordan",
+        "jordan/amman",
+        "jordan/jerash",
+        "jordan/madaba",
+        "jordan/dana",
+        "jordan/ma-an",
+        "jordan/petra",
+        "jordan/wadi-rum",
+        "jordan/aqaba"
+      ],
+      "hero": "jordan/petra",
+      "sources": [
+        "KimKim itinerary library",
+        "TravelStride itinerary library",
+        "On The Go Tours",
+        "Magnificent Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Amman",
+          "hotel": "Hotel in Amman",
+          "start": 0,
+          "nights": 3,
+          "area": "Around Jabal Amman or Rainbow Street for cafes and walking; downtown for budget stays near the Roman Theatre",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Madaba",
+          "hotel": "Hotel in Madaba",
+          "start": 3,
+          "nights": 1,
+          "area": "In the centre of Madaba, close to the mosaics and restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dana",
+          "hotel": "Guesthouse in Dana",
+          "start": 4,
+          "nights": 1,
+          "area": "In the stone village of Dana or a nature lodge on the edge of the reserve; facilities are simple",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Petra",
+          "hotel": "Hotel in Petra",
+          "start": 5,
+          "nights": 3,
+          "area": "In Wadi Musa near the Petra entrance, to walk to the gate for early starts and the evening show",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wadi Rum",
+          "hotel": "Camp in Wadi Rum",
+          "start": 8,
+          "nights": 2,
+          "area": "A desert camp within the protected area; simple to comfortable tents, with dinner and breakfast provided",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aqaba",
+          "hotel": "Hotel in Aqaba",
+          "start": 10,
+          "nights": 1,
+          "area": "Near the seafront or the marina, close to restaurants and the beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Amman Citadel",
+          "notes": "Late afternoon light is best; paths are uneven.",
+          "where": "Jabal al-Qala'a, Amman",
+          "book": "",
+          "place": "jordan/amman-citadel"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:00",
+          "duration": "2.5h",
+          "name": "Evening on Rainbow Street",
+          "notes": "Lively at weekends; rooftops offer sunset views.",
+          "where": "Jabal Amman",
+          "book": "",
+          "place": "jordan/rainbow-street"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "3.5h",
+          "name": "Jerash Roman city",
+          "notes": "Almost no shade, so go early and bring water; the hippodrome show runs on a schedule.",
+          "where": "Jerash",
+          "book": "",
+          "place": "jordan/jerash"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1.5h",
+          "name": "Ajloun Castle",
+          "notes": "A short stop in pine-covered hills; the castle has steps and uneven floors.",
+          "where": "Ajloun",
+          "book": "",
+          "place": "jordan/ajloun-castle"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Umm Qais viewpoint",
+          "notes": "A quieter ruin than Jerash; carry your passport near the border area.",
+          "where": "Umm Qais",
+          "book": "",
+          "place": "jordan/umm-qais"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Desert castles and Qusayr Amra",
+          "notes": "There is little shade and no services, so bring water.",
+          "where": "Eastern desert, Jordan",
+          "book": "",
+          "place": "jordan/desert-castles"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Roman Theatre and downtown Amman",
+          "notes": "Shops close on Friday mornings; the climb to the top row is steep.",
+          "where": "Downtown Amman",
+          "book": "",
+          "place": "jordan/roman-theatre-amman"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Madaba mosaic map",
+          "notes": "Dress modestly in churches; the mosaic map is in St George's Church.",
+          "where": "Madaba",
+          "book": "",
+          "place": "jordan/madaba-mosaics"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:45",
+          "duration": "1h",
+          "name": "Mount Nebo",
+          "notes": "A short stop with fine views over the Jordan Valley on a clear day.",
+          "where": "Mount Nebo",
+          "book": "",
+          "place": "jordan/mount-nebo"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "1.5h",
+          "name": "Kerak Castle",
+          "notes": "Bring a torch for the dark vaulted passages.",
+          "where": "Kerak",
+          "book": "",
+          "place": "jordan/kerak-castle"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Evening walk in Dana village",
+          "notes": "Gentle paths through the old stone village.",
+          "where": "Dana",
+          "book": "",
+          "place": "jordan/dana-reserve"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "1.5h",
+          "name": "Little Petra",
+          "notes": "Free of crowds; the Painted House has traces of frescoes.",
+          "where": "Little Petra",
+          "book": "",
+          "place": "jordan/little-petra"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Petra: Siq and the Treasury",
+          "notes": "Go as the gates open, before the groups; the walk back is uphill and shade is limited.",
+          "where": "Petra",
+          "book": "",
+          "place": "jordan/petra-treasury"
+        },
+        {
+          "day": 6,
+          "type": "Concert/Show",
+          "time": "20:30",
+          "duration": "2h",
+          "name": "Petra by Night",
+          "notes": "Runs on selected evenings of the week, usually Monday, Wednesday and Thursday; tickets are bought at the visitor centre.",
+          "where": "Petra",
+          "book": "Yes - runs only on selected evenings",
+          "place": "jordan/petra-by-night"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "5h",
+          "name": "Petra: climb to the Monastery",
+          "notes": "About 800 steps, steep in places; start early and carry water.",
+          "where": "Petra",
+          "book": "",
+          "place": "jordan/petra-monastery"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Wadi Rum jeep tour",
+          "notes": "Dust and glare are strong; bring a scarf and sunglasses.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-jeep"
+        },
+        {
+          "day": 8,
+          "type": "Food & Drink",
+          "time": "19:00",
+          "duration": "2.5h",
+          "name": "Desert camp dinner and stargazing",
+          "notes": "Nights get cold in winter; bring warm layers.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-sunset-camp"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Wadi Rum full-day jeep tour",
+          "notes": "Bedouin guides stop for tea and lunch; bring sun protection.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-jeep"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Camel ride at sunset",
+          "notes": "Check that the animals look healthy and well cared for.",
+          "where": "Wadi Rum",
+          "book": "",
+          "place": "jordan/wadi-rum-camel"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Red Sea snorkelling in Aqaba",
+          "notes": "Boat trips include snorkel stops; hire equipment locally.",
+          "where": "Aqaba",
+          "book": "",
+          "place": "jordan/aqaba-snorkel"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Queen Alia International Airport (AMM)",
+          "to": "Amman hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "The airport is about 35 km south of the city; pre-booking avoids haggling.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Amman",
+          "to": "Madaba",
+          "time": "13:00",
+          "minutes": 45,
+          "carrier": "Private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Madaba",
+          "to": "Dana",
+          "time": "08:30",
+          "minutes": 220,
+          "carrier": "Private transfer or rental car",
+          "notes": "The King's Highway route stops at Kerak Castle.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Dana",
+          "to": "Petra (Wadi Musa)",
+          "time": "11:00",
+          "minutes": 100,
+          "carrier": "Private transfer or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Petra (Wadi Musa)",
+          "to": "Wadi Rum",
+          "time": "14:00",
+          "minutes": 105,
+          "carrier": "Private transfer",
+          "notes": "Camps arrange pick-up from the Wadi Rum visitor centre.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Wadi Rum",
+          "to": "Aqaba",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Aqaba",
+          "to": "King Hussein International Airport, Aqaba (AQJ)",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Private transfer or taxi",
+          "notes": "Aqaba airport is small; allow two to three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "jordan/amman-citadel": {
+        "name": "Amman Citadel",
+        "description": "A hilltop archaeological site above downtown Amman with the Temple of Hercules and the Umayyad Palace.",
+        "details": "The Citadel crowns one of the hills of Amman and holds remains from the Roman, Byzantine and Umayyad periods, including the columns of the Temple of Hercules and the Umayyad Palace complex. The small Jordan Archaeological Museum is on site. It gives wide views over the city and is best in late afternoon, when the light is soft and the heat eases. Wear sturdy shoes; paths are uneven.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/roman-theatre-amman": {
+        "name": "Roman Theatre and downtown Amman",
+        "description": "A restored second-century Roman theatre in the middle of the old downtown, with souks and cafes around it.",
+        "details": "The Roman Theatre seats about six thousand and sits at the heart of downtown Amman, a short walk from lively streets of spice sellers, sweet shops and falafel stands. Two small museums are tucked into the sides of the theatre. The climb to the top row is steep. Downtown is busiest in the evening, and Friday mornings are quiet because shops close.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/rainbow-street": {
+        "name": "Rainbow Street",
+        "description": "A lively Amman street of cafes, bookshops and rooftop terraces popular for an evening stroll.",
+        "details": "Rainbow Street runs through the Jabal Amman district and is the place locals and visitors head to for coffee, snacks and sunset from a rooftop terrace. Side streets hold craft shops and small galleries. It is most lively on weekend evenings. Prices vary widely from street food to full restaurant meals.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "jordan/jerash": {
+        "name": "Jerash",
+        "description": "One of the best-preserved Roman provincial cities in the world, with colonnaded streets, temples and theatres.",
+        "details": "Jerash, ancient Gerasa, has a long colonnaded street, an oval plaza, two theatres and the Temple of Artemis, all in remarkable condition. It lies about an hour north of Amman. Go early to beat the heat and the tour groups; there is almost no shade. A hippodrome show with chariot races and legionary drills runs on a set schedule.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/ajloun-castle": {
+        "name": "Ajloun Castle",
+        "description": "A twelfth-century hilltop fortress in pine-covered hills north of Jerash, built to guard against crusaders.",
+        "details": "Ajloun Castle was built in 1184 by an Ayyubid commander and commands views across the Jordan Valley. Inside are vaulted halls and a small museum. The surrounding hills are green, with pine and oak forest that feels very different from the desert south. It is often combined with Jerash on a day trip from Amman.",
+        "interests": [
+          "culture",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/umm-qais": {
+        "name": "Umm Qais",
+        "description": "A hilltop ruin of ancient Gadara with basalt theatre seats and views over the Sea of Galilee and the Golan Heights.",
+        "details": "Umm Qais is the site of the Decapolis city of Gadara, with black basalt columns and a theatre built of dark stone. Its main attraction is the view, across the Yarmouk valley to the Sea of Galilee and the Golan Heights. It is quiet compared with Jerash. It sits close to a border area, so carry your passport.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/madaba-mosaics": {
+        "name": "Madaba mosaics",
+        "description": "A town known for its Byzantine mosaics, including a sixth-century map of the Holy Land in St George's Church.",
+        "details": "Madaba is called the City of Mosaics. The Greek Orthodox Church of St George holds a sixth-century mosaic map of the Holy Land made of about two million pieces. The Archaeological Park and the Church of the Apostles have more floors. The town is small, friendly and easy to explore on foot. Dress modestly in churches.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "jordan/mount-nebo": {
+        "name": "Mount Nebo",
+        "description": "The mountain from which Moses is said to have seen the Promised Land, with a memorial church and sweeping valley views.",
+        "details": "Mount Nebo rises above the Jordan Valley and the Dead Sea. A Byzantine church on the summit shelters fine mosaics, and a serpent sculpture marks the viewing platform. On a clear day Jerusalem and Jericho can be seen in the distance. It is a short stop, usually combined with Madaba.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "jordan/bethany-baptism-site": {
+        "name": "Bethany Beyond the Jordan",
+        "description": "The traditional site of Jesus's baptism, with ruined churches and baptism pools by the Jordan River.",
+        "details": "This UNESCO site on the east bank of the Jordan River is reached on a guided walk from the visitor centre, past ruined Byzantine churches and baptism pools. The river here is narrow and slow. It is hot in summer, so go in the morning. A guide is required, and the visit takes around two hours.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/kerak-castle": {
+        "name": "Kerak Castle",
+        "description": "A large crusader fortress on the King's Highway, with long vaulted passages, towers and valley views.",
+        "details": "Kerak Castle was built by the crusaders in the twelfth century and later extended by the Mamluks. Long dark vaulted galleries run through the walls and can be explored with a torch. It sits on the old King's Highway between Madaba and Petra, so many routes stop here. Wear shoes with good grip.",
+        "interests": [
+          "culture",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/desert-castles": {
+        "name": "Desert castles and Qusayr Amra",
+        "description": "Eighth-century Umayyad desert retreats east of Amman, including Qusayr Amra with its painted bathhouse frescoes.",
+        "details": "The Umayyad rulers built hunting lodges and bathhouses in the eastern desert, including Qusayr Amra, a UNESCO site with rare wall paintings of hunting and bathing scenes, and the fortress of Qasr Kharana. They are best reached by car or on a tour in half a day from Amman. There is little shade and no services, so bring water.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "jordan/petra-treasury": {
+        "name": "Petra: Siq and the Treasury",
+        "description": "The narrow canyon entrance to Petra, ending at the famous rose-red Treasury carved into the cliff.",
+        "details": "The walk to the Treasury starts at the visitor centre and follows the Siq, a winding canyon about 1.2 kilometres long with high walls, to the Treasury (Al-Khazneh). Early morning, before the groups arrive, is best for light and quiet. The whole site is much bigger than most expect, so allow a full day with comfortable shoes and plenty of water. Horses, carts and camels are available, and the way back is uphill.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/petra-monastery": {
+        "name": "Petra: the Monastery",
+        "description": "A hike of around 850 rock-cut steps to a huge carved monument high above the main valley.",
+        "details": "The Monastery (Ad-Deir) is even larger than the Treasury but much quieter. The climb is about 800 steps from the valley floor, taking an hour or more, and is steep in places. Donkeys are offered but not recommended for welfare reasons. Start in the cooler morning and carry water. Views from the cliff edge beyond the Monastery are spectacular.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "culture"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "jordan/petra-by-night": {
+        "name": "Petra by Night",
+        "description": "An evening walk through the Siq lit by candles to the Treasury, with music and tea.",
+        "details": "Petra by Night is held on certain evenings of the week (usually Monday, Wednesday and Thursday), when around 1,500 candles light the Siq and the Treasury square. Visitors sit on mats for a short performance of music and storytelling with tea. Tickets are bought separately at the visitor centre. It lasts about two hours and is atmospheric rather than a place for photographs.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/little-petra": {
+        "name": "Little Petra",
+        "description": "A smaller Nabataean site just north of Petra with a short siq, carved rooms and a painted ceiling.",
+        "details": "Siq al-Barid, or Little Petra, was a suburb of the Nabataean capital with carved dining rooms and homes along a short canyon. It is free of crowds and quick to explore. The Painted House has traces of colourful frescoes. It is often visited at dusk or before Petra, and a scramble up its stairs gives views over the valley.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "jordan/wadi-rum-jeep": {
+        "name": "Wadi Rum jeep tour",
+        "description": "A guided drive with a Bedouin driver across red sand and past sandstone arches and canyons.",
+        "details": "Wadi Rum, the Valley of the Moon, is a protected desert of red sand and towering sandstone cliffs. Local Bedouin guides drive visitors in 4x4 trucks to sites such as Khazali Canyon, the Burdah rock bridge and sand dunes, with tea stops. Tours run from two hours to a full day. Sun protection and a scarf help with the glare and dust.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/wadi-rum-sunset-camp": {
+        "name": "Wadi Rum sunset and desert camp",
+        "description": "A sunset on the dunes followed by a Bedouin dinner cooked underground and a night of stars.",
+        "details": "After the day tour, visitors watch the sun set over the cliffs, then return to a desert camp for zarb, a traditional meal of meat and vegetables cooked in a pit in the sand. The sky is exceptionally dark, giving a brilliant view of the stars. Nights are cold in winter, so bring warm layers.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "jordan/wadi-rum-camel": {
+        "name": "Camel ride in Wadi Rum",
+        "description": "A short ride across the desert with a Bedouin guide, usually near sunset or sunrise.",
+        "details": "Camel rides in Wadi Rum range from one hour to a full day and are offered by Bedouin families. Sunset is the most popular time. The ride is slow and gentle, though getting on and off can be a jolt. Check the animals look healthy and are well treated before booking.",
+        "interests": [
+          "adventure",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/aqaba-snorkel": {
+        "name": "Red Sea snorkelling in Aqaba",
+        "description": "Snorkelling or a boat trip over coral reefs and a wreck in the Gulf of Aqaba.",
+        "details": "Aqaba is Jordan's only coastal city, with warm water and good reefs just offshore. Boat trips include snorkel stops, and the Cedar Pride wreck is a popular dive site. Equipment is cheap to hire. The gulf is quiet and calm, a relaxing end to a desert trip. The city is hot in summer, so book morning sessions.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "jordan/dead-sea-float": {
+        "name": "Floating in the Dead Sea",
+        "description": "A float in water so salty that nobody sinks, at the lowest point on land, with mud treatments on the shore.",
+        "details": "The Dead Sea lies about 430 metres below sea level. Its water is around ten times as salty as the ocean, so bathers float without effort. Smearing black mud on the skin is the traditional treatment. Do not shave beforehand, avoid getting water in the eyes, and rinse in the fresh-water showers afterwards. Resort day passes are available for non-guests.",
+        "interests": [
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "jordan/wadi-mujib": {
+        "name": "Wadi Mujib canyon",
+        "description": "A water-filled canyon where visitors wade, scramble and swim through a narrow gorge to a waterfall.",
+        "details": "The Siq Trail at Wadi Mujib follows a stream through a narrow canyon, wading and swimming to a waterfall. Lifejackets are provided and the guides help with ropes. The trail is only open from about April to October, as flash floods are a risk in the wet season. Wear water shoes and expect to be soaked.",
+        "interests": [
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "jordan/dana-reserve": {
+        "name": "Dana Biosphere Reserve",
+        "description": "Jordan's largest nature reserve, with hiking trails between an old stone village and the desert of Wadi Araba.",
+        "details": "Dana Biosphere Reserve covers mountains, valleys and desert, and holds several habitats in a short distance. Guided or self-guided trails descend from the old stone village of Dana. Wildlife includes ibex and many birds. The village is quiet, with views over Wadi Dana, and it is a good place to end a day. Spring and autumn are the best seasons.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      }
+    },
+    "destinations": {
+      "jordan": {
+        "name": "Jordan",
+        "description": "A desert kingdom of Petra, Wadi Rum, Roman ruins and the Dead Sea, with warm hospitality.",
+        "images": []
+      },
+      "jordan/amman": {
+        "name": "Amman",
+        "description": "Jordan's hilly capital, with a Roman theatre, a hilltop citadel and a lively cafe and food scene.",
+        "images": []
+      },
+      "jordan/jerash": {
+        "name": "Jerash",
+        "description": "A town north of Amman beside one of the best-preserved Roman cities in the Middle East.",
+        "images": []
+      },
+      "jordan/madaba": {
+        "name": "Madaba",
+        "description": "A small town of Byzantine mosaics, close to Mount Nebo and the Dead Sea.",
+        "images": []
+      },
+      "jordan/dana": {
+        "name": "Dana",
+        "description": "A stone village on the edge of Dana Biosphere Reserve, with hiking trails and desert views.",
+        "images": []
+      },
+      "jordan/petra": {
+        "name": "Petra",
+        "description": "The rose-red Nabataean capital carved into the cliffs, reached from the town of Wadi Musa.",
+        "images": []
+      },
+      "jordan/wadi-rum": {
+        "name": "Wadi Rum",
+        "description": "A protected desert of red sand and sandstone cliffs, explored with Bedouin guides and camps.",
+        "images": []
+      },
+      "jordan/aqaba": {
+        "name": "Aqaba",
+        "description": "Jordan's Red Sea port, with warm water, coral reefs and a relaxed seaside feel.",
+        "images": []
+      },
+      "jordan/dead-sea": {
+        "name": "Dead Sea",
+        "description": "The lowest point on land, with salty water that lets bathers float.",
+        "images": []
+      },
+      "jordan/ma-an": {
+        "name": "Ma'an Governorate",
+        "description": "The southern governorate that includes Petra, the Dana area and the desert highlands.",
+        "images": []
+      }
+    }
+  }
+}

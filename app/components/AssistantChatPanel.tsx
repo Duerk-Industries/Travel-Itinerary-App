@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
 
 
@@ -337,7 +338,7 @@ const AssistantChatPanel: React.FC<Props> = ({
       <View style={themedStyles.header}>
         {!isWeb && (
           <TouchableOpacity onPress={onClose} style={themedStyles.headerBtn} testID="assistant-back">
-            <Text style={themedStyles.headerBtnText}>← Back</Text>
+            <IconText style={themedStyles.headerBtnText}>← Back</IconText>
           </TouchableOpacity>
         )}
         <View
@@ -363,12 +364,12 @@ const AssistantChatPanel: React.FC<Props> = ({
             accessibilityRole="button"
             accessibilityLabel="Clear conversation"
           >
-            <Text style={themedStyles.headerBtnText}>🗑</Text>
+            <IconText style={themedStyles.headerBtnText}>🗑</IconText>
           </TouchableOpacity>
         )}
         {isWeb && (
           <TouchableOpacity onPress={onClose} style={themedStyles.headerBtn} testID="assistant-close">
-            <Text style={themedStyles.headerBtnText}>✕</Text>
+            <IconText style={themedStyles.headerBtnText}>✕</IconText>
           </TouchableOpacity>
         )}
       </View>

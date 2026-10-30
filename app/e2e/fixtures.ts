@@ -60,6 +60,7 @@ export async function registerUser(
       email: credentials.email,
       password: credentials.password,
       passwordConfirm: credentials.password,
+      dateOfBirth: '1990-01-01',
       firstName: credentials.firstName,
       lastName: credentials.lastName,
     },

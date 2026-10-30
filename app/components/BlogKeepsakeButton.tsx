@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { keepsakeLoadingHtml, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -176,7 +177,7 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, nati
                     <Text style={themeStyle('components_BlogKeepsakeButton_11', {  }, _styleTheme)}>{theme.name}</Text>
                     <Text style={themeStyle('components_BlogKeepsakeButton_12', {  }, _styleTheme)}>{theme.description}</Text>
                   </View>
-                  {selected ? <Text style={themeStyle('components_BlogKeepsakeButton_13', { theme: theme }, _styleTheme)}>✓</Text> : null}
+                  {selected ? <IconText style={themeStyle('components_BlogKeepsakeButton_13', { theme: theme }, _styleTheme)}>✓</IconText> : null}
                 </TouchableOpacity>
               );
             })}

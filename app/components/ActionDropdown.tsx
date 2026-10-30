@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { themeStyle } from '../theme/theme';
 import React, { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
@@ -25,7 +26,7 @@ export default function ActionDropdown({ actions, styles, testID }: {
   return <>
     <View ref={anchor} collapsable={false}>
       <TouchableOpacity testID={testID} accessibilityRole="button" accessibilityLabel="Menu" accessibilityState={{ expanded: open }} style={[styles.button, styles.smallButton]} onPress={showMenu}>
-        <Text style={styles.buttonText}>Menu ▾</Text>
+        <IconText style={styles.buttonText}>Menu ▾</IconText>
       </TouchableOpacity>
     </View>
     {open ? <Modal visible transparent animationType="fade" onRequestClose={() => setOpen(false)}>

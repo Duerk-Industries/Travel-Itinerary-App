@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { layoutMetrics, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -92,7 +93,7 @@ const PackingListMatrixWeb: React.FC<Props> = ({ items, travelers, onToggle, dis
                 onPress={() => onToggle?.(item, traveler)}
                 style={[styles(_styleTheme).checkCell, themeStyle('components_PackingListMatrix_13', { colors: colors }, _styleTheme)]}
               >
-                <Text style={[styles(_styleTheme).checkText, themeStyle('components_PackingListMatrix_14', { checked: checked, colors: colors }, _styleTheme)]}>{checked ? '✓' : ''}</Text>
+                <IconText style={[styles(_styleTheme).checkText, themeStyle('components_PackingListMatrix_14', { checked: checked, colors: colors }, _styleTheme)]}>{checked ? '✓' : ''}</IconText>
               </Pressable>
             );
           })}
@@ -159,7 +160,7 @@ const PackingListMatrixNative: React.FC<Props> = ({ items, travelers, onToggle, 
                       onPress={() => onToggle?.(item, traveler)}
                       style={[styles(_styleTheme).checkCell, themeStyle('components_PackingListMatrix_25', { colors: colors }, _styleTheme)]}
                     >
-                      <Text style={[styles(_styleTheme).checkText, themeStyle('components_PackingListMatrix_26', { checked: checked, colors: colors }, _styleTheme)]}>{checked ? '✓' : ''}</Text>
+                      <IconText style={[styles(_styleTheme).checkText, themeStyle('components_PackingListMatrix_26', { checked: checked, colors: colors }, _styleTheme)]}>{checked ? '✓' : ''}</IconText>
                     </Pressable>
                   );
                 })}

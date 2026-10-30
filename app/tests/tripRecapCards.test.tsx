@@ -53,6 +53,6 @@ describe('TripRecapCards', () => {
   it('shows Phase 7 awards only behind the presentation flag', () => {
     const recap = { title: 'Italy', topPhoto: { assetId: 'a1', reactionTotal: 12 }, topPhotoContributor: { displayName: 'Maya', photoCount: 44 }, mostCommentedDay: { dayDate: '2027-07-07', commentCount: 8 } };
     expect(render(<TripRecapCards recap={recap} />).queryByTestId('trip-awards')).toBeNull();
-    expect(render(<TripRecapCards recap={recap} showAwards />).getByText('📸 Shutterbug · Maya · 44 photos')).toBeTruthy();
+    expect(render(<TripRecapCards recap={recap} showAwards />).getByText('Shutterbug · Maya · 44 photos')).toBeTruthy();
   });
 });

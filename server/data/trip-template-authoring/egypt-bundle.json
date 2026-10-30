@@ -1,0 +1,2947 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim and TravelStride itineraries for Egypt",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "egypt-cairo-giza-4d",
+      "title": "Cairo and the Pyramids in 4 Days",
+      "summary": "A short city break covering the pyramids, the new Grand Egyptian Museum, medieval Cairo and a day among the older tombs at Saqqara.",
+      "days": 4,
+      "route": "Cairo (Saqqara day trip)",
+      "arrive": "Cairo (CAI)",
+      "depart": "Cairo (CAI)",
+      "countries": [
+        "Egypt"
+      ],
+      "regions": [
+        "Cairo",
+        "Giza"
+      ],
+      "cities": [
+        "Cairo",
+        "Giza",
+        "Saqqara"
+      ],
+      "imageQuery": "Giza pyramids Cairo Egypt",
+      "highlights": [
+        "Pyramids of Giza",
+        "Grand Egyptian Museum",
+        "Saqqara Step Pyramid",
+        "Khan el-Khalili",
+        "Cairo Citadel"
+      ],
+      "destinationKeys": [
+        "egypt",
+        "egypt/cairo",
+        "egypt/giza",
+        "egypt/saqqara"
+      ],
+      "hero": "egypt/giza",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Cairo",
+          "hotel": "Hotel in Cairo",
+          "start": 0,
+          "nights": 3,
+          "area": "Zamalek, Downtown or near the Giza plateau: Zamalek and Downtown for restaurants and the metro, Giza for short transfers to the pyramids",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Khan el-Khalili",
+          "notes": "Go in the evening when the heat eases; the lanes are narrow and uneven, and bargaining is expected.",
+          "where": "Islamic Cairo, Cairo",
+          "book": "",
+          "place": "egypt/khan-el-khalili"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "1.5h",
+          "name": "Koshari dinner",
+          "notes": "Egypt's national dish, served by the bowl in plain, fast-moving restaurants; a good first meal after a late arrival.",
+          "where": "Downtown Cairo",
+          "book": "",
+          "place": "egypt/koshari-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Pyramids of Giza and the Sphinx",
+          "notes": "Go at opening, before the heat and the crowds; agree prices before accepting a camel or horse ride, and entry inside a pyramid is ticketed separately.",
+          "where": "Giza Plateau, Giza",
+          "book": "",
+          "place": "egypt/giza-pyramids"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "3.5h",
+          "name": "Grand Egyptian Museum",
+          "notes": "Very large, so choose a few galleries; check current opening hours and which galleries are open before going.",
+          "where": "Giza",
+          "book": "",
+          "place": "egypt/grand-egyptian-museum"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Saqqara and Memphis",
+          "notes": "The Step Pyramid and the Old Kingdom tombs, then the open-air museum at Memphis; there is little shade, so carry water.",
+          "where": "Saqqara, Giza",
+          "book": "",
+          "place": "egypt/saqqara-memphis"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coptic Cairo",
+          "notes": "Short, flat lanes of early churches; modest dress is expected.",
+          "where": "Old Cairo, Cairo",
+          "book": "",
+          "place": "egypt/coptic-cairo"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Felucca sail on the Nile in Cairo",
+          "notes": "Agree the length of the sail before boarding; a sunset sail is a relaxed end to the day.",
+          "where": "Corniche, Cairo",
+          "book": "",
+          "place": "egypt/cairo-felucca"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Cairo Citadel",
+          "notes": "A short last visit before the airport; modest dress is expected and shoes come off inside the mosque.",
+          "where": "Citadel, Cairo",
+          "book": "",
+          "place": "egypt/citadel-cairo"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cairo Airport (CAI)",
+          "to": "Cairo hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "Traffic can be heavy at any hour; agree the fare or use a metered or app-based car.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Saqqara",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "A driver for the morning is the simplest way to combine Saqqara and Memphis.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Saqqara",
+          "to": "Cairo hotel area",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Cairo Airport (CAI)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "Allow three hours before an international flight; Cairo traffic is unpredictable.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "egypt-cairo-luxor-7d",
+      "title": "Cairo and Luxor in 7 Days",
+      "summary": "A first-timer's introduction: three days in Cairo for the pyramids and old city, then three in Luxor for the temples and royal tombs.",
+      "days": 7,
+      "route": "Cairo > Luxor (Dendera day trip)",
+      "arrive": "Cairo (CAI)",
+      "depart": "Luxor (LXR), connecting via Cairo",
+      "countries": [
+        "Egypt"
+      ],
+      "regions": [
+        "Cairo",
+        "Giza",
+        "Luxor"
+      ],
+      "cities": [
+        "Cairo",
+        "Giza",
+        "Luxor",
+        "Dendera"
+      ],
+      "imageQuery": "Karnak temple Luxor Egypt columns",
+      "highlights": [
+        "Pyramids of Giza",
+        "Grand Egyptian Museum",
+        "Valley of the Kings",
+        "Karnak Temple",
+        "Luxor balloon flight"
+      ],
+      "destinationKeys": [
+        "egypt",
+        "egypt/cairo",
+        "egypt/giza",
+        "egypt/luxor",
+        "egypt/dendera"
+      ],
+      "hero": "egypt/luxor",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Cairo",
+          "hotel": "Hotel in Cairo",
+          "start": 0,
+          "nights": 3,
+          "area": "Zamalek, Downtown or near the Giza plateau: Zamalek and Downtown for restaurants and the metro, Giza for short transfers to the pyramids",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Luxor",
+          "hotel": "Hotel in Luxor",
+          "start": 3,
+          "nights": 3,
+          "area": "East bank near Luxor Temple (walkable, restaurants) or the quieter west bank near the royal tombs",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Khan el-Khalili",
+          "notes": "Go in the evening when the heat eases; the lanes are narrow and uneven, and bargaining is expected.",
+          "where": "Islamic Cairo, Cairo",
+          "book": "",
+          "place": "egypt/khan-el-khalili"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "1.5h",
+          "name": "Koshari dinner",
+          "notes": "Egypt's national dish, served by the bowl in plain, fast-moving restaurants; a good first meal after a late arrival.",
+          "where": "Downtown Cairo",
+          "book": "",
+          "place": "egypt/koshari-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Pyramids of Giza and the Sphinx",
+          "notes": "Go at opening, before the heat and the crowds; agree prices before accepting a camel or horse ride, and entry inside a pyramid is ticketed separately.",
+          "where": "Giza Plateau, Giza",
+          "book": "",
+          "place": "egypt/giza-pyramids"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "3.5h",
+          "name": "Grand Egyptian Museum",
+          "notes": "Very large, so choose a few galleries; check current opening hours and which galleries are open before going.",
+          "where": "Giza",
+          "book": "",
+          "place": "egypt/grand-egyptian-museum"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Cairo Citadel",
+          "notes": "Modest dress is expected and shoes come off inside the mosque; the terraces look over the city toward the pyramids on a clear day.",
+          "where": "Citadel, Cairo",
+          "book": "",
+          "place": "egypt/citadel-cairo"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "2h",
+          "name": "Islamic Cairo and Al-Muizz Street",
+          "notes": "A long street of medieval gateways and mosques; some minarets can be climbed for a small extra charge.",
+          "where": "Islamic Cairo, Cairo",
+          "book": "",
+          "place": "egypt/islamic-cairo"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Felucca sail on the Nile in Cairo",
+          "notes": "Agree the length of the sail before boarding.",
+          "where": "Corniche, Cairo",
+          "book": "",
+          "place": "egypt/cairo-felucca"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Luxor Temple",
+          "notes": "Compact and best seen as the floodlights come on; an easy first stop after arriving.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/luxor-temple"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "1h",
+          "name": "Hot air balloon over Luxor",
+          "notes": "Flights are cancelled when the wind is wrong, so leave a spare morning; pickup from the hotel is in the dark.",
+          "where": "West Bank, Luxor",
+          "book": "Yes - flights are weather dependent and booked ahead",
+          "place": "egypt/luxor-hot-air-balloon"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Valley of the Kings",
+          "notes": "Go early: the tombs are hot and narrow, and the valley has no shade. A standard ticket allows a choice of a few tombs.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/valley-of-the-kings"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Temple of Hatshepsut",
+          "notes": "The terraces are exposed to the sun; best visited before it gets hot.",
+          "where": "Deir el-Bahari, Luxor",
+          "book": "",
+          "place": "egypt/hatshepsut-temple"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "0.5h",
+          "name": "Colossi of Memnon",
+          "notes": "A quick roadside stop on the way back to the river; there is nothing else to see at the site.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/colossi-of-memnon"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Karnak Temple Complex",
+          "notes": "Go late afternoon when the heat has dropped; the Great Hypostyle Hall is the highlight.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/karnak-temple"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Dendera Temple",
+          "notes": "The Temple of Hathor is quieter than the temples at Luxor; the stairways to the roof are worth the climb.",
+          "where": "Dendera",
+          "book": "",
+          "place": "egypt/dendera-temple"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cairo Airport (CAI)",
+          "to": "Cairo hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "Traffic can be heavy at any hour; agree the fare or use a metered or app-based car.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Cairo Airport (CAI)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "This covers the ground leg to the departure airport only; Cairo to the south is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Luxor Airport (LXR)",
+          "to": "Luxor hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Luxor hotel area",
+          "to": "Dendera",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Dendera",
+          "to": "Luxor hotel area",
+          "time": "13:30",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Luxor hotel area",
+          "to": "Luxor Airport (LXR)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Flights home usually connect through Cairo; allow three hours before the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "egypt-cairo-nile-cruise-8d",
+      "title": "Cairo and a Nile Cruise in 8 Days",
+      "summary": "Three days in Cairo followed by a four-night Nile cruise from Luxor to Aswan, with the temples reached straight from the moorings.",
+      "days": 8,
+      "route": "Cairo > Nile cruise (Luxor > Edfu > Kom Ombo > Aswan)",
+      "arrive": "Cairo (CAI)",
+      "depart": "Aswan (ASW), connecting via Cairo",
+      "countries": [
+        "Egypt"
+      ],
+      "regions": [
+        "Cairo",
+        "Giza",
+        "Luxor",
+        "Aswan"
+      ],
+      "cities": [
+        "Cairo",
+        "Giza",
+        "Saqqara",
+        "Luxor",
+        "Nile cruise",
+        "Edfu",
+        "Kom Ombo",
+        "Aswan"
+      ],
+      "imageQuery": "Nile cruise Egypt felucca Aswan sunset",
+      "highlights": [
+        "Pyramids of Giza",
+        "Valley of the Kings",
+        "Karnak Temple",
+        "Temple of Horus at Edfu",
+        "Philae Temple"
+      ],
+      "destinationKeys": [
+        "egypt",
+        "egypt/cairo",
+        "egypt/giza",
+        "egypt/saqqara",
+        "egypt/luxor",
+        "egypt/nile-cruise",
+        "egypt/edfu",
+        "egypt/kom-ombo",
+        "egypt/aswan"
+      ],
+      "hero": "egypt/nile-cruise",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Cairo",
+          "hotel": "Hotel in Cairo",
+          "start": 0,
+          "nights": 3,
+          "area": "Zamalek, Downtown or near the Giza plateau: Zamalek and Downtown for restaurants and the metro, Giza for short transfers to the pyramids",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nile cruise",
+          "hotel": "Stay aboard a Nile cruise ship",
+          "start": 3,
+          "nights": 4,
+          "area": "A Nile cruise ship on the Luxor to Aswan route, serving as hotel and transport",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Khan el-Khalili",
+          "notes": "Go in the evening when the heat eases; the lanes are narrow and uneven, and bargaining is expected.",
+          "where": "Islamic Cairo, Cairo",
+          "book": "",
+          "place": "egypt/khan-el-khalili"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "1.5h",
+          "name": "Koshari dinner",
+          "notes": "Egypt's national dish, served by the bowl in plain, fast-moving restaurants; a good first meal after a late arrival.",
+          "where": "Downtown Cairo",
+          "book": "",
+          "place": "egypt/koshari-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Pyramids of Giza and the Sphinx",
+          "notes": "Go at opening, before the heat and the crowds; agree prices before accepting a camel or horse ride, and entry inside a pyramid is ticketed separately.",
+          "where": "Giza Plateau, Giza",
+          "book": "",
+          "place": "egypt/giza-pyramids"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "3.5h",
+          "name": "Grand Egyptian Museum",
+          "notes": "Very large, so choose a few galleries; check current opening hours and which galleries are open before going.",
+          "where": "Giza",
+          "book": "",
+          "place": "egypt/grand-egyptian-museum"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Saqqara and Memphis",
+          "notes": "The Step Pyramid and the Old Kingdom tombs, then the open-air museum at Memphis; there is little shade, so carry water.",
+          "where": "Saqqara, Giza",
+          "book": "",
+          "place": "egypt/saqqara-memphis"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coptic Cairo",
+          "notes": "Short, flat lanes of early churches; modest dress is expected.",
+          "where": "Old Cairo, Cairo",
+          "book": "",
+          "place": "egypt/coptic-cairo"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Felucca sail on the Nile in Cairo",
+          "notes": "Agree the length of the sail before boarding; a sunset sail is a relaxed end to the day.",
+          "where": "Corniche, Cairo",
+          "book": "",
+          "place": "egypt/cairo-felucca"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Board the Nile cruise ship",
+          "notes": "Embarkation follows the ship's programme; shore visits are timed by the cruise rather than chosen freely.",
+          "where": "Luxor",
+          "book": "",
+          "place": "egypt/nile-cruise"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Karnak Temple Complex",
+          "notes": "The Great Hypostyle Hall is the highlight; the site is large and mostly in the open.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/karnak-temple"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1h",
+          "name": "Luxor Temple",
+          "notes": "Floodlit in the evening and an easy walk from the moorings.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/luxor-temple"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "07:00",
+          "duration": "2h",
+          "name": "Valley of the Kings",
+          "notes": "Go first thing: the tombs are hot and narrow, and the valley has no shade.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/valley-of-the-kings"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "09:45",
+          "duration": "1h",
+          "name": "Temple of Hatshepsut",
+          "notes": "The terraces are exposed to the sun.",
+          "where": "Deir el-Bahari, Luxor",
+          "book": "",
+          "place": "egypt/hatshepsut-temple"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:15",
+          "duration": "0.5h",
+          "name": "Colossi of Memnon",
+          "notes": "A quick roadside stop before the ship sails south.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/colossi-of-memnon"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "1.5h",
+          "name": "Temple of Horus at Edfu",
+          "notes": "One of the best-preserved temples in Egypt; carriages run from the dock.",
+          "where": "Edfu",
+          "book": "",
+          "place": "egypt/edfu-temple"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "1h",
+          "name": "Temple of Kom Ombo",
+          "notes": "A double temple right on the riverbank, especially atmospheric at sunset.",
+          "where": "Kom Ombo",
+          "book": "",
+          "place": "egypt/kom-ombo-temple"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Philae Temple",
+          "notes": "Reached by small motor boat; there are steps and uneven stone throughout.",
+          "where": "Agilkia Island, Aswan",
+          "book": "",
+          "place": "egypt/philae-temple"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Felucca sail around Elephantine Island",
+          "notes": "Agree the length of the sail first.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/aswan-felucca"
+        },
+        {
+          "day": 7,
+          "type": "Shopping",
+          "time": "09:00",
+          "duration": "1.5h",
+          "name": "Aswan souq",
+          "notes": "A short last stroll before disembarking and heading to the airport.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/aswan-souq"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cairo Airport (CAI)",
+          "to": "Cairo hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "Traffic can be heavy at any hour; agree the fare or use a metered or app-based car.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Saqqara",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "A driver for the morning is the simplest way to combine Saqqara and Memphis.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Saqqara",
+          "to": "Cairo hotel area",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Cairo Airport (CAI)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "This covers the ground leg to the departure airport only; Cairo to the south is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Luxor Airport (LXR)",
+          "to": "Nile cruise ship, Luxor",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Cruise line transfer or taxi",
+          "notes": "Most cruises include the transfer from the airport to the ship.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Nile cruise ship, Aswan",
+          "to": "Aswan Airport (ASW)",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Cruise line transfer or taxi",
+          "notes": "Flights home usually connect through Cairo; allow three hours before the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "egypt-cairo-luxor-aswan-10d",
+      "title": "Cairo, Luxor and Aswan in 10 Days",
+      "summary": "The Nile valley highlights without a cruise: four days in Cairo, three in Luxor and two in Aswan, linked by a road trip that stops at the temples of Edfu and Kom Ombo.",
+      "days": 10,
+      "route": "Cairo > Luxor (Dendera day trip) > Aswan (Abu Simbel day trip)",
+      "arrive": "Cairo (CAI)",
+      "depart": "Aswan (ASW), connecting via Cairo",
+      "countries": [
+        "Egypt"
+      ],
+      "regions": [
+        "Cairo",
+        "Giza",
+        "Luxor",
+        "Aswan"
+      ],
+      "cities": [
+        "Cairo",
+        "Giza",
+        "Saqqara",
+        "Luxor",
+        "Dendera",
+        "Edfu",
+        "Kom Ombo",
+        "Aswan",
+        "Abu Simbel"
+      ],
+      "imageQuery": "Abu Simbel temple Egypt Ramesses statues",
+      "highlights": [
+        "Pyramids of Giza",
+        "Valley of the Kings",
+        "Karnak Temple",
+        "Abu Simbel",
+        "Philae Temple"
+      ],
+      "destinationKeys": [
+        "egypt",
+        "egypt/cairo",
+        "egypt/giza",
+        "egypt/saqqara",
+        "egypt/luxor",
+        "egypt/dendera",
+        "egypt/edfu",
+        "egypt/kom-ombo",
+        "egypt/aswan",
+        "egypt/abu-simbel"
+      ],
+      "hero": "egypt/abu-simbel",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Cairo",
+          "hotel": "Hotel in Cairo",
+          "start": 0,
+          "nights": 4,
+          "area": "Zamalek, Downtown or near the Giza plateau: Zamalek and Downtown for restaurants and the metro, Giza for short transfers to the pyramids",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Luxor",
+          "hotel": "Hotel in Luxor",
+          "start": 4,
+          "nights": 3,
+          "area": "East bank near Luxor Temple (walkable, restaurants) or the quieter west bank near the royal tombs",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aswan",
+          "hotel": "Hotel in Aswan",
+          "start": 7,
+          "nights": 2,
+          "area": "The east bank corniche, close to the souq and the river",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Khan el-Khalili",
+          "notes": "Go in the evening when the heat eases; the lanes are narrow and uneven, and bargaining is expected.",
+          "where": "Islamic Cairo, Cairo",
+          "book": "",
+          "place": "egypt/khan-el-khalili"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "1.5h",
+          "name": "Koshari dinner",
+          "notes": "Egypt's national dish, served by the bowl in plain, fast-moving restaurants; a good first meal after a late arrival.",
+          "where": "Downtown Cairo",
+          "book": "",
+          "place": "egypt/koshari-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Pyramids of Giza and the Sphinx",
+          "notes": "Go at opening, before the heat and the crowds; agree prices before accepting a camel or horse ride, and entry inside a pyramid is ticketed separately.",
+          "where": "Giza Plateau, Giza",
+          "book": "",
+          "place": "egypt/giza-pyramids"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "3.5h",
+          "name": "Grand Egyptian Museum",
+          "notes": "Very large, so choose a few galleries; check current opening hours and which galleries are open before going.",
+          "where": "Giza",
+          "book": "",
+          "place": "egypt/grand-egyptian-museum"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Saqqara and Memphis",
+          "notes": "The Step Pyramid and the Old Kingdom tombs, then the open-air museum at Memphis; there is little shade, so carry water.",
+          "where": "Saqqara, Giza",
+          "book": "",
+          "place": "egypt/saqqara-memphis"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coptic Cairo",
+          "notes": "Short, flat lanes of early churches; modest dress is expected.",
+          "where": "Old Cairo, Cairo",
+          "book": "",
+          "place": "egypt/coptic-cairo"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Felucca sail on the Nile in Cairo",
+          "notes": "Agree the length of the sail before boarding; a sunset sail is a relaxed end to the day.",
+          "where": "Corniche, Cairo",
+          "book": "",
+          "place": "egypt/cairo-felucca"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Cairo Citadel",
+          "notes": "Modest dress is expected and shoes come off inside the mosque; the terraces look over the city toward the pyramids on a clear day.",
+          "where": "Citadel, Cairo",
+          "book": "",
+          "place": "egypt/citadel-cairo"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "2h",
+          "name": "Islamic Cairo and Al-Muizz Street",
+          "notes": "A long street of medieval gateways and mosques; some minarets can be climbed for a small extra charge.",
+          "where": "Islamic Cairo, Cairo",
+          "book": "",
+          "place": "egypt/islamic-cairo"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "National Museum of Egyptian Civilization",
+          "notes": "Home to the Royal Mummies Hall; rules on photography there are strict, so check at the entrance.",
+          "where": "Fustat, Cairo",
+          "book": "",
+          "place": "egypt/national-museum-egyptian-civilization"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Luxor Temple",
+          "notes": "Compact and best seen as the floodlights come on; an easy first stop after arriving.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/luxor-temple"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Valley of the Kings",
+          "notes": "Go early: the tombs are hot and narrow, and the valley has no shade. A standard ticket allows a choice of a few tombs.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/valley-of-the-kings"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Temple of Hatshepsut",
+          "notes": "The terraces are exposed to the sun; best visited before it gets hot.",
+          "where": "Deir el-Bahari, Luxor",
+          "book": "",
+          "place": "egypt/hatshepsut-temple"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "0.5h",
+          "name": "Colossi of Memnon",
+          "notes": "A quick roadside stop on the way back to the river; there is nothing else to see at the site.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/colossi-of-memnon"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Karnak Temple Complex",
+          "notes": "Go late afternoon when the heat has dropped; the Great Hypostyle Hall is the highlight.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/karnak-temple"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Dendera Temple",
+          "notes": "The Temple of Hathor is quieter than the temples at Luxor; the stairways to the roof are worth the climb.",
+          "where": "Dendera",
+          "book": "",
+          "place": "egypt/dendera-temple"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "10:45",
+          "duration": "1h",
+          "name": "Temple of Horus at Edfu",
+          "notes": "One of the best-preserved temples in Egypt; many visitors arrive by horse-drawn carriage from the dock.",
+          "where": "Edfu",
+          "book": "",
+          "place": "egypt/edfu-temple"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Temple of Kom Ombo",
+          "notes": "A double temple on the riverbank; the small crocodile museum next to it is worth a few minutes.",
+          "where": "Kom Ombo",
+          "book": "",
+          "place": "egypt/kom-ombo-temple"
+        },
+        {
+          "day": 7,
+          "type": "Shopping",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Aswan souq",
+          "notes": "Spices, hibiscus and Nubian crafts; livelier in the evening once the heat eases.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/aswan-souq"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "04:00",
+          "duration": "8h",
+          "name": "Abu Simbel",
+          "notes": "A very early start for the three-hour road journey; the site is hot and shadeless, so reach it before the heat.",
+          "where": "Abu Simbel",
+          "book": "",
+          "place": "egypt/abu-simbel"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Philae Temple",
+          "notes": "Reached by small motor boat; there are steps and uneven stone throughout.",
+          "where": "Agilkia Island, Aswan",
+          "book": "",
+          "place": "egypt/philae-temple"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Felucca sail around Elephantine Island",
+          "notes": "Agree the length of the sail first; a sunset sail suits the end of the day.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/aswan-felucca"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cairo Airport (CAI)",
+          "to": "Cairo hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "Traffic can be heavy at any hour; agree the fare or use a metered or app-based car.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Saqqara",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "A driver for the morning is the simplest way to combine Saqqara and Memphis.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Saqqara",
+          "to": "Cairo hotel area",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Cairo Airport (CAI)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "This covers the ground leg to the departure airport only; Cairo to the south is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Luxor Airport (LXR)",
+          "to": "Luxor hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Luxor hotel area",
+          "to": "Dendera",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Dendera",
+          "to": "Luxor hotel area",
+          "time": "13:30",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Luxor hotel area",
+          "to": "Edfu",
+          "time": "09:00",
+          "minutes": 105,
+          "carrier": "Car with driver",
+          "notes": "A private driver lets you stop at both temples on the way south.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Edfu",
+          "to": "Kom Ombo",
+          "time": "12:00",
+          "minutes": 65,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Kom Ombo",
+          "to": "Aswan hotel area",
+          "time": "14:45",
+          "minutes": 50,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Aswan hotel area",
+          "to": "Abu Simbel",
+          "time": "04:00",
+          "minutes": 180,
+          "carrier": "Car with driver or minibus",
+          "notes": "The road to Abu Simbel crosses open desert; leave early and carry water.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Abu Simbel",
+          "to": "Aswan hotel area",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Car with driver or minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Aswan hotel area",
+          "to": "Aswan Airport (ASW)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Flights home usually connect through Cairo; allow three hours before the international leg.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "egypt-cairo-aswan-cruise-red-sea-12d",
+      "title": "Cairo, a Nile Cruise and the Red Sea in 12 Days",
+      "summary": "Cairo, then the Nile upstream to Aswan and Abu Simbel, a three-night cruise down to Luxor, and a few days of beach and reef at Hurghada to finish.",
+      "days": 12,
+      "route": "Cairo > Aswan (Abu Simbel) > Nile cruise > Luxor > Hurghada",
+      "arrive": "Cairo (CAI)",
+      "depart": "Hurghada (HRG)",
+      "countries": [
+        "Egypt"
+      ],
+      "regions": [
+        "Cairo",
+        "Giza",
+        "Aswan",
+        "Luxor",
+        "Red Sea"
+      ],
+      "cities": [
+        "Cairo",
+        "Giza",
+        "Saqqara",
+        "Aswan",
+        "Abu Simbel",
+        "Nile cruise",
+        "Kom Ombo",
+        "Edfu",
+        "Luxor",
+        "Hurghada"
+      ],
+      "imageQuery": "Red Sea Hurghada coral reef snorkelling",
+      "highlights": [
+        "Pyramids of Giza",
+        "Abu Simbel",
+        "Nile cruise",
+        "Valley of the Kings",
+        "Red Sea snorkelling"
+      ],
+      "destinationKeys": [
+        "egypt",
+        "egypt/cairo",
+        "egypt/giza",
+        "egypt/saqqara",
+        "egypt/aswan",
+        "egypt/abu-simbel",
+        "egypt/nile-cruise",
+        "egypt/kom-ombo",
+        "egypt/edfu",
+        "egypt/luxor",
+        "egypt/red-sea",
+        "egypt/hurghada"
+      ],
+      "hero": "egypt/hurghada",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "relax",
+        "outdoors",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Cairo",
+          "hotel": "Hotel in Cairo",
+          "start": 0,
+          "nights": 3,
+          "area": "Zamalek, Downtown or near the Giza plateau: Zamalek and Downtown for restaurants and the metro, Giza for short transfers to the pyramids",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aswan",
+          "hotel": "Hotel in Aswan",
+          "start": 3,
+          "nights": 2,
+          "area": "The east bank corniche, close to the souq and the river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nile cruise",
+          "hotel": "Stay aboard a Nile cruise ship",
+          "start": 5,
+          "nights": 3,
+          "area": "A Nile cruise ship on the Luxor to Aswan route, serving as hotel and transport",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hurghada",
+          "hotel": "Resort in Hurghada",
+          "start": 8,
+          "nights": 3,
+          "area": "A beachfront resort along the Hurghada coast, within reach of the marina for boat trips",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Khan el-Khalili",
+          "notes": "Go in the evening when the heat eases; the lanes are narrow and uneven, and bargaining is expected.",
+          "where": "Islamic Cairo, Cairo",
+          "book": "",
+          "place": "egypt/khan-el-khalili"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "1.5h",
+          "name": "Koshari dinner",
+          "notes": "Egypt's national dish, served by the bowl in plain, fast-moving restaurants; a good first meal after a late arrival.",
+          "where": "Downtown Cairo",
+          "book": "",
+          "place": "egypt/koshari-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Pyramids of Giza and the Sphinx",
+          "notes": "Go at opening, before the heat and the crowds; agree prices before accepting a camel or horse ride, and entry inside a pyramid is ticketed separately.",
+          "where": "Giza Plateau, Giza",
+          "book": "",
+          "place": "egypt/giza-pyramids"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "3.5h",
+          "name": "Grand Egyptian Museum",
+          "notes": "Very large, so choose a few galleries; check current opening hours and which galleries are open before going.",
+          "where": "Giza",
+          "book": "",
+          "place": "egypt/grand-egyptian-museum"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Saqqara and Memphis",
+          "notes": "The Step Pyramid and the Old Kingdom tombs, then the open-air museum at Memphis; there is little shade, so carry water.",
+          "where": "Saqqara, Giza",
+          "book": "",
+          "place": "egypt/saqqara-memphis"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coptic Cairo",
+          "notes": "Short, flat lanes of early churches; modest dress is expected.",
+          "where": "Old Cairo, Cairo",
+          "book": "",
+          "place": "egypt/coptic-cairo"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Felucca sail on the Nile in Cairo",
+          "notes": "Agree the length of the sail before boarding; a sunset sail is a relaxed end to the day.",
+          "where": "Corniche, Cairo",
+          "book": "",
+          "place": "egypt/cairo-felucca"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Philae Temple",
+          "notes": "Reached by small motor boat; there are steps and uneven stone throughout.",
+          "where": "Agilkia Island, Aswan",
+          "book": "",
+          "place": "egypt/philae-temple"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "Felucca sail around Elephantine Island",
+          "notes": "Agree the length of the sail first.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/aswan-felucca"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "04:00",
+          "duration": "8h",
+          "name": "Abu Simbel",
+          "notes": "A very early start for the three-hour road journey; the site is hot and shadeless, so reach it before the heat.",
+          "where": "Abu Simbel",
+          "book": "",
+          "place": "egypt/abu-simbel"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Nubian village visit",
+          "notes": "Reached by boat; tea or a meal in a family home is usually part of it.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/nubian-village"
+        },
+        {
+          "day": 5,
+          "type": "Shopping",
+          "time": "09:30",
+          "duration": "1h",
+          "name": "Aswan souq",
+          "notes": "Spices, hibiscus and Nubian crafts before boarding.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/aswan-souq"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "13:00",
+          "duration": "1h",
+          "name": "Board the Nile cruise ship",
+          "notes": "Embarkation follows the ship's programme; shore visits are timed by the cruise.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/nile-cruise"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "17:00",
+          "duration": "1h",
+          "name": "Temple of Kom Ombo",
+          "notes": "A double temple right on the riverbank, especially atmospheric at sunset.",
+          "where": "Kom Ombo",
+          "book": "",
+          "place": "egypt/kom-ombo-temple"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "1.5h",
+          "name": "Temple of Horus at Edfu",
+          "notes": "One of the best-preserved temples in Egypt; carriages run from the dock.",
+          "where": "Edfu",
+          "book": "",
+          "place": "egypt/edfu-temple"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "07:00",
+          "duration": "2h",
+          "name": "Valley of the Kings",
+          "notes": "Go early: the tombs are hot and narrow, and the valley has no shade. A standard ticket allows a choice of a few tombs.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/valley-of-the-kings"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "09:45",
+          "duration": "1h",
+          "name": "Temple of Hatshepsut",
+          "notes": "The terraces are exposed to the sun; best visited before it gets hot.",
+          "where": "Deir el-Bahari, Luxor",
+          "book": "",
+          "place": "egypt/hatshepsut-temple"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "11:15",
+          "duration": "0.5h",
+          "name": "Colossi of Memnon",
+          "notes": "A quick roadside stop on the way back to the river; there is nothing else to see at the site.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/colossi-of-memnon"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Karnak Temple Complex",
+          "notes": "Go late afternoon when the heat has dropped; the Great Hypostyle Hall is the highlight.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/karnak-temple"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "07:30",
+          "duration": "1h",
+          "name": "Luxor Temple",
+          "notes": "See it in the cool of the morning before the drive to the coast.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/luxor-temple"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Red Sea beach day in Hurghada",
+          "notes": "Arrive and settle in; sun protection matters even in winter.",
+          "where": "Hurghada, Red Sea",
+          "book": "",
+          "place": "egypt/hurghada-beach"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Boat trip and snorkelling at Giftun Island",
+          "notes": "No experience needed; masks and fins are usually provided, and a long-sleeved top helps against sunburn.",
+          "where": "Hurghada marina, Red Sea",
+          "book": "",
+          "place": "egypt/giftun-snorkel"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "4h",
+          "name": "Desert jeep safari and Bedouin dinner",
+          "notes": "A fun change from the sea; a scarf and closed shoes help with the dust.",
+          "where": "Eastern Desert, Red Sea",
+          "book": "",
+          "place": "egypt/hurghada-desert-safari"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cairo Airport (CAI)",
+          "to": "Cairo hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "Traffic can be heavy at any hour; agree the fare or use a metered or app-based car.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Saqqara",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "A driver for the morning is the simplest way to combine Saqqara and Memphis.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Saqqara",
+          "to": "Cairo hotel area",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Cairo Airport (CAI)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "This covers the ground leg to the departure airport only; Cairo to the south is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Aswan Airport (ASW)",
+          "to": "Aswan hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Aswan hotel area",
+          "to": "Abu Simbel",
+          "time": "04:00",
+          "minutes": 180,
+          "carrier": "Car with driver or minibus",
+          "notes": "The road to Abu Simbel crosses open desert; leave early and carry water.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Abu Simbel",
+          "to": "Aswan hotel area",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Car with driver or minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Aswan hotel area",
+          "to": "Nile cruise ship, Aswan",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Cruise line transfer or taxi",
+          "notes": "Embarkation is usually around midday.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Nile cruise ship, Luxor",
+          "to": "Hurghada resort",
+          "time": "10:00",
+          "minutes": 270,
+          "carrier": "Car with driver",
+          "notes": "A private drive across the Eastern Desert to the coast; stop for a break part-way.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Hurghada resort",
+          "to": "Hurghada Airport (HRG)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or resort transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "egypt-nile-valley-sinai-14d",
+      "title": "Cairo, the Nile Valley and Sharm el-Sheikh in 14 Days",
+      "summary": "A two-week circuit with time to breathe: Cairo and a day trip to Alexandria, Luxor, Aswan and Abu Simbel, then four days of reef and beach at Sharm el-Sheikh.",
+      "days": 14,
+      "route": "Cairo (Alexandria day trip) > Luxor > Aswan (Abu Simbel) > Sharm el-Sheikh (Mount Sinai)",
+      "arrive": "Cairo (CAI)",
+      "depart": "Sharm el-Sheikh (SSH)",
+      "countries": [
+        "Egypt"
+      ],
+      "regions": [
+        "Cairo",
+        "Giza",
+        "Alexandria",
+        "Luxor",
+        "Aswan",
+        "South Sinai"
+      ],
+      "cities": [
+        "Cairo",
+        "Giza",
+        "Saqqara",
+        "Alexandria",
+        "Luxor",
+        "Dendera",
+        "Edfu",
+        "Kom Ombo",
+        "Aswan",
+        "Abu Simbel",
+        "Sharm el-Sheikh",
+        "St Catherine"
+      ],
+      "imageQuery": "Sharm el-Sheikh Red Sea reef Sinai mountains",
+      "highlights": [
+        "Pyramids of Giza",
+        "Alexandria day trip",
+        "Valley of the Kings",
+        "Abu Simbel",
+        "Ras Mohammed reefs",
+        "Mount Sinai sunrise"
+      ],
+      "destinationKeys": [
+        "egypt",
+        "egypt/cairo",
+        "egypt/giza",
+        "egypt/saqqara",
+        "egypt/alexandria",
+        "egypt/luxor",
+        "egypt/dendera",
+        "egypt/edfu",
+        "egypt/kom-ombo",
+        "egypt/aswan",
+        "egypt/abu-simbel",
+        "egypt/south-sinai",
+        "egypt/sharm-el-sheikh",
+        "egypt/st-catherine"
+      ],
+      "hero": "egypt/sharm-el-sheikh",
+      "sources": [
+        "Rough Guides",
+        "KimKim itinerary library",
+        "TravelStride itinerary library"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "outdoors",
+        "relax",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Cairo",
+          "hotel": "Hotel in Cairo",
+          "start": 0,
+          "nights": 4,
+          "area": "Zamalek, Downtown or near the Giza plateau: Zamalek and Downtown for restaurants and the metro, Giza for short transfers to the pyramids",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Luxor",
+          "hotel": "Hotel in Luxor",
+          "start": 4,
+          "nights": 3,
+          "area": "East bank near Luxor Temple (walkable, restaurants) or the quieter west bank near the royal tombs",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aswan",
+          "hotel": "Hotel in Aswan",
+          "start": 7,
+          "nights": 2,
+          "area": "The east bank corniche, close to the souq and the river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sharm el-Sheikh",
+          "hotel": "Resort in Sharm el-Sheikh",
+          "start": 9,
+          "nights": 4,
+          "area": "Naama Bay for walkable restaurants, or a quieter bay further north",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Shopping",
+          "time": "18:00",
+          "duration": "2h",
+          "name": "Khan el-Khalili",
+          "notes": "Go in the evening when the heat eases; the lanes are narrow and uneven, and bargaining is expected.",
+          "where": "Islamic Cairo, Cairo",
+          "book": "",
+          "place": "egypt/khan-el-khalili"
+        },
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "20:30",
+          "duration": "1.5h",
+          "name": "Koshari dinner",
+          "notes": "Egypt's national dish, served by the bowl in plain, fast-moving restaurants; a good first meal after a late arrival.",
+          "where": "Downtown Cairo",
+          "book": "",
+          "place": "egypt/koshari-dinner"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "3h",
+          "name": "Pyramids of Giza and the Sphinx",
+          "notes": "Go at opening, before the heat and the crowds; agree prices before accepting a camel or horse ride, and entry inside a pyramid is ticketed separately.",
+          "where": "Giza Plateau, Giza",
+          "book": "",
+          "place": "egypt/giza-pyramids"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "3.5h",
+          "name": "Grand Egyptian Museum",
+          "notes": "Very large, so choose a few galleries; check current opening hours and which galleries are open before going.",
+          "where": "Giza",
+          "book": "",
+          "place": "egypt/grand-egyptian-museum"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Saqqara and Memphis",
+          "notes": "The Step Pyramid and the Old Kingdom tombs, then the open-air museum at Memphis; there is little shade, so carry water.",
+          "where": "Saqqara, Giza",
+          "book": "",
+          "place": "egypt/saqqara-memphis"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Coptic Cairo",
+          "notes": "Short, flat lanes of early churches; modest dress is expected.",
+          "where": "Old Cairo, Cairo",
+          "book": "",
+          "place": "egypt/coptic-cairo"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Felucca sail on the Nile in Cairo",
+          "notes": "Agree the length of the sail before boarding; a sunset sail is a relaxed end to the day.",
+          "where": "Corniche, Cairo",
+          "book": "",
+          "place": "egypt/cairo-felucca"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:45",
+          "duration": "1h",
+          "name": "Citadel of Qaitbay",
+          "notes": "A flat causeway walk to the fort at the harbour mouth; stairs lead up to the ramparts.",
+          "where": "Eastern Harbour, Alexandria",
+          "book": "",
+          "place": "egypt/alexandria-qaitbay-citadel"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "11:15",
+          "duration": "1h",
+          "name": "Bibliotheca Alexandrina",
+          "notes": "A modern working library; check which areas are open to the public.",
+          "where": "Shatby, Alexandria",
+          "book": "",
+          "place": "egypt/bibliotheca-alexandrina"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "13:00",
+          "duration": "1.5h",
+          "name": "Seafood lunch in Alexandria",
+          "notes": "Pick fish by weight from the display and agree how it is weighed before it is cooked.",
+          "where": "Corniche, Alexandria",
+          "book": "",
+          "place": "egypt/alexandria-seafood-lunch"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Catacombs of Kom el-Shoqafa and Pompey's Pillar",
+          "notes": "The catacomb stairs are steep and the passages low and damp.",
+          "where": "Karmouz, Alexandria",
+          "book": "",
+          "place": "egypt/alexandria-catacombs"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1h",
+          "name": "Luxor Temple",
+          "notes": "Compact and best seen as the floodlights come on; an easy first stop after arriving.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/luxor-temple"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "05:30",
+          "duration": "1h",
+          "name": "Hot air balloon over Luxor",
+          "notes": "Flights are cancelled when the wind is wrong, so leave a spare morning; pickup from the hotel is in the dark.",
+          "where": "West Bank, Luxor",
+          "book": "Yes - flights are weather dependent and booked ahead",
+          "place": "egypt/luxor-hot-air-balloon"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "08:00",
+          "duration": "2h",
+          "name": "Valley of the Kings",
+          "notes": "Go early: the tombs are hot and narrow, and the valley has no shade. A standard ticket allows a choice of a few tombs.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/valley-of-the-kings"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "1h",
+          "name": "Temple of Hatshepsut",
+          "notes": "The terraces are exposed to the sun; best visited before it gets hot.",
+          "where": "Deir el-Bahari, Luxor",
+          "book": "",
+          "place": "egypt/hatshepsut-temple"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "12:00",
+          "duration": "0.5h",
+          "name": "Colossi of Memnon",
+          "notes": "A quick roadside stop on the way back to the river; there is nothing else to see at the site.",
+          "where": "West Bank, Luxor",
+          "book": "",
+          "place": "egypt/colossi-of-memnon"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Karnak Temple Complex",
+          "notes": "Go late afternoon when the heat has dropped; the Great Hypostyle Hall is the highlight.",
+          "where": "East Bank, Luxor",
+          "book": "",
+          "place": "egypt/karnak-temple"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Dendera Temple",
+          "notes": "The Temple of Hathor is quieter than the temples at Luxor; the stairways to the roof are worth the climb.",
+          "where": "Dendera",
+          "book": "",
+          "place": "egypt/dendera-temple"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "10:45",
+          "duration": "1h",
+          "name": "Temple of Horus at Edfu",
+          "notes": "One of the best-preserved temples in Egypt; many visitors arrive by horse-drawn carriage from the dock.",
+          "where": "Edfu",
+          "book": "",
+          "place": "egypt/edfu-temple"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "13:30",
+          "duration": "1h",
+          "name": "Temple of Kom Ombo",
+          "notes": "A double temple on the riverbank; the small crocodile museum next to it is worth a few minutes.",
+          "where": "Kom Ombo",
+          "book": "",
+          "place": "egypt/kom-ombo-temple"
+        },
+        {
+          "day": 7,
+          "type": "Shopping",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Aswan souq",
+          "notes": "Spices, hibiscus and Nubian crafts; livelier in the evening once the heat eases.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/aswan-souq"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "04:00",
+          "duration": "8h",
+          "name": "Abu Simbel",
+          "notes": "A very early start for the three-hour road journey; the site is hot and shadeless, so reach it before the heat.",
+          "where": "Abu Simbel",
+          "book": "",
+          "place": "egypt/abu-simbel"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Philae Temple",
+          "notes": "Reached by small motor boat; there are steps and uneven stone throughout.",
+          "where": "Agilkia Island, Aswan",
+          "book": "",
+          "place": "egypt/philae-temple"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "1.5h",
+          "name": "Felucca sail around Elephantine Island",
+          "notes": "Agree the length of the sail first; a sunset sail suits the end of the day.",
+          "where": "Aswan",
+          "book": "",
+          "place": "egypt/aswan-felucca"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "18:30",
+          "duration": "1.5h",
+          "name": "Naama Bay",
+          "notes": "A flat evening stroll along the seafront promenade.",
+          "where": "Naama Bay, Sharm el-Sheikh",
+          "book": "",
+          "place": "egypt/naama-bay"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Ras Mohammed National Park",
+          "notes": "Snorkelling from the shore or on a boat; park rules forbid touching coral or wildlife, and there is little shade onshore.",
+          "where": "Ras Mohammed, South Sinai",
+          "book": "",
+          "place": "egypt/ras-mohammed"
+        },
+        {
+          "day": 11,
+          "type": "Day Trip",
+          "time": "03:00",
+          "duration": "8h",
+          "name": "Mount Sinai and St Catherine's Monastery",
+          "notes": "A pre-dawn climb for sunrise, then the monastery, which opens only for set hours on certain days. Check current official travel advice for Sinai before planning this.",
+          "where": "St Catherine, South Sinai",
+          "book": "",
+          "place": "egypt/mount-sinai"
+        },
+        {
+          "day": 12,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Sharm el-Sheikh beach day",
+          "notes": "Wear water shoes where there is coral near the shore.",
+          "where": "Sharm el-Sheikh, South Sinai",
+          "book": "",
+          "place": "egypt/sharm-beach-day"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Cairo Airport (CAI)",
+          "to": "Cairo hotel area",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "Traffic can be heavy at any hour; agree the fare or use a metered or app-based car.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Saqqara",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "A driver for the morning is the simplest way to combine Saqqara and Memphis.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Saqqara",
+          "to": "Cairo hotel area",
+          "time": "14:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Cairo Ramses Station",
+          "to": "Alexandria Misr Station",
+          "time": "06:45",
+          "minutes": 165,
+          "carrier": "ENR express train",
+          "notes": "Check the timetable at the station; first-class seats on the express are the comfortable choice.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Alexandria Misr Station",
+          "to": "Cairo Ramses Station",
+          "time": "17:30",
+          "minutes": 165,
+          "carrier": "ENR express train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Cairo hotel area",
+          "to": "Cairo Airport (CAI)",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or hotel transfer",
+          "notes": "This covers the ground leg to the departure airport only; Cairo to the south is a short domestic flight.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Luxor Airport (LXR)",
+          "to": "Luxor hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Luxor hotel area",
+          "to": "Dendera",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Dendera",
+          "to": "Luxor hotel area",
+          "time": "13:30",
+          "minutes": 60,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Luxor hotel area",
+          "to": "Edfu",
+          "time": "09:00",
+          "minutes": 105,
+          "carrier": "Car with driver",
+          "notes": "A private driver lets you stop at both temples on the way south.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Edfu",
+          "to": "Kom Ombo",
+          "time": "12:00",
+          "minutes": 65,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Kom Ombo",
+          "to": "Aswan hotel area",
+          "time": "14:45",
+          "minutes": 50,
+          "carrier": "Car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Aswan hotel area",
+          "to": "Abu Simbel",
+          "time": "04:00",
+          "minutes": 180,
+          "carrier": "Car with driver or minibus",
+          "notes": "The road to Abu Simbel crosses open desert; leave early and carry water.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Abu Simbel",
+          "to": "Aswan hotel area",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Car with driver or minibus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Aswan hotel area",
+          "to": "Aswan Airport (ASW)",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "Flights to Sharm el-Sheikh usually connect through Cairo; this covers the ground leg to the departure airport only.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Sharm el-Sheikh Airport (SSH)",
+          "to": "Sharm el-Sheikh resort",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or resort transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Sharm el-Sheikh resort",
+          "to": "St Catherine",
+          "time": "00:00",
+          "minutes": 180,
+          "carrier": "Private driver or tour van",
+          "notes": "The drive leaves at midnight to be at the foot of the mountain for the pre-dawn climb.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "St Catherine",
+          "to": "Sharm el-Sheikh resort",
+          "time": "11:00",
+          "minutes": 180,
+          "carrier": "Private driver or tour van",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Sharm el-Sheikh resort",
+          "to": "Sharm el-Sheikh Airport (SSH)",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi or resort transfer",
+          "notes": "Allow three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "egypt/khan-el-khalili": {
+        "name": "Khan el-Khalili",
+        "description": "Cairo's great medieval bazaar, a maze of lanes selling spices, brass, lanterns and souvenirs beside old mosques and coffeehouses.",
+        "details": "Khan el-Khalili has been a market district since the late fourteenth century, and its alleys still run in a dense web around the Al-Hussein mosque in Islamic Cairo. Shops and workshops sell spices, copperware, perfume, textiles and the lanterns the city is known for, and bargaining is expected. Old coffeehouses tucked among the stalls, the best known being Fishawy's, are a good place to stop and watch the crowd. It is busiest in the evening, the lanes are narrow and uneven, and some stalls close on Fridays and Sundays.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/koshari-dinner": {
+        "name": "Koshari dinner",
+        "description": "Egypt's best-loved street dish of rice, lentils, pasta and chickpeas under tomato sauce and crisp fried onions.",
+        "details": "Koshari is a vegetarian mix of rice, brown lentils, macaroni and chickpeas, topped with a spiced tomato sauce, vinegary garlic dressing and fried onions, and it is usually considered Egypt's national dish. Specialist koshari restaurants across Cairo serve it by the bowl in plain, fast-moving rooms, with hot sauce on the table. It is cheap, filling and eaten quickly rather than lingered over. Most places keep long hours, which makes it a reliable first meal after a late arrival.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/giza-pyramids": {
+        "name": "Pyramids of Giza and the Sphinx",
+        "description": "The three great pyramids on the Giza plateau and the Sphinx, the last surviving wonder of the ancient world.",
+        "details": "The Great Pyramid of Khufu was raised around 4,500 years ago and remained the tallest man-made structure in the world for thousands of years, with the pyramids of his son Khafre and grandson Menkaure beside it. The Sphinx, carved from a single outcrop of limestone, crouches just below the plateau. Going inside a pyramid is ticketed separately, capped in number and cramped. The site is open desert with almost no shade and persistent hawkers, so an early start, a hat and water make a large difference, and prices for camel or horse rides should be agreed before you get on.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/grand-egyptian-museum": {
+        "name": "Grand Egyptian Museum",
+        "description": "A vast museum beside the Giza plateau holding Egypt's pharaonic collections, including the Tutankhamun treasures.",
+        "details": "The Grand Egyptian Museum was built a short distance from the pyramids to house the largest collection of ancient Egyptian material in a single modern building, including the treasures from the tomb of Tutankhamun. A monumental statue of Ramesses II greets visitors in the entrance hall, and a grand staircase lined with colossal statues leads up to the galleries. It is very large, so choosing a few galleries is better than trying to see everything. Opening hours, ticket arrangements and which galleries are open have changed since it opened, so check current details before going.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/saqqara-memphis": {
+        "name": "Saqqara and Memphis",
+        "description": "The ancient burial ground of Memphis, with the Step Pyramid of Djoser, and the site of the first capital of unified Egypt.",
+        "details": "Saqqara was the necropolis of Memphis, the old capital, and its Step Pyramid, built for the pharaoh Djoser in the twenty-seventh century BC, is widely regarded as the oldest large stone building in the world. Nearby are the tombs of Old Kingdom officials, many with painted reliefs that remain vivid. Memphis itself survives mostly as a small open-air museum around a colossal fallen statue of Ramesses II. The sites are open desert with little shade, and some tombs involve low, steep passages.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/coptic-cairo": {
+        "name": "Coptic Cairo",
+        "description": "A walled quarter in old Cairo of early churches, a synagogue and a museum of Christian Egyptian art.",
+        "details": "Coptic Cairo grew up within and around the walls of a Roman fortress on the Nile and holds some of the oldest Christian sites in Egypt. The Hanging Church, built over the gatehouse of the fortress, is the best known, with a wooden barrel-vaulted roof said to resemble Noah's ark. Nearby are the church of St Sergius, the Ben Ezra Synagogue and the Coptic Museum. The lanes are short, flat and easy to walk, and the churches ask for modest dress.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/cairo-felucca": {
+        "name": "Felucca sail on the Nile in Cairo",
+        "description": "A short sail on a traditional wooden felucca at sunset, with the city lights coming on along the riverbank.",
+        "details": "The felucca is the traditional lateen-sailed boat of the Nile, and in Cairo they can be hired by the hour from landing points along the Corniche. A sail around sunset is a relaxed contrast to the traffic and noise on land. Boats are small and basic, with cushioned seating and no shade at midday. Agree the duration and price before boarding, and expect to share the river with the evening dinner cruises.",
+        "interests": [
+          "relax",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/citadel-cairo": {
+        "name": "Cairo Citadel",
+        "description": "A hilltop fortress begun by Saladin in the twelfth century, with the Ottoman-style Mosque of Muhammad Ali and views over the city.",
+        "details": "The Citadel was begun by Saladin in the 1170s as a defence against the Crusaders and remained the seat of Egypt's rulers for some seven centuries. Its best-known building is the Mosque of Muhammad Ali, built in the nineteenth century in the style of Istanbul's mosques, with a large central dome and two slender minarets. Terraces on the walls look out over the rooftops toward the pyramids on a clear day. The grounds are large and slope, and visitors are asked to dress modestly and remove shoes in the mosque.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/islamic-cairo": {
+        "name": "Islamic Cairo and Al-Muizz Street",
+        "description": "A historic street lined with mosques, madrasas and gateways from the Fatimid, Mamluk and Ottoman periods.",
+        "details": "Al-Muizz Street runs through the heart of the medieval city and is lined with one of the densest collections of historic Islamic architecture in the world, from the Fatimid-period Bab al-Futuh and Bab Zuweila gates to Mamluk mosques and madrasas. Parts of it are closed to traffic and it is lit in the evening. Several buildings can be entered and some have minarets that can be climbed for views, at a small extra charge. The street is uneven in places, and visitors are asked to dress modestly and remove shoes in mosques.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/national-museum-egyptian-civilization": {
+        "name": "National Museum of Egyptian Civilization",
+        "description": "A modern museum in Fustat tracing Egyptian history from prehistory to the present, home to the royal mummies.",
+        "details": "The National Museum of Egyptian Civilization sits on the edge of old Cairo and tells the country's story across all its eras, not only the pharaonic one, with a central gallery on the history of Egypt through objects. Its Royal Mummies Hall holds mummies of kings and queens that were moved here in a ceremonial procession in 2021. The presentation is thematic and uncrowded compared with the pyramids. Photography rules in the mummy hall are strict, and opening hours should be checked.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/alexandria-qaitbay-citadel": {
+        "name": "Citadel of Qaitbay",
+        "description": "A fifteenth-century seafront fort at the tip of Alexandria's harbour, built on the site of the ancient Pharos lighthouse.",
+        "details": "The Citadel of Qaitbay was built in the late fifteenth century by the Mamluk sultan Qaitbay on the spot where the Pharos, one of the seven wonders of the ancient world, once stood; stone from the lighthouse is thought to have been reused in its walls. The fort sits at the end of a causeway, with views along the Mediterranean seafront and across the harbour. Its rooms are fairly bare, so the setting is the main draw. The approach along the seawall is flat, with stairs up to the ramparts.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/bibliotheca-alexandrina": {
+        "name": "Bibliotheca Alexandrina",
+        "description": "A striking modern library on Alexandria's waterfront, built to recall the great library of the ancient world.",
+        "details": "The Bibliotheca Alexandrina opened in 2002 near the site where the ancient Library of Alexandria is believed to have stood. Its main reading room sits beneath a vast sloping disc-shaped roof, and its granite outer wall is carved with letters from many alphabets. The complex also holds museums, a planetarium and changing exhibitions. It is a modern working library rather than a historic site, and visiting hours and the areas open to the public vary, so check ahead.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/alexandria-catacombs": {
+        "name": "Catacombs of Kom el-Shoqafa and Pompey's Pillar",
+        "description": "A Roman-era burial complex cut deep into the rock and a tall granite column that dominates a hilltop nearby.",
+        "details": "The Catacombs of Kom el-Shoqafa are a funerary complex of the first to second centuries AD, reached by a spiral staircase and cut over three levels, with decoration that blends Egyptian, Greek and Roman styles. Nearby, Pompey's Pillar is a granite column raised in the late third century AD in honour of the emperor Diocletian, and has nothing to do with Pompey despite its name. Both are sites of the older city, which is otherwise largely built over. The catacomb stairs are steep and the passages low and damp.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/alexandria-seafood-lunch": {
+        "name": "Seafood lunch in Alexandria",
+        "description": "A meal of fresh fish and shellfish chosen from the display and grilled or fried to order at a harbourside restaurant.",
+        "details": "Alexandria's restaurants, many of them along the Corniche and near the eastern harbour, are known for seafood that is picked from an iced display by weight and cooked to order, usually grilled, fried or baked. The fish is accompanied by salads, tahini and bread. It is a long, relaxed lunch rather than a quick stop, which fits the pace of a day trip from Cairo. Agree how the fish is priced and weighed before it is cooked.",
+        "interests": [
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/luxor-hot-air-balloon": {
+        "name": "Hot air balloon over Luxor",
+        "description": "A sunrise balloon flight over the west bank, with the temples, tombs and green fields below.",
+        "details": "Balloons lift off from the west bank of Luxor shortly before dawn and drift for around forty-five minutes to an hour over the Theban necropolis, the temple of Hatshepsut and the farmland along the Nile. Flights depend on the wind and are cancelled on days when conditions are not safe, so it is worth leaving a spare morning. Pickup from the hotel is in the dark, often before five. The basket is entered by a short step and holds a handful of people, with a quick, bumpy landing in a field.",
+        "interests": [
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/valley-of-the-kings": {
+        "name": "Valley of the Kings",
+        "description": "The royal burial valley of the New Kingdom pharaohs, with painted tombs cut into the cliffs on the west bank at Luxor.",
+        "details": "For roughly five centuries from the sixteenth century BC the pharaohs of the New Kingdom were buried in rock-cut tombs in this dry valley, among them Tutankhamun, whose small tomb was found almost intact in 1922. Dozens of tombs have been opened, a handful at a time, with painted walls and ceilings in places still vivid. A standard ticket usually allows a choice of a few tombs, and the best known need a separate ticket. Tombs are hot, steep and narrow with crowds in the passages, and the valley itself has no shade, so go early.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/hatshepsut-temple": {
+        "name": "Temple of Hatshepsut",
+        "description": "A terraced mortuary temple cut into the cliffs at Deir el-Bahari, built for one of Egypt's few female pharaohs.",
+        "details": "The mortuary temple of Hatshepsut rises in three colonnaded terraces against a sheer limestone cliff at Deir el-Bahari, built in the fifteenth century BC for the woman who ruled as pharaoh for about two decades. Its design is unusually clean and modern-looking for ancient Egyptian architecture. Reliefs show a trading expedition to the land of Punt. The ramps between terraces are exposed to the sun, and the temple is best visited early or late, with a short walk or tram ride from the parking area.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/colossi-of-memnon": {
+        "name": "Colossi of Memnon",
+        "description": "Two huge seated statues of Amenhotep III standing alone in the fields on the west bank at Luxor.",
+        "details": "The two seated figures, about eighteen metres tall, are all that remains above ground of the mortuary temple of Amenhotep III, once among the largest in Egypt. In antiquity the northern statue was said to sing at dawn, which drew Greek and Roman visitors who left graffiti on its legs. There is nothing else to see at the site, so it is a quick roadside stop that fits naturally between other west bank sights. It is free to view and has no shade.",
+        "interests": [
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/karnak-temple": {
+        "name": "Karnak Temple Complex",
+        "description": "The largest ancient religious complex in Egypt, with a forest of enormous columns in its Great Hypostyle Hall.",
+        "details": "Karnak grew over some two thousand years as successive pharaohs added to the temple of Amun, producing a sprawling complex of pylons, courtyards, obelisks and sacred lakes on the east bank at Luxor. The Great Hypostyle Hall is its centrepiece, with 134 stone columns in sixteen rows, the tallest rising high above visitors. The site is large and much of it is in the open, so a morning visit avoids the worst heat. It is flat but the ground is uneven, and a visit takes at least two hours.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/luxor-temple": {
+        "name": "Luxor Temple",
+        "description": "An ancient riverside temple in the centre of Luxor, lit up in the evening and linked to Karnak by an avenue of sphinxes.",
+        "details": "Luxor Temple was built largely by Amenhotep III and Ramesses II on the east bank of the Nile, and unlike Karnak it sits right in the middle of the modern town. A colossal pair of statues and a single standing obelisk mark the entrance, the second obelisk having been taken to Paris. A restored avenue of sphinxes once connected it to Karnak, some two and a half kilometres away. It is at its best in the evening when floodlit, and it is compact enough to see in an hour.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/dendera-temple": {
+        "name": "Dendera Temple",
+        "description": "A well-preserved temple of the goddess Hathor north of Luxor, with astronomical ceilings and stairways to the roof.",
+        "details": "The Temple of Hathor at Dendera was built mostly in the Ptolemaic and Roman periods and survives in unusually complete form, down to its roof. Its hypostyle hall has columns topped with the face of Hathor, and the ceilings carry astronomical scenes painted in deep blue. Stairways lead up to the roof and to small chapels. It is quieter than the temples at Luxor and is normally visited as a morning excursion by road.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/nile-cruise": {
+        "name": "Nile cruise",
+        "description": "A multi-night river cruise between Luxor and Aswan, with temples reached directly from the moorings.",
+        "details": "Cruise ships on the Nile run between Luxor and Aswan, typically over three to four nights, with the ship serving as both hotel and transport. Stops at Esna, Edfu and Kom Ombo put temples within a short walk or carriage ride of the dock. Shore visits follow the ship's programme, so timings are set by the cruise rather than chosen freely. Nights on the water are usually a mix of docking and sailing, and the decks are a pleasant place to watch village life pass on the banks.",
+        "interests": [
+          "relax",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/edfu-temple": {
+        "name": "Temple of Horus at Edfu",
+        "description": "One of the best-preserved ancient temples in Egypt, a Ptolemaic building with a vast pylon and an almost intact inner sanctuary.",
+        "details": "The Temple of Horus at Edfu was built over roughly two centuries in the Ptolemaic period and is among the most complete ancient temples anywhere in Egypt, its walls still covered in carved scenes and inscriptions. A monumental pylon with two towers fronts it, and the court behind leads to a dark sanctuary. Many visitors arrive by horse-drawn carriage from the dock. It is mostly flat, with some steps at the entrance and in the inner rooms.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/kom-ombo-temple": {
+        "name": "Temple of Kom Ombo",
+        "description": "A riverside temple with two parallel sanctuaries, one to the crocodile god Sobek and one to Horus the Elder.",
+        "details": "The Temple of Kom Ombo stands on a bluff right at the edge of the Nile and is unusual in being a double temple, with a mirrored plan so that each half is dedicated to a different god, Sobek and Horus the Elder. It dates mostly from the Ptolemaic period. A small museum next to it holds mummified crocodiles found in the area. The temple is compact and easy to see in an hour, and especially atmospheric at sunset.",
+        "interests": [
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/philae-temple": {
+        "name": "Philae Temple",
+        "description": "The temple of Isis, moved stone by stone to a new island in the 1970s when the Aswan High Dam flooded its original site.",
+        "details": "Philae was dedicated to the goddess Isis and was one of the last places in Egypt where the ancient religion was practised. When the Aswan High Dam threatened to submerge the original island, the temples were dismantled and rebuilt on Agilkia island nearby in a UNESCO rescue project. Visitors cross to it by small motor boat from a landing near Aswan. The setting on its lake is a large part of the appeal. There are steps and uneven stone paving throughout.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/aswan-felucca": {
+        "name": "Felucca sail around Elephantine Island",
+        "description": "A sail among the granite boulders and islands of the Nile at Aswan, with the Aga Khan mausoleum on the skyline.",
+        "details": "At Aswan the river runs between rocks and islands rather than wide fields, and a felucca is the most relaxed way to move between them. Typical routes pass Elephantine Island, the botanical garden on Kitchener's Island and the hillside tomb of the Aga Khan. Sailing depends on the wind and on a boatman who may row or use a motor when it drops. The felucca has no shade except what is rigged, so sun protection is worth having.",
+        "interests": [
+          "relax",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/nubian-village": {
+        "name": "Nubian village visit",
+        "description": "A visit to a colourfully painted Nubian village on the Nile, with tea, crafts and a look at local home life.",
+        "details": "The Nubian people of southern Egypt and northern Sudan have their own language and traditions, and many were displaced when the High Dam created Lake Nasser. Villages near Aswan, reached by boat, are known for houses painted in bright blues and yellows, crafts and henna. Visits usually include tea or a meal in a family home. The experience is largely commercial, and what you buy or tip is up to you.",
+        "interests": [
+          "authentic_local",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/aswan-souq": {
+        "name": "Aswan souq",
+        "description": "A long market street along the Aswan Corniche selling spices, hibiscus, Nubian crafts and cotton.",
+        "details": "The souq runs along a street parallel to the river in the centre of Aswan and is known for spices, dried hibiscus flowers used for the local drink karkade, henna and Nubian baskets. It is calmer and less pressured than Cairo's bazaars. Bargaining is expected. It livens up in the late afternoon and evening when the heat eases, and many stalls close for a break in the middle of the day.",
+        "interests": [
+          "authentic_local",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/abu-simbel": {
+        "name": "Abu Simbel",
+        "description": "Ramesses II's colossal rock-cut temples on the shore of Lake Nasser, moved to higher ground in the 1960s.",
+        "details": "The two temples at Abu Simbel were carved into a sandstone cliff in the thirteenth century BC, the larger one fronted by four seated statues of Ramesses II about twenty metres tall. When the Aswan High Dam threatened to flood the site, it was cut into blocks and reassembled on higher ground in a UNESCO project in the 1960s. Twice a year the rising sun is said to reach deep into the inner sanctuary. It lies about three hours by road from Aswan, which makes it a very early start and a long day, and the site is hot and shadeless.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/hurghada-beach": {
+        "name": "Red Sea beach day in Hurghada",
+        "description": "A relaxed day on the beach or by the pool at a Red Sea resort, with warm water and desert mountains behind.",
+        "details": "Hurghada stretches for many kilometres along the Red Sea coast, and most of its resorts have their own private beach or sheltered lagoon. The water is warm for much of the year and the sun reliable, so it works well as a restful end to a trip of early starts and temple visits. Sun protection matters, as the light is strong even in winter. Check where public access to the beach is and where reef shoes are advisable.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/giftun-snorkel": {
+        "name": "Boat trip and snorkelling at Giftun Island",
+        "description": "A day boat trip to coral reefs off Hurghada, with snorkelling, swimming and a beach stop.",
+        "details": "Boats run daily from the Hurghada marina to reefs and small islands in the Red Sea, most commonly the islands of the Giftun group, a protected marine area. A day normally includes two or three snorkelling stops over coral gardens, lunch on board and time on a beach. No experience is needed, and masks and fins are usually provided. The sea can be choppy, so people prone to seasickness should take precautions, and a long-sleeved top helps against sunburn.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/hurghada-desert-safari": {
+        "name": "Desert jeep safari and Bedouin dinner",
+        "description": "An afternoon in the desert hills behind the Red Sea coast, ending with a sunset and a Bedouin-style dinner.",
+        "details": "Tours leave the resorts in the afternoon for the Eastern Desert, driving in 4x4s or quad bikes across the rocky plain toward a Bedouin camp. After a stop for sunset, the evening usually includes a simple dinner, tea and some music. It is as much a show as an authentic encounter but is a fun change from the sea. Dust is part of the experience, so a scarf and closed shoes help.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/naama-bay": {
+        "name": "Naama Bay",
+        "description": "The main promenade of Sharm el-Sheikh, with a sandy bay, restaurants and cafes along the seafront.",
+        "details": "Naama Bay is the traditional centre of Sharm el-Sheikh's visitor strip, a curve of beach and a pedestrian promenade lined with restaurants, cafes and shops. It is the most walkable part of the resort area and busiest in the evening. Beaches in front of the hotels can have some coral near the shore. It is flat and easy to stroll.",
+        "interests": [
+          "relax",
+          "food",
+          "nightlife"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "egypt/ras-mohammed": {
+        "name": "Ras Mohammed National Park",
+        "description": "A national park at the southern tip of Sinai, with some of the Red Sea's best coral reefs for snorkelling and diving.",
+        "details": "Ras Mohammed occupies the southernmost point of the Sinai Peninsula, where the Gulf of Suez and the Gulf of Aqaba meet, and is protected for its reefs and the dense marine life along its drop-offs. Snorkelling from the shore is possible at several spots, and dive boats run to the reefs just off the headland. The land side is stark desert with mangroves. Park rules are strict about touching coral and wildlife, and there is little shade onshore.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "egypt/mount-sinai": {
+        "name": "Mount Sinai and St Catherine's Monastery",
+        "description": "A pre-dawn climb of the mountain tradition holds is where Moses received the commandments, followed by a visit to the monastery at its foot.",
+        "details": "Mount Sinai, also called Jabal Musa, rises above St Catherine's Monastery in the high mountains of the south Sinai. A camel path and a long stone staircase lead to the summit, usually climbed in the dark to reach the top for sunrise, then descended to the monastery. The monastery, founded in the sixth century, is among the oldest continuously inhabited Christian monasteries and is a UNESCO World Heritage Site. It is open only for set hours on certain days, so check ahead, and the climb is cold at the top. Check current official travel advice for the Sinai before planning this trip.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "culture"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "egypt/sharm-beach-day": {
+        "name": "Sharm el-Sheikh beach day",
+        "description": "A restful day on one of Sharm el-Sheikh's resort beaches, with snorkelling directly from the shore.",
+        "details": "Many of Sharm's resorts sit beside reefs that can be reached directly from the beach, often by a jetty over the coral, so there is good snorkelling without a boat. Sun and warm water are reliable for most of the year, and the stretch of coast north of Naama Bay is quieter. It is a gentle way to finish a trip that began with early starts at temples. Water shoes are useful where there is coral near the shore.",
+        "interests": [
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "egypt": {
+        "name": "Egypt",
+        "description": "A country of pharaonic temples, desert and Nile valley farmland, with the Red Sea coast adding reefs and beach resorts.",
+        "images": []
+      },
+      "egypt/cairo": {
+        "name": "Cairo",
+        "description": "Egypt's vast capital on the Nile, with medieval bazaars, a hilltop citadel and the pyramids on its western edge.",
+        "images": []
+      },
+      "egypt/giza": {
+        "name": "Giza",
+        "description": "The area west of Cairo across the Nile, home to the great pyramids, the Sphinx and the Grand Egyptian Museum.",
+        "images": []
+      },
+      "egypt/saqqara": {
+        "name": "Saqqara",
+        "description": "The ancient burial ground of Memphis south of Giza, holding the Step Pyramid of Djoser and many painted tombs.",
+        "images": []
+      },
+      "egypt/alexandria": {
+        "name": "Alexandria",
+        "description": "Egypt's Mediterranean port, founded by Alexander the Great, with a seafront fort, a modern library and Roman-era catacombs.",
+        "images": []
+      },
+      "egypt/luxor": {
+        "name": "Luxor",
+        "description": "A Nile town built over ancient Thebes, with Karnak and Luxor Temples on the east bank and the royal tombs of the west bank.",
+        "images": []
+      },
+      "egypt/dendera": {
+        "name": "Dendera",
+        "description": "A village north of Luxor that holds the Ptolemaic Temple of Hathor, one of Egypt's best-preserved temple complexes.",
+        "images": []
+      },
+      "egypt/nile-cruise": {
+        "name": "Nile cruise",
+        "description": "A river cruise between Luxor and Aswan, stopping at temples along the Nile over several nights.",
+        "images": []
+      },
+      "egypt/edfu": {
+        "name": "Edfu",
+        "description": "A Nile town between Luxor and Aswan, home to the Temple of Horus, among the best-preserved ancient temples in Egypt.",
+        "images": []
+      },
+      "egypt/kom-ombo": {
+        "name": "Kom Ombo",
+        "description": "A small Nile town between Edfu and Aswan, known for its riverside double temple to Sobek and Horus.",
+        "images": []
+      },
+      "egypt/aswan": {
+        "name": "Aswan",
+        "description": "A relaxed southern Nile city among granite islands, with Nubian villages, a souq and the road to Abu Simbel.",
+        "images": []
+      },
+      "egypt/abu-simbel": {
+        "name": "Abu Simbel",
+        "description": "A remote site on Lake Nasser with Ramesses II's great rock-cut temples, moved to higher ground in the 1960s.",
+        "images": []
+      },
+      "egypt/red-sea": {
+        "name": "Red Sea",
+        "description": "The governorate along Egypt's Red Sea coast, known for coral reefs, diving and beach resorts backed by desert mountains.",
+        "images": []
+      },
+      "egypt/hurghada": {
+        "name": "Hurghada",
+        "description": "A long strip of Red Sea resorts, used as a base for snorkelling and diving trips to offshore reefs and islands.",
+        "images": []
+      },
+      "egypt/south-sinai": {
+        "name": "South Sinai",
+        "description": "The southern tip of the Sinai Peninsula, taking in Red Sea reefs, desert mountains and St Catherine's Monastery.",
+        "images": []
+      },
+      "egypt/sharm-el-sheikh": {
+        "name": "Sharm el-Sheikh",
+        "description": "A resort town at the tip of the Sinai Peninsula, popular for coral reefs, snorkelling and diving.",
+        "images": []
+      },
+      "egypt/st-catherine": {
+        "name": "St Catherine",
+        "description": "A mountain village in Sinai at the foot of Mount Sinai, with a sixth-century monastery that is still inhabited.",
+        "images": []
+      }
+    }
+  }
+}

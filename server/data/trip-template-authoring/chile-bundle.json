@@ -1,0 +1,1327 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, Rough Guides, Say Hueque and Original Travel itineraries for Chile",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "chile-santiago-valparaiso-6d",
+      "title": "Santiago, Wine and Valparaiso in 6 Days",
+      "summary": "The capital, a winery day and the colourful port of Valparaiso.",
+      "days": 6,
+      "route": "Santiago > Valparaiso",
+      "arrive": "Santiago (SCL)",
+      "depart": "Santiago (SCL)",
+      "countries": [
+        "Chile"
+      ],
+      "regions": [
+        "Santiago Metropolitan",
+        "Valparaiso"
+      ],
+      "cities": [
+        "Santiago",
+        "Valparaiso"
+      ],
+      "imageQuery": "Valparaiso colourful hills",
+      "highlights": [
+        "Cerro San Cristobal",
+        "Casablanca wine",
+        "Valparaiso",
+        "Vina del Mar"
+      ],
+      "destinationKeys": [
+        "chile",
+        "chile/santiago-metropolitan",
+        "chile/santiago",
+        "chile/valparaiso"
+      ],
+      "hero": "chile/valparaiso",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Say Hueque",
+        "Original Travel",
+        "South America Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Santiago",
+          "hotel": "Hotel in Santiago",
+          "start": 0,
+          "nights": 3,
+          "area": "In Lastarria, Bellavista or Providencia for walkability and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Valparaiso",
+          "hotel": "Guesthouse in Valparaiso",
+          "start": 3,
+          "nights": 2,
+          "area": "On Cerro Alegre or Cerro Concepcion, close to viewpoints and cafes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Armas and Cerro San Cristobal",
+          "notes": "Take the funicular; mountains can be hidden by smog in winter.",
+          "where": "Santiago",
+          "book": "",
+          "place": "chile/santiago-centro"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Lastarria and Bellavista walk",
+          "notes": "Streets of murals, wine bars and Neruda house.",
+          "where": "Santiago",
+          "book": "",
+          "place": "chile/santiago-barrios"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Casablanca or Maipo winery day",
+          "notes": "Use a driver or tour for tastings.",
+          "where": "Casablanca Valley",
+          "book": "Yes - book a winery tour",
+          "place": "chile/casablanca-wine"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Valparaiso funiculars, murals and Neruda house",
+          "notes": "Steep lanes; wear good shoes and watch belongings.",
+          "where": "Valparaiso",
+          "book": "",
+          "place": "chile/valparaiso"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Vina del Mar coast",
+          "notes": "Morning fog is common.",
+          "where": "Vina del Mar",
+          "book": "",
+          "place": "chile/vina-del-mar"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Santiago Airport (SCL)",
+          "to": "Santiago hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Santiago",
+          "to": "Valparaiso",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Valparaiso",
+          "to": "Santiago Airport (SCL)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "chile-santiago-atacama-7d",
+      "title": "Santiago and the Atacama Desert in 7 Days",
+      "summary": "Two days in the capital and four nights in San Pedro de Atacama.",
+      "days": 7,
+      "route": "Santiago > San Pedro de Atacama",
+      "arrive": "Santiago (SCL)",
+      "depart": "Calama (CJC)",
+      "countries": [
+        "Chile"
+      ],
+      "regions": [
+        "Santiago Metropolitan",
+        "Antofagasta"
+      ],
+      "cities": [
+        "Santiago",
+        "San Pedro de Atacama"
+      ],
+      "imageQuery": "Atacama Valle de la Luna",
+      "highlights": [
+        "Cerro San Cristobal",
+        "Valle de la Luna",
+        "El Tatio",
+        "Stargazing",
+        "Cejar Lagoon"
+      ],
+      "destinationKeys": [
+        "chile",
+        "chile/santiago-metropolitan",
+        "chile/santiago",
+        "chile/antofagasta",
+        "chile/san-pedro-de-atacama"
+      ],
+      "hero": "chile/san-pedro-de-atacama",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Say Hueque",
+        "Original Travel",
+        "South America Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Santiago",
+          "hotel": "Hotel in Santiago",
+          "start": 0,
+          "nights": 2,
+          "area": "In Lastarria, Bellavista or Providencia for walkability and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San Pedro de Atacama",
+          "hotel": "Lodge in San Pedro de Atacama",
+          "start": 2,
+          "nights": 4,
+          "area": "In San Pedro village or a nearby lodge, with a pool for the afternoon heat",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Armas and Cerro San Cristobal",
+          "notes": "Take the funicular; mountains can be hidden by smog in winter.",
+          "where": "Santiago",
+          "book": "",
+          "place": "chile/santiago-centro"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "21:00",
+          "duration": "2h",
+          "name": "Atacama stargazing",
+          "notes": "Dress warmly; the Milky Way is best around new moon.",
+          "where": "San Pedro de Atacama",
+          "book": "Yes - book an astronomy tour",
+          "place": "chile/atacama-stargazing"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "4h",
+          "name": "Valle de la Luna at sunset",
+          "notes": "Take water and a jacket.",
+          "where": "San Pedro de Atacama",
+          "book": "Yes - book a sunset tour",
+          "place": "chile/valle-de-la-luna"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "04:30",
+          "duration": "6h",
+          "name": "El Tatio geysers at dawn",
+          "notes": "Very cold at dawn and at 4,300 metres; dress warmly.",
+          "where": "El Tatio",
+          "book": "Yes - book a dawn tour",
+          "place": "chile/el-tatio"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "5h",
+          "name": "Salt flat, Laguna Chaxa and altiplanic lagoons",
+          "notes": "Altitude over 4,000 metres at the lagoons.",
+          "where": "Atacama",
+          "book": "Yes - book a day tour",
+          "place": "chile/atacama-lagoons-salar"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "4h",
+          "name": "Cejar Lagoon floating and sunset at Tebinquiche",
+          "notes": "Check that bathing is open; rinse after floating.",
+          "where": "Atacama",
+          "book": "Yes - book the tour",
+          "place": "chile/lagunas-cejar"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Santiago Airport (SCL)",
+          "to": "Santiago hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Santiago hotel area",
+          "to": "Santiago Airport (SCL)",
+          "time": "07:00",
+          "minutes": 35,
+          "carrier": "Airport transfer or taxi",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Calama Airport (CJC)",
+          "to": "San Pedro de Atacama",
+          "time": "11:00",
+          "minutes": 100,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "San Pedro de Atacama",
+          "to": "Calama Airport (CJC)",
+          "time": "09:00",
+          "minutes": 100,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "chile-santiago-torres-del-paine-8d",
+      "title": "Santiago and Torres del Paine in 8 Days",
+      "summary": "The capital, a flight south and the granite spires of Patagonia.",
+      "days": 8,
+      "route": "Santiago > Puerto Natales > Torres del Paine",
+      "arrive": "Santiago (SCL)",
+      "depart": "Punta Arenas (PUQ)",
+      "countries": [
+        "Chile"
+      ],
+      "regions": [
+        "Santiago Metropolitan",
+        "Magallanes"
+      ],
+      "cities": [
+        "Santiago",
+        "Puerto Natales",
+        "Torres del Paine"
+      ],
+      "imageQuery": "Torres del Paine towers lake",
+      "highlights": [
+        "Cerro San Cristobal",
+        "Base of the Towers",
+        "Grey Glacier",
+        "Paine viewpoints"
+      ],
+      "destinationKeys": [
+        "chile",
+        "chile/santiago-metropolitan",
+        "chile/santiago",
+        "chile/magallanes",
+        "chile/puerto-natales",
+        "chile/torres-del-paine"
+      ],
+      "hero": "chile/torres-del-paine",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Say Hueque",
+        "Original Travel",
+        "South America Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Santiago",
+          "hotel": "Hotel in Santiago",
+          "start": 0,
+          "nights": 2,
+          "area": "In Lastarria, Bellavista or Providencia for walkability and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Natales",
+          "hotel": "Hotel in Puerto Natales",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the waterfront in Puerto Natales, close to restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Torres del Paine",
+          "hotel": "Lodge in Torres del Paine",
+          "start": 4,
+          "nights": 3,
+          "area": "In a lodge inside or at the edge of Torres del Paine; book far ahead",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Armas and Cerro San Cristobal",
+          "notes": "Take the funicular; mountains can be hidden by smog in winter.",
+          "where": "Santiago",
+          "book": "",
+          "place": "chile/santiago-centro"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "16:00",
+          "duration": "3h",
+          "name": "Lastarria and Bellavista walk",
+          "notes": "Streets of murals, wine bars and Neruda house.",
+          "where": "Santiago",
+          "book": "",
+          "place": "chile/santiago-barrios"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Milodon Cave and Puerto Natales",
+          "notes": "A gentle half-day before the park.",
+          "where": "Puerto Natales",
+          "book": "",
+          "place": "chile/milodon-cave"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Paine viewpoints and wildlife day",
+          "notes": "Guanacos and condors are likely; a moderate day.",
+          "where": "Torres del Paine",
+          "book": "",
+          "place": "chile/paine-viewpoints"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Base of the Towers hike",
+          "notes": "About 18 kilometres return; weather changes fast.",
+          "where": "Torres del Paine",
+          "book": "",
+          "place": "chile/torres-base-hike"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Santiago Airport (SCL)",
+          "to": "Santiago hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Santiago hotel area",
+          "to": "Santiago Airport (SCL)",
+          "time": "07:00",
+          "minutes": 35,
+          "carrier": "Airport transfer or taxi",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Punta Arenas Airport (PUQ)",
+          "to": "Puerto Natales",
+          "time": "12:00",
+          "minutes": 180,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Puerto Natales",
+          "to": "Torres del Paine",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Torres del Paine",
+          "to": "Punta Arenas Airport (PUQ)",
+          "time": "07:00",
+          "minutes": 330,
+          "carrier": "Rental car or private transfer",
+          "notes": "A long transfer; confirm timing with the lodge.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "chile-santiago-atacama-patagonia-10d",
+      "title": "Chile Desert to Glaciers in 10 Days",
+      "summary": "Santiago, three nights in the Atacama and three in Patagonia.",
+      "days": 10,
+      "route": "Santiago > San Pedro de Atacama > Puerto Natales > Torres del Paine",
+      "arrive": "Santiago (SCL)",
+      "depart": "Punta Arenas (PUQ)",
+      "countries": [
+        "Chile"
+      ],
+      "regions": [
+        "Santiago Metropolitan",
+        "Antofagasta",
+        "Magallanes"
+      ],
+      "cities": [
+        "Santiago",
+        "San Pedro de Atacama",
+        "Puerto Natales",
+        "Torres del Paine"
+      ],
+      "imageQuery": "Chile Atacama and Patagonia",
+      "highlights": [
+        "Valle de la Luna",
+        "Stargazing",
+        "Base of the Towers",
+        "Grey Glacier"
+      ],
+      "destinationKeys": [
+        "chile",
+        "chile/santiago-metropolitan",
+        "chile/santiago",
+        "chile/antofagasta",
+        "chile/san-pedro-de-atacama",
+        "chile/magallanes",
+        "chile/puerto-natales",
+        "chile/torres-del-paine"
+      ],
+      "hero": "chile/antofagasta",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Say Hueque",
+        "Original Travel",
+        "South America Vacations"
+      ],
+      "pace": "F",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Santiago",
+          "hotel": "Hotel in Santiago",
+          "start": 0,
+          "nights": 2,
+          "area": "In Lastarria, Bellavista or Providencia for walkability and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San Pedro de Atacama",
+          "hotel": "Lodge in San Pedro de Atacama",
+          "start": 2,
+          "nights": 3,
+          "area": "In San Pedro village or a nearby lodge, with a pool for the afternoon heat",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Natales",
+          "hotel": "Hotel in Puerto Natales",
+          "start": 5,
+          "nights": 1,
+          "area": "Near the waterfront in Puerto Natales, close to restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Torres del Paine",
+          "hotel": "Lodge in Torres del Paine",
+          "start": 6,
+          "nights": 3,
+          "area": "In a lodge inside or at the edge of Torres del Paine; book far ahead",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Armas and Cerro San Cristobal",
+          "notes": "Take the funicular; mountains can be hidden by smog in winter.",
+          "where": "Santiago",
+          "book": "",
+          "place": "chile/santiago-centro"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "4h",
+          "name": "Valle de la Luna at sunset",
+          "notes": "Take water and a jacket.",
+          "where": "San Pedro de Atacama",
+          "book": "Yes - book a sunset tour",
+          "place": "chile/valle-de-la-luna"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "21:00",
+          "duration": "2h",
+          "name": "Atacama stargazing",
+          "notes": "Dress warmly; the Milky Way is best around new moon.",
+          "where": "San Pedro de Atacama",
+          "book": "Yes - book an astronomy tour",
+          "place": "chile/atacama-stargazing"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "04:30",
+          "duration": "6h",
+          "name": "El Tatio geysers at dawn",
+          "notes": "Very cold at dawn and at 4,300 metres; dress warmly.",
+          "where": "El Tatio",
+          "book": "Yes - book a dawn tour",
+          "place": "chile/el-tatio"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Milodon Cave and Puerto Natales",
+          "notes": "A gentle half-day before the park.",
+          "where": "Puerto Natales",
+          "book": "",
+          "place": "chile/milodon-cave"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Base of the Towers hike",
+          "notes": "About 18 kilometres return; weather changes fast.",
+          "where": "Torres del Paine",
+          "book": "",
+          "place": "chile/torres-base-hike"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Grey Glacier boat trip",
+          "notes": "Wind off the ice is cold.",
+          "where": "Torres del Paine",
+          "book": "Yes - book the boat",
+          "place": "chile/grey-glacier"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Santiago Airport (SCL)",
+          "to": "Santiago hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Santiago hotel area",
+          "to": "Santiago Airport (SCL)",
+          "time": "07:00",
+          "minutes": 35,
+          "carrier": "Airport transfer or taxi",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Calama Airport (CJC)",
+          "to": "San Pedro de Atacama",
+          "time": "11:00",
+          "minutes": 100,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "San Pedro de Atacama",
+          "to": "Calama Airport (CJC)",
+          "time": "06:00",
+          "minutes": 100,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Punta Arenas Airport (PUQ)",
+          "to": "Puerto Natales",
+          "time": "15:00",
+          "minutes": 180,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Puerto Natales",
+          "to": "Torres del Paine",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Torres del Paine",
+          "to": "Punta Arenas Airport (PUQ)",
+          "time": "07:00",
+          "minutes": 330,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "chile-complete-14d",
+      "title": "Complete Chile in 14 Days",
+      "summary": "Santiago, Valparaiso, the Atacama and Torres del Paine at an unhurried pace.",
+      "days": 14,
+      "route": "Santiago > Valparaiso > San Pedro de Atacama > Puerto Natales > Torres del Paine",
+      "arrive": "Santiago (SCL)",
+      "depart": "Punta Arenas (PUQ)",
+      "countries": [
+        "Chile"
+      ],
+      "regions": [
+        "Santiago Metropolitan",
+        "Valparaiso",
+        "Antofagasta",
+        "Magallanes"
+      ],
+      "cities": [
+        "Santiago",
+        "Valparaiso",
+        "San Pedro de Atacama",
+        "Puerto Natales",
+        "Torres del Paine"
+      ],
+      "imageQuery": "Torres del Paine Chile Patagonia",
+      "highlights": [
+        "Valparaiso",
+        "El Tatio",
+        "Atacama lagoons",
+        "Base of the Towers",
+        "Grey Glacier"
+      ],
+      "destinationKeys": [
+        "chile",
+        "chile/santiago-metropolitan",
+        "chile/santiago",
+        "chile/valparaiso",
+        "chile/antofagasta",
+        "chile/san-pedro-de-atacama",
+        "chile/magallanes",
+        "chile/puerto-natales",
+        "chile/torres-del-paine"
+      ],
+      "hero": "chile/santiago",
+      "sources": [
+        "KimKim",
+        "Rough Guides",
+        "Say Hueque",
+        "Original Travel",
+        "South America Vacations"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Santiago",
+          "hotel": "Hotel in Santiago",
+          "start": 0,
+          "nights": 2,
+          "area": "In Lastarria, Bellavista or Providencia for walkability and food",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Valparaiso",
+          "hotel": "Guesthouse in Valparaiso",
+          "start": 2,
+          "nights": 2,
+          "area": "On Cerro Alegre or Cerro Concepcion, close to viewpoints and cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San Pedro de Atacama",
+          "hotel": "Lodge in San Pedro de Atacama",
+          "start": 4,
+          "nights": 4,
+          "area": "In San Pedro village or a nearby lodge, with a pool for the afternoon heat",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Puerto Natales",
+          "hotel": "Hotel in Puerto Natales",
+          "start": 8,
+          "nights": 2,
+          "area": "Near the waterfront in Puerto Natales, close to restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Torres del Paine",
+          "hotel": "Lodge in Torres del Paine",
+          "start": 10,
+          "nights": 3,
+          "area": "In a lodge inside or at the edge of Torres del Paine; book far ahead",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Plaza de Armas and Cerro San Cristobal",
+          "notes": "Take the funicular; mountains can be hidden by smog in winter.",
+          "where": "Santiago",
+          "book": "",
+          "place": "chile/santiago-centro"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Valparaiso funiculars, murals and Neruda house",
+          "notes": "Steep lanes; wear good shoes and watch belongings.",
+          "where": "Valparaiso",
+          "book": "",
+          "place": "chile/valparaiso"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Vina del Mar coast",
+          "notes": "Morning fog is common.",
+          "where": "Vina del Mar",
+          "book": "",
+          "place": "chile/vina-del-mar"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "4h",
+          "name": "Valle de la Luna at sunset",
+          "notes": "Take water and a jacket.",
+          "where": "San Pedro de Atacama",
+          "book": "Yes - book a sunset tour",
+          "place": "chile/valle-de-la-luna"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "21:00",
+          "duration": "2h",
+          "name": "Atacama stargazing",
+          "notes": "Dress warmly; the Milky Way is best around new moon.",
+          "where": "San Pedro de Atacama",
+          "book": "Yes - book an astronomy tour",
+          "place": "chile/atacama-stargazing"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "04:30",
+          "duration": "6h",
+          "name": "El Tatio geysers at dawn",
+          "notes": "Very cold at dawn and at 4,300 metres; dress warmly.",
+          "where": "El Tatio",
+          "book": "Yes - book a dawn tour",
+          "place": "chile/el-tatio"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "4h",
+          "name": "Cejar Lagoon floating and sunset at Tebinquiche",
+          "notes": "Check that bathing is open; rinse after floating.",
+          "where": "Atacama",
+          "book": "Yes - book the tour",
+          "place": "chile/lagunas-cejar"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Milodon Cave and Puerto Natales",
+          "notes": "A gentle half-day before the park.",
+          "where": "Puerto Natales",
+          "book": "",
+          "place": "chile/milodon-cave"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Paine viewpoints and wildlife day",
+          "notes": "Guanacos and condors are likely; a moderate day.",
+          "where": "Torres del Paine",
+          "book": "",
+          "place": "chile/paine-viewpoints"
+        },
+        {
+          "day": 12,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "9h",
+          "name": "Base of the Towers hike",
+          "notes": "About 18 kilometres return; weather changes fast.",
+          "where": "Torres del Paine",
+          "book": "",
+          "place": "chile/torres-base-hike"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Santiago Airport (SCL)",
+          "to": "Santiago hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Santiago",
+          "to": "Valparaiso",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Valparaiso",
+          "to": "Santiago Airport (SCL)",
+          "time": "06:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Calama Airport (CJC)",
+          "to": "San Pedro de Atacama",
+          "time": "13:00",
+          "minutes": 100,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "San Pedro de Atacama",
+          "to": "Calama Airport (CJC)",
+          "time": "06:00",
+          "minutes": 100,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Punta Arenas Airport (PUQ)",
+          "to": "Puerto Natales",
+          "time": "15:00",
+          "minutes": 180,
+          "carrier": "Airport transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Puerto Natales",
+          "to": "Torres del Paine",
+          "time": "08:00",
+          "minutes": 150,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Torres del Paine",
+          "to": "Punta Arenas Airport (PUQ)",
+          "time": "07:00",
+          "minutes": 330,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "chile/santiago-centro": {
+        "name": "Plaza de Armas and Cerro San Cristobal",
+        "description": "The colonial heart of Santiago and a hilltop park with a funicular and a view of the Andes.",
+        "details": "Plaza de Armas has the cathedral and the national history museum, and the Mercado Central nearby is the place for seafood. Cerro San Cristobal rises above Providencia with a funicular, a statue of the Virgin and a view of the city and the Andes on clear days. Smog can hide the mountains in winter.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "chile/santiago-barrios": {
+        "name": "Bellavista, Lastarria and the markets",
+        "description": "Bohemian neighbourhoods of murals, cafes and bars, plus La Vega fresh market.",
+        "details": "Lastarria and Bellavista have street art, bookshops, wine bars and the house of Pablo Neruda, La Chascona. La Vega Central is a busy market for fruit and everyday food. Evenings are lively and safe in the main streets.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "chile/casablanca-wine": {
+        "name": "Casablanca and Maipo Valley wineries",
+        "description": "Cool-climate vineyards for white wines and Carmenere reds within an hour of Santiago.",
+        "details": "Casablanca Valley is known for sauvignon blanc and chardonnay and sits on the way to the coast, and Maipo is famous for cabernet near the city. A winery day gives tastings with lunch. Book through a tour or driver.",
+        "interests": [
+          "food",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "chile/valparaiso": {
+        "name": "Valparaiso funiculars and street art",
+        "description": "A port city of hillside houses, murals, funicular lifts and ocean views, a UNESCO site.",
+        "details": "Valparaiso spills down steep hills to the Pacific, with colourful houses, ascensores (funicular lifts) and murals around Cerro Alegre and Cerro Concepcion. Neruda La Sebastiana house is a highlight. Wear good shoes for the steep lanes and watch your belongings.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "chile/vina-del-mar": {
+        "name": "Vina del Mar and the coast",
+        "description": "A seaside resort city with a flower clock, gardens and beaches, a short bus ride from Valparaiso.",
+        "details": "Vina del Mar has a beach promenade, the Quinta Vergara gardens and the Wulff Castle. It is a more orderly counterpart to Valparaiso. The Pacific water is cold, and fog is common in the morning.",
+        "interests": [
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "chile/valle-de-la-luna": {
+        "name": "Valle de la Luna",
+        "description": "A desert landscape of salt formations and dunes near San Pedro de Atacama, best at sunset.",
+        "details": "The Moon Valley is a protected area of eroded rock, sand dunes and salt crusts. Most visits end with sunset from a viewpoint on the Amphitheatre, with colour shifting across the Andes. Bring water, sun cream and a jacket for after dark.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "chile/el-tatio": {
+        "name": "El Tatio geysers",
+        "description": "A high-altitude geyser field best seen at dawn, with steam columns in freezing air.",
+        "details": "El Tatio sits at about 4,300 metres and the geysers erupt most strongly in the cold dawn. Tours leave around 4am, so dress in very warm layers and expect altitude effects. Some tours include a hot-spring dip and breakfast.",
+        "interests": [
+          "adventure",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "chile/atacama-lagoons-salar": {
+        "name": "Atacama Salt Flat and altiplanic lagoons",
+        "description": "A salt flat with flamingos and high mountain lakes beneath volcanoes.",
+        "details": "The Salar de Atacama has flamingos at Laguna Chaxa. Further up, the Altiplanic lagoons at Miscanti and Meniques are bright blue under volcanic peaks at over 4,000 metres. Most tours combine them with stops in small villages.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "chile/atacama-stargazing": {
+        "name": "Atacama stargazing",
+        "description": "One of the clearest night skies on earth, seen through telescopes with an astronomer.",
+        "details": "The dry air and altitude of the Atacama give extraordinary star visibility. Evening tours from San Pedro use telescopes and explain the southern constellations. The Milky Way is especially good around new moon. Dress warmly, because nights are very cold.",
+        "interests": [
+          "relax",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "chile/lagunas-cejar": {
+        "name": "Cejar Lagoon and floating",
+        "description": "A salt lagoon where you float like in the Dead Sea, followed by a sunset at Tebinquiche.",
+        "details": "Laguna Cejar is so salty that swimmers float effortlessly. The tour usually adds the Ojos del Salar sinkholes and sunset drinks at Laguna Tebinquiche. Rinse off with fresh water afterwards. Check that the lagoons are open to bathing, because access rules change.",
+        "interests": [
+          "relax",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "chile/torres-base-hike": {
+        "name": "Base of the Towers hike",
+        "description": "The classic day hike in Torres del Paine, to a glacial lake beneath three granite spires.",
+        "details": "The trail from Hotel Las Torres rises through forest and over a moraine to a lake at the foot of the Towers. It is about 18 kilometres return and takes 8 to 9 hours. Weather is changeable and winds strong, so pack layers and waterproofs. Entry to the park requires a ticket.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "chile/grey-glacier": {
+        "name": "Grey Glacier and Lake Grey",
+        "description": "A boat trip to the face of Grey Glacier, or a walk to the Mirador, with floating icebergs.",
+        "details": "Grey Glacier flows into Lake Grey in the west of the park, and icebergs drift across the lake. Boat trips from the Paine Grande area approach the face. A walk to the viewpoint is an easier option. Dress very warm, because wind off the ice is cold.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "chile/paine-viewpoints": {
+        "name": "Torres del Paine viewpoints and wildlife",
+        "description": "A drive between waterfalls, lakes and viewpoints, with guanacos and condors.",
+        "details": "A day tour or self-drive visits Salto Grande, Lake Pehoe, Mirador Cuernos and the Lago Sarmiento steppe. Guanaco herds are common and condors circle above. This is a good option for those who prefer a moderate day to a long hike.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "chile/milodon-cave": {
+        "name": "Milodon Cave and Puerto Natales",
+        "description": "A giant cave where remains of an extinct ground sloth were found, near a quiet port town.",
+        "details": "The Cueva del Milodon is a short drive from Puerto Natales and has a replica of the giant sloth. Puerto Natales has a waterfront, restaurants serving lamb and king crab, and outfitters for the park. It is a gentle half-day.",
+        "interests": [
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "chile": {
+        "name": "Chile",
+        "description": "A narrow country from the driest desert on earth to Patagonian glaciers.",
+        "images": []
+      },
+      "chile/santiago-metropolitan": {
+        "name": "Santiago Metropolitan",
+        "description": "The region of the capital, Andean views and wine valleys.",
+        "images": []
+      },
+      "chile/santiago": {
+        "name": "Santiago",
+        "description": "The capital, set below the Andes, with hills, museums and a good food scene.",
+        "images": []
+      },
+      "chile/valparaiso": {
+        "name": "Valparaiso",
+        "description": "A hillside port city of murals, funiculars and bohemian charm.",
+        "images": []
+      },
+      "chile/antofagasta": {
+        "name": "Antofagasta",
+        "description": "The northern region that holds the Atacama Desert.",
+        "images": []
+      },
+      "chile/san-pedro-de-atacama": {
+        "name": "San Pedro de Atacama",
+        "description": "An adobe desert village, the base for geysers, lagoons and star tours.",
+        "images": []
+      },
+      "chile/magallanes": {
+        "name": "Magallanes",
+        "description": "The far southern region of Patagonia, fiords and glaciers.",
+        "images": []
+      },
+      "chile/puerto-natales": {
+        "name": "Puerto Natales",
+        "description": "A quiet port and gateway to Torres del Paine.",
+        "images": []
+      },
+      "chile/torres-del-paine": {
+        "name": "Torres del Paine",
+        "description": "A national park of granite spires, glaciers and turquoise lakes.",
+        "images": []
+      }
+    }
+  }
+}

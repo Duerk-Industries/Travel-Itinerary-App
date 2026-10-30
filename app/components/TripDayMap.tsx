@@ -4,7 +4,7 @@ import { useAutomaticMapLocations } from '../hooks/useAutomaticMapLocations';
 import TripMap from './TripMap';
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Icon from './Icon';
 import { buildTripDayMapUrl, type TripMapPoint, type TripMapPointKind } from '../utils/googleMaps';
 
 type TripDayMapProps = {
@@ -24,19 +24,8 @@ const LEGEND_ORDER: TripMapPointKind[] = ['flight', 'lodging', 'activity', 'car_
 
 const LEGEND_ENTRY = (_theme: import('../theme/theme').AppTheme): Record<TripMapPointKind, { label: string; color: string }> => themeStyle('components_TripDayMap_1', {  }, _theme);
 
-// Small teardrop pin, same silhouette as the markers Google Static Maps draws
-// on the image itself, so the legend keys visually match what's pinned above.
-const LegendPin: React.FC<{ color: string }> = ({ color }) => { const _styleTheme = useStyleTheme(); return ((
-  <Svg width={14} height={18} viewBox="0 0 24 24">
-    <Path
-      d="M12 1.5C7.31 1.5 3.5 5.28 3.5 9.9c0 6.2 7.2 12.02 8.06 12.7a.7.7 0 0 0 .88 0c.86-.68 8.06-6.5 8.06-12.7 0-4.62-3.81-8.4-8.5-8.4z"
-      fill={color}
-      stroke={themeStyle('components_TripDayMap_3', {  }, _styleTheme)}
-      strokeWidth={1}
-    />
-    <Circle cx={12} cy={9.9} r={2.9} fill={themeStyle('components_TripDayMap_4', {  }, _styleTheme)} />
-  </Svg>
-)); };
+// Keep the map's category colors while sharing the app's line-pin geometry.
+const LegendPin: React.FC<{ color: string }> = ({ color }) => <Icon name="pin" size={18} color={color} />;
 
 /**
  * Static, multi-pin map for one day of an itinerary (flights, lodging,

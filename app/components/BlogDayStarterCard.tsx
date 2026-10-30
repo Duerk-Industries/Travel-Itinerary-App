@@ -1,4 +1,5 @@
 // @ts-nocheck
+import IconText from './IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // @ts-nocheck
@@ -46,7 +47,7 @@ const BlogDayStarterCard: React.FC<Props> = ({
     style={themeStyle('components_BlogDayStarterCard_1', { borderColor: borderColor, backgroundColor: backgroundColor }, _styleTheme)}
   >
     <View style={themeStyle('components_BlogDayStarterCard_2', {  }, _styleTheme)}>
-      <Text style={themeStyle('components_BlogDayStarterCard_3', { displayFont: displayFont, accentColor: accentColor }, _styleTheme)}>✨ Day Starter</Text>
+      <IconText style={themeStyle('components_BlogDayStarterCard_3', { displayFont: displayFont, accentColor: accentColor }, _styleTheme)}>✨ Day Starter</IconText>
       <TouchableOpacity
         testID={testID ? `${testID}-dismiss` : undefined}
         accessibilityRole="button"
@@ -55,7 +56,7 @@ const BlogDayStarterCard: React.FC<Props> = ({
         disabled={busy}
         style={themeStyle('components_BlogDayStarterCard_4', {  }, _styleTheme)}
       >
-        <Text style={themeStyle('components_BlogDayStarterCard_5', { mutedColor: mutedColor }, _styleTheme)}>✕</Text>
+        <IconText style={themeStyle('components_BlogDayStarterCard_5', { mutedColor: mutedColor }, _styleTheme)}>✕</IconText>
       </TouchableOpacity>
     </View>
 

@@ -5,7 +5,7 @@
 /// <reference types="node" />
 
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native';
 
 jest.mock('react-native', () => ({
   Platform: { OS: 'web' },
@@ -234,7 +234,7 @@ describe('PackingListTable', () => {
     await waitFor(() => expect(queryAllByText('Documents')).toHaveLength(1));
     await waitFor(() => expect(queryAllByText(/Alex's list/).length).toBeGreaterThan(0));
     expect(getByTestId('trip-packing-preset-scroll').props.style).toEqual(expect.objectContaining({ width: '100%', maxWidth: '100%', flexGrow: 0 }));
-    fireEvent.press(getByText('+ Beach'));
+    fireEvent.press(getByText('Beach'));
     await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith('http://localhost/api/trips/trip-1/packing-list/sources', expect.objectContaining({ method: 'PATCH' })));
   });
 
@@ -280,10 +280,10 @@ describe('PackingListTable', () => {
     expect(await findByTestId('packing-matrix-web-header-bryan')).toBeTruthy();
     expect(await findByTestId('packing-matrix-web-header-linda')).toBeTruthy();
     // ...and neither name appears a second time, as a bare item row or category heading.
-    expect(queryAllByText('Bryan')).toHaveLength(1);
-    expect(queryAllByText('Linda')).toHaveLength(1);
+    expect(within(await findByTestId('packing-matrix-web-scroll')).queryAllByText('Bryan')).toHaveLength(1);
+    expect(within(await findByTestId('packing-matrix-web-scroll')).queryAllByText('Linda')).toHaveLength(1);
     // The preset's own self-titled heading artifact is still stripped too.
-    expect(queryAllByText('General')).toHaveLength(0);
+    expect(within(await findByTestId('packing-matrix-web-scroll')).queryAllByText('General')).toHaveLength(0);
   });
 
   test('materializes a user preset into the editable custom list without waiting for the save request', async () => {

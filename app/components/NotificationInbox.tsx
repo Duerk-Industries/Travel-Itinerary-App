@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { ThemedText as Text } from './ThemedText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -121,7 +122,7 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
   if (!enabled) return null;
   const buttonStyle = themeStyle('components_NotificationInbox_1', {  }, _styleTheme);
   return <>
-    <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Notifications, ${count} unread`} onPress={() => { setOpen(true); void load(); }} style={buttonStyle}><Text>🔔{count ? ` ${count}` : ''}</Text></TouchableOpacity>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Notifications, ${count} unread`} onPress={() => { setOpen(true); void load(); }} style={buttonStyle}><IconText>🔔{count ? ` ${count}` : ''}</IconText></TouchableOpacity>
     <Modal visible={open} transparent animationType="none" onRequestClose={() => setOpen(false)}>
       <View style={themeStyle('components_NotificationInbox_2', {  }, _styleTheme)}>
         <View accessibilityViewIsModal style={themeStyle('components_NotificationInbox_3', {  }, _styleTheme)}>
@@ -163,7 +164,7 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
                   <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void saveTiming(preference, true)}><Text>Turn quiet hours off</Text></TouchableOpacity>
                 </View>}
                 {(['inApp', 'push', 'email'] as const).map(channel => <TouchableOpacity key={channel} style={buttonStyle} accessibilityRole="checkbox" accessibilityState={{ checked: preference[channel] }} accessibilityLabel={`${LABELS[preference.category] || preference.category} ${channel}`}
-                  onPress={() => void toggle(preference, channel)}><Text>{preference[channel] ? '☑' : '☐'} {channel === 'inApp' ? 'Inbox' : channel === 'push' ? 'Mobile alerts' : 'Email'}</Text></TouchableOpacity>)}
+                  onPress={() => void toggle(preference, channel)}><IconText>{preference[channel] ? '☑' : '☐'} {channel === 'inApp' ? 'Inbox' : channel === 'push' ? 'Mobile alerts' : 'Email'}</IconText></TouchableOpacity>)}
               </View>)}
               <TouchableOpacity style={buttonStyle} onPress={() => setSettings(false)}><Text>Back to updates</Text></TouchableOpacity>
             </> : <>

@@ -299,11 +299,7 @@ describe('Overview edit controls', () => {
     });
 
     act(() => {
-      const addTravelerNode = findByText(root, '+ Add traveler');
-      if (!addTravelerNode?.parent?.props.onPress) {
-        throw new Error('Add Traveler button not found.');
-      }
-      addTravelerNode.parent.props.onPress();
+      root.findByProps({ testID: 'overview-add-traveler' }).props.onPress();
     });
 
     const firstNameInput = root.findAllByProps({ placeholder: 'First name' })[0];

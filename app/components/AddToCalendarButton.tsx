@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useContext, useState } from 'react';
@@ -24,7 +25,7 @@ export default function AddToCalendarButton({ event, styles, compact = false }: 
         finally { setBusy(false); }
       }}>
       {compact
-        ? <Text style={[styles.buttonText, themeStyle('components_AddToCalendarButton_3', {  }, _styleTheme)]}>{busy ? '…' : '📅'}</Text>
+        ? <IconText style={[styles.buttonText, themeStyle('components_AddToCalendarButton_3', {  }, _styleTheme)]}>{busy ? '…' : '📅'}</IconText>
         : <Text style={styles.buttonText}>{busy ? 'Opening calendar…' : 'Add to calendar'}</Text>}
     </TouchableOpacity>
     {error ? <Text accessibilityRole="alert" style={styles.helperText}>{error}</Text> : null}

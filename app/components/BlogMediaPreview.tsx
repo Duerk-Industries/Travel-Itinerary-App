@@ -1,4 +1,5 @@
 // @ts-nocheck
+import IconText from './IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // @ts-nocheck
@@ -63,7 +64,7 @@ export const BlogMediaPreview = ({ item, backgroundColor, tileHeight = null }) =
     return (
       <View style={themeStyle('components_BlogMediaPreview_3', { backgroundColor: backgroundColor }, _styleTheme)}>
         <TouchableOpacity accessibilityRole="button" disabled={!mediaUrl} onPress={() => mediaUrl && Linking.openURL(mediaUrl)} style={themeStyle('components_BlogMediaPreview_4', {  }, _styleTheme)}>
-          <Text style={themeStyle('components_BlogMediaPreview_5', {  }, _styleTheme)}>▶ Play voice note</Text>
+          <IconText style={themeStyle('components_BlogMediaPreview_5', {  }, _styleTheme)}>▶ Play voice note</IconText>
         </TouchableOpacity>
       </View>
     );

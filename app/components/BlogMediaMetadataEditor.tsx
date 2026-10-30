@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -161,7 +162,7 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         style={themeStyle('components_BlogMediaMetadataEditor_5', { textColor: textColor, isDecorative: isDecorative, borderColor: borderColor }, (theme ?? _styleTheme))}
       />
       <TouchableOpacity testID="blog-media-decorative-toggle" accessibilityRole="checkbox" accessibilityState={{ checked: isDecorative }} onPress={() => { setIsDecorative((value) => !value); setNotice(''); }} style={themeStyle('components_BlogMediaMetadataEditor_6', {  }, (theme ?? _styleTheme))}>
-        <Text style={themeStyle('components_BlogMediaMetadataEditor_7', { textColor: textColor }, (theme ?? _styleTheme))}>{isDecorative ? '☑' : '☐'}</Text>
+        <IconText style={themeStyle('components_BlogMediaMetadataEditor_7', { textColor: textColor }, (theme ?? _styleTheme))}>{isDecorative ? '☑' : '☐'}</IconText>
         <Text style={themeStyle('components_BlogMediaMetadataEditor_8', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Decorative image (no alt text needed)</Text>
       </TouchableOpacity>
       <View style={themeStyle('components_BlogMediaMetadataEditor_9', {  }, (theme ?? _styleTheme))}>
@@ -180,9 +181,9 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
             onPress={toggleRecording}
             style={[styles?.button, themeStyle('components_BlogMediaMetadataEditor_12', { recordingState: recordingState, accentColor: accentColor }, (theme ?? _styleTheme))]}
           >
-            <Text style={styles?.buttonText}>
+            <IconText style={styles?.buttonText}>
               {recordingState === 'recording' ? '● Stop' : recordingState === 'transcribing' ? 'Transcribing…' : '🎙 Record caption'}
-            </Text>
+            </IconText>
           </TouchableOpacity>
         ) : null}
       </View>

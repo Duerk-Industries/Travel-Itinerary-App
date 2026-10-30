@@ -6529,11 +6529,48 @@ const styleFactories = {
   // tabs/ledger.tsx
   tabs_ledger_30: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginLeft: 'auto' }),
   // tabs/ledger.tsx
+  transferSummary: (theme: AppTheme, {}: ThemeStyleValues): any => ({
+    summary: { paddingVertical: 6, gap: 2 },
+    routeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    route: { fontSize: theme.typography.body, fontWeight: theme.typography.weightSemibold,
+      color: theme.colors.linkText, flexShrink: 1, flexWrap: 'wrap', textDecorationLine: 'underline' },
+    detail: { color: theme.colors.textMuted, marginBottom: 8, fontSize: theme.typography.small },
+  }),
+  carRentalSummary: (theme: AppTheme, {}: ThemeStyleValues): any => ({
+    summary: { paddingVertical: 6, gap: 8 },
+    title: { fontSize: theme.typography.body, fontWeight: theme.typography.weightSemibold, color: theme.colors.linkText },
+    route: { fontSize: theme.typography.small, color: theme.colors.textMuted, marginBottom: 8 },
+  }),
+  compactItemList: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ gap: 8 }),
+  bottomAddSheetHeight: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ maxHeight: '85%' }),
+  bottomAddSheetScroll: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ flexShrink: 1 }),
+  dayHeroSubtitleRow: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 6 }),
+  dayHeroSubtitleText: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ marginTop: 0, flexShrink: 1 }),
   settlementPanel: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({
           backgroundColor: _theme.colors.accentSurface,
           borderColor: _theme.colors.accentBorder,
           borderWidth: 1,
+          borderLeftWidth: 4,
+          borderLeftColor: _theme.colors.primary,
         }),
+  settlementHeading: (_theme: AppTheme, {}: ThemeStyleValues): ViewStyle => ({
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: _theme.spacing.md,
+    marginBottom: _theme.spacing.sm,
+  }),
+  settlementHeadingIcon: (_theme: AppTheme, {}: ThemeStyleValues): ViewStyle => ({
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: _theme.colors.selectedSurface,
+  }),
+  settlementHeadingTitle: (_theme: AppTheme, {}: ThemeStyleValues): any => ({
+    marginBottom: 0,
+    color: _theme.colors.text,
+  }),
   // tabs/ledger.tsx
   tabs_ledger_32: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.dangerText }),
   // tabs/ledger.tsx

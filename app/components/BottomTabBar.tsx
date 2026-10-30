@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon, { type IconName } from './Icon';
 import { themeStyle, type AppTheme } from '../theme/theme';
 
 export type BottomTab = { page: string; label: string; icon: IconName };
-export type AddOptionKey = 'expense' | 'blog' | 'activity' | 'flight' | 'lodging' | 'import';
+export type AddOptionKey = 'expense' | 'blog' | 'activity' | 'flight' | 'lodging' | 'import' | 'transfer' | 'rental' | 'person' | 'note' | 'checklist';
 export type AddOption = { key: AddOptionKey; label: string; icon: IconName };
 
 /** Height of the bar above the bottom safe-area inset; floating buttons sit above it. */
@@ -87,14 +87,14 @@ const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs,
       <Modal visible transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
         <Pressable style={styles.scrim} onPress={() => setAddOpen(false)} accessibilityLabel="Close add menu" testID="add-sheet-scrim" />
         <View
-          style={[styles.sheet, themeStyle('components_BottomTabBar_6', { bottomInset: bottomInset }, theme)]}
+          style={[styles.sheet, themeStyle('bottomAddSheetHeight', {}, theme), themeStyle('components_BottomTabBar_6', { bottomInset: bottomInset }, theme)]}
           accessibilityViewIsModal
           testID="add-sheet"
         >
           <View style={styles.grabber} />
           <Text style={styles.sheetTitle} numberOfLines={2}>{addTitle}</Text>
           <Text style={styles.sheetSubtitle}>Pick what you want to add.</Text>
-          <View style={styles.grid}>
+          <ScrollView style={themeStyle('bottomAddSheetScroll', {}, theme)} contentContainerStyle={styles.grid}>
             {addOptions.map((option) => (
               <TouchableOpacity
                 key={option.key}
@@ -105,10 +105,10 @@ const BottomTabBar: React.FC<Props> = ({ theme, activePage, leftTabs, rightTabs,
                 testID={`add-option-${option.key}`}
               >
                 <Icon name={option.icon} color={themeStyle('components_BottomTabBar_8', {  }, theme)} size={26} />
-                <Text style={styles.optionLabel} numberOfLines={1}>{option.label}</Text>
+                <Text style={styles.optionLabel} numberOfLines={2}>{option.label}</Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
           <TouchableOpacity
             style={styles.cancel}
             onPress={() => setAddOpen(false)}

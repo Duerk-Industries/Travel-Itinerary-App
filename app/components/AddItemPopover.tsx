@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -51,7 +52,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, mode = 'items'
       style={styles((theme ?? _styleTheme)).option} onPress={() => onSelect(activity.id)}>
       {activity.image
         ? <Image source={{ uri: activity.image.url }} accessibilityIgnoresInvertColors accessibilityLabel={activity.name} style={styles((theme ?? _styleTheme)).optionImage} />
-        : <Text style={styles((theme ?? _styleTheme)).optionIcon}>{kind === 'optional' ? '💡' : '✨'}</Text>}
+        : <IconText style={styles((theme ?? _styleTheme)).optionIcon}>{kind === 'optional' ? '💡' : '✨'}</IconText>}
       <View style={styles((theme ?? _styleTheme)).optionTextWrap}>
         <Text style={[styles((theme ?? _styleTheme)).optionLabel, colors && themeStyle('components_AddItemPopover_4', { colors }, (theme ?? _styleTheme))]}>{activity.name || 'Optional activity'}</Text>
         {activity.description ? <Text numberOfLines={3} style={[styles((theme ?? _styleTheme)).optionDescription, colors && themeStyle('components_AddItemPopover_5', { colors }, (theme ?? _styleTheme))]}>{activity.description}</Text> : null}
@@ -90,7 +91,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, mode = 'items'
             disabled={busy}
             style={({ pressed }: { pressed: boolean }) => [styles((theme ?? _styleTheme)).option, pressed && themeStyle('components_AddItemPopover_3', { colors: colors }, (theme ?? _styleTheme))]}
           >
-            <Text style={styles((theme ?? _styleTheme)).optionIcon}>{opt.icon}</Text>
+            <IconText style={styles((theme ?? _styleTheme)).optionIcon}>{opt.icon}</IconText>
             <View style={styles((theme ?? _styleTheme)).optionTextWrap}>
               <Text style={[styles((theme ?? _styleTheme)).optionLabel, colors && themeStyle('components_AddItemPopover_4', { colors: colors }, (theme ?? _styleTheme))]}>{opt.label}</Text>
               <Text style={[styles((theme ?? _styleTheme)).optionDescription, colors && themeStyle('components_AddItemPopover_5', { colors: colors }, (theme ?? _styleTheme))]}>{opt.description}</Text>

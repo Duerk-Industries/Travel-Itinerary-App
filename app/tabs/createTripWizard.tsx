@@ -1,3 +1,4 @@
+import IconText from '../components/IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -2089,7 +2090,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <View style={styles.row}>
               <Text style={styles.sectionTitle}>Lodgings</Text>
               <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openWizardLodgingEditor(null)}>
-                <Text style={styles.buttonText}>+</Text>
+                <IconText style={styles.buttonText}>+</IconText>
               </TouchableOpacity>
             </View>
             <HorizontalTableScroll
@@ -2264,7 +2265,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <View style={styles.row}>
               <Text style={styles.sectionTitle}>Car Rentals</Text>
               <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openWizardCarDialog(null)} testID="wizard-car-add" accessibilityRole="button" accessibilityLabel="Add car rental">
-                <Text style={styles.buttonText}>+</Text>
+                <IconText style={styles.buttonText}>+</IconText>
               </TouchableOpacity>
             </View>
             <HorizontalTableScroll

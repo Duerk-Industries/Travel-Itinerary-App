@@ -1,3 +1,4 @@
+import IconText from '../components/IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -290,7 +291,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                   onPress={() => setShowTripPicker(false)}
                   style={({ pressed }: { pressed: boolean }) => [styles.homeModalClose, pressed && styles.homeModalClosePressed]}
                 >
-                  <Text style={styles.homeModalCloseText}>✕</Text>
+                  <IconText style={styles.homeModalCloseText}>✕</IconText>
                 </Pressable>
               </View>
               <ScrollView
@@ -334,7 +335,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                           onDeleteTrip({ id: trip.id, name: trip.name });
                         }}
                       >
-                        <Text style={styles.homeModalRowDeleteText}>🗑 Delete</Text>
+                        <IconText style={styles.homeModalRowDeleteText}>🗑 Delete</IconText>
                       </Pressable>
                     ) : null}
                   </Pressable>

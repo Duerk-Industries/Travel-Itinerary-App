@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -71,7 +72,7 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
           <Text style={detailStyles.title} accessibilityRole="header">{title || `${kind} details`}</Text>
           {status ? <View style={detailStyles.status}><Text style={detailStyles.statusText}>{status}</Text></View> : null}
           <TouchableOpacity style={detailStyles.close} onPress={onClose} accessibilityRole="button" accessibilityLabel={`Close ${kind} details`}>
-            <Text style={detailStyles.closeText}>✕</Text>
+            <IconText style={detailStyles.closeText}>✕</IconText>
           </TouchableOpacity>
         </View>
         {subtitle ? <Text style={detailStyles.subtitle} numberOfLines={3}>{subtitle}</Text> : null}

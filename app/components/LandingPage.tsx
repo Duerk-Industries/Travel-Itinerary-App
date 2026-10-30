@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -196,7 +197,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
           </SemanticHeading>
           {FEATURES.map((feature) => (
             <View key={feature} style={themeStyle('components_LandingPage_18', { colors: colors }, (theme ?? _styleTheme))}>
-              <Text style={themeStyle('components_LandingPage_19', { colors: colors, typography: typography }, (theme ?? _styleTheme))}>{'✓'}</Text>
+              <IconText style={themeStyle('components_LandingPage_19', { colors: colors, typography: typography }, (theme ?? _styleTheme))}>{'✓'}</IconText>
               <Text style={themeStyle('components_LandingPage_20', { colors: colors, typography: typography }, (theme ?? _styleTheme))}>{feature}</Text>
             </View>
           ))}

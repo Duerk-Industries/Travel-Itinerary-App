@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -64,9 +65,9 @@ const BlogConflictBanner: React.FC<Props> = ({
       accessibilityRole="alert"
       style={themeStyle('components_BlogConflictBanner_1', { borderColor: borderColor, backgroundColor: backgroundColor }, (theme ?? _styleTheme))}
     >
-      <Text style={themeStyle('components_BlogConflictBanner_2', { textColor: textColor }, (theme ?? _styleTheme))}>
+      <IconText style={themeStyle('components_BlogConflictBanner_2', { textColor: textColor }, (theme ?? _styleTheme))}>
         ⚠ {editorLabel} edited this while you were writing.
-      </Text>
+      </IconText>
       <Text style={themeStyle('components_BlogConflictBanner_3', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
         Your draft is saved locally and won't be lost — choose how to resolve it.
       </Text>

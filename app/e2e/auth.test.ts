@@ -53,14 +53,22 @@ test.describe('Authentication', () => {
     await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 10_000 });
   });
 
-  test('logout clears session and returns to login screen', async ({ page }) => {
+  test('logout clears session and returns to the signed-out landing page', async ({ page }) => {
     await loginAsNewUser(page);
 
     // Logout is exposed from the persistent top bar on authenticated screens.
     await page.getByTestId('topbar-logout').click();
 
-    // After logout the login form must be visible
-    await expect(page.getByPlaceholder('Email')).toBeVisible({ timeout: 8000 });
+    // Logout returns to the public landing page; the form opens via Log In.
+    const loginButton = page.getByRole('button', { name: 'Log In', exact: true });
+    await expect(loginButton).toBeVisible();
     await expect(page.getByTestId('home-nav-overview')).not.toBeVisible();
+    await expect.poll(() => page.evaluate(() => [
+      localStorage.getItem('stp.session'),
+      localStorage.getItem('stp.session.token'),
+    ])).toEqual([null, null]);
+
+    await loginButton.click();
+    await expect(page.getByPlaceholder('Email')).toBeVisible();
   });
 });

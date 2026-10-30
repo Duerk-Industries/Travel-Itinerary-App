@@ -3,7 +3,7 @@ import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme }
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, TouchableOpacity, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Icon from './Icon';
 import type { Trip } from '../../server/src/types';
 
 import { downloadOfflineTripSnapshot } from '../utils/downloadOfflineTripSnapshot';
@@ -106,13 +106,6 @@ export function useSaveTripOffline({ trip, trips, groups, owner, token, costTrac
   };
 }
 
-const DownloadIcon: React.FC<{ color: string; size?: number }> = ({ color, size = 22 }) => (
-  // Material "file download" glyph: an arrow into a tray.
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Path fill={color} d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
-  </Svg>
-);
-
 /** The top-bar button: a download icon with the same footprint as the notification bell beside it. */
 export function OfflineSaveButton({ controller, theme: _providedTheme }: { controller: SaveTripOfflineController; theme?: AppTheme }) {
   const _styleTheme = useStyleTheme();
@@ -125,7 +118,7 @@ export function OfflineSaveButton({ controller, theme: _providedTheme }: { contr
     accessibilityState={{ disabled: off, busy: controller.busy }} disabled={off}
     {...(Platform.OS === 'web' ? ({ title: 'Save this trip offline' } as object) : {})}
     onPress={() => void controller.start()} style={themeStyle('components_SaveTripOffline_1', { controller: controller }, (theme ?? _styleTheme))}>
-    {controller.busy ? <ActivityIndicator size="small" color={color} /> : <DownloadIcon color={color} />}
+    {controller.busy ? <ActivityIndicator size="small" color={color} /> : <Icon name="download" color={color} />}
   </TouchableOpacity>;
 }
 

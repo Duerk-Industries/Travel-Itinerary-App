@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
@@ -64,7 +65,7 @@ export default function ImportSuggestionReview({ backendUrl, headers, onConfirme
       {rows.map(row => <View key={row.itemId} style={themeStyle('components_ImportSuggestionReview_4', {  }, _styleTheme)}>
         <TouchableOpacity accessibilityRole="checkbox" accessibilityLabel={`Select ${row.label} for ${row.tripName}`} aria-checked={selected.has(row.itemId)} accessibilityState={{ checked: selected.has(row.itemId), disabled: busy }}
           style={themeStyle('components_ImportSuggestionReview_5', {  }, _styleTheme)} disabled={busy} onPress={() => setSelected(previous => { const next = new Set(previous); if (next.has(row.itemId)) next.delete(row.itemId); else next.add(row.itemId); return next; })}>
-          <Text style={styles.flightTitle}>{selected.has(row.itemId) ? '✓ ' : '○ '}{row.label} → {row.tripName}</Text>
+          <IconText style={styles.flightTitle}>{selected.has(row.itemId) ? '✓ ' : '○ '}{row.label} → {row.tripName}</IconText>
         </TouchableOpacity>
         <Text style={styles.helperText}>{row.startDate || 'Date to check'}{row.endDate && row.endDate !== row.startDate ? ` – ${row.endDate}` : ''} · {row.amount === null ? 'Amount not provided — check before adding' : `${row.currency ?? ''} ${row.amount}`}</Text>
         <Text style={styles.helperText}>{row.reasons.join('. ')}</Text>

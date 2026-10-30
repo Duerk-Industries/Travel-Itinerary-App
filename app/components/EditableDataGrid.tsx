@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -409,7 +410,7 @@ export function EditableDataGrid<Row extends { id: string }>({
         accessibilityLabel={isSortable ? `Sort by ${column.label}` : column.label}
         testID={isSortable ? `activity-sort-${column.key}` : undefined}
       >
-        <Text style={styles.headerText}>{headerLabel}</Text>
+        <IconText style={styles.headerText}>{headerLabel}</IconText>
       </TouchableOpacity>
     );
   })}</View>;
@@ -454,7 +455,7 @@ export function EditableDataGrid<Row extends { id: string }>({
                     style={pickerOptionRowStyle}
                     onPress={() => setPickerDraftIds((current) => (checked ? current.filter((id) => id !== option.id) : [...current, option.id]))}
                   >
-                    <Text style={styles.cellText}>{checked ? '☑' : '☐'} {option.label}</Text>
+                    <IconText style={styles.cellText}>{checked ? '☑' : '☐'} {option.label}</IconText>
                   </TouchableOpacity>
                 );
               })}

@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { layoutMetrics, resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
 
 
@@ -316,7 +317,7 @@ const ChatPanel: React.FC<Props> = ({
         {isPhoneLayout && (
           <TouchableOpacity onPress={onClose} style={themedStyles.headerBtn} testID="chat-back"
             accessibilityRole="button" accessibilityLabel="Close trip chat">
-            <Text style={themedStyles.headerBtnText}>← Back</Text>
+            <IconText style={themedStyles.headerBtnText}>← Back</IconText>
           </TouchableOpacity>
         )}
         <Text style={themedStyles.headerTitle}>Trip Chat</Text>
@@ -327,7 +328,7 @@ const ChatPanel: React.FC<Props> = ({
         )}
         {!isPhoneLayout && (
           <TouchableOpacity onPress={onClose} style={themedStyles.headerBtn} testID="chat-close">
-            <Text style={themedStyles.headerBtnText}>✕</Text>
+            <IconText style={themedStyles.headerBtnText}>✕</IconText>
           </TouchableOpacity>
         )}
       </View>

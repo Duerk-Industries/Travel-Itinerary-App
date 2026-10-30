@@ -1,4 +1,6 @@
 // @ts-nocheck
+import IconText from '../components/IconText';
+import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import { themeFontFamilies, resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 
@@ -102,6 +104,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
   }, []);
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const { isPhoneLayout } = useLayoutBreakpoints();
   const { width: viewportWidth } = useWindowDimensions();
   const compactMasthead = viewportWidth < 600;
   // Phase 1 typography (redesign proposal §5) — Fraunces for the masthead title and day
@@ -1458,7 +1461,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                 onPress={quickCapturePhoto}
                 style={[styles.button, themeStyle('tabs_tripBlog_21', { theme: theme, quickCapturing: quickCapturing, uploading: uploading }, (theme ?? _styleTheme))]}
               >
-                <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_22', { textColor: textColor }, (theme ?? _styleTheme))]}>{quickCapturing ? 'Opening camera…' : '📷 Add photo'}</Text>
+                <IconText style={[styles.buttonText, themeStyle('tabs_tripBlog_22', { textColor: textColor }, (theme ?? _styleTheme))]}>{quickCapturing ? 'Opening camera…' : '📷 Add photo'}</IconText>
               </TouchableOpacity>
             ) : null}
             {publicPageUrl ? (
@@ -1467,7 +1470,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                 onPress={() => { void Linking.openURL(publicPageUrl).catch(() => {}); }}
                 style={themeStyle('tabs_tripBlog_23', {  }, (theme ?? _styleTheme))}
               >
-                <Text style={themeStyle('tabs_tripBlog_24', { theme: theme }, (theme ?? _styleTheme))}>View public page ↗</Text>
+                <IconText style={themeStyle('tabs_tripBlog_24', { theme: theme }, (theme ?? _styleTheme))}>View public page ↗</IconText>
               </TouchableOpacity>
             ) : null}
             {canEdit && ((Platform.OS === 'ios' && capabilities.trip_blog_mobile_share_ios) || (Platform.OS === 'android' && capabilities.trip_blog_mobile_share_android)) ? (
@@ -1581,15 +1584,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                 ) : null}
               </View>
             ) : null}
-            <TouchableOpacity
+            {!isPhoneLayout ? <TouchableOpacity
               testID="blog-add-photos"
               accessibilityRole="button"
               style={[styles.button, themeStyle('tabs_tripBlog_49', {  }, (theme ?? _styleTheme))]}
               onPress={() => openPhotoComposer(localDateString())}
               disabled={uploading}
             >
-              <Text style={styles.buttonText}>＋ Add photos to this trip</Text>
-            </TouchableOpacity>
+              <IconText style={styles.buttonText}>＋ Add photos to this trip</IconText>
+            </TouchableOpacity> : null}
           </View>
         ) : null}
         {blog?.tripPhotos?.map((photo) => (
@@ -1691,7 +1694,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                     style={[styles.button, themeStyle('tabs_tripBlog_67', {  }, (theme ?? _styleTheme))]}
                     onPress={() => { setAddingDay(day.localDate); setNewBody(''); }}
                   >
-                    <Text style={[styles.buttonText, themeStyle('tabs_tripBlog_68', {  }, (theme ?? _styleTheme))]}>+ Add note</Text>
+                    <IconText style={[styles.buttonText, themeStyle('tabs_tripBlog_68', {  }, (theme ?? _styleTheme))]}>+ Add note</IconText>
                   </TouchableOpacity>
                 )}
                 {/* Recording only needs voice notes on; handleRecordedVoiceNote skips the transcript when
@@ -1849,8 +1852,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                       ) : null}
                       {capabilities.trip_blog_authoring_assist ? (
                         <>
-                          <TouchableOpacity accessibilityLabel="Move entry up" disabled={reorderBusy || (day.items || [])[0]?.id === item.id} onPress={() => moveItem(day, item, -1)} style={themeStyle('tabs_tripBlog_92', {  }, (theme ?? _styleTheme))}><Text style={themeStyle('tabs_tripBlog_93', { textColor: textColor }, (theme ?? _styleTheme))}>↑</Text></TouchableOpacity>
-                          <TouchableOpacity accessibilityLabel="Move entry down" disabled={reorderBusy || (day.items || [])[(day.items || []).length - 1]?.id === item.id} onPress={() => moveItem(day, item, 1)} style={themeStyle('tabs_tripBlog_94', {  }, (theme ?? _styleTheme))}><Text style={themeStyle('tabs_tripBlog_95', { textColor: textColor }, (theme ?? _styleTheme))}>↓</Text></TouchableOpacity>
+                          <TouchableOpacity accessibilityLabel="Move entry up" disabled={reorderBusy || (day.items || [])[0]?.id === item.id} onPress={() => moveItem(day, item, -1)} style={themeStyle('tabs_tripBlog_92', {  }, (theme ?? _styleTheme))}><IconText style={themeStyle('tabs_tripBlog_93', { textColor: textColor }, (theme ?? _styleTheme))}>↑</IconText></TouchableOpacity>
+                          <TouchableOpacity accessibilityLabel="Move entry down" disabled={reorderBusy || (day.items || [])[(day.items || []).length - 1]?.id === item.id} onPress={() => moveItem(day, item, 1)} style={themeStyle('tabs_tripBlog_94', {  }, (theme ?? _styleTheme))}><IconText style={themeStyle('tabs_tripBlog_95', { textColor: textColor }, (theme ?? _styleTheme))}>↓</IconText></TouchableOpacity>
                         </>
                       ) : null}
                       <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_96', { theme: theme }, (theme ?? _styleTheme))]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>
@@ -1902,7 +1905,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                     <>
                       {canEdit && capabilities.trip_blog_reactions ? (
                         <TouchableOpacity testID={`blog-cover-proposal-${day.localDate}`} onPress={() => loadCoverProposal(day.localDate)} style={themeStyle('tabs_tripBlog_97', {  }, (theme ?? _styleTheme))}>
-                          <Text style={themeStyle('tabs_tripBlog_98', { theme: theme }, (theme ?? _styleTheme))}>{coverProposals[day.localDate] ? '♥ Most-loved photo selected below' : 'Find the most-loved photo'}</Text>
+                          <IconText style={themeStyle('tabs_tripBlog_98', { theme: theme }, (theme ?? _styleTheme))}>{coverProposals[day.localDate] ? '♥ Most-loved photo selected below' : 'Find the most-loved photo'}</IconText>
                         </TouchableOpacity>
                       ) : null}
                       <DayMediaGallery
@@ -1935,7 +1938,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                   ) : null}
                   {processingMedia.map((item) => (
                     <View key={item.id} style={themeStyle('tabs_tripBlog_99', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
-                      <Text style={themeStyle('tabs_tripBlog_100', { textColor: textColor }, (theme ?? _styleTheme))}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
+                      <IconText style={themeStyle('tabs_tripBlog_100', { textColor: textColor }, (theme ?? _styleTheme))}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</IconText>
                       {item.caption ? <Text style={themeStyle('tabs_tripBlog_101', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{item.caption}</Text> : null}
                       {canEdit ? (
                         <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_102', { theme: theme }, (theme ?? _styleTheme))]} disabled={deleting} onPress={() => removeMediaItem(item)}>
@@ -1946,7 +1949,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                   ))}
                   {audioItems.map((item) => (
                     <View key={item.id} testID={`blog-voice-note-${item.id}`} style={themeStyle('tabs_tripBlog_103', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
-                      <Text style={themeStyle('tabs_tripBlog_104', { textColor: textColor }, (theme ?? _styleTheme))}>🎙 Voice note</Text>
+                      <IconText style={themeStyle('tabs_tripBlog_104', { textColor: textColor }, (theme ?? _styleTheme))}>🎙 Voice note</IconText>
                       {item.caption ? <Text style={themeStyle('tabs_tripBlog_105', { textColor: textColor }, (theme ?? _styleTheme))}>{item.caption}</Text> : null}
                       {item.primaryUrl ? (
                         <View style={themeStyle('tabs_tripBlog_106', {  }, (theme ?? _styleTheme))}>
@@ -2174,7 +2177,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
             onPress={() => setShowBlogTools((current) => !current)}
             style={themeStyle('tabs_tripBlog_133', {  }, (theme ?? _styleTheme))}
           >
-            <Text style={themeStyle('tabs_tripBlog_134', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{showBlogTools ? '▾' : '▸'} Blog tools</Text>
+            <IconText style={themeStyle('tabs_tripBlog_134', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{showBlogTools ? '▾' : '▸'} Blog tools</IconText>
           </TouchableOpacity>
           {showBlogTools ? (
             <View testID="blog-tools-panel" style={themeStyle('tabs_tripBlog_135', { surfaceColor: surfaceColor }, (theme ?? _styleTheme))}>

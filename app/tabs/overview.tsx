@@ -1,4 +1,11 @@
 // @ts-nocheck
+import IconText from '../components/IconText';
+import TransferSummaryCard from '../components/TransferSummaryCard';
+import CarRentalSummaryCard from '../components/CarRentalSummaryCard';
+import { formatRentalDetails } from '../utils/carRentalDetails';
+import Icon, { type IconName } from '../components/Icon';
+import { describeTransferRoute } from '../utils/transferRoute';
+export { describeTransferRoute } from '../utils/transferRoute';
 import ActionDropdown from '../components/ActionDropdown';
 import BannerPicturePicker from '../components/BannerPicturePicker';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
@@ -38,7 +45,7 @@ import {
   computeEndDateFromDuration,
   formatMonthYear,
 } from '../utils/tripDates';
-import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName, formatTravelerListDisplay } from '../utils/memberDisplay';
+import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName } from '../utils/memberDisplay';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { dayToOpen, localIsoDate } from '../utils/tripDayFocus';
 import {
@@ -268,8 +275,10 @@ type OverviewTabProps = {
   openLodgingDetails: (lodging: Lodging) => void;
   theme?: AppTheme;
   readOnly?: boolean;
+  /** Move the inline day add buttons into the phone navigation's Add menu. */
+  useBottomAddMenu?: boolean;
   /** One-shot request from the phone Add menu: open this item type's add form, then call onAutoOpenAddHandled. */
-  autoOpenAdd?: 'flight' | 'lodging' | 'activity' | null;
+  autoOpenAdd?: 'flight' | 'lodging' | 'activity' | 'transfer' | 'rental' | 'person' | 'note' | 'checklist' | null;
   onAutoOpenAddHandled?: () => void;
   featureStandardizedItemDialogs?: boolean;
   // Kill switch for the designed gradient placeholder shown in place of a
@@ -324,32 +333,6 @@ type DetailModalState = {
   sections: DetailSection[];
   kind?: 'flight' | 'lodging' | 'activity';
   item?: Flight | Lodging | Tour;
-};
-
-// Short labels for a transfer's route, shared by the day card subtitle and the day view. Prefers a
-// real code (EWR, LIS); ground transfers keep station names in the code field, so those fall back
-// to the place name minus "(Fujikyu Railway)"-style detail. Icon follows the transfer type.
-export const describeTransferRoute = (flight: {
-  departure_airport_code?: string | null;
-  arrival_airport_code?: string | null;
-  departure_location?: string | null;
-  arrival_location?: string | null;
-  transfer_type?: string | null;
-  transferType?: string | null;
-}): { icon: string; from: string; to: string; fullFrom: string; fullTo: string } => {
-  const shortPlace = (code?: string | null, location?: string | null) => {
-    const c = String(code ?? '').trim();
-    if (/^[A-Z0-9]{3,4}$/.test(c)) return c;
-    return String(c || location || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
-  };
-  const type = normalizeTransferType(flight.transfer_type || flight.transferType);
-  return {
-    icon: type === 'Flight' ? '✈' : type === 'Public Transit' ? '🚆' : type === 'Private Transfer' ? '🚗' : '➜',
-    from: shortPlace(flight.departure_airport_code, flight.departure_location),
-    to: shortPlace(flight.arrival_airport_code, flight.arrival_location),
-    fullFrom: String(flight.departure_location || flight.departure_airport_code || '').trim(),
-    fullTo: String(flight.arrival_location || flight.arrival_airport_code || '').trim(),
-  };
 };
 
 export const dedupeAttendees = (
@@ -539,6 +522,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   theme: _providedTheme,
   readOnly = false,
   autoOpenAdd = null,
+  useBottomAddMenu = false,
   onAutoOpenAddHandled,
   featureStandardizedItemDialogs = false,
   featureCoverPhotoFallbackV2 = true,
@@ -2189,18 +2173,27 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setAddPopoverOpen(true);
   };
 
-  // The phone Add menu opens the same add form as a day's "+ Add X" chip, for today when
-  // the trip is under way and otherwise for its first day.
+  // Reuse the day's add flows and selected date, falling back to today during the trip
+  // or its first day when no day is selected.
   useEffect(() => {
     if (!autoOpenAdd) return;
     if (readOnly) { onAutoOpenAddHandled?.(); return; }
     if (!trip) return;
     const today = localTodayIso();
     const inTrip = overviewStartDate && overviewEndDate && today >= overviewStartDate && today <= overviewEndDate;
-    const dateIso = inTrip ? today : (overviewStartDate ?? today);
+    const dateIso = selectedDay ?? (inTrip ? today : (overviewStartDate ?? today));
     onAutoOpenAddHandled?.();
     if (autoOpenAdd === 'flight') addFlightForDay(dateIso);
     else if (autoOpenAdd === 'lodging') addLodgingForDay(dateIso);
+    else if (autoOpenAdd === 'transfer') addFlightForDay(dateIso, 'Public Transit');
+    else if (autoOpenAdd === 'rental') addRentalForDay(dateIso);
+    else if (autoOpenAdd === 'person') { setSelectedDay(null); setShowAddTraveler(true); }
+    else if (autoOpenAdd === 'note' || autoOpenAdd === 'checklist') {
+      if (!featureItineraryItemKinds) return;
+      setAddPopoverDay(Math.max(1, dayCards.findIndex((day) => day.date === dateIso) + 1));
+      setAddPopoverDate(dateIso.startsWith('unscheduled-') ? null : dateIso);
+      setActiveAddDialog(autoOpenAdd);
+    }
     else addTourForDay(dateIso);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenAdd, readOnly, trip?.id, overviewStartDate, overviewEndDate]);
@@ -2259,19 +2252,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
   };
 
-  const formatRentalDetails = (rental: CarRental): DetailItem[] => [
-    { label: 'Status', value: normalizeItineraryStatus((rental as any).status, LEGACY_ITINERARY_STATUS) },
-    { label: 'Pickup Location', value: rental.pickupLocation || 'N/A' },
-    { label: 'Pickup Date', value: formatFriendlyDate(rental.pickupDate) || rental.pickupDate || 'N/A' },
-    { label: 'Dropoff Location', value: rental.dropoffLocation || 'N/A' },
-    { label: 'Dropoff Date', value: formatFriendlyDate(rental.dropoffDate) || rental.dropoffDate || 'N/A' },
-    { label: 'Vendor', value: rental.vendor || 'N/A' },
-    { label: 'Model', value: rental.model || 'N/A' },
-    { label: 'Reference', value: rental.reference || 'N/A' },
-    { label: 'Prepaid', value: rental.prepaid || 'N/A' },
-    { label: 'Cost', value: rental.cost ? `$${rental.cost}` : 'N/A' },
-    { label: 'Notes', value: rental.notes || 'N/A' },
-  ];
 
   const renderDetailModal = (title: string, items: DetailItem[], onClose: () => void) => (
     <View style={styles.modalOverlay}>
@@ -2547,16 +2527,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const buildDaySubtitle = (
     info: { flights: Flight[]; lodgings: Lodging[] } | undefined,
     date: string,
-  ): string | null => {
+  ): { text: string; iconName?: IconName } | null => {
     if (!info) return null;
     const flight = info.flights[0];
     if (flight) {
-      const { icon, from, to } = describeTransferRoute(flight);
-      if (from && to) return `${icon} ${from} → ${to}`;
+      const { iconName, from, to } = describeTransferRoute(flight);
+      if (from && to) return { text: `${from} → ${to}`, iconName };
     }
     const day = normalizeDateString(date ?? '');
     const checkIn = info.lodgings.find((lodging) => normalizeDateString(lodging.checkInDate) === day);
-    if (checkIn?.name) return `🏨 Check in: ${checkIn.name}`;
+    if (checkIn?.name) return { text: `Check in: ${checkIn.name}`, iconName: 'lodging' };
     return null;
   };
 
@@ -2908,7 +2888,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         activeDayInfo?.index ?? (activeDayCard ? dayCards.findIndex((card) => card.date === activeDayCard.date) + 1 : null);
       const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
 
-      const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string, subtitle?: string | null) => {
+      const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string, subtitle?: { text: string; iconName?: IconName } | null) => {
         const img = blogDayImages[card.date] ?? dayImages[card.date];
         const weather = dayWeather[card.date];
         const weatherLabel =
@@ -2941,7 +2921,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 style={themeStyle('tabs_overview_17', {  }, (theme ?? _styleTheme))}
                 testID={`${testID || 'day-hero'}-weather`}
               >
-                <Text style={themeStyle('tabs_overview_18', {  }, (theme ?? _styleTheme))}>{weatherLabel}</Text>
+                <IconText style={themeStyle('tabs_overview_18', {  }, (theme ?? _styleTheme))}>{weatherLabel}</IconText>
               </View>
             ) : null}
             <View style={styles.dayHeroTextWrap}>
@@ -2956,13 +2936,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 {title}
               </Text>
               {subtitle ? (
+                <View style={themeStyle('dayHeroSubtitleRow', {}, theme)}>
+                {subtitle.iconName ? <Icon name={subtitle.iconName} size={16} color={theme.colors.onAccent} /> : null}
                 <Text
                   testID={`${testID || 'day-hero'}-subtitle`}
-                  style={[styles.dayHeroAction, themeStyle('tabs_overview_102', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))]}
+                  style={[styles.dayHeroAction, themeStyle('tabs_overview_102', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme)), themeStyle('dayHeroSubtitleText', {}, theme)]}
                   numberOfLines={1}
                 >
-                  {subtitle}
+                  {subtitle.text}
                 </Text>
+                </View>
               ) : null}
               {showAction ? (
                 <Text style={[styles.dayHeroAction, isPhoneLayout ? themeStyle('tabs_overview_21', {  }, (theme ?? _styleTheme)) : null]}>View details</Text>
@@ -2993,21 +2976,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <View style={isPhoneLayout ? themeStyle('tabs_overview_100', {  }, (theme ?? _styleTheme)) : themeStyle('tabs_overview_36', {  }, (theme ?? _styleTheme))}>
                 {d.kind === 'place' ? (
                   <View>
-                    <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
+                    <IconText style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</IconText>
                     {d.noteBody ? (
                       <Text style={[styles.helperText, themeStyle('tabs_overview_37', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
                     ) : null}
                   </View>
                 ) : d.kind === 'note' ? (
                   <View>
-                    <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
+                    <IconText style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</IconText>
                     {d.noteBody ? (
                       <Text style={[styles.helperText, themeStyle('tabs_overview_38', {  }, (theme ?? _styleTheme))]}>{d.noteBody}</Text>
                     ) : null}
                   </View>
                 ) : d.kind === 'checklist' ? (
                   <View style={themeStyle('tabs_overview_39', {  }, (theme ?? _styleTheme))}>
-                    <Text style={[styles.dayInfoRoute, themeStyle('tabs_overview_40', {  }, (theme ?? _styleTheme))]}>{`📋 ${d.activity}`}</Text>
+                    <IconText style={[styles.dayInfoRoute, themeStyle('tabs_overview_40', {  }, (theme ?? _styleTheme))]}>{`📋 ${d.activity}`}</IconText>
                     {(d.checklistItems ?? []).map((it) => {
                       const checked = !!it.checkedBy;
                       return (
@@ -3029,7 +3012,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                               checked && styles.checklistCheckboxChecked,
                             ]}
                           >
-                            {checked ? <Text style={styles.checklistCheckboxMark}>✓</Text> : null}
+                            {checked ? <IconText style={styles.checklistCheckboxMark}>✓</IconText> : null}
                           </View>
                           <Text
                             style={[
@@ -3070,7 +3053,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     style={styles.detailDeleteButton}
                     hitSlop={themeStyle('tabs_overview_45', {  }, (theme ?? _styleTheme))}
                   >
-                    <Text style={styles.detailDeleteButtonText}>×</Text>
+                    <IconText style={styles.detailDeleteButtonText}>×</IconText>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -3114,7 +3097,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         return (
           <View style={[styles.card, responsiveCardStyle, themeStyle('tabs_overview_22', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity testID="day-details-back" style={styles.dayDetailsBackButton} onPress={() => setSelectedDay(null)}>
-              <Text style={styles.dayDetailsBackText}>← Back</Text>
+              <IconText style={styles.dayDetailsBackText}>← Back</IconText>
             </TouchableOpacity>
             <ScrollView
               ref={scrollRef}
@@ -3150,37 +3133,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {flightsForDay.length ? (
                 <View style={styles.dayInfoCard}>
                   <Text style={styles.sectionTitle}>Your transfer</Text>
-                  {flightsForDay.map((flight) => {
-                    const route = describeTransferRoute(flight);
-                    const showFullNames = (route.fullFrom && route.fullFrom !== route.from) || (route.fullTo && route.fullTo !== route.to);
-                    const carrierLine = [flight.carrier, flight.flight_number].filter(Boolean).join(' ');
-                    const passengers =
-                      Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
-                        ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
-                        : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
-                    // Stacked rather than side by side: long airport/station names used to push the
-                    // route off the card and hide the times on phones.
-                    return (
-                      <View key={flight.id} style={themeStyle('tabs_overview_104', {  }, (theme ?? _styleTheme))} testID={`day-details-transfer-row-${flight.id}`}>
-                        <TouchableOpacity
-                          testID={`day-details-transfer-${flight.id}`}
-                          accessibilityRole="link"
-                          onPress={() => setSelectedFlight(flight)}
-                        >
-                          <Text style={[styles.dayInfoRoute, styles.linkText, themeStyle('tabs_overview_25', {  }, (theme ?? _styleTheme))]}>
-                            {`${route.icon} ${route.from || 'Departure'} → ${route.to || 'Arrival'}`}
-                          </Text>
-                        </TouchableOpacity>
-                        {showFullNames ? (
-                          <Text style={styles.helperText}>{`${route.fullFrom || route.from} → ${route.fullTo || route.to}`}</Text>
-                        ) : null}
-                        <Text style={styles.helperText}>
-                          {`${flight.departure_time || '--:--'} → ${flight.arrival_time || '--:--'}${carrierLine ? ` · ${carrierLine}` : ''}`}
-                        </Text>
-                        {showFlightNames && passengers ? <Text style={styles.helperText}>Travelers: {passengers}</Text> : null}
-                      </View>
-                    );
-                  })}
+                  {flightsForDay.map((flight) => (
+                    <TransferSummaryCard
+                      key={flight.id}
+                      flight={flight}
+                      members={groupMembers}
+                      showTravelers={showFlightNames}
+                      theme={theme}
+                      testID={`day-details-transfer-${flight.id}`}
+                      containerTestID={`day-details-transfer-row-${flight.id}`}
+                      onPress={() => setSelectedFlight(flight)}
+                    />
+                  ))}
 
                 </View>
               ) : null}
@@ -3189,14 +3153,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <View style={styles.dayInfoCard}>
                   <Text style={styles.sectionTitle}>Rental car</Text>
                   {rentalsForDay.map((rental) => (
-                    <View key={rental.id} style={styles.dayInfoRow}>
-                      <Text
-                        style={styles.dayInfoRoute}
-                      >{`${rental.vendor || 'Rental car'} · ${rental.model || 'Vehicle'}`}</Text>
-                      <Text style={styles.helperText}>
-                        {`${rental.pickupLocation || 'Pickup'} → ${rental.dropoffLocation || 'Dropoff'}`}
-                      </Text>
-                    </View>
+                    <CarRentalSummaryCard key={rental.id} rental={rental} theme={theme}
+                      testID={`day-details-rental-${rental.id}`}
+                      onPress={() => setDetailModal({ title: 'Rental Car Details', sections: [{
+                        items: formatRentalDetails(rental), calendarEvent: rentalCalendarEvent(rental),
+                      }] })} />
                   ))}
                   <TouchableOpacity
                     testID="day-details-rental-details"
@@ -3294,15 +3255,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     );
                     }}
                   />
-                  <TouchableOpacity
+                  {!readOnly && !useBottomAddMenu ? <TouchableOpacity
                     testID="day-details-add-activity-button"
                     accessibilityRole="button"
                     accessibilityLabel="Add activity to this day"
                     style={[styles.dayInfoButton, themeStyle('tabs_overview_28', {  }, (theme ?? _styleTheme))]}
                     onPress={() => addTourForDay(activeDayCard.date)}
                   >
-                    <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
-                  </TouchableOpacity>
+                    <IconText style={styles.dayInfoButtonText}>+ Add activity</IconText>
+                  </TouchableOpacity> : null}
                 </View>
               ) : null}
 
@@ -3335,7 +3296,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                               themeStyle('tabs_overview_30', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme)),
                             ]}
                           >
-                            <Text style={themeStyle('tabs_overview_105', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme))}>🏨</Text>
+                            <IconText style={themeStyle('tabs_overview_105', { lodgingThumbnailSize: lodgingThumbnailSize }, (theme ?? _styleTheme))}>🏨</IconText>
                           </View>
                         )}
                         <View style={styles.dayInfoText}>
@@ -3372,37 +3333,37 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 </View>
               ) : null}
 
-              {!readOnly ? (
+              {!readOnly && !useBottomAddMenu ? (
                 <View testID="day-details-add-actions" style={[themeStyle('tabs_overview_47', {}, (theme ?? _styleTheme)), themeStyle('tabs_overview_layout1', {  }, (theme ?? _styleTheme))]}>
                   <Text style={[styles.helperText, themeStyle('tabs_overview_layout4', {  }, (theme ?? _styleTheme))]}>Add to this day</Text>
                   <TouchableOpacity testID="day-details-add-flight-button" accessibilityRole="button" accessibilityLabel="Add flight to this day"
                     style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addFlightForDay(activeDayCard.date)}>
-                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add flight</Text>
+                    <IconText style={styles.dayInfoButtonText} numberOfLines={1}>+ Add flight</IconText>
                   </TouchableOpacity>
                   <TouchableOpacity testID="day-details-add-transfer-button" accessibilityRole="button" accessibilityLabel="Add ground transfer to this day"
                     style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addFlightForDay(activeDayCard.date, 'Public Transit')}>
-                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add transfer</Text>
+                    <IconText style={styles.dayInfoButtonText} numberOfLines={1}>+ Add transfer</IconText>
                   </TouchableOpacity>
                   <TouchableOpacity testID="day-details-add-accommodation-button" accessibilityRole="button" accessibilityLabel="Add accommodation to this day"
                     style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addLodgingForDay(activeDayCard.date)}>
-                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add accommodation</Text>
+                    <IconText style={styles.dayInfoButtonText} numberOfLines={1}>+ Add accommodation</IconText>
                   </TouchableOpacity>
                   <TouchableOpacity testID="day-details-add-rental-button" accessibilityRole="button" accessibilityLabel="Add rental car to this day"
                     style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addRentalForDay(activeDayCard.date)}>
-                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add rental car</Text>
+                    <IconText style={styles.dayInfoButtonText} numberOfLines={1}>+ Add rental car</IconText>
                   </TouchableOpacity>
                   {!toursForDay.length && !locationDetails.length ? <TouchableOpacity testID="day-details-add-activity-button" accessibilityRole="button"
                     accessibilityLabel="Add activity to this day" style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => addTourForDay(activeDayCard.date)}>
-                    <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add activity</Text>
+                    <IconText style={styles.dayInfoButtonText} numberOfLines={1}>+ Add activity</IconText>
                   </TouchableOpacity> : null}
                   {featureItineraryItemKinds ? <>
                     <TouchableOpacity testID="day-details-add-note-button" accessibilityRole="button" accessibilityLabel="Add note to this day"
                       style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('note'); }}>
-                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add note</Text>
+                      <IconText style={styles.dayInfoButtonText} numberOfLines={1}>+ Add note</IconText>
                     </TouchableOpacity>
                     <TouchableOpacity testID="day-details-add-checklist-button" accessibilityRole="button" accessibilityLabel="Add checklist to this day"
                       style={themeStyle('tabs_overview_103', {  }, (theme ?? _styleTheme))} onPress={() => { setAddPopoverDay(activeDayInfo.index); setAddPopoverDate(activeDayCard.date); setActiveAddDialog('checklist'); }}>
-                      <Text style={styles.dayInfoButtonText} numberOfLines={1}>+ Add checklist</Text>
+                      <IconText style={styles.dayInfoButtonText} numberOfLines={1}>+ Add checklist</IconText>
                     </TouchableOpacity>
                   </> : null}
                 </View>
@@ -3595,7 +3556,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <View style={[styles.input, styles.dropdown, themeStyle('tabs_overview_62', {  }, (theme ?? _styleTheme))]}>
               <TouchableOpacity style={styles.selectButtonRow} onPress={() => setShowCurrencyDropdown((prev) => !prev)}>
                 <Text style={styles.cellText}>{currentCurrency}</Text>
-                <Text style={styles.selectCaret}>▾</Text>
+                <IconText style={styles.selectCaret}>▾</IconText>
               </TouchableOpacity>
               {showCurrencyDropdown ? (
                 <View style={styles.dropdownList}>
@@ -3784,7 +3745,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               style={[styles.button, styles.smallButton, themeStyle('tabs_overview_74', {  }, (theme ?? _styleTheme))]}
               onPress={() => setShowAddTraveler((prev) => !prev)}
             >
-              <Text style={styles.buttonText}>+ Add traveler</Text>
+              <IconText style={styles.buttonText}>+ Add traveler</IconText>
             </TouchableOpacity>
           )}
         </View>
@@ -3807,7 +3768,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   onPress={() => removeTraveler(member.id)}
                   hitSlop={themeStyle('tabs_overview_79', {  }, (theme ?? _styleTheme))}
                 >
-                  <Text style={styles.attendeeRemoveText}>✕</Text>
+                  <IconText style={styles.attendeeRemoveText}>✕</IconText>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -3837,7 +3798,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               style={[styles.button, styles.smallButton, themeStyle('tabs_overview_82', {  }, (theme ?? _styleTheme))]}
               onPress={() => openFlightAdd()}
             >
-              <Text style={styles.buttonText}>+ Add Transfer</Text>
+              <IconText style={styles.buttonText}>+ Add Transfer</IconText>
             </TouchableOpacity>
           )}
         </View>
@@ -3897,7 +3858,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               style={[styles.button, styles.smallButton, themeStyle('tabs_overview_84', {  }, (theme ?? _styleTheme))]}
               onPress={() => openAddLodging()}
             >
-              <Text style={styles.buttonText}>+ Add Lodging</Text>
+              <IconText style={styles.buttonText}>+ Add Lodging</IconText>
             </TouchableOpacity>
           )}
         </View>
@@ -3945,7 +3906,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <Text style={styles.headerText}>Activities</Text>
           {isEditing && (
             <TouchableOpacity style={[styles.button, styles.smallButton, themeStyle('tabs_overview_86', {  }, (theme ?? _styleTheme))]} onPress={openAddTour}>
-              <Text style={styles.buttonText}>+ Add Activity</Text>
+              <IconText style={styles.buttonText}>+ Add Activity</IconText>
             </TouchableOpacity>
           )}
         </View>
@@ -3982,7 +3943,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <Text style={styles.headerText}>Rental Cars</Text>
           {isEditing && (
             <TouchableOpacity style={[styles.button, styles.smallButton, themeStyle('tabs_overview_88', {  }, (theme ?? _styleTheme))]} onPress={openAddRental}>
-              <Text style={styles.buttonText}>+ Add Rental</Text>
+              <IconText style={styles.buttonText}>+ Add Rental</IconText>
             </TouchableOpacity>
           )}
         </View>

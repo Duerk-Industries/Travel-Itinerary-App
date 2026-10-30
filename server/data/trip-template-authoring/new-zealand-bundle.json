@@ -1,0 +1,2279 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Tourism New Zealand, Air New Zealand, Earth Trekkers and First Light Travel itineraries for New Zealand",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "new-zealand-north-island-7d",
+      "title": "North Island Highlights in 7 Days",
+      "summary": "Auckland and Waiheke, then Hobbiton, Rotorua's geysers and Maori culture and Lake Taupō, all by rental car.",
+      "days": 7,
+      "route": "Auckland > Rotorua > Taupō",
+      "arrive": "Auckland (AKL)",
+      "depart": "Auckland (AKL)",
+      "countries": [
+        "New Zealand"
+      ],
+      "regions": [
+        "Auckland",
+        "Bay of Plenty",
+        "Waikato"
+      ],
+      "cities": [
+        "Auckland",
+        "Rotorua",
+        "Taupō"
+      ],
+      "imageQuery": "Rotorua geothermal Wai-O-Tapu New Zealand",
+      "highlights": [
+        "Sky Tower",
+        "Waiheke Island",
+        "Hobbiton",
+        "Rotorua geothermal",
+        "Hangi",
+        "Huka Falls"
+      ],
+      "destinationKeys": [
+        "new-zealand",
+        "new-zealand/auckland",
+        "new-zealand/bay-of-plenty",
+        "new-zealand/rotorua",
+        "new-zealand/waikato",
+        "new-zealand/taupo"
+      ],
+      "hero": "new-zealand/rotorua",
+      "sources": [
+        "Tourism New Zealand (newzealand.com)",
+        "Air New Zealand itineraries",
+        "Earth Trekkers",
+        "First Light Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Auckland",
+          "hotel": "Hotel in Auckland",
+          "start": 0,
+          "nights": 2,
+          "area": "In the CBD or Viaduct Harbour for the waterfront and ferries",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rotorua",
+          "hotel": "Hotel in Rotorua",
+          "start": 2,
+          "nights": 3,
+          "area": "Near the lakefront or a short drive from the central geothermal area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Taupō",
+          "hotel": "Hotel in Taupō",
+          "start": 5,
+          "nights": 1,
+          "area": "On the lakefront in Taupō town, close to restaurants",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Sky Tower",
+          "notes": "Best near sunset; the viewing deck has glass floor panels.",
+          "where": "Auckland CBD",
+          "book": "",
+          "place": "new-zealand/sky-tower"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Waiheke Island wine tour",
+          "notes": "Book tastings and lunch in summer; check last ferry times.",
+          "where": "Waiheke Island",
+          "book": "Yes - book vineyard lunch in summer",
+          "place": "new-zealand/waiheke-island"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "2.5h",
+          "name": "Hobbiton Movie Set",
+          "notes": "Tours sell out, so book ahead; mostly paved paths with some slopes.",
+          "where": "Matamata",
+          "book": "Yes - tours sell out",
+          "place": "new-zealand/hobbiton"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Redwoods Treewalk",
+          "notes": "After dark the bridges are lit by lanterns; the bridges sway slightly.",
+          "where": "Whakarewarewa Forest, Rotorua",
+          "book": "",
+          "place": "new-zealand/redwoods-treewalk"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Te Puia geothermal valley",
+          "notes": "Pohutu geyser erupts several times a day; the sulphur smell is strong.",
+          "where": "Whakarewarewa, Rotorua",
+          "book": "",
+          "place": "new-zealand/te-puia"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "13:00",
+          "duration": "3h",
+          "name": "Wai-O-Tapu Thermal Wonderland",
+          "notes": "Lady Knox Geyser erupts around 10:15; stay on the boardwalks, as the ground is hot.",
+          "where": "Wai-O-Tapu",
+          "book": "",
+          "place": "new-zealand/wai-o-tapu"
+        },
+        {
+          "day": 3,
+          "type": "Concert/Show",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Maori cultural evening and hangi",
+          "notes": "Compare venues and book ahead in summer.",
+          "where": "Rotorua",
+          "book": "Yes - book a cultural evening",
+          "place": "new-zealand/hangi-evening"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Waitomo glowworm caves",
+          "notes": "About two hours each way from Rotorua; the caves are cool year-round.",
+          "where": "Waitomo",
+          "book": "Yes - cave tours run on a schedule",
+          "place": "new-zealand/waitomo-caves"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Huka Falls",
+          "notes": "Viewpoints are close to the car park; a walkway follows the river.",
+          "where": "Taupō",
+          "book": "",
+          "place": "new-zealand/huka-falls"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Lake Taupō cruise to the Maori rock carvings",
+          "notes": "The carving is reachable only by water; dress warmly on deck.",
+          "where": "Lake Taupō",
+          "book": "",
+          "place": "new-zealand/taupo-rock-carvings"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Auckland Airport (AKL)",
+          "to": "Auckland hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Shuttle, taxi or rideshare",
+          "notes": "Allow extra time at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Auckland",
+          "to": "Rotorua",
+          "time": "08:30",
+          "minutes": 190,
+          "carrier": "Rental car or private transfer",
+          "notes": "The route passes Hobbiton near Matamata, around two hours from Auckland.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Rotorua",
+          "to": "Taupō",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Taupō",
+          "to": "Auckland Airport (AKL)",
+          "time": "08:00",
+          "minutes": 240,
+          "carrier": "Rental car return or shuttle",
+          "notes": "Return rental cars at the airport and allow two to three hours before an international flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "new-zealand-queenstown-milford-7d",
+      "title": "Queenstown and Milford Sound in 7 Days",
+      "summary": "Four nights of adventure in Queenstown, then two nights at Te Anau for glowworm caves and a day cruising Milford Sound.",
+      "days": 7,
+      "route": "Queenstown > Te Anau",
+      "arrive": "Queenstown (ZQN)",
+      "depart": "Queenstown (ZQN)",
+      "countries": [
+        "New Zealand"
+      ],
+      "regions": [
+        "Otago",
+        "Southland"
+      ],
+      "cities": [
+        "Queenstown",
+        "Te Anau",
+        "Milford Sound"
+      ],
+      "imageQuery": "Milford Sound Fiordland cruise Mitre Peak",
+      "highlights": [
+        "Skyline Gondola",
+        "Shotover Jet",
+        "Glenorchy",
+        "Glowworm caves",
+        "Milford Sound"
+      ],
+      "destinationKeys": [
+        "new-zealand",
+        "new-zealand/otago",
+        "new-zealand/queenstown",
+        "new-zealand/southland",
+        "new-zealand/te-anau",
+        "new-zealand/milford-sound"
+      ],
+      "hero": "new-zealand/queenstown",
+      "sources": [
+        "Tourism New Zealand (newzealand.com)",
+        "Air New Zealand itineraries",
+        "Earth Trekkers",
+        "First Light Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Queenstown",
+          "hotel": "Hotel in Queenstown",
+          "start": 0,
+          "nights": 4,
+          "area": "In the town centre for restaurants, or on the lake shore for views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Te Anau",
+          "hotel": "Hotel in Te Anau",
+          "start": 4,
+          "nights": 2,
+          "area": "In Te Anau town, within walking distance of the lake and restaurants",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "17:00",
+          "duration": "2h",
+          "name": "Skyline Gondola",
+          "notes": "Go near sunset for views over Lake Wakatipu and the Remarkables.",
+          "where": "Queenstown",
+          "book": "",
+          "place": "new-zealand/skyline-gondola"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Shotover Jet",
+          "notes": "The ride is wet; wear layers.",
+          "where": "Arthurs Point, Queenstown",
+          "book": "Yes - book the jet-boat ride",
+          "place": "new-zealand/shotover-jet"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Arrowtown",
+          "notes": "Gold-rush cottages and a Chinese settlement; gold autumn colour in April and May.",
+          "where": "Arrowtown",
+          "book": "",
+          "place": "new-zealand/arrowtown"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Glenorchy and Lake Wakatipu",
+          "notes": "The lake road is winding; allow stops for photos.",
+          "where": "Glenorchy",
+          "book": "",
+          "place": "new-zealand/glenorchy"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Kawarau Bridge bungy",
+          "notes": "Weight and age limits apply; spectators can watch from the viewing platform.",
+          "where": "Kawarau Gorge, near Queenstown",
+          "book": "Yes - book the jump",
+          "place": "new-zealand/queenstown-bungy"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Te Anau Glowworm Caves",
+          "notes": "A boat and walking tour; book ahead in summer.",
+          "where": "Te Anau",
+          "book": "Yes - tours run on a schedule",
+          "place": "new-zealand/te-anau-glowworms"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Milford Sound cruise",
+          "notes": "Drive two hours from Te Anau (or take a coach); rain adds waterfalls and winter closures are possible.",
+          "where": "Milford Sound",
+          "book": "Yes - cruises run on set sailings",
+          "place": "new-zealand/milford-sound"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Queenstown Airport (ZQN)",
+          "to": "Queenstown hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Queenstown",
+          "to": "Te Anau",
+          "time": "09:30",
+          "minutes": 170,
+          "carrier": "Rental car or private transfer",
+          "notes": "The road follows the Mataura valley and the lake.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Te Anau",
+          "to": "Milford Sound",
+          "time": "07:30",
+          "minutes": 135,
+          "carrier": "Rental car or coach",
+          "notes": "The Homer Tunnel section can close in winter; leave early.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Milford Sound",
+          "to": "Te Anau",
+          "time": "15:30",
+          "minutes": 135,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Te Anau",
+          "to": "Queenstown Airport (ZQN)",
+          "time": "10:00",
+          "minutes": 170,
+          "carrier": "Rental car return or shuttle",
+          "notes": "Allow time for returning the car and check-in at Queenstown Airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "new-zealand-auckland-rotorua-queenstown-10d",
+      "title": "Auckland, Rotorua and Queenstown in 10 Days",
+      "summary": "Two nights in Auckland, two in Rotorua for geysers and Maori culture, then a flight south to five nights of adventure in Queenstown.",
+      "days": 10,
+      "route": "Auckland > Rotorua > Queenstown",
+      "arrive": "Auckland (AKL)",
+      "depart": "Queenstown (ZQN)",
+      "countries": [
+        "New Zealand"
+      ],
+      "regions": [
+        "Auckland",
+        "Bay of Plenty",
+        "Waikato",
+        "Otago"
+      ],
+      "cities": [
+        "Auckland",
+        "Rotorua",
+        "Queenstown",
+        "Milford Sound"
+      ],
+      "imageQuery": "Queenstown Lake Wakatipu Remarkables",
+      "highlights": [
+        "Sky Tower",
+        "Hobbiton",
+        "Rotorua hangi",
+        "Shotover Jet",
+        "Milford Sound"
+      ],
+      "destinationKeys": [
+        "new-zealand",
+        "new-zealand/auckland",
+        "new-zealand/bay-of-plenty",
+        "new-zealand/rotorua",
+        "new-zealand/waikato",
+        "new-zealand/otago",
+        "new-zealand/queenstown",
+        "new-zealand/milford-sound"
+      ],
+      "hero": "new-zealand/queenstown",
+      "sources": [
+        "Tourism New Zealand (newzealand.com)",
+        "Air New Zealand itineraries",
+        "Earth Trekkers",
+        "First Light Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Auckland",
+          "hotel": "Hotel in Auckland",
+          "start": 0,
+          "nights": 2,
+          "area": "In the CBD or Viaduct Harbour for the waterfront and ferries",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rotorua",
+          "hotel": "Hotel in Rotorua",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the lakefront or a short drive from the central geothermal area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Queenstown",
+          "hotel": "Hotel in Queenstown",
+          "start": 4,
+          "nights": 5,
+          "area": "In the town centre for restaurants, or on the lake shore for views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Sky Tower",
+          "notes": "Best near sunset; the viewing deck has glass floor panels.",
+          "where": "Auckland CBD",
+          "book": "",
+          "place": "new-zealand/sky-tower"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Waiheke Island wine tour",
+          "notes": "Book tastings and lunch in summer; check last ferry times.",
+          "where": "Waiheke Island",
+          "book": "Yes - book vineyard lunch in summer",
+          "place": "new-zealand/waiheke-island"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "2.5h",
+          "name": "Hobbiton Movie Set",
+          "notes": "Tours sell out, so book ahead; mostly paved paths with some slopes.",
+          "where": "Matamata",
+          "book": "Yes - tours sell out",
+          "place": "new-zealand/hobbiton"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Redwoods Treewalk",
+          "notes": "After dark the bridges are lit by lanterns; the bridges sway slightly.",
+          "where": "Whakarewarewa Forest, Rotorua",
+          "book": "",
+          "place": "new-zealand/redwoods-treewalk"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Te Puia geothermal valley",
+          "notes": "Pohutu geyser erupts several times a day; the sulphur smell is strong.",
+          "where": "Whakarewarewa, Rotorua",
+          "book": "",
+          "place": "new-zealand/te-puia"
+        },
+        {
+          "day": 3,
+          "type": "Concert/Show",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Maori cultural evening and hangi",
+          "notes": "Compare venues and book ahead in summer.",
+          "where": "Rotorua",
+          "book": "Yes - book a cultural evening",
+          "place": "new-zealand/hangi-evening"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Skyline Gondola",
+          "notes": "Go near sunset for views over Lake Wakatipu and the Remarkables.",
+          "where": "Queenstown",
+          "book": "",
+          "place": "new-zealand/skyline-gondola"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Shotover Jet",
+          "notes": "The ride is wet; wear layers.",
+          "where": "Arthurs Point, Queenstown",
+          "book": "Yes - book the jet-boat ride",
+          "place": "new-zealand/shotover-jet"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Arrowtown",
+          "notes": "Gold-rush cottages and a Chinese settlement; gold autumn colour in April and May.",
+          "where": "Arrowtown",
+          "book": "",
+          "place": "new-zealand/arrowtown"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "07:00",
+          "duration": "12h",
+          "name": "Milford Sound coach and cruise",
+          "notes": "A very long day; the road can close in winter, and rain makes the waterfalls spectacular.",
+          "where": "Milford Sound",
+          "book": "Yes - book coach and cruise early",
+          "place": "new-zealand/milford-sound"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Glenorchy and Lake Wakatipu",
+          "notes": "The lake road is winding; allow stops for photos.",
+          "where": "Glenorchy",
+          "book": "",
+          "place": "new-zealand/glenorchy"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Kawarau Bridge bungy",
+          "notes": "Weight and age limits apply; spectators can watch from the viewing platform.",
+          "where": "Kawarau Gorge, near Queenstown",
+          "book": "Yes - book the jump",
+          "place": "new-zealand/queenstown-bungy"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Auckland Airport (AKL)",
+          "to": "Auckland hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Shuttle, taxi or rideshare",
+          "notes": "Allow extra time at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Auckland",
+          "to": "Rotorua",
+          "time": "08:30",
+          "minutes": 190,
+          "carrier": "Rental car or private transfer",
+          "notes": "The route passes Hobbiton near Matamata, around two hours from Auckland.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Rotorua",
+          "to": "Auckland Airport (AKL)",
+          "time": "06:30",
+          "minutes": 210,
+          "carrier": "Rental car return or shuttle",
+          "notes": "Return rental cars at the airport and allow two to three hours before an international flight.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Queenstown Airport (ZQN)",
+          "to": "Queenstown hotel area",
+          "time": "14:30",
+          "minutes": 20,
+          "carrier": "Shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Queenstown hotel area",
+          "to": "Queenstown Airport (ZQN)",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Rental car return or shuttle",
+          "notes": "Allow time for returning the car and check-in at Queenstown Airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "new-zealand-south-island-road-trip-10d",
+      "title": "South Island Road Trip in 10 Days",
+      "summary": "Christchurch and Akaroa, the turquoise lakes of Tekapo, Aoraki Mount Cook and Wanaka, finishing with four nights in Queenstown.",
+      "days": 10,
+      "route": "Christchurch > Lake Tekapo > Wanaka > Queenstown",
+      "arrive": "Christchurch (CHC)",
+      "depart": "Queenstown (ZQN)",
+      "countries": [
+        "New Zealand"
+      ],
+      "regions": [
+        "Canterbury",
+        "Otago"
+      ],
+      "cities": [
+        "Christchurch",
+        "Akaroa",
+        "Lake Tekapo",
+        "Mount Cook",
+        "Wanaka",
+        "Queenstown"
+      ],
+      "imageQuery": "Lake Tekapo Church of the Good Shepherd New Zealand",
+      "highlights": [
+        "Akaroa dolphins",
+        "Lake Tekapo",
+        "Hooker Valley",
+        "Roys Peak",
+        "Milford Sound"
+      ],
+      "destinationKeys": [
+        "new-zealand",
+        "new-zealand/canterbury",
+        "new-zealand/christchurch",
+        "new-zealand/lake-tekapo",
+        "new-zealand/mount-cook",
+        "new-zealand/otago",
+        "new-zealand/wanaka",
+        "new-zealand/queenstown",
+        "new-zealand/akaroa"
+      ],
+      "hero": "new-zealand/lake-tekapo",
+      "sources": [
+        "Tourism New Zealand (newzealand.com)",
+        "Air New Zealand itineraries",
+        "Earth Trekkers",
+        "First Light Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "photography",
+        "adventure",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Christchurch",
+          "hotel": "Hotel in Christchurch",
+          "start": 0,
+          "nights": 2,
+          "area": "In the central city near the Botanic Gardens and Avon River",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Tekapo",
+          "hotel": "Lodge at Lake Tekapo",
+          "start": 2,
+          "nights": 1,
+          "area": "In Lake Tekapo village, with lake views if possible",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wanaka",
+          "hotel": "Hotel in Wanaka",
+          "start": 3,
+          "nights": 2,
+          "area": "Near the lakefront in Wanaka town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Queenstown",
+          "hotel": "Hotel in Queenstown",
+          "start": 5,
+          "nights": 4,
+          "area": "In the town centre for restaurants, or on the lake shore for views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Christchurch Botanic Gardens and punting",
+          "notes": "Punts leave from the Antigua Boatsheds; the city centre is flat and easy on foot.",
+          "where": "Christchurch",
+          "book": "",
+          "place": "new-zealand/christchurch-botanic-gardens"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Akaroa and Hector's dolphins",
+          "notes": "The road is winding; boat trips go out to the dolphins from the harbour.",
+          "where": "Akaroa",
+          "book": "",
+          "place": "new-zealand/akaroa-dolphins"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "Church of the Good Shepherd",
+          "notes": "No photography inside; the view is best in late afternoon.",
+          "where": "Lake Tekapo",
+          "book": "",
+          "place": "new-zealand/lake-tekapo-church"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "21:30",
+          "duration": "2h",
+          "name": "Stargazing at Tekapo",
+          "notes": "Warm layers needed; tours are cancelled in cloud.",
+          "where": "Lake Tekapo",
+          "book": "Yes - stargazing tours run on set nights",
+          "place": "new-zealand/tekapo-stargazing"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Hooker Valley Track",
+          "notes": "Flat and easy but windy; the weather can change fast.",
+          "where": "Aoraki Mount Cook National Park",
+          "book": "",
+          "place": "new-zealand/hooker-valley"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "That Wanaka Tree",
+          "notes": "Best at sunset; do not climb the tree.",
+          "where": "Wanaka",
+          "book": "",
+          "place": "new-zealand/lake-wanaka-tree"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Roys Peak track",
+          "notes": "Long and steep with no shade; closed during lambing season, around October to early November.",
+          "where": "Wanaka",
+          "book": "",
+          "place": "new-zealand/roys-peak"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Skyline Gondola",
+          "notes": "Go near sunset for views over Lake Wakatipu and the Remarkables.",
+          "where": "Queenstown",
+          "book": "",
+          "place": "new-zealand/skyline-gondola"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Shotover Jet",
+          "notes": "The ride is wet; wear layers.",
+          "where": "Arthurs Point, Queenstown",
+          "book": "Yes - book the jet-boat ride",
+          "place": "new-zealand/shotover-jet"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Arrowtown",
+          "notes": "Gold-rush cottages and a Chinese settlement; gold autumn colour in April and May.",
+          "where": "Arrowtown",
+          "book": "",
+          "place": "new-zealand/arrowtown"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "07:00",
+          "duration": "12h",
+          "name": "Milford Sound coach and cruise",
+          "notes": "A very long day; the road can close in winter, and rain makes the waterfalls spectacular.",
+          "where": "Milford Sound",
+          "book": "Yes - book coach and cruise early",
+          "place": "new-zealand/milford-sound"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Glenorchy and Lake Wakatipu",
+          "notes": "The lake road is winding; allow stops for photos.",
+          "where": "Glenorchy",
+          "book": "",
+          "place": "new-zealand/glenorchy"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Christchurch Airport (CHC)",
+          "to": "Christchurch hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Christchurch",
+          "to": "Lake Tekapo",
+          "time": "08:30",
+          "minutes": 230,
+          "carrier": "Rental car",
+          "notes": "Fuel up before the long, quiet stretches of the Mackenzie Country.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Lake Tekapo",
+          "to": "Wanaka",
+          "time": "07:00",
+          "minutes": 240,
+          "carrier": "Rental car",
+          "notes": "The route passes Aoraki Mount Cook and the Lindis Pass; the Hooker Valley stop is a short detour.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Wanaka",
+          "to": "Queenstown",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "The Crown Range road is the high route; it can be icy in winter.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Queenstown hotel area",
+          "to": "Queenstown Airport (ZQN)",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Rental car return or shuttle",
+          "notes": "Allow time for returning the car and check-in at Queenstown Airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "new-zealand-both-islands-14d",
+      "title": "Both Islands from Auckland to Queenstown in 14 Days",
+      "summary": "Auckland, Rotorua and Taupō, the capital at Wellington, then a flight south for Tekapo, Mount Cook, Wanaka and Queenstown.",
+      "days": 14,
+      "route": "Auckland > Rotorua > Taupō > Wellington > Christchurch > Lake Tekapo > Wanaka > Queenstown",
+      "arrive": "Auckland (AKL)",
+      "depart": "Queenstown (ZQN)",
+      "countries": [
+        "New Zealand"
+      ],
+      "regions": [
+        "Auckland",
+        "Bay of Plenty",
+        "Waikato",
+        "Wellington",
+        "Canterbury",
+        "Otago"
+      ],
+      "cities": [
+        "Auckland",
+        "Rotorua",
+        "Taupō",
+        "Wellington",
+        "Christchurch",
+        "Lake Tekapo",
+        "Mount Cook",
+        "Wanaka",
+        "Queenstown",
+        "Milford Sound"
+      ],
+      "imageQuery": "New Zealand Wellington harbour Te Papa",
+      "highlights": [
+        "Hobbiton",
+        "Rotorua",
+        "Te Papa",
+        "Lake Tekapo",
+        "Hooker Valley",
+        "Milford Sound"
+      ],
+      "destinationKeys": [
+        "new-zealand",
+        "new-zealand/auckland",
+        "new-zealand/bay-of-plenty",
+        "new-zealand/rotorua",
+        "new-zealand/waikato",
+        "new-zealand/taupo",
+        "new-zealand/wellington",
+        "new-zealand/canterbury",
+        "new-zealand/christchurch",
+        "new-zealand/lake-tekapo",
+        "new-zealand/mount-cook",
+        "new-zealand/otago",
+        "new-zealand/wanaka",
+        "new-zealand/queenstown",
+        "new-zealand/milford-sound"
+      ],
+      "hero": "new-zealand/wellington",
+      "sources": [
+        "Tourism New Zealand (newzealand.com)",
+        "Air New Zealand itineraries",
+        "Earth Trekkers",
+        "First Light Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Auckland",
+          "hotel": "Hotel in Auckland",
+          "start": 0,
+          "nights": 2,
+          "area": "In the CBD or Viaduct Harbour for the waterfront and ferries",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rotorua",
+          "hotel": "Hotel in Rotorua",
+          "start": 2,
+          "nights": 2,
+          "area": "Near the lakefront or a short drive from the central geothermal area",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Taupō",
+          "hotel": "Hotel in Taupō",
+          "start": 4,
+          "nights": 1,
+          "area": "On the lakefront in Taupō town, close to restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wellington",
+          "hotel": "Hotel in Wellington",
+          "start": 5,
+          "nights": 2,
+          "area": "Near Lambton Quay, Cuba Street or the waterfront; most things are walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Christchurch",
+          "hotel": "Hotel in Christchurch",
+          "start": 7,
+          "nights": 1,
+          "area": "In the central city near the Botanic Gardens and Avon River",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Tekapo",
+          "hotel": "Lodge at Lake Tekapo",
+          "start": 8,
+          "nights": 1,
+          "area": "In Lake Tekapo village, with lake views if possible",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wanaka",
+          "hotel": "Hotel in Wanaka",
+          "start": 9,
+          "nights": 2,
+          "area": "Near the lakefront in Wanaka town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Queenstown",
+          "hotel": "Hotel in Queenstown",
+          "start": 11,
+          "nights": 2,
+          "area": "In the town centre for restaurants, or on the lake shore for views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "1.5h",
+          "name": "Sky Tower",
+          "notes": "Best near sunset; the viewing deck has glass floor panels.",
+          "where": "Auckland CBD",
+          "book": "",
+          "place": "new-zealand/sky-tower"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Waiheke Island wine tour",
+          "notes": "Book tastings and lunch in summer; check last ferry times.",
+          "where": "Waiheke Island",
+          "book": "Yes - book vineyard lunch in summer",
+          "place": "new-zealand/waiheke-island"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:30",
+          "duration": "2.5h",
+          "name": "Hobbiton Movie Set",
+          "notes": "Tours sell out, so book ahead; mostly paved paths with some slopes.",
+          "where": "Matamata",
+          "book": "Yes - tours sell out",
+          "place": "new-zealand/hobbiton"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "19:00",
+          "duration": "1.5h",
+          "name": "Redwoods Treewalk",
+          "notes": "After dark the bridges are lit by lanterns; the bridges sway slightly.",
+          "where": "Whakarewarewa Forest, Rotorua",
+          "book": "",
+          "place": "new-zealand/redwoods-treewalk"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "2.5h",
+          "name": "Te Puia geothermal valley",
+          "notes": "Pohutu geyser erupts several times a day; the sulphur smell is strong.",
+          "where": "Whakarewarewa, Rotorua",
+          "book": "",
+          "place": "new-zealand/te-puia"
+        },
+        {
+          "day": 3,
+          "type": "Concert/Show",
+          "time": "18:30",
+          "duration": "3h",
+          "name": "Maori cultural evening and hangi",
+          "notes": "Compare venues and book ahead in summer.",
+          "where": "Rotorua",
+          "book": "Yes - book a cultural evening",
+          "place": "new-zealand/hangi-evening"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Huka Falls",
+          "notes": "Viewpoints are close to the car park; a walkway follows the river.",
+          "where": "Taupō",
+          "book": "",
+          "place": "new-zealand/huka-falls"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Lake Taupō cruise to the Maori rock carvings",
+          "notes": "The carving is reachable only by water; dress warmly on deck.",
+          "where": "Lake Taupō",
+          "book": "",
+          "place": "new-zealand/taupo-rock-carvings"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Te Papa Tongarewa",
+          "notes": "General admission is free; plan two to three hours.",
+          "where": "Wellington waterfront",
+          "book": "",
+          "place": "new-zealand/te-papa"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "17:45",
+          "duration": "1h",
+          "name": "Wellington Cable Car",
+          "notes": "Bring a windproof layer; Wellington weather changes quickly.",
+          "where": "Lambton Quay, Wellington",
+          "book": "",
+          "place": "new-zealand/wellington-cable-car"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Zealandia wildlife sanctuary",
+          "notes": "A night tour is the best chance to see kiwi.",
+          "where": "Wellington",
+          "book": "",
+          "place": "new-zealand/zealandia"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Christchurch Botanic Gardens and punting",
+          "notes": "Punts leave from the Antigua Boatsheds; the city centre is flat and easy on foot.",
+          "where": "Christchurch",
+          "book": "",
+          "place": "new-zealand/christchurch-botanic-gardens"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "1h",
+          "name": "Church of the Good Shepherd",
+          "notes": "No photography inside; the view is best in late afternoon.",
+          "where": "Lake Tekapo",
+          "book": "",
+          "place": "new-zealand/lake-tekapo-church"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "21:30",
+          "duration": "2h",
+          "name": "Stargazing at Tekapo",
+          "notes": "Warm layers needed; tours are cancelled in cloud.",
+          "where": "Lake Tekapo",
+          "book": "Yes - stargazing tours run on set nights",
+          "place": "new-zealand/tekapo-stargazing"
+        },
+        {
+          "day": 9,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Hooker Valley Track",
+          "notes": "Flat and easy but windy; the weather can change fast.",
+          "where": "Aoraki Mount Cook National Park",
+          "book": "",
+          "place": "new-zealand/hooker-valley"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "That Wanaka Tree",
+          "notes": "Best at sunset; do not climb the tree.",
+          "where": "Wanaka",
+          "book": "",
+          "place": "new-zealand/lake-wanaka-tree"
+        },
+        {
+          "day": 10,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Roys Peak track",
+          "notes": "Long and steep with no shade; closed during lambing season, around October to early November.",
+          "where": "Wanaka",
+          "book": "",
+          "place": "new-zealand/roys-peak"
+        },
+        {
+          "day": 11,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Skyline Gondola",
+          "notes": "Go near sunset for views over Lake Wakatipu and the Remarkables.",
+          "where": "Queenstown",
+          "book": "",
+          "place": "new-zealand/skyline-gondola"
+        },
+        {
+          "day": 12,
+          "type": "Day Trip",
+          "time": "07:00",
+          "duration": "12h",
+          "name": "Milford Sound coach and cruise",
+          "notes": "A very long day; the road can close in winter, and rain makes the waterfalls spectacular.",
+          "where": "Milford Sound",
+          "book": "Yes - book coach and cruise early",
+          "place": "new-zealand/milford-sound"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Auckland Airport (AKL)",
+          "to": "Auckland hotel area",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Shuttle, taxi or rideshare",
+          "notes": "Allow extra time at peak hours.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Auckland",
+          "to": "Rotorua",
+          "time": "08:30",
+          "minutes": 190,
+          "carrier": "Rental car or private transfer",
+          "notes": "The route passes Hobbiton near Matamata, around two hours from Auckland.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Rotorua",
+          "to": "Taupō",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Taupō",
+          "to": "Wellington",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "Rental car or private transfer",
+          "notes": "The road runs through the Desert Road and Manawatū; allow stops.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Wellington hotel area",
+          "to": "Wellington Airport (WLG)",
+          "time": "07:30",
+          "minutes": 20,
+          "carrier": "Taxi or shuttle",
+          "notes": "This covers the ground leg to Wellington Airport only; the flight to Christchurch takes about an hour.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Christchurch Airport (CHC)",
+          "to": "Christchurch hotel area",
+          "time": "12:30",
+          "minutes": 25,
+          "carrier": "Shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Christchurch",
+          "to": "Lake Tekapo",
+          "time": "08:30",
+          "minutes": 230,
+          "carrier": "Rental car",
+          "notes": "Fuel up before the long, quiet stretches of the Mackenzie Country.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Lake Tekapo",
+          "to": "Wanaka",
+          "time": "07:00",
+          "minutes": 240,
+          "carrier": "Rental car",
+          "notes": "The route passes Aoraki Mount Cook and the Lindis Pass; the Hooker Valley stop is a short detour.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Wanaka",
+          "to": "Queenstown",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "The Crown Range road is the high route; it can be icy in winter.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Queenstown hotel area",
+          "to": "Queenstown Airport (ZQN)",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Rental car return or shuttle",
+          "notes": "Allow time for returning the car and check-in at Queenstown Airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "new-zealand-south-island-west-coast-12d",
+      "title": "South Island, Glaciers and Fiordland in 12 Days",
+      "summary": "Over Arthur's Pass to Franz Josef glacier, Wanaka, Queenstown and a finish at Te Anau for Milford Sound.",
+      "days": 12,
+      "route": "Christchurch > Franz Josef > Wanaka > Queenstown > Te Anau",
+      "arrive": "Christchurch (CHC)",
+      "depart": "Queenstown (ZQN)",
+      "countries": [
+        "New Zealand"
+      ],
+      "regions": [
+        "Canterbury",
+        "West Coast",
+        "Otago",
+        "Southland"
+      ],
+      "cities": [
+        "Christchurch",
+        "Akaroa",
+        "Franz Josef",
+        "Wanaka",
+        "Queenstown",
+        "Te Anau",
+        "Milford Sound"
+      ],
+      "imageQuery": "Franz Josef Glacier New Zealand",
+      "highlights": [
+        "Arthur's Pass",
+        "Franz Josef Glacier",
+        "Roys Peak",
+        "Queenstown",
+        "Milford Sound"
+      ],
+      "destinationKeys": [
+        "new-zealand",
+        "new-zealand/canterbury",
+        "new-zealand/christchurch",
+        "new-zealand/west-coast",
+        "new-zealand/franz-josef",
+        "new-zealand/otago",
+        "new-zealand/wanaka",
+        "new-zealand/queenstown",
+        "new-zealand/southland",
+        "new-zealand/te-anau",
+        "new-zealand/akaroa",
+        "new-zealand/milford-sound"
+      ],
+      "hero": "new-zealand/franz-josef",
+      "sources": [
+        "Tourism New Zealand (newzealand.com)",
+        "Air New Zealand itineraries",
+        "Earth Trekkers",
+        "First Light Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Christchurch",
+          "hotel": "Hotel in Christchurch",
+          "start": 0,
+          "nights": 2,
+          "area": "In the central city near the Botanic Gardens and Avon River",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Franz Josef",
+          "hotel": "Hotel in Franz Josef",
+          "start": 2,
+          "nights": 2,
+          "area": "In Franz Josef village, a short walk from cafes; a few options are on the edge of the rainforest",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Wanaka",
+          "hotel": "Hotel in Wanaka",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the lakefront in Wanaka town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Queenstown",
+          "hotel": "Hotel in Queenstown",
+          "start": 6,
+          "nights": 3,
+          "area": "In the town centre for restaurants, or on the lake shore for views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Te Anau",
+          "hotel": "Hotel in Te Anau",
+          "start": 9,
+          "nights": 2,
+          "area": "In Te Anau town, within walking distance of the lake and restaurants",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Christchurch Botanic Gardens and punting",
+          "notes": "Punts leave from the Antigua Boatsheds; the city centre is flat and easy on foot.",
+          "where": "Christchurch",
+          "book": "",
+          "place": "new-zealand/christchurch-botanic-gardens"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Akaroa and Hector's dolphins",
+          "notes": "The road is winding; boat trips go out to the dolphins from the harbour.",
+          "where": "Akaroa",
+          "book": "",
+          "place": "new-zealand/akaroa-dolphins"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "1.5h",
+          "name": "Arthur's Pass viewpoints and waterfall walk",
+          "notes": "Kea may approach parked cars; do not feed them. The pass can close in winter snow.",
+          "where": "Arthur's Pass",
+          "book": "",
+          "place": "new-zealand/arthurs-pass"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "3.5h",
+          "name": "Franz Josef Glacier valley walk or heli-hike",
+          "notes": "Walking access to the glacier face has changed as it retreats, so check conditions; flights are weather-dependent.",
+          "where": "Franz Josef",
+          "book": "Yes - helicopter and guided trips book out",
+          "place": "new-zealand/franz-josef-glacier"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "1.5h",
+          "name": "That Wanaka Tree",
+          "notes": "Best at sunset; do not climb the tree.",
+          "where": "Wanaka",
+          "book": "",
+          "place": "new-zealand/lake-wanaka-tree"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "07:00",
+          "duration": "6h",
+          "name": "Roys Peak track",
+          "notes": "Long and steep with no shade; closed during lambing season, around October to early November.",
+          "where": "Wanaka",
+          "book": "",
+          "place": "new-zealand/roys-peak"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Skyline Gondola",
+          "notes": "Go near sunset for views over Lake Wakatipu and the Remarkables.",
+          "where": "Queenstown",
+          "book": "",
+          "place": "new-zealand/skyline-gondola"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "1.5h",
+          "name": "Shotover Jet",
+          "notes": "The ride is wet; wear layers.",
+          "where": "Arthurs Point, Queenstown",
+          "book": "Yes - book the jet-boat ride",
+          "place": "new-zealand/shotover-jet"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Arrowtown",
+          "notes": "Gold-rush cottages and a Chinese settlement; gold autumn colour in April and May.",
+          "where": "Arrowtown",
+          "book": "",
+          "place": "new-zealand/arrowtown"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Glenorchy and Lake Wakatipu",
+          "notes": "The lake road is winding; allow stops for photos.",
+          "where": "Glenorchy",
+          "book": "",
+          "place": "new-zealand/glenorchy"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Te Anau Glowworm Caves",
+          "notes": "A boat and walking tour; book ahead in summer.",
+          "where": "Te Anau",
+          "book": "Yes - tours run on a schedule",
+          "place": "new-zealand/te-anau-glowworms"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Milford Sound cruise",
+          "notes": "Drive two hours from Te Anau (or take a coach); rain adds waterfalls and winter closures are possible.",
+          "where": "Milford Sound",
+          "book": "Yes - cruises run on set sailings",
+          "place": "new-zealand/milford-sound"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Christchurch Airport (CHC)",
+          "to": "Christchurch hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Shuttle, taxi or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Christchurch",
+          "to": "Franz Josef",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "Rental car",
+          "notes": "The route over Arthur's Pass is scenic but winding; check road conditions in winter.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Franz Josef",
+          "to": "Wanaka",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car",
+          "notes": "The Haast Pass road is long with few services; fill the tank first.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Wanaka",
+          "to": "Queenstown",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Rental car",
+          "notes": "The Crown Range road is the high route; it can be icy in winter.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Queenstown",
+          "to": "Te Anau",
+          "time": "09:30",
+          "minutes": 170,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Te Anau",
+          "to": "Milford Sound",
+          "time": "07:00",
+          "minutes": 135,
+          "carrier": "Rental car or coach",
+          "notes": "The Homer Tunnel section can close in winter; leave early.",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Milford Sound",
+          "to": "Te Anau",
+          "time": "15:00",
+          "minutes": 135,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Te Anau",
+          "to": "Queenstown Airport (ZQN)",
+          "time": "10:00",
+          "minutes": 170,
+          "carrier": "Rental car return or shuttle",
+          "notes": "Allow time for returning the car and check-in at Queenstown Airport.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "new-zealand/sky-tower": {
+        "name": "Sky Tower",
+        "description": "Auckland's 328-metre tower, with a viewing deck and glass floor looking over the harbour and volcanic cones.",
+        "details": "The Sky Tower dominates Auckland's skyline and has viewing decks with glass floor panels, restaurants and a skywalk and jump for thrill seekers. On a clear day views reach over the Hauraki Gulf and the volcanic cones of the isthmus. Go near sunset for both daylight and city lights. It is in the central city, within walking distance of the waterfront.",
+        "interests": [
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/waiheke-island": {
+        "name": "Waiheke Island",
+        "description": "A short ferry ride from Auckland to vineyards, olive groves and sheltered beaches in the Hauraki Gulf.",
+        "details": "Waiheke is about forty minutes by ferry from downtown Auckland and known for its wineries, restaurants and beaches. Hop-on hop-off buses link the main vineyards, or you can hire an electric bike. Book tastings and lunch in advance in summer. Last ferries leave in the evening, so check times.",
+        "interests": [
+          "food",
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/hobbiton": {
+        "name": "Hobbiton Movie Set",
+        "description": "The Shire from The Lord of the Rings and The Hobbit films, preserved on a working farm near Matamata.",
+        "details": "Hobbiton is on a sheep farm outside Matamata, with 44 hobbit holes, a mill and the Green Dragon Inn. Guided tours last about two hours and include a drink at the inn. It is a gentle walk over mostly paved paths. Tours often sell out, so book ahead, and note that it is a large site that needs some stamina.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/waitomo-caves": {
+        "name": "Waitomo glowworm caves",
+        "description": "Limestone caves lit by thousands of glowworms, visited by boat or on foot.",
+        "details": "The Waitomo caves are famed for the glowworms that light the roof like stars. Guides lead visitors through the cathedral-like chambers, and a boat drifts through the darkest cave. Adventure options include black-water rafting. The caves are cool year-round. They are about an hour off the main road, so it is a half-day detour.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "new-zealand/te-puia": {
+        "name": "Te Puia and Te Whakarewarewa",
+        "description": "A geothermal valley with the Pohutu geyser, boiling mud pools and a Maori arts and crafts school.",
+        "details": "Te Puia is a geothermal reserve at Whakarewarewa where the Pohutu geyser erupts up to 30 metres several times a day. The site also has bubbling mud pools and houses a school for traditional Maori carving and weaving, with a kiwi house. Sulphur gas gives the area its distinctive smell. Guided tours explain the culture as well as the geology.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "iconic_landmarks",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/wai-o-tapu": {
+        "name": "Wai-O-Tapu Thermal Wonderland",
+        "description": "A geothermal park of coloured pools, craters and a geyser that is made to erupt each morning.",
+        "details": "Wai-O-Tapu is a large thermal area south of Rotorua, with the Champagne Pool, the Artist's Palette and Lady Knox Geyser, which is triggered to erupt at around 10:15 each day. Walks of different lengths follow boardwalks past steaming craters in orange, green and yellow. Allow two to three hours. Stay on the paths, as the ground is hot.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/hangi-evening": {
+        "name": "Maori cultural evening and hangi",
+        "description": "An evening of song, dance and a traditional feast cooked in an earth oven.",
+        "details": "Cultural evenings in Rotorua introduce the Maori welcome (powhiri), songs and the haka, followed by a hangi meal of meat and vegetables slow-cooked in heated stones in the ground. Several venues host them, so compare the type of experience before booking. Booking ahead is wise, especially in summer.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/redwoods-treewalk": {
+        "name": "Redwoods Treewalk",
+        "description": "Suspension bridges among giant redwoods in the Whakarewarewa Forest, lit with lanterns after dark.",
+        "details": "The Redwoods forest at Rotorua holds a treetop walkway of suspension bridges and platforms about 12 metres up. After dark it is lit with lanterns, giving a magical evening walk. The surrounding forest has mountain bike and walking trails. The bridges sway slightly, and the walk is easy underfoot.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/huka-falls": {
+        "name": "Huka Falls",
+        "description": "A powerful stretch of the Waikato River squeezing through a narrow gorge into turquoise rapids.",
+        "details": "At Huka Falls the Waikato River narrows and drops in a rush of blue-green water. A footbridge crosses above, and a walkway follows the river to Taupō. Jet-boat rides run to the base of the falls. The viewpoints are close to the car park and suit most visitors.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/taupo-rock-carvings": {
+        "name": "Lake Taupō cruise and Maori rock carvings",
+        "description": "A boat trip across New Zealand's largest lake to a giant Maori rock carving cut into the cliffs.",
+        "details": "The Ngatoroirangi rock carving was made in the late 1970s and rises about 14 metres on a cliff face at Mine Bay, reachable only by water. Cruises include sailing boats and a traditional-style vessel, and the views take in snow-topped volcanoes on a clear day. Cruises last two to three hours.",
+        "interests": [
+          "culture",
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/te-papa": {
+        "name": "Te Papa Tongarewa",
+        "description": "New Zealand's national museum on the Wellington waterfront, covering Maori culture, natural history and the colossal squid.",
+        "details": "Te Papa is a large, interactive museum with floors on Maori culture, Pacific peoples, natural history and art. The giant squid is a favourite, and there is an earthquake simulator. General admission is free, with charges for special exhibitions. Plan at least two to three hours.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/wellington-cable-car": {
+        "name": "Wellington Cable Car and Botanic Garden",
+        "description": "A heritage funicular from Lambton Quay to the hilltop gardens with city and harbour views.",
+        "details": "The red Wellington Cable Car climbs the hill from the city to the Botanic Garden, giving views of the harbour and the compact central city. A pleasant downhill walk through the gardens follows, passing the Lady Norwood Rose Garden. The weather in Wellington changes quickly, so bring a windproof layer.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/zealandia": {
+        "name": "Zealandia",
+        "description": "A fenced wildlife sanctuary in the city where rare native birds such as kaka and takahe roam.",
+        "details": "Zealandia protects a valley of regenerating forest from introduced predators, allowing endangered species such as tuatara, takahe and kiwi to thrive. Trails of different lengths wind through the forest, and a night tour gives the best chance to see kiwi. It is five minutes by shuttle from the city centre.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "new-zealand/christchurch-botanic-gardens": {
+        "name": "Christchurch Botanic Gardens and the Avon",
+        "description": "A leafy city garden beside the Avon River, where visitors can go punting.",
+        "details": "Christchurch's Botanic Gardens sit in a bend of the Avon River next to Hagley Park, with rose gardens, glasshouses and tree-lined paths. Punts glide along the river from the Antigua Boatsheds. The city is flat and rebuilt in places after the 2011 earthquakes, with street art and a newer centre to explore. The Canterbury Museum is next door.",
+        "interests": [
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/akaroa-dolphins": {
+        "name": "Akaroa and Hector's dolphins",
+        "description": "A French-flavoured harbour village on a volcanic peninsula, with cruises to see the rare Hector's dolphin.",
+        "details": "Akaroa sits inside an ancient volcano crater, with a harbour where the world's smallest and rarest marine dolphin, Hector's dolphin, swims. Boat trips go out to see the dolphins, and some allow swimming with them in season. The village has French street names and cafes. The road from Christchurch is winding, around an hour and a half.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/lake-tekapo-church": {
+        "name": "Church of the Good Shepherd",
+        "description": "A tiny stone chapel on the shore of Lake Tekapo, with a window that frames the turquoise lake.",
+        "details": "The Church of the Good Shepherd was built in 1935 and sits on the shore of Lake Tekapo, a milky turquoise lake coloured by glacial flour. The altar window frames the lake and mountains. Photography inside is not allowed. The church is small, and the view is best in the late afternoon.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/tekapo-stargazing": {
+        "name": "Stargazing at Tekapo",
+        "description": "An evening tour in one of the world's largest dark-sky reserves, with telescopes and a guide.",
+        "details": "The Aoraki Mackenzie International Dark Sky Reserve gives some of the clearest night skies in the world. Guided tours at the Mount John Observatory or in the town use telescopes to view planets, star clusters and the Milky Way. Dress in warm layers, as it is cold after sunset even in summer. Tours are cancelled in cloud.",
+        "interests": [
+          "relax",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/hooker-valley": {
+        "name": "Hooker Valley Track",
+        "description": "A flat and easy walk to a glacial lake under Aoraki Mount Cook, with swing bridges.",
+        "details": "The Hooker Valley Track follows a river through the Southern Alps, crossing three swing bridges, to a glacial lake with icebergs and views of Aoraki Mount Cook, New Zealand's highest peak. It is about 10 kilometres return and takes three hours, with little elevation. The weather can change fast, and wind is strong in the valley.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "new-zealand/lake-wanaka-tree": {
+        "name": "That Wanaka Tree and Lake Wanaka",
+        "description": "A lone willow growing in the water of Lake Wanaka, one of the country's most photographed trees.",
+        "details": "The willow tree stands in the shallows of Lake Wanaka, with mountains behind. It is best photographed at sunrise or sunset. The lakefront has cafes and walking paths. Please do not climb the tree. Wanaka is quieter and more relaxed than Queenstown.",
+        "interests": [
+          "photography",
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/roys-peak": {
+        "name": "Roys Peak track",
+        "description": "A steep zigzag walk above Lake Wanaka to a ridge with a sweeping view of the lake and the Southern Alps.",
+        "details": "Roys Peak is a long climb of about 16 kilometres return with 1,200 metres of ascent, taking five to six hours. The view from the lookout over Lake Wanaka and the Southern Alps is one of the best in the country. It is exposed with no shade. The track is closed in the lambing season, from about October to early November, and the weather turns quickly.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "new-zealand/arthurs-pass": {
+        "name": "Arthur's Pass",
+        "description": "A mountain pass crossing the Southern Alps, with waterfalls, alpine scenery and cheeky kea parrots.",
+        "details": "Arthur's Pass is the road and rail route over the Southern Alps from Canterbury to the West Coast. Stops include the Devil's Punchbowl waterfall walk and viewpoints. Kea, the native alpine parrot, may investigate parked cars, so do not feed them. Snow and rockfall can close the road in winter.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "new-zealand/franz-josef-glacier": {
+        "name": "Franz Josef Glacier",
+        "description": "A glacier that descends almost to rainforest, viewed on a valley walk or by helicopter and guided ice hike.",
+        "details": "The Franz Josef Glacier flows from the Southern Alps into temperate rainforest. The glacier has retreated, and walking access to the terminal face has changed, so check current conditions at the visitor centre. Helicopter flights with a landing on the ice, or guided heli-hikes, are the best way to see it up close. Flights are weather-dependent and often rescheduled.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "new-zealand/skyline-gondola": {
+        "name": "Skyline Gondola, Queenstown",
+        "description": "A cable car above Queenstown to a viewpoint over Lake Wakatipu and the Remarkables.",
+        "details": "The gondola climbs 450 metres above the town to Bob's Peak, with a view over Lake Wakatipu and the Remarkables mountain range. At the top are restaurants and the luge. It is a good way to spend the evening, especially around sunset. Queenstown is compact and walkable.",
+        "interests": [
+          "photography",
+          "iconic_landmarks",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/shotover-jet": {
+        "name": "Shotover Jet",
+        "description": "A fast jet-boat ride through the narrow canyons of the Shotover River with sharp 360-degree spins.",
+        "details": "The Shotover Jet skims through shallow canyons just centimetres from the walls, with spins and sharp turns. The ride lasts about 25 minutes and is wet and exhilarating. The trip begins at Arthurs Point, a short drive from the town. Passengers get splashed, so wear layers.",
+        "interests": [
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "new-zealand/queenstown-bungy": {
+        "name": "Bungy jumping at Kawarau Bridge",
+        "description": "The world's first commercial bungy site, a 43-metre jump from a bridge over the Kawarau River.",
+        "details": "The Kawarau Bridge is where commercial bungy jumping began in 1988. The 43-metre jump ends with the option of a dip in the river. Spectators can watch from the viewing platform for a small charge. Other jumps at Queenstown are higher and more extreme. Weight and age limits apply.",
+        "interests": [
+          "adventure",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "new-zealand/arrowtown": {
+        "name": "Arrowtown",
+        "description": "A restored gold-rush village with historic cottages, a Chinese settlement and autumn colour.",
+        "details": "Arrowtown was a gold-mining settlement in the 1860s, and its tiny main street of timber and stone buildings is well preserved. The Chinese Settlement, where miners lived, can be explored on foot. The village is at its most colourful in April and May, when the trees turn gold. It is 20 minutes from Queenstown.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/glenorchy": {
+        "name": "Glenorchy",
+        "description": "A remote village at the head of Lake Wakatipu, set among mountains used as a film location.",
+        "details": "The drive along the lake to Glenorchy is one of the most scenic in the country. Wetlands, short walks, horse riding and jet-boat trips are on offer, and the landscape has appeared in Lord of the Rings films. The road is winding. It is a half-day or full-day trip from Queenstown.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/te-anau-glowworms": {
+        "name": "Te Anau Glowworm Caves",
+        "description": "A boat and walking tour into a cave on Lake Te Anau where glowworms light a hidden grotto.",
+        "details": "The caves lie across Lake Te Anau and are reached by a boat trip, then a guided walk past underground waterfalls to a small boat that floats beneath thousands of glowworms in silence. Tours leave from the Te Anau Downs wharf and last about two hours. Booking is advised in summer.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "new-zealand/milford-sound": {
+        "name": "Milford Sound cruise",
+        "description": "A cruise on a fiord of sheer cliffs and waterfalls in Fiordland National Park, often called the eighth wonder of the world.",
+        "details": "Milford Sound (Piopiotahi) is a glacier-carved fiord with Mitre Peak rising straight from the water. Cruises last one to two hours, passing waterfalls and fur seals, with a chance of dolphins. The road from Te Anau is two hours and passes the Homer Tunnel. Rain adds waterfalls, and the Milford road may close for avalanche risk in winter.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "new-zealand": {
+        "name": "New Zealand",
+        "description": "Two islands of volcanoes, fiords, glaciers and Maori culture at the bottom of the world.",
+        "images": []
+      },
+      "new-zealand/auckland": {
+        "name": "Auckland",
+        "description": "New Zealand's largest city, built on volcanic cones between two harbours with islands close by.",
+        "images": []
+      },
+      "new-zealand/waikato": {
+        "name": "Waikato",
+        "description": "The central North Island region of Hobbiton, the Waitomo caves and Lake Taupō.",
+        "images": []
+      },
+      "new-zealand/bay-of-plenty": {
+        "name": "Bay of Plenty",
+        "description": "The North Island region that includes Rotorua and its geothermal landscape.",
+        "images": []
+      },
+      "new-zealand/rotorua": {
+        "name": "Rotorua",
+        "description": "A geothermal city of geysers, mud pools and Maori cultural experiences.",
+        "images": []
+      },
+      "new-zealand/taupo": {
+        "name": "Taupō",
+        "description": "A lakeside town on New Zealand's largest lake, close to Huka Falls and the volcanic plateau.",
+        "images": []
+      },
+      "new-zealand/wellington": {
+        "name": "Wellington",
+        "description": "The compact harbour capital, with the national museum, cafes and a wildlife sanctuary.",
+        "images": []
+      },
+      "new-zealand/canterbury": {
+        "name": "Canterbury",
+        "description": "The South Island region of Christchurch, Akaroa, the Mackenzie Basin and Aoraki Mount Cook.",
+        "images": []
+      },
+      "new-zealand/akaroa": {
+        "name": "Akaroa",
+        "description": "A French-flavoured harbour village on a volcanic peninsula, home to the rare Hector dolphin.",
+        "images": []
+      },
+      "new-zealand/milford-sound": {
+        "name": "Milford Sound",
+        "description": "A fiord of sheer cliffs and waterfalls in Fiordland National Park.",
+        "images": []
+      },
+      "new-zealand/christchurch": {
+        "name": "Christchurch",
+        "description": "The South Island's main city, a garden city rebuilding with a river, parks and arts.",
+        "images": []
+      },
+      "new-zealand/lake-tekapo": {
+        "name": "Lake Tekapo",
+        "description": "A turquoise glacial lake with a stone chapel and one of the world's clearest night skies.",
+        "images": []
+      },
+      "new-zealand/mount-cook": {
+        "name": "Aoraki Mount Cook",
+        "description": "The country's highest peak and a national park of glaciers, with easy valley walks.",
+        "images": []
+      },
+      "new-zealand/otago": {
+        "name": "Otago",
+        "description": "The southern region of Queenstown, Wanaka and gold-rush heritage.",
+        "images": []
+      },
+      "new-zealand/wanaka": {
+        "name": "Wanaka",
+        "description": "A lakeside town below the Southern Alps, calmer than Queenstown, with hiking and views.",
+        "images": []
+      },
+      "new-zealand/queenstown": {
+        "name": "Queenstown",
+        "description": "The adventure capital, set on Lake Wakatipu beneath the Remarkables.",
+        "images": []
+      },
+      "new-zealand/west-coast": {
+        "name": "West Coast",
+        "description": "A wild coastal region of rainforest and glaciers on the western side of the Southern Alps.",
+        "images": []
+      },
+      "new-zealand/franz-josef": {
+        "name": "Franz Josef",
+        "description": "A small village at the foot of a glacier that flows into rainforest.",
+        "images": []
+      },
+      "new-zealand/southland": {
+        "name": "Southland",
+        "description": "The far-south region that holds Fiordland National Park.",
+        "images": []
+      },
+      "new-zealand/te-anau": {
+        "name": "Te Anau",
+        "description": "A lakeside gateway to Fiordland and Milford Sound.",
+        "images": []
+      }
+    }
+  }
+}

@@ -30,13 +30,43 @@ Paste this to a fresh session:
 
 ---
 
-## Done (3 of 91)
+## Done (33 of 91)
 
 | # | Destination | File | Templates | Lengths | Notes |
 |---|---|---|---|---|---|
 | 1 | Brazil | `brazil-bundle.json` | 6 | 4, 7, 10, 10, 14, 14 | Rio / Sao Paulo / Iguazu / Salvador / Pantanal+Bonito / Amazon |
 | 2 | United Kingdom — Scotland | `united-kingdom-scotland-bundle.json` | 6 | 4, 5, 7, 7, 10, 14 | Migrated from an earlier draft that wrongly used `countries: ["Scotland"]` |
 | 3 | Japan | `japan-bundle.json` | 6 | 5, 7, 10, 10, 14, 14 | Tokyo / golden route / +Hakone+Nara / +Hiroshima / full circuit / Japan Alps via Kanazawa+Takayama |
+| 4 | Italy | `italy-bundle.json` | 6 | 4, 7, 10, 10, 14, 14 | Rome / big three / southern Amalfi / +Cinque Terre / Milan-to-Rome / grand tour |
+| 5 | Peru | `peru-bundle.json` | 6 | 5, 7, 10, 10, 14, 14 | Cusco+MP / classic Lima+MP / +Amazon / Arequipa+Colca / southern circuit w/ Titicaca / 14d Amazon |
+| 6 | Egypt | `egypt-bundle.json` | 6 | 4, 7, 8, 10, 12, 14 | Cairo / +Luxor / +Nile cruise / hotel-based Nile valley / cruise+Red Sea (Hurghada) / +Alexandria+Sharm. Sources: Rough Guides, KimKim, TravelStride (no Lonely Planet content found) |
+| 7 | Thailand | `thailand-bundle.json` | 6 | 4, 7, 7, 10, 14, 14 | Bangkok / +Chiang Mai / +Phuket / +Chiang Mai+Krabi / north+Andaman (Chiang Rai, Krabi) / north+Koh Samui (Gulf). Sources: Rough Guides, KimKim, TravelStride |
+| 8 | Vietnam | `vietnam-bundle.json` | 6 | 4, 7, 7, 10, 14, 14 | Hanoi / north (Ha Long+Ninh Binh) / Hanoi+Hoi An / 10d Hanoi-Hue-Hoi An-Saigon / 14d north+Sapa / 14d end-to-end with Mekong. Regions kept to names safe after the 2025 province mergers (see gotchas) |
+| 9 | Morocco | `morocco-bundle.json` | 6 | 4, 7, 7, 10, 14, 14 | Marrakech / +Fes / +Sahara loop / Marrakech-Skoura-Merzouga-Fes / Casablanca-to-Marrakech grand tour (Chefchaouen) / Marrakech+Essaouira+Atlas+Sahara+Fes. Regions are the official 2015 regions |
+| 10 | India | `india-bundle.json` | 6 | 4, 7, 7, 10, 14, 14 | Delhi+Taj / Golden Triangle / Rajasthan (Jaipur-Jodhpur-Udaipur) / GT+Varanasi / GT+Rajasthan+Varanasi / GT+Kerala. Sources note: sources say do not combine Rajasthan+Varanasi+Kerala in 14 days |
+| 11 | Greece | `greece-bundle.json` | 6 | 4, 7, 7, 10, 14, 14 | Athens(+Delphi) / Athens+Santorini / Athens+Mykonos+Santorini / Naxos-Paros-Santorini hop / mainland (Delphi, Meteora)+islands / Peloponnese+Santorini+Crete. Region "Cyclades" used (traveller-search name) rather than "South Aegean" |
+| 12 | Spain | `spain-bundle.json` | 6 | 4, 7, 7, 10, 14, 14 | Madrid(+Toledo) / Madrid-Seville-Granada / Andalusia-only / +Barcelona / Barcelona-Valencia-Madrid-Andalusia / Barcelona-Basque-Madrid-Seville. AVE rail throughout |
+| 13 | Iceland | `iceland-bundle.json` | 6 | 4, 5, 7, 7, 10, 14 | Reykjavik+Golden Circle / +South Coast / South Coast to Jokulsarlon / Ring Road 7d / Ring Road+Snaefellsnes 10d / full Ring Road 14d. All self-drive (rental-car legs); places/cities use ASCII names. Hofn left out of regions (unsure whether South or East) |
+| 14 | Costa Rica | `costa-rica-bundle.json` | 6 | 5, 7, 7, 10, 10, 14 | San Jose+Arenal / Arenal+Manuel Antonio / Rio Celeste+Arenal+Guanacaste (fly into Liberia) / classic Arenal-Monteverde-Manuel Antonio / Tortuguero-Arenal-Manuel Antonio / coast-to-coast+Osa. Regions are the 5 provinces used |
+| 15 | South Africa | `south-africa-bundle.json` | 7 | 5, 7, 7, 10, 10, 14, 14 | Cape Town+Winelands / Cape Town+Hermanus / Cape Town+Route 62+Knysna (depart George) / Johannesburg+Panorama+Kruger / Cape-Winelands-Garden Route / Cape-Garden Route-Addo (depart Gqeberha) / Cape-Garden Route-Kruger (JNB hop, depart Hoedspruit). Regions: Western Cape, Eastern Cape, Gauteng, Mpumalanga |
+| 16 | Jordan | `jordan-bundle.json` | 6 | 6, 7, 8, 8, 10, 12 | Amman-Petra-Wadi Rum (depart Aqaba) / Petra-Rum-Dead Sea / Golden Triangle with Jerash / Madaba-Petra-Aqaba / King's Highway with Dana + Dead Sea / complete 12d. Regions: Amman, Jerash, Madaba, Ma'an, Aqaba (key `jordan/ma-an`) |
+| 17 | Turkey | `turkey-bundle.json` | 7 | 7, 7, 8, 10, 10, 10, 14 | Istanbul+Cappadocia (depart NAV) / +Ephesus / +Pamukkale / classic 10 / +Antalya / Aegean-only / 14d grand tour. Regions are provinces (Nevsehir, Izmir, Denizli, Antalya); air hops as paired airport legs |
+| 18 | New Zealand | `new-zealand-bundle.json` | 6 | 7, 7, 10, 10, 12, 14 | North Island 7d / Queenstown+Milford 7d / Auckland-Rotorua-Queenstown (fly) / South Island road trip / West Coast+Fiordland 12d / both islands 14d. Regions are the regional councils; city destinations also added for Milford Sound and Akaroa |
+| 19 | Australia | `australia-bundle.json` | 6 | 7, 7, 10, 10, 12, 14 | Sydney+Blue Mountains / Cairns+Port Douglas / Sydney-Uluru-Cairns / Sydney+Melbourne (Hunter, Great Ocean Road) / Melbourne-Uluru-Cairns-Sydney / grand tour. Air hops as paired airport legs; hero must be a destination key || 20 | Argentina | `argentina-bundle.json` | 6 | 7, 8, 10, 10, 12, 14 | BA+Iguazu / BA+Calafate / classic 3-part / BA-Mendoza-Bariloche / +El Chalten trekking / grand tour || 21 | Albania | `albania-bundle.json` | 6 | 5, 7, 8, 10, 12, 14 | Tirana+Berat / highlights loop / northern Alps+Koman ferry / classic loop / north-to-south / complete || 22 | Austria | `austria-bundle.json` | 6 | 4, 5, 7, 8, 10, 12 | Vienna / Vienna+Salzburg / 4-city 7d / lakes 8d / grand tour 10d / Wachau (Durnstein) 12d || 23 | Bahrain | `bahrain-bundle.json` | 4 | 3, 4, 5, 7 | Small country, 4 templates: Manama 3d / Manama+south 4d / Manama+Muharraq 5d / complete 7d |
+| 20 | Argentina | `argentina-bundle.json` | 6 | 7, 8, 10, 10, 12, 14 | BA+Iguazu / BA+Calafate / classic 3-part / BA-Mendoza-Bariloche / +El Chalten trekking / grand tour |
+| 21 | Albania | `albania-bundle.json` | 6 | 5, 7, 8, 10, 12, 14 | Tirana+Berat / highlights loop / northern Alps+Koman ferry / classic loop / north-to-south / complete |
+| 22 | Austria | `austria-bundle.json` | 6 | 4, 5, 7, 8, 10, 12 | Vienna / Vienna+Salzburg / 4-city 7d / lakes 8d / grand tour 10d / Wachau (Durnstein) 12d |
+| 23 | Bahrain | `bahrain-bundle.json` | 4 | 3, 4, 5, 7 | Small country, 4 templates: Manama 3d / Manama+south 4d / Manama+Muharraq 5d / complete 7d |
+| 24 | Belgium | `belgium-bundle.json` | 5 | 4, 5, 7, 8, 10 | Brussels+Bruges 4d/5d / four-city loop 7d / Ghent-first 8d with Ostend / complete 10d with Ypres. All by train |
+| 25 | Belize | `belize-bundle.json` | 5 | 5, 7, 7, 10, 12 | San Ignacio+Caye Caulker 5d/7d / San Ignacio+Placencia 7d / three-part 10d / complete 12d with Caracol. Water taxi legs use transferType Other |
+| 26 | Bhutan | `bhutan-bundle.json` | 5 | 5, 7, 7, 9, 10 | Paro+Thimphu / western circuit / Haa+Punakha+Paro / +Phobjikha 9d / highlights 10d. Always a guide and driver |
+| 27 | Bolivia | `bolivia-bundle.json` | 5 | 6, 7, 8, 10, 14 | Titicaca+La Paz / La Paz+Uyuni / Titicaca-La Paz-Uyuni / classic with Sucre and Potosi transit / complete 14d. Altitude notes included |
+| 28 | Botswana | `botswana-bundle.json` | 5 | 5, 7, 8, 11, 13 | Delta 5d / Delta+Moremi 7d / Maun-Delta-Moremi-Savute-Kasane 8d/11d/13d. Camp bases; air hops as paired airstrip legs; no Victoria Falls (Zimbabwe) |
+| 29 | Bulgaria | `bulgaria-bundle.json` | 5 | 4, 6, 7, 9, 11 | Sofia+Plovdiv / +Veliko Tarnovo / +Rila+Melnik 7d / to Varna 9d / complete 11d with Seven Rila Lakes, Nessebar, Rose Valley |
+| 30 | Cambodia | `cambodia-bundle.json` | 5 | 4, 5, 7, 10, 12 | Angkor 4d / +Phnom Penh 5d / +Battambang 7d / +Kampot 10d / complete 12d with Kep. Overland by bus |
+| 31 | Canada | `canada-bundle.json` | 5 | 6, 7, 8, 10, 14 | Vancouver+Banff / Toronto-Montreal-Quebec City by train / Rockies to Vancouver / west to Toronto / coast to coast 14d. Moraine Lake shuttle reservation noted |
+| 32 | Chile | `chile-bundle.json` | 5 | 6, 7, 8, 10, 14 | Santiago+Valparaiso / Atacama / Torres del Paine / desert to glaciers / complete 14d. Region keys: santiago-metropolitan, antofagasta, magallanes |
+| 33 | China | `china-bundle.json` | 5 | 5, 7, 9, 12, 14 | Beijing / +Xi an / +Shanghai / +Chengdu pandas / grand 14d with Li River at Yangshuo. High-speed rail plus paired airport legs |
 
 ## Queue
 
@@ -44,27 +74,11 @@ Ordered by how many well-documented published itineraries exist, which is what t
 combining method in instructions 2.1 depends on.
 
 ### Next up
-4. **Italy** — Rome / Florence / Venice, 7/10/14 d
-5. **Peru** — Lima / Cusco / Machu Picchu / Sacred Valley, 7/10/14 d
-6. **Egypt** — Cairo / Nile cruise / Luxor / Aswan, 8/10/12 d
-7. **Thailand** — Bangkok / Chiang Mai / southern islands, 7/10/14 d
-8. **Vietnam** — Hanoi / Ha Long / Hoi An / Ho Chi Minh City, 10/14 d
-9. **Morocco** — Marrakesh / Fes / Sahara / Chefchaouen, 7/10 d
-10. **India** — Golden Triangle + Kerala/Varanasi, 7/10/14 d
-11. **Greece** — Athens + Cyclades, 7/10 d
-12. **Spain** — Madrid / Barcelona / Andalusia, 7/10/14 d
-13. **Iceland** — Ring Road + Golden Circle, 5/7/10 d
-14. **Costa Rica** — San Jose / Arenal / Monteverde / coast, 7/10 d
-15. **South Africa** — Cape Town / Garden Route / Kruger, 10/14 d
-16. **Jordan** — Amman / Petra / Wadi Rum, 6/8 d
-17. **Turkey** — Istanbul / Cappadocia / Aegean, 7/10 d
-18. **New Zealand** — North + South Island, 10/14 d
-19. **Australia** — Sydney / Cairns / Uluru / Melbourne, 10/14 d
-20. **Argentina** — Buenos Aires / Patagonia / Iguazu, 10/14 d
+No ordered items left: take the next country from "Remaining" below (Colombia first).
 
 ### Remaining (not yet ordered)
-Albania, Austria, Bahrain, Belgium, Belize, Bhutan, Bolivia, Botswana, Bulgaria, Cambodia,
-Canada, Chile, China, Colombia, Croatia, Cyprus, Czech Republic, Denmark, Dominican
+
+Colombia, Croatia, Cyprus, Czech Republic, Denmark, Dominican
 Republic, Ecuador, El Salvador, Eswatini, Ethiopia, Fiji, Finland, France, Germany,
 Guatemala, Honduras, Hungary, Indonesia, Ireland, Kazakhstan, Kenya, Kosovo, Madagascar,
 Malaysia, Maldives, Mauritius, Mexico, Montenegro, Mozambique, Namibia, Nepal,
@@ -112,5 +126,16 @@ Keep these consistent across bundles so the app's destination matching works.
 - For long bundles, write `<country>-media.json` and `<country>-templates-a/-b.json`
   separately and merge them with a short node script, then delete the parts. Writing one
   85 KB file in a single pass tends to hit the output limit mid-JSON.
+- Some destinations have a **hard physical ordering constraint** that overrides the neat
+  geographic one. In Peru every good source insists you land in Cusco and go straight down
+  to the lower Sacred Valley, returning to Cusco only later, because arriving at 3,400 m and
+  staying there wrecks the first days. Check for this kind of constraint (altitude, monsoon,
+  tides, ferry seasons) before fixing the route order.
+- A **river/boat cruise stay** (Nile) is modelled as its own base: `base`/`cities` entry "Nile cruise", hotel placeholder "Stay aboard a Nile cruise ship" (the validator expects hotel text to start with Hotel/Lodge/Resort/Stay/etc.), plus its own `media.destinations` entry. No "sailing" leg is written (minutes would be days); the airport/dock ground legs cover the move.
+- For destinations with lots of repeated day blocks (Egypt), a throwaway generator script in the session scratchpad (helper fns `A()`/`L()` + reusable day blocks) is far less error-prone than hand-copying JSON across 6 templates.
+- **Admin boundaries that changed recently** (Vietnam merged many provinces in 2025): for `regions`, use only names that survived and that you are sure of (Hanoi, Quang Ninh, Ninh Binh, Lao Cai, Da Nang, Ho Chi Minh City, Can Tho, Hue). Do not use retired names like Quang Nam or Thua Thien Hue, and leave a region out if unsure. Da Nang is used as the region for Hoi An on the understanding that Quang Nam was merged into it; revisit if that proves wrong.
 - A **departure-day activity is optional**. Better to leave the last day with only the
   transfer than to invent a filler stop or repeat an earlier one.
+- Place `interests` vocabulary has no `shopping` (use food / authentic_local / culture); activity type `Shopping` is still valid. Region names with diacritics (Nevşehir, İzmir) are slugged to ASCII for the destinationKey (`turkey/nevsehir`); apostrophes become hyphens (`jordan/ma-an`).
+- Highlights must be 3-6 entries; template hero must be one of that template's destinationKeys (not a place key).
+- Destination key for a city name is its slug, so a city 'Moremi Game Reserve' needs key `botswana/moremi-game-reserve`.

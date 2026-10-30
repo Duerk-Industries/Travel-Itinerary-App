@@ -1,4 +1,5 @@
 // @ts-nocheck
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 
@@ -207,13 +208,13 @@ const PhotoFirstComposer: React.FC<Props> = ({
         <View style={themeStyle('components_PhotoFirstComposer_5', {  }, (theme ?? _styleTheme))}>
           {file.previewUri && !isVideo
             ? <Image source={{ uri: file.previewUri }} style={themeStyle('components_PhotoFirstComposer_6', {  }, (theme ?? _styleTheme))} resizeMode="cover" />
-            : <Text style={themeStyle('components_PhotoFirstComposer_7', {  }, (theme ?? _styleTheme))}>{isVideo ? '🎞️' : '🖼️'}</Text>}
+            : <IconText style={themeStyle('components_PhotoFirstComposer_7', {  }, (theme ?? _styleTheme))}>{isVideo ? '🎞️' : '🖼️'}</IconText>}
         </View>
         <View style={themeStyle('components_PhotoFirstComposer_8', {  }, (theme ?? _styleTheme))}>
         <View style={themeStyle('components_PhotoFirstComposer_9', {  }, (theme ?? _styleTheme))}>
           <Text style={themeStyle('components_PhotoFirstComposer_10', { textColor: textColor }, (theme ?? _styleTheme))} numberOfLines={1}>{file.name || 'photo'}</Text>
           <TouchableOpacity testID={`${testID}-file-${file.clientId}-remove`} accessibilityRole="button" accessibilityLabel="Remove this photo" onPress={() => removeFile(file.clientId)} style={themeStyle('components_PhotoFirstComposer_11', {  }, (theme ?? _styleTheme))}>
-            <Text style={themeStyle('components_PhotoFirstComposer_12', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>✕</Text>
+            <IconText style={themeStyle('components_PhotoFirstComposer_12', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>✕</IconText>
           </TouchableOpacity>
         </View>
         {oor ? (
@@ -244,7 +245,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
               Add {included.length} photo{included.length === 1 ? '' : 's'}
             </Text>
             <TouchableOpacity testID={`${testID}-close`} accessibilityRole="button" accessibilityLabel="Close" onPress={onClose}>
-              <Text style={themeStyle('components_PhotoFirstComposer_20', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>✕</Text>
+              <IconText style={themeStyle('components_PhotoFirstComposer_20', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>✕</IconText>
             </TouchableOpacity>
           </View>
 

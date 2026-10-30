@@ -1,3 +1,4 @@
+import IconText from '../components/IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -7,6 +8,7 @@ import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ExpenseCovering from './ExpenseCovering';
 import PaymentDialog from '../components/PaymentDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Icon from '../components/Icon';
 
 import { fixedTableColumn } from '../utils/tableColumns';
 import {
@@ -447,7 +449,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
         <View style={styles.table} testID="settlement-matrix">
           <View style={[styles.tableRow, styles.tableHeader]}>
             <View style={[styles.cell, fixedTableColumn(160)]}>
-              <Text style={styles.headerText}>Owes ↓ / To →</Text>
+              <IconText style={styles.headerText}>Owes ↓ / To →</IconText>
             </View>
             {sortedParticipants.map((p) => (
               <View key={`header-col-${p.id}`} style={[styles.cell, fixedTableColumn(120)]}>
@@ -645,7 +647,12 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
         style={[styles.card, themeStyle('settlementPanel', {}, (theme ?? _styleTheme))]}
         testID="ledger-settlement"
       >
-        <Text style={styles.sectionTitle}>Settlement</Text>
+        <View style={themeStyle('settlementHeading', {}, theme)}>
+          <View style={themeStyle('settlementHeadingIcon', {}, theme)}>
+            <Icon name="expense" size={20} color={theme.colors.onSelected} />
+          </View>
+          <Text style={[styles.sectionTitle, themeStyle('settlementHeadingTitle', {}, theme)]}>Settlement</Text>
+        </View>
         <Text style={styles.helperText}>
           {isNarrowLayout
             ? 'Who pays whom to settle up, after accounting for recorded payments.'
@@ -669,7 +676,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
               testID="record-payment-button"
               disabled={eligibleSortedIds.length < 2}
             >
-              <Text style={styles.buttonText}>+ Record Payment</Text>
+              <IconText style={styles.buttonText}>+ Record Payment</IconText>
             </TouchableOpacity>
           ) : null}
         </View>

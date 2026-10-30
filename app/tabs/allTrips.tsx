@@ -1,3 +1,4 @@
+import IconText from '../components/IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useState } from 'react';
@@ -65,7 +66,7 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
         <View style={[styles.row, themeStyle('tabs_allTrips_layout2', {  }, _styleTheme)]}>
           <Text accessibilityRole="header" style={styles.homeTitle}>All Trips</Text>
           <View style={[styles.row, themeStyle('tabs_allTrips_layout3', {  }, _styleTheme)]}>
-            {!hiddenPages?.has('create-trip') && onNavigate ? <Pressable accessibilityRole="button" testID="all-trips-create-button" style={[styles.button, styles.smallButton]} onPress={() => onNavigate('create-trip')}><Text style={styles.buttonText}>+ Create Trip</Text></Pressable> : null}
+            {!hiddenPages?.has('create-trip') && onNavigate ? <Pressable accessibilityRole="button" testID="all-trips-create-button" style={[styles.button, styles.smallButton]} onPress={() => onNavigate('create-trip')}><IconText style={styles.buttonText}>+ Create Trip</IconText></Pressable> : null}
             {!hiddenPages?.has('follow') && onFollowTrip ? <FollowTripButton styles={styles} onFollowTrip={onFollowTrip} /> : null}
           </View>
         </View>
@@ -100,7 +101,7 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
                         style={({ pressed }: { pressed: boolean }) => [styles.homeModalRowDelete, pressed && styles.homeModalRowDeletePressed]}
                         onPress={(e: any) => { e?.stopPropagation?.(); onDeleteTrip({ id: trip.id, name: trip.name }); }}
                       >
-                        <Text style={styles.homeModalRowDeleteText}>🗑 Delete</Text>
+                        <IconText style={styles.homeModalRowDeleteText}>🗑 Delete</IconText>
                       </Pressable>
                     ) : null}
                   </Pressable>

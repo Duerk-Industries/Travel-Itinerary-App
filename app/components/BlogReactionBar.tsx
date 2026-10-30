@@ -1,3 +1,4 @@
+import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -83,7 +84,7 @@ const BlogReactionBar: React.FC<Props> = ({
           onPress={() => handlePress(emoji)}
           style={chipStyle(summary.userReaction === emoji)}
         >
-          <Text style={themeStyle('components_BlogReactionBar_3', { compact: compact }, (theme ?? _styleTheme))}>{EMOJI_GLYPH[emoji]}</Text>
+          <IconText style={themeStyle('components_BlogReactionBar_3', { compact: compact }, (theme ?? _styleTheme))}>{EMOJI_GLYPH[emoji]}</IconText>
           <Text style={themeStyle('components_BlogReactionBar_4', { summary: summary, emoji: emoji, textColor: textColor, mutedColor: mutedColor }, (theme ?? _styleTheme))}>
             {visibleCount(emoji)}
           </Text>
@@ -99,7 +100,7 @@ const BlogReactionBar: React.FC<Props> = ({
           onPress={() => setExpanded((current) => !current)}
           style={[chipStyle(false), themeStyle('components_BlogReactionBar_5', { compact: compact }, (theme ?? _styleTheme))]}
         >
-          <Text style={themeStyle('components_BlogReactionBar_6', { compact: compact, mutedColor: mutedColor }, (theme ?? _styleTheme))}>{expanded ? '×' : '＋'}</Text>
+          <IconText style={themeStyle('components_BlogReactionBar_6', { compact: compact, mutedColor: mutedColor }, (theme ?? _styleTheme))}>{expanded ? '×' : '＋'}</IconText>
         </Pressable>
       ) : null}
       {expanded ? (
@@ -119,7 +120,7 @@ const BlogReactionBar: React.FC<Props> = ({
               onPress={() => handlePress(emoji)}
               style={chipStyle(summary.userReaction === emoji)}
             >
-              <Text style={themeStyle('components_BlogReactionBar_8', {  }, (theme ?? _styleTheme))}>{EMOJI_GLYPH[emoji]}</Text>
+              <IconText style={themeStyle('components_BlogReactionBar_8', {  }, (theme ?? _styleTheme))}>{EMOJI_GLYPH[emoji]}</IconText>
             </Pressable>
           ))}
         </View>

@@ -5,6 +5,13 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import AssistantChat from '../components/AssistantChat';
+import { detectAssistantModelCapability } from '../utils/assistantLocalModel';
+
+jest.mock('../utils/assistantLocalModel', () => ({
+  detectAssistantModelCapability: jest.fn(),
+}));
+
+const mockDetectCapability = jest.mocked(detectAssistantModelCapability);
 
 // This test is about the open/close routing between the cheap button and
 // the lazy-loaded panel -- not the panel's own internals (covered by
@@ -37,6 +44,15 @@ jest.mock('../components/AssistantChatPanel', () => {
 describe('AssistantChat', () => {
   beforeEach(() => {
     mountCount = 0;
+    mockDetectCapability.mockReturnValue({ supported: true });
+  });
+
+  it.each(['phone', 'no-webgpu', 'not-web'] as const)('hides the assistant when unsupported: %s', (reason) => {
+    mockDetectCapability.mockReturnValue({ supported: false, reason });
+    const { queryByTestId, queryByText } = render(<AssistantChat />);
+    expect(queryByTestId('assistant-chat-fab')).toBeNull();
+    expect(queryByText('mock assistant panel')).toBeNull();
+    expect(mountCount).toBe(0);
   });
 
   it('renders the FAB when closed, not the panel', () => {
