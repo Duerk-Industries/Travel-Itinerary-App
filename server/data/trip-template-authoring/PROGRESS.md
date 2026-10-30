@@ -30,7 +30,7 @@ Paste this to a fresh session:
 
 ---
 
-## Done (63 of 91)
+## Done (73 of 91)
 
 | # | Destination | File | Templates | Lengths | Notes |
 |---|---|---|---|---|---|
@@ -97,6 +97,16 @@ Paste this to a fresh session:
 | 61 | Montenegro | `montenegro-bundle.json` | 5 | 4, 5, 7, 8, 10 | Kotor / +Budva / +Durmitor / +Ulcinj / complete. Arrive TIV, depart TGD on longer ones |
 | 62 | Mozambique | `mozambique-bundle.json` | 5 | 5, 7, 9, 12, 14 | Maputo+Tofo / +Vilanculos / +Ilha de Mocambique / +Ibo (depart POL). Security advice for Cabo Delgado noted |
 | 63 | Namibia | `namibia-bundle.json` | 5 | 5, 7, 9, 12, 14 | Self-drive circuits: Sossusvlei / +Swakopmund / +Etosha / +Damaraland / +Fish River Canyon. Kolmanskop dropped |
+| 64 | Nepal | `nepal-bundle.json` | 5 | 5, 7, 9, 11, 13 | Kathmandu+Pokhara / +Chitwan / +Poon Hill trek / +Lumbini / complete with Nagarkot. Depart PKR; trailhead legs by jeep |
+| 65 | Netherlands | `netherlands-bundle.json` | 5 | 4, 5, 7, 8, 10 | Amsterdam / +Haarlem+Keukenhof (spring only) / +Delft+Utrecht / +Kinderdijk / complete with Giethoorn. By train |
+| 66 | North Macedonia | `north-macedonia-bundle.json` | 5 | 4, 5, 7, 8, 10 | Skopje+Ohrid (depart OHD) / +Matka / +Bitola / +Mavrovo / complete with Tikves wine |
+| 67 | Norway | `norway-bundle.json` | 6 | 5, 7, 8, 10, 12, 14 | Oslo+Bergen / Norway in a Nutshell / +Alesund / +Tromso / 12d / grand 14d with Lofoten (depart LKN). Preikestolen dropped |
+| 68 | Panama | `panama-bundle.json` | 5 | 5, 7, 9, 12, 14 | PC+San Blas / PC+Bocas / highlands+Bocas / 12d / grand 14d. Hotel text must not start with Cabin (use Lodge) |
+| 69 | Philippines | `philippines-bundle.json` | 5 | 7, 8, 10, 12, 14 | Coron+El Nido / +Manila / +Bohol / +Banaue+Cebu / grand with Siargao (depart IAO). Ferries as Other |
+| 70 | Portugal | `portugal-bundle.json` | 6 | 5, 7, 8, 10, 12, 14 | Lisbon / +Porto / +Coimbra / Porto-Douro-Lisbon-Algarve (depart FAO) / classic 12d / complete 14d |
+| 71 | Qatar | `qatar-bundle.json` | 4 | 3, 4, 5, 7 | Doha plus an Inland Sea desert camp night; Al Zubarah and mangroves in the 7d |
+| 72 | Romania | `romania-bundle.json` | 5 | 5, 7, 8, 10, 12 | Bucharest+Brasov / +Sibiu / +Sighisoara+Viscri / +Maramures (depart CLJ) / complete 12d |
+| 73 | Rwanda | `rwanda-bundle.json` | 5 | 4, 5, 7, 8, 10 | Gorillas short breaks / +Lake Kivu / +Akagera / complete with Nyungwe. Permits flagged as Yes - book ahead |
 
 ## Queue
 
@@ -104,16 +114,16 @@ Ordered by how many well-documented published itineraries exist, which is what t
 combining method in instructions 2.1 depends on.
 
 ### Next up
-No ordered items left: take the next country from "Remaining" below (Nepal first).
+No ordered items left: take the next country from "Remaining" below (Saudi Arabia first).
 
 ### Remaining (not yet ordered)
 
 
 
 
-Nepal,
-Netherlands, North Macedonia, Norway, Panama, Philippines, Portugal, Qatar, Romania,
-Rwanda, Saudi Arabia, Serbia, Singapore, Slovakia, South Korea, Sri Lanka, Sweden,
+
+
+Saudi Arabia, Serbia, Singapore, Slovakia, South Korea, Sri Lanka, Sweden,
 Switzerland, Tanzania, Tunisia, Uganda, United Arab Emirates, United Kingdom
 (England / Northern Ireland), United States, Uzbekistan, Zimbabwe
 

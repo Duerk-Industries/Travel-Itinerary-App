@@ -1,0 +1,1307 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, On The Go Tours, Secret Romania and Rolandia itineraries for Romania",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "romania-bucharest-brasov-5d",
+      "title": "Bucharest and Brasov in 5 Days",
+      "summary": "The capital, Peles Castle, Brasov and Bran.",
+      "days": 5,
+      "route": "Bucharest > Brasov",
+      "arrive": "Bucharest (OTP)",
+      "depart": "Bucharest (OTP)",
+      "countries": [
+        "Romania"
+      ],
+      "regions": [
+        "Transylvania"
+      ],
+      "cities": [
+        "Bucharest",
+        "Brasov"
+      ],
+      "imageQuery": "Bran Castle Romania",
+      "highlights": [
+        "Palace of Parliament",
+        "Peles Castle",
+        "Brasov Black Church",
+        "Bran Castle"
+      ],
+      "destinationKeys": [
+        "romania",
+        "romania/bucharest",
+        "romania/transylvania",
+        "romania/brasov"
+      ],
+      "hero": "romania/brasov",
+      "sources": [
+        "KimKim",
+        "On The Go Tours",
+        "Secret Romania",
+        "Rolandia",
+        "Romania Tour Store"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bucharest",
+          "hotel": "Hotel in Bucharest",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Old Town (Lipscani) or Cismigiu Park, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Brasov",
+          "hotel": "Hotel in Brasov",
+          "start": 2,
+          "nights": 2,
+          "area": "Inside the Brasov old town near Council Square",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Palace of Parliament and Old Town",
+          "notes": "Bring a passport for the guided palace tour.",
+          "where": "Bucharest",
+          "book": "Yes - book the palace tour",
+          "place": "romania/bucharest-palace"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Peles Castle and Sinaia",
+          "notes": "Closed Mondays; timed tickets in summer.",
+          "where": "Sinaia",
+          "book": "",
+          "place": "romania/peles-sinaia"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Brasov Black Church and Rope Street",
+          "notes": "Take the cable car up Mount Tampa for the view.",
+          "where": "Brasov",
+          "book": "",
+          "place": "romania/brasov-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Bran Castle and Rasnov Fortress",
+          "notes": "Go early to beat the coaches.",
+          "where": "Bran",
+          "book": "",
+          "place": "romania/bran-rasnov"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bucharest Airport (OTP)",
+          "to": "Bucharest hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Bucharest",
+          "to": "Brasov",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "CFR train",
+          "notes": "Stop at Sinaia for Peles Castle on the way.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Brasov",
+          "to": "Bucharest",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "CFR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Bucharest",
+          "to": "Bucharest Airport (OTP)",
+          "time": "14:00",
+          "minutes": 35,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "romania-bucharest-brasov-sibiu-7d",
+      "title": "Transylvania Highlights in 7 Days",
+      "summary": "Bucharest, Brasov and Sibiu.",
+      "days": 7,
+      "route": "Bucharest > Brasov > Sibiu",
+      "arrive": "Bucharest (OTP)",
+      "depart": "Bucharest (OTP)",
+      "countries": [
+        "Romania"
+      ],
+      "regions": [
+        "Transylvania"
+      ],
+      "cities": [
+        "Bucharest",
+        "Brasov",
+        "Sibiu"
+      ],
+      "imageQuery": "Sibiu Romania Large Square",
+      "highlights": [
+        "Palace of Parliament",
+        "Peles",
+        "Brasov",
+        "Bran",
+        "Sibiu"
+      ],
+      "destinationKeys": [
+        "romania",
+        "romania/bucharest",
+        "romania/transylvania",
+        "romania/brasov",
+        "romania/sibiu"
+      ],
+      "hero": "romania/sibiu",
+      "sources": [
+        "KimKim",
+        "On The Go Tours",
+        "Secret Romania",
+        "Rolandia",
+        "Romania Tour Store"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bucharest",
+          "hotel": "Hotel in Bucharest",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Old Town (Lipscani) or Cismigiu Park, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Brasov",
+          "hotel": "Hotel in Brasov",
+          "start": 2,
+          "nights": 2,
+          "area": "Inside the Brasov old town near Council Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sibiu",
+          "hotel": "Hotel in Sibiu",
+          "start": 4,
+          "nights": 2,
+          "area": "In the Sibiu old town near the Large Square",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Palace of Parliament and Old Town",
+          "notes": "Bring a passport for the guided palace tour.",
+          "where": "Bucharest",
+          "book": "Yes - book the palace tour",
+          "place": "romania/bucharest-palace"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Peles Castle and Sinaia",
+          "notes": "Closed Mondays; timed tickets in summer.",
+          "where": "Sinaia",
+          "book": "",
+          "place": "romania/peles-sinaia"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Brasov Black Church and Rope Street",
+          "notes": "Take the cable car up Mount Tampa for the view.",
+          "where": "Brasov",
+          "book": "",
+          "place": "romania/brasov-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Bran Castle and Rasnov Fortress",
+          "notes": "Go early to beat the coaches.",
+          "where": "Bran",
+          "book": "",
+          "place": "romania/bran-rasnov"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Sibiu squares, Bridge of Lies and ASTRA Museum",
+          "notes": "Look for the eye-like roof windows.",
+          "where": "Sibiu",
+          "book": "",
+          "place": "romania/sibiu"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bucharest Airport (OTP)",
+          "to": "Bucharest hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Bucharest",
+          "to": "Brasov",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "CFR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Brasov",
+          "to": "Sibiu",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Rental car or private driver",
+          "notes": "The road passes Fagaras fortress.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Sibiu",
+          "to": "Bucharest Airport (OTP)",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "romania-bucharest-brasov-sighisoara-sibiu-8d",
+      "title": "Dracula Country in 8 Days",
+      "summary": "Bucharest, Brasov, Sighisoara and Sibiu.",
+      "days": 8,
+      "route": "Bucharest > Brasov > Sighisoara > Sibiu",
+      "arrive": "Bucharest (OTP)",
+      "depart": "Bucharest (OTP)",
+      "countries": [
+        "Romania"
+      ],
+      "regions": [
+        "Transylvania"
+      ],
+      "cities": [
+        "Bucharest",
+        "Brasov",
+        "Sighisoara",
+        "Sibiu"
+      ],
+      "imageQuery": "Sighisoara citadel clock tower",
+      "highlights": [
+        "Peles",
+        "Bran Castle",
+        "Sighisoara",
+        "Viscri",
+        "Sibiu"
+      ],
+      "destinationKeys": [
+        "romania",
+        "romania/bucharest",
+        "romania/transylvania",
+        "romania/brasov",
+        "romania/sighisoara",
+        "romania/sibiu"
+      ],
+      "hero": "romania/sighisoara",
+      "sources": [
+        "KimKim",
+        "On The Go Tours",
+        "Secret Romania",
+        "Rolandia",
+        "Romania Tour Store"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Bucharest",
+          "hotel": "Hotel in Bucharest",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Old Town (Lipscani) or Cismigiu Park, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Brasov",
+          "hotel": "Hotel in Brasov",
+          "start": 2,
+          "nights": 2,
+          "area": "Inside the Brasov old town near Council Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sighisoara",
+          "hotel": "Guesthouse in Sighisoara",
+          "start": 4,
+          "nights": 1,
+          "area": "Inside the Sighisoara citadel, in a guesthouse in an old house",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sibiu",
+          "hotel": "Hotel in Sibiu",
+          "start": 5,
+          "nights": 2,
+          "area": "In the Sibiu old town near the Large Square",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Palace of Parliament and Old Town",
+          "notes": "Bring a passport for the guided palace tour.",
+          "where": "Bucharest",
+          "book": "Yes - book the palace tour",
+          "place": "romania/bucharest-palace"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Peles Castle and Sinaia",
+          "notes": "Closed Mondays; timed tickets in summer.",
+          "where": "Sinaia",
+          "book": "",
+          "place": "romania/peles-sinaia"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Brasov Black Church and Rope Street",
+          "notes": "Take the cable car up Mount Tampa for the view.",
+          "where": "Brasov",
+          "book": "",
+          "place": "romania/brasov-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Bran Castle and Rasnov Fortress",
+          "notes": "Go early to beat the coaches.",
+          "where": "Bran",
+          "book": "",
+          "place": "romania/bran-rasnov"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Viscri fortified church and village",
+          "notes": "A rural village with horse carts.",
+          "where": "Viscri",
+          "book": "",
+          "place": "romania/viscri"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "2h",
+          "name": "Sighisoara citadel walk and Clock Tower",
+          "notes": "The old town is lovely at dusk too.",
+          "where": "Sighisoara",
+          "book": "",
+          "place": "romania/sighisoara"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Sibiu squares, Bridge of Lies and ASTRA Museum",
+          "notes": "Look for the eye-like roof windows.",
+          "where": "Sibiu",
+          "book": "",
+          "place": "romania/sibiu"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bucharest Airport (OTP)",
+          "to": "Bucharest hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Bucharest",
+          "to": "Brasov",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "CFR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Brasov",
+          "to": "Sighisoara",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "Stop at Viscri on the way.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Sighisoara",
+          "to": "Sibiu",
+          "time": "11:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Sibiu",
+          "to": "Bucharest Airport (OTP)",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "romania-maramures-cluj-10d",
+      "title": "Romania with Maramures in 10 Days",
+      "summary": "Transylvania plus the wooden churches of Maramures, ending in Cluj.",
+      "days": 10,
+      "route": "Bucharest > Brasov > Sighisoara > Sibiu > Cluj-Napoca > Sapanta",
+      "arrive": "Bucharest (OTP)",
+      "depart": "Cluj-Napoca (CLJ)",
+      "countries": [
+        "Romania"
+      ],
+      "regions": [
+        "Transylvania",
+        "Maramures"
+      ],
+      "cities": [
+        "Bucharest",
+        "Brasov",
+        "Sighisoara",
+        "Sibiu",
+        "Cluj-Napoca",
+        "Sapanta"
+      ],
+      "imageQuery": "Sapanta Merry Cemetery Maramures",
+      "highlights": [
+        "Bran Castle",
+        "Sighisoara",
+        "Sibiu",
+        "Turda Salt Mine",
+        "Merry Cemetery"
+      ],
+      "destinationKeys": [
+        "romania",
+        "romania/bucharest",
+        "romania/transylvania",
+        "romania/brasov",
+        "romania/sighisoara",
+        "romania/sibiu",
+        "romania/cluj-napoca",
+        "romania/maramures",
+        "romania/sapanta"
+      ],
+      "hero": "romania/maramures",
+      "sources": [
+        "KimKim",
+        "On The Go Tours",
+        "Secret Romania",
+        "Rolandia",
+        "Romania Tour Store"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Bucharest",
+          "hotel": "Hotel in Bucharest",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Old Town (Lipscani) or Cismigiu Park, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Brasov",
+          "hotel": "Hotel in Brasov",
+          "start": 2,
+          "nights": 2,
+          "area": "Inside the Brasov old town near Council Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sighisoara",
+          "hotel": "Guesthouse in Sighisoara",
+          "start": 4,
+          "nights": 1,
+          "area": "Inside the Sighisoara citadel, in a guesthouse in an old house",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sibiu",
+          "hotel": "Hotel in Sibiu",
+          "start": 5,
+          "nights": 1,
+          "area": "In the Sibiu old town near the Large Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cluj-Napoca",
+          "hotel": "Hotel in Cluj-Napoca",
+          "start": 6,
+          "nights": 1,
+          "area": "Near Union Square in Cluj, central and close to cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sapanta",
+          "hotel": "Guesthouse in Sapanta",
+          "start": 7,
+          "nights": 2,
+          "area": "In a village guesthouse near Sapanta or Barsana, with home cooking",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Palace of Parliament and Old Town",
+          "notes": "Bring a passport for the guided palace tour.",
+          "where": "Bucharest",
+          "book": "Yes - book the palace tour",
+          "place": "romania/bucharest-palace"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Peles Castle and Sinaia",
+          "notes": "Closed Mondays; timed tickets in summer.",
+          "where": "Sinaia",
+          "book": "",
+          "place": "romania/peles-sinaia"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "3h",
+          "name": "Brasov Black Church and Rope Street",
+          "notes": "Take the cable car up Mount Tampa for the view.",
+          "where": "Brasov",
+          "book": "",
+          "place": "romania/brasov-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Bran Castle and Rasnov Fortress",
+          "notes": "Go early to beat the coaches.",
+          "where": "Bran",
+          "book": "",
+          "place": "romania/bran-rasnov"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Viscri fortified church and village",
+          "notes": "A rural village with horse carts.",
+          "where": "Viscri",
+          "book": "",
+          "place": "romania/viscri"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Sibiu squares, Bridge of Lies and ASTRA Museum",
+          "notes": "Look for the eye-like roof windows.",
+          "where": "Sibiu",
+          "book": "",
+          "place": "romania/sibiu"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cluj old centre and Turda Salt Mine",
+          "notes": "Wear a layer; cool underground.",
+          "where": "Cluj-Napoca",
+          "book": "",
+          "place": "romania/cluj-turda"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Maramures wooden churches and Merry Cemetery",
+          "notes": "Roads are slow; hire a local guide.",
+          "where": "Maramures",
+          "book": "",
+          "place": "romania/maramures"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bucharest Airport (OTP)",
+          "to": "Bucharest hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Bucharest",
+          "to": "Brasov",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "CFR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Brasov",
+          "to": "Sighisoara",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Sighisoara",
+          "to": "Sibiu",
+          "time": "11:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Sibiu",
+          "to": "Cluj-Napoca",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Cluj-Napoca",
+          "to": "Sapanta",
+          "time": "09:30",
+          "minutes": 240,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Sapanta",
+          "to": "Cluj-Napoca Airport (CLJ)",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "romania-complete-12d",
+      "title": "Complete Romania in 12 Days",
+      "summary": "Three nights in Brasov and a longer stay across Transylvania and Maramures.",
+      "days": 12,
+      "route": "Bucharest > Brasov > Sighisoara > Sibiu > Cluj-Napoca > Sapanta",
+      "arrive": "Bucharest (OTP)",
+      "depart": "Cluj-Napoca (CLJ)",
+      "countries": [
+        "Romania"
+      ],
+      "regions": [
+        "Transylvania",
+        "Maramures"
+      ],
+      "cities": [
+        "Bucharest",
+        "Brasov",
+        "Sighisoara",
+        "Sibiu",
+        "Cluj-Napoca",
+        "Sapanta"
+      ],
+      "imageQuery": "Transylvania fortified church Viscri",
+      "highlights": [
+        "Peles Castle",
+        "Bran Castle",
+        "Viscri",
+        "Sibiu",
+        "Transfagarasan",
+        "Maramures"
+      ],
+      "destinationKeys": [
+        "romania",
+        "romania/bucharest",
+        "romania/transylvania",
+        "romania/brasov",
+        "romania/sighisoara",
+        "romania/sibiu",
+        "romania/cluj-napoca",
+        "romania/maramures",
+        "romania/sapanta"
+      ],
+      "hero": "romania/transylvania",
+      "sources": [
+        "KimKim",
+        "On The Go Tours",
+        "Secret Romania",
+        "Rolandia",
+        "Romania Tour Store"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "authentic_local",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bucharest",
+          "hotel": "Hotel in Bucharest",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Old Town (Lipscani) or Cismigiu Park, central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Brasov",
+          "hotel": "Hotel in Brasov",
+          "start": 2,
+          "nights": 3,
+          "area": "Inside the Brasov old town near Council Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sighisoara",
+          "hotel": "Guesthouse in Sighisoara",
+          "start": 5,
+          "nights": 1,
+          "area": "Inside the Sighisoara citadel, in a guesthouse in an old house",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sibiu",
+          "hotel": "Hotel in Sibiu",
+          "start": 6,
+          "nights": 2,
+          "area": "In the Sibiu old town near the Large Square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cluj-Napoca",
+          "hotel": "Hotel in Cluj-Napoca",
+          "start": 8,
+          "nights": 1,
+          "area": "Near Union Square in Cluj, central and close to cafes",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Sapanta",
+          "hotel": "Guesthouse in Sapanta",
+          "start": 9,
+          "nights": 2,
+          "area": "In a village guesthouse near Sapanta or Barsana, with home cooking",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Palace of Parliament and Old Town",
+          "notes": "Bring a passport for the guided palace tour.",
+          "where": "Bucharest",
+          "book": "Yes - book the palace tour",
+          "place": "romania/bucharest-palace"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Peles Castle and Sinaia",
+          "notes": "Closed Mondays; timed tickets in summer.",
+          "where": "Sinaia",
+          "book": "",
+          "place": "romania/peles-sinaia"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Brasov Black Church and Rope Street",
+          "notes": "Take the cable car up Mount Tampa for the view.",
+          "where": "Brasov",
+          "book": "",
+          "place": "romania/brasov-old-town"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Bran Castle and Rasnov Fortress",
+          "notes": "Go early to beat the coaches.",
+          "where": "Bran",
+          "book": "",
+          "place": "romania/bran-rasnov"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Viscri fortified church and village",
+          "notes": "A rural village with horse carts.",
+          "where": "Viscri",
+          "book": "",
+          "place": "romania/viscri"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Sibiu squares, Bridge of Lies and ASTRA Museum",
+          "notes": "Look for the eye-like roof windows.",
+          "where": "Sibiu",
+          "book": "",
+          "place": "romania/sibiu"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cluj old centre and Turda Salt Mine",
+          "notes": "Wear a layer; cool underground.",
+          "where": "Cluj-Napoca",
+          "book": "",
+          "place": "romania/cluj-turda"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Maramures wooden churches and Merry Cemetery",
+          "notes": "Roads are slow; hire a local guide.",
+          "where": "Maramures",
+          "book": "",
+          "place": "romania/maramures"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Bucharest Airport (OTP)",
+          "to": "Bucharest hotel",
+          "time": "",
+          "minutes": 35,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Bucharest",
+          "to": "Brasov",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "CFR train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Brasov",
+          "to": "Sighisoara",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Sighisoara",
+          "to": "Sibiu",
+          "time": "11:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Sibiu",
+          "to": "Cluj-Napoca",
+          "time": "09:30",
+          "minutes": 180,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Cluj-Napoca",
+          "to": "Sapanta",
+          "time": "09:30",
+          "minutes": 240,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Sapanta",
+          "to": "Cluj-Napoca Airport (CLJ)",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "romania/bucharest-palace": {
+        "name": "Bucharest Palace of Parliament and Old Town",
+        "description": "The second-largest administrative building in the world and the lively Lipscani quarter.",
+        "details": "The Palace of Parliament was built under Ceausescu and is visited on a guided tour with passport. The Old Town has Stavropoleos church, the Hanul lui Manuc inn and cafes. The Village Museum shows peasant houses from across the country.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "romania/peles-sinaia": {
+        "name": "Peles Castle and Sinaia",
+        "description": "A neo-Renaissance royal castle in a forest of the Carpathian foothills.",
+        "details": "Peles was the summer palace of King Carol I and has richly decorated rooms with carved wood. Sinaia is a mountain resort with a cable car. The castle is closed on Mondays and tours need timed tickets in summer.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "romania/brasov-old-town": {
+        "name": "Brasov Black Church and Council Square",
+        "description": "A Saxon medieval town beneath a mountain, with a large Gothic church.",
+        "details": "Brasov is the heart of southern Transylvania, with the Black Church, Council Square and Rope Street, one of the narrowest in Europe. A cable car climbs Mount Tampa for views. Cafes and restaurants fill the old centre in the evenings.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "romania/bran-rasnov": {
+        "name": "Bran Castle and Rasnov Fortress",
+        "description": "The Dracula castle legend and a peasant fortress on a nearby hill.",
+        "details": "Bran Castle sits on a rock and is linked to Bram Stoker novel, though the real Vlad connection is slight. Rasnov Citadel is a fortified peasant refuge with views. Both are within 30 minutes of Brasov. Go early to beat the coaches.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "romania/sighisoara": {
+        "name": "Sighisoara citadel",
+        "description": "A UNESCO medieval citadel with painted houses and clock tower, birthplace of Vlad the Impaler.",
+        "details": "Sighisoara is one of the best-preserved inhabited citadels in Europe. The Clock Tower has a museum and view, and the Scholars Stairs lead to a Gothic church. Colourful houses fill the lanes, and the old town is lovely at night.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "romania/viscri": {
+        "name": "Viscri fortified church and Saxon villages",
+        "description": "A UNESCO fortified church in a rural village of horse carts and Prince Charles guesthouse.",
+        "details": "Viscri has a 12th-century fortified church and a village life largely untouched by modern times, with horse-drawn carts and homemade jam. The Saxon fortified churches of Transylvania are unique to the region. A day trip from Sighisoara or Brasov.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "romania/sibiu": {
+        "name": "Sibiu Large Square and Transfagarasan",
+        "description": "A European Capital of Culture with houses that watch you, and the spectacular mountain road nearby.",
+        "details": "Sibiu has three squares, the Bridge of Lies and the roofs with eye-like windows. ASTRA Museum is an open-air museum of rural life. The Transfagarasan road crosses the Fagaras mountains and is open from about July to October.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "romania/maramures": {
+        "name": "Maramures wooden churches and Merry Cemetery",
+        "description": "Carved wooden churches, haystacks and the colourful grave crosses at Sapanta.",
+        "details": "Maramures is the most traditional region, with UNESCO wooden churches such as Barsana and Surdesti, and the Merry Cemetery at Sapanta with painted crosses and funny verses. Villages have carved gates and women in traditional dress. Roads are slow.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "romania/cluj-turda": {
+        "name": "Cluj-Napoca and Turda Salt Mine",
+        "description": "Transylvania lively university city and an underground salt mine with a Ferris wheel.",
+        "details": "Cluj has a big square with St Michael Church, student bars and a growing cafe scene. The Turda Salt Mine, 40 minutes away, is a huge cavern with boats, a wheel and a mini-golf course. Wear a layer, as it is cool underground.",
+        "interests": [
+          "culture",
+          "food",
+          "adventure",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "romania": {
+        "name": "Romania",
+        "description": "A country of Carpathian castles, fortified churches, painted villages and Transylvanian legend.",
+        "images": []
+      },
+      "romania/bucharest": {
+        "name": "Bucharest",
+        "description": "The capital, with a giant palace and a lively old town.",
+        "images": []
+      },
+      "romania/transylvania": {
+        "name": "Transylvania",
+        "description": "The central region of medieval towns and castles.",
+        "images": []
+      },
+      "romania/brasov": {
+        "name": "Brasov",
+        "description": "A Saxon town with a famous Black Church, near Bran Castle.",
+        "images": []
+      },
+      "romania/sighisoara": {
+        "name": "Sighisoara",
+        "description": "A UNESCO citadel on a hill.",
+        "images": []
+      },
+      "romania/sibiu": {
+        "name": "Sibiu",
+        "description": "A graceful Saxon city of squares.",
+        "images": []
+      },
+      "romania/maramures": {
+        "name": "Maramures",
+        "description": "A northern region of wooden churches.",
+        "images": []
+      },
+      "romania/sapanta": {
+        "name": "Sapanta",
+        "description": "A village famous for the Merry Cemetery.",
+        "images": []
+      },
+      "romania/cluj-napoca": {
+        "name": "Cluj-Napoca",
+        "description": "Transylvania lively student city.",
+        "images": []
+      }
+    }
+  }
+}
