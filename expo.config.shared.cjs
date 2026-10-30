@@ -131,7 +131,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
   return {
     name: 'WanderBunnies',
     slug: 'travel-itinerary-planner',
-    version: '1.0.4',
+    version: '1.0.5',
     scheme: 'travelitineraryplanner',
     owner: 'duerk-industries',
     icon: prefixAsset('./assets/wanderbunnies-app-icon.png', assetPrefix),
