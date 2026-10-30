@@ -1,0 +1,1110 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Africa Beast Safaris, Steppes Travel, Ultimate Travel Company and Adventure Life itineraries for Zimbabwe",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "zimbabwe-victoria-falls-4d",
+      "title": "Victoria Falls in 4 Days",
+      "summary": "The falls, the river, adventure and a day with a Zambezi sunset.",
+      "days": 4,
+      "route": "Victoria Falls",
+      "arrive": "Victoria Falls (VFA)",
+      "depart": "Victoria Falls (VFA)",
+      "countries": [
+        "Zimbabwe"
+      ],
+      "regions": [],
+      "cities": [
+        "Victoria Falls"
+      ],
+      "imageQuery": "Victoria Falls Zimbabwe rainbow",
+      "highlights": [
+        "Victoria Falls",
+        "Zambezi cruise",
+        "Bungee or rafting"
+      ],
+      "destinationKeys": [
+        "zimbabwe",
+        "zimbabwe/victoria-falls"
+      ],
+      "hero": "zimbabwe/victoria-falls",
+      "sources": [
+        "Africa Beast Safaris",
+        "Steppes Travel",
+        "Ultimate Travel Company",
+        "Eclipse Travel",
+        "Adventure Life"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Victoria Falls",
+          "hotel": "Hotel in Victoria Falls",
+          "start": 0,
+          "nights": 3,
+          "area": "In Victoria Falls town or a riverside lodge on the Zambezi",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Zambezi sunset cruise",
+          "notes": "Hippos and elephants on the banks.",
+          "where": "Zambezi River",
+          "book": "Yes - book a cruise",
+          "place": "zimbabwe/zambezi-sunset-cruise"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Victoria Falls rainforest walk",
+          "notes": "Hire a raincoat in the wet season.",
+          "where": "Victoria Falls",
+          "book": "",
+          "place": "zimbabwe/victoria-falls"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Bridge bungee, gorge swing or white-water rafting",
+          "notes": "Choose with a safety-rated operator; rafting best in the low-water season.",
+          "where": "Victoria Falls",
+          "book": "Yes - book activities",
+          "place": "zimbabwe/vic-falls-adventure"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Devil Pool and Livingstone Island swim",
+          "notes": "Low-water season only; needs a Zambian visa for the crossing.",
+          "where": "Livingstone Island",
+          "book": "Yes - book a guided trip",
+          "place": "zimbabwe/devils-pool-livingstone-island"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls Airport (VFA)",
+          "to": "Victoria Falls lodge",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls lodge",
+          "to": "Victoria Falls Airport (VFA)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Lodge transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "zimbabwe-victoria-falls-hwange-5d",
+      "title": "Victoria Falls and Hwange in 5 Days",
+      "summary": "The falls then elephants in Hwange.",
+      "days": 5,
+      "route": "Victoria Falls > Hwange",
+      "arrive": "Victoria Falls (VFA)",
+      "depart": "Victoria Falls (VFA)",
+      "countries": [
+        "Zimbabwe"
+      ],
+      "regions": [],
+      "cities": [
+        "Victoria Falls",
+        "Hwange"
+      ],
+      "imageQuery": "Hwange elephants waterhole Zimbabwe",
+      "highlights": [
+        "Victoria Falls",
+        "Zambezi cruise",
+        "Hwange elephants"
+      ],
+      "destinationKeys": [
+        "zimbabwe",
+        "zimbabwe/victoria-falls",
+        "zimbabwe/hwange"
+      ],
+      "hero": "zimbabwe/hwange",
+      "sources": [
+        "Africa Beast Safaris",
+        "Steppes Travel",
+        "Ultimate Travel Company",
+        "Eclipse Travel",
+        "Adventure Life"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Victoria Falls",
+          "hotel": "Hotel in Victoria Falls",
+          "start": 0,
+          "nights": 2,
+          "area": "In Victoria Falls town or a riverside lodge on the Zambezi",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hwange",
+          "hotel": "Lodge in Hwange",
+          "start": 2,
+          "nights": 2,
+          "area": "In a lodge in Hwange with waterhole views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Zambezi sunset cruise",
+          "notes": "Hippos and elephants on the banks.",
+          "where": "Zambezi River",
+          "book": "Yes - book a cruise",
+          "place": "zimbabwe/zambezi-sunset-cruise"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Victoria Falls rainforest walk",
+          "notes": "Hire a raincoat in the wet season.",
+          "where": "Victoria Falls",
+          "book": "",
+          "place": "zimbabwe/victoria-falls"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Hwange morning game drive",
+          "notes": "Waterholes in the dry season are crowded with elephants.",
+          "where": "Hwange",
+          "book": "",
+          "place": "zimbabwe/hwange-safari"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Hwange evening drive or walking safari",
+          "notes": "Night drives available in private concessions.",
+          "where": "Hwange",
+          "book": "",
+          "place": "zimbabwe/hwange-safari"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls Airport (VFA)",
+          "to": "Victoria Falls lodge",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls",
+          "to": "Hwange lodge",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hwange lodge",
+          "to": "Victoria Falls Airport (VFA)",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "zimbabwe-falls-hwange-matobo-7d",
+      "title": "Zimbabwe Highlights in 7 Days",
+      "summary": "Victoria Falls, Hwange and Matobo Hills.",
+      "days": 7,
+      "route": "Victoria Falls > Hwange > Matobo",
+      "arrive": "Victoria Falls (VFA)",
+      "depart": "Bulawayo (BUQ)",
+      "countries": [
+        "Zimbabwe"
+      ],
+      "regions": [],
+      "cities": [
+        "Victoria Falls",
+        "Hwange",
+        "Matobo"
+      ],
+      "imageQuery": "Matobo Hills balancing rocks Zimbabwe",
+      "highlights": [
+        "Victoria Falls",
+        "Hwange",
+        "Matobo rhinos",
+        "Rock paintings"
+      ],
+      "destinationKeys": [
+        "zimbabwe",
+        "zimbabwe/victoria-falls",
+        "zimbabwe/hwange",
+        "zimbabwe/matobo"
+      ],
+      "hero": "zimbabwe/matobo",
+      "sources": [
+        "Africa Beast Safaris",
+        "Steppes Travel",
+        "Ultimate Travel Company",
+        "Eclipse Travel",
+        "Adventure Life"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "adventure",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Victoria Falls",
+          "hotel": "Hotel in Victoria Falls",
+          "start": 0,
+          "nights": 2,
+          "area": "In Victoria Falls town or a riverside lodge on the Zambezi",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hwange",
+          "hotel": "Lodge in Hwange",
+          "start": 2,
+          "nights": 2,
+          "area": "In a lodge in Hwange with waterhole views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Matobo",
+          "hotel": "Lodge in Matobo Hills",
+          "start": 4,
+          "nights": 2,
+          "area": "In a lodge in Matobo Hills among the granite boulders",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Zambezi sunset cruise",
+          "notes": "Hippos and elephants on the banks.",
+          "where": "Zambezi River",
+          "book": "Yes - book a cruise",
+          "place": "zimbabwe/zambezi-sunset-cruise"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Victoria Falls rainforest walk",
+          "notes": "Hire a raincoat in the wet season.",
+          "where": "Victoria Falls",
+          "book": "",
+          "place": "zimbabwe/victoria-falls"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Hwange morning game drive",
+          "notes": "Waterholes in the dry season are crowded with elephants.",
+          "where": "Hwange",
+          "book": "",
+          "place": "zimbabwe/hwange-safari"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Hwange evening drive or walking safari",
+          "notes": "Night drives available in private concessions.",
+          "where": "Hwange",
+          "book": "",
+          "place": "zimbabwe/hwange-safari"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bulawayo museums and Khami Ruins",
+          "notes": "Half-day between Matobo and Hwange.",
+          "where": "Bulawayo",
+          "book": "",
+          "place": "zimbabwe/bulawayo-khami"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Rhino tracking and World View sunrise",
+          "notes": "Rhino walks must be booked with the park.",
+          "where": "Matobo Hills",
+          "book": "Yes - book rhino tracking",
+          "place": "zimbabwe/matobo-hills"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls Airport (VFA)",
+          "to": "Victoria Falls lodge",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls",
+          "to": "Hwange lodge",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Hwange lodge",
+          "to": "Matobo lodge",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "A long drive via Bulawayo.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Matobo lodge",
+          "to": "Bulawayo Airport (BUQ)",
+          "time": "09:00",
+          "minutes": 75,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "zimbabwe-falls-hwange-matobo-great-zimbabwe-9d",
+      "title": "Zimbabwe Loop in 9 Days",
+      "summary": "Falls, Hwange, Matobo and Great Zimbabwe, ending in Harare.",
+      "days": 9,
+      "route": "Victoria Falls > Hwange > Matobo > Great Zimbabwe",
+      "arrive": "Victoria Falls (VFA)",
+      "depart": "Harare (HRE)",
+      "countries": [
+        "Zimbabwe"
+      ],
+      "regions": [],
+      "cities": [
+        "Victoria Falls",
+        "Hwange",
+        "Matobo",
+        "Great Zimbabwe"
+      ],
+      "imageQuery": "Great Zimbabwe ruins stone walls",
+      "highlights": [
+        "Victoria Falls",
+        "Hwange",
+        "Matobo",
+        "Great Zimbabwe"
+      ],
+      "destinationKeys": [
+        "zimbabwe",
+        "zimbabwe/victoria-falls",
+        "zimbabwe/hwange",
+        "zimbabwe/matobo",
+        "zimbabwe/great-zimbabwe"
+      ],
+      "hero": "zimbabwe/great-zimbabwe",
+      "sources": [
+        "Africa Beast Safaris",
+        "Steppes Travel",
+        "Ultimate Travel Company",
+        "Eclipse Travel",
+        "Adventure Life"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "adventure",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Victoria Falls",
+          "hotel": "Hotel in Victoria Falls",
+          "start": 0,
+          "nights": 3,
+          "area": "In Victoria Falls town or a riverside lodge on the Zambezi",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hwange",
+          "hotel": "Lodge in Hwange",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge in Hwange with waterhole views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Matobo",
+          "hotel": "Lodge in Matobo Hills",
+          "start": 5,
+          "nights": 2,
+          "area": "In a lodge in Matobo Hills among the granite boulders",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Great Zimbabwe",
+          "hotel": "Lodge near Great Zimbabwe",
+          "start": 7,
+          "nights": 1,
+          "area": "In a lodge near Masvingo, close to the ruins",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Zambezi sunset cruise",
+          "notes": "Hippos and elephants on the banks.",
+          "where": "Zambezi River",
+          "book": "Yes - book a cruise",
+          "place": "zimbabwe/zambezi-sunset-cruise"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Victoria Falls rainforest walk",
+          "notes": "Hire a raincoat in the wet season.",
+          "where": "Victoria Falls",
+          "book": "",
+          "place": "zimbabwe/victoria-falls"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Bridge bungee, gorge swing or white-water rafting",
+          "notes": "Choose with a safety-rated operator; rafting best in the low-water season.",
+          "where": "Victoria Falls",
+          "book": "Yes - book activities",
+          "place": "zimbabwe/vic-falls-adventure"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Hwange morning game drive",
+          "notes": "Waterholes in the dry season are crowded with elephants.",
+          "where": "Hwange",
+          "book": "",
+          "place": "zimbabwe/hwange-safari"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Hwange evening drive or walking safari",
+          "notes": "Night drives available in private concessions.",
+          "where": "Hwange",
+          "book": "",
+          "place": "zimbabwe/hwange-safari"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bulawayo museums and Khami Ruins",
+          "notes": "Half-day between Matobo and Hwange.",
+          "where": "Bulawayo",
+          "book": "",
+          "place": "zimbabwe/bulawayo-khami"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Rhino tracking and World View sunrise",
+          "notes": "Rhino walks must be booked with the park.",
+          "where": "Matobo Hills",
+          "book": "Yes - book rhino tracking",
+          "place": "zimbabwe/matobo-hills"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "4h",
+          "name": "Great Zimbabwe ruins",
+          "notes": "Go early; the site is hot and exposed.",
+          "where": "Masvingo",
+          "book": "",
+          "place": "zimbabwe/great-zimbabwe"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls Airport (VFA)",
+          "to": "Victoria Falls lodge",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls",
+          "to": "Hwange lodge",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Hwange lodge",
+          "to": "Matobo lodge",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Matobo lodge",
+          "to": "Great Zimbabwe lodge",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Great Zimbabwe lodge",
+          "to": "Harare Airport (HRE)",
+          "time": "12:00",
+          "minutes": 330,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "zimbabwe-complete-11d",
+      "title": "Complete Zimbabwe in 11 Days",
+      "summary": "Falls with adventure, Hwange, Matobo, Great Zimbabwe and Harare.",
+      "days": 11,
+      "route": "Victoria Falls > Hwange > Matobo > Great Zimbabwe > Harare",
+      "arrive": "Victoria Falls (VFA)",
+      "depart": "Harare (HRE)",
+      "countries": [
+        "Zimbabwe"
+      ],
+      "regions": [],
+      "cities": [
+        "Victoria Falls",
+        "Hwange",
+        "Matobo",
+        "Great Zimbabwe",
+        "Harare"
+      ],
+      "imageQuery": "Zimbabwe Harare Chapungu sculpture",
+      "highlights": [
+        "Victoria Falls",
+        "Hwange",
+        "Matobo rhinos",
+        "Great Zimbabwe",
+        "Harare"
+      ],
+      "destinationKeys": [
+        "zimbabwe",
+        "zimbabwe/victoria-falls",
+        "zimbabwe/hwange",
+        "zimbabwe/matobo",
+        "zimbabwe/great-zimbabwe",
+        "zimbabwe/harare"
+      ],
+      "hero": "zimbabwe/harare",
+      "sources": [
+        "Africa Beast Safaris",
+        "Steppes Travel",
+        "Ultimate Travel Company",
+        "Eclipse Travel",
+        "Adventure Life"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "culture",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Victoria Falls",
+          "hotel": "Hotel in Victoria Falls",
+          "start": 0,
+          "nights": 3,
+          "area": "In Victoria Falls town or a riverside lodge on the Zambezi",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hwange",
+          "hotel": "Lodge in Hwange",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge in Hwange with waterhole views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Matobo",
+          "hotel": "Lodge in Matobo Hills",
+          "start": 5,
+          "nights": 2,
+          "area": "In a lodge in Matobo Hills among the granite boulders",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Great Zimbabwe",
+          "hotel": "Lodge near Great Zimbabwe",
+          "start": 7,
+          "nights": 1,
+          "area": "In a lodge near Masvingo, close to the ruins",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Harare",
+          "hotel": "Hotel in Harare",
+          "start": 8,
+          "nights": 2,
+          "area": "In a quiet suburb of Harare, close to restaurants",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Zambezi sunset cruise",
+          "notes": "Hippos and elephants on the banks.",
+          "where": "Zambezi River",
+          "book": "Yes - book a cruise",
+          "place": "zimbabwe/zambezi-sunset-cruise"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Victoria Falls rainforest walk",
+          "notes": "Hire a raincoat in the wet season.",
+          "where": "Victoria Falls",
+          "book": "",
+          "place": "zimbabwe/victoria-falls"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Bridge bungee, gorge swing or white-water rafting",
+          "notes": "Choose with a safety-rated operator; rafting best in the low-water season.",
+          "where": "Victoria Falls",
+          "book": "Yes - book activities",
+          "place": "zimbabwe/vic-falls-adventure"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Hwange morning game drive",
+          "notes": "Waterholes in the dry season are crowded with elephants.",
+          "where": "Hwange",
+          "book": "",
+          "place": "zimbabwe/hwange-safari"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Hwange evening drive or walking safari",
+          "notes": "Night drives available in private concessions.",
+          "where": "Hwange",
+          "book": "",
+          "place": "zimbabwe/hwange-safari"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Bulawayo museums and Khami Ruins",
+          "notes": "Half-day between Matobo and Hwange.",
+          "where": "Bulawayo",
+          "book": "",
+          "place": "zimbabwe/bulawayo-khami"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "06:00",
+          "duration": "4h",
+          "name": "Rhino tracking and World View sunrise",
+          "notes": "Rhino walks must be booked with the park.",
+          "where": "Matobo Hills",
+          "book": "Yes - book rhino tracking",
+          "place": "zimbabwe/matobo-hills"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "4h",
+          "name": "Great Zimbabwe ruins",
+          "notes": "Go early; the site is hot and exposed.",
+          "where": "Masvingo",
+          "book": "",
+          "place": "zimbabwe/great-zimbabwe"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Mbare market and Chapungu Sculpture Park",
+          "notes": "Hire a driver.",
+          "where": "Harare",
+          "book": "",
+          "place": "zimbabwe/harare-city"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls Airport (VFA)",
+          "to": "Victoria Falls lodge",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Victoria Falls",
+          "to": "Hwange lodge",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Hwange lodge",
+          "to": "Matobo lodge",
+          "time": "08:00",
+          "minutes": 360,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Matobo lodge",
+          "to": "Great Zimbabwe lodge",
+          "time": "08:30",
+          "minutes": 330,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Great Zimbabwe lodge",
+          "to": "Harare",
+          "time": "12:00",
+          "minutes": 330,
+          "carrier": "Safari vehicle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Harare hotel",
+          "to": "Harare Airport (HRE)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "zimbabwe/victoria-falls": {
+        "name": "Victoria Falls rainforest walk",
+        "description": "The Smoke that Thunders, a kilometre-wide curtain of water, seen from clifftop paths.",
+        "details": "Victoria Falls is one of the largest waterfalls in the world. The rainforest walk on the Zimbabwe side has fifteen viewpoints, including Danger Point, and gets very wet during the high flow from March to June. Raincoats are rented at the gate. In the dry season from September to December the flow is lower but views of the gorge are clear.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "zimbabwe/zambezi-sunset-cruise": {
+        "name": "Zambezi River sunset cruise",
+        "description": "A relaxed boat trip with hippos, crocodiles and elephants at the water edge.",
+        "details": "Evening cruises above the falls drift past islands with hippos and birds, with drinks and snacks on board. Elephants often drink along the banks. Book with a licensed operator. It is a gentle way to spend the first evening.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "zimbabwe/vic-falls-adventure": {
+        "name": "Victoria Falls adventure activities",
+        "description": "Bungee off the bridge, a gorge swing, white-water rafting and a helicopter flight.",
+        "details": "Adventure options include the 111-metre bridge bungee, a gorge swing, rafting through the Batoka Gorge (best from August to December when low) and scenic helicopter flights. In the high-water season rafting is limited to the lower rapids. Book with safety-rated operators.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "zimbabwe/devils-pool-livingstone-island": {
+        "name": "Devil Pool and Livingstone Island",
+        "description": "A swim at the edge of the falls, offered only when the river is low.",
+        "details": "In the low-water months, usually September to December, guided trips from the Zambian side allow a swim in a rock pool at the lip of the falls. This requires crossing from Zambia, which needs a visa. Safety rules are strict. Check the river level with operators.",
+        "interests": [
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "zimbabwe/hwange-safari": {
+        "name": "Hwange National Park safari",
+        "description": "Zimbabwe largest park, famed for huge elephant herds at waterholes.",
+        "details": "Hwange has more than 40,000 elephants and many predators, with game drives around pumped waterholes. The dry season from June to October is best. Night drives and walking safaris are offered by private concessions. Lodges are tented or thatched.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "zimbabwe/matobo-hills": {
+        "name": "Matobo Hills rhinos, rock art and Rhodes grave",
+        "description": "A granite wonderland with rhino tracking, San rock paintings and the World View.",
+        "details": "Matobo National Park has balancing rocks, caves with San paintings and white and black rhinos tracked on foot with rangers. Cecil Rhodes is buried on a granite dome called World View. The scenery is stunning at sunrise. Rhino walks must be booked with the park.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "zimbabwe/bulawayo-khami": {
+        "name": "Bulawayo and Khami Ruins",
+        "description": "A colonial grid city with a railway museum and a UNESCO stone ruin site.",
+        "details": "Bulawayo has the Natural History Museum, the railway museum and tree-lined streets. The Khami Ruins are the remains of a capital of the Torwa state, with stone walls decorated in patterns. Both are easy half-day stops on the road between Matobo and Hwange.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "zimbabwe/great-zimbabwe": {
+        "name": "Great Zimbabwe",
+        "description": "The ruined stone city that gave the country its name, built between the 11th and 15th centuries.",
+        "details": "Great Zimbabwe has the Great Enclosure with towering curved walls and a hilltop complex with views over the plain. Guides explain the history of the Shona kingdom. It is hot and open, so go early. It lies near Masvingo, five hours from Harare.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "zimbabwe/harare-city": {
+        "name": "Harare, Mbare market and the sculpture gardens",
+        "description": "The capital with jacaranda-lined streets, a bustling market and stone sculpture gardens.",
+        "details": "Harare has the Mbare Musika market for crafts and produce, the National Gallery and Chapungu Sculpture Park, which shows Shona stone sculpture. The city is relaxed and green. Taxis or hired drivers are the best way around.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "zimbabwe": {
+        "name": "Zimbabwe",
+        "description": "A land of Victoria Falls, elephants, granite hills and ancient stone cities.",
+        "images": []
+      },
+      "zimbabwe/victoria-falls": {
+        "name": "Victoria Falls",
+        "description": "A gateway town to one of the greatest waterfalls.",
+        "images": []
+      },
+      "zimbabwe/hwange": {
+        "name": "Hwange",
+        "description": "The largest national park in the country.",
+        "images": []
+      },
+      "zimbabwe/matobo": {
+        "name": "Matobo",
+        "description": "A hill park near Bulawayo.",
+        "images": []
+      },
+      "zimbabwe/great-zimbabwe": {
+        "name": "Great Zimbabwe",
+        "description": "A UNESCO stone ruin city.",
+        "images": []
+      },
+      "zimbabwe/harare": {
+        "name": "Harare",
+        "description": "The green capital.",
+        "images": []
+      }
+    }
+  }
+}

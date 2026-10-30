@@ -1,0 +1,1341 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, KimKim, Asilia Africa and Jewel Safaris itineraries for Uganda",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "uganda-gorillas-5d",
+      "title": "Bwindi Gorilla Escape in 5 Days",
+      "summary": "A quick gorilla trek with a flight from Entebbe.",
+      "days": 5,
+      "route": "Entebbe > Bwindi",
+      "arrive": "Entebbe (EBB)",
+      "depart": "Entebbe (EBB)",
+      "countries": [
+        "Uganda"
+      ],
+      "regions": [],
+      "cities": [
+        "Entebbe",
+        "Bwindi"
+      ],
+      "imageQuery": "Bwindi mountain gorilla Uganda",
+      "highlights": [
+        "Gorilla trek",
+        "Bwindi forest",
+        "Entebbe gardens"
+      ],
+      "destinationKeys": [
+        "uganda",
+        "uganda/entebbe",
+        "uganda/bwindi"
+      ],
+      "hero": "uganda/bwindi",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Asilia Africa",
+        "Jewel Safaris",
+        "Scott Dunn"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Entebbe",
+          "hotel": "Hotel in Entebbe",
+          "start": 0,
+          "nights": 1,
+          "area": "In Entebbe, close to the airport and the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bwindi",
+          "hotel": "Lodge near Bwindi",
+          "start": 1,
+          "nights": 3,
+          "area": "In a forest lodge near Bwindi, with views of the hills",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Entebbe Botanical Gardens and wildlife centre",
+          "notes": "A relaxed first or last stop.",
+          "where": "Entebbe",
+          "book": "",
+          "place": "uganda/entebbe-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; hire a porter.",
+          "where": "Bwindi",
+          "book": "Yes - gorilla permit required",
+          "place": "uganda/bwindi-gorillas"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Batwa community walk or forest hike",
+          "notes": "Swimming is safe in this lake.",
+          "where": "Lake Bunyonyi",
+          "book": "",
+          "place": "uganda/bwindi-gorillas"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Entebbe hotel",
+          "to": "Entebbe Airport (EBB)",
+          "time": "07:30",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "A light-aircraft flight saves a long road day.",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Kihihi Airstrip (KHX)",
+          "to": "Bwindi lodge",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Bwindi lodge",
+          "to": "Kihihi Airstrip (KHX)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe airport area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "uganda-chimps-gorillas-7d",
+      "title": "Chimps and Gorillas in 7 Days",
+      "summary": "Kibale, Queen Elizabeth and Bwindi.",
+      "days": 7,
+      "route": "Entebbe > Kibale > Queen Elizabeth > Bwindi",
+      "arrive": "Entebbe (EBB)",
+      "depart": "Entebbe (EBB)",
+      "countries": [
+        "Uganda"
+      ],
+      "regions": [],
+      "cities": [
+        "Entebbe",
+        "Kibale",
+        "Queen Elizabeth",
+        "Bwindi"
+      ],
+      "imageQuery": "Kibale chimpanzee Uganda",
+      "highlights": [
+        "Kibale chimps",
+        "Kazinga cruise",
+        "Bwindi gorillas"
+      ],
+      "destinationKeys": [
+        "uganda",
+        "uganda/entebbe",
+        "uganda/kibale",
+        "uganda/queen-elizabeth",
+        "uganda/bwindi"
+      ],
+      "hero": "uganda/kibale",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Asilia Africa",
+        "Jewel Safaris",
+        "Scott Dunn"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Entebbe",
+          "hotel": "Hotel in Entebbe",
+          "start": 0,
+          "nights": 1,
+          "area": "In Entebbe, close to the airport and the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kibale",
+          "hotel": "Lodge near Kibale",
+          "start": 1,
+          "nights": 2,
+          "area": "In a forest lodge near Kibale National Park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Queen Elizabeth",
+          "hotel": "Lodge at Queen Elizabeth",
+          "start": 3,
+          "nights": 1,
+          "area": "In a lodge near the Kazinga Channel or Ishasha",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bwindi",
+          "hotel": "Lodge near Bwindi",
+          "start": 4,
+          "nights": 2,
+          "area": "In a forest lodge near Bwindi, with views of the hills",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Entebbe Botanical Gardens and wildlife centre",
+          "notes": "A relaxed first or last stop.",
+          "where": "Entebbe",
+          "book": "",
+          "place": "uganda/entebbe-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Kibale chimpanzee trek",
+          "notes": "Permits are limited; book months ahead.",
+          "where": "Kibale",
+          "book": "Yes - chimp permit required",
+          "place": "uganda/kibale-chimps"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "3.5h",
+          "name": "Queen Elizabeth morning game drive",
+          "notes": "Lions and kob; Ishasha for tree-climbing lions.",
+          "where": "Queen Elizabeth",
+          "book": "",
+          "place": "uganda/queen-elizabeth"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Kazinga Channel boat cruise",
+          "notes": "Hippos and elephants on the banks.",
+          "where": "Queen Elizabeth",
+          "book": "Yes - book the cruise",
+          "place": "uganda/queen-elizabeth"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; hire a porter.",
+          "where": "Bwindi",
+          "book": "Yes - gorilla permit required",
+          "place": "uganda/bwindi-gorillas"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Entebbe",
+          "to": "Kibale lodge",
+          "time": "07:30",
+          "minutes": 360,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Kibale lodge",
+          "to": "Queen Elizabeth lodge",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Queen Elizabeth lodge",
+          "to": "Bwindi lodge",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "Ishasha sector for tree-climbing lions on the way.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Bwindi lodge",
+          "to": "Kihihi Airstrip (KHX)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe airport area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "uganda-murchison-primates-8d",
+      "title": "Uganda Safari in 8 Days",
+      "summary": "Murchison Falls, Kibale, Queen Elizabeth and Bwindi.",
+      "days": 8,
+      "route": "Entebbe > Murchison Falls > Kibale > Queen Elizabeth > Bwindi",
+      "arrive": "Entebbe (EBB)",
+      "depart": "Entebbe (EBB)",
+      "countries": [
+        "Uganda"
+      ],
+      "regions": [],
+      "cities": [
+        "Entebbe",
+        "Murchison Falls",
+        "Kibale",
+        "Queen Elizabeth",
+        "Bwindi"
+      ],
+      "imageQuery": "Murchison Falls Uganda Nile",
+      "highlights": [
+        "Murchison Falls",
+        "Chimps",
+        "Queen Elizabeth",
+        "Gorillas"
+      ],
+      "destinationKeys": [
+        "uganda",
+        "uganda/entebbe",
+        "uganda/murchison-falls",
+        "uganda/kibale",
+        "uganda/queen-elizabeth",
+        "uganda/bwindi"
+      ],
+      "hero": "uganda/murchison-falls",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Asilia Africa",
+        "Jewel Safaris",
+        "Scott Dunn"
+      ],
+      "pace": "F",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Entebbe",
+          "hotel": "Hotel in Entebbe",
+          "start": 0,
+          "nights": 1,
+          "area": "In Entebbe, close to the airport and the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Murchison Falls",
+          "hotel": "Lodge at Murchison Falls",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge near Paraa, with views of the Nile",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kibale",
+          "hotel": "Lodge near Kibale",
+          "start": 3,
+          "nights": 1,
+          "area": "In a forest lodge near Kibale National Park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Queen Elizabeth",
+          "hotel": "Lodge at Queen Elizabeth",
+          "start": 4,
+          "nights": 1,
+          "area": "In a lodge near the Kazinga Channel or Ishasha",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bwindi",
+          "hotel": "Lodge near Bwindi",
+          "start": 5,
+          "nights": 2,
+          "area": "In a forest lodge near Bwindi, with views of the hills",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Entebbe Botanical Gardens and wildlife centre",
+          "notes": "A relaxed first or last stop.",
+          "where": "Entebbe",
+          "book": "",
+          "place": "uganda/entebbe-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Boat trip to the base of Murchison Falls",
+          "notes": "Hippos and crocodiles on the way.",
+          "where": "Murchison Falls",
+          "book": "Yes - book the boat",
+          "place": "uganda/murchison-falls"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Murchison game drive",
+          "notes": "Look for lions and giraffes.",
+          "where": "Murchison Falls",
+          "book": "",
+          "place": "uganda/murchison-falls"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Kibale chimpanzee trek",
+          "notes": "Permits are limited; book months ahead.",
+          "where": "Kibale",
+          "book": "Yes - chimp permit required",
+          "place": "uganda/kibale-chimps"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Kazinga Channel boat cruise",
+          "notes": "Hippos and elephants on the banks.",
+          "where": "Queen Elizabeth",
+          "book": "Yes - book the cruise",
+          "place": "uganda/queen-elizabeth"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; hire a porter.",
+          "where": "Bwindi",
+          "book": "Yes - gorilla permit required",
+          "place": "uganda/bwindi-gorillas"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Entebbe",
+          "to": "Murchison lodge",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Murchison lodge",
+          "to": "Kibale lodge",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "A very long drive on rough roads.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Kibale lodge",
+          "to": "Queen Elizabeth lodge",
+          "time": "12:30",
+          "minutes": 120,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Queen Elizabeth lodge",
+          "to": "Bwindi lodge",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Bwindi lodge",
+          "to": "Kihihi Airstrip (KHX)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe airport area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "uganda-classic-10d",
+      "title": "Uganda Classic in 10 Days",
+      "summary": "Murchison, two nights each in Kibale and Queen Elizabeth, and gorillas.",
+      "days": 10,
+      "route": "Entebbe > Murchison Falls > Kibale > Queen Elizabeth > Bwindi",
+      "arrive": "Entebbe (EBB)",
+      "depart": "Entebbe (EBB)",
+      "countries": [
+        "Uganda"
+      ],
+      "regions": [],
+      "cities": [
+        "Entebbe",
+        "Murchison Falls",
+        "Kibale",
+        "Queen Elizabeth",
+        "Bwindi"
+      ],
+      "imageQuery": "Queen Elizabeth National Park Uganda lion tree",
+      "highlights": [
+        "Murchison Falls",
+        "Chimpanzees",
+        "Kazinga Channel",
+        "Tree-climbing lions",
+        "Gorillas"
+      ],
+      "destinationKeys": [
+        "uganda",
+        "uganda/entebbe",
+        "uganda/murchison-falls",
+        "uganda/kibale",
+        "uganda/queen-elizabeth",
+        "uganda/bwindi"
+      ],
+      "hero": "uganda/queen-elizabeth",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Asilia Africa",
+        "Jewel Safaris",
+        "Scott Dunn"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Entebbe",
+          "hotel": "Hotel in Entebbe",
+          "start": 0,
+          "nights": 1,
+          "area": "In Entebbe, close to the airport and the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Murchison Falls",
+          "hotel": "Lodge at Murchison Falls",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge near Paraa, with views of the Nile",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kibale",
+          "hotel": "Lodge near Kibale",
+          "start": 3,
+          "nights": 2,
+          "area": "In a forest lodge near Kibale National Park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Queen Elizabeth",
+          "hotel": "Lodge at Queen Elizabeth",
+          "start": 5,
+          "nights": 2,
+          "area": "In a lodge near the Kazinga Channel or Ishasha",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bwindi",
+          "hotel": "Lodge near Bwindi",
+          "start": 7,
+          "nights": 2,
+          "area": "In a forest lodge near Bwindi, with views of the hills",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Entebbe Botanical Gardens and wildlife centre",
+          "notes": "A relaxed first or last stop.",
+          "where": "Entebbe",
+          "book": "",
+          "place": "uganda/entebbe-wildlife"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Boat trip to the base of Murchison Falls",
+          "notes": "Hippos and crocodiles on the way.",
+          "where": "Murchison Falls",
+          "book": "Yes - book the boat",
+          "place": "uganda/murchison-falls"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Murchison game drive",
+          "notes": "Look for lions and giraffes.",
+          "where": "Murchison Falls",
+          "book": "",
+          "place": "uganda/murchison-falls"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Kibale chimpanzee trek",
+          "notes": "Permits are limited; book months ahead.",
+          "where": "Kibale",
+          "book": "Yes - chimp permit required",
+          "place": "uganda/kibale-chimps"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "3.5h",
+          "name": "Queen Elizabeth morning game drive",
+          "notes": "Lions and kob; Ishasha for tree-climbing lions.",
+          "where": "Queen Elizabeth",
+          "book": "",
+          "place": "uganda/queen-elizabeth"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Kazinga Channel boat cruise",
+          "notes": "Hippos and elephants on the banks.",
+          "where": "Queen Elizabeth",
+          "book": "Yes - book the cruise",
+          "place": "uganda/queen-elizabeth"
+        },
+        {
+          "day": 8,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; hire a porter.",
+          "where": "Bwindi",
+          "book": "Yes - gorilla permit required",
+          "place": "uganda/bwindi-gorillas"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Entebbe",
+          "to": "Murchison lodge",
+          "time": "08:00",
+          "minutes": 300,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Murchison lodge",
+          "to": "Kibale lodge",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Kibale lodge",
+          "to": "Queen Elizabeth lodge",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Queen Elizabeth lodge",
+          "to": "Bwindi lodge",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Bwindi lodge",
+          "to": "Kihihi Airstrip (KHX)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe airport area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "uganda-complete-12d",
+      "title": "Complete Uganda in 12 Days",
+      "summary": "Nile rafting at Jinja, the full wildlife circuit, gorillas and Lake Bunyonyi.",
+      "days": 12,
+      "route": "Entebbe > Jinja > Murchison Falls > Kibale > Queen Elizabeth > Bwindi > Lake Bunyonyi",
+      "arrive": "Entebbe (EBB)",
+      "depart": "Entebbe (EBB)",
+      "countries": [
+        "Uganda"
+      ],
+      "regions": [],
+      "cities": [
+        "Entebbe",
+        "Jinja",
+        "Murchison Falls",
+        "Kibale",
+        "Queen Elizabeth",
+        "Bwindi",
+        "Lake Bunyonyi"
+      ],
+      "imageQuery": "Lake Bunyonyi Uganda canoe",
+      "highlights": [
+        "Nile rafting",
+        "Murchison Falls",
+        "Chimps",
+        "Queen Elizabeth",
+        "Gorillas",
+        "Lake Bunyonyi"
+      ],
+      "destinationKeys": [
+        "uganda",
+        "uganda/entebbe",
+        "uganda/jinja",
+        "uganda/murchison-falls",
+        "uganda/kibale",
+        "uganda/queen-elizabeth",
+        "uganda/bwindi",
+        "uganda/lake-bunyonyi"
+      ],
+      "hero": "uganda/jinja",
+      "sources": [
+        "Rough Guides",
+        "KimKim",
+        "Asilia Africa",
+        "Jewel Safaris",
+        "Scott Dunn"
+      ],
+      "pace": "R",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Entebbe",
+          "hotel": "Hotel in Entebbe",
+          "start": 0,
+          "nights": 1,
+          "area": "In Entebbe, close to the airport and the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Jinja",
+          "hotel": "Lodge at Jinja",
+          "start": 1,
+          "nights": 2,
+          "area": "In a lodge overlooking the Nile at Jinja",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Murchison Falls",
+          "hotel": "Lodge at Murchison Falls",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge near Paraa, with views of the Nile",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Kibale",
+          "hotel": "Lodge near Kibale",
+          "start": 5,
+          "nights": 1,
+          "area": "In a forest lodge near Kibale National Park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Queen Elizabeth",
+          "hotel": "Lodge at Queen Elizabeth",
+          "start": 6,
+          "nights": 2,
+          "area": "In a lodge near the Kazinga Channel or Ishasha",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bwindi",
+          "hotel": "Lodge near Bwindi",
+          "start": 8,
+          "nights": 2,
+          "area": "In a forest lodge near Bwindi, with views of the hills",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Bunyonyi",
+          "hotel": "Lodge at Lake Bunyonyi",
+          "start": 10,
+          "nights": 1,
+          "area": "In a lodge on a Lake Bunyonyi island or shore",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Kasubi Tombs and Kampala mosque view",
+          "notes": "Choose a car rather than a motorbike taxi.",
+          "where": "Kampala",
+          "book": "",
+          "place": "uganda/kampala-city"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Nile white-water rafting",
+          "notes": "Use a safety-rated operator.",
+          "where": "Jinja",
+          "book": "Yes - book rafting",
+          "place": "uganda/jinja-nile"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Boat trip to the base of Murchison Falls",
+          "notes": "Hippos and crocodiles on the way.",
+          "where": "Murchison Falls",
+          "book": "Yes - book the boat",
+          "place": "uganda/murchison-falls"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Murchison game drive",
+          "notes": "Look for lions and giraffes.",
+          "where": "Murchison Falls",
+          "book": "",
+          "place": "uganda/murchison-falls"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "4h",
+          "name": "Kibale chimpanzee trek",
+          "notes": "Permits are limited; book months ahead.",
+          "where": "Kibale",
+          "book": "Yes - chimp permit required",
+          "place": "uganda/kibale-chimps"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "3.5h",
+          "name": "Queen Elizabeth morning game drive",
+          "notes": "Lions and kob; Ishasha for tree-climbing lions.",
+          "where": "Queen Elizabeth",
+          "book": "",
+          "place": "uganda/queen-elizabeth"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "2.5h",
+          "name": "Kazinga Channel boat cruise",
+          "notes": "Hippos and elephants on the banks.",
+          "where": "Queen Elizabeth",
+          "book": "Yes - book the cruise",
+          "place": "uganda/queen-elizabeth"
+        },
+        {
+          "day": 9,
+          "type": "Hike",
+          "time": "07:30",
+          "duration": "7h",
+          "name": "Mountain gorilla trek",
+          "notes": "Permits must be booked months ahead; hire a porter.",
+          "where": "Bwindi",
+          "book": "Yes - gorilla permit required",
+          "place": "uganda/bwindi-gorillas"
+        },
+        {
+          "day": 11,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Canoe trip around the islands",
+          "notes": "Swimming is safe in this lake.",
+          "where": "Lake Bunyonyi",
+          "book": "",
+          "place": "uganda/lake-bunyonyi"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Lodge transfer or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Private Transfer",
+          "from": "Entebbe",
+          "to": "Jinja lodge",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Jinja",
+          "to": "Murchison lodge",
+          "time": "07:30",
+          "minutes": 360,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Murchison lodge",
+          "to": "Kibale lodge",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Kibale lodge",
+          "to": "Queen Elizabeth lodge",
+          "time": "12:30",
+          "minutes": 120,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Queen Elizabeth lodge",
+          "to": "Bwindi lodge",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Bwindi lodge",
+          "to": "Lake Bunyonyi lodge",
+          "time": "12:00",
+          "minutes": 150,
+          "carrier": "4x4 safari vehicle with driver-guide",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Lake Bunyonyi lodge",
+          "to": "Kabale airstrip",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Entebbe Airport (EBB)",
+          "to": "Entebbe airport area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "uganda/entebbe-wildlife": {
+        "name": "Entebbe Botanical Gardens and wildlife centre",
+        "description": "A lakeside garden and a sanctuary for rescued primates and shoebills near the airport.",
+        "details": "Entebbe has the Botanical Gardens on Lake Victoria, with monkeys and birds, and the Uganda Wildlife Education Centre, which cares for rescued animals. They are an easy first or last stop near the airport. Mosquito repellent is useful.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "uganda/jinja-nile": {
+        "name": "Jinja, the source of the Nile and rafting",
+        "description": "White-water rafting on the Nile and a boat to the source of the longest river in Africa.",
+        "details": "Jinja is Uganda adventure capital. Grade 3 to 5 rafting runs on the Nile from a base just downstream of the source, with calm sections for swimming. Quad biking, kayaking and a sunset cruise are other options. Book with a safety-rated operator.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "uganda/murchison-falls": {
+        "name": "Murchison Falls National Park",
+        "description": "A river that squeezes through a 7-metre gap, with game drives and boat trips below.",
+        "details": "Murchison Falls is Uganda largest park. A boat trip from Paraa goes to the base of the falls, passing hippos, crocodiles and elephants on the banks, and a hike leads to the top. Game drives in the north find lions, giraffes and buffalo. Shoebill storks are possible on the Nile delta.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "uganda/kibale-chimps": {
+        "name": "Kibale Forest chimpanzee tracking",
+        "description": "Habituated chimps in a rainforest with 13 species of primates.",
+        "details": "Kibale has one of the highest densities of primates in Africa. Trekkers hike with a ranger to find a habituated chimpanzee community and spend an hour with them. Permits are limited, so book months ahead. The Bigodi Wetland Sanctuary is a bird walk nearby.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "uganda/queen-elizabeth": {
+        "name": "Queen Elizabeth National Park and Kazinga Channel",
+        "description": "Savannah drives, a hippo-packed channel cruise and the Ishasha tree-climbing lions.",
+        "details": "Queen Elizabeth has a mix of savannah, lakes and crater lakes. The Kazinga Channel boat cruise shows hippos, buffalo and elephants at the water. In the Ishasha sector, lions climb fig trees. Early morning and late afternoon drives are best.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "uganda/bwindi-gorillas": {
+        "name": "Bwindi mountain gorilla trek",
+        "description": "A steep forest hike to spend one hour with a habituated mountain gorilla family.",
+        "details": "Bwindi Impenetrable Forest holds about half the world mountain gorillas. Treks take 2 to 6 hours over steep, muddy ground, followed by one hour with the family. Permits are limited, so book months ahead. Porters are available to carry bags and help on slopes.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "uganda/lake-bunyonyi": {
+        "name": "Lake Bunyonyi canoe and island walks",
+        "description": "A terraced highland lake dotted with islands, calm and safe for swimming.",
+        "details": "Lake Bunyonyi has more than twenty islands. Dugout canoe trips visit villages and islands, and walks climb the terraced hills. It is a restful stop after a gorilla trek. Swimming is safe because the lake is free of bilharzia.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "uganda/kampala-city": {
+        "name": "Kampala Kasubi Tombs and markets",
+        "description": "A hilly capital with royal tombs, a hilltop mosque and busy markets.",
+        "details": "Kampala has the Kasubi Tombs (rebuilt after a fire), the Gaddafi National Mosque with a minaret view and the Owino market for crafts. Boda-boda motorbike taxis are fast but risky, so choose a car.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "uganda": {
+        "name": "Uganda",
+        "description": "The Pearl of Africa, with mountain gorillas, chimpanzees, savannah parks and the source of the Nile.",
+        "images": []
+      },
+      "uganda/entebbe": {
+        "name": "Entebbe",
+        "description": "A lakeside town near the airport.",
+        "images": []
+      },
+      "uganda/jinja": {
+        "name": "Jinja",
+        "description": "The adventure town on the Nile.",
+        "images": []
+      },
+      "uganda/murchison-falls": {
+        "name": "Murchison Falls",
+        "description": "A Nile gorge and national park.",
+        "images": []
+      },
+      "uganda/kibale": {
+        "name": "Kibale",
+        "description": "A forest park for chimpanzees.",
+        "images": []
+      },
+      "uganda/queen-elizabeth": {
+        "name": "Queen Elizabeth",
+        "description": "A savannah park and channel.",
+        "images": []
+      },
+      "uganda/bwindi": {
+        "name": "Bwindi",
+        "description": "A forest of mountain gorillas.",
+        "images": []
+      },
+      "uganda/lake-bunyonyi": {
+        "name": "Lake Bunyonyi",
+        "description": "A highland lake of islands.",
+        "images": []
+      }
+    }
+  }
+}

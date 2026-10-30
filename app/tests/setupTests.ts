@@ -10,7 +10,10 @@ console.error = (...args: unknown[]) => {
     typeof first === 'string' &&
     (first.includes('react-test-renderer is deprecated') ||
       first.includes('not wrapped in act') ||
-      first.includes('not wrapped in act(...)'))
+      first.includes('not wrapped in act(...)') ||
+      // Many suites stub react-native components as plain strings
+      // (`Text: 'Text'`), which React-DOM flags as mis-cased HTML tags.
+      first.includes('is using incorrect casing'))
   ) {
     return;
   }
