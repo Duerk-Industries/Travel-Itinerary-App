@@ -4,7 +4,7 @@ import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme }
 import { useAppTheme as useStyleTheme } from '../../theme/ThemeContext';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { pickTextFile, shareTextFile } from '../../utils/dataTransferPlatform';
+import { pickTextFiles, shareTextFile } from '../../utils/dataTransferPlatform';
 
 /**
  * Admin → Itinerary templates. Sample itineraries are written outside the app by an LLM that follows the
@@ -42,6 +42,29 @@ const countLine = (report: ImportReport): string => {
     ...(count('invalid') ? [`${count('invalid')} need fixes`] : []),
     `${media('places')} place and ${media('destinations')} destination descriptions added or changed`,
   ].join(' · ');
+};
+
+/**
+ * Several bundle files chosen at once become one bundle, so they are checked and imported together: templates are
+ * joined and media entries merged (a later file wins on a shared key). A single file is passed through untouched.
+ * A file that is not valid JSON or not a bundle object is named in the error.
+ */
+const mergeBundleFiles = (files: Array<{ name: string; text: string }>): string => {
+  if (files.length === 1) return files[0].text;
+  const merged: Record<string, any> = { format: 'wanderbunnies.trip-templates', version: 1, templates: [], media: { places: {}, destinations: {} } };
+  for (const file of files) {
+    let bundle: any;
+    try { bundle = JSON.parse(file.text); } catch (err) { throw new Error(`${file.name} is not valid JSON: ${err instanceof Error ? err.message : 'it could not be read'}.`); }
+    if (!bundle || typeof bundle !== 'object' || Array.isArray(bundle)) throw new Error(`${file.name} must be a JSON object with "format", "version" and "templates".`);
+    if (bundle.format !== merged.format || bundle.version !== merged.version) throw new Error(`${file.name} is not a trip-templates bundle (format "${merged.format}", version ${merged.version}).`);
+    if (bundle.templates !== undefined && !Array.isArray(bundle.templates)) throw new Error(`${file.name}: "templates" must be an array.`);
+    merged.templates.push(...(bundle.templates ?? []));
+    for (const kind of ['places', 'destinations'] as const) {
+      const entries = bundle.media?.[kind];
+      if (entries && typeof entries === 'object' && !Array.isArray(entries)) Object.assign(merged.media[kind], entries);
+    }
+  }
+  return JSON.stringify(merged, null, 2);
 };
 
 type Props = { backendUrl: string; headers: Record<string, string>; theme?: AppTheme };
@@ -129,12 +152,13 @@ export const TripTemplatesSection: React.FC<Props> = ({ backendUrl, headers, the
   const chooseFile = async () => {
     setMessage(null);
     try {
-      const picked = await pickTextFile({ accept: '.json,application/json', maxBytes: MAX_FILE_BYTES });
-      if (!picked) return;
-      setText(picked.text);
-      setFileName(picked.name);
+      const picked = await pickTextFiles({ accept: '.json,application/json', maxBytes: MAX_FILE_BYTES });
+      if (!picked.length) return;
+      const merged = mergeBundleFiles(picked);
+      setText(merged);
+      setFileName(picked.length === 1 ? picked[0].name : `${picked.length} files: ${picked.map((file) => file.name).join(', ')}`);
       setReport(null);
-      await check(picked.text);
+      await check(merged);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Unable to read the file.');
     }
@@ -202,7 +226,7 @@ export const TripTemplatesSection: React.FC<Props> = ({ backendUrl, headers, the
 
       <View style={s.card}>
         <Text style={s.cardTitle}>2. Import the result</Text>
-        <Text style={s.helper}>Choose the JSON file the LLM produced, or paste it. It is checked first; nothing changes until you press Import, and nothing is saved unless the whole file is acceptable.</Text>
+        <Text style={s.helper}>Choose one or more JSON files the LLM produced (select several at once to import them together), or paste one. It is checked first; nothing changes until you press Import, and nothing is saved unless the whole file is acceptable.</Text>
         <View style={s.row}>
           <TouchableOpacity testID="trip-templates-pick-file" accessibilityRole="button" style={s.button} onPress={() => void chooseFile()} disabled={busy}>
             <Text style={s.buttonText}>Choose file…</Text>

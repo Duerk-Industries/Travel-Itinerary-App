@@ -1,0 +1,1156 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Eurasia Travel, Wander-Lush, Bamboo Travel and G Adventures itineraries for Uzbekistan",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "uzbekistan-samarkand-bukhara-5d",
+      "title": "Samarkand and Bukhara in 5 Days",
+      "summary": "The two great Silk Road cities by high-speed train.",
+      "days": 5,
+      "route": "Tashkent > Samarkand > Bukhara",
+      "arrive": "Tashkent (TAS)",
+      "depart": "Bukhara (BHK)",
+      "countries": [
+        "Uzbekistan"
+      ],
+      "regions": [],
+      "cities": [
+        "Tashkent",
+        "Samarkand",
+        "Bukhara"
+      ],
+      "imageQuery": "Registan Samarkand Uzbekistan",
+      "highlights": [
+        "Registan",
+        "Chorsu Bazaar",
+        "Lyabi-Hauz",
+        "Kalon Minaret"
+      ],
+      "destinationKeys": [
+        "uzbekistan",
+        "uzbekistan/tashkent",
+        "uzbekistan/samarkand",
+        "uzbekistan/bukhara"
+      ],
+      "hero": "uzbekistan/samarkand",
+      "sources": [
+        "Eurasia Travel",
+        "Wander-Lush",
+        "Bamboo Travel",
+        "G Adventures",
+        "Steppes Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tashkent",
+          "hotel": "Hotel in Tashkent",
+          "start": 0,
+          "nights": 1,
+          "area": "In central Tashkent, near the Amir Timur Square and the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Samarkand",
+          "hotel": "Hotel in Samarkand",
+          "start": 1,
+          "nights": 2,
+          "area": "In a boutique hotel near the Registan",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bukhara",
+          "hotel": "Hotel in Bukhara",
+          "start": 3,
+          "nights": 1,
+          "area": "In a restored merchant house near Lyabi-Hauz in Bukhara",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Chorsu Bazaar, metro stations and Khast Imam",
+          "notes": "Try plov at the bazaar; metro photography is now allowed.",
+          "where": "Tashkent",
+          "book": "",
+          "place": "uzbekistan/tashkent"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Registan, Gur-e-Amir and Shah-i-Zinda",
+          "notes": "Return to the Registan after dark for the lights.",
+          "where": "Samarkand",
+          "book": "",
+          "place": "uzbekistan/samarkand-registan"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Samanid Mausoleum and Chor Minor",
+          "notes": "Best in late light.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-mausoleums"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Lyabi-Hauz, Ark fortress and Kalon Minaret",
+          "notes": "Wander the trading domes.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-old-town"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tashkent Airport (TAS)",
+          "to": "Tashkent hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex) or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Tashkent",
+          "to": "Samarkand",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Samarkand",
+          "to": "Bukhara",
+          "time": "09:00",
+          "minutes": 80,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Bukhara hotel",
+          "to": "Bukhara Airport (BHK)",
+          "time": "13:00",
+          "minutes": 15,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "uzbekistan-tashkent-samarkand-bukhara-7d",
+      "title": "Uzbekistan Silk Road in 7 Days",
+      "summary": "Tashkent, Samarkand and Bukhara.",
+      "days": 7,
+      "route": "Tashkent > Samarkand > Bukhara",
+      "arrive": "Tashkent (TAS)",
+      "depart": "Tashkent (TAS)",
+      "countries": [
+        "Uzbekistan"
+      ],
+      "regions": [],
+      "cities": [
+        "Tashkent",
+        "Samarkand",
+        "Bukhara"
+      ],
+      "imageQuery": "Bukhara Kalon minaret Uzbekistan",
+      "highlights": [
+        "Tashkent metro",
+        "Registan",
+        "Ulugh Beg",
+        "Bukhara old town"
+      ],
+      "destinationKeys": [
+        "uzbekistan",
+        "uzbekistan/tashkent",
+        "uzbekistan/samarkand",
+        "uzbekistan/bukhara"
+      ],
+      "hero": "uzbekistan/bukhara",
+      "sources": [
+        "Eurasia Travel",
+        "Wander-Lush",
+        "Bamboo Travel",
+        "G Adventures",
+        "Steppes Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Tashkent",
+          "hotel": "Hotel in Tashkent",
+          "start": 0,
+          "nights": 2,
+          "area": "In central Tashkent, near the Amir Timur Square and the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Samarkand",
+          "hotel": "Hotel in Samarkand",
+          "start": 2,
+          "nights": 2,
+          "area": "In a boutique hotel near the Registan",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bukhara",
+          "hotel": "Hotel in Bukhara",
+          "start": 4,
+          "nights": 2,
+          "area": "In a restored merchant house near Lyabi-Hauz in Bukhara",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chorsu Bazaar, metro stations and Khast Imam",
+          "notes": "Try plov at the bazaar; metro photography is now allowed.",
+          "where": "Tashkent",
+          "book": "",
+          "place": "uzbekistan/tashkent"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Siab Bazaar and Ulugh Beg Observatory",
+          "notes": "Try fresh Samarkand bread.",
+          "where": "Samarkand",
+          "book": "",
+          "place": "uzbekistan/samarkand-siab-ulugbek"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Registan, Gur-e-Amir and Shah-i-Zinda",
+          "notes": "Return to the Registan after dark for the lights.",
+          "where": "Samarkand",
+          "book": "",
+          "place": "uzbekistan/samarkand-registan"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Lyabi-Hauz, Ark fortress and Kalon Minaret",
+          "notes": "Wander the trading domes.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-old-town"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Samanid Mausoleum and Chor Minor",
+          "notes": "Best in late light.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-mausoleums"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tashkent Airport (TAS)",
+          "to": "Tashkent hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex) or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Tashkent",
+          "to": "Samarkand",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Samarkand",
+          "to": "Bukhara",
+          "time": "09:00",
+          "minutes": 80,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Bukhara",
+          "to": "Tashkent",
+          "time": "08:00",
+          "minutes": 270,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Tashkent",
+          "to": "Tashkent Airport (TAS)",
+          "time": "15:00",
+          "minutes": 30,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "uzbekistan-classic-8d",
+      "title": "Classic Uzbekistan in 8 Days",
+      "summary": "Tashkent, Samarkand, Bukhara and Khiva.",
+      "days": 8,
+      "route": "Tashkent > Samarkand > Bukhara > Khiva",
+      "arrive": "Tashkent (TAS)",
+      "depart": "Urgench (UGC)",
+      "countries": [
+        "Uzbekistan"
+      ],
+      "regions": [],
+      "cities": [
+        "Tashkent",
+        "Samarkand",
+        "Bukhara",
+        "Khiva"
+      ],
+      "imageQuery": "Khiva Itchan Kala walls",
+      "highlights": [
+        "Registan",
+        "Bukhara",
+        "Khiva walled city"
+      ],
+      "destinationKeys": [
+        "uzbekistan",
+        "uzbekistan/tashkent",
+        "uzbekistan/samarkand",
+        "uzbekistan/bukhara",
+        "uzbekistan/khiva"
+      ],
+      "hero": "uzbekistan/khiva",
+      "sources": [
+        "Eurasia Travel",
+        "Wander-Lush",
+        "Bamboo Travel",
+        "G Adventures",
+        "Steppes Travel"
+      ],
+      "pace": "F",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Tashkent",
+          "hotel": "Hotel in Tashkent",
+          "start": 0,
+          "nights": 1,
+          "area": "In central Tashkent, near the Amir Timur Square and the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Samarkand",
+          "hotel": "Hotel in Samarkand",
+          "start": 1,
+          "nights": 2,
+          "area": "In a boutique hotel near the Registan",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bukhara",
+          "hotel": "Hotel in Bukhara",
+          "start": 3,
+          "nights": 2,
+          "area": "In a restored merchant house near Lyabi-Hauz in Bukhara",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Khiva",
+          "hotel": "Hotel in Khiva",
+          "start": 5,
+          "nights": 2,
+          "area": "Inside or beside the walls of Khiva old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Chorsu Bazaar, metro stations and Khast Imam",
+          "notes": "Try plov at the bazaar; metro photography is now allowed.",
+          "where": "Tashkent",
+          "book": "",
+          "place": "uzbekistan/tashkent"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Registan, Gur-e-Amir and Shah-i-Zinda",
+          "notes": "Return to the Registan after dark for the lights.",
+          "where": "Samarkand",
+          "book": "",
+          "place": "uzbekistan/samarkand-registan"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Lyabi-Hauz, Ark fortress and Kalon Minaret",
+          "notes": "Wander the trading domes.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-old-town"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Samanid Mausoleum and Chor Minor",
+          "notes": "Best in late light.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-mausoleums"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Itchan Kala walls, minarets and Juma Mosque",
+          "notes": "Climb the walls for sunset.",
+          "where": "Khiva",
+          "book": "",
+          "place": "uzbekistan/khiva-itchan-kala"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tashkent Airport (TAS)",
+          "to": "Tashkent hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex) or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 1,
+          "transferType": "Public Transit",
+          "from": "Tashkent",
+          "to": "Samarkand",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Samarkand",
+          "to": "Bukhara",
+          "time": "09:00",
+          "minutes": 80,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Bukhara",
+          "to": "Khiva",
+          "time": "08:00",
+          "minutes": 450,
+          "carrier": "Private car with driver",
+          "notes": "A long drive across the Kyzylkum; a flight to Urgench is an alternative.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Khiva hotel",
+          "to": "Urgench Airport (UGC)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "uzbekistan-complete-10d",
+      "title": "Uzbekistan Cities of the Silk Road in 10 Days",
+      "summary": "Tashkent, Samarkand, Bukhara and Khiva at a more comfortable pace.",
+      "days": 10,
+      "route": "Tashkent > Samarkand > Bukhara > Khiva",
+      "arrive": "Tashkent (TAS)",
+      "depart": "Urgench (UGC)",
+      "countries": [
+        "Uzbekistan"
+      ],
+      "regions": [],
+      "cities": [
+        "Tashkent",
+        "Samarkand",
+        "Bukhara",
+        "Khiva"
+      ],
+      "imageQuery": "Uzbekistan Silk Road mosque tile",
+      "highlights": [
+        "Chorsu Bazaar",
+        "Registan",
+        "Ulugh Beg Observatory",
+        "Bukhara",
+        "Khiva"
+      ],
+      "destinationKeys": [
+        "uzbekistan",
+        "uzbekistan/tashkent",
+        "uzbekistan/samarkand",
+        "uzbekistan/bukhara",
+        "uzbekistan/khiva"
+      ],
+      "hero": "uzbekistan/samarkand",
+      "sources": [
+        "Eurasia Travel",
+        "Wander-Lush",
+        "Bamboo Travel",
+        "G Adventures",
+        "Steppes Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Tashkent",
+          "hotel": "Hotel in Tashkent",
+          "start": 0,
+          "nights": 2,
+          "area": "In central Tashkent, near the Amir Timur Square and the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Samarkand",
+          "hotel": "Hotel in Samarkand",
+          "start": 2,
+          "nights": 3,
+          "area": "In a boutique hotel near the Registan",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bukhara",
+          "hotel": "Hotel in Bukhara",
+          "start": 5,
+          "nights": 2,
+          "area": "In a restored merchant house near Lyabi-Hauz in Bukhara",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Khiva",
+          "hotel": "Hotel in Khiva",
+          "start": 7,
+          "nights": 2,
+          "area": "Inside or beside the walls of Khiva old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chorsu Bazaar, metro stations and Khast Imam",
+          "notes": "Try plov at the bazaar; metro photography is now allowed.",
+          "where": "Tashkent",
+          "book": "",
+          "place": "uzbekistan/tashkent"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Registan, Gur-e-Amir and Shah-i-Zinda",
+          "notes": "Return to the Registan after dark for the lights.",
+          "where": "Samarkand",
+          "book": "",
+          "place": "uzbekistan/samarkand-registan"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Siab Bazaar and Ulugh Beg Observatory",
+          "notes": "Try fresh Samarkand bread.",
+          "where": "Samarkand",
+          "book": "",
+          "place": "uzbekistan/samarkand-siab-ulugbek"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Lyabi-Hauz, Ark fortress and Kalon Minaret",
+          "notes": "Wander the trading domes.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-old-town"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Samanid Mausoleum and Chor Minor",
+          "notes": "Best in late light.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-mausoleums"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Itchan Kala walls, minarets and Juma Mosque",
+          "notes": "Climb the walls for sunset.",
+          "where": "Khiva",
+          "book": "",
+          "place": "uzbekistan/khiva-itchan-kala"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tashkent Airport (TAS)",
+          "to": "Tashkent hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex) or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Tashkent",
+          "to": "Samarkand",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Samarkand",
+          "to": "Bukhara",
+          "time": "09:00",
+          "minutes": 80,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Bukhara",
+          "to": "Khiva",
+          "time": "08:00",
+          "minutes": 450,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Khiva hotel",
+          "to": "Urgench Airport (UGC)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "uzbekistan-yurt-12d",
+      "title": "Complete Uzbekistan with a Yurt Camp in 12 Days",
+      "summary": "The four cities with a night under the desert stars.",
+      "days": 12,
+      "route": "Tashkent > Samarkand > Nurata > Bukhara > Khiva",
+      "arrive": "Tashkent (TAS)",
+      "depart": "Urgench (UGC)",
+      "countries": [
+        "Uzbekistan"
+      ],
+      "regions": [],
+      "cities": [
+        "Tashkent",
+        "Samarkand",
+        "Nurata",
+        "Bukhara",
+        "Khiva"
+      ],
+      "imageQuery": "Nurata yurt camp Uzbekistan desert",
+      "highlights": [
+        "Registan",
+        "Yurt camp",
+        "Bukhara",
+        "Khiva",
+        "Chorsu Bazaar"
+      ],
+      "destinationKeys": [
+        "uzbekistan",
+        "uzbekistan/tashkent",
+        "uzbekistan/samarkand",
+        "uzbekistan/nurata",
+        "uzbekistan/bukhara",
+        "uzbekistan/khiva"
+      ],
+      "hero": "uzbekistan/nurata",
+      "sources": [
+        "Eurasia Travel",
+        "Wander-Lush",
+        "Bamboo Travel",
+        "G Adventures",
+        "Steppes Travel"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "adventure",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Tashkent",
+          "hotel": "Hotel in Tashkent",
+          "start": 0,
+          "nights": 2,
+          "area": "In central Tashkent, near the Amir Timur Square and the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Samarkand",
+          "hotel": "Hotel in Samarkand",
+          "start": 2,
+          "nights": 3,
+          "area": "In a boutique hotel near the Registan",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Nurata",
+          "hotel": "Camp at Aydarkul Lake",
+          "start": 5,
+          "nights": 1,
+          "area": "In a yurt camp on the edge of Aydarkul Lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bukhara",
+          "hotel": "Hotel in Bukhara",
+          "start": 6,
+          "nights": 2,
+          "area": "In a restored merchant house near Lyabi-Hauz in Bukhara",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Khiva",
+          "hotel": "Hotel in Khiva",
+          "start": 8,
+          "nights": 3,
+          "area": "Inside or beside the walls of Khiva old town",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chorsu Bazaar, metro stations and Khast Imam",
+          "notes": "Try plov at the bazaar; metro photography is now allowed.",
+          "where": "Tashkent",
+          "book": "",
+          "place": "uzbekistan/tashkent"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Registan, Gur-e-Amir and Shah-i-Zinda",
+          "notes": "Return to the Registan after dark for the lights.",
+          "where": "Samarkand",
+          "book": "",
+          "place": "uzbekistan/samarkand-registan"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Siab Bazaar and Ulugh Beg Observatory",
+          "notes": "Try fresh Samarkand bread.",
+          "where": "Samarkand",
+          "book": "",
+          "place": "uzbekistan/samarkand-siab-ulugbek"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "17:00",
+          "duration": "4h",
+          "name": "Camel ride, campfire and yurt dinner",
+          "notes": "Nights are cold in spring and autumn.",
+          "where": "Aydarkul Lake",
+          "book": "",
+          "place": "uzbekistan/yurt-camp-nurata"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Lyabi-Hauz, Ark fortress and Kalon Minaret",
+          "notes": "Wander the trading domes.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-old-town"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Samanid Mausoleum and Chor Minor",
+          "notes": "Best in late light.",
+          "where": "Bukhara",
+          "book": "",
+          "place": "uzbekistan/bukhara-mausoleums"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Itchan Kala walls, minarets and Juma Mosque",
+          "notes": "Climb the walls for sunset.",
+          "where": "Khiva",
+          "book": "",
+          "place": "uzbekistan/khiva-itchan-kala"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Second day in Khiva: Tash Hauli, minarets and tea",
+          "notes": "Climb the walls for sunset.",
+          "where": "Khiva",
+          "book": "",
+          "place": "uzbekistan/khiva-itchan-kala"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tashkent Airport (TAS)",
+          "to": "Tashkent hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi (Yandex) or hotel transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Tashkent",
+          "to": "Samarkand",
+          "time": "08:00",
+          "minutes": 120,
+          "carrier": "Afrosiyob high-speed train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Samarkand",
+          "to": "Aydarkul yurt camp",
+          "time": "10:00",
+          "minutes": 240,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Aydarkul yurt camp",
+          "to": "Bukhara",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Bukhara",
+          "to": "Khiva",
+          "time": "08:00",
+          "minutes": 450,
+          "carrier": "Private car with driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Khiva hotel",
+          "to": "Urgench Airport (UGC)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi or hotel transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "uzbekistan/tashkent": {
+        "name": "Tashkent: Chorsu Bazaar, metro and Khast Imam",
+        "description": "A Soviet-era capital with a domed bazaar, painted metro stations and a historic mosque complex.",
+        "details": "Tashkent has the Chorsu Bazaar with its blue dome for dried fruit, bread and plov. The metro stations are decorated like palaces, and photography has recently been allowed. Khast Imam holds the Uthman Quran. Taxis are cheap through apps.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "uzbekistan/samarkand-registan": {
+        "name": "Samarkand Registan and Gur-e-Amir",
+        "description": "Three tile-covered madrasahs on a great square, and the tomb of Timur.",
+        "details": "The Registan is one of the most majestic squares in the world, lit up at night. Gur-e-Amir is Timur turquoise-domed mausoleum, and Bibi-Khanym Mosque is immense. The Shah-i-Zinda necropolis is a street of blue-tiled tombs. Visit the Registan at sunset.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "uzbekistan/samarkand-siab-ulugbek": {
+        "name": "Siab Bazaar and Ulugh Beg Observatory",
+        "description": "A fresh-produce market and the ruins of a 15th-century observatory.",
+        "details": "Siab Bazaar sells bread, nuts and dried fruit. The Ulugh Beg Observatory preserves the base of a giant sextant used for medieval astronomy. Allow half a day. Try Samarkand bread, baked in a clay oven.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "uzbekistan/bukhara-old-town": {
+        "name": "Bukhara Lyabi-Hauz, Ark and Kalon Minaret",
+        "description": "A living Silk Road city of domed bazaars, a pool plaza and a fortress.",
+        "details": "Bukhara has over 140 protected monuments. Lyabi-Hauz is a pool surrounded by old madrasahs and tea houses. The Kalon Minaret is 47 metres tall, and the Ark fortress was the residence of the emirs. Trading domes now sell carpets and crafts.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "uzbekistan/bukhara-mausoleums": {
+        "name": "Samanid Mausoleum and Chor Minor",
+        "description": "A tenth-century brick tomb and a charming four-towered gatehouse.",
+        "details": "The Samanid Mausoleum is a masterpiece of brick pattern from the 10th century. Chor Minor is a small madrasah gatehouse with four turquoise towers. Both are a short walk or taxi ride from the centre. Visit in late afternoon light.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "uzbekistan/khiva-itchan-kala": {
+        "name": "Khiva Itchan Kala",
+        "description": "A completely walled desert city of mud-brick walls, minarets and blue tile.",
+        "details": "Itchan Kala is the inner walled town of Khiva, a UNESCO site, with the unfinished Kalta Minor minaret, Juma Mosque with 213 wooden pillars and Tash Hauli palace. You can climb the walls for sunset. The old town is very pedestrian and quiet in the evening.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "uzbekistan/yurt-camp-nurata": {
+        "name": "Nurata yurt camp and Aydarkul Lake",
+        "description": "An overnight in a yurt in the Kyzylkum desert, with camels and a lake swim.",
+        "details": "Between Samarkand and Bukhara, yurt camps at Aydarkul Lake offer camel rides, a campfire and a Uzbek dinner under a vast night sky. Nights are cold in spring and autumn. In summer the lake is good for swimming.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "uzbekistan": {
+        "name": "Uzbekistan",
+        "description": "The heart of the Silk Road, with blue-tiled domes and mud-brick walled towns.",
+        "images": []
+      },
+      "uzbekistan/tashkent": {
+        "name": "Tashkent",
+        "description": "The capital, with markets and decorated metro stations.",
+        "images": []
+      },
+      "uzbekistan/samarkand": {
+        "name": "Samarkand",
+        "description": "The Timurid capital of the Registan.",
+        "images": []
+      },
+      "uzbekistan/nurata": {
+        "name": "Nurata",
+        "description": "A desert region of yurt camps and a lake.",
+        "images": []
+      },
+      "uzbekistan/bukhara": {
+        "name": "Bukhara",
+        "description": "A Silk Road city of mosques and bazaars.",
+        "images": []
+      },
+      "uzbekistan/khiva": {
+        "name": "Khiva",
+        "description": "A walled desert city.",
+        "images": []
+      }
+    }
+  }
+}

@@ -1,0 +1,1047 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Goabroad Travel, Musement, Platinum List and Civitatis itineraries for the United Arab Emirates",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "united-arab-emirates-dubai-4d",
+      "title": "Dubai in 4 Days",
+      "summary": "Skyscrapers, souks, beaches and a desert evening.",
+      "days": 4,
+      "route": "Dubai",
+      "arrive": "Dubai (DXB)",
+      "depart": "Dubai (DXB)",
+      "countries": [
+        "United Arab Emirates"
+      ],
+      "regions": [
+        "Dubai"
+      ],
+      "cities": [
+        "Dubai"
+      ],
+      "imageQuery": "Dubai skyline Burj Khalifa",
+      "highlights": [
+        "Burj Khalifa",
+        "Old Dubai souks",
+        "Jumeirah Beach",
+        "Desert safari"
+      ],
+      "destinationKeys": [
+        "united-arab-emirates",
+        "united-arab-emirates/dubai"
+      ],
+      "hero": "united-arab-emirates/dubai",
+      "sources": [
+        "Goabroad Travel",
+        "Musement",
+        "Platinum List",
+        "Civitatis",
+        "Marriott Activities"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "culture",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Dubai",
+          "hotel": "Hotel in Dubai",
+          "start": 0,
+          "nights": 3,
+          "area": "In Downtown Dubai or Dubai Marina, with metro access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "4h",
+          "name": "Burj Khalifa, Dubai Mall and fountain show",
+          "notes": "Book sunset deck slots ahead.",
+          "where": "Downtown Dubai",
+          "book": "Yes - book the observation deck",
+          "place": "united-arab-emirates/burj-khalifa-mall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Creek, souks and abra ride",
+          "notes": "Go early before the heat.",
+          "where": "Old Dubai",
+          "book": "",
+          "place": "united-arab-emirates/old-dubai"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Jumeirah Beach, Palm and Marina",
+          "notes": "Summer midday is extremely hot.",
+          "where": "Dubai",
+          "book": "",
+          "place": "united-arab-emirates/jumeirah-palm"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "6h",
+          "name": "Desert safari with dinner",
+          "notes": "Choose a reputable operator.",
+          "where": "Dubai desert",
+          "book": "Yes - book the safari",
+          "place": "united-arab-emirates/dubai-desert-safari"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dubai Airport (DXB)",
+          "to": "Dubai hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Dubai hotel",
+          "to": "Dubai Airport (DXB)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Metro, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-arab-emirates-dubai-abu-dhabi-5d",
+      "title": "Dubai and Abu Dhabi in 5 Days",
+      "summary": "The two big emirates.",
+      "days": 5,
+      "route": "Dubai > Abu Dhabi",
+      "arrive": "Dubai (DXB)",
+      "depart": "Abu Dhabi (AUH)",
+      "countries": [
+        "United Arab Emirates"
+      ],
+      "regions": [
+        "Dubai",
+        "Abu Dhabi"
+      ],
+      "cities": [
+        "Dubai",
+        "Abu Dhabi"
+      ],
+      "imageQuery": "Sheikh Zayed Mosque Abu Dhabi",
+      "highlights": [
+        "Burj Khalifa",
+        "Souks",
+        "Sheikh Zayed Mosque",
+        "Louvre Abu Dhabi"
+      ],
+      "destinationKeys": [
+        "united-arab-emirates",
+        "united-arab-emirates/dubai",
+        "united-arab-emirates/abu-dhabi"
+      ],
+      "hero": "united-arab-emirates/abu-dhabi",
+      "sources": [
+        "Goabroad Travel",
+        "Musement",
+        "Platinum List",
+        "Civitatis",
+        "Marriott Activities"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Dubai",
+          "hotel": "Hotel in Dubai",
+          "start": 0,
+          "nights": 2,
+          "area": "In Downtown Dubai or Dubai Marina, with metro access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Abu Dhabi",
+          "hotel": "Hotel in Abu Dhabi",
+          "start": 2,
+          "nights": 2,
+          "area": "On the Corniche or near Saadiyat Island in Abu Dhabi",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "4h",
+          "name": "Burj Khalifa, Dubai Mall and fountain show",
+          "notes": "Book sunset deck slots ahead.",
+          "where": "Downtown Dubai",
+          "book": "Yes - book the observation deck",
+          "place": "united-arab-emirates/burj-khalifa-mall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Creek, souks and abra ride",
+          "notes": "Go early before the heat.",
+          "where": "Old Dubai",
+          "book": "",
+          "place": "united-arab-emirates/old-dubai"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Sheikh Zayed Grand Mosque at sunset",
+          "notes": "Dress modestly; abayas provided.",
+          "where": "Abu Dhabi",
+          "book": "",
+          "place": "united-arab-emirates/sheikh-zayed-mosque"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Louvre Abu Dhabi",
+          "notes": "Book timed tickets.",
+          "where": "Saadiyat Island",
+          "book": "Yes - book timed entry",
+          "place": "united-arab-emirates/louvre-abu-dhabi"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dubai Airport (DXB)",
+          "to": "Dubai hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Dubai",
+          "to": "Abu Dhabi",
+          "time": "11:00",
+          "minutes": 90,
+          "carrier": "Rental car or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Abu Dhabi hotel",
+          "to": "Abu Dhabi Airport (AUH)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Metro, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-arab-emirates-dubai-abu-dhabi-7d",
+      "title": "Dubai and Abu Dhabi in 7 Days",
+      "summary": "Four nights in Dubai with the desert and Hatta day trip, then Abu Dhabi.",
+      "days": 7,
+      "route": "Dubai > Abu Dhabi",
+      "arrive": "Dubai (DXB)",
+      "depart": "Abu Dhabi (AUH)",
+      "countries": [
+        "United Arab Emirates"
+      ],
+      "regions": [
+        "Dubai",
+        "Abu Dhabi"
+      ],
+      "cities": [
+        "Dubai",
+        "Abu Dhabi"
+      ],
+      "imageQuery": "Dubai desert safari dunes",
+      "highlights": [
+        "Burj Khalifa",
+        "Desert safari",
+        "Hatta",
+        "Sheikh Zayed Mosque",
+        "Louvre Abu Dhabi"
+      ],
+      "destinationKeys": [
+        "united-arab-emirates",
+        "united-arab-emirates/dubai",
+        "united-arab-emirates/abu-dhabi"
+      ],
+      "hero": "united-arab-emirates/dubai",
+      "sources": [
+        "Goabroad Travel",
+        "Musement",
+        "Platinum List",
+        "Civitatis",
+        "Marriott Activities"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "adventure",
+        "culture",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Dubai",
+          "hotel": "Hotel in Dubai",
+          "start": 0,
+          "nights": 4,
+          "area": "In Downtown Dubai or Dubai Marina, with metro access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Abu Dhabi",
+          "hotel": "Hotel in Abu Dhabi",
+          "start": 4,
+          "nights": 2,
+          "area": "On the Corniche or near Saadiyat Island in Abu Dhabi",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "4h",
+          "name": "Burj Khalifa, Dubai Mall and fountain show",
+          "notes": "Book sunset deck slots ahead.",
+          "where": "Downtown Dubai",
+          "book": "Yes - book the observation deck",
+          "place": "united-arab-emirates/burj-khalifa-mall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Creek, souks and abra ride",
+          "notes": "Go early before the heat.",
+          "where": "Old Dubai",
+          "book": "",
+          "place": "united-arab-emirates/old-dubai"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Jumeirah Beach, Palm and Marina",
+          "notes": "Summer midday is extremely hot.",
+          "where": "Dubai",
+          "book": "",
+          "place": "united-arab-emirates/jumeirah-palm"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "6h",
+          "name": "Desert safari with dinner",
+          "notes": "Choose a reputable operator.",
+          "where": "Dubai desert",
+          "book": "Yes - book the safari",
+          "place": "united-arab-emirates/dubai-desert-safari"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Hatta Dam kayaking and heritage village",
+          "notes": "A rental car helps.",
+          "where": "Hatta",
+          "book": "",
+          "place": "united-arab-emirates/hatta"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Sheikh Zayed Grand Mosque at sunset",
+          "notes": "Dress modestly; abayas provided.",
+          "where": "Abu Dhabi",
+          "book": "",
+          "place": "united-arab-emirates/sheikh-zayed-mosque"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Louvre Abu Dhabi",
+          "notes": "Book timed tickets.",
+          "where": "Saadiyat Island",
+          "book": "Yes - book timed entry",
+          "place": "united-arab-emirates/louvre-abu-dhabi"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dubai Airport (DXB)",
+          "to": "Dubai hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Dubai",
+          "to": "Abu Dhabi",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Abu Dhabi hotel",
+          "to": "Abu Dhabi Airport (AUH)",
+          "time": "12:00",
+          "minutes": 30,
+          "carrier": "Metro, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-arab-emirates-dubai-abu-dhabi-al-ain-8d",
+      "title": "UAE with Al Ain in 8 Days",
+      "summary": "Dubai, Abu Dhabi and the oasis city of Al Ain.",
+      "days": 8,
+      "route": "Dubai > Abu Dhabi > Al Ain",
+      "arrive": "Dubai (DXB)",
+      "depart": "Abu Dhabi (AUH)",
+      "countries": [
+        "United Arab Emirates"
+      ],
+      "regions": [
+        "Dubai",
+        "Abu Dhabi"
+      ],
+      "cities": [
+        "Dubai",
+        "Abu Dhabi",
+        "Al Ain"
+      ],
+      "imageQuery": "Jebel Hafeet Al Ain road",
+      "highlights": [
+        "Burj Khalifa",
+        "Desert safari",
+        "Sheikh Zayed Mosque",
+        "Yas Island",
+        "Al Ain Oasis"
+      ],
+      "destinationKeys": [
+        "united-arab-emirates",
+        "united-arab-emirates/dubai",
+        "united-arab-emirates/abu-dhabi",
+        "united-arab-emirates/al-ain"
+      ],
+      "hero": "united-arab-emirates/al-ain",
+      "sources": [
+        "Goabroad Travel",
+        "Musement",
+        "Platinum List",
+        "Civitatis",
+        "Marriott Activities"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "adventure",
+        "culture",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Dubai",
+          "hotel": "Hotel in Dubai",
+          "start": 0,
+          "nights": 3,
+          "area": "In Downtown Dubai or Dubai Marina, with metro access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Abu Dhabi",
+          "hotel": "Hotel in Abu Dhabi",
+          "start": 3,
+          "nights": 2,
+          "area": "On the Corniche or near Saadiyat Island in Abu Dhabi",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Al Ain",
+          "hotel": "Hotel in Al Ain",
+          "start": 5,
+          "nights": 2,
+          "area": "In Al Ain town, near the oasis",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "4h",
+          "name": "Burj Khalifa, Dubai Mall and fountain show",
+          "notes": "Book sunset deck slots ahead.",
+          "where": "Downtown Dubai",
+          "book": "Yes - book the observation deck",
+          "place": "united-arab-emirates/burj-khalifa-mall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Creek, souks and abra ride",
+          "notes": "Go early before the heat.",
+          "where": "Old Dubai",
+          "book": "",
+          "place": "united-arab-emirates/old-dubai"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "6h",
+          "name": "Desert safari with dinner",
+          "notes": "Choose a reputable operator.",
+          "where": "Dubai desert",
+          "book": "Yes - book the safari",
+          "place": "united-arab-emirates/dubai-desert-safari"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Sheikh Zayed Grand Mosque at sunset",
+          "notes": "Dress modestly; abayas provided.",
+          "where": "Abu Dhabi",
+          "book": "",
+          "place": "united-arab-emirates/sheikh-zayed-mosque"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Louvre Abu Dhabi",
+          "notes": "Book timed tickets.",
+          "where": "Saadiyat Island",
+          "book": "Yes - book timed entry",
+          "place": "united-arab-emirates/louvre-abu-dhabi"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Al Ain Oasis, Jebel Hafeet and Al Jahili Fort",
+          "notes": "Drive the Jebel Hafeet road for the view.",
+          "where": "Al Ain",
+          "book": "",
+          "place": "united-arab-emirates/al-ain-oasis"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dubai Airport (DXB)",
+          "to": "Dubai hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Dubai",
+          "to": "Abu Dhabi",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Abu Dhabi",
+          "to": "Al Ain",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Al Ain",
+          "to": "Abu Dhabi Airport (AUH)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-arab-emirates-complete-10d",
+      "title": "Complete UAE in 10 Days",
+      "summary": "Dubai, Hatta mountains, Abu Dhabi and Al Ain.",
+      "days": 10,
+      "route": "Dubai > Hatta > Abu Dhabi > Al Ain",
+      "arrive": "Dubai (DXB)",
+      "depart": "Abu Dhabi (AUH)",
+      "countries": [
+        "United Arab Emirates"
+      ],
+      "regions": [
+        "Dubai",
+        "Abu Dhabi"
+      ],
+      "cities": [
+        "Dubai",
+        "Hatta",
+        "Abu Dhabi",
+        "Al Ain"
+      ],
+      "imageQuery": "Hatta Dam mountains UAE",
+      "highlights": [
+        "Burj Khalifa",
+        "Hatta",
+        "Louvre Abu Dhabi",
+        "Yas Island",
+        "Al Ain"
+      ],
+      "destinationKeys": [
+        "united-arab-emirates",
+        "united-arab-emirates/dubai",
+        "united-arab-emirates/hatta",
+        "united-arab-emirates/abu-dhabi",
+        "united-arab-emirates/al-ain"
+      ],
+      "hero": "united-arab-emirates/hatta",
+      "sources": [
+        "Goabroad Travel",
+        "Musement",
+        "Platinum List",
+        "Civitatis",
+        "Marriott Activities"
+      ],
+      "pace": "R",
+      "interests": [
+        "iconic_landmarks",
+        "adventure",
+        "outdoors",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Dubai",
+          "hotel": "Hotel in Dubai",
+          "start": 0,
+          "nights": 4,
+          "area": "In Downtown Dubai or Dubai Marina, with metro access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hatta",
+          "hotel": "Lodge in Hatta",
+          "start": 4,
+          "nights": 1,
+          "area": "In a Hatta lodge or glamping site by the mountains",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Abu Dhabi",
+          "hotel": "Hotel in Abu Dhabi",
+          "start": 5,
+          "nights": 3,
+          "area": "On the Corniche or near Saadiyat Island in Abu Dhabi",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Al Ain",
+          "hotel": "Hotel in Al Ain",
+          "start": 8,
+          "nights": 1,
+          "area": "In Al Ain town, near the oasis",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Ticketed Attraction",
+          "time": "16:00",
+          "duration": "4h",
+          "name": "Burj Khalifa, Dubai Mall and fountain show",
+          "notes": "Book sunset deck slots ahead.",
+          "where": "Downtown Dubai",
+          "book": "Yes - book the observation deck",
+          "place": "united-arab-emirates/burj-khalifa-mall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Creek, souks and abra ride",
+          "notes": "Go early before the heat.",
+          "where": "Old Dubai",
+          "book": "",
+          "place": "united-arab-emirates/old-dubai"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Jumeirah Beach, Palm and Marina",
+          "notes": "Summer midday is extremely hot.",
+          "where": "Dubai",
+          "book": "",
+          "place": "united-arab-emirates/jumeirah-palm"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "6h",
+          "name": "Desert safari with dinner",
+          "notes": "Choose a reputable operator.",
+          "where": "Dubai desert",
+          "book": "Yes - book the safari",
+          "place": "united-arab-emirates/dubai-desert-safari"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Hatta Dam kayaking and heritage village",
+          "notes": "A rental car helps.",
+          "where": "Hatta",
+          "book": "",
+          "place": "united-arab-emirates/hatta"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Sheikh Zayed Grand Mosque at sunset",
+          "notes": "Dress modestly; abayas provided.",
+          "where": "Abu Dhabi",
+          "book": "",
+          "place": "united-arab-emirates/sheikh-zayed-mosque"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Louvre Abu Dhabi",
+          "notes": "Book timed tickets.",
+          "where": "Saadiyat Island",
+          "book": "Yes - book timed entry",
+          "place": "united-arab-emirates/louvre-abu-dhabi"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Ferrari World or Yas Waterworld",
+          "notes": "Choose one park per day.",
+          "where": "Yas Island",
+          "book": "Yes - book tickets",
+          "place": "united-arab-emirates/yas-island"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Al Ain Oasis, Jebel Hafeet and Al Jahili Fort",
+          "notes": "Drive the Jebel Hafeet road for the view.",
+          "where": "Al Ain",
+          "book": "",
+          "place": "united-arab-emirates/al-ain-oasis"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dubai Airport (DXB)",
+          "to": "Dubai hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Dubai",
+          "to": "Hatta lodge",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Hatta lodge",
+          "to": "Abu Dhabi",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "Rental car or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Abu Dhabi",
+          "to": "Al Ain",
+          "time": "08:30",
+          "minutes": 90,
+          "carrier": "Rental car or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Al Ain",
+          "to": "Abu Dhabi Airport (AUH)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "united-arab-emirates/burj-khalifa-mall": {
+        "name": "Burj Khalifa, Dubai Mall and the fountain show",
+        "description": "The tallest building in the world, a giant mall and an evening fountain display.",
+        "details": "The Burj Khalifa observation deck has views from 124th floor and higher, and tickets are cheaper at off-peak times. The Dubai Mall has an aquarium and the Dubai Fountain shows every 30 minutes in the evening. Book sunset slots ahead.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-arab-emirates/old-dubai": {
+        "name": "Old Dubai: Creek, souks and abra ride",
+        "description": "Wooden dhows on the creek, gold and spice souks and a one-dirham abra ferry.",
+        "details": "The Dubai Creek district has the Al Fahidi historic quarter, the Gold Souk, the Spice Souk and the abra water taxi across the creek. It is a good glimpse of the pre-skyscraper city. Go in the morning or evening, because the midday heat is strong.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-arab-emirates/jumeirah-palm": {
+        "name": "Jumeirah Beach, Palm and Marina",
+        "description": "Beach clubs, the Burj Al Arab view and a waterfront promenade.",
+        "details": "Jumeirah has public beaches with a view of the Burj Al Arab, the Palm Jumeirah with its monorail and Atlantis, and Dubai Marina with its walkway. The sea is warm most of the year, and summer is extremely hot.",
+        "interests": [
+          "relax",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-arab-emirates/dubai-desert-safari": {
+        "name": "Dubai desert safari",
+        "description": "Dune bashing, sandboarding, camel rides and a Bedouin-style dinner under the stars.",
+        "details": "Evening desert safaris leave Dubai in late afternoon for dune driving, sunset photography and a camp dinner with entertainment. Some operators run overnight camps. Choose a reputable operator and dress for sand and cooler evenings in winter.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-arab-emirates/hatta": {
+        "name": "Hatta Dam, heritage village and mountains",
+        "description": "A mountain enclave of kayaking, hiking and trails, 90 minutes from Dubai.",
+        "details": "Hatta has the Hatta Dam with kayaks, the Heritage Village and hiking and mountain biking in the Hajar mountains. It is cooler than the coast. Glamping sites offer an overnight stay. A rental car or tour is needed.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-arab-emirates/sheikh-zayed-mosque": {
+        "name": "Sheikh Zayed Grand Mosque",
+        "description": "A white marble mosque of 82 domes and the world largest hand-knotted carpet.",
+        "details": "Sheikh Zayed Grand Mosque in Abu Dhabi is free to enter, and visitors must dress modestly, with abayas provided for women. It is spectacular at sunset when the marble glows. Guided tours explain the architecture. It is closed to visitors during Friday morning prayers.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-arab-emirates/louvre-abu-dhabi": {
+        "name": "Louvre Abu Dhabi",
+        "description": "A museum under a silver lattice dome that creates a rain of light.",
+        "details": "The Louvre Abu Dhabi on Saadiyat Island shows art and artefacts from across human history under a vast dome. Allow three hours, and book timed tickets. Saadiyat Beach is nearby.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-arab-emirates/yas-island": {
+        "name": "Yas Island and Ferrari World",
+        "description": "Theme parks and a Formula 1 circuit on an island east of Abu Dhabi city.",
+        "details": "Yas Island has Ferrari World, the Formula 1 circuit and Yas Waterworld. Other options include Warner Bros World and CLYMB. Choose one park per day, because crowds and heat are strong. Weekends are busier.",
+        "interests": [
+          "adventure",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-arab-emirates/al-ain-oasis": {
+        "name": "Al Ain Oasis, Jebel Hafeet and Al Jahili Fort",
+        "description": "A UNESCO palm oasis, a mountain road with views and a fort museum in the Garden City.",
+        "details": "Al Ain is a green oasis city in the desert. The Al Ain Oasis has falaj irrigation channels and palms, Jebel Hafeet is a mountain road with a 360-degree view, and Al Jahili Fort has an exhibition about explorer Wilfred Thesiger. It is 90 minutes from Abu Dhabi.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "united-arab-emirates": {
+        "name": "United Arab Emirates",
+        "description": "A federation of emirates of futuristic cities, desert dunes and mountain oases.",
+        "images": []
+      },
+      "united-arab-emirates/dubai": {
+        "name": "Dubai",
+        "description": "The skyscraper city of souks, beaches and desert safaris.",
+        "images": []
+      },
+      "united-arab-emirates/hatta": {
+        "name": "Hatta",
+        "description": "A mountain enclave inland.",
+        "images": []
+      },
+      "united-arab-emirates/abu-dhabi": {
+        "name": "Abu Dhabi",
+        "description": "The capital, with a vast mosque and a Louvre museum.",
+        "images": []
+      },
+      "united-arab-emirates/al-ain": {
+        "name": "Al Ain",
+        "description": "A UNESCO oasis city.",
+        "images": []
+      }
+    }
+  }
+}

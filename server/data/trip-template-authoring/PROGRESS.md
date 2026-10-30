@@ -30,7 +30,7 @@ Paste this to a fresh session:
 
 ---
 
-## Done (83 of 91)
+## Done (89 bundle files; every queued destination)
 
 | # | Destination | File | Templates | Lengths | Notes |
 |---|---|---|---|---|---|
@@ -117,6 +117,12 @@ Paste this to a fresh session:
 | 81 | Switzerland | `switzerland-bundle.json` | 5 | 5, 7, 8, 10, 12 | Lucerne+Interlaken / +Zermatt / grand with Montreux (depart GVA) / complete with Bern and Glacier Express route |
 | 82 | Tanzania | `tanzania-bundle.json` | 5 | 5, 6, 8, 10, 12 | Northern circuit safaris, +Zanzibar (depart ZNZ). Serengeti flights as airstrip legs |
 | 83 | Tunisia | `tunisia-bundle.json` | 5 | 4, 5, 7, 9, 11 | Tunis / +Kairouan / +Sahara at Douz / +Djerba (depart DJE) / complete with Tataouine |
+| 84 | Uganda | `uganda-bundle.json` | 5 | 5, 7, 8, 10, 12 | Bwindi gorillas by air / chimps+gorillas / Murchison+primates / classic 10d / complete with Jinja and Lake Bunyonyi. Permits flagged |
+| 85 | United Arab Emirates | `united-arab-emirates-bundle.json` | 5 | 4, 5, 7, 8, 10 | Dubai / +Abu Dhabi (depart AUH) / +Al Ain / complete with Hatta |
+| 86 | United Kingdom (England, Northern Ireland) | `united-kingdom-england-northern-ireland-bundle.json` | 6 | 5, 7, 8, 10, 12, 14 | London / +Bath / +Cotswolds / +Lake District+York (depart MAN) / +Belfast (depart BHD) / grand 14d. Keys use `united-kingdom/...` like Scotland |
+| 87 | United States | `united-states-bundle.json` | 6 | 5, 7, 8, 10, 12, 14 | NYC / +DC / California / +Yosemite+Las Vegas / coast to coast / grand with New Orleans and Grand Canyon. Air hops as paired legs |
+| 88 | Uzbekistan | `uzbekistan-bundle.json` | 5 | 5, 7, 8, 10, 12 | Silk Road cities by Afrosiyob train; Khiva endings depart UGC; yurt camp in 12d |
+| 89 | Zimbabwe | `zimbabwe-bundle.json` | 5 | 4, 5, 7, 9, 11 | Victoria Falls / +Hwange / +Matobo / +Great Zimbabwe (depart HRE) / +Harare |
 
 ## Queue
 
@@ -124,7 +130,7 @@ Ordered by how many well-documented published itineraries exist, which is what t
 combining method in instructions 2.1 depends on.
 
 ### Next up
-No ordered items left: take the next country from "Remaining" below (Uganda first).
+Queue finished. Optional leftovers: Hong Kong (a region under China, not added to the China bundle) and Poland (not in the Exoticca list).
 
 ### Remaining (not yet ordered)
 
@@ -134,8 +140,8 @@ No ordered items left: take the next country from "Remaining" below (Uganda firs
 
 
 
-Uganda, United Arab Emirates, United Kingdom
-(England / Northern Ireland), United States, Uzbekistan, Zimbabwe
+
+Optional only: Poland, Hong Kong (as a China region).
 
 ---
 

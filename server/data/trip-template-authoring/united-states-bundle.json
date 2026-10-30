@@ -1,0 +1,1577 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining On The Go Tours, Lonely Planet, Peregrine Travel and Contiki itineraries for the United States",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "united-states-new-york-5d",
+      "title": "New York City in 5 Days",
+      "summary": "Landmarks, parks, museums, food and a Broadway show.",
+      "days": 5,
+      "route": "New York City",
+      "arrive": "New York (JFK)",
+      "depart": "New York (JFK)",
+      "countries": [
+        "United States"
+      ],
+      "regions": [],
+      "cities": [
+        "New York City"
+      ],
+      "imageQuery": "New York skyline Brooklyn Bridge",
+      "highlights": [
+        "Statue of Liberty",
+        "Central Park",
+        "The Met",
+        "Broadway"
+      ],
+      "destinationKeys": [
+        "united-states",
+        "united-states/new-york-city"
+      ],
+      "hero": "united-states/new-york-city",
+      "sources": [
+        "On The Go Tours",
+        "Lonely Planet",
+        "Peregrine Travel",
+        "Contiki",
+        "Tripoto"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "New York City",
+          "hotel": "Hotel in New York City",
+          "start": 0,
+          "nights": 4,
+          "area": "In Midtown Manhattan or Lower Manhattan, near subway lines",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Times Square and skyline deck at dusk",
+          "notes": "Go up at sunset and watch the lights come on.",
+          "where": "New York",
+          "book": "Yes - book the observation deck",
+          "place": "united-states/nyc-landmarks"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Statue of Liberty ferry and Lower Manhattan",
+          "notes": "Book ferry tickets ahead.",
+          "where": "New York",
+          "book": "Yes - book the ferry",
+          "place": "united-states/nyc-landmarks"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Central Park and the Met",
+          "notes": "Allow three hours at the Met.",
+          "where": "New York",
+          "book": "",
+          "place": "united-states/nyc-central-park-museums"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "2.5h",
+          "name": "Chinatown, Chelsea Market and food crawl",
+          "notes": "Try pizza and dim sum.",
+          "where": "New York",
+          "book": "",
+          "place": "united-states/nyc-food-broadway"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "3h",
+          "name": "Broadway show",
+          "notes": "Book popular shows ahead; TKTS has same-day discounts.",
+          "where": "Times Square, New York",
+          "book": "Yes - book seats",
+          "place": "united-states/nyc-food-broadway"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "New York JFK Airport (JFK)",
+          "to": "New York hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "New York hotel",
+          "to": "New York JFK Airport (JFK)",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-states-new-york-washington-7d",
+      "title": "New York and Washington DC in 7 Days",
+      "summary": "The skyline city and the capital of memorials.",
+      "days": 7,
+      "route": "New York City > Washington DC",
+      "arrive": "New York (JFK)",
+      "depart": "Washington (DCA)",
+      "countries": [
+        "United States"
+      ],
+      "regions": [],
+      "cities": [
+        "New York City",
+        "Washington"
+      ],
+      "imageQuery": "Lincoln Memorial Washington DC",
+      "highlights": [
+        "Statue of Liberty",
+        "Central Park",
+        "Broadway",
+        "Lincoln Memorial",
+        "Smithsonian"
+      ],
+      "destinationKeys": [
+        "united-states",
+        "united-states/new-york-city",
+        "united-states/washington"
+      ],
+      "hero": "united-states/washington",
+      "sources": [
+        "On The Go Tours",
+        "Lonely Planet",
+        "Peregrine Travel",
+        "Contiki",
+        "Tripoto"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "New York City",
+          "hotel": "Hotel in New York City",
+          "start": 0,
+          "nights": 4,
+          "area": "In Midtown Manhattan or Lower Manhattan, near subway lines",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Washington",
+          "hotel": "Hotel in Washington",
+          "start": 4,
+          "nights": 2,
+          "area": "Near Dupont Circle or the National Mall, with Metro access",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Times Square and skyline deck at dusk",
+          "notes": "Go up at sunset and watch the lights come on.",
+          "where": "New York",
+          "book": "Yes - book the observation deck",
+          "place": "united-states/nyc-landmarks"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Statue of Liberty ferry and Lower Manhattan",
+          "notes": "Book ferry tickets ahead.",
+          "where": "New York",
+          "book": "Yes - book the ferry",
+          "place": "united-states/nyc-landmarks"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Central Park and the Met",
+          "notes": "Allow three hours at the Met.",
+          "where": "New York",
+          "book": "",
+          "place": "united-states/nyc-central-park-museums"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "2.5h",
+          "name": "Chinatown, Chelsea Market and food crawl",
+          "notes": "Try pizza and dim sum.",
+          "where": "New York",
+          "book": "",
+          "place": "united-states/nyc-food-broadway"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "3h",
+          "name": "Broadway show",
+          "notes": "Book popular shows ahead; TKTS has same-day discounts.",
+          "where": "Times Square, New York",
+          "book": "Yes - book seats",
+          "place": "united-states/nyc-food-broadway"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "National Mall memorials and Smithsonian museums",
+          "notes": "Some museums need free timed passes.",
+          "where": "Washington DC",
+          "book": "",
+          "place": "united-states/dc-monuments"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "New York JFK Airport (JFK)",
+          "to": "New York hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "New York",
+          "to": "Washington",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Amtrak train",
+          "notes": "Acela or Northeast Regional trains.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Washington hotel",
+          "to": "Washington Reagan Airport (DCA)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-states-california-8d",
+      "title": "San Francisco and Los Angeles in 8 Days",
+      "summary": "California coast: bridge, prison island, film capital and beaches.",
+      "days": 8,
+      "route": "San Francisco > Los Angeles",
+      "arrive": "San Francisco (SFO)",
+      "depart": "Los Angeles (LAX)",
+      "countries": [
+        "United States"
+      ],
+      "regions": [
+        "California"
+      ],
+      "cities": [
+        "San Francisco",
+        "Los Angeles"
+      ],
+      "imageQuery": "Golden Gate Bridge San Francisco fog",
+      "highlights": [
+        "Golden Gate Bridge",
+        "Alcatraz",
+        "Griffith Observatory",
+        "Santa Monica"
+      ],
+      "destinationKeys": [
+        "united-states",
+        "united-states/california",
+        "united-states/san-francisco",
+        "united-states/los-angeles"
+      ],
+      "hero": "united-states/california",
+      "sources": [
+        "On The Go Tours",
+        "Lonely Planet",
+        "Peregrine Travel",
+        "Contiki",
+        "Tripoto"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "culture",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "San Francisco",
+          "hotel": "Hotel in San Francisco",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Union Square or Fisherman Wharf, with cable car access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Los Angeles",
+          "hotel": "Hotel in Los Angeles",
+          "start": 3,
+          "nights": 4,
+          "area": "In Santa Monica or Hollywood, depending on your focus",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Golden Gate Bridge, Presidio and cable car",
+          "notes": "Bring a jacket for fog.",
+          "where": "San Francisco",
+          "book": "",
+          "place": "united-states/sf-golden-gate"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "13:30",
+          "duration": "4h",
+          "name": "Alcatraz tour",
+          "notes": "Book weeks ahead.",
+          "where": "San Francisco",
+          "book": "Yes - book Alcatraz",
+          "place": "united-states/sf-golden-gate"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Griffith Observatory, Hollywood and Santa Monica pier",
+          "notes": "Plan around traffic.",
+          "where": "Los Angeles",
+          "book": "",
+          "place": "united-states/la-hollywood-santa-monica"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "6h",
+          "name": "Venice Beach, Malibu and sunset",
+          "notes": "Plan around traffic.",
+          "where": "Los Angeles",
+          "book": "",
+          "place": "united-states/la-hollywood-santa-monica"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San Francisco Airport (SFO)",
+          "to": "San Francisco hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "San Francisco hotel",
+          "to": "San Francisco Airport (SFO)",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Los Angeles Airport (LAX)",
+          "to": "Los Angeles hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Los Angeles hotel",
+          "to": "Los Angeles Airport (LAX)",
+          "time": "11:00",
+          "minutes": 40,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-states-california-nevada-10d",
+      "title": "California and Las Vegas in 10 Days",
+      "summary": "San Francisco, Yosemite, Los Angeles and Las Vegas.",
+      "days": 10,
+      "route": "San Francisco > Yosemite > Los Angeles > Las Vegas",
+      "arrive": "San Francisco (SFO)",
+      "depart": "Las Vegas (LAS)",
+      "countries": [
+        "United States"
+      ],
+      "regions": [
+        "California",
+        "Nevada"
+      ],
+      "cities": [
+        "San Francisco",
+        "Yosemite",
+        "Los Angeles",
+        "Las Vegas"
+      ],
+      "imageQuery": "Yosemite Valley Half Dome",
+      "highlights": [
+        "Golden Gate Bridge",
+        "Yosemite",
+        "Hollywood",
+        "Las Vegas Strip"
+      ],
+      "destinationKeys": [
+        "united-states",
+        "united-states/california",
+        "united-states/san-francisco",
+        "united-states/yosemite",
+        "united-states/los-angeles",
+        "united-states/nevada",
+        "united-states/las-vegas"
+      ],
+      "hero": "united-states/yosemite",
+      "sources": [
+        "On The Go Tours",
+        "Lonely Planet",
+        "Peregrine Travel",
+        "Contiki",
+        "Tripoto"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "iconic_landmarks",
+        "photography",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "San Francisco",
+          "hotel": "Hotel in San Francisco",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Union Square or Fisherman Wharf, with cable car access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Yosemite",
+          "hotel": "Lodge near Yosemite",
+          "start": 3,
+          "nights": 2,
+          "area": "In a lodge in or at the edge of Yosemite National Park; book far ahead",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Los Angeles",
+          "hotel": "Hotel in Los Angeles",
+          "start": 5,
+          "nights": 2,
+          "area": "In Santa Monica or Hollywood, depending on your focus",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Las Vegas",
+          "hotel": "Hotel in Las Vegas",
+          "start": 7,
+          "nights": 2,
+          "area": "On the Las Vegas Strip, close to the main casino hotels",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Golden Gate Bridge, Presidio and cable car",
+          "notes": "Bring a jacket for fog.",
+          "where": "San Francisco",
+          "book": "",
+          "place": "united-states/sf-golden-gate"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "13:30",
+          "duration": "4h",
+          "name": "Alcatraz tour",
+          "notes": "Book weeks ahead.",
+          "where": "San Francisco",
+          "book": "Yes - book Alcatraz",
+          "place": "united-states/sf-golden-gate"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "7h",
+          "name": "Yosemite Valley and Glacier Point",
+          "notes": "Check reservations and seasonal road closures.",
+          "where": "Yosemite",
+          "book": "Yes - check park reservations",
+          "place": "united-states/yosemite"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Griffith Observatory, Hollywood and Santa Monica pier",
+          "notes": "Plan around traffic.",
+          "where": "Los Angeles",
+          "book": "",
+          "place": "united-states/la-hollywood-santa-monica"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "19:00",
+          "duration": "4h",
+          "name": "The Strip at night and the Bellagio fountains",
+          "notes": "Walk in the evening; summer days are very hot.",
+          "where": "Las Vegas",
+          "book": "",
+          "place": "united-states/las-vegas-strip"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Day around the Strip and a headline show",
+          "notes": "Walk in the evening; summer days are very hot.",
+          "where": "Las Vegas",
+          "book": "",
+          "place": "united-states/las-vegas-strip"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San Francisco Airport (SFO)",
+          "to": "San Francisco hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "San Francisco",
+          "to": "Yosemite lodge",
+          "time": "08:00",
+          "minutes": 270,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Yosemite lodge",
+          "to": "Los Angeles",
+          "time": "07:30",
+          "minutes": 390,
+          "carrier": "Rental car",
+          "notes": "A long drive; or fly from Fresno.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Los Angeles",
+          "to": "Las Vegas",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Las Vegas hotel",
+          "to": "Las Vegas Airport (LAS)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-states-coast-to-coast-12d",
+      "title": "USA East to West in 12 Days",
+      "summary": "New York, Washington, San Francisco, Los Angeles and Las Vegas.",
+      "days": 12,
+      "route": "New York City > Washington > San Francisco > Los Angeles > Las Vegas",
+      "arrive": "New York (JFK)",
+      "depart": "Las Vegas (LAS)",
+      "countries": [
+        "United States"
+      ],
+      "regions": [
+        "California",
+        "Nevada"
+      ],
+      "cities": [
+        "New York City",
+        "Washington",
+        "San Francisco",
+        "Los Angeles",
+        "Las Vegas"
+      ],
+      "imageQuery": "Las Vegas Strip neon night",
+      "highlights": [
+        "Statue of Liberty",
+        "Lincoln Memorial",
+        "Golden Gate Bridge",
+        "Hollywood",
+        "Las Vegas"
+      ],
+      "destinationKeys": [
+        "united-states",
+        "united-states/new-york-city",
+        "united-states/washington",
+        "united-states/california",
+        "united-states/san-francisco",
+        "united-states/los-angeles",
+        "united-states/nevada",
+        "united-states/las-vegas"
+      ],
+      "hero": "united-states/las-vegas",
+      "sources": [
+        "On The Go Tours",
+        "Lonely Planet",
+        "Peregrine Travel",
+        "Contiki",
+        "Tripoto"
+      ],
+      "pace": "B",
+      "interests": [
+        "iconic_landmarks",
+        "culture",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "New York City",
+          "hotel": "Hotel in New York City",
+          "start": 0,
+          "nights": 3,
+          "area": "In Midtown Manhattan or Lower Manhattan, near subway lines",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Washington",
+          "hotel": "Hotel in Washington",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Dupont Circle or the National Mall, with Metro access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San Francisco",
+          "hotel": "Hotel in San Francisco",
+          "start": 5,
+          "nights": 3,
+          "area": "Near Union Square or Fisherman Wharf, with cable car access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Los Angeles",
+          "hotel": "Hotel in Los Angeles",
+          "start": 8,
+          "nights": 2,
+          "area": "In Santa Monica or Hollywood, depending on your focus",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Las Vegas",
+          "hotel": "Hotel in Las Vegas",
+          "start": 10,
+          "nights": 1,
+          "area": "On the Las Vegas Strip, close to the main casino hotels",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Times Square and skyline deck at dusk",
+          "notes": "Go up at sunset and watch the lights come on.",
+          "where": "New York",
+          "book": "Yes - book the observation deck",
+          "place": "united-states/nyc-landmarks"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Statue of Liberty ferry and Lower Manhattan",
+          "notes": "Book ferry tickets ahead.",
+          "where": "New York",
+          "book": "Yes - book the ferry",
+          "place": "united-states/nyc-landmarks"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Central Park and the Met",
+          "notes": "Allow three hours at the Met.",
+          "where": "New York",
+          "book": "",
+          "place": "united-states/nyc-central-park-museums"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "2.5h",
+          "name": "Chinatown, Chelsea Market and food crawl",
+          "notes": "Try pizza and dim sum.",
+          "where": "New York",
+          "book": "",
+          "place": "united-states/nyc-food-broadway"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "3h",
+          "name": "Broadway show",
+          "notes": "Book popular shows ahead; TKTS has same-day discounts.",
+          "where": "Times Square, New York",
+          "book": "Yes - book seats",
+          "place": "united-states/nyc-food-broadway"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "National Mall memorials and Smithsonian museums",
+          "notes": "Some museums need free timed passes.",
+          "where": "Washington DC",
+          "book": "",
+          "place": "united-states/dc-monuments"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Golden Gate Bridge, Presidio and cable car",
+          "notes": "Bring a jacket for fog.",
+          "where": "San Francisco",
+          "book": "",
+          "place": "united-states/sf-golden-gate"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "13:30",
+          "duration": "4h",
+          "name": "Alcatraz tour",
+          "notes": "Book weeks ahead.",
+          "where": "San Francisco",
+          "book": "Yes - book Alcatraz",
+          "place": "united-states/sf-golden-gate"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Griffith Observatory, Hollywood and Santa Monica pier",
+          "notes": "Plan around traffic.",
+          "where": "Los Angeles",
+          "book": "",
+          "place": "united-states/la-hollywood-santa-monica"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "4h",
+          "name": "The Strip at night and the Bellagio fountains",
+          "notes": "Walk in the evening; summer days are very hot.",
+          "where": "Las Vegas",
+          "book": "",
+          "place": "united-states/las-vegas-strip"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "New York JFK Airport (JFK)",
+          "to": "New York hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "New York",
+          "to": "Washington",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Amtrak train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Washington hotel",
+          "to": "Washington Reagan Airport (DCA)",
+          "time": "08:00",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "San Francisco Airport (SFO)",
+          "to": "San Francisco hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "San Francisco hotel",
+          "to": "San Francisco Airport (SFO)",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Los Angeles Airport (LAX)",
+          "to": "Los Angeles hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Los Angeles",
+          "to": "Las Vegas",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Las Vegas hotel",
+          "to": "Las Vegas Airport (LAS)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-states-grand-14d",
+      "title": "Grand USA in 14 Days",
+      "summary": "East coast, New Orleans, California, Las Vegas and the Grand Canyon.",
+      "days": 14,
+      "route": "New York City > Washington > New Orleans > San Francisco > Los Angeles > Las Vegas > Grand Canyon",
+      "arrive": "New York (JFK)",
+      "depart": "Las Vegas (LAS)",
+      "countries": [
+        "United States"
+      ],
+      "regions": [
+        "Louisiana",
+        "California",
+        "Nevada",
+        "Arizona"
+      ],
+      "cities": [
+        "New York City",
+        "Washington",
+        "New Orleans",
+        "San Francisco",
+        "Los Angeles",
+        "Las Vegas",
+        "Grand Canyon"
+      ],
+      "imageQuery": "Grand Canyon South Rim sunset",
+      "highlights": [
+        "Statue of Liberty",
+        "Lincoln Memorial",
+        "New Orleans jazz",
+        "Golden Gate Bridge",
+        "Las Vegas",
+        "Grand Canyon"
+      ],
+      "destinationKeys": [
+        "united-states",
+        "united-states/new-york-city",
+        "united-states/washington",
+        "united-states/louisiana",
+        "united-states/new-orleans",
+        "united-states/california",
+        "united-states/san-francisco",
+        "united-states/los-angeles",
+        "united-states/nevada",
+        "united-states/las-vegas",
+        "united-states/arizona",
+        "united-states/grand-canyon"
+      ],
+      "hero": "united-states/grand-canyon",
+      "sources": [
+        "On The Go Tours",
+        "Lonely Planet",
+        "Peregrine Travel",
+        "Contiki",
+        "Tripoto"
+      ],
+      "pace": "F",
+      "interests": [
+        "iconic_landmarks",
+        "culture",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "New York City",
+          "hotel": "Hotel in New York City",
+          "start": 0,
+          "nights": 3,
+          "area": "In Midtown Manhattan or Lower Manhattan, near subway lines",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Washington",
+          "hotel": "Hotel in Washington",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Dupont Circle or the National Mall, with Metro access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "New Orleans",
+          "hotel": "Hotel in New Orleans",
+          "start": 5,
+          "nights": 2,
+          "area": "In the French Quarter or Garden District",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San Francisco",
+          "hotel": "Hotel in San Francisco",
+          "start": 7,
+          "nights": 2,
+          "area": "Near Union Square or Fisherman Wharf, with cable car access",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Los Angeles",
+          "hotel": "Hotel in Los Angeles",
+          "start": 9,
+          "nights": 2,
+          "area": "In Santa Monica or Hollywood, depending on your focus",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Las Vegas",
+          "hotel": "Hotel in Las Vegas",
+          "start": 11,
+          "nights": 1,
+          "area": "On the Las Vegas Strip, close to the main casino hotels",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Grand Canyon",
+          "hotel": "Lodge on the Grand Canyon South Rim",
+          "start": 12,
+          "nights": 1,
+          "area": "In a lodge on the Grand Canyon South Rim, or in Tusayan",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Times Square and skyline deck at dusk",
+          "notes": "Go up at sunset and watch the lights come on.",
+          "where": "New York",
+          "book": "Yes - book the observation deck",
+          "place": "united-states/nyc-landmarks"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Statue of Liberty ferry and Lower Manhattan",
+          "notes": "Book ferry tickets ahead.",
+          "where": "New York",
+          "book": "Yes - book the ferry",
+          "place": "united-states/nyc-landmarks"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Central Park and the Met",
+          "notes": "Allow three hours at the Met.",
+          "where": "New York",
+          "book": "",
+          "place": "united-states/nyc-central-park-museums"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "2.5h",
+          "name": "Chinatown, Chelsea Market and food crawl",
+          "notes": "Try pizza and dim sum.",
+          "where": "New York",
+          "book": "",
+          "place": "united-states/nyc-food-broadway"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "20:00",
+          "duration": "3h",
+          "name": "Broadway show",
+          "notes": "Book popular shows ahead; TKTS has same-day discounts.",
+          "where": "Times Square, New York",
+          "book": "Yes - book seats",
+          "place": "united-states/nyc-food-broadway"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "National Mall memorials and Smithsonian museums",
+          "notes": "Some museums need free timed passes.",
+          "where": "Washington DC",
+          "book": "",
+          "place": "united-states/dc-monuments"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "French Quarter, beignets and Jackson Square",
+          "notes": "Try beignets at Cafe du Monde.",
+          "where": "New Orleans",
+          "book": "",
+          "place": "united-states/new-orleans-french-quarter"
+        },
+        {
+          "day": 6,
+          "type": "Nightlife",
+          "time": "20:00",
+          "duration": "3h",
+          "name": "Live jazz on Frenchmen Street",
+          "notes": "Better music than Bourbon Street.",
+          "where": "New Orleans",
+          "book": "",
+          "place": "united-states/new-orleans-french-quarter"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Golden Gate Bridge, Presidio and cable car",
+          "notes": "Bring a jacket for fog.",
+          "where": "San Francisco",
+          "book": "",
+          "place": "united-states/sf-golden-gate"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Griffith Observatory, Hollywood and Santa Monica pier",
+          "notes": "Plan around traffic.",
+          "where": "Los Angeles",
+          "book": "",
+          "place": "united-states/la-hollywood-santa-monica"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "18:00",
+          "duration": "4h",
+          "name": "The Strip at night and the Bellagio fountains",
+          "notes": "Walk in the evening; summer days are very hot.",
+          "where": "Las Vegas",
+          "book": "",
+          "place": "united-states/las-vegas-strip"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "4h",
+          "name": "Grand Canyon South Rim sunset",
+          "notes": "Stay on the rim in summer heat.",
+          "where": "Grand Canyon",
+          "book": "",
+          "place": "united-states/grand-canyon"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "New York JFK Airport (JFK)",
+          "to": "New York hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Taxi, rideshare or train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "New York",
+          "to": "Washington",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Amtrak train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Washington hotel",
+          "to": "Washington Reagan Airport (DCA)",
+          "time": "08:00",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "New Orleans Airport (MSY)",
+          "to": "New Orleans hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "New Orleans hotel",
+          "to": "New Orleans Airport (MSY)",
+          "time": "08:00",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "San Francisco Airport (SFO)",
+          "to": "San Francisco hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "San Francisco hotel",
+          "to": "San Francisco Airport (SFO)",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Los Angeles Airport (LAX)",
+          "to": "Los Angeles hotel",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Los Angeles",
+          "to": "Las Vegas",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Las Vegas",
+          "to": "Grand Canyon lodge",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Grand Canyon lodge",
+          "to": "Las Vegas Airport (LAS)",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "united-states/nyc-landmarks": {
+        "name": "Statue of Liberty, Times Square and the skyline",
+        "description": "The harbour icon, the neon crossroads and views from a rooftop or observation deck.",
+        "details": "New York icons include the Statue of Liberty and Ellis Island by ferry, Times Square at night, and the Empire State Building or Top of the Rock for skyline views. Book ferry and observation tickets ahead. Use the subway for most journeys.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-states/nyc-central-park-museums": {
+        "name": "Central Park, the Met and Brooklyn Bridge",
+        "description": "A giant park, a great art museum and a walk across a historic bridge.",
+        "details": "Central Park has the Bethesda Fountain, Strawberry Fields and the Reservoir. The Metropolitan Museum of Art needs at least three hours. Walking the Brooklyn Bridge at sunrise or sunset gives skyline views, and DUMBO has a famous photo spot.",
+        "interests": [
+          "culture",
+          "relax",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-states/nyc-food-broadway": {
+        "name": "NYC food neighbourhoods and Broadway",
+        "description": "Pizza, bagels and dumplings, then a Broadway show.",
+        "details": "New York is a food city, from dollar pizza slices and bagels to dim sum in Chinatown and a food market at Chelsea. Broadway shows start at 7pm or 8pm, and discount tickets are sold at the TKTS booth in Times Square. Book major shows ahead.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-states/dc-monuments": {
+        "name": "National Mall, Lincoln Memorial and Smithsonian museums",
+        "description": "Marble memorials and free world-class museums.",
+        "details": "The National Mall has the Lincoln Memorial, Washington Monument and Capitol views. The Smithsonian museums, including Air and Space, Natural History and African American History, are free, though some need timed passes. The White House has no interior visits without advance arrangement.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-states/sf-golden-gate": {
+        "name": "Golden Gate Bridge, Alcatraz and cable cars",
+        "description": "The red suspension bridge, a prison island and the hilly streets of San Francisco.",
+        "details": "The Golden Gate Bridge can be walked or biked, with views from Battery Spencer. Alcatraz tours need advance tickets, often weeks ahead. Cable cars run to Fisherman Wharf, and Lombard Street is the crooked street. Fog is common in summer, so bring a jacket.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-states/yosemite": {
+        "name": "Yosemite Valley and Glacier Point",
+        "description": "Granite cliffs, giant waterfalls and sequoia groves in the Sierra Nevada.",
+        "details": "Yosemite has El Capitan, Half Dome and Yosemite Falls, which flow strongly in spring. Glacier Point and the Tioga Road close in winter. Entry may require a reservation in peak seasons. Mariposa Grove has giant sequoias.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-states/la-hollywood-santa-monica": {
+        "name": "Hollywood, Griffith Observatory and Santa Monica pier",
+        "description": "The film capital sights, a hillside observatory and a beachfront pier.",
+        "details": "In Los Angeles, the Hollywood Walk of Fame and TCL Chinese Theatre are touristy, but Griffith Observatory gives a view of the Hollywood sign and city. Santa Monica Pier and Venice Beach are the beach scene. LA is spread out, so plan around traffic.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-states/las-vegas-strip": {
+        "name": "Las Vegas Strip and Fremont Street",
+        "description": "Themed casino hotels, fountains, shows and a downtown light canopy.",
+        "details": "The Strip is best seen on foot at night, with the Bellagio fountains, the Venetian canals and shows by famous acts. Fremont Street downtown has a covered light display. Summer daytime heat is extreme. Book shows ahead.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-states/grand-canyon": {
+        "name": "Grand Canyon South Rim",
+        "description": "A mile-deep canyon seen from rim viewpoints and short trails.",
+        "details": "The South Rim has viewpoints along Desert View Drive, the Rim Trail and Bright Angel Trail, where summer heat makes hiking below the rim dangerous. Sunrise and sunset are the best light. Reserve lodging far ahead. Free shuttles run along the rim.",
+        "interests": [
+          "iconic_landmarks",
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-states/new-orleans-french-quarter": {
+        "name": "New Orleans French Quarter and live jazz",
+        "description": "Creole food, brass bands and the lively streets of the French Quarter.",
+        "details": "The French Quarter has Jackson Square, beignets at Cafe du Monde, and Bourbon Street. Frenchmen Street has better live jazz clubs. A swamp tour or plantation visit is a typical day trip. Humidity is high in summer.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "united-states": {
+        "name": "United States",
+        "description": "A continent-sized country of big cities, national parks and deserts.",
+        "images": []
+      },
+      "united-states/new-york-city": {
+        "name": "New York City",
+        "description": "The skyline city of museums, food and theatres.",
+        "images": []
+      },
+      "united-states/washington": {
+        "name": "Washington DC",
+        "description": "The capital of memorials and free museums.",
+        "images": []
+      },
+      "united-states/louisiana": {
+        "name": "Louisiana",
+        "description": "The Gulf state of jazz and Creole cooking.",
+        "images": []
+      },
+      "united-states/new-orleans": {
+        "name": "New Orleans",
+        "description": "The jazz city of the French Quarter.",
+        "images": []
+      },
+      "united-states/california": {
+        "name": "California",
+        "description": "The Pacific state of coast, mountains and cities.",
+        "images": []
+      },
+      "united-states/san-francisco": {
+        "name": "San Francisco",
+        "description": "The hilly bay city.",
+        "images": []
+      },
+      "united-states/yosemite": {
+        "name": "Yosemite",
+        "description": "A national park of granite cliffs and waterfalls.",
+        "images": []
+      },
+      "united-states/los-angeles": {
+        "name": "Los Angeles",
+        "description": "The sprawling film city on the coast.",
+        "images": []
+      },
+      "united-states/nevada": {
+        "name": "Nevada",
+        "description": "The desert state of Las Vegas.",
+        "images": []
+      },
+      "united-states/las-vegas": {
+        "name": "Las Vegas",
+        "description": "The neon entertainment city.",
+        "images": []
+      },
+      "united-states/arizona": {
+        "name": "Arizona",
+        "description": "The desert state of the Grand Canyon.",
+        "images": []
+      },
+      "united-states/grand-canyon": {
+        "name": "Grand Canyon",
+        "description": "A mile-deep canyon in northern Arizona.",
+        "images": []
+      }
+    }
+  }
+}

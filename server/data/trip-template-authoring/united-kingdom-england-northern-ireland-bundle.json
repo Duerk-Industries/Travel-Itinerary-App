@@ -1,0 +1,1627 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rick Steves, Lonely Planet, Nordic Visitor and On The Go Tours itineraries for England and Northern Ireland",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "united-kingdom-london-5d",
+      "title": "London in 5 Days",
+      "summary": "Royal sights, museums, a West End show and Greenwich.",
+      "days": 5,
+      "route": "London",
+      "arrive": "London (LHR)",
+      "depart": "London (LHR)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "England"
+      ],
+      "cities": [
+        "London"
+      ],
+      "imageQuery": "London Tower Bridge Thames",
+      "highlights": [
+        "Westminster",
+        "British Museum",
+        "West End show",
+        "Tower of London"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/england",
+        "united-kingdom/london"
+      ],
+      "hero": "united-kingdom/london",
+      "sources": [
+        "Rick Steves",
+        "Lonely Planet",
+        "Nordic Visitor",
+        "On The Go Tours",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "London",
+          "hotel": "Hotel in London",
+          "start": 0,
+          "nights": 4,
+          "area": "In Westminster, Covent Garden or South Kensington; central and well connected by Tube",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Westminster, Abbey and South Bank walk",
+          "notes": "Book Abbey tickets; the guard change is around 11am.",
+          "where": "Westminster, London",
+          "book": "Yes - book Westminster Abbey",
+          "place": "united-kingdom/london-westminster"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "British Museum and National Gallery",
+          "notes": "Both are free; choose a few galleries.",
+          "where": "London",
+          "book": "",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "West End show",
+          "notes": "Book popular shows in advance.",
+          "where": "West End, London",
+          "book": "Yes - book seats",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Tower of London and Tower Bridge",
+          "notes": "Book timed tickets; see the Crown Jewels first.",
+          "where": "London",
+          "book": "Yes - book the Tower",
+          "place": "united-kingdom/london-tower-greenwich"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "River boat to Greenwich",
+          "notes": "Maritime Museum and Royal Observatory.",
+          "where": "Greenwich, London",
+          "book": "",
+          "place": "united-kingdom/london-tower-greenwich"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Heathrow Airport (LHR)",
+          "to": "London hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Tube, Elizabeth line or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "London hotel",
+          "to": "Heathrow Airport (LHR)",
+          "time": "11:00",
+          "minutes": 60,
+          "carrier": "Tube, Elizabeth line or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-kingdom-london-bath-7d",
+      "title": "London and Bath in 7 Days",
+      "summary": "London plus Georgian Bath with Stonehenge.",
+      "days": 7,
+      "route": "London > Bath",
+      "arrive": "London (LHR)",
+      "depart": "London (LHR)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "England"
+      ],
+      "cities": [
+        "London",
+        "Bath"
+      ],
+      "imageQuery": "Roman Baths Bath England",
+      "highlights": [
+        "Westminster",
+        "Tower of London",
+        "Roman Baths",
+        "Stonehenge"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/england",
+        "united-kingdom/london",
+        "united-kingdom/bath"
+      ],
+      "hero": "united-kingdom/bath",
+      "sources": [
+        "Rick Steves",
+        "Lonely Planet",
+        "Nordic Visitor",
+        "On The Go Tours",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "London",
+          "hotel": "Hotel in London",
+          "start": 0,
+          "nights": 4,
+          "area": "In Westminster, Covent Garden or South Kensington; central and well connected by Tube",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bath",
+          "hotel": "Hotel in Bath",
+          "start": 4,
+          "nights": 2,
+          "area": "In Bath city centre, within walking distance of the baths",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Westminster, Abbey and South Bank walk",
+          "notes": "Book Abbey tickets; the guard change is around 11am.",
+          "where": "Westminster, London",
+          "book": "Yes - book Westminster Abbey",
+          "place": "united-kingdom/london-westminster"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "British Museum and National Gallery",
+          "notes": "Both are free; choose a few galleries.",
+          "where": "London",
+          "book": "",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "West End show",
+          "notes": "Book popular shows in advance.",
+          "where": "West End, London",
+          "book": "Yes - book seats",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Tower of London and Tower Bridge",
+          "notes": "Book timed tickets; see the Crown Jewels first.",
+          "where": "London",
+          "book": "Yes - book the Tower",
+          "place": "united-kingdom/london-tower-greenwich"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "River boat to Greenwich",
+          "notes": "Maritime Museum and Royal Observatory.",
+          "where": "Greenwich, London",
+          "book": "",
+          "place": "united-kingdom/london-tower-greenwich"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Roman Baths and Bath Abbey",
+          "notes": "Book timed baths tickets online.",
+          "where": "Bath",
+          "book": "Yes - book the Roman Baths",
+          "place": "united-kingdom/bath-roman-baths"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "13:00",
+          "duration": "4h",
+          "name": "Stonehenge and Salisbury",
+          "notes": "Timed tickets are required.",
+          "where": "Stonehenge",
+          "book": "Yes - book Stonehenge",
+          "place": "united-kingdom/stonehenge"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Heathrow Airport (LHR)",
+          "to": "London hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Tube, Elizabeth line or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "London",
+          "to": "Bath",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "National Rail train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Bath",
+          "to": "Heathrow Airport (LHR)",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "National Rail train",
+          "notes": "Direct to Reading then Heathrow Express.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-kingdom-london-bath-cotswolds-8d",
+      "title": "London, Bath and the Cotswolds in 8 Days",
+      "summary": "The classic southern England loop.",
+      "days": 8,
+      "route": "London > Bath > Cotswolds",
+      "arrive": "London (LHR)",
+      "depart": "London (LHR)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "England"
+      ],
+      "cities": [
+        "London",
+        "Bath",
+        "Cotswolds"
+      ],
+      "imageQuery": "Bibury Cotswolds England",
+      "highlights": [
+        "Westminster",
+        "Roman Baths",
+        "Stonehenge",
+        "Cotswolds villages"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/england",
+        "united-kingdom/london",
+        "united-kingdom/bath",
+        "united-kingdom/cotswolds"
+      ],
+      "hero": "united-kingdom/cotswolds",
+      "sources": [
+        "Rick Steves",
+        "Lonely Planet",
+        "Nordic Visitor",
+        "On The Go Tours",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "London",
+          "hotel": "Hotel in London",
+          "start": 0,
+          "nights": 3,
+          "area": "In Westminster, Covent Garden or South Kensington; central and well connected by Tube",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bath",
+          "hotel": "Hotel in Bath",
+          "start": 3,
+          "nights": 2,
+          "area": "In Bath city centre, within walking distance of the baths",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cotswolds",
+          "hotel": "Guesthouse in a Cotswolds village",
+          "start": 5,
+          "nights": 2,
+          "area": "In a Cotswolds village such as Broadway or Chipping Campden",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Westminster, Abbey and South Bank walk",
+          "notes": "Book Abbey tickets; the guard change is around 11am.",
+          "where": "Westminster, London",
+          "book": "Yes - book Westminster Abbey",
+          "place": "united-kingdom/london-westminster"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "British Museum and National Gallery",
+          "notes": "Both are free; choose a few galleries.",
+          "where": "London",
+          "book": "",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "West End show",
+          "notes": "Book popular shows in advance.",
+          "where": "West End, London",
+          "book": "Yes - book seats",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 4,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Roman Baths and Bath Abbey",
+          "notes": "Book timed baths tickets online.",
+          "where": "Bath",
+          "book": "Yes - book the Roman Baths",
+          "place": "united-kingdom/bath-roman-baths"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "13:00",
+          "duration": "4h",
+          "name": "Stonehenge and Salisbury",
+          "notes": "Timed tickets are required.",
+          "where": "Stonehenge",
+          "book": "Yes - book Stonehenge",
+          "place": "united-kingdom/stonehenge"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Cotswolds village hop and pub lunch",
+          "notes": "A car or small-group tour is easiest.",
+          "where": "Cotswolds",
+          "book": "",
+          "place": "united-kingdom/cotswolds-villages"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Heathrow Airport (LHR)",
+          "to": "London hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Tube, Elizabeth line or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "London",
+          "to": "Bath",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "National Rail train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Bath",
+          "to": "Cotswolds inn",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or small-group tour",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Cotswolds inn",
+          "to": "Heathrow Airport (LHR)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or small-group tour",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-kingdom-london-bath-york-lake-district-10d",
+      "title": "England North and South in 10 Days",
+      "summary": "London, Bath, the Cotswolds, the Lake District and York.",
+      "days": 10,
+      "route": "London > Bath > Cotswolds > Lake District > York",
+      "arrive": "London (LHR)",
+      "depart": "Manchester (MAN)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "England"
+      ],
+      "cities": [
+        "London",
+        "Bath",
+        "Cotswolds",
+        "Lake District",
+        "York"
+      ],
+      "imageQuery": "Windermere Lake District England",
+      "highlights": [
+        "Westminster",
+        "Roman Baths",
+        "Cotswolds",
+        "Windermere",
+        "York Minster"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/england",
+        "united-kingdom/london",
+        "united-kingdom/bath",
+        "united-kingdom/cotswolds",
+        "united-kingdom/lake-district",
+        "united-kingdom/york"
+      ],
+      "hero": "united-kingdom/lake-district",
+      "sources": [
+        "Rick Steves",
+        "Lonely Planet",
+        "Nordic Visitor",
+        "On The Go Tours",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "London",
+          "hotel": "Hotel in London",
+          "start": 0,
+          "nights": 3,
+          "area": "In Westminster, Covent Garden or South Kensington; central and well connected by Tube",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bath",
+          "hotel": "Hotel in Bath",
+          "start": 3,
+          "nights": 1,
+          "area": "In Bath city centre, within walking distance of the baths",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cotswolds",
+          "hotel": "Guesthouse in a Cotswolds village",
+          "start": 4,
+          "nights": 1,
+          "area": "In a Cotswolds village such as Broadway or Chipping Campden",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake District",
+          "hotel": "Guesthouse in the Lake District",
+          "start": 5,
+          "nights": 2,
+          "area": "In Windermere or Ambleside, close to the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "York",
+          "hotel": "Hotel in York",
+          "start": 7,
+          "nights": 2,
+          "area": "Inside the walls of York, near the Minster",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Westminster, Abbey and South Bank walk",
+          "notes": "Book Abbey tickets; the guard change is around 11am.",
+          "where": "Westminster, London",
+          "book": "Yes - book Westminster Abbey",
+          "place": "united-kingdom/london-westminster"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "British Museum and National Gallery",
+          "notes": "Both are free; choose a few galleries.",
+          "where": "London",
+          "book": "",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "West End show",
+          "notes": "Book popular shows in advance.",
+          "where": "West End, London",
+          "book": "Yes - book seats",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Roman Baths and Bath Abbey",
+          "notes": "Book timed baths tickets online.",
+          "where": "Bath",
+          "book": "Yes - book the Roman Baths",
+          "place": "united-kingdom/bath-roman-baths"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Cotswolds village hop and pub lunch",
+          "notes": "A car or small-group tour is easiest.",
+          "where": "Cotswolds",
+          "book": "",
+          "place": "united-kingdom/cotswolds-villages"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Windermere cruise and Orrest Head walk",
+          "notes": "Pack waterproofs.",
+          "where": "Lake District",
+          "book": "",
+          "place": "united-kingdom/lake-district-windermere"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "York Minster, city walls and the Shambles",
+          "notes": "Walk the walls for the best views.",
+          "where": "York",
+          "book": "",
+          "place": "united-kingdom/york-minster-shambles"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Heathrow Airport (LHR)",
+          "to": "London hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Tube, Elizabeth line or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "London",
+          "to": "Bath",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "National Rail train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Bath",
+          "to": "Cotswolds inn",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or small-group tour",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Cotswolds",
+          "to": "Lake District inn",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or small-group tour",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Lake District",
+          "to": "York",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "National Rail train",
+          "notes": "Change at Oxenholme and Leeds or Manchester.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "York",
+          "to": "Manchester Airport (MAN)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "National Rail train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-kingdom-england-and-belfast-12d",
+      "title": "England and Northern Ireland in 12 Days",
+      "summary": "England highlights and a flight to Belfast for the Giant Causeway.",
+      "days": 12,
+      "route": "London > Bath > Cotswolds > Lake District > York > Belfast",
+      "arrive": "London (LHR)",
+      "depart": "Belfast (BHD)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "England",
+        "Northern Ireland"
+      ],
+      "cities": [
+        "London",
+        "Bath",
+        "Cotswolds",
+        "Lake District",
+        "York",
+        "Belfast"
+      ],
+      "imageQuery": "Giants Causeway Northern Ireland",
+      "highlights": [
+        "London",
+        "Roman Baths",
+        "Cotswolds",
+        "York Minster",
+        "Titanic Belfast",
+        "Giant Causeway"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/england",
+        "united-kingdom/london",
+        "united-kingdom/bath",
+        "united-kingdom/cotswolds",
+        "united-kingdom/lake-district",
+        "united-kingdom/york",
+        "united-kingdom/northern-ireland",
+        "united-kingdom/belfast"
+      ],
+      "hero": "united-kingdom/northern-ireland",
+      "sources": [
+        "Rick Steves",
+        "Lonely Planet",
+        "Nordic Visitor",
+        "On The Go Tours",
+        "Beyonder"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "London",
+          "hotel": "Hotel in London",
+          "start": 0,
+          "nights": 3,
+          "area": "In Westminster, Covent Garden or South Kensington; central and well connected by Tube",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bath",
+          "hotel": "Hotel in Bath",
+          "start": 3,
+          "nights": 1,
+          "area": "In Bath city centre, within walking distance of the baths",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cotswolds",
+          "hotel": "Guesthouse in a Cotswolds village",
+          "start": 4,
+          "nights": 1,
+          "area": "In a Cotswolds village such as Broadway or Chipping Campden",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake District",
+          "hotel": "Guesthouse in the Lake District",
+          "start": 5,
+          "nights": 2,
+          "area": "In Windermere or Ambleside, close to the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "York",
+          "hotel": "Hotel in York",
+          "start": 7,
+          "nights": 2,
+          "area": "Inside the walls of York, near the Minster",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Belfast",
+          "hotel": "Hotel in Belfast",
+          "start": 9,
+          "nights": 2,
+          "area": "In the Cathedral Quarter or near Queens University in Belfast",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Westminster, Abbey and South Bank walk",
+          "notes": "Book Abbey tickets; the guard change is around 11am.",
+          "where": "Westminster, London",
+          "book": "Yes - book Westminster Abbey",
+          "place": "united-kingdom/london-westminster"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "British Museum and National Gallery",
+          "notes": "Both are free; choose a few galleries.",
+          "where": "London",
+          "book": "",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "West End show",
+          "notes": "Book popular shows in advance.",
+          "where": "West End, London",
+          "book": "Yes - book seats",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Roman Baths and Bath Abbey",
+          "notes": "Book timed baths tickets online.",
+          "where": "Bath",
+          "book": "Yes - book the Roman Baths",
+          "place": "united-kingdom/bath-roman-baths"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Cotswolds village hop and pub lunch",
+          "notes": "A car or small-group tour is easiest.",
+          "where": "Cotswolds",
+          "book": "",
+          "place": "united-kingdom/cotswolds-villages"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Windermere cruise and Orrest Head walk",
+          "notes": "Pack waterproofs.",
+          "where": "Lake District",
+          "book": "",
+          "place": "united-kingdom/lake-district-windermere"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "York Minster, city walls and the Shambles",
+          "notes": "Walk the walls for the best views.",
+          "where": "York",
+          "book": "",
+          "place": "united-kingdom/york-minster-shambles"
+        },
+        {
+          "day": 9,
+          "type": "Ticketed Attraction",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Titanic Belfast and Black Taxi mural tour",
+          "notes": "Allow time for both.",
+          "where": "Belfast",
+          "book": "",
+          "place": "united-kingdom/belfast-titanic"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "9h",
+          "name": "Giant Causeway, Carrick-a-Rede and Dunluce Castle",
+          "notes": "Book the rope bridge ahead.",
+          "where": "Antrim coast",
+          "book": "Yes - book the rope bridge",
+          "place": "united-kingdom/giants-causeway"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Heathrow Airport (LHR)",
+          "to": "London hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Tube, Elizabeth line or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "London",
+          "to": "Bath",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "National Rail train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Bath",
+          "to": "Cotswolds inn",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or small-group tour",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Cotswolds",
+          "to": "Lake District inn",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or small-group tour",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Lake District",
+          "to": "York",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "National Rail train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "York hotel",
+          "to": "Manchester Airport (MAN)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Belfast City Airport (BHD)",
+          "to": "Belfast hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Belfast hotel",
+          "to": "Belfast City Airport (BHD)",
+          "time": "12:00",
+          "minutes": 15,
+          "carrier": "Tube, Elizabeth line or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "united-kingdom-grand-england-belfast-14d",
+      "title": "Grand England and Northern Ireland in 14 Days",
+      "summary": "London with Oxford and Greenwich, southern England, the north and Northern Ireland.",
+      "days": 14,
+      "route": "London > Oxford > Bath > Cotswolds > Lake District > York > Belfast",
+      "arrive": "London (LHR)",
+      "depart": "Belfast (BHD)",
+      "countries": [
+        "United Kingdom"
+      ],
+      "regions": [
+        "England",
+        "Northern Ireland"
+      ],
+      "cities": [
+        "London",
+        "Oxford",
+        "Bath",
+        "Cotswolds",
+        "Lake District",
+        "York",
+        "Belfast"
+      ],
+      "imageQuery": "Oxford colleges England dreaming spires",
+      "highlights": [
+        "Tower of London",
+        "Oxford",
+        "Stonehenge",
+        "Lake District",
+        "York",
+        "Giant Causeway"
+      ],
+      "destinationKeys": [
+        "united-kingdom",
+        "united-kingdom/england",
+        "united-kingdom/london",
+        "united-kingdom/oxford",
+        "united-kingdom/bath",
+        "united-kingdom/cotswolds",
+        "united-kingdom/lake-district",
+        "united-kingdom/york",
+        "united-kingdom/northern-ireland",
+        "united-kingdom/belfast"
+      ],
+      "hero": "united-kingdom/england",
+      "sources": [
+        "Rick Steves",
+        "Lonely Planet",
+        "Nordic Visitor",
+        "On The Go Tours",
+        "Beyonder"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "London",
+          "hotel": "Hotel in London",
+          "start": 0,
+          "nights": 4,
+          "area": "In Westminster, Covent Garden or South Kensington; central and well connected by Tube",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oxford",
+          "hotel": "Hotel in Oxford",
+          "start": 4,
+          "nights": 1,
+          "area": "In the centre of Oxford, close to the colleges",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bath",
+          "hotel": "Hotel in Bath",
+          "start": 5,
+          "nights": 2,
+          "area": "In Bath city centre, within walking distance of the baths",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cotswolds",
+          "hotel": "Guesthouse in a Cotswolds village",
+          "start": 7,
+          "nights": 1,
+          "area": "In a Cotswolds village such as Broadway or Chipping Campden",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake District",
+          "hotel": "Guesthouse in the Lake District",
+          "start": 8,
+          "nights": 2,
+          "area": "In Windermere or Ambleside, close to the lake",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "York",
+          "hotel": "Hotel in York",
+          "start": 10,
+          "nights": 2,
+          "area": "Inside the walls of York, near the Minster",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Belfast",
+          "hotel": "Hotel in Belfast",
+          "start": 12,
+          "nights": 1,
+          "area": "In the Cathedral Quarter or near Queens University in Belfast",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Westminster, Abbey and South Bank walk",
+          "notes": "Book Abbey tickets; the guard change is around 11am.",
+          "where": "Westminster, London",
+          "book": "Yes - book Westminster Abbey",
+          "place": "united-kingdom/london-westminster"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "British Museum and National Gallery",
+          "notes": "Both are free; choose a few galleries.",
+          "where": "London",
+          "book": "",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 2,
+          "type": "Concert/Show",
+          "time": "19:30",
+          "duration": "3h",
+          "name": "West End show",
+          "notes": "Book popular shows in advance.",
+          "where": "West End, London",
+          "book": "Yes - book seats",
+          "place": "united-kingdom/london-museums-theatre"
+        },
+        {
+          "day": 3,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Tower of London and Tower Bridge",
+          "notes": "Book timed tickets; see the Crown Jewels first.",
+          "where": "London",
+          "book": "Yes - book the Tower",
+          "place": "united-kingdom/london-tower-greenwich"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "River boat to Greenwich",
+          "notes": "Maritime Museum and Royal Observatory.",
+          "where": "Greenwich, London",
+          "book": "",
+          "place": "united-kingdom/london-tower-greenwich"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Oxford colleges or Windsor Castle",
+          "notes": "Trains take about an hour from London.",
+          "where": "Oxford",
+          "book": "",
+          "place": "united-kingdom/windsor-oxford"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Roman Baths and Bath Abbey",
+          "notes": "Book timed baths tickets online.",
+          "where": "Bath",
+          "book": "Yes - book the Roman Baths",
+          "place": "united-kingdom/bath-roman-baths"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "13:00",
+          "duration": "4h",
+          "name": "Stonehenge and Salisbury",
+          "notes": "Timed tickets are required.",
+          "where": "Stonehenge",
+          "book": "Yes - book Stonehenge",
+          "place": "united-kingdom/stonehenge"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Cotswolds village hop and pub lunch",
+          "notes": "A car or small-group tour is easiest.",
+          "where": "Cotswolds",
+          "book": "",
+          "place": "united-kingdom/cotswolds-villages"
+        },
+        {
+          "day": 9,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Windermere cruise and Orrest Head walk",
+          "notes": "Pack waterproofs.",
+          "where": "Lake District",
+          "book": "",
+          "place": "united-kingdom/lake-district-windermere"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "York Minster, city walls and the Shambles",
+          "notes": "Walk the walls for the best views.",
+          "where": "York",
+          "book": "",
+          "place": "united-kingdom/york-minster-shambles"
+        },
+        {
+          "day": 12,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Titanic Belfast and Black Taxi mural tour",
+          "notes": "Allow time for both.",
+          "where": "Belfast",
+          "book": "",
+          "place": "united-kingdom/belfast-titanic"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Heathrow Airport (LHR)",
+          "to": "London hotel",
+          "time": "",
+          "minutes": 60,
+          "carrier": "Tube, Elizabeth line or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "London",
+          "to": "Oxford",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "National Rail train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Oxford",
+          "to": "Bath",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "National Rail train",
+          "notes": "Change at Didcot or Reading.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Bath",
+          "to": "Cotswolds inn",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or small-group tour",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Cotswolds",
+          "to": "Lake District inn",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or small-group tour",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Public Transit",
+          "from": "Lake District",
+          "to": "York",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "National Rail train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "York hotel",
+          "to": "Manchester Airport (MAN)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 12,
+          "transferType": "Private Transfer",
+          "from": "Belfast City Airport (BHD)",
+          "to": "Belfast hotel",
+          "time": "",
+          "minutes": 15,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Belfast hotel",
+          "to": "Belfast City Airport (BHD)",
+          "time": "12:00",
+          "minutes": 15,
+          "carrier": "Tube, Elizabeth line or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "united-kingdom/london-westminster": {
+        "name": "Westminster, Buckingham Palace and the Thames",
+        "description": "Big Ben, Westminster Abbey, the palace and a walk along the river.",
+        "details": "Westminster has the Houses of Parliament, Westminster Abbey and Buckingham Palace with the guard change. A walk along the South Bank passes the London Eye, Tate Modern and Borough Market. Allow a full day, and book Abbey tickets online.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/london-museums-theatre": {
+        "name": "British Museum, National Gallery and a West End show",
+        "description": "Free national museums and an evening of theatre.",
+        "details": "The British Museum and National Gallery are free to enter. Seats for West End shows are cheaper at the TKTS booth on the day. Book popular shows ahead. Covent Garden and Soho are close for pre-theatre dinner.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/london-tower-greenwich": {
+        "name": "Tower of London, Tower Bridge and Greenwich",
+        "description": "The crown jewels and a river trip to the home of Greenwich Mean Time.",
+        "details": "The Tower of London holds the Crown Jewels and Yeoman Warder tours. Walk across Tower Bridge, then take a river boat to Greenwich for the Maritime Museum, the Royal Observatory and the Cutty Sark. Book Tower tickets in advance.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/windsor-oxford": {
+        "name": "Windsor Castle or Oxford colleges",
+        "description": "A royal castle and the dreaming spires of a university city, each an hour from London.",
+        "details": "Windsor Castle is the oldest inhabited castle in the world, with State Apartments. Oxford has historic colleges, the Bodleian Library and Christ Church, which inspired the Harry Potter films. Both are easy by train from London.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/stonehenge": {
+        "name": "Stonehenge and Salisbury",
+        "description": "The prehistoric stone circle on Salisbury Plain and a cathedral city.",
+        "details": "Stonehenge stands on open downland with a visitor centre and audio guide. Entry needs a timed ticket booked ahead. Salisbury has a cathedral with the oldest working clock in England and a Magna Carta copy. Combine with Bath on a day trip.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/bath-roman-baths": {
+        "name": "Bath Roman Baths and the Royal Crescent",
+        "description": "A Georgian spa city built on Roman hot springs.",
+        "details": "The Roman Baths are a well-preserved temple and bathing complex, and Bath Abbey, the Royal Crescent and Pulteney Bridge are close. Thermae Bath Spa has a rooftop pool. Book Roman Baths tickets online, and go early or late to avoid crowds.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/cotswolds-villages": {
+        "name": "Cotswolds villages",
+        "description": "Honey-coloured stone villages such as Bourton-on-the-Water, Bibury and Chipping Campden.",
+        "details": "The Cotswolds are best by car or on a small-group tour. Villages such as Bibury, Castle Combe and Broadway have stone cottages, tea rooms and pubs. Walks follow the Cotswold Way. Visit early to avoid day-trippers.",
+        "interests": [
+          "relax",
+          "photography",
+          "outdoors",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/york-minster-shambles": {
+        "name": "York Minster, city walls and the Shambles",
+        "description": "A medieval walled city with Britain largest Gothic cathedral and a crooked old lane.",
+        "details": "York Minster has a Great East Window and a tower climb. The city walls can be walked for 3.4 kilometres, and the Shambles is the narrow street of overhanging medieval houses. The Jorvik Viking Centre and the National Railway Museum are family favourites.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/lake-district-windermere": {
+        "name": "Lake District: Windermere cruise and fell walk",
+        "description": "England largest lake, steamers, and short mountain hikes with views.",
+        "details": "Windermere has cruises from Bowness and Ambleside, and nearby fells such as Orrest Head offer easy hikes with views. Beatrix Potter and Wordsworth sites are close. Weather is changeable and often wet, so carry waterproofs.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "united-kingdom/belfast-titanic": {
+        "name": "Belfast Titanic Quarter and murals",
+        "description": "The shipyard where the Titanic was built and political murals on the Falls Road.",
+        "details": "Titanic Belfast is a museum on the slipway of the famous ship, and the city has Black Taxi tours of the murals, St George Market and the Cathedral Quarter. A good introduction to the Troubles and the peace process. Allow a full day.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "united-kingdom/giants-causeway": {
+        "name": "Giant Causeway and the Antrim coast",
+        "description": "Basalt columns on the coast, rope bridges and Dunluce Castle.",
+        "details": "The Giant Causeway is a UNESCO site of around 40,000 hexagonal basalt columns. The Carrick-a-Rede rope bridge, Dunluce Castle and the Dark Hedges are other stops on a coastal day trip from Belfast. Book bridge tickets ahead.",
+        "interests": [
+          "iconic_landmarks",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "united-kingdom": {
+        "name": "United Kingdom",
+        "description": "A group of nations of castles, cathedrals, moors, lakes and cities.",
+        "images": []
+      },
+      "united-kingdom/england": {
+        "name": "England",
+        "description": "The largest nation of the UK, with London, Georgian Bath and rolling countryside.",
+        "images": []
+      },
+      "united-kingdom/london": {
+        "name": "London",
+        "description": "The capital, with royal sights and world-class museums.",
+        "images": []
+      },
+      "united-kingdom/oxford": {
+        "name": "Oxford",
+        "description": "A university city of colleges.",
+        "images": []
+      },
+      "united-kingdom/bath": {
+        "name": "Bath",
+        "description": "A Georgian spa city with Roman baths.",
+        "images": []
+      },
+      "united-kingdom/cotswolds": {
+        "name": "Cotswolds",
+        "description": "Honey-stone villages.",
+        "images": []
+      },
+      "united-kingdom/lake-district": {
+        "name": "Lake District",
+        "description": "A national park of lakes and fells.",
+        "images": []
+      },
+      "united-kingdom/york": {
+        "name": "York",
+        "description": "A medieval walled city.",
+        "images": []
+      },
+      "united-kingdom/northern-ireland": {
+        "name": "Northern Ireland",
+        "description": "The north-eastern part of Ireland within the UK.",
+        "images": []
+      },
+      "united-kingdom/belfast": {
+        "name": "Belfast",
+        "description": "The capital of Northern Ireland.",
+        "images": []
+      }
+    }
+  }
+}

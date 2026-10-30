@@ -5,12 +5,12 @@ import { fireEvent, render, waitFor, within } from '@testing-library/react-nativ
 import { TripTemplatesSection } from '../components/admin/TripTemplatesSection';
 import { ThemeProvider } from '../theme/ThemeContext';
 import { getAppTheme, themeStyle } from '../theme/theme';
-import { pickTextFile, shareTextFile } from '../utils/dataTransferPlatform';
+import { pickTextFiles, shareTextFile } from '../utils/dataTransferPlatform';
 
 jest.mock('../utils/dataTransferPlatform', () => ({
   pickCsvFile: jest.fn(),
   shareCsvFile: jest.fn(),
-  pickTextFile: jest.fn(),
+  pickTextFiles: jest.fn(),
   shareTextFile: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -125,7 +125,7 @@ describe('TripTemplatesSection', () => {
   });
 
   it('checks a chosen file first, shows what would change, and only then imports it', async () => {
-    (pickTextFile as jest.Mock).mockResolvedValue({ name: 'portugal.json', size: BUNDLE.length, text: BUNDLE });
+    (pickTextFiles as jest.Mock).mockResolvedValue([{ name: 'portugal.json', size: BUNDLE.length, text: BUNDLE }]);
     const ui = mount();
     await ui.findByText('Lisbon in 4 days');
     expect(ui.getByTestId('trip-templates-import').props.accessibilityState.disabled).toBe(true);
@@ -189,14 +189,42 @@ describe('TripTemplatesSection', () => {
     expect(ui.getByTestId('trip-templates-import').props.accessibilityState.disabled).toBe(true);
   });
 
+  it('merges several chosen files into one bundle that is checked and imported together', async () => {
+    const file = (id: string, place: string) => JSON.stringify({ format: 'wanderbunnies.trip-templates', version: 1, templates: [{ id }], media: { places: { [place]: { name: place } }, destinations: {} } });
+    (pickTextFiles as jest.Mock).mockResolvedValue([
+      { name: 'portugal.json', size: 10, text: file('portugal-a', 'portugal/a') },
+      { name: 'spain.json', size: 10, text: file('spain-a', 'spain/a') },
+    ]);
+    const ui = mount();
+    await ui.findByText('Lisbon in 4 days');
+    fireEvent.press(ui.getByTestId('trip-templates-pick-file'));
+    expect(await ui.findByTestId('trip-templates-report')).toBeTruthy();
+    expect(ui.getByText('2 files: portugal.json, spain.json')).toBeTruthy();
+    expect(importCalls()).toEqual([{
+      bundle: { format: 'wanderbunnies.trip-templates', version: 1, templates: [{ id: 'portugal-a' }, { id: 'spain-a' }], media: { places: { 'portugal/a': { name: 'portugal/a' }, 'spain/a': { name: 'spain/a' } }, destinations: {} } },
+      dryRun: true,
+    }]);
+  });
+
+  it('names the file that is not a bundle when several are chosen', async () => {
+    (pickTextFiles as jest.Mock).mockResolvedValue([
+      { name: 'ok.json', size: 10, text: BUNDLE },
+      { name: 'broken.json', size: 10, text: '{nope' },
+    ]);
+    const ui = mount();
+    fireEvent.press(ui.getByTestId('trip-templates-pick-file'));
+    expect(await ui.findByText(/broken\.json is not valid JSON/)).toBeTruthy();
+    expect(importCalls()).toEqual([]);
+  });
+
   it('reports a file that cannot be read or is too large', async () => {
-    (pickTextFile as jest.Mock).mockRejectedValue(new Error('The file is larger than 10 MiB.'));
+    (pickTextFiles as jest.Mock).mockRejectedValue(new Error('The file is larger than 10 MiB.'));
     const ui = mount();
     fireEvent.press(ui.getByTestId('trip-templates-pick-file'));
     expect(await ui.findByText('The file is larger than 10 MiB.')).toBeTruthy();
-    (pickTextFile as jest.Mock).mockResolvedValue(null);
+    (pickTextFiles as jest.Mock).mockResolvedValue([]);
     fireEvent.press(ui.getByTestId('trip-templates-pick-file'));
-    await waitFor(() => expect(pickTextFile).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(pickTextFiles).toHaveBeenCalledTimes(2));
     expect(importCalls()).toEqual([]);
   });
 
