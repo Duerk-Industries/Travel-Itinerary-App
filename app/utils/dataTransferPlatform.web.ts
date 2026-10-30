@@ -44,6 +44,23 @@ export const pickTextFile = ({ accept, maxBytes }: { accept: string; maxBytes: n
   input.click();
 });
 
+/** Like pickTextFile, but lets the person select several files at once. Returns [] if they cancel. */
+export const pickTextFiles = ({ accept, maxBytes }: { accept: string; maxBytes: number }): Promise<PickedTextFile[]> => new Promise((resolve, reject) => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = accept;
+  input.multiple = true;
+  input.onchange = async () => {
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    if (!files.length) { resolve([]); return; }
+    const tooBig = files.find((file) => file.size > maxBytes);
+    if (tooBig) { reject(new Error(`${tooBig.name} is larger than ${Math.round(maxBytes / (1024 * 1024))} MiB.`)); return; }
+    try { resolve(await Promise.all(files.map(async (file) => ({ name: file.name, size: file.size, text: await file.text() })))); } catch { reject(new Error('Unable to read the selected files.')); }
+  };
+  input.click();
+});
+
 /** Saves text as a downloaded file. */
 export const shareTextFile = async (filename: string, text: string, options: { mimeType: string }): Promise<void> => {
   const blob = new Blob([text], { type: `${options.mimeType};charset=utf-8` });

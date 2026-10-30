@@ -21,7 +21,7 @@ import {
 // app-wide JSON parser because a bundle is far larger than its 100 kb limit.
 const router = Router();
 router.use(authenticate, requireAdmin);
-router.use(bodyParser.json({ limit: '15mb' }));
+router.use(bodyParser.json({ limit: '50mb' }));
 
 const AUTHORING_DIR = (): string => resolveRuntimeDataPath('trip-template-authoring', process.env.TRIP_TEMPLATE_AUTHORING_DIR);
 const authoringFile = (name: string): string | null => {

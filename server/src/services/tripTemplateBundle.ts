@@ -29,7 +29,7 @@ import {
 
 export const BUNDLE_FORMAT = 'wanderbunnies.trip-templates';
 export const BUNDLE_VERSION = 1;
-const MAX_TEMPLATES_PER_BUNDLE = 50;
+const MAX_TEMPLATES_PER_BUNDLE = 500;
 
 /** Kept in step with the ActivityType union in types.ts (a test checks they match). */
 export const TEMPLATE_ACTIVITY_TYPES = [

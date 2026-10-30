@@ -46,6 +46,22 @@ export const pickTextFile = async ({ accept, maxBytes }: { accept: string; maxBy
   return { name: asset.name || 'file', size, text: await file.text() };
 };
 
+/** Like pickTextFile, but lets the person select several files at once. Returns [] if they cancel. */
+export const pickTextFiles = async ({ accept, maxBytes }: { accept: string; maxBytes: number }): Promise<PickedTextFile[]> => {
+  const result = await DocumentPicker.getDocumentAsync({
+    type: [...accept.split(',').map((part) => part.trim()).filter((part) => part.includes('/')), '*/*'],
+    copyToCacheDirectory: true,
+    multiple: true,
+  });
+  if (result.canceled || !result.assets?.length) return [];
+  return Promise.all(result.assets.map(async (asset) => {
+    const file = new File(asset.uri);
+    const size = Number(asset.size ?? file.size ?? 0);
+    if (size > maxBytes) throw new Error(`${asset.name || 'A file'} is larger than ${Math.round(maxBytes / (1024 * 1024))} MiB.`);
+    return { name: asset.name || 'file', size, text: await file.text() };
+  }));
+};
+
 /** Hands text to the share sheet as a file (save to Files, send by email, and so on). */
 export const shareTextFile = async (filename: string, text: string, options: { mimeType: string }): Promise<void> => {
   if (!(await Sharing.isAvailableAsync())) throw new Error('File sharing is not available on this device.');
