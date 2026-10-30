@@ -58,7 +58,7 @@ import { privacyPolicyHtml } from './legal/privacyPolicyHtml';
 import dataTransferRoutes from './routes/dataTransferRoutes';
 
 import { loadEnv } from './env_loader';
-import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
+import { getBackendUrl, getEnvFlag, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
 import { startNotificationOutboxWorker } from './services/notificationOutboxWorker';
 import { runBlogBackgroundJobs } from './services/blogBackgroundWorker';
 import { logError } from './logger';
@@ -70,7 +70,7 @@ const localEnvPaths = [
   path.resolve(__dirname, '../.local_env'),
   path.resolve(__dirname, '../../.local_env'),
 ];
-for (const envPath of localEnvPaths) {
+for (const envPath of process.env.E2E_MODE === '1' ? [] : localEnvPaths) {
   if (hasRunLocalFlag(envPath)) {
     dotenv.config({ path: envPath, override: false });
   }
@@ -82,7 +82,7 @@ const envPaths = [
   path.resolve(__dirname, '../../.secrets'),
 ];
 const loadedEnvPaths: string[] = [];
-for (const envPath of envPaths) {
+for (const envPath of process.env.E2E_MODE === '1' ? [] : envPaths) {
   if (fs.existsSync(envPath)) {
     dotenv.config({ path: envPath, override: false });
     loadedEnvPaths.push(envPath);
@@ -215,7 +215,12 @@ app.get('/api/diagnostics/google-client-id', (_req, res) => {
   const clientId = getEnvValue('GOOGLE_CLIENT_ID') || '';
   res.json({ configured: Boolean(clientId), last6: clientId.trim().slice(-6) || null });
 });
-app.get('/api/healthz', (_req, res) => res.status(200).json({ ok: true, sha: getEnvValue('GIT_SHA') ?? null, revision: getEnvValue('K_REVISION') ?? null }));
+app.get('/api/healthz', (_req, res) => {
+  // Production binds early for platform liveness. Browser tests additionally
+  // need DB migrations and seed data to finish before their first request.
+  const ready = !getEnvFlag('E2E_MODE') || app.locals.e2eReady === true;
+  res.status(ready ? 200 : 503).json({ ok: ready, sha: getEnvValue('GIT_SHA') ?? null, revision: getEnvValue('K_REVISION') ?? null });
+});
 
 if (!hasWebApp) {
   app.get('/', (_req, res) => res.sendFile(loginPath));

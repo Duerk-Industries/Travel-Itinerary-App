@@ -1,3 +1,4 @@
+import { goHome } from './ui';
 /**
  * E2E: Trip management — selecting, switching, and navigating trips
  *
@@ -15,14 +16,12 @@ test.describe('Trip Management', () => {
   test('newly created trip appears in the trip picker', async ({ page }) => {
     const tripName = await createTripViaWizard(page);
 
-    // Open the "Select a trip" modal from the hero card
-    await page.getByTestId('home-hero-card').click();
-    await page.waitForLoadState('networkidle');
+    // Open the current All Trips screen.
+    await page.getByTestId('home-all-trips').click();
 
-    // The trip name should appear in the list (hero card also shows the
-    // active trip's name, so scope to the modal to avoid a strict-mode
-    // violation from matching both).
-    await expect(page.getByTestId('home-trip-modal').getByText(tripName)).toBeVisible({ timeout: 8000 });
+
+    // Scope the assertion to the upcoming-trip list.
+    await expect(page.getByTestId('all-trips-upcoming').getByText(tripName)).toBeVisible({ timeout: 8000 });
   });
 
   test('user can switch active trip', async ({ page }) => {
@@ -30,23 +29,23 @@ test.describe('Trip Management', () => {
     const tripName2 = await createTripViaWizard(page, { tripName: `Trip Beta ${Date.now() + 1}` });
 
     // Trip 2 is active after being created — switch to Trip 1
-    await page.getByTestId('home-hero-card').click();
-    await page.waitForLoadState('networkidle');
+    await page.getByTestId('home-all-trips').click();
+
 
     const elapsed = await measureMs(async () => {
       await page.getByText(tripName1).click();
-      // Selecting a trip closes the picker modal.
-      await expect(page.getByTestId('home-trip-modal')).not.toBeVisible({ timeout: 3000 });
+      // Selecting a trip returns to Home.
+      await expect(page.getByRole('heading', { name: 'All Trips', exact: true })).not.toBeVisible({ timeout: 3000 });
     });
 
     expect(elapsed, `Trip switch took ${elapsed}ms — expected < 3000ms`).toBeLessThan(3000);
 
-    // Reopen the picker and confirm Trip 1 (not Trip 2) is now marked Active.
-    await page.getByTestId('home-hero-card').click();
-    const row1 = page.locator('[data-testid^="home-trip-row-"]').filter({ hasText: tripName1 });
-    const row2 = page.locator('[data-testid^="home-trip-row-"]').filter({ hasText: tripName2 });
+    // Reopen All Trips and confirm which trip is active.
+    await page.getByTestId('home-all-trips').click();
+    const row1 = page.locator('[data-testid^="all-trips-row-"]').filter({ hasText: tripName1 });
+    const row2 = page.locator('[data-testid^="all-trips-row-"]').filter({ hasText: tripName2 });
     await expect(row1.getByText('Active', { exact: true })).toBeVisible();
-    await expect(row2.getByText('Active', { exact: true })).not.toBeVisible();
+    await expect(row2.getByText('Active', { exact: true })).toHaveCount(0);
   });
 
   test('all main tabs load without JavaScript errors', async ({ page }) => {
@@ -55,11 +54,9 @@ test.describe('Trip Management', () => {
 
     await createTripViaWizard(page);
 
-    // 'overview' navigates to its own standalone page (unlike the other tabs,
-    // which stay within the home grid context) — test it last so it doesn't
-    // strand subsequent home-nav-* clicks.
+    // Exercise each current page through the shared navigation helper.
     const tabs: Array<[string, string]> = [
-      ['flights', 'Transfers'],
+      ['flights', 'Flights'],
       ['lodging', 'Lodging'],
       ['tours', 'Activities'],
       ['expenses', 'Daily Expenses'],
@@ -67,21 +64,21 @@ test.describe('Trip Management', () => {
     ];
 
     for (const [tabKey, heading] of tabs) {
-      await page.getByTestId(`home-nav-${tabKey}`).click();
-      await page.waitForLoadState('networkidle');
+      await openTab(page, tabKey);
+
       await expect(page.getByText(heading).first()).toBeVisible({ timeout: 5000 });
     }
 
     // Balances is reached from within Cost Report (the Settle Up button), not the home nav grid.
     await page.getByText('Settle Up', { exact: true }).first().click();
-    await page.waitForLoadState('networkidle');
+
     await expect(page.getByText('Balances', { exact: true }).first()).toBeVisible({ timeout: 5000 });
 
     // Return home before checking 'overview' (now labeled "Itinerary"), which navigates to its own page.
-    await page.getByText('⌂', { exact: true }).click();
-    await page.getByTestId('home-nav-overview').click();
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByText('Itinerary').first()).toBeVisible({ timeout: 5000 });
+    await goHome(page);
+    await openTab(page, 'overview');
+
+    await expect(page.getByTestId('overview-actions-menu')).toBeVisible();
 
     expect(jsErrors, `JS errors: ${jsErrors.join(', ')}`).toHaveLength(0);
   });
@@ -89,24 +86,26 @@ test.describe('Trip Management', () => {
   test('overview tab shows trip name and participant section', async ({ page }) => {
     const tripName = await createTripViaWizard(page);
 
-    await page.getByTestId('home-nav-overview').click();
-    await page.waitForLoadState('networkidle');
+    await openTab(page, 'overview');
+
 
     // Trip name should appear somewhere in overview
     await expect(page.getByText(tripName)).toBeVisible({ timeout: 8000 });
 
     // The Travelers/participants section is only shown in edit mode.
+    await page.getByTestId('overview-actions-menu').click();
     await page.getByText('Edit', { exact: true }).click();
     await expect(
       page.getByText(/participant|member|traveler|group/i).first(),
     ).toBeVisible({ timeout: 8000 });
   });
 
-  test('hero card prompts trip creation when no trips exist yet', async ({ page }) => {
+  test('All Trips offers trip creation when no trips exist yet', async ({ page }) => {
     // No trip has been created in this test (beforeEach only logs in), so the
     // hero card should offer to create one rather than show a trip picker.
-    await page.getByTestId('home-hero-card').click();
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByTestId('home-no-trips-dialog')).toBeVisible({ timeout: 5000 });
+    await page.getByTestId('home-all-trips').click();
+
+    await expect(page.getByTestId('all-trips-create-button')).toBeVisible();
+    await expect(page.getByTestId(/^all-trips-row-/)).toHaveCount(0);
   });
 });

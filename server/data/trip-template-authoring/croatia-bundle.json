@@ -1,0 +1,1224 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, Lonely Planet, Croatia Traveller and On The Go Tours itineraries for Croatia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "croatia-dubrovnik-5d",
+      "title": "Dubrovnik City Break in 5 Days",
+      "summary": "The walled city, sea kayaking and a day on the islands.",
+      "days": 5,
+      "route": "Dubrovnik",
+      "arrive": "Dubrovnik (DBV)",
+      "depart": "Dubrovnik (DBV)",
+      "countries": [
+        "Croatia"
+      ],
+      "regions": [
+        "Dalmatia"
+      ],
+      "cities": [
+        "Dubrovnik"
+      ],
+      "imageQuery": "Dubrovnik old town walls",
+      "highlights": [
+        "City walls",
+        "Sea kayaking",
+        "Srd cable car"
+      ],
+      "destinationKeys": [
+        "croatia",
+        "croatia/dalmatia",
+        "croatia/dubrovnik"
+      ],
+      "hero": "croatia/dubrovnik",
+      "sources": [
+        "KimKim",
+        "Lonely Planet",
+        "Croatia Traveller",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "R",
+      "interests": [
+        "iconic_landmarks",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Dubrovnik",
+          "hotel": "Hotel in Dubrovnik",
+          "start": 0,
+          "nights": 4,
+          "area": "Near the Pile Gate or in Lapad for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Dubrovnik city walls",
+          "notes": "Go at opening to avoid heat and crowds.",
+          "where": "Dubrovnik",
+          "book": "",
+          "place": "croatia/dubrovnik-walls"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Sea kayak to Lokrum and Srd cable car",
+          "notes": "Kayak in the morning; the cable car at sunset.",
+          "where": "Dubrovnik",
+          "book": "Yes - book kayak",
+          "place": "croatia/dubrovnik-cable-kayak"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dubrovnik Airport (DBV)",
+          "to": "Dubrovnik hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Dubrovnik hotel area",
+          "to": "Dubrovnik Airport (DBV)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "croatia-split-hvar-dubrovnik-7d",
+      "title": "Dalmatian Coast: Split, Hvar and Dubrovnik in 7 Days",
+      "summary": "Roman palace, island sunshine and a walled city.",
+      "days": 7,
+      "route": "Split > Hvar > Dubrovnik",
+      "arrive": "Split (SPU)",
+      "depart": "Dubrovnik (DBV)",
+      "countries": [
+        "Croatia"
+      ],
+      "regions": [
+        "Dalmatia"
+      ],
+      "cities": [
+        "Split",
+        "Hvar",
+        "Dubrovnik"
+      ],
+      "imageQuery": "Hvar island harbour Croatia",
+      "highlights": [
+        "Diocletian Palace",
+        "Hvar Town",
+        "Pakleni Islands",
+        "Dubrovnik walls"
+      ],
+      "destinationKeys": [
+        "croatia",
+        "croatia/dalmatia",
+        "croatia/split",
+        "croatia/hvar",
+        "croatia/dubrovnik"
+      ],
+      "hero": "croatia/hvar",
+      "sources": [
+        "KimKim",
+        "Lonely Planet",
+        "Croatia Traveller",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "B",
+      "interests": [
+        "relax",
+        "culture",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Split",
+          "hotel": "Hotel in Split",
+          "start": 0,
+          "nights": 2,
+          "area": "Inside or beside the old town walls, close to the Riva",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hvar",
+          "hotel": "Hotel in Hvar",
+          "start": 2,
+          "nights": 2,
+          "area": "In or near Hvar Town, ideally near the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dubrovnik",
+          "hotel": "Hotel in Dubrovnik",
+          "start": 4,
+          "nights": 2,
+          "area": "Near the Pile Gate or in Lapad for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Diocletian Palace walking tour",
+          "notes": "Cover the Peristyle, the cellars and the bell tower.",
+          "where": "Split",
+          "book": "",
+          "place": "croatia/split-palace"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Hvar Town and Spanjola fortress",
+          "notes": "Climb up for sunset; book restaurants in summer.",
+          "where": "Hvar",
+          "book": "",
+          "place": "croatia/hvar-town"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Pakleni Islands boat trip",
+          "notes": "Bring sun protection; limited shade.",
+          "where": "Hvar",
+          "book": "Yes - book a boat",
+          "place": "croatia/pakleni-islands"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Dubrovnik city walls",
+          "notes": "Go at opening to avoid heat and crowds.",
+          "where": "Dubrovnik",
+          "book": "",
+          "place": "croatia/dubrovnik-walls"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Sea kayak to Lokrum and Srd cable car",
+          "notes": "Kayak in the morning; the cable car at sunset.",
+          "where": "Dubrovnik",
+          "book": "Yes - book kayak",
+          "place": "croatia/dubrovnik-cable-kayak"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Split Airport (SPU)",
+          "to": "Split hotel area",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Split",
+          "to": "Hvar",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Catamaran or ferry",
+          "notes": "Catamarans run daily in summer; book ahead.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Hvar",
+          "to": "Dubrovnik",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Catamaran or ferry",
+          "notes": "Direct summer catamaran; otherwise take a ferry to Split and bus.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Dubrovnik hotel area",
+          "to": "Dubrovnik Airport (DBV)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "croatia-zagreb-plitvice-split-dubrovnik-8d",
+      "title": "Classic Croatia in 8 Days",
+      "summary": "Zagreb, Plitvice Lakes, Split and Dubrovnik.",
+      "days": 8,
+      "route": "Zagreb > Plitvice > Split > Dubrovnik",
+      "arrive": "Zagreb (ZAG)",
+      "depart": "Dubrovnik (DBV)",
+      "countries": [
+        "Croatia"
+      ],
+      "regions": [
+        "Dalmatia"
+      ],
+      "cities": [
+        "Zagreb",
+        "Plitvice Lakes",
+        "Split",
+        "Dubrovnik"
+      ],
+      "imageQuery": "Plitvice Lakes waterfalls",
+      "highlights": [
+        "Zagreb Upper Town",
+        "Plitvice Lakes",
+        "Diocletian Palace",
+        "Dubrovnik walls"
+      ],
+      "destinationKeys": [
+        "croatia",
+        "croatia/zagreb",
+        "croatia/plitvice-lakes",
+        "croatia/dalmatia",
+        "croatia/split",
+        "croatia/dubrovnik"
+      ],
+      "hero": "croatia/plitvice-lakes",
+      "sources": [
+        "KimKim",
+        "Lonely Planet",
+        "Croatia Traveller",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Zagreb",
+          "hotel": "Hotel in Zagreb",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the main square, close to trams and the upper-town funicular",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Plitvice Lakes",
+          "hotel": "Guesthouse near Plitvice",
+          "start": 2,
+          "nights": 1,
+          "area": "In a guesthouse or hotel near the park entrances",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Split",
+          "hotel": "Hotel in Split",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside or beside the old town walls, close to the Riva",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dubrovnik",
+          "hotel": "Hotel in Dubrovnik",
+          "start": 5,
+          "nights": 2,
+          "area": "Near the Pile Gate or in Lapad for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Zagreb Upper Town and Dolac Market",
+          "notes": "Ride the funicular up; the noon cannon fires from Lotrscak tower.",
+          "where": "Zagreb",
+          "book": "",
+          "place": "croatia/zagreb-upper-town"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Plitvice Lakes boardwalk circuit",
+          "notes": "Book timed tickets in summer; arrive early.",
+          "where": "Plitvice Lakes",
+          "book": "Yes - book timed entry",
+          "place": "croatia/plitvice-lakes"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Diocletian Palace walking tour",
+          "notes": "Cover the Peristyle, the cellars and the bell tower.",
+          "where": "Split",
+          "book": "",
+          "place": "croatia/split-palace"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Dubrovnik city walls",
+          "notes": "Go at opening to avoid heat and crowds.",
+          "where": "Dubrovnik",
+          "book": "",
+          "place": "croatia/dubrovnik-walls"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Sea kayak to Lokrum and Srd cable car",
+          "notes": "Kayak in the morning; the cable car at sunset.",
+          "where": "Dubrovnik",
+          "book": "Yes - book kayak",
+          "place": "croatia/dubrovnik-cable-kayak"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Zagreb Airport (ZAG)",
+          "to": "Zagreb hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Zagreb",
+          "to": "Plitvice Lakes",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Plitvice Lakes",
+          "to": "Split",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car or private transfer",
+          "notes": "Stop at Zadar if time allows.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Split",
+          "to": "Dubrovnik",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Catamaran or ferry",
+          "notes": "A coastal bus is the usual choice; a summer catamaran is an alternative.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Dubrovnik hotel area",
+          "to": "Dubrovnik Airport (DBV)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "croatia-zagreb-plitvice-split-hvar-dubrovnik-10d",
+      "title": "Croatia with Hvar in 10 Days",
+      "summary": "Zagreb, Plitvice, Split, Hvar and Dubrovnik, with Krka and a Zadar sunset.",
+      "days": 10,
+      "route": "Zagreb > Plitvice > Split > Hvar > Dubrovnik",
+      "arrive": "Zagreb (ZAG)",
+      "depart": "Dubrovnik (DBV)",
+      "countries": [
+        "Croatia"
+      ],
+      "regions": [
+        "Dalmatia"
+      ],
+      "cities": [
+        "Zagreb",
+        "Plitvice Lakes",
+        "Split",
+        "Hvar",
+        "Dubrovnik"
+      ],
+      "imageQuery": "Hvar Pakleni Islands",
+      "highlights": [
+        "Plitvice Lakes",
+        "Krka waterfalls",
+        "Diocletian Palace",
+        "Pakleni Islands",
+        "Dubrovnik walls"
+      ],
+      "destinationKeys": [
+        "croatia",
+        "croatia/zagreb",
+        "croatia/plitvice-lakes",
+        "croatia/dalmatia",
+        "croatia/split",
+        "croatia/hvar",
+        "croatia/dubrovnik"
+      ],
+      "hero": "croatia/dalmatia",
+      "sources": [
+        "KimKim",
+        "Lonely Planet",
+        "Croatia Traveller",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "relax",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Zagreb",
+          "hotel": "Hotel in Zagreb",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the main square, close to trams and the upper-town funicular",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Plitvice Lakes",
+          "hotel": "Guesthouse near Plitvice",
+          "start": 2,
+          "nights": 1,
+          "area": "In a guesthouse or hotel near the park entrances",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Split",
+          "hotel": "Hotel in Split",
+          "start": 3,
+          "nights": 3,
+          "area": "Inside or beside the old town walls, close to the Riva",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hvar",
+          "hotel": "Hotel in Hvar",
+          "start": 6,
+          "nights": 2,
+          "area": "In or near Hvar Town, ideally near the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dubrovnik",
+          "hotel": "Hotel in Dubrovnik",
+          "start": 8,
+          "nights": 1,
+          "area": "Near the Pile Gate or in Lapad for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Zagreb Upper Town and Dolac Market",
+          "notes": "Ride the funicular up; the noon cannon fires from Lotrscak tower.",
+          "where": "Zagreb",
+          "book": "",
+          "place": "croatia/zagreb-upper-town"
+        },
+        {
+          "day": 2,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Plitvice Lakes boardwalk circuit",
+          "notes": "Book timed tickets in summer; arrive early.",
+          "where": "Plitvice Lakes",
+          "book": "Yes - book timed entry",
+          "place": "croatia/plitvice-lakes"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "17:30",
+          "duration": "2h",
+          "name": "Zadar Sea Organ and sunset",
+          "notes": "A quiet stop between Plitvice and Split.",
+          "where": "Zadar",
+          "book": "",
+          "place": "croatia/zadar"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Diocletian Palace walking tour",
+          "notes": "Cover the Peristyle, the cellars and the bell tower.",
+          "where": "Split",
+          "book": "",
+          "place": "croatia/split-palace"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Krka waterfalls and Trogir",
+          "notes": "Check swimming rules at the falls.",
+          "where": "Krka National Park",
+          "book": "",
+          "place": "croatia/krka-trogir"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Krka waterfalls and Trogir",
+          "notes": "Check swimming rules at the falls.",
+          "where": "Krka National Park",
+          "book": "",
+          "place": "croatia/krka-trogir"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Hvar Town and Spanjola fortress",
+          "notes": "Climb up for sunset; book restaurants in summer.",
+          "where": "Hvar",
+          "book": "",
+          "place": "croatia/hvar-town"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Pakleni Islands boat trip",
+          "notes": "Bring sun protection; limited shade.",
+          "where": "Hvar",
+          "book": "Yes - book a boat",
+          "place": "croatia/pakleni-islands"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Dubrovnik city walls",
+          "notes": "Go at opening to avoid heat and crowds.",
+          "where": "Dubrovnik",
+          "book": "",
+          "place": "croatia/dubrovnik-walls"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Zagreb Airport (ZAG)",
+          "to": "Zagreb hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Zagreb",
+          "to": "Plitvice Lakes",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Plitvice Lakes",
+          "to": "Split",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car or private transfer",
+          "notes": "Stop at Zadar for the sunset.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Split",
+          "to": "Hvar",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Catamaran or ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Hvar",
+          "to": "Dubrovnik",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Catamaran or ferry",
+          "notes": "Direct summer catamaran; otherwise via Split.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Dubrovnik hotel area",
+          "to": "Dubrovnik Airport (DBV)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "croatia-grand-12d",
+      "title": "Croatia from Istria to Dubrovnik in 12 Days",
+      "summary": "Zagreb, Rovinj in Istria, Plitvice, Split, Hvar and Dubrovnik at a comfortable pace.",
+      "days": 12,
+      "route": "Zagreb > Rovinj > Plitvice > Split > Hvar > Dubrovnik",
+      "arrive": "Zagreb (ZAG)",
+      "depart": "Dubrovnik (DBV)",
+      "countries": [
+        "Croatia"
+      ],
+      "regions": [
+        "Istria",
+        "Dalmatia"
+      ],
+      "cities": [
+        "Zagreb",
+        "Rovinj",
+        "Plitvice Lakes",
+        "Split",
+        "Hvar",
+        "Dubrovnik"
+      ],
+      "imageQuery": "Rovinj Istria Croatia",
+      "highlights": [
+        "Rovinj",
+        "Plitvice Lakes",
+        "Krka",
+        "Pakleni Islands",
+        "Dubrovnik walls",
+        "Sea kayaking"
+      ],
+      "destinationKeys": [
+        "croatia",
+        "croatia/zagreb",
+        "croatia/istria",
+        "croatia/rovinj",
+        "croatia/plitvice-lakes",
+        "croatia/dalmatia",
+        "croatia/split",
+        "croatia/hvar",
+        "croatia/dubrovnik"
+      ],
+      "hero": "croatia/istria",
+      "sources": [
+        "KimKim",
+        "Lonely Planet",
+        "Croatia Traveller",
+        "On The Go Tours",
+        "Designer Journeys"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Zagreb",
+          "hotel": "Hotel in Zagreb",
+          "start": 0,
+          "nights": 2,
+          "area": "Near the main square, close to trams and the upper-town funicular",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Rovinj",
+          "hotel": "Hotel in Rovinj",
+          "start": 2,
+          "nights": 2,
+          "area": "In Rovinj old town or a short walk away, with harbour views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Plitvice Lakes",
+          "hotel": "Guesthouse near Plitvice",
+          "start": 4,
+          "nights": 1,
+          "area": "In a guesthouse or hotel near the park entrances",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Split",
+          "hotel": "Hotel in Split",
+          "start": 5,
+          "nights": 2,
+          "area": "Inside or beside the old town walls, close to the Riva",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Hvar",
+          "hotel": "Hotel in Hvar",
+          "start": 7,
+          "nights": 2,
+          "area": "In or near Hvar Town, ideally near the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dubrovnik",
+          "hotel": "Hotel in Dubrovnik",
+          "start": 9,
+          "nights": 2,
+          "area": "Near the Pile Gate or in Lapad for a quieter stay",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Zagreb Upper Town and Dolac Market",
+          "notes": "Ride the funicular up; the noon cannon fires from Lotrscak tower.",
+          "where": "Zagreb",
+          "book": "",
+          "place": "croatia/zagreb-upper-town"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Rovinj old town and St Euphemia tower",
+          "notes": "Steep cobbled lanes; end with a harbour lunch.",
+          "where": "Rovinj",
+          "book": "",
+          "place": "croatia/rovinj"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Plitvice Lakes boardwalk circuit",
+          "notes": "Book timed tickets in summer; arrive early.",
+          "where": "Plitvice Lakes",
+          "book": "Yes - book timed entry",
+          "place": "croatia/plitvice-lakes"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Diocletian Palace walking tour",
+          "notes": "Cover the Peristyle, the cellars and the bell tower.",
+          "where": "Split",
+          "book": "",
+          "place": "croatia/split-palace"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "2.5h",
+          "name": "Hvar Town and Spanjola fortress",
+          "notes": "Climb up for sunset; book restaurants in summer.",
+          "where": "Hvar",
+          "book": "",
+          "place": "croatia/hvar-town"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Pakleni Islands boat trip",
+          "notes": "Bring sun protection; limited shade.",
+          "where": "Hvar",
+          "book": "Yes - book a boat",
+          "place": "croatia/pakleni-islands"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "3h",
+          "name": "Dubrovnik city walls",
+          "notes": "Go at opening to avoid heat and crowds.",
+          "where": "Dubrovnik",
+          "book": "",
+          "place": "croatia/dubrovnik-walls"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Sea kayak to Lokrum and Srd cable car",
+          "notes": "Kayak in the morning; the cable car at sunset.",
+          "where": "Dubrovnik",
+          "book": "Yes - book kayak",
+          "place": "croatia/dubrovnik-cable-kayak"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Zagreb Airport (ZAG)",
+          "to": "Zagreb hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Zagreb",
+          "to": "Rovinj",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Rovinj",
+          "to": "Plitvice Lakes",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Plitvice Lakes",
+          "to": "Split",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Split",
+          "to": "Hvar",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Catamaran or ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Hvar",
+          "to": "Dubrovnik",
+          "time": "08:30",
+          "minutes": 210,
+          "carrier": "Catamaran or ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Dubrovnik hotel area",
+          "to": "Dubrovnik Airport (DBV)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Taxi, airport bus or transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "croatia/zagreb-upper-town": {
+        "name": "Zagreb Upper Town and Dolac Market",
+        "description": "The hilltop old town of Zagreb with St Mark Church, plus the farmers market below.",
+        "details": "Gornji Grad is reached by the short funicular and holds St Mark Church with its coloured tile roof, the Stone Gate and the Lotrscak tower, whose cannon fires at noon. Dolac market is at the foot of the hill. Cafes on Tkalciceva Street are lively in the evening.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "croatia/plitvice-lakes": {
+        "name": "Plitvice Lakes National Park",
+        "description": "Sixteen terraced lakes joined by waterfalls and wooden boardwalks, a UNESCO site.",
+        "details": "Plitvice is famed for turquoise lakes and cascades that you walk past on boardwalks and by boat. Routes range from two to six hours. Go early or late to avoid crowds, and book timed tickets in summer. Swimming is not allowed. In winter, parts are icy.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "croatia/rovinj": {
+        "name": "Rovinj old town",
+        "description": "A Venetian-style fishing town on a peninsula in Istria, with a hilltop church and harbour restaurants.",
+        "details": "Rovinj has steep cobbled lanes, art galleries and the church of St Euphemia, whose tower is climbed for a view. Istria is famed for truffles, olive oil and wines. Beach swimming is from rocks or small coves, and a boat trip to the Red Island is popular.",
+        "interests": [
+          "culture",
+          "food",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "croatia/split-palace": {
+        "name": "Diocletian Palace, Split",
+        "description": "A Roman emperor retirement palace that is now the living old town of Split.",
+        "details": "The palace is a maze of lanes, cafes, shops and homes built within the Roman walls. See the Peristyle, the cellars and the cathedral bell tower. The Riva promenade is the evening meeting place. Marjan Hill gives a view over the harbour.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "croatia/krka-trogir": {
+        "name": "Krka waterfalls and Trogir",
+        "description": "A smaller waterfall park with swimming at certain spots, and a medieval island town.",
+        "details": "Krka National Park has walkways around the Skradinski Buk falls, with boat trips from Skradin. Swimming at the falls is restricted in some seasons, so check. Trogir is a UNESCO island town of stone lanes, about 30 minutes from Split.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "croatia/hvar-town": {
+        "name": "Hvar Town and Spanjola fortress",
+        "description": "A lively port with a Venetian loggia and a fortress above with views of the Pakleni Islands.",
+        "details": "Hvar is known for lavender, nightlife and sunshine. The Spanjola fortress is a short climb above the town. The main square is one of the largest in Dalmatia. In summer the town is lively and expensive, so book ahead.",
+        "interests": [
+          "relax",
+          "photography",
+          "food"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "croatia/pakleni-islands": {
+        "name": "Pakleni Islands boat trip",
+        "description": "A chain of pine-covered islets with beach bars and swimming coves.",
+        "details": "Water taxis run from the harbour to the islands in minutes, and boat tours include swims and a lunch on a beach. The water is clear and calm. Take sun protection, since shade is limited on some beaches.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "croatia/dubrovnik-walls": {
+        "name": "Dubrovnik city walls and old town",
+        "description": "A circuit on top of the medieval walls with views over red roofs and the Adriatic.",
+        "details": "The walls are about two kilometres around and take two hours to walk. Go at opening or late afternoon to avoid the heat and crowds. Stradun is the main street, and the Rector Palace and the cathedral are inside. Cruise ship days are very crowded.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "croatia/dubrovnik-cable-kayak": {
+        "name": "Srd cable car and sea kayaking",
+        "description": "A cable car view over the old town and a kayak paddle along the walls.",
+        "details": "The cable car to Mount Srd gives a panorama at sunset. A guided sea kayak tour paddles under the walls to Lokrum Island and a swim in a cave. Both are good for a second day in the city.",
+        "interests": [
+          "adventure",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "croatia/zadar": {
+        "name": "Zadar Sea Organ and sunset",
+        "description": "A seafront instrument played by waves, and the Greeting to the Sun light circle.",
+        "details": "Zadar has Roman ruins, a peninsula old town and a waterfront installation where the Sea Organ makes tones from the waves. The sunsets are famous. It is a short stop between Plitvice and Split.",
+        "interests": [
+          "relax",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "croatia": {
+        "name": "Croatia",
+        "description": "A coastal country of Roman palaces, walled towns, islands and waterfall parks.",
+        "images": []
+      },
+      "croatia/zagreb": {
+        "name": "Zagreb",
+        "description": "The capital, with a hilltop old town and a lively cafe culture.",
+        "images": []
+      },
+      "croatia/plitvice-lakes": {
+        "name": "Plitvice Lakes",
+        "description": "A national park of terraced turquoise lakes and waterfalls.",
+        "images": []
+      },
+      "croatia/istria": {
+        "name": "Istria",
+        "description": "A heart-shaped peninsula of hill towns, truffles, wine and olive oil.",
+        "images": []
+      },
+      "croatia/rovinj": {
+        "name": "Rovinj",
+        "description": "A Venetian-style port town on the Istrian coast.",
+        "images": []
+      },
+      "croatia/dalmatia": {
+        "name": "Dalmatia",
+        "description": "The coast of Split, Hvar and Dubrovnik, with islands and stone towns.",
+        "images": []
+      },
+      "croatia/split": {
+        "name": "Split",
+        "description": "A coastal city built in a Roman emperor palace.",
+        "images": []
+      },
+      "croatia/hvar": {
+        "name": "Hvar",
+        "description": "A sunny island of lavender, harbour nightlife and nearby beaches.",
+        "images": []
+      },
+      "croatia/dubrovnik": {
+        "name": "Dubrovnik",
+        "description": "A walled city on the Adriatic, a UNESCO site.",
+        "images": []
+      }
+    }
+  }
+}

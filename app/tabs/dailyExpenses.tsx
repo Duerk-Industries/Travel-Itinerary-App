@@ -19,6 +19,7 @@ import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import DateField from '../components/DateField';
 import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import { normalizeDateString } from '../utils/normalizeDateString';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
@@ -165,9 +166,11 @@ const formatDateLabel = (iso: string): string => {
 
 const buildDateRange = (trip: Trip | null): string[] => {
   if (!trip?.startDate || !trip?.endDate) return [];
-  const start = parseLocalDateOnly(trip.startDate);
-  const end = parseLocalDateOnly(trip.endDate);
-  if (formatLocalDateOnly(start) !== trip.startDate || formatLocalDateOnly(end) !== trip.endDate) return [];
+  const startDate = normalizeDateString(trip.startDate);
+  const endDate = normalizeDateString(trip.endDate);
+  const start = parseLocalDateOnly(startDate);
+  const end = parseLocalDateOnly(endDate);
+  if (formatLocalDateOnly(start) !== startDate || formatLocalDateOnly(end) !== endDate) return [];
   const dates: string[] = [];
   const cursor = new Date(start.getTime());
   while (cursor <= end) {

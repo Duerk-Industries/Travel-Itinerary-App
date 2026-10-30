@@ -46,7 +46,24 @@ jest.mock('../src/utils/pushTokenCrypto', () => ({
   decryptPushToken: (ciphertext: string) => `decrypted:${ciphertext}`,
 }));
 
-import { deliverPush, deliverEmail } from '../src/services/notificationOutboxWorker';
+import { deliverPush, deliverEmail, startNotificationOutboxWorker } from '../src/services/notificationOutboxWorker';
+
+describe('notification worker startup', () => {
+  test.each([undefined, '0'])('provider delivery can be disabled for an isolated browser server: %s', value => {
+    const previous = process.env.NOTIFICATION_OUTBOX_WORKER_ENABLED;
+    const interval = jest.spyOn(global, 'setInterval').mockReturnValue({} as ReturnType<typeof setInterval>);
+    try {
+      if (value === undefined) delete process.env.NOTIFICATION_OUTBOX_WORKER_ENABLED;
+      else process.env.NOTIFICATION_OUTBOX_WORKER_ENABLED = value;
+      startNotificationOutboxWorker();
+      expect(interval).toHaveBeenCalledTimes(value === '0' ? 0 : 1);
+    } finally {
+      interval.mockRestore();
+      if (previous === undefined) delete process.env.NOTIFICATION_OUTBOX_WORKER_ENABLED;
+      else process.env.NOTIFICATION_OUTBOX_WORKER_ENABLED = previous;
+    }
+  });
+});
 
 describe('notification outbox real delivery', () => {
   beforeEach(() => {

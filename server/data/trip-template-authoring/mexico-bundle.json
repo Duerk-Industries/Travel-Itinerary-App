@@ -1,0 +1,1497 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, G Adventures, TravelStride and Audley Travel itineraries for Mexico",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "mexico-city-5d",
+      "title": "Mexico City in 5 Days",
+      "summary": "History, museums, Frida and a day at the pyramids.",
+      "days": 5,
+      "route": "Mexico City",
+      "arrive": "Mexico City (MEX)",
+      "depart": "Mexico City (MEX)",
+      "countries": [
+        "Mexico"
+      ],
+      "regions": [],
+      "cities": [
+        "Mexico City"
+      ],
+      "imageQuery": "Mexico City Zocalo cathedral",
+      "highlights": [
+        "Zocalo",
+        "Anthropology Museum",
+        "Frida Kahlo",
+        "Teotihuacan"
+      ],
+      "destinationKeys": [
+        "mexico",
+        "mexico/mexico-city"
+      ],
+      "hero": "mexico/mexico-city",
+      "sources": [
+        "Rough Guides",
+        "G Adventures",
+        "TravelStride",
+        "Audley Travel",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Mexico City",
+          "hotel": "Hotel in Mexico City",
+          "start": 0,
+          "nights": 4,
+          "area": "In Roma, Condesa or the historic centre; central and walkable",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Zocalo, cathedral and Templo Mayor",
+          "notes": "Bring ID for the National Palace; it is closed on Mondays.",
+          "where": "Mexico City",
+          "book": "",
+          "place": "mexico/cdmx-zocalo"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "National Museum of Anthropology",
+          "notes": "Closed Mondays; start early.",
+          "where": "Chapultepec, Mexico City",
+          "book": "",
+          "place": "mexico/anthropology-museum"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "4h",
+          "name": "Coyoacan and the Frida Kahlo Museum",
+          "notes": "Book museum tickets ahead.",
+          "where": "Coyoacan, Mexico City",
+          "book": "Yes - book the Frida Kahlo Museum",
+          "place": "mexico/frida-coyoacan"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Teotihuacan pyramids",
+          "notes": "Go early; climb the Pyramid of the Sun.",
+          "where": "Teotihuacan",
+          "book": "",
+          "place": "mexico/teotihuacan"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Mexico City Airport (MEX)",
+          "to": "Mexico City hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Mexico City hotel",
+          "to": "Mexico City Airport (MEX)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mexico-city-oaxaca-7d",
+      "title": "Mexico City and Oaxaca in 7 Days",
+      "summary": "The capital and the culinary heart of southern Mexico.",
+      "days": 7,
+      "route": "Mexico City > Oaxaca",
+      "arrive": "Mexico City (MEX)",
+      "depart": "Oaxaca (OAX)",
+      "countries": [
+        "Mexico"
+      ],
+      "regions": [],
+      "cities": [
+        "Mexico City",
+        "Oaxaca"
+      ],
+      "imageQuery": "Oaxaca market Mexico",
+      "highlights": [
+        "Zocalo",
+        "Frida Kahlo",
+        "Oaxaca markets",
+        "Monte Alban",
+        "Mezcal"
+      ],
+      "destinationKeys": [
+        "mexico",
+        "mexico/mexico-city",
+        "mexico/oaxaca"
+      ],
+      "hero": "mexico/oaxaca",
+      "sources": [
+        "Rough Guides",
+        "G Adventures",
+        "TravelStride",
+        "Audley Travel",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Mexico City",
+          "hotel": "Hotel in Mexico City",
+          "start": 0,
+          "nights": 3,
+          "area": "In Roma, Condesa or the historic centre; central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oaxaca",
+          "hotel": "Hotel in Oaxaca",
+          "start": 3,
+          "nights": 3,
+          "area": "In the historic centre of Oaxaca, near the zocalo",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Zocalo, cathedral and Templo Mayor",
+          "notes": "Bring ID for the National Palace; it is closed on Mondays.",
+          "where": "Mexico City",
+          "book": "",
+          "place": "mexico/cdmx-zocalo"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "4h",
+          "name": "Coyoacan and the Frida Kahlo Museum",
+          "notes": "Book museum tickets ahead.",
+          "where": "Coyoacan, Mexico City",
+          "book": "Yes - book the Frida Kahlo Museum",
+          "place": "mexico/frida-coyoacan"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Oaxaca markets, mezcal tasting and cooking",
+          "notes": "Try tlayudas and the seven moles.",
+          "where": "Oaxaca",
+          "book": "",
+          "place": "mexico/oaxaca-city"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Monte Alban and Hierve el Agua",
+          "notes": "Bring a swimsuit for the mineral pools.",
+          "where": "Oaxaca",
+          "book": "",
+          "place": "mexico/monte-alban-hierve"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Mexico City Airport (MEX)",
+          "to": "Mexico City hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Mexico City hotel",
+          "to": "Mexico City Airport (MEX)",
+          "time": "09:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Oaxaca Airport (OAX)",
+          "to": "Oaxaca hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Oaxaca hotel",
+          "to": "Oaxaca Airport (OAX)",
+          "time": "11:00",
+          "minutes": 30,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mexico-yucatan-8d",
+      "title": "Yucatan Maya Route in 8 Days",
+      "summary": "Merida, Chichen Itza, Valladolid and the Tulum coast.",
+      "days": 8,
+      "route": "Merida > Valladolid > Tulum",
+      "arrive": "Merida (MID)",
+      "depart": "Cancun (CUN)",
+      "countries": [
+        "Mexico"
+      ],
+      "regions": [
+        "Yucatan",
+        "Quintana Roo"
+      ],
+      "cities": [
+        "Merida",
+        "Valladolid",
+        "Tulum"
+      ],
+      "imageQuery": "Chichen Itza pyramid Mexico",
+      "highlights": [
+        "Merida",
+        "Chichen Itza",
+        "Cenotes",
+        "Tulum ruins"
+      ],
+      "destinationKeys": [
+        "mexico",
+        "mexico/yucatan",
+        "mexico/merida",
+        "mexico/valladolid",
+        "mexico/quintana-roo",
+        "mexico/tulum"
+      ],
+      "hero": "mexico/yucatan",
+      "sources": [
+        "Rough Guides",
+        "G Adventures",
+        "TravelStride",
+        "Audley Travel",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Merida",
+          "hotel": "Hotel in Merida",
+          "start": 0,
+          "nights": 2,
+          "area": "In Merida centro, close to the main plaza",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Valladolid",
+          "hotel": "Hotel in Valladolid",
+          "start": 2,
+          "nights": 1,
+          "area": "In Valladolid, near the central square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tulum",
+          "hotel": "Hotel in Tulum",
+          "start": 3,
+          "nights": 4,
+          "area": "Along the Tulum beach road, or in the town for cenotes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Merida plaza, Paseo de Montejo and cochinita pibil",
+          "notes": "Explore early or late; it is hot at midday.",
+          "where": "Merida",
+          "book": "",
+          "place": "mexico/merida"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Merida food and market morning",
+          "notes": "Explore early or late; it is hot at midday.",
+          "where": "Merida",
+          "book": "",
+          "place": "mexico/merida"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Chichen Itza and a cenote swim",
+          "notes": "Go at opening; swim in a cenote after.",
+          "where": "Chichen Itza",
+          "book": "",
+          "place": "mexico/chichen-itza"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Valladolid and Cenote Zaci",
+          "notes": "Rent a bike to visit more cenotes.",
+          "where": "Valladolid",
+          "book": "",
+          "place": "mexico/valladolid-cenote"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Tulum ruins and beach",
+          "notes": "Go early; seaweed may affect the beach in summer.",
+          "where": "Tulum",
+          "book": "",
+          "place": "mexico/tulum-ruins"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Merida Airport (MID)",
+          "to": "Merida hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Merida",
+          "to": "Valladolid",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "Rental car or shuttle",
+          "notes": "Stop at Chichen Itza on the way.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Valladolid",
+          "to": "Tulum",
+          "time": "09:30",
+          "minutes": 100,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Tulum",
+          "to": "Cancun Airport (CUN)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mexico-city-oaxaca-tulum-10d",
+      "title": "Mexico City, Oaxaca and the Caribbean in 10 Days",
+      "summary": "The capital, Oaxaca and a beach finish at Tulum.",
+      "days": 10,
+      "route": "Mexico City > Oaxaca > Tulum",
+      "arrive": "Mexico City (MEX)",
+      "depart": "Cancun (CUN)",
+      "countries": [
+        "Mexico"
+      ],
+      "regions": [
+        "Quintana Roo"
+      ],
+      "cities": [
+        "Mexico City",
+        "Oaxaca",
+        "Tulum"
+      ],
+      "imageQuery": "Tulum Mexico beach ruins",
+      "highlights": [
+        "Zocalo",
+        "Frida Kahlo",
+        "Teotihuacan",
+        "Oaxaca",
+        "Tulum"
+      ],
+      "destinationKeys": [
+        "mexico",
+        "mexico/mexico-city",
+        "mexico/oaxaca",
+        "mexico/quintana-roo",
+        "mexico/tulum"
+      ],
+      "hero": "mexico/tulum",
+      "sources": [
+        "Rough Guides",
+        "G Adventures",
+        "TravelStride",
+        "Audley Travel",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Mexico City",
+          "hotel": "Hotel in Mexico City",
+          "start": 0,
+          "nights": 4,
+          "area": "In Roma, Condesa or the historic centre; central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oaxaca",
+          "hotel": "Hotel in Oaxaca",
+          "start": 4,
+          "nights": 3,
+          "area": "In the historic centre of Oaxaca, near the zocalo",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tulum",
+          "hotel": "Hotel in Tulum",
+          "start": 7,
+          "nights": 2,
+          "area": "Along the Tulum beach road, or in the town for cenotes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Zocalo, cathedral and Templo Mayor",
+          "notes": "Bring ID for the National Palace; it is closed on Mondays.",
+          "where": "Mexico City",
+          "book": "",
+          "place": "mexico/cdmx-zocalo"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "National Museum of Anthropology",
+          "notes": "Closed Mondays; start early.",
+          "where": "Chapultepec, Mexico City",
+          "book": "",
+          "place": "mexico/anthropology-museum"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "13:30",
+          "duration": "4h",
+          "name": "Coyoacan and the Frida Kahlo Museum",
+          "notes": "Book museum tickets ahead.",
+          "where": "Coyoacan, Mexico City",
+          "book": "Yes - book the Frida Kahlo Museum",
+          "place": "mexico/frida-coyoacan"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Teotihuacan pyramids",
+          "notes": "Go early; climb the Pyramid of the Sun.",
+          "where": "Teotihuacan",
+          "book": "",
+          "place": "mexico/teotihuacan"
+        },
+        {
+          "day": 5,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Oaxaca markets, mezcal tasting and cooking",
+          "notes": "Try tlayudas and the seven moles.",
+          "where": "Oaxaca",
+          "book": "",
+          "place": "mexico/oaxaca-city"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Monte Alban and Hierve el Agua",
+          "notes": "Bring a swimsuit for the mineral pools.",
+          "where": "Oaxaca",
+          "book": "",
+          "place": "mexico/monte-alban-hierve"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Tulum ruins and beach",
+          "notes": "Go early; seaweed may affect the beach in summer.",
+          "where": "Tulum",
+          "book": "",
+          "place": "mexico/tulum-ruins"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Mexico City Airport (MEX)",
+          "to": "Mexico City hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Mexico City hotel",
+          "to": "Mexico City Airport (MEX)",
+          "time": "09:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Oaxaca Airport (OAX)",
+          "to": "Oaxaca hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Oaxaca hotel",
+          "to": "Oaxaca Airport (OAX)",
+          "time": "06:30",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects through Mexico City.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Cancun Airport (CUN)",
+          "to": "Tulum hotel",
+          "time": "",
+          "minutes": 120,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Tulum",
+          "to": "Cancun Airport (CUN)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mexico-colonial-yucatan-12d",
+      "title": "Mexico Colonial and Maya in 12 Days",
+      "summary": "Mexico City, Guanajuato, Oaxaca, Merida and Tulum.",
+      "days": 12,
+      "route": "Mexico City > Guanajuato > Oaxaca > Merida > Tulum",
+      "arrive": "Mexico City (MEX)",
+      "depart": "Cancun (CUN)",
+      "countries": [
+        "Mexico"
+      ],
+      "regions": [
+        "Yucatan",
+        "Quintana Roo"
+      ],
+      "cities": [
+        "Mexico City",
+        "Guanajuato",
+        "Oaxaca",
+        "Merida",
+        "Tulum"
+      ],
+      "imageQuery": "Guanajuato colourful Mexico",
+      "highlights": [
+        "Anthropology Museum",
+        "Guanajuato",
+        "Oaxaca",
+        "Chichen Itza",
+        "Tulum"
+      ],
+      "destinationKeys": [
+        "mexico",
+        "mexico/mexico-city",
+        "mexico/guanajuato",
+        "mexico/oaxaca",
+        "mexico/yucatan",
+        "mexico/merida",
+        "mexico/quintana-roo",
+        "mexico/tulum"
+      ],
+      "hero": "mexico/guanajuato",
+      "sources": [
+        "Rough Guides",
+        "G Adventures",
+        "TravelStride",
+        "Audley Travel",
+        "Intrepid Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Mexico City",
+          "hotel": "Hotel in Mexico City",
+          "start": 0,
+          "nights": 3,
+          "area": "In Roma, Condesa or the historic centre; central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Guanajuato",
+          "hotel": "Hotel in Guanajuato",
+          "start": 3,
+          "nights": 2,
+          "area": "In central Guanajuato, a steep walk from the main plaza",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oaxaca",
+          "hotel": "Hotel in Oaxaca",
+          "start": 5,
+          "nights": 3,
+          "area": "In the historic centre of Oaxaca, near the zocalo",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Merida",
+          "hotel": "Hotel in Merida",
+          "start": 8,
+          "nights": 1,
+          "area": "In Merida centro, close to the main plaza",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tulum",
+          "hotel": "Hotel in Tulum",
+          "start": 9,
+          "nights": 2,
+          "area": "Along the Tulum beach road, or in the town for cenotes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Zocalo, cathedral and Templo Mayor",
+          "notes": "Bring ID for the National Palace; it is closed on Mondays.",
+          "where": "Mexico City",
+          "book": "",
+          "place": "mexico/cdmx-zocalo"
+        },
+        {
+          "day": 2,
+          "type": "Ticketed Attraction",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "National Museum of Anthropology",
+          "notes": "Closed Mondays; start early.",
+          "where": "Chapultepec, Mexico City",
+          "book": "",
+          "place": "mexico/anthropology-museum"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Guanajuato lanes, Alley of the Kiss and funicular",
+          "notes": "Ride the funicular for the view; mariachi at night.",
+          "where": "Guanajuato",
+          "book": "",
+          "place": "mexico/guanajuato"
+        },
+        {
+          "day": 6,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Oaxaca markets, mezcal tasting and cooking",
+          "notes": "Try tlayudas and the seven moles.",
+          "where": "Oaxaca",
+          "book": "",
+          "place": "mexico/oaxaca-city"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Monte Alban and Hierve el Agua",
+          "notes": "Bring a swimsuit for the mineral pools.",
+          "where": "Oaxaca",
+          "book": "",
+          "place": "mexico/monte-alban-hierve"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Merida plaza, Paseo de Montejo and cochinita pibil",
+          "notes": "Explore early or late; it is hot at midday.",
+          "where": "Merida",
+          "book": "",
+          "place": "mexico/merida"
+        },
+        {
+          "day": 9,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Chichen Itza and a cenote swim",
+          "notes": "Go at opening; swim in a cenote after.",
+          "where": "Chichen Itza",
+          "book": "",
+          "place": "mexico/chichen-itza"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Tulum ruins and beach",
+          "notes": "Go early; seaweed may affect the beach in summer.",
+          "where": "Tulum",
+          "book": "",
+          "place": "mexico/tulum-ruins"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Mexico City Airport (MEX)",
+          "to": "Mexico City hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Mexico City",
+          "to": "Guanajuato",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "First-class ADO or Primera Plus bus",
+          "notes": "Bus from Terminal Norte.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Guanajuato hotel",
+          "to": "Bajio Airport (BJX)",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects through Mexico City.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Oaxaca Airport (OAX)",
+          "to": "Oaxaca hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Oaxaca hotel",
+          "to": "Oaxaca Airport (OAX)",
+          "time": "07:30",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "The flight connects through Mexico City.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Merida Airport (MID)",
+          "to": "Merida hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Merida",
+          "to": "Tulum",
+          "time": "08:30",
+          "minutes": 270,
+          "carrier": "Rental car or shuttle",
+          "notes": "Stop at Chichen Itza on the way.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Tulum",
+          "to": "Cancun Airport (CUN)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mexico-grand-14d",
+      "title": "Grand Mexico in 14 Days",
+      "summary": "Capital, colonial highlands, Oaxaca and the full Yucatan loop.",
+      "days": 14,
+      "route": "Mexico City > Guanajuato > Oaxaca > Merida > Valladolid > Tulum",
+      "arrive": "Mexico City (MEX)",
+      "depart": "Cancun (CUN)",
+      "countries": [
+        "Mexico"
+      ],
+      "regions": [
+        "Yucatan",
+        "Quintana Roo"
+      ],
+      "cities": [
+        "Mexico City",
+        "Guanajuato",
+        "Oaxaca",
+        "Merida",
+        "Valladolid",
+        "Tulum"
+      ],
+      "imageQuery": "Mexico pyramids cenote colonial",
+      "highlights": [
+        "Teotihuacan",
+        "Guanajuato",
+        "Monte Alban",
+        "Chichen Itza",
+        "Cenotes",
+        "Tulum"
+      ],
+      "destinationKeys": [
+        "mexico",
+        "mexico/mexico-city",
+        "mexico/guanajuato",
+        "mexico/oaxaca",
+        "mexico/yucatan",
+        "mexico/merida",
+        "mexico/valladolid",
+        "mexico/quintana-roo",
+        "mexico/tulum"
+      ],
+      "hero": "mexico/mexico-city",
+      "sources": [
+        "Rough Guides",
+        "G Adventures",
+        "TravelStride",
+        "Audley Travel",
+        "Intrepid Travel"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "food",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Mexico City",
+          "hotel": "Hotel in Mexico City",
+          "start": 0,
+          "nights": 3,
+          "area": "In Roma, Condesa or the historic centre; central and walkable",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Guanajuato",
+          "hotel": "Hotel in Guanajuato",
+          "start": 3,
+          "nights": 2,
+          "area": "In central Guanajuato, a steep walk from the main plaza",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Oaxaca",
+          "hotel": "Hotel in Oaxaca",
+          "start": 5,
+          "nights": 3,
+          "area": "In the historic centre of Oaxaca, near the zocalo",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Merida",
+          "hotel": "Hotel in Merida",
+          "start": 8,
+          "nights": 2,
+          "area": "In Merida centro, close to the main plaza",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Valladolid",
+          "hotel": "Hotel in Valladolid",
+          "start": 10,
+          "nights": 1,
+          "area": "In Valladolid, near the central square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Tulum",
+          "hotel": "Hotel in Tulum",
+          "start": 11,
+          "nights": 2,
+          "area": "Along the Tulum beach road, or in the town for cenotes",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Zocalo, cathedral and Templo Mayor",
+          "notes": "Bring ID for the National Palace; it is closed on Mondays.",
+          "where": "Mexico City",
+          "book": "",
+          "place": "mexico/cdmx-zocalo"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Teotihuacan pyramids",
+          "notes": "Go early; climb the Pyramid of the Sun.",
+          "where": "Teotihuacan",
+          "book": "",
+          "place": "mexico/teotihuacan"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Guanajuato lanes, Alley of the Kiss and funicular",
+          "notes": "Ride the funicular for the view; mariachi at night.",
+          "where": "Guanajuato",
+          "book": "",
+          "place": "mexico/guanajuato"
+        },
+        {
+          "day": 6,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Oaxaca markets, mezcal tasting and cooking",
+          "notes": "Try tlayudas and the seven moles.",
+          "where": "Oaxaca",
+          "book": "",
+          "place": "mexico/oaxaca-city"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Monte Alban and Hierve el Agua",
+          "notes": "Bring a swimsuit for the mineral pools.",
+          "where": "Oaxaca",
+          "book": "",
+          "place": "mexico/monte-alban-hierve"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Merida plaza, Paseo de Montejo and cochinita pibil",
+          "notes": "Explore early or late; it is hot at midday.",
+          "where": "Merida",
+          "book": "",
+          "place": "mexico/merida"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Merida day: haciendas and food",
+          "notes": "Explore early or late; it is hot at midday.",
+          "where": "Merida",
+          "book": "",
+          "place": "mexico/merida"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Chichen Itza and a cenote swim",
+          "notes": "Go at opening; swim in a cenote after.",
+          "where": "Chichen Itza",
+          "book": "",
+          "place": "mexico/chichen-itza"
+        },
+        {
+          "day": 10,
+          "type": "Sights & Landmarks",
+          "time": "15:30",
+          "duration": "3h",
+          "name": "Valladolid and Cenote Zaci",
+          "notes": "Rent a bike to visit more cenotes.",
+          "where": "Valladolid",
+          "book": "",
+          "place": "mexico/valladolid-cenote"
+        },
+        {
+          "day": 12,
+          "type": "Sights & Landmarks",
+          "time": "08:30",
+          "duration": "3h",
+          "name": "Tulum ruins and beach",
+          "notes": "Go early; seaweed may affect the beach in summer.",
+          "where": "Tulum",
+          "book": "",
+          "place": "mexico/tulum-ruins"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Mexico City Airport (MEX)",
+          "to": "Mexico City hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Mexico City",
+          "to": "Guanajuato",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "First-class ADO or Primera Plus bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Guanajuato hotel",
+          "to": "Bajio Airport (BJX)",
+          "time": "08:00",
+          "minutes": 60,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Oaxaca Airport (OAX)",
+          "to": "Oaxaca hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Oaxaca hotel",
+          "to": "Oaxaca Airport (OAX)",
+          "time": "07:30",
+          "minutes": 30,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Merida Airport (MID)",
+          "to": "Merida hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Merida",
+          "to": "Valladolid",
+          "time": "08:30",
+          "minutes": 150,
+          "carrier": "Rental car or shuttle",
+          "notes": "Stop at Chichen Itza on the way.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Valladolid",
+          "to": "Tulum",
+          "time": "09:30",
+          "minutes": 100,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Tulum",
+          "to": "Cancun Airport (CUN)",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Rental car or shuttle",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "mexico/cdmx-zocalo": {
+        "name": "Zocalo, Templo Mayor and Historic Centre",
+        "description": "The giant main square, an Aztec temple excavation and baroque cathedrals.",
+        "details": "The Zocalo is one of the largest city squares in the world, flanked by the Metropolitan Cathedral and National Palace with Diego Rivera murals. The Templo Mayor ruins sit beside it. Allow half a day, and note that the palace is free but needs ID.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mexico/anthropology-museum": {
+        "name": "National Museum of Anthropology",
+        "description": "One of the world great museums, holding the Aztec Sun Stone and Maya treasures.",
+        "details": "The museum in Chapultepec Park has halls on every major pre-Hispanic culture, with the Aztec Sun Stone as the centrepiece. Plan three hours and start early. It is closed on Mondays.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mexico/frida-coyoacan": {
+        "name": "Coyoacan and the Frida Kahlo Museum",
+        "description": "A leafy village district with the artist Blue House and a lively market.",
+        "details": "Coyoacan has cobbled streets and plazas, the Mercado de Coyoacan for tostadas, and the Casa Azul, where Frida Kahlo lived. Tickets for the Frida Kahlo Museum must be booked in advance. Xochimilco canals are nearby.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mexico/teotihuacan": {
+        "name": "Teotihuacan pyramids",
+        "description": "The city of the gods, with the Pyramids of the Sun and Moon, an hour from the capital.",
+        "details": "Teotihuacan is a vast Mesoamerican city with the Avenue of the Dead and two great pyramids, one of which can be climbed. Go early to avoid the heat and crowds. Hot air balloon flights at dawn are an option.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "mexico/guanajuato": {
+        "name": "Guanajuato colourful hill town",
+        "description": "A UNESCO silver town of underground tunnels, painted houses and the Alley of the Kiss.",
+        "details": "Guanajuato spreads over steep hills with brightly painted houses, plazas and the Callejon del Beso. Tunnels carry traffic under the city. The funicular rises to a viewpoint with the Pipila statue, and mariachi bands play in the evenings.",
+        "interests": [
+          "culture",
+          "photography",
+          "iconic_landmarks",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "mexico/oaxaca-city": {
+        "name": "Oaxaca city, markets and mezcal",
+        "description": "A colonial city of food markets, craft villages and mezcal tastings.",
+        "details": "Oaxaca has the Santo Domingo church, the Benito Juarez market for chocolate and tlayudas and mezcal bars. Cooking classes teach the seven moles. Evening zocalo life is lively. Day trips visit craft villages such as Teotitlan del Valle.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mexico/monte-alban-hierve": {
+        "name": "Monte Alban and Hierve el Agua",
+        "description": "A Zapotec mountaintop city and petrified waterfalls with swimming pools.",
+        "details": "Monte Alban sits on a levelled hilltop above Oaxaca, with plazas and tombs and big views. Hierve el Agua has mineral formations that look like frozen waterfalls and natural infinity pools. Both fit in one day trip. Bring a swimsuit.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "mexico/merida": {
+        "name": "Merida colonial centre",
+        "description": "A white city of mansions, markets and Mayan cuisine in the Yucatan.",
+        "details": "Merida has the Paseo de Montejo boulevard, a Sunday street fair and restaurants serving cochinita pibil. Evenings have free dance and music in the plazas. It is hot, so explore in the early morning and the evening.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mexico/chichen-itza": {
+        "name": "Chichen Itza and a cenote swim",
+        "description": "The Maya pyramid of Kukulkan, with a cenote swim nearby.",
+        "details": "Chichen Itza has El Castillo, the ball court and the Temple of the Warriors. Go at opening to beat the heat and crowds, and combine with a swim in a cenote near Valladolid. Climbing the pyramid is not permitted.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "mexico/valladolid-cenote": {
+        "name": "Valladolid and Cenote Zaci",
+        "description": "A colonial town with a central cenote in the middle of the Yucatan.",
+        "details": "Valladolid has a convent, a plaza and the Cenote Zaci in a town park. Cenotes nearby, such as Suytun and Ik Kil, are a great way to cool off. Rent a bike or take a colectivo.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mexico/tulum-ruins": {
+        "name": "Tulum ruins and beach",
+        "description": "A clifftop Maya port overlooking the Caribbean, with a beach below.",
+        "details": "The ruins of Tulum stand on a cliff above the turquoise sea, with a small beach for swimming. Go early before the tour buses. The town and beach strip have cafes, cenotes and the Sian Ka an reserve. Sargassum seaweed can affect the beach in summer.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "mexico": {
+        "name": "Mexico",
+        "description": "A country of ancient pyramids, colonial cities, great food and Caribbean beaches.",
+        "images": []
+      },
+      "mexico/mexico-city": {
+        "name": "Mexico City",
+        "description": "The vast capital, built on an Aztec lake city.",
+        "images": []
+      },
+      "mexico/guanajuato": {
+        "name": "Guanajuato",
+        "description": "A colourful silver-mining town in the central highlands.",
+        "images": []
+      },
+      "mexico/oaxaca": {
+        "name": "Oaxaca",
+        "description": "A southern city of food, craft and Zapotec heritage.",
+        "images": []
+      },
+      "mexico/yucatan": {
+        "name": "Yucatan",
+        "description": "The peninsula state of Maya ruins, haciendas and cenotes.",
+        "images": []
+      },
+      "mexico/merida": {
+        "name": "Merida",
+        "description": "The Yucatan capital, a white colonial city.",
+        "images": []
+      },
+      "mexico/valladolid": {
+        "name": "Valladolid",
+        "description": "A colonial town close to Chichen Itza and cenotes.",
+        "images": []
+      },
+      "mexico/quintana-roo": {
+        "name": "Quintana Roo",
+        "description": "The Caribbean state of Tulum and the Riviera Maya.",
+        "images": []
+      },
+      "mexico/tulum": {
+        "name": "Tulum",
+        "description": "A clifftop Maya site and beach town.",
+        "images": []
+      }
+    }
+  }
+}

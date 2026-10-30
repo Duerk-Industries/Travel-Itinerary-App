@@ -1,0 +1,1070 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Take Your Backpack, Chasing the Donkey, Voice of Guides and Travel With Hello itineraries for Kosovo",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "kosovo-pristina-prizren-4d",
+      "title": "Pristina and Prizren in 4 Days",
+      "summary": "The lively capital and the most beautiful Ottoman town.",
+      "days": 4,
+      "route": "Pristina > Prizren",
+      "arrive": "Pristina (PRN)",
+      "depart": "Pristina (PRN)",
+      "countries": [
+        "Kosovo"
+      ],
+      "regions": [],
+      "cities": [
+        "Pristina",
+        "Prizren"
+      ],
+      "imageQuery": "Prizren old town Stone Bridge",
+      "highlights": [
+        "Newborn monument",
+        "Prizren fortress",
+        "Stone Bridge"
+      ],
+      "destinationKeys": [
+        "kosovo",
+        "kosovo/pristina",
+        "kosovo/prizren"
+      ],
+      "hero": "kosovo/prizren",
+      "sources": [
+        "Take Your Backpack",
+        "Chasing the Donkey",
+        "Voice of Guides",
+        "Travel With Hello",
+        "Calvert Journal"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Pristina",
+          "hotel": "Hotel in Pristina",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Mother Teresa Boulevard in central Pristina",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Prizren",
+          "hotel": "Hotel in Prizren",
+          "start": 2,
+          "nights": 1,
+          "area": "In Prizren old town, near the Stone Bridge",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Newborn monument, Mother Teresa Boulevard and National Library",
+          "notes": "A short walk covers the main sights.",
+          "where": "Pristina",
+          "book": "",
+          "place": "kosovo/pristina-centre"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Gracanica Monastery and Gazimestan",
+          "notes": "Dress modestly; a guide explains the history.",
+          "where": "Gracanica",
+          "book": "",
+          "place": "kosovo/gracanica-monastery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Prizren old town and fortress",
+          "notes": "Climb to the fortress at sunset.",
+          "where": "Prizren",
+          "book": "",
+          "place": "kosovo/prizren-old-town"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Pristina Airport (PRN)",
+          "to": "Pristina hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Pristina",
+          "to": "Prizren",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Prizren",
+          "to": "Pristina Airport (PRN)",
+          "time": "10:00",
+          "minutes": 100,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kosovo-pristina-prizren-5d",
+      "title": "Pristina, Gracanica and Prizren in 5 Days",
+      "summary": "A slower take with more time in Prizren.",
+      "days": 5,
+      "route": "Pristina > Prizren",
+      "arrive": "Pristina (PRN)",
+      "depart": "Pristina (PRN)",
+      "countries": [
+        "Kosovo"
+      ],
+      "regions": [],
+      "cities": [
+        "Pristina",
+        "Prizren"
+      ],
+      "imageQuery": "Prizren Kosovo fortress sunset",
+      "highlights": [
+        "National Library",
+        "Gracanica",
+        "Prizren old town",
+        "Gjakova bazaar"
+      ],
+      "destinationKeys": [
+        "kosovo",
+        "kosovo/pristina",
+        "kosovo/prizren"
+      ],
+      "hero": "kosovo/pristina",
+      "sources": [
+        "Take Your Backpack",
+        "Chasing the Donkey",
+        "Voice of Guides",
+        "Travel With Hello",
+        "Calvert Journal"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Pristina",
+          "hotel": "Hotel in Pristina",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Mother Teresa Boulevard in central Pristina",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Prizren",
+          "hotel": "Hotel in Prizren",
+          "start": 2,
+          "nights": 2,
+          "area": "In Prizren old town, near the Stone Bridge",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Newborn monument, Mother Teresa Boulevard and National Library",
+          "notes": "A short walk covers the main sights.",
+          "where": "Pristina",
+          "book": "",
+          "place": "kosovo/pristina-centre"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Gracanica Monastery and Gazimestan",
+          "notes": "Dress modestly; a guide explains the history.",
+          "where": "Gracanica",
+          "book": "",
+          "place": "kosovo/gracanica-monastery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Prizren old town and fortress",
+          "notes": "Climb to the fortress at sunset.",
+          "where": "Prizren",
+          "book": "",
+          "place": "kosovo/prizren-old-town"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Gjakova old bazaar",
+          "notes": "On the road between Prizren and Peja.",
+          "where": "Gjakova",
+          "book": "",
+          "place": "kosovo/gjakova-bazaar"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Pristina Airport (PRN)",
+          "to": "Pristina hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Pristina",
+          "to": "Prizren",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Prizren",
+          "to": "Pristina Airport (PRN)",
+          "time": "10:00",
+          "minutes": 100,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kosovo-golden-triangle-7d",
+      "title": "Kosovo Golden Triangle in 7 Days",
+      "summary": "Pristina, Prizren and Peja, the classic trio.",
+      "days": 7,
+      "route": "Pristina > Prizren > Peja",
+      "arrive": "Pristina (PRN)",
+      "depart": "Pristina (PRN)",
+      "countries": [
+        "Kosovo"
+      ],
+      "regions": [],
+      "cities": [
+        "Pristina",
+        "Prizren",
+        "Peja"
+      ],
+      "imageQuery": "Peja Patriarchate Pec Kosovo",
+      "highlights": [
+        "Prizren fortress",
+        "Decani Monastery",
+        "Peja Patriarchate",
+        "Rugova Gorge"
+      ],
+      "destinationKeys": [
+        "kosovo",
+        "kosovo/pristina",
+        "kosovo/prizren",
+        "kosovo/peja"
+      ],
+      "hero": "kosovo/peja",
+      "sources": [
+        "Take Your Backpack",
+        "Chasing the Donkey",
+        "Voice of Guides",
+        "Travel With Hello",
+        "Calvert Journal"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Pristina",
+          "hotel": "Hotel in Pristina",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Mother Teresa Boulevard in central Pristina",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Prizren",
+          "hotel": "Hotel in Prizren",
+          "start": 2,
+          "nights": 2,
+          "area": "In Prizren old town, near the Stone Bridge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Peja",
+          "hotel": "Hotel in Peja",
+          "start": 4,
+          "nights": 2,
+          "area": "In Peja town, with views of the mountains",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Newborn monument, Mother Teresa Boulevard and National Library",
+          "notes": "A short walk covers the main sights.",
+          "where": "Pristina",
+          "book": "",
+          "place": "kosovo/pristina-centre"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Gracanica Monastery and Gazimestan",
+          "notes": "Dress modestly; a guide explains the history.",
+          "where": "Gracanica",
+          "book": "",
+          "place": "kosovo/gracanica-monastery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Prizren old town and fortress",
+          "notes": "Climb to the fortress at sunset.",
+          "where": "Prizren",
+          "book": "",
+          "place": "kosovo/prizren-old-town"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Gjakova old bazaar",
+          "notes": "On the road between Prizren and Peja.",
+          "where": "Gjakova",
+          "book": "",
+          "place": "kosovo/gjakova-bazaar"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Visoki Decani Monastery",
+          "notes": "Bring ID; dress modestly and keep quiet.",
+          "where": "Decan",
+          "book": "",
+          "place": "kosovo/decani-monastery"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Patriarchate of Pec and Peja bazaar",
+          "notes": "Medieval frescoes and a lively bazaar.",
+          "where": "Peja",
+          "book": "",
+          "place": "kosovo/peja-patriarchate"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Rugova Gorge hike or via ferrata",
+          "notes": "Taxis run from Peja; the via ferrata needs gear.",
+          "where": "Rugova Gorge",
+          "book": "Yes - book via ferrata gear",
+          "place": "kosovo/rugova-gorge"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Pristina Airport (PRN)",
+          "to": "Pristina hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Pristina",
+          "to": "Prizren",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Prizren",
+          "to": "Peja",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Intercity bus or minivan",
+          "notes": "Stop at Gjakova on the way.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Peja",
+          "to": "Pristina Airport (PRN)",
+          "time": "10:00",
+          "minutes": 100,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kosovo-golden-triangle-gjakova-8d",
+      "title": "Kosovo with Gjakova and Rugova in 8 Days",
+      "summary": "The Golden Triangle with a night in Gjakova and more time in the mountains.",
+      "days": 8,
+      "route": "Pristina > Prizren > Gjakova > Peja",
+      "arrive": "Pristina (PRN)",
+      "depart": "Pristina (PRN)",
+      "countries": [
+        "Kosovo"
+      ],
+      "regions": [],
+      "cities": [
+        "Pristina",
+        "Prizren",
+        "Gjakova",
+        "Peja"
+      ],
+      "imageQuery": "Rugova Gorge Kosovo",
+      "highlights": [
+        "Prizren",
+        "Gjakova bazaar",
+        "Decani",
+        "Rugova Gorge",
+        "Patriarchate of Pec"
+      ],
+      "destinationKeys": [
+        "kosovo",
+        "kosovo/pristina",
+        "kosovo/prizren",
+        "kosovo/gjakova",
+        "kosovo/peja"
+      ],
+      "hero": "kosovo/gjakova",
+      "sources": [
+        "Take Your Backpack",
+        "Chasing the Donkey",
+        "Voice of Guides",
+        "Travel With Hello",
+        "Calvert Journal"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Pristina",
+          "hotel": "Hotel in Pristina",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Mother Teresa Boulevard in central Pristina",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Prizren",
+          "hotel": "Hotel in Prizren",
+          "start": 2,
+          "nights": 2,
+          "area": "In Prizren old town, near the Stone Bridge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gjakova",
+          "hotel": "Hotel in Gjakova",
+          "start": 4,
+          "nights": 1,
+          "area": "Near the old bazaar in Gjakova",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Peja",
+          "hotel": "Hotel in Peja",
+          "start": 5,
+          "nights": 2,
+          "area": "In Peja town, with views of the mountains",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Newborn monument, Mother Teresa Boulevard and National Library",
+          "notes": "A short walk covers the main sights.",
+          "where": "Pristina",
+          "book": "",
+          "place": "kosovo/pristina-centre"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Gracanica Monastery and Gazimestan",
+          "notes": "Dress modestly; a guide explains the history.",
+          "where": "Gracanica",
+          "book": "",
+          "place": "kosovo/gracanica-monastery"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Prizren old town and fortress",
+          "notes": "Climb to the fortress at sunset.",
+          "where": "Prizren",
+          "book": "",
+          "place": "kosovo/prizren-old-town"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Gjakova old bazaar",
+          "notes": "On the road between Prizren and Peja.",
+          "where": "Gjakova",
+          "book": "",
+          "place": "kosovo/gjakova-bazaar"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Visoki Decani Monastery",
+          "notes": "Bring ID; dress modestly and keep quiet.",
+          "where": "Decan",
+          "book": "",
+          "place": "kosovo/decani-monastery"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Patriarchate of Pec and Peja bazaar",
+          "notes": "Medieval frescoes and a lively bazaar.",
+          "where": "Peja",
+          "book": "",
+          "place": "kosovo/peja-patriarchate"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Rugova Gorge hike or via ferrata",
+          "notes": "Taxis run from Peja; the via ferrata needs gear.",
+          "where": "Rugova Gorge",
+          "book": "Yes - book via ferrata gear",
+          "place": "kosovo/rugova-gorge"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Pristina Airport (PRN)",
+          "to": "Pristina hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Pristina",
+          "to": "Prizren",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Prizren",
+          "to": "Gjakova",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Gjakova",
+          "to": "Peja",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Peja",
+          "to": "Pristina Airport (PRN)",
+          "time": "10:00",
+          "minutes": 100,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kosovo-complete-10d",
+      "title": "Complete Kosovo in 10 Days",
+      "summary": "Three nights in Pristina with Mitrovica, then Prizren, Gjakova and three nights in Peja.",
+      "days": 10,
+      "route": "Pristina > Prizren > Gjakova > Peja",
+      "arrive": "Pristina (PRN)",
+      "depart": "Pristina (PRN)",
+      "countries": [
+        "Kosovo"
+      ],
+      "regions": [],
+      "cities": [
+        "Pristina",
+        "Prizren",
+        "Gjakova",
+        "Peja"
+      ],
+      "imageQuery": "Kosovo mountains Peja",
+      "highlights": [
+        "National Library",
+        "Mitrovica and Prekaz",
+        "Prizren",
+        "Decani",
+        "Rugova Gorge"
+      ],
+      "destinationKeys": [
+        "kosovo",
+        "kosovo/pristina",
+        "kosovo/prizren",
+        "kosovo/gjakova",
+        "kosovo/peja"
+      ],
+      "hero": "kosovo/pristina",
+      "sources": [
+        "Take Your Backpack",
+        "Chasing the Donkey",
+        "Voice of Guides",
+        "Travel With Hello",
+        "Calvert Journal"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "adventure",
+        "outdoors",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Pristina",
+          "hotel": "Hotel in Pristina",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Mother Teresa Boulevard in central Pristina",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Prizren",
+          "hotel": "Hotel in Prizren",
+          "start": 3,
+          "nights": 2,
+          "area": "In Prizren old town, near the Stone Bridge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Gjakova",
+          "hotel": "Hotel in Gjakova",
+          "start": 5,
+          "nights": 1,
+          "area": "Near the old bazaar in Gjakova",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Peja",
+          "hotel": "Hotel in Peja",
+          "start": 6,
+          "nights": 3,
+          "area": "In Peja town, with views of the mountains",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Newborn monument, Mother Teresa Boulevard and National Library",
+          "notes": "A short walk covers the main sights.",
+          "where": "Pristina",
+          "book": "",
+          "place": "kosovo/pristina-centre"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Gracanica Monastery and Gazimestan",
+          "notes": "Dress modestly; a guide explains the history.",
+          "where": "Gracanica",
+          "book": "",
+          "place": "kosovo/gracanica-monastery"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Mitrovica bridge and Prekaz memorial",
+          "notes": "Go with a local guide.",
+          "where": "Mitrovica",
+          "book": "",
+          "place": "kosovo/mitrovica-prekaz"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "4h",
+          "name": "Prizren old town and fortress",
+          "notes": "Climb to the fortress at sunset.",
+          "where": "Prizren",
+          "book": "",
+          "place": "kosovo/prizren-old-town"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "10:30",
+          "duration": "2h",
+          "name": "Gjakova old bazaar",
+          "notes": "On the road between Prizren and Peja.",
+          "where": "Gjakova",
+          "book": "",
+          "place": "kosovo/gjakova-bazaar"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "2h",
+          "name": "Visoki Decani Monastery",
+          "notes": "Bring ID; dress modestly and keep quiet.",
+          "where": "Decan",
+          "book": "",
+          "place": "kosovo/decani-monastery"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "16:30",
+          "duration": "2.5h",
+          "name": "Patriarchate of Pec and Peja bazaar",
+          "notes": "Medieval frescoes and a lively bazaar.",
+          "where": "Peja",
+          "book": "",
+          "place": "kosovo/peja-patriarchate"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Rugova Gorge hike or via ferrata",
+          "notes": "Taxis run from Peja; the via ferrata needs gear.",
+          "where": "Rugova Gorge",
+          "book": "Yes - book via ferrata gear",
+          "place": "kosovo/rugova-gorge"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Pristina Airport (PRN)",
+          "to": "Pristina hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi or airport bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Pristina",
+          "to": "Prizren",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Prizren",
+          "to": "Gjakova",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Gjakova",
+          "to": "Peja",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Peja",
+          "to": "Pristina Airport (PRN)",
+          "time": "10:00",
+          "minutes": 100,
+          "carrier": "Intercity bus or minivan",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "kosovo/pristina-centre": {
+        "name": "Pristina centre, Newborn monument and National Library",
+        "description": "The compact capital, with a yellow Newborn sign, Mother Teresa Boulevard and a famous brutalist library.",
+        "details": "Pristina has a walkable centre. The Newborn monument is repainted each independence anniversary, and the National Library is an unusual concrete building covered in metal lattice. The Ethnographic Museum and the Skanderbeg statue are close. Evenings are lively on the pedestrian street.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kosovo/gracanica-monastery": {
+        "name": "Gracanica Monastery and Gazimestan",
+        "description": "A fourteenth-century Serbian Orthodox monastery and a medieval battlefield memorial near Pristina.",
+        "details": "Gracanica is a UNESCO-listed monastery with Byzantine-style frescoes and an enclave of Serbs around it. Gazimestan is a memorial on the Kosovo Polje plain. Dress modestly, and go with a guide who can explain the history. Both are a short drive from the capital.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kosovo/prizren-old-town": {
+        "name": "Prizren old town and fortress",
+        "description": "An Ottoman-style town on a river with a stone bridge, mosques and a hilltop fortress.",
+        "details": "Prizren is the most picturesque city in Kosovo, with the Stone Bridge, the Sinan Pasha Mosque and the Kalaja fortress above. The old bazaar has traditional crafts and filigree. The Dokufest film festival is in August. A walk up to the fortress at sunset gives the best view.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "kosovo/gjakova-bazaar": {
+        "name": "Gjakova old bazaar",
+        "description": "A rebuilt Ottoman bazaar with craft shops and a hamam, in the west of Kosovo.",
+        "details": "The Old Bazaar of Gjakova has cobbled lanes with cobblers, tinsmiths and spice sellers, plus the Hadum Mosque. It was damaged in the war and later restored. Allow a couple of hours on the way between Prizren and Peja.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kosovo/decani-monastery": {
+        "name": "Visoki Decani Monastery",
+        "description": "A medieval monastery with exceptional frescoes, guarded by international troops.",
+        "details": "Visoki Decani is a UNESCO-listed Serbian Orthodox monastery with a great marble church from the 14th century. A permit or ID may be needed at the checkpoint, and visitors should dress modestly and keep quiet. Monks sometimes sell wine and honey.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kosovo/peja-patriarchate": {
+        "name": "Peja and the Patriarchate of Pec",
+        "description": "A mountain-edge town with a historic monastery complex and a lively bazaar.",
+        "details": "The Patriarchate of Pec is a group of medieval churches with frescoes, once the seat of the Serbian church. Peja has a traditional bazaar, a clock tower and the Peja brewery. The Rugova mountains rise right behind the town.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "kosovo/rugova-gorge": {
+        "name": "Rugova Gorge and Via Ferrata",
+        "description": "A deep canyon in the Accursed Mountains with hiking, a zip line and a cliffside via ferrata.",
+        "details": "The Rugova Canyon begins just outside Peja and has hiking trails, climbing and Kosovo longest zip line. The via ferrata climbs the canyon wall with cables and ladders. The weather is cooler than the plains, and a taxi to the canyon is cheap.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "kosovo/mitrovica-prekaz": {
+        "name": "Mitrovica bridge and Prekaz memorial",
+        "description": "A divided city on the Ibar river, and the memorial site to the Jashari family.",
+        "details": "Mitrovica has a bridge that divides the Albanian and Serbian sides, and gives insight into the situation. Prekaz is a memorial site to the Jashari family, key figures in the 1998 conflict. Visit with a local guide and take care with sensitive topics.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "kosovo": {
+        "name": "Kosovo",
+        "description": "The youngest country in Europe, with Ottoman towns, medieval monasteries and mountains.",
+        "images": []
+      },
+      "kosovo/pristina": {
+        "name": "Pristina",
+        "description": "The lively capital with an unusual library and a young population.",
+        "images": []
+      },
+      "kosovo/prizren": {
+        "name": "Prizren",
+        "description": "An Ottoman riverside town beneath a hilltop fortress.",
+        "images": []
+      },
+      "kosovo/gjakova": {
+        "name": "Gjakova",
+        "description": "A town with a restored Ottoman bazaar.",
+        "images": []
+      },
+      "kosovo/peja": {
+        "name": "Peja",
+        "description": "A town at the foot of the Accursed Mountains, near the Rugova Gorge.",
+        "images": []
+      }
+    }
+  }
+}

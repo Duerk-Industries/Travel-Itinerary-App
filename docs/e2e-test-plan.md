@@ -6,6 +6,17 @@ This document is the living test plan for Playwright end-to-end tests. It covers
 
 Tests run against a real HTTP server (in-memory, Firebase emulator, or PostgreSQL). See [docs/faq/testing-and-coverage.md](faq/testing-and-coverage.md) for how to run each variant.
 
+## Running the current suite
+
+Run `npm run test:e2e` from the repository root. Playwright starts its own in-memory backend on port **4011** and Expo frontend on **4173**, then warms the browser bundle before starting the tests. No development server needs to be started manually. Local runs use two workers; use `npm run test:e2e -- --workers=1` when debugging.
+
+- `E2E_API_PORT` and `E2E_WEB_PORT` select other local ports when needed.
+- Existing servers are reused only with `E2E_REUSE_SERVERS=1`. They must use the same E2E configuration and API URL.
+- `E2E_MODE=1` makes Expo and the backend use the runner's environment rather than local `.env`/`.local_env` credentials. Mail and the provider-delivery notification worker are disabled in this browser-test environment; delivery has separate server tests. Application journeys stub the optional external photo API and exercise the normal image fallback.
+- Failed tests retain a trace and screenshot under `test-results/`. Open `npx playwright show-report`, or `npx playwright show-trace <trace.zip>`. Reports do not automatically open a browser or keep the test command running.
+
+Shared browser journeys live in `app/e2e/ui.ts`: `goHome`, `openTab`, `openTripWizard`, `advanceWizardStep`, and `addTripItem`. Phone tests use the bottom Add menu, including the optional-activity chooser, while desktop tests use the page-level Add controls. Wizard tests enter through All Trips → Create Trip → Customize before creating. Wait for the relevant element, response, or state transition; avoid `networkidle` and fixed sleeps in this real-time app.
+
 ---
 
 ## Mobile keyboard and selector layering regressions

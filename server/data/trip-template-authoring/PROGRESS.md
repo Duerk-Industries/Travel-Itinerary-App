@@ -30,7 +30,7 @@ Paste this to a fresh session:
 
 ---
 
-## Done (33 of 91)
+## Done (63 of 91)
 
 | # | Destination | File | Templates | Lengths | Notes |
 |---|---|---|---|---|---|
@@ -67,6 +67,36 @@ Paste this to a fresh session:
 | 31 | Canada | `canada-bundle.json` | 5 | 6, 7, 8, 10, 14 | Vancouver+Banff / Toronto-Montreal-Quebec City by train / Rockies to Vancouver / west to Toronto / coast to coast 14d. Moraine Lake shuttle reservation noted |
 | 32 | Chile | `chile-bundle.json` | 5 | 6, 7, 8, 10, 14 | Santiago+Valparaiso / Atacama / Torres del Paine / desert to glaciers / complete 14d. Region keys: santiago-metropolitan, antofagasta, magallanes |
 | 33 | China | `china-bundle.json` | 5 | 5, 7, 9, 12, 14 | Beijing / +Xi an / +Shanghai / +Chengdu pandas / grand 14d with Li River at Yangshuo. High-speed rail plus paired airport legs |
+| 34 | Colombia | `colombia-bundle.json` | 5 | 5, 7, 9, 12, 14 | Bogota+Cartagena / Medellin+Cartagena / big three / +Salento coffee 12d / +Tayrona 14d. Air hops as paired legs |
+| 35 | Croatia | `croatia-bundle.json` | 5 | 5, 7, 8, 10, 12 | Dubrovnik / Split-Hvar-Dubrovnik / Zagreb-Plitvice-Split-Dubrovnik / +Hvar / +Rovinj (Istria). Plitvice key is `croatia/plitvice-lakes` |
+| 36 | Cyprus | `cyprus-bundle.json` | 4 | 5, 7, 8, 10 | Paphos+Limassol / +Troodos / west to east with Larnaca / complete with Nicosia. Fly into PFO, out of LCA |
+| 37 | Czech Republic | `czech-republic-bundle.json` | 5 | 4, 5, 7, 9, 10 | Prague / +Cesky Krumlov / +Karlovy Vary / +Brno with Plzen / complete 10d |
+| 38 | Denmark | `denmark-bundle.json` | 5 | 4, 5, 7, 8, 10 | Copenhagen / +Odense / +Aarhus / +Skagen (depart AAL) / complete 10d. All by train |
+| 39 | Dominican Republic | `dominican-republic-bundle.json` | 5 | 5, 7, 8, 10, 12 | Santo Domingo+Punta Cana / +Samana / mountains-north-Samana (depart AZS) / complete 12d. Whale season Jan-Mar noted |
+| 40 | Ecuador | `ecuador-bundle.json` | 5 | 6, 7, 8, 10, 12 | Andes loop / Quito+Galapagos 7d / +Cuenca / Andes+Galapagos / complete 12d. Galapagos via Baltra, paired legs |
+| 41 | El Salvador | `el-salvador-bundle.json` | 4 | 4, 6, 8, 10 | San Salvador+El Tunco / +Santa Ana volcano / +Ruta de las Flores / +Suchitoto |
+| 42 | Eswatini | `eswatini-bundle.json` | 4 | 4, 5, 7, 9 | Arrive and depart via Johannesburg by road. Ezulwini key is `eswatini/ezulwini-valley`; Mlilwane, Malolotja, Hlane, Mkhaya |
+| 43 | Ethiopia | `ethiopia-bundle.json` | 5 | 5, 7, 10, 11, 13 | Addis+Lalibela / +Axum / northern circuit / +Simien Mountains / complete 13d. Domestic flights as paired legs |
+| 44 | Fiji | `fiji-bundle.json` | 5 | 5, 7, 10, 12, 14 | Mamanuca 5d / +Coral Coast / Yasawa-Mamanuca-Taveuni / +Suva (depart SUV) / complete 14d. Boats as Public Transit, flights as paired legs |
+| 45 | Finland | `finland-bundle.json` | 5 | 4, 5, 7, 8, 10 | Helsinki / +Turku / +Lapland by air / +Tampere / complete with Savonlinna. Depart RVN for Lapland ones; aurora season noted |
+| 46 | France | `france-bundle.json` | 6 | 5, 7, 8, 10, 12, 14 | Paris / +Loire / +Normandy / +Bordeaux (depart BOD) / to Nice 12d / grand 14d. All by TGV |
+| 47 | Germany | `germany-bundle.json` | 6 | 4, 5, 7, 8, 10, 12 | Berlin / Munich+Neuschwanstein / Berlin+Munich / +Heidelberg / +Cologne+Rhine / +Rothenburg 12d. Rothenburg key `germany/rothenburg-ob-der-tauber` |
+| 48 | Guatemala | `guatemala-bundle.json` | 5 | 5, 7, 8, 10, 12 | Antigua+Atitlan / +Tikal by air / +Chichicastenango / +Semuc Champey / complete 12d with Acatenango. Long shuttle days noted |
+| 49 | Honduras | `honduras-bundle.json` | 5 | 5, 7, 8, 10, 12 | Copan+Roatan / +Pico Bonito / Yojoa+Utila (depart LCE) / complete 10d / Utila+Roatan 12d. Ferry legs use transferType Other |
+| 50 | Hungary | `hungary-bundle.json` | 5 | 4, 5, 7, 8, 10 | Budapest / +Eger / +Balaton / Balaton+Pecs / complete 10d with Tokaj and Danube Bend |
+| 51 | Indonesia | `indonesia-bundle.json` | 5 | 7, 8, 10, 12, 14 | Bali 7d / Java+Bali / Bali+Gili Air / +Komodo 12d / grand 14d. Fast boats as Other, flights as paired legs. Bromo dropped (no logical slot) |
+| 52 | Ireland | `ireland-bundle.json` | 5 | 5, 7, 8, 10, 12 | Republic only (Northern Ireland to be covered under United Kingdom). Dublin+Galway / +Killarney / +Dingle / classic 10d / complete 12d |
+| 53 | Kazakhstan | `kazakhstan-bundle.json` | 4 | 4, 5, 7, 10 | Almaty / +Charyn+Kolsai (Saty) / +Astana / +Turkestan (depart HSA) |
+| 54 | Kenya | `kenya-bundle.json` | 5 | 5, 7, 8, 10, 12 | Mara 5d / Nakuru+Mara / classic Amboseli-Nakuru-Mara / +Diani / grand 12d. Fly Mara-Nairobi; depart Ukunda (UKA) for beach ones |
+| 55 | Kosovo | `kosovo-bundle.json` | 5 | 4, 5, 7, 8, 10 | Pristina+Prizren / Golden Triangle with Peja / +Gjakova / complete with Mitrovica and Rugova. By bus |
+| 56 | Madagascar | `madagascar-bundle.json` | 5 | 7, 8, 10, 12, 14 | Andasibe+baobabs / RN7 / +Ifaty / +Nosy Be / grand 14d. Very long road days; flights via Antananarivo noted |
+| 57 | Malaysia | `malaysia-bundle.json` | 5 | 5, 7, 10, 12, 14 | KL+Melaka / KL+Penang / peninsula loop / +Borneo (Sepilok, Kinabatangan, depart SDK) / grand 14d |
+| 58 | Maldives | `maldives-bundle.json` | 5 | 4, 5, 7, 8, 10 | Local-island guesthouse trips (Maafushi, Dhigurah) plus a South Ari resort. Boats as Other |
+| 59 | Mauritius | `mauritius-bundle.json` | 5 | 5, 7, 8, 10, 12 | North+Le Morne / east-to-north / classic 10d / complete with Flic en Flac |
+| 60 | Mexico | `mexico-bundle.json` | 6 | 5, 7, 8, 10, 12, 14 | CDMX / +Oaxaca / Yucatan / CDMX-Oaxaca-Tulum / colonial+Maya / grand 14d. Depart Cancun for Tulum endings |
+| 61 | Montenegro | `montenegro-bundle.json` | 5 | 4, 5, 7, 8, 10 | Kotor / +Budva / +Durmitor / +Ulcinj / complete. Arrive TIV, depart TGD on longer ones |
+| 62 | Mozambique | `mozambique-bundle.json` | 5 | 5, 7, 9, 12, 14 | Maputo+Tofo / +Vilanculos / +Ilha de Mocambique / +Ibo (depart POL). Security advice for Cabo Delgado noted |
+| 63 | Namibia | `namibia-bundle.json` | 5 | 5, 7, 9, 12, 14 | Self-drive circuits: Sossusvlei / +Swakopmund / +Etosha / +Damaraland / +Fish River Canyon. Kolmanskop dropped |
 
 ## Queue
 
@@ -74,14 +104,14 @@ Ordered by how many well-documented published itineraries exist, which is what t
 combining method in instructions 2.1 depends on.
 
 ### Next up
-No ordered items left: take the next country from "Remaining" below (Colombia first).
+No ordered items left: take the next country from "Remaining" below (Nepal first).
 
 ### Remaining (not yet ordered)
 
-Colombia, Croatia, Cyprus, Czech Republic, Denmark, Dominican
-Republic, Ecuador, El Salvador, Eswatini, Ethiopia, Fiji, Finland, France, Germany,
-Guatemala, Honduras, Hungary, Indonesia, Ireland, Kazakhstan, Kenya, Kosovo, Madagascar,
-Malaysia, Maldives, Mauritius, Mexico, Montenegro, Mozambique, Namibia, Nepal,
+
+
+
+Nepal,
 Netherlands, North Macedonia, Norway, Panama, Philippines, Portugal, Qatar, Romania,
 Rwanda, Saudi Arabia, Serbia, Singapore, Slovakia, South Korea, Sri Lanka, Sweden,
 Switzerland, Tanzania, Tunisia, Uganda, United Arab Emirates, United Kingdom

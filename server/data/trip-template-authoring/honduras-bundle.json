@@ -1,0 +1,1156 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Frommers, Backpackers Wanderlust, Moon Travel and Sally Sees itineraries for Honduras",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "honduras-copan-roatan-5d",
+      "title": "Copan Ruins and Roatan in 5 Days",
+      "summary": "A Maya city, then a Caribbean reef island.",
+      "days": 5,
+      "route": "Copan Ruinas > Roatan",
+      "arrive": "San Pedro Sula (SAP)",
+      "depart": "Roatan (RTB)",
+      "countries": [
+        "Honduras"
+      ],
+      "regions": [
+        "Bay Islands"
+      ],
+      "cities": [
+        "Copan Ruinas",
+        "Roatan"
+      ],
+      "imageQuery": "Copan ruins macaw Honduras",
+      "highlights": [
+        "Copan ruins",
+        "Macaw Mountain",
+        "West Bay beach",
+        "Reef snorkelling"
+      ],
+      "destinationKeys": [
+        "honduras",
+        "honduras/copan-ruinas",
+        "honduras/bay-islands",
+        "honduras/roatan"
+      ],
+      "hero": "honduras/copan-ruinas",
+      "sources": [
+        "Frommers",
+        "Backpackers Wanderlust",
+        "Moon Travel",
+        "Sally Sees",
+        "Journey Latin America"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Copan Ruinas",
+          "hotel": "Hotel in Copan Ruinas",
+          "start": 0,
+          "nights": 2,
+          "area": "In Copan Ruinas near the park, a short walk from restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Roatan",
+          "hotel": "Hotel in Roatan",
+          "start": 2,
+          "nights": 2,
+          "area": "In West Bay or West End on Roatan, close to the reef",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3.5h",
+          "name": "Copan Maya ruins",
+          "notes": "Go early before the heat and take a guide; look for macaws.",
+          "where": "Copan",
+          "book": "",
+          "place": "honduras/copan-ruins"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Macaw Mountain and hot springs",
+          "notes": "An easy afternoon after the ruins.",
+          "where": "Copan Ruinas",
+          "book": "",
+          "place": "honduras/macaw-mountain"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "West Bay beach and reef snorkelling",
+          "notes": "Cruise-ship days are busier at some spots.",
+          "where": "Roatan",
+          "book": "",
+          "place": "honduras/roatan-west-bay"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San Pedro Sula Airport (SAP)",
+          "to": "Copan Ruinas hotel",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Copan Ruinas",
+          "to": "San Pedro Sula Airport (SAP)",
+          "time": "06:00",
+          "minutes": 210,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "San Pedro Sula airport",
+          "to": "San Pedro Sula Airport (SAP)",
+          "time": "11:30",
+          "minutes": 5,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Roatan Airport (RTB)",
+          "to": "Roatan hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Roatan hotel",
+          "to": "Roatan Airport (RTB)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "honduras-copan-la-ceiba-roatan-7d",
+      "title": "Maya Ruins, Rainforest and Reef in 7 Days",
+      "summary": "Copan, Pico Bonito near La Ceiba and the Bay Island of Roatan.",
+      "days": 7,
+      "route": "Copan Ruinas > La Ceiba > Roatan",
+      "arrive": "San Pedro Sula (SAP)",
+      "depart": "Roatan (RTB)",
+      "countries": [
+        "Honduras"
+      ],
+      "regions": [
+        "Bay Islands"
+      ],
+      "cities": [
+        "Copan Ruinas",
+        "La Ceiba",
+        "Roatan"
+      ],
+      "imageQuery": "Pico Bonito Honduras rainforest",
+      "highlights": [
+        "Copan ruins",
+        "Pico Bonito",
+        "Cayos Cochinos",
+        "Roatan snorkelling"
+      ],
+      "destinationKeys": [
+        "honduras",
+        "honduras/copan-ruinas",
+        "honduras/la-ceiba",
+        "honduras/bay-islands",
+        "honduras/roatan"
+      ],
+      "hero": "honduras/la-ceiba",
+      "sources": [
+        "Frommers",
+        "Backpackers Wanderlust",
+        "Moon Travel",
+        "Sally Sees",
+        "Journey Latin America"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Copan Ruinas",
+          "hotel": "Hotel in Copan Ruinas",
+          "start": 0,
+          "nights": 2,
+          "area": "In Copan Ruinas near the park, a short walk from restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Ceiba",
+          "hotel": "Lodge near Pico Bonito",
+          "start": 2,
+          "nights": 2,
+          "area": "In an ecolodge near Pico Bonito, or in La Ceiba town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Roatan",
+          "hotel": "Hotel in Roatan",
+          "start": 4,
+          "nights": 2,
+          "area": "In West Bay or West End on Roatan, close to the reef",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3.5h",
+          "name": "Copan Maya ruins",
+          "notes": "Go early before the heat and take a guide; look for macaws.",
+          "where": "Copan",
+          "book": "",
+          "place": "honduras/copan-ruins"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Macaw Mountain and hot springs",
+          "notes": "An easy afternoon after the ruins.",
+          "where": "Copan Ruinas",
+          "book": "",
+          "place": "honduras/macaw-mountain"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Pico Bonito waterfall hike or Cangrejal rafting",
+          "notes": "Rain is heavier from October to January.",
+          "where": "Pico Bonito",
+          "book": "Yes - book a guide or raft",
+          "place": "honduras/pico-bonito"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "West Bay beach and reef snorkelling",
+          "notes": "Cruise-ship days are busier at some spots.",
+          "where": "Roatan",
+          "book": "",
+          "place": "honduras/roatan-west-bay"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San Pedro Sula Airport (SAP)",
+          "to": "Copan Ruinas hotel",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Copan Ruinas",
+          "to": "La Ceiba",
+          "time": "07:00",
+          "minutes": 360,
+          "carrier": "Shuttle or private driver",
+          "notes": "A long road day; stop at Lake Yojoa to break it.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Other",
+          "from": "La Ceiba",
+          "to": "Roatan",
+          "time": "09:30",
+          "minutes": 90,
+          "carrier": "Passenger ferry",
+          "notes": "The last ferry leaves in the afternoon; confirm times.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Roatan hotel",
+          "to": "Roatan Airport (RTB)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "honduras-copan-yojoa-la-ceiba-utila-8d",
+      "title": "Honduras with Lake Yojoa and Utila in 8 Days",
+      "summary": "Copan, Lake Yojoa, La Ceiba and the diving island of Utila.",
+      "days": 8,
+      "route": "Copan Ruinas > Lake Yojoa > La Ceiba > Utila",
+      "arrive": "San Pedro Sula (SAP)",
+      "depart": "La Ceiba (LCE)",
+      "countries": [
+        "Honduras"
+      ],
+      "regions": [
+        "Bay Islands"
+      ],
+      "cities": [
+        "Copan Ruinas",
+        "Lake Yojoa",
+        "La Ceiba",
+        "Utila"
+      ],
+      "imageQuery": "Utila island Honduras diving",
+      "highlights": [
+        "Copan ruins",
+        "Lake Yojoa",
+        "Pico Bonito",
+        "Utila diving"
+      ],
+      "destinationKeys": [
+        "honduras",
+        "honduras/copan-ruinas",
+        "honduras/lake-yojoa",
+        "honduras/la-ceiba",
+        "honduras/bay-islands",
+        "honduras/utila"
+      ],
+      "hero": "honduras/utila",
+      "sources": [
+        "Frommers",
+        "Backpackers Wanderlust",
+        "Moon Travel",
+        "Sally Sees",
+        "Journey Latin America"
+      ],
+      "pace": "B",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Copan Ruinas",
+          "hotel": "Hotel in Copan Ruinas",
+          "start": 0,
+          "nights": 2,
+          "area": "In Copan Ruinas near the park, a short walk from restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Yojoa",
+          "hotel": "Lodge at Lake Yojoa",
+          "start": 2,
+          "nights": 1,
+          "area": "On the lake shore at Los Naranjos, with views and a brewery",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Ceiba",
+          "hotel": "Lodge near Pico Bonito",
+          "start": 3,
+          "nights": 2,
+          "area": "In an ecolodge near Pico Bonito, or in La Ceiba town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Utila",
+          "hotel": "Hotel in Utila",
+          "start": 5,
+          "nights": 2,
+          "area": "In Utila town, a short walk from dive shops",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3.5h",
+          "name": "Copan Maya ruins",
+          "notes": "Go early before the heat and take a guide; look for macaws.",
+          "where": "Copan",
+          "book": "",
+          "place": "honduras/copan-ruins"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Macaw Mountain and hot springs",
+          "notes": "An easy afternoon after the ruins.",
+          "where": "Copan Ruinas",
+          "book": "",
+          "place": "honduras/macaw-mountain"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Lake Yojoa birding and Pulhapanzak falls",
+          "notes": "Early morning is best for birds.",
+          "where": "Lake Yojoa",
+          "book": "",
+          "place": "honduras/lake-yojoa"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Pico Bonito waterfall hike or Cangrejal rafting",
+          "notes": "Rain is heavier from October to January.",
+          "where": "Pico Bonito",
+          "book": "Yes - book a guide or raft",
+          "place": "honduras/pico-bonito"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Utila dive or snorkel (whale shark season)",
+          "notes": "Whale sharks are most frequent March-April and October.",
+          "where": "Utila",
+          "book": "Yes - book dives",
+          "place": "honduras/utila-diving"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San Pedro Sula Airport (SAP)",
+          "to": "Copan Ruinas hotel",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Copan Ruinas",
+          "to": "Lake Yojoa",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Lake Yojoa",
+          "to": "La Ceiba",
+          "time": "08:30",
+          "minutes": 240,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Other",
+          "from": "La Ceiba",
+          "to": "Utila",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Other",
+          "from": "Utila",
+          "to": "La Ceiba",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "La Ceiba port",
+          "to": "La Ceiba Airport (LCE)",
+          "time": "10:30",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "honduras-complete-10d",
+      "title": "Complete Honduras in 10 Days",
+      "summary": "Copan, Lake Yojoa, Pico Bonito and three nights diving on Utila.",
+      "days": 10,
+      "route": "Copan Ruinas > Lake Yojoa > La Ceiba > Utila",
+      "arrive": "San Pedro Sula (SAP)",
+      "depart": "La Ceiba (LCE)",
+      "countries": [
+        "Honduras"
+      ],
+      "regions": [
+        "Bay Islands"
+      ],
+      "cities": [
+        "Copan Ruinas",
+        "Lake Yojoa",
+        "La Ceiba",
+        "Utila"
+      ],
+      "imageQuery": "Honduras Caribbean coast Utila beach",
+      "highlights": [
+        "Copan ruins",
+        "Lake Yojoa",
+        "Cayos Cochinos",
+        "Pico Bonito",
+        "Utila whale sharks"
+      ],
+      "destinationKeys": [
+        "honduras",
+        "honduras/copan-ruinas",
+        "honduras/lake-yojoa",
+        "honduras/la-ceiba",
+        "honduras/bay-islands",
+        "honduras/utila"
+      ],
+      "hero": "honduras/lake-yojoa",
+      "sources": [
+        "Frommers",
+        "Backpackers Wanderlust",
+        "Moon Travel",
+        "Sally Sees",
+        "Journey Latin America"
+      ],
+      "pace": "R",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Copan Ruinas",
+          "hotel": "Hotel in Copan Ruinas",
+          "start": 0,
+          "nights": 2,
+          "area": "In Copan Ruinas near the park, a short walk from restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Yojoa",
+          "hotel": "Lodge at Lake Yojoa",
+          "start": 2,
+          "nights": 2,
+          "area": "On the lake shore at Los Naranjos, with views and a brewery",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Ceiba",
+          "hotel": "Lodge near Pico Bonito",
+          "start": 4,
+          "nights": 2,
+          "area": "In an ecolodge near Pico Bonito, or in La Ceiba town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Utila",
+          "hotel": "Hotel in Utila",
+          "start": 6,
+          "nights": 3,
+          "area": "In Utila town, a short walk from dive shops",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3.5h",
+          "name": "Copan Maya ruins",
+          "notes": "Go early before the heat and take a guide; look for macaws.",
+          "where": "Copan",
+          "book": "",
+          "place": "honduras/copan-ruins"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Macaw Mountain and hot springs",
+          "notes": "An easy afternoon after the ruins.",
+          "where": "Copan Ruinas",
+          "book": "",
+          "place": "honduras/macaw-mountain"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Lake Yojoa birding and Pulhapanzak falls",
+          "notes": "Early morning is best for birds.",
+          "where": "Lake Yojoa",
+          "book": "",
+          "place": "honduras/lake-yojoa"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Pico Bonito waterfall hike or Cangrejal rafting",
+          "notes": "Rain is heavier from October to January.",
+          "where": "Pico Bonito",
+          "book": "Yes - book a guide or raft",
+          "place": "honduras/pico-bonito"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Utila dive or snorkel (whale shark season)",
+          "notes": "Whale sharks are most frequent March-April and October.",
+          "where": "Utila",
+          "book": "Yes - book dives",
+          "place": "honduras/utila-diving"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Second dive day",
+          "notes": "Whale sharks are most frequent March-April and October.",
+          "where": "Utila",
+          "book": "Yes - book dives",
+          "place": "honduras/utila-diving"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San Pedro Sula Airport (SAP)",
+          "to": "Copan Ruinas hotel",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Copan Ruinas",
+          "to": "Lake Yojoa",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lake Yojoa",
+          "to": "La Ceiba",
+          "time": "08:30",
+          "minutes": 240,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Other",
+          "from": "La Ceiba",
+          "to": "Utila",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Other",
+          "from": "Utila",
+          "to": "La Ceiba",
+          "time": "09:00",
+          "minutes": 60,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "La Ceiba port",
+          "to": "La Ceiba Airport (LCE)",
+          "time": "10:30",
+          "minutes": 20,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "honduras-grand-12d",
+      "title": "Honduras Grand Tour in 12 Days",
+      "summary": "Copan, Lake Yojoa, La Ceiba, Utila and Roatan.",
+      "days": 12,
+      "route": "Copan Ruinas > Lake Yojoa > La Ceiba > Utila > Roatan",
+      "arrive": "San Pedro Sula (SAP)",
+      "depart": "Roatan (RTB)",
+      "countries": [
+        "Honduras"
+      ],
+      "regions": [
+        "Bay Islands"
+      ],
+      "cities": [
+        "Copan Ruinas",
+        "Lake Yojoa",
+        "La Ceiba",
+        "Utila",
+        "Roatan"
+      ],
+      "imageQuery": "Roatan West Bay beach Honduras",
+      "highlights": [
+        "Copan ruins",
+        "Lake Yojoa",
+        "Pico Bonito",
+        "Cayos Cochinos",
+        "Utila",
+        "Roatan"
+      ],
+      "destinationKeys": [
+        "honduras",
+        "honduras/copan-ruinas",
+        "honduras/lake-yojoa",
+        "honduras/la-ceiba",
+        "honduras/bay-islands",
+        "honduras/utila",
+        "honduras/roatan"
+      ],
+      "hero": "honduras/bay-islands",
+      "sources": [
+        "Frommers",
+        "Backpackers Wanderlust",
+        "Moon Travel",
+        "Sally Sees",
+        "Journey Latin America"
+      ],
+      "pace": "R",
+      "interests": [
+        "adventure",
+        "outdoors",
+        "culture",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Copan Ruinas",
+          "hotel": "Hotel in Copan Ruinas",
+          "start": 0,
+          "nights": 2,
+          "area": "In Copan Ruinas near the park, a short walk from restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Lake Yojoa",
+          "hotel": "Lodge at Lake Yojoa",
+          "start": 2,
+          "nights": 2,
+          "area": "On the lake shore at Los Naranjos, with views and a brewery",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "La Ceiba",
+          "hotel": "Lodge near Pico Bonito",
+          "start": 4,
+          "nights": 2,
+          "area": "In an ecolodge near Pico Bonito, or in La Ceiba town",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Utila",
+          "hotel": "Hotel in Utila",
+          "start": 6,
+          "nights": 3,
+          "area": "In Utila town, a short walk from dive shops",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Roatan",
+          "hotel": "Hotel in Roatan",
+          "start": 9,
+          "nights": 2,
+          "area": "In West Bay or West End on Roatan, close to the reef",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "08:00",
+          "duration": "3.5h",
+          "name": "Copan Maya ruins",
+          "notes": "Go early before the heat and take a guide; look for macaws.",
+          "where": "Copan",
+          "book": "",
+          "place": "honduras/copan-ruins"
+        },
+        {
+          "day": 1,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Macaw Mountain and hot springs",
+          "notes": "An easy afternoon after the ruins.",
+          "where": "Copan Ruinas",
+          "book": "",
+          "place": "honduras/macaw-mountain"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "07:00",
+          "duration": "4h",
+          "name": "Lake Yojoa birding and Pulhapanzak falls",
+          "notes": "Early morning is best for birds.",
+          "where": "Lake Yojoa",
+          "book": "",
+          "place": "honduras/lake-yojoa"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "6h",
+          "name": "Pico Bonito waterfall hike or Cangrejal rafting",
+          "notes": "Rain is heavier from October to January.",
+          "where": "Pico Bonito",
+          "book": "Yes - book a guide or raft",
+          "place": "honduras/pico-bonito"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Cayos Cochinos snorkel afternoon",
+          "notes": "Snorkelling and a Garifuna village stop.",
+          "where": "Cayos Cochinos",
+          "book": "Yes - book a boat",
+          "place": "honduras/la-ceiba-cayos"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Utila dive or snorkel (whale shark season)",
+          "notes": "Whale sharks are most frequent March-April and October.",
+          "where": "Utila",
+          "book": "Yes - book dives",
+          "place": "honduras/utila-diving"
+        },
+        {
+          "day": 10,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "West Bay beach and reef snorkelling",
+          "notes": "Cruise-ship days are busier at some spots.",
+          "where": "Roatan",
+          "book": "",
+          "place": "honduras/roatan-west-bay"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "San Pedro Sula Airport (SAP)",
+          "to": "Copan Ruinas hotel",
+          "time": "10:00",
+          "minutes": 210,
+          "carrier": "Shuttle or private transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Copan Ruinas",
+          "to": "Lake Yojoa",
+          "time": "08:00",
+          "minutes": 210,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Lake Yojoa",
+          "to": "La Ceiba",
+          "time": "08:30",
+          "minutes": 240,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Other",
+          "from": "La Ceiba",
+          "to": "Utila",
+          "time": "09:30",
+          "minutes": 60,
+          "carrier": "Passenger ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Other",
+          "from": "Utila",
+          "to": "Roatan",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Passenger ferry",
+          "notes": "Check inter-island ferry timetables; sailings are limited.",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Roatan hotel",
+          "to": "Roatan Airport (RTB)",
+          "time": "11:00",
+          "minutes": 25,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "honduras/copan-ruins": {
+        "name": "Copan Maya ruins",
+        "description": "A major Maya city famed for its carved stelae, hieroglyphic stairway and macaws.",
+        "details": "Copan was a Classic-period Maya centre, with plazas, a ball court and the Hieroglyphic Stairway, the longest Maya inscription known. Scarlet macaws fly around the site. The sculpture museum has a full-scale replica of the Rosalila temple. A guide brings the carvings to life.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "honduras/macaw-mountain": {
+        "name": "Macaw Mountain bird park and hot springs",
+        "description": "A rescue centre for macaws and tropical birds, with nearby hot springs.",
+        "details": "Macaw Mountain rehabilitates parrots and toucans in a forest garden near the town of Copan Ruinas. Luna Jaguar hot springs offer a soak in the forested hills. Both are an easy afternoon after the ruins.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "honduras/lake-yojoa": {
+        "name": "Lake Yojoa birding and waterfalls",
+        "description": "The largest lake in Honduras, with bird-watching, a craft brewery and Pulhapanzak falls.",
+        "details": "Lake Yojoa is a highland lake with more than 400 bird species, boat tours and kayaking. The Pulhapanzak waterfall can be walked behind. A lakeside lodge with a brewery is a classic overnight stop between Copan and the coast.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "honduras/pico-bonito": {
+        "name": "Pico Bonito National Park and Cangrejal River",
+        "description": "A rainforest park with waterfall hikes and white-water rafting near La Ceiba.",
+        "details": "Pico Bonito protects cloud forest above the Caribbean coast, with trails to waterfalls and ecolodges. The Cangrejal River has class II to IV rapids for rafting. Hikes are best in the morning, and the rainy season is from October to January.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "honduras/la-ceiba-cayos": {
+        "name": "La Ceiba and Cayos Cochinos",
+        "description": "A Caribbean port city, with boat trips to a marine reserve of coral cays.",
+        "details": "La Ceiba is the hub for the north coast and the ferry port for the Bay Islands. Day boats go to the Cayos Cochinos reserve for snorkelling and white-sand cays, and the Garifuna village of Sambo Creek offers music and food.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "honduras/utila-diving": {
+        "name": "Utila diving and whale sharks",
+        "description": "A backpacker island known for cheap diving and year-round whale shark sightings.",
+        "details": "Utila offers dive courses and fun dives on a healthy reef, and whale sharks are seen most often between March and April and in October. The island is small and low-key. Bikes and golf carts are the transport.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "honduras/roatan-west-bay": {
+        "name": "Roatan West Bay beach and snorkelling",
+        "description": "A long white-sand beach beside the Mesoamerican Barrier Reef.",
+        "details": "West Bay is the best beach on Roatan, with calm water and reef snorkelling just offshore. Other highlights are the ziplines at Mahogany Bay, a sloth and monkey sanctuary and the town of West End. Cruise ship days are busier at some spots.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "honduras": {
+        "name": "Honduras",
+        "description": "A country of Maya ruins, cloud forest and the Bay Islands reef.",
+        "images": []
+      },
+      "honduras/copan-ruinas": {
+        "name": "Copan Ruinas",
+        "description": "A small cobbled town beside the Maya ruins.",
+        "images": []
+      },
+      "honduras/lake-yojoa": {
+        "name": "Lake Yojoa",
+        "description": "A highland lake of birds, waterfalls and local brewing.",
+        "images": []
+      },
+      "honduras/la-ceiba": {
+        "name": "La Ceiba",
+        "description": "The north-coast port and base for Pico Bonito and the Bay Island ferries.",
+        "images": []
+      },
+      "honduras/bay-islands": {
+        "name": "Bay Islands",
+        "description": "Caribbean islands of coral reef, diving and whale sharks.",
+        "images": []
+      },
+      "honduras/utila": {
+        "name": "Utila",
+        "description": "A low-key diving island.",
+        "images": []
+      },
+      "honduras/roatan": {
+        "name": "Roatan",
+        "description": "The largest Bay Island, with white-sand beaches and snorkelling.",
+        "images": []
+      }
+    }
+  }
+}

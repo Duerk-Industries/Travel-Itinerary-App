@@ -20,6 +20,9 @@ const resolvePluginFromApp = (moduleName, appDir) => {
 };
 
 const loadEnv = (appDir) => {
+  // Test runner configuration is authoritative; never bake local service URLs
+  // or credentials into an isolated E2E browser bundle.
+  if (process.env.E2E_MODE === '1') return;
   const workspaceRoot = path.resolve(appDir, '..');
   dotenv.config({ path: path.join(workspaceRoot, '.env'), override: true });
   dotenv.config({ path: path.join(workspaceRoot, 'server', '.env'), override: true });

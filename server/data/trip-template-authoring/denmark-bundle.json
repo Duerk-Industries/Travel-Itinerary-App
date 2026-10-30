@@ -1,0 +1,1159 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Travel Melodies, TravelStride, Baltic Travel Company and Choose Where itineraries for Denmark",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "denmark-copenhagen-4d",
+      "title": "Copenhagen City Break in 4 Days",
+      "summary": "Harbour, castles, Tivoli and Danish food.",
+      "days": 4,
+      "route": "Copenhagen",
+      "arrive": "Copenhagen (CPH)",
+      "depart": "Copenhagen (CPH)",
+      "countries": [
+        "Denmark"
+      ],
+      "regions": [],
+      "cities": [
+        "Copenhagen"
+      ],
+      "imageQuery": "Nyhavn Copenhagen colourful houses",
+      "highlights": [
+        "Nyhavn",
+        "Tivoli Gardens",
+        "Rosenborg Castle",
+        "Smorrebrod"
+      ],
+      "destinationKeys": [
+        "denmark",
+        "denmark/copenhagen"
+      ],
+      "hero": "denmark/copenhagen",
+      "sources": [
+        "Travel Melodies",
+        "TravelStride",
+        "Baltic Travel Company",
+        "Choose Where",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Copenhagen",
+          "hotel": "Hotel in Copenhagen",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Nyhavn, Vesterbro or Norrebro, close to the metro",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:30",
+          "duration": "3h",
+          "name": "Nyhavn and harbour canal tour",
+          "notes": "See the Little Mermaid and Opera House from the water.",
+          "where": "Nyhavn, Copenhagen",
+          "book": "",
+          "place": "denmark/nyhavn-harbour"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Rosenborg Castle",
+          "notes": "See the crown jewels in the King Garden.",
+          "where": "Copenhagen",
+          "book": "",
+          "place": "denmark/tivoli-rosenborg"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "12:00",
+          "duration": "3h",
+          "name": "Torvehallerne smorrebrod lunch and design shops",
+          "notes": "Rent a bike to see more.",
+          "where": "Copenhagen",
+          "book": "",
+          "place": "denmark/copenhagen-food-design"
+        },
+        {
+          "day": 2,
+          "type": "Fun & Games",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Tivoli Gardens",
+          "notes": "Best in the evening when it is lit.",
+          "where": "Copenhagen",
+          "book": "",
+          "place": "denmark/tivoli-rosenborg"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Copenhagen Airport (CPH)",
+          "to": "Copenhagen hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Copenhagen hotel area",
+          "to": "Copenhagen Airport (CPH)",
+          "time": "12:00",
+          "minutes": 25,
+          "carrier": "Metro, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "denmark-copenhagen-odense-5d",
+      "title": "Copenhagen and Odense in 5 Days",
+      "summary": "Copenhagen sights, a Viking day at Roskilde and Hans Christian Andersen in Odense.",
+      "days": 5,
+      "route": "Copenhagen > Odense",
+      "arrive": "Copenhagen (CPH)",
+      "depart": "Copenhagen (CPH)",
+      "countries": [
+        "Denmark"
+      ],
+      "regions": [
+        "Zealand",
+        "Funen"
+      ],
+      "cities": [
+        "Copenhagen",
+        "Odense"
+      ],
+      "imageQuery": "Odense Denmark Andersen",
+      "highlights": [
+        "Nyhavn",
+        "Roskilde Viking ships",
+        "Tivoli",
+        "Odense"
+      ],
+      "destinationKeys": [
+        "denmark",
+        "denmark/copenhagen",
+        "denmark/zealand",
+        "denmark/funen",
+        "denmark/odense"
+      ],
+      "hero": "denmark/funen",
+      "sources": [
+        "Travel Melodies",
+        "TravelStride",
+        "Baltic Travel Company",
+        "Choose Where",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Copenhagen",
+          "hotel": "Hotel in Copenhagen",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Nyhavn, Vesterbro or Norrebro, close to the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Odense",
+          "hotel": "Hotel in Odense",
+          "start": 2,
+          "nights": 2,
+          "area": "In the pedestrian centre, near the Andersen museum",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Nyhavn and harbour canal tour",
+          "notes": "See the Little Mermaid and Opera House from the water.",
+          "where": "Nyhavn, Copenhagen",
+          "book": "",
+          "place": "denmark/nyhavn-harbour"
+        },
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Roskilde Viking ships and cathedral",
+          "notes": "About 25 minutes by train from Copenhagen.",
+          "where": "Roskilde",
+          "book": "",
+          "place": "denmark/roskilde-vikings"
+        },
+        {
+          "day": 1,
+          "type": "Fun & Games",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Tivoli Gardens",
+          "notes": "Best in the evening when it is lit.",
+          "where": "Copenhagen",
+          "book": "",
+          "place": "denmark/tivoli-rosenborg"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Odense Andersen museum and old town",
+          "notes": "Walk the fairy-tale lanes.",
+          "where": "Odense",
+          "book": "",
+          "place": "denmark/odense-andersen"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Funen Village and Egeskov area day",
+          "notes": "Walk the fairy-tale lanes.",
+          "where": "Odense",
+          "book": "",
+          "place": "denmark/odense-andersen"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Copenhagen Airport (CPH)",
+          "to": "Copenhagen hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Copenhagen",
+          "to": "Odense",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "DSB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Odense",
+          "to": "Copenhagen Airport (CPH)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "DSB train",
+          "notes": "Direct trains reach the airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "denmark-copenhagen-odense-aarhus-7d",
+      "title": "Copenhagen, Odense and Aarhus in 7 Days",
+      "summary": "Capital, fairytale city and Jutland second city by train.",
+      "days": 7,
+      "route": "Copenhagen > Odense > Aarhus",
+      "arrive": "Copenhagen (CPH)",
+      "depart": "Copenhagen (CPH)",
+      "countries": [
+        "Denmark"
+      ],
+      "regions": [
+        "Zealand",
+        "Funen",
+        "Jutland"
+      ],
+      "cities": [
+        "Copenhagen",
+        "Odense",
+        "Aarhus"
+      ],
+      "imageQuery": "Aarhus ARoS rainbow panorama",
+      "highlights": [
+        "Nyhavn",
+        "Roskilde",
+        "Odense",
+        "ARoS",
+        "Den Gamle By"
+      ],
+      "destinationKeys": [
+        "denmark",
+        "denmark/copenhagen",
+        "denmark/zealand",
+        "denmark/funen",
+        "denmark/odense",
+        "denmark/jutland",
+        "denmark/aarhus"
+      ],
+      "hero": "denmark/aarhus",
+      "sources": [
+        "Travel Melodies",
+        "TravelStride",
+        "Baltic Travel Company",
+        "Choose Where",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Copenhagen",
+          "hotel": "Hotel in Copenhagen",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Nyhavn, Vesterbro or Norrebro, close to the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Odense",
+          "hotel": "Hotel in Odense",
+          "start": 3,
+          "nights": 2,
+          "area": "In the pedestrian centre, near the Andersen museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aarhus",
+          "hotel": "Hotel in Aarhus",
+          "start": 5,
+          "nights": 1,
+          "area": "In the Latin Quarter or near the harbour",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:30",
+          "duration": "3h",
+          "name": "Nyhavn and harbour canal tour",
+          "notes": "See the Little Mermaid and Opera House from the water.",
+          "where": "Nyhavn, Copenhagen",
+          "book": "",
+          "place": "denmark/nyhavn-harbour"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Roskilde Viking ships and cathedral",
+          "notes": "About 25 minutes by train from Copenhagen.",
+          "where": "Roskilde",
+          "book": "",
+          "place": "denmark/roskilde-vikings"
+        },
+        {
+          "day": 2,
+          "type": "Fun & Games",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Tivoli Gardens",
+          "notes": "Best in the evening when it is lit.",
+          "where": "Copenhagen",
+          "book": "",
+          "place": "denmark/tivoli-rosenborg"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Odense Andersen museum and old town",
+          "notes": "Walk the fairy-tale lanes.",
+          "where": "Odense",
+          "book": "",
+          "place": "denmark/odense-andersen"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "ARoS art museum and Rainbow Panorama",
+          "notes": "The rainbow walkway is on the roof.",
+          "where": "Aarhus",
+          "book": "",
+          "place": "denmark/aarhus-aros"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Den Gamle By open-air museum",
+          "notes": "Allow three hours.",
+          "where": "Aarhus",
+          "book": "",
+          "place": "denmark/den-gamle-by"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Copenhagen Airport (CPH)",
+          "to": "Copenhagen hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Copenhagen",
+          "to": "Odense",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "DSB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Odense",
+          "to": "Aarhus",
+          "time": "09:30",
+          "minutes": 105,
+          "carrier": "DSB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Aarhus",
+          "to": "Copenhagen Airport (CPH)",
+          "time": "09:00",
+          "minutes": 195,
+          "carrier": "DSB train",
+          "notes": "Direct trains continue to the airport.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "denmark-skagen-8d",
+      "title": "Denmark to the Northern Tip in 8 Days",
+      "summary": "Copenhagen, Odense, Aarhus and Skagen, finishing at Aalborg.",
+      "days": 8,
+      "route": "Copenhagen > Odense > Aarhus > Skagen",
+      "arrive": "Copenhagen (CPH)",
+      "depart": "Aalborg (AAL)",
+      "countries": [
+        "Denmark"
+      ],
+      "regions": [
+        "Zealand",
+        "Funen",
+        "Jutland"
+      ],
+      "cities": [
+        "Copenhagen",
+        "Odense",
+        "Aarhus",
+        "Skagen"
+      ],
+      "imageQuery": "Skagen Grenen beach Denmark",
+      "highlights": [
+        "Nyhavn",
+        "Odense",
+        "ARoS",
+        "Legoland",
+        "Skagen Grenen"
+      ],
+      "destinationKeys": [
+        "denmark",
+        "denmark/copenhagen",
+        "denmark/zealand",
+        "denmark/funen",
+        "denmark/odense",
+        "denmark/jutland",
+        "denmark/aarhus",
+        "denmark/skagen"
+      ],
+      "hero": "denmark/skagen",
+      "sources": [
+        "Travel Melodies",
+        "TravelStride",
+        "Baltic Travel Company",
+        "Choose Where",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Copenhagen",
+          "hotel": "Hotel in Copenhagen",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Nyhavn, Vesterbro or Norrebro, close to the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Odense",
+          "hotel": "Hotel in Odense",
+          "start": 3,
+          "nights": 1,
+          "area": "In the pedestrian centre, near the Andersen museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aarhus",
+          "hotel": "Hotel in Aarhus",
+          "start": 4,
+          "nights": 2,
+          "area": "In the Latin Quarter or near the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Skagen",
+          "hotel": "Hotel in Skagen",
+          "start": 6,
+          "nights": 1,
+          "area": "In Skagen town, near the harbour and old houses",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:30",
+          "duration": "3h",
+          "name": "Nyhavn and harbour canal tour",
+          "notes": "See the Little Mermaid and Opera House from the water.",
+          "where": "Nyhavn, Copenhagen",
+          "book": "",
+          "place": "denmark/nyhavn-harbour"
+        },
+        {
+          "day": 1,
+          "type": "Fun & Games",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Tivoli Gardens",
+          "notes": "Best in the evening when it is lit.",
+          "where": "Copenhagen",
+          "book": "",
+          "place": "denmark/tivoli-rosenborg"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Roskilde Viking ships and cathedral",
+          "notes": "About 25 minutes by train from Copenhagen.",
+          "where": "Roskilde",
+          "book": "",
+          "place": "denmark/roskilde-vikings"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Odense Andersen museum and old town",
+          "notes": "Walk the fairy-tale lanes.",
+          "where": "Odense",
+          "book": "",
+          "place": "denmark/odense-andersen"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "ARoS art museum and Rainbow Panorama",
+          "notes": "The rainbow walkway is on the roof.",
+          "where": "Aarhus",
+          "book": "",
+          "place": "denmark/aarhus-aros"
+        },
+        {
+          "day": 5,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Den Gamle By open-air museum",
+          "notes": "Allow three hours.",
+          "where": "Aarhus",
+          "book": "",
+          "place": "denmark/den-gamle-by"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "4h",
+          "name": "Grenen sand spit and Skagen town",
+          "notes": "Stand where two seas meet; eat fresh fish.",
+          "where": "Skagen",
+          "book": "",
+          "place": "denmark/skagen-grenen"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Copenhagen Airport (CPH)",
+          "to": "Copenhagen hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Copenhagen",
+          "to": "Odense",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "DSB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Odense",
+          "to": "Aarhus",
+          "time": "09:30",
+          "minutes": 105,
+          "carrier": "DSB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Aarhus",
+          "to": "Skagen",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "DSB train",
+          "notes": "Change at Aalborg and Frederikshavn.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Skagen",
+          "to": "Aalborg Airport (AAL)",
+          "time": "12:00",
+          "minutes": 150,
+          "carrier": "Metro, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "denmark-grand-10d",
+      "title": "Complete Denmark in 10 Days",
+      "summary": "Copenhagen, Kronborg, Odense, Legoland, Ribe and Skagen.",
+      "days": 10,
+      "route": "Copenhagen > Odense > Aarhus > Skagen",
+      "arrive": "Copenhagen (CPH)",
+      "depart": "Aalborg (AAL)",
+      "countries": [
+        "Denmark"
+      ],
+      "regions": [
+        "Zealand",
+        "Funen",
+        "Jutland"
+      ],
+      "cities": [
+        "Copenhagen",
+        "Odense",
+        "Aarhus",
+        "Skagen"
+      ],
+      "imageQuery": "Denmark Legoland Ribe Kronborg",
+      "highlights": [
+        "Kronborg",
+        "Roskilde",
+        "Legoland",
+        "Ribe",
+        "Skagen"
+      ],
+      "destinationKeys": [
+        "denmark",
+        "denmark/copenhagen",
+        "denmark/zealand",
+        "denmark/funen",
+        "denmark/odense",
+        "denmark/jutland",
+        "denmark/aarhus",
+        "denmark/skagen"
+      ],
+      "hero": "denmark/jutland",
+      "sources": [
+        "Travel Melodies",
+        "TravelStride",
+        "Baltic Travel Company",
+        "Choose Where",
+        "TakeTours"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Copenhagen",
+          "hotel": "Hotel in Copenhagen",
+          "start": 0,
+          "nights": 4,
+          "area": "Near Nyhavn, Vesterbro or Norrebro, close to the metro",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Odense",
+          "hotel": "Hotel in Odense",
+          "start": 4,
+          "nights": 2,
+          "area": "In the pedestrian centre, near the Andersen museum",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Aarhus",
+          "hotel": "Hotel in Aarhus",
+          "start": 6,
+          "nights": 2,
+          "area": "In the Latin Quarter or near the harbour",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Skagen",
+          "hotel": "Hotel in Skagen",
+          "start": 8,
+          "nights": 1,
+          "area": "In Skagen town, near the harbour and old houses",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:30",
+          "duration": "3h",
+          "name": "Nyhavn and harbour canal tour",
+          "notes": "See the Little Mermaid and Opera House from the water.",
+          "where": "Nyhavn, Copenhagen",
+          "book": "",
+          "place": "denmark/nyhavn-harbour"
+        },
+        {
+          "day": 1,
+          "type": "Fun & Games",
+          "time": "17:00",
+          "duration": "3h",
+          "name": "Tivoli Gardens",
+          "notes": "Best in the evening when it is lit.",
+          "where": "Copenhagen",
+          "book": "",
+          "place": "denmark/tivoli-rosenborg"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "8h",
+          "name": "Kronborg Castle and Louisiana Museum",
+          "notes": "Train to Helsingor then on to Humlebaek.",
+          "where": "Helsingor",
+          "book": "",
+          "place": "denmark/kronborg-louisiana"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Roskilde Viking ships and cathedral",
+          "notes": "About 25 minutes by train from Copenhagen.",
+          "where": "Roskilde",
+          "book": "",
+          "place": "denmark/roskilde-vikings"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Odense Andersen museum and old town",
+          "notes": "Walk the fairy-tale lanes.",
+          "where": "Odense",
+          "book": "",
+          "place": "denmark/odense-andersen"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Ribe old town and Wadden Sea",
+          "notes": "A stop between Funen and Jutland.",
+          "where": "Ribe",
+          "book": "",
+          "place": "denmark/ribe-wadden"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2.5h",
+          "name": "ARoS art museum and Rainbow Panorama",
+          "notes": "The rainbow walkway is on the roof.",
+          "where": "Aarhus",
+          "book": "",
+          "place": "denmark/aarhus-aros"
+        },
+        {
+          "day": 6,
+          "type": "Ticketed Attraction",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Den Gamle By open-air museum",
+          "notes": "Allow three hours.",
+          "where": "Aarhus",
+          "book": "",
+          "place": "denmark/den-gamle-by"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "7h",
+          "name": "Legoland Billund",
+          "notes": "Check seasonal opening dates.",
+          "where": "Billund",
+          "book": "Yes - book park tickets",
+          "place": "denmark/legoland-billund"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "4h",
+          "name": "Grenen sand spit and Skagen town",
+          "notes": "Stand where two seas meet; eat fresh fish.",
+          "where": "Skagen",
+          "book": "",
+          "place": "denmark/skagen-grenen"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Copenhagen Airport (CPH)",
+          "to": "Copenhagen hotel area",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Metro or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Copenhagen",
+          "to": "Odense",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "DSB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Odense",
+          "to": "Aarhus",
+          "time": "09:30",
+          "minutes": 105,
+          "carrier": "DSB train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Aarhus",
+          "to": "Skagen",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "DSB train",
+          "notes": "Change at Aalborg and Frederikshavn.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Skagen",
+          "to": "Aalborg Airport (AAL)",
+          "time": "12:00",
+          "minutes": 150,
+          "carrier": "Metro, bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "denmark/nyhavn-harbour": {
+        "name": "Nyhavn and the Copenhagen harbour",
+        "description": "The colourful 17th-century canal quay with restaurants, plus harbour boat tours.",
+        "details": "Nyhavn is the postcard image of Copenhagen, with painted townhouses and old wooden ships. A canal boat tour passes the Little Mermaid, the Opera House and Christiania. Terraces get busy, so look for quieter lanes just off the quay.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/tivoli-rosenborg": {
+        "name": "Tivoli Gardens and Rosenborg Castle",
+        "description": "A historic amusement park in the city centre, and a Renaissance castle with the crown jewels.",
+        "details": "Tivoli opened in 1843 and has rides, gardens and concerts, lit up after dark. Rosenborg Castle, in the King Garden, holds the crown jewels and royal collections. Both are easy to visit on foot from the old town.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/copenhagen-food-design": {
+        "name": "Copenhagen food halls and design",
+        "description": "Smorrebrod, pastries, Torvehallerne market and Danish design shops.",
+        "details": "Copenhagen is a food city, from the open-faced rye sandwiches of smorrebrod to Danish pastry. Torvehallerne market and Reffen street food are good starting points, and the Design Museum shows classic furniture. Cycling is the best way to see the city.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/kronborg-louisiana": {
+        "name": "Kronborg Castle and Louisiana Museum",
+        "description": "Hamlet castle at Helsingor and a modern art museum on the coast, both north of Copenhagen.",
+        "details": "Kronborg is the castle of Shakespeare Hamlet, with ramparts looking across the sound to Sweden. The Louisiana Museum of Modern Art, a short train ride away, has a sculpture park by the sea and a very good cafe. It makes a full-day trip by train.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/roskilde-vikings": {
+        "name": "Roskilde Viking Ship Museum and cathedral",
+        "description": "Reconstructed Viking ships by the fjord, and the burial church of the Danish kings.",
+        "details": "The Viking Ship Museum displays five ships found in the fjord, and in summer visitors can join a sail. Roskilde Cathedral is a UNESCO site holding royal tombs. Trains from Copenhagen take about 25 minutes.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/odense-andersen": {
+        "name": "Odense and Hans Christian Andersen",
+        "description": "The fairytale author birthplace, with a museum and cobbled lanes of the old town.",
+        "details": "Odense is the capital of Funen. The Hans Christian Andersen Museum tells the story of the writer in a modern space beside his childhood home, and the old streets are lined with colourful houses. The Funen Village open-air museum is nearby. The city is easy to cover on foot.",
+        "interests": [
+          "culture",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/aarhus-aros": {
+        "name": "ARoS and the Rainbow Panorama",
+        "description": "An art museum with a rooftop rainbow walkway and the lively cafes of Denmark second city.",
+        "details": "ARoS is a large art museum whose roof holds Your Rainbow Panorama, a circular walkway of coloured glass with a city view. The Latin Quarter is full of cafes, and the Aarhus Street Food market offers many cuisines. The Moesgaard Museum shows Viking-age finds.",
+        "interests": [
+          "culture",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/den-gamle-by": {
+        "name": "Den Gamle By open-air museum",
+        "description": "A living museum of historic Danish townhouses, shops and workshops in Aarhus.",
+        "details": "Den Gamle By is a town of over seventy period buildings brought from across the country, staffed by costumed guides and craftspeople. Seasonal events include a Christmas market. Allow three hours.",
+        "interests": [
+          "culture",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/legoland-billund": {
+        "name": "Legoland, Billund",
+        "description": "The original Lego theme park, with Miniland models and family rides.",
+        "details": "Legoland in Billund suits families with rides, Miniland and Lego-brick models of famous places. The nearby LEGO House has a museum and building areas. It opens seasonally, so check dates. Billund has an airport and good bus links.",
+        "interests": [
+          "adventure",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/skagen-grenen": {
+        "name": "Skagen and Grenen",
+        "description": "The northern tip of Denmark where two seas meet, and a town of yellow houses and painters.",
+        "details": "Skagen sits at the end of Jutland, famed for the light that drew a colony of painters. Grenen is a sand spit where the Baltic and North Seas meet, and visitors can stand with a foot in each. The Skagen Museum holds the painters works. Fresh fish is a speciality.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "denmark/ribe-wadden": {
+        "name": "Ribe and the Wadden Sea",
+        "description": "Denmark oldest town, with a cathedral and marshes where tide flats attract birds.",
+        "details": "Ribe is a medieval town with half-timbered houses and a Romanesque cathedral. The nearby Wadden Sea is a UNESCO site known for tidal flats and bird migrations, with black sun events in spring and autumn. It is a stop on the way between Odense and Jutland.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "denmark": {
+        "name": "Denmark",
+        "description": "A flat, bike-friendly country of design, castles, Viking history and northern light.",
+        "images": []
+      },
+      "denmark/copenhagen": {
+        "name": "Copenhagen",
+        "description": "A harbour capital of canals, design and exceptional food.",
+        "images": []
+      },
+      "denmark/zealand": {
+        "name": "Zealand",
+        "description": "The island of Copenhagen, Roskilde and Kronborg.",
+        "images": []
+      },
+      "denmark/funen": {
+        "name": "Funen",
+        "description": "The central island, birthplace of Hans Christian Andersen.",
+        "images": []
+      },
+      "denmark/odense": {
+        "name": "Odense",
+        "description": "A fairytale city on Funen.",
+        "images": []
+      },
+      "denmark/jutland": {
+        "name": "Jutland",
+        "description": "The peninsula of Aarhus, Legoland, Ribe and Skagen.",
+        "images": []
+      },
+      "denmark/aarhus": {
+        "name": "Aarhus",
+        "description": "Denmark second city, a student town with museums and cafes.",
+        "images": []
+      },
+      "denmark/skagen": {
+        "name": "Skagen",
+        "description": "The northern tip of Denmark, with painters light and sea-meeting beaches.",
+        "images": []
+      }
+    }
+  }
+}

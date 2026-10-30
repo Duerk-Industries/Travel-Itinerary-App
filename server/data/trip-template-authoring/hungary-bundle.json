@@ -1,0 +1,1155 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Eurail, Earth Trekkers, MustSeeSpots and Jayway Travel itineraries for Hungary",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "hungary-budapest-4d",
+      "title": "Budapest City Break in 4 Days",
+      "summary": "Castle, baths, Parliament and ruin bars.",
+      "days": 4,
+      "route": "Budapest",
+      "arrive": "Budapest (BUD)",
+      "depart": "Budapest (BUD)",
+      "countries": [
+        "Hungary"
+      ],
+      "regions": [],
+      "cities": [
+        "Budapest"
+      ],
+      "imageQuery": "Budapest Parliament Danube night",
+      "highlights": [
+        "Buda Castle",
+        "Szechenyi baths",
+        "Parliament",
+        "Ruin bars"
+      ],
+      "destinationKeys": [
+        "hungary",
+        "hungary/budapest"
+      ],
+      "hero": "hungary/budapest",
+      "sources": [
+        "Eurail",
+        "Earth Trekkers",
+        "MustSeeSpots",
+        "Lonely Planet",
+        "Jayway Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Budapest",
+          "hotel": "Hotel in Budapest",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Pest side near the Jewish Quarter for nightlife, or Buda for quiet views",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Danube evening cruise",
+          "notes": "The buildings are lit after dark.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/parliament-danube"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Buda Castle, Fisherman Bastion and Matthias Church",
+          "notes": "Walk up from the Chain Bridge or take the funicular.",
+          "where": "Buda",
+          "book": "",
+          "place": "hungary/buda-castle"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Szechenyi thermal baths",
+          "notes": "Bring a swimsuit and flip-flops; fast-track tickets help.",
+          "where": "City Park, Budapest",
+          "book": "",
+          "place": "hungary/budapest-baths"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Great Market Hall and langos",
+          "notes": "Closed on Sundays.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/market-ruin-bars"
+        },
+        {
+          "day": 2,
+          "type": "Nightlife",
+          "time": "20:30",
+          "duration": "3h",
+          "name": "Ruin bars in the Jewish Quarter",
+          "notes": "Try Szimpla Kert and another courtyard bar.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/market-ruin-bars"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Budapest Airport (BUD)",
+          "to": "Budapest hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Budapest hotel area",
+          "to": "Budapest Airport (BUD)",
+          "time": "12:00",
+          "minutes": 40,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "hungary-budapest-eger-5d",
+      "title": "Budapest and Eger in 5 Days",
+      "summary": "The capital then a baroque wine town.",
+      "days": 5,
+      "route": "Budapest > Eger",
+      "arrive": "Budapest (BUD)",
+      "depart": "Budapest (BUD)",
+      "countries": [
+        "Hungary"
+      ],
+      "regions": [],
+      "cities": [
+        "Budapest",
+        "Eger"
+      ],
+      "imageQuery": "Eger castle Hungary",
+      "highlights": [
+        "Buda Castle",
+        "Baths",
+        "Eger Castle",
+        "Bull Blood wine"
+      ],
+      "destinationKeys": [
+        "hungary",
+        "hungary/budapest",
+        "hungary/eger"
+      ],
+      "hero": "hungary/eger",
+      "sources": [
+        "Eurail",
+        "Earth Trekkers",
+        "MustSeeSpots",
+        "Lonely Planet",
+        "Jayway Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Budapest",
+          "hotel": "Hotel in Budapest",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Pest side near the Jewish Quarter for nightlife, or Buda for quiet views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Eger",
+          "hotel": "Hotel in Eger",
+          "start": 3,
+          "nights": 1,
+          "area": "In Eger old town near the castle and basilica",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Danube evening cruise",
+          "notes": "The buildings are lit after dark.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/parliament-danube"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Buda Castle, Fisherman Bastion and Matthias Church",
+          "notes": "Walk up from the Chain Bridge or take the funicular.",
+          "where": "Buda",
+          "book": "",
+          "place": "hungary/buda-castle"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Szechenyi thermal baths",
+          "notes": "Bring a swimsuit and flip-flops; fast-track tickets help.",
+          "where": "City Park, Budapest",
+          "book": "",
+          "place": "hungary/budapest-baths"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Great Market Hall and langos",
+          "notes": "Closed on Sundays.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/market-ruin-bars"
+        },
+        {
+          "day": 2,
+          "type": "Nightlife",
+          "time": "20:30",
+          "duration": "3h",
+          "name": "Ruin bars in the Jewish Quarter",
+          "notes": "Try Szimpla Kert and another courtyard bar.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/market-ruin-bars"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Eger Castle and old town",
+          "notes": "The siege museum and a minaret climb.",
+          "where": "Eger",
+          "book": "",
+          "place": "hungary/eger"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "2.5h",
+          "name": "Valley of the Beautiful Women wine cellars",
+          "notes": "Taste Bull Blood; walk back afterwards.",
+          "where": "Eger",
+          "book": "",
+          "place": "hungary/eger"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Budapest Airport (BUD)",
+          "to": "Budapest hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Budapest",
+          "to": "Eger",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "MAV train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Eger",
+          "to": "Budapest Airport (BUD)",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "MAV train",
+          "notes": "Train to Budapest then the airport bus.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "hungary-budapest-eger-balaton-7d",
+      "title": "Budapest, Eger and Lake Balaton in 7 Days",
+      "summary": "Capital, wine town and the Hungarian sea.",
+      "days": 7,
+      "route": "Budapest > Eger > Balatonfured",
+      "arrive": "Budapest (BUD)",
+      "depart": "Budapest (BUD)",
+      "countries": [
+        "Hungary"
+      ],
+      "regions": [
+        "Lake Balaton"
+      ],
+      "cities": [
+        "Budapest",
+        "Eger",
+        "Balatonfured"
+      ],
+      "imageQuery": "Lake Balaton Tihany abbey",
+      "highlights": [
+        "Buda Castle",
+        "Danube Bend",
+        "Eger wine",
+        "Lake Balaton"
+      ],
+      "destinationKeys": [
+        "hungary",
+        "hungary/budapest",
+        "hungary/eger",
+        "hungary/lake-balaton",
+        "hungary/balatonfured"
+      ],
+      "hero": "hungary/lake-balaton",
+      "sources": [
+        "Eurail",
+        "Earth Trekkers",
+        "MustSeeSpots",
+        "Lonely Planet",
+        "Jayway Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Budapest",
+          "hotel": "Hotel in Budapest",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Pest side near the Jewish Quarter for nightlife, or Buda for quiet views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Eger",
+          "hotel": "Hotel in Eger",
+          "start": 3,
+          "nights": 2,
+          "area": "In Eger old town near the castle and basilica",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Balatonfured",
+          "hotel": "Hotel in Balatonfured",
+          "start": 5,
+          "nights": 1,
+          "area": "On the Balatonfured promenade, near the ferry pier",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Danube evening cruise",
+          "notes": "The buildings are lit after dark.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/parliament-danube"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Buda Castle, Fisherman Bastion and Matthias Church",
+          "notes": "Walk up from the Chain Bridge or take the funicular.",
+          "where": "Buda",
+          "book": "",
+          "place": "hungary/buda-castle"
+        },
+        {
+          "day": 1,
+          "type": "Spa/Wellness",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Szechenyi thermal baths",
+          "notes": "Bring a swimsuit and flip-flops; fast-track tickets help.",
+          "where": "City Park, Budapest",
+          "book": "",
+          "place": "hungary/budapest-baths"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Szentendre, Visegrad and Danube Bend",
+          "notes": "Suburban train to Szentendre; bus or boat onwards.",
+          "where": "Danube Bend",
+          "book": "",
+          "place": "hungary/szentendre-danube-bend"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Eger Castle and old town",
+          "notes": "The siege museum and a minaret climb.",
+          "where": "Eger",
+          "book": "",
+          "place": "hungary/eger"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "2.5h",
+          "name": "Valley of the Beautiful Women wine cellars",
+          "notes": "Taste Bull Blood; walk back afterwards.",
+          "where": "Eger",
+          "book": "",
+          "place": "hungary/eger"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Tokaj wine region",
+          "notes": "A car or driver helps; harvest is in autumn.",
+          "where": "Tokaj",
+          "book": "Yes - book a driver and cellars",
+          "place": "hungary/tokaj"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Balatonfured promenade and Tihany abbey",
+          "notes": "Lavender blooms in June and July.",
+          "where": "Lake Balaton",
+          "book": "",
+          "place": "hungary/balaton-tihany"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Budapest Airport (BUD)",
+          "to": "Budapest hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Budapest",
+          "to": "Eger",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "MAV train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Eger",
+          "to": "Balatonfured",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "MAV train",
+          "notes": "Change at Budapest.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Balatonfured",
+          "to": "Budapest Airport (BUD)",
+          "time": "10:00",
+          "minutes": 150,
+          "carrier": "MAV train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "hungary-budapest-balaton-pecs-8d",
+      "title": "Budapest, Balaton and Pecs in 8 Days",
+      "summary": "Capital, lake and the southern city of Pecs.",
+      "days": 8,
+      "route": "Budapest > Balatonfured > Pecs",
+      "arrive": "Budapest (BUD)",
+      "depart": "Budapest (BUD)",
+      "countries": [
+        "Hungary"
+      ],
+      "regions": [
+        "Lake Balaton"
+      ],
+      "cities": [
+        "Budapest",
+        "Balatonfured",
+        "Pecs"
+      ],
+      "imageQuery": "Pecs Zsolnay quarter",
+      "highlights": [
+        "Parliament",
+        "Szechenyi baths",
+        "Lake Balaton",
+        "Pecs Zsolnay Quarter"
+      ],
+      "destinationKeys": [
+        "hungary",
+        "hungary/budapest",
+        "hungary/lake-balaton",
+        "hungary/balatonfured",
+        "hungary/pecs"
+      ],
+      "hero": "hungary/pecs",
+      "sources": [
+        "Eurail",
+        "Earth Trekkers",
+        "MustSeeSpots",
+        "Lonely Planet",
+        "Jayway Travel"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Budapest",
+          "hotel": "Hotel in Budapest",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Pest side near the Jewish Quarter for nightlife, or Buda for quiet views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Balatonfured",
+          "hotel": "Hotel in Balatonfured",
+          "start": 3,
+          "nights": 2,
+          "area": "On the Balatonfured promenade, near the ferry pier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pecs",
+          "hotel": "Hotel in Pecs",
+          "start": 5,
+          "nights": 2,
+          "area": "In central Pecs near the main square",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Danube evening cruise",
+          "notes": "The buildings are lit after dark.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/parliament-danube"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Buda Castle, Fisherman Bastion and Matthias Church",
+          "notes": "Walk up from the Chain Bridge or take the funicular.",
+          "where": "Buda",
+          "book": "",
+          "place": "hungary/buda-castle"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Great Market Hall and langos",
+          "notes": "Closed on Sundays.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/market-ruin-bars"
+        },
+        {
+          "day": 2,
+          "type": "Spa/Wellness",
+          "time": "15:30",
+          "duration": "2.5h",
+          "name": "Szechenyi thermal baths",
+          "notes": "Bring a swimsuit and flip-flops; fast-track tickets help.",
+          "where": "City Park, Budapest",
+          "book": "",
+          "place": "hungary/budapest-baths"
+        },
+        {
+          "day": 2,
+          "type": "Nightlife",
+          "time": "20:30",
+          "duration": "3h",
+          "name": "Ruin bars in the Jewish Quarter",
+          "notes": "Try Szimpla Kert and another courtyard bar.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/market-ruin-bars"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Balatonfured promenade and Tihany abbey",
+          "notes": "Lavender blooms in June and July.",
+          "where": "Lake Balaton",
+          "book": "",
+          "place": "hungary/balaton-tihany"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Pecs Zsolnay Quarter and Mosque Church",
+          "notes": "Includes the early Christian burial chambers.",
+          "where": "Pecs",
+          "book": "",
+          "place": "hungary/pecs-zsolnay"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Budapest Airport (BUD)",
+          "to": "Budapest hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Budapest",
+          "to": "Balatonfured",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "MAV train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Balatonfured",
+          "to": "Pecs",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "MAV train",
+          "notes": "Change at Dombovar or Budapest.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Pecs",
+          "to": "Budapest Airport (BUD)",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "MAV train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "hungary-complete-10d",
+      "title": "Complete Hungary in 10 Days",
+      "summary": "Four days in Budapest, then Eger and Tokaj, Balaton and Pecs.",
+      "days": 10,
+      "route": "Budapest > Eger > Balatonfured > Pecs",
+      "arrive": "Budapest (BUD)",
+      "depart": "Budapest (BUD)",
+      "countries": [
+        "Hungary"
+      ],
+      "regions": [
+        "Lake Balaton"
+      ],
+      "cities": [
+        "Budapest",
+        "Eger",
+        "Balatonfured",
+        "Pecs"
+      ],
+      "imageQuery": "Tokaj vineyards Hungary",
+      "highlights": [
+        "Buda Castle",
+        "Danube Bend",
+        "Eger",
+        "Tokaj",
+        "Balaton",
+        "Pecs"
+      ],
+      "destinationKeys": [
+        "hungary",
+        "hungary/budapest",
+        "hungary/eger",
+        "hungary/lake-balaton",
+        "hungary/balatonfured",
+        "hungary/pecs"
+      ],
+      "hero": "hungary/budapest",
+      "sources": [
+        "Eurail",
+        "Earth Trekkers",
+        "MustSeeSpots",
+        "Lonely Planet",
+        "Jayway Travel"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "food",
+        "relax",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Budapest",
+          "hotel": "Hotel in Budapest",
+          "start": 0,
+          "nights": 4,
+          "area": "In the Pest side near the Jewish Quarter for nightlife, or Buda for quiet views",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Eger",
+          "hotel": "Hotel in Eger",
+          "start": 4,
+          "nights": 2,
+          "area": "In Eger old town near the castle and basilica",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Balatonfured",
+          "hotel": "Hotel in Balatonfured",
+          "start": 6,
+          "nights": 1,
+          "area": "On the Balatonfured promenade, near the ferry pier",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Pecs",
+          "hotel": "Hotel in Pecs",
+          "start": 7,
+          "nights": 2,
+          "area": "In central Pecs near the main square",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "19:30",
+          "duration": "1.5h",
+          "name": "Danube evening cruise",
+          "notes": "The buildings are lit after dark.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/parliament-danube"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Buda Castle, Fisherman Bastion and Matthias Church",
+          "notes": "Walk up from the Chain Bridge or take the funicular.",
+          "where": "Buda",
+          "book": "",
+          "place": "hungary/buda-castle"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "7h",
+          "name": "Szentendre, Visegrad and Danube Bend",
+          "notes": "Suburban train to Szentendre; bus or boat onwards.",
+          "where": "Danube Bend",
+          "book": "",
+          "place": "hungary/szentendre-danube-bend"
+        },
+        {
+          "day": 3,
+          "type": "Food & Drink",
+          "time": "11:00",
+          "duration": "2h",
+          "name": "Great Market Hall and langos",
+          "notes": "Closed on Sundays.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/market-ruin-bars"
+        },
+        {
+          "day": 3,
+          "type": "Spa/Wellness",
+          "time": "14:30",
+          "duration": "2.5h",
+          "name": "Szechenyi thermal baths",
+          "notes": "Bring a swimsuit and flip-flops; fast-track tickets help.",
+          "where": "City Park, Budapest",
+          "book": "",
+          "place": "hungary/budapest-baths"
+        },
+        {
+          "day": 3,
+          "type": "Nightlife",
+          "time": "20:30",
+          "duration": "3h",
+          "name": "Ruin bars in the Jewish Quarter",
+          "notes": "Try Szimpla Kert and another courtyard bar.",
+          "where": "Budapest",
+          "book": "",
+          "place": "hungary/market-ruin-bars"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Eger Castle and old town",
+          "notes": "The siege museum and a minaret climb.",
+          "where": "Eger",
+          "book": "",
+          "place": "hungary/eger"
+        },
+        {
+          "day": 4,
+          "type": "Food & Drink",
+          "time": "17:30",
+          "duration": "2.5h",
+          "name": "Valley of the Beautiful Women wine cellars",
+          "notes": "Taste Bull Blood; walk back afterwards.",
+          "where": "Eger",
+          "book": "",
+          "place": "hungary/eger"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Tokaj wine region",
+          "notes": "A car or driver helps; harvest is in autumn.",
+          "where": "Tokaj",
+          "book": "Yes - book a driver and cellars",
+          "place": "hungary/tokaj"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Balatonfured promenade and Tihany abbey",
+          "notes": "Lavender blooms in June and July.",
+          "where": "Lake Balaton",
+          "book": "",
+          "place": "hungary/balaton-tihany"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Pecs Zsolnay Quarter and Mosque Church",
+          "notes": "Includes the early Christian burial chambers.",
+          "where": "Pecs",
+          "book": "",
+          "place": "hungary/pecs-zsolnay"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Budapest Airport (BUD)",
+          "to": "Budapest hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Budapest",
+          "to": "Eger",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "MAV train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Eger",
+          "to": "Balatonfured",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "MAV train",
+          "notes": "Change at Budapest.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Balatonfured",
+          "to": "Pecs",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "MAV train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Pecs",
+          "to": "Budapest Airport (BUD)",
+          "time": "09:00",
+          "minutes": 210,
+          "carrier": "MAV train",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "hungary/buda-castle": {
+        "name": "Buda Castle, Fisherman Bastion and Matthias Church",
+        "description": "The castle district above the Danube, with the fairytale Bastion and a gothic church.",
+        "details": "Castle Hill has the royal palace housing the National Gallery and History Museum, the neo-Romanesque Fisherman Bastion and Matthias Church with its tiled roof. The funicular or a stroll up from the Chain Bridge leads to it. Views of Parliament across the river are the highlight.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "hungary/budapest-baths": {
+        "name": "Szechenyi and Gellert thermal baths",
+        "description": "Budapest historic thermal baths, a soak in warm mineral pools.",
+        "details": "Szechenyi in City Park is a yellow neo-baroque complex with outdoor pools, and Gellert is an art nouveau bathhouse with a mosaic hall. Evening party baths are on some Saturdays. Bring a swimsuit and flip-flops, and book fast-track tickets in busy seasons.",
+        "interests": [
+          "relax",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "hungary/parliament-danube": {
+        "name": "Parliament and a Danube cruise",
+        "description": "The neo-Gothic Parliament building and an evening boat trip when it is lit.",
+        "details": "The Hungarian Parliament is one of the largest in Europe, and guided tours inside need advance tickets. A Danube cruise at dusk passes the lit Castle, Chain Bridge and Parliament. The Shoes on the Danube memorial is a moving stop along the bank.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "hungary/market-ruin-bars": {
+        "name": "Great Market Hall and ruin bars",
+        "description": "A covered market for paprika, langos and salami, and the famous bars in derelict buildings.",
+        "details": "The Great Market Hall has stalls of paprika, sausages and Tokaji wine, with langos (fried bread) on the upper floor. The ruin bars of the Jewish Quarter, such as Szimpla Kert, are quirky courtyards with mismatched furniture, best from the evening.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "hungary/szentendre-danube-bend": {
+        "name": "Szentendre and the Danube Bend",
+        "description": "An artists town of baroque lanes and the river bend with Visegrad fortress.",
+        "details": "Szentendre is 30 minutes from Budapest by suburban train, with galleries, a marzipan museum and cobbled streets. Further on, Visegrad has a citadel with a view over the Danube bend and Esztergom has the great basilica. Boats also run in summer.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "hungary/eger": {
+        "name": "Eger castle and the Valley of the Beautiful Women",
+        "description": "A baroque town with a castle that resisted the Ottomans, and cellars of Bull Blood red wine.",
+        "details": "Eger Castle holds a museum of the 1552 siege. The old town has a minaret, a basilica and thermal baths. The Szepasszony Valley is a row of wine cellars where you taste Egri Bikaver. Try several small glasses and then walk.",
+        "interests": [
+          "culture",
+          "food",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "hungary/tokaj": {
+        "name": "Tokaj wine region",
+        "description": "A UNESCO wine landscape of volcanic hills and sweet Tokaji Aszu.",
+        "details": "Tokaj makes the sweet wine called the wine of kings. Cellar visits are in small producers, many cut into the hillside. It is about two hours from Eger and a long day trip from Budapest, so a car or driver helps. Harvest runs in autumn.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "hungary/balaton-tihany": {
+        "name": "Lake Balaton and Tihany",
+        "description": "Central Europe largest lake, with a beach resort north shore and a lavender abbey peninsula.",
+        "details": "Lake Balaton is shallow and warm in summer, with beaches at Balatonfured and Siofok. Tihany has an abbey, craft shops and lavender in June and July. Cycling the shore path or taking a ferry across the lake are summer pleasures. In winter the area is quiet.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "hungary/pecs-zsolnay": {
+        "name": "Pecs and the Zsolnay Quarter",
+        "description": "A southern city of early Christian tombs, a mosque-church and ceramic works.",
+        "details": "Pecs has a UNESCO set of early Christian burial chambers, the Mosque Church on the main square and the Zsolnay Cultural Quarter, home of colourful ceramics. It is milder than Budapest. The city is about 3 hours by train from the capital.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "hungary": {
+        "name": "Hungary",
+        "description": "A country of thermal baths, Danube views, wine cellars and a lively capital.",
+        "images": []
+      },
+      "hungary/budapest": {
+        "name": "Budapest",
+        "description": "The Danube capital, split into Buda and Pest, famous for baths and ruin bars.",
+        "images": []
+      },
+      "hungary/eger": {
+        "name": "Eger",
+        "description": "A baroque wine town beneath a castle.",
+        "images": []
+      },
+      "hungary/lake-balaton": {
+        "name": "Lake Balaton",
+        "description": "The largest lake in Central Europe and a summer holiday area.",
+        "images": []
+      },
+      "hungary/balatonfured": {
+        "name": "Balatonfured",
+        "description": "A spa town on the north shore of Lake Balaton.",
+        "images": []
+      },
+      "hungary/pecs": {
+        "name": "Pecs",
+        "description": "A southern city of Roman and Ottoman heritage and ceramics.",
+        "images": []
+      }
+    }
+  }
+}

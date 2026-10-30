@@ -22,8 +22,9 @@
  * timeout assertions (`expect.toBeVisible({ timeout })`) enforce hard limits
  * — if an element does not appear within the budget the test fails.
  */
+import { chooseDestination, openLoginForm, openTripWizard } from './ui';
 import { test, expect } from '@playwright/test';
-import { loginAsNewUser, createTripViaWizard, openTab, measureMs } from './fixtures';
+import { loginAsNewUser, createTripViaWizard, openTab, measureMs, registerUser } from './fixtures';
 
 const THRESHOLDS = {
   loginToHome: 5_000,
@@ -35,8 +36,13 @@ const THRESHOLDS = {
 
 test.describe('Performance Thresholds', () => {
   test('login to home screen is under budget', async ({ page }) => {
+    const credentials = await registerUser(page.request);
+    await openLoginForm(page);
+    await page.getByPlaceholder(/^Email/).fill(credentials.email);
+    await page.getByTestId('auth-password').fill(credentials.password);
     const t0 = Date.now();
-    await loginAsNewUser(page);
+    await page.getByTestId('auth-form-submit').click();
+    await expect(page.getByTestId('home-nav-overview')).toBeVisible();
     const elapsed = Date.now() - t0;
 
     expect(elapsed, `Login took ${elapsed}ms — budget ${THRESHOLDS.loginToHome}ms`)
@@ -47,16 +53,16 @@ test.describe('Performance Thresholds', () => {
     await loginAsNewUser(page);
     const tripName = await createTripViaWizard(page);
 
-    // Open the trip-picker modal so we can measure the trip-select journey
-    await page.getByTestId('home-hero-card').click();
-    await page.waitForLoadState('networkidle');
+    // Open All Trips before measuring selection.
+    await page.getByTestId('home-all-trips').click();
+
 
     const elapsed = await measureMs(async () => {
       // Click the trip row to make it active again (may already be active)
       const tripRow = page.getByText(tripName).first();
       if (await tripRow.isVisible()) await tripRow.click();
-      // Selecting a trip closes the picker modal.
-      await expect(page.getByTestId('home-trip-modal'))
+      // Selecting a trip returns to Home.
+      await expect(page.getByRole('heading', { name: 'All Trips', exact: true }))
         .not.toBeVisible({ timeout: THRESHOLDS.tripLoad });
     });
 
@@ -70,8 +76,8 @@ test.describe('Performance Thresholds', () => {
 
     // Switch to Transfers tab and measure
     const elapsed = await measureMs(async () => {
-      await page.getByTestId('home-nav-flights').click();
-      await expect(page.getByText('Transfers')).toBeVisible({ timeout: THRESHOLDS.tabSwitch });
+      await openTab(page, 'flights');
+      await expect(page.getByText('Flights', { exact: true })).toBeVisible({ timeout: THRESHOLDS.tabSwitch });
     });
 
     expect(elapsed, `Tab switch took ${elapsed}ms — budget ${THRESHOLDS.tabSwitch}ms`)
@@ -83,7 +89,7 @@ test.describe('Performance Thresholds', () => {
     await createTripViaWizard(page);
 
     const tabs: Array<[string, string]> = [
-      ['flights', 'Transfers'],
+      ['flights', 'Flights'],
       ['lodging', 'Lodging'],
       ['tours', 'Activities'],
       ['expenses', 'Daily Expenses'],
@@ -91,7 +97,7 @@ test.describe('Performance Thresholds', () => {
 
     for (const [tabKey, heading] of tabs) {
       const elapsed = await measureMs(async () => {
-        await page.getByTestId(`home-nav-${tabKey}`).click();
+        await openTab(page, tabKey);
         await expect(page.getByText(heading).first()).toBeVisible({ timeout: THRESHOLDS.tabSwitch });
       });
       expect(elapsed, `${heading} tab took ${elapsed}ms — budget ${THRESHOLDS.tabSwitch}ms`)
@@ -101,12 +107,12 @@ test.describe('Performance Thresholds', () => {
 
   test('wizard step advance is under budget', async ({ page }) => {
     await loginAsNewUser(page);
-    await page.getByTestId('home-create-trip-button').click();
+    await openTripWizard(page);
     await expect(page.getByText('Create Trip Wizard')).toBeVisible();
 
     await page.getByPlaceholder('Trip Name').fill(`Perf Wizard ${Date.now()}`);
-    await page.getByPlaceholder('Destination').fill('Berlin');
-    await page.waitForLoadState('networkidle');
+    await chooseDestination(page);
+
 
     const elapsed = await measureMs(async () => {
       await page.getByText('Next').click();
@@ -124,7 +130,7 @@ test.describe('Performance Thresholds', () => {
 
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Performance.enable');
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30_000 });
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30_000 });
     const { metrics } = await cdp.send('Performance.getMetrics');
 
     const firstContentfulPaint = metrics.find((m: { name: string }) => m.name === 'FirstContentfulPaint');

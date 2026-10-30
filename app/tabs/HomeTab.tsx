@@ -256,7 +256,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
         </Pressable>
 
         <View style={styles.homeNavList}>
-          <Pressable accessibilityRole="link" testID="home-all-trips" onPress={() => onNavigate('all-trips')} style={styles.homeNavButton}>
+          <Pressable accessibilityRole="button" testID="home-all-trips" onPress={() => onNavigate('all-trips')} style={styles.homeNavButton}>
             <View style={styles.homeNavIcon}><Icon name="trips" color={navIconColor} size={22} /></View>
             <Text style={styles.homeNavLabel}>Change or Create Trip</Text>
             <Text style={styles.homeNavArrow}>{'>'}</Text>

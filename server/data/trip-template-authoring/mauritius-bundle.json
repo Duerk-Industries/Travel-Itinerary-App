@@ -1,0 +1,1056 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rough Guides, Isla Guru, iExplore and Destinationless Travel itineraries for Mauritius",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "mauritius-grand-baie-le-morne-5d",
+      "title": "Mauritius North and West in 5 Days",
+      "summary": "Grand Baie boat trips, Chamarel and Le Morne.",
+      "days": 5,
+      "route": "Grand Baie > Le Morne",
+      "arrive": "Mauritius (MRU)",
+      "depart": "Mauritius (MRU)",
+      "countries": [
+        "Mauritius"
+      ],
+      "regions": [],
+      "cities": [
+        "Grand Baie",
+        "Le Morne"
+      ],
+      "imageQuery": "Le Morne Brabant Mauritius",
+      "highlights": [
+        "Catamaran cruise",
+        "Chamarel",
+        "Le Morne Brabant"
+      ],
+      "destinationKeys": [
+        "mauritius",
+        "mauritius/grand-baie",
+        "mauritius/le-morne"
+      ],
+      "hero": "mauritius/le-morne",
+      "sources": [
+        "Rough Guides",
+        "Isla Guru",
+        "iExplore",
+        "Destinationless Travel",
+        "I Wandered"
+      ],
+      "pace": "B",
+      "interests": [
+        "relax",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Grand Baie",
+          "hotel": "Hotel in Grand Baie",
+          "start": 0,
+          "nights": 2,
+          "area": "In Grand Baie, near the bay and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Le Morne",
+          "hotel": "Resort at Le Morne",
+          "start": 2,
+          "nights": 2,
+          "area": "On the Le Morne peninsula, beside the lagoon",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Catamaran cruise to the northern islands",
+          "notes": "Includes snorkelling and a barbecue lunch.",
+          "where": "Grand Baie",
+          "book": "Yes - book a catamaran",
+          "place": "mauritius/grand-baie-water"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Chamarel Seven Coloured Earths, waterfall and rum tasting",
+          "notes": "Cooler and wetter than the coast.",
+          "where": "Chamarel",
+          "book": "",
+          "place": "mauritius/chamarel"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "06:30",
+          "duration": "5h",
+          "name": "Le Morne Brabant summit hike",
+          "notes": "Start early; a guide is advisable.",
+          "where": "Le Morne",
+          "book": "Yes - book a guide",
+          "place": "mauritius/le-morne"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "to": "Grand Baie hotel",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Resort shuttle, taxi or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Grand Baie",
+          "to": "Le Morne",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Le Morne",
+          "to": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mauritius-grand-baie-le-morne-7d",
+      "title": "Mauritius Beaches and Highlands in 7 Days",
+      "summary": "Three nights in the north, three at Le Morne with Chamarel and Black River Gorges.",
+      "days": 7,
+      "route": "Grand Baie > Le Morne",
+      "arrive": "Mauritius (MRU)",
+      "depart": "Mauritius (MRU)",
+      "countries": [
+        "Mauritius"
+      ],
+      "regions": [],
+      "cities": [
+        "Grand Baie",
+        "Le Morne"
+      ],
+      "imageQuery": "Chamarel seven coloured earths",
+      "highlights": [
+        "Port Louis market",
+        "Catamaran cruise",
+        "Chamarel",
+        "Black River Gorges",
+        "Le Morne"
+      ],
+      "destinationKeys": [
+        "mauritius",
+        "mauritius/grand-baie",
+        "mauritius/le-morne"
+      ],
+      "hero": "mauritius/grand-baie",
+      "sources": [
+        "Rough Guides",
+        "Isla Guru",
+        "iExplore",
+        "Destinationless Travel",
+        "I Wandered"
+      ],
+      "pace": "B",
+      "interests": [
+        "relax",
+        "outdoors",
+        "adventure",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Grand Baie",
+          "hotel": "Hotel in Grand Baie",
+          "start": 0,
+          "nights": 3,
+          "area": "In Grand Baie, near the bay and nightlife",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Le Morne",
+          "hotel": "Resort at Le Morne",
+          "start": 3,
+          "nights": 3,
+          "area": "On the Le Morne peninsula, beside the lagoon",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Port Louis Central Market and Caudan Waterfront",
+          "notes": "Go in the morning; markets close on Sundays.",
+          "where": "Port Louis",
+          "book": "",
+          "place": "mauritius/port-louis"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Pamplemousses Botanical Garden",
+          "notes": "Giant lilies and a palm avenue.",
+          "where": "Pamplemousses",
+          "book": "",
+          "place": "mauritius/pamplemousses-garden"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Catamaran cruise to the northern islands",
+          "notes": "Includes snorkelling and a barbecue lunch.",
+          "where": "Grand Baie",
+          "book": "Yes - book a catamaran",
+          "place": "mauritius/grand-baie-water"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chamarel Seven Coloured Earths, waterfall and rum tasting",
+          "notes": "Cooler and wetter than the coast.",
+          "where": "Chamarel",
+          "book": "",
+          "place": "mauritius/chamarel"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Black River Gorges hike",
+          "notes": "Carry water and rain gear.",
+          "where": "Black River Gorges",
+          "book": "",
+          "place": "mauritius/black-river-gorges"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "to": "Grand Baie hotel",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Resort shuttle, taxi or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Grand Baie",
+          "to": "Le Morne",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Le Morne",
+          "to": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mauritius-belle-mare-le-morne-grand-baie-8d",
+      "title": "Mauritius East to North in 8 Days",
+      "summary": "Belle Mare and Ile aux Cerfs, Le Morne, then Grand Baie.",
+      "days": 8,
+      "route": "Belle Mare > Le Morne > Grand Baie",
+      "arrive": "Mauritius (MRU)",
+      "depart": "Mauritius (MRU)",
+      "countries": [
+        "Mauritius"
+      ],
+      "regions": [],
+      "cities": [
+        "Belle Mare",
+        "Le Morne",
+        "Grand Baie"
+      ],
+      "imageQuery": "Ile aux Cerfs Mauritius",
+      "highlights": [
+        "Ile aux Cerfs",
+        "Chamarel",
+        "Le Morne",
+        "Grand Baie cruise"
+      ],
+      "destinationKeys": [
+        "mauritius",
+        "mauritius/belle-mare",
+        "mauritius/le-morne",
+        "mauritius/grand-baie"
+      ],
+      "hero": "mauritius/belle-mare",
+      "sources": [
+        "Rough Guides",
+        "Isla Guru",
+        "iExplore",
+        "Destinationless Travel",
+        "I Wandered"
+      ],
+      "pace": "B",
+      "interests": [
+        "relax",
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Belle Mare",
+          "hotel": "Resort at Belle Mare",
+          "start": 0,
+          "nights": 2,
+          "area": "On the Belle Mare beach strip on the east coast",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Le Morne",
+          "hotel": "Resort at Le Morne",
+          "start": 2,
+          "nights": 3,
+          "area": "On the Le Morne peninsula, beside the lagoon",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Grand Baie",
+          "hotel": "Hotel in Grand Baie",
+          "start": 5,
+          "nights": 2,
+          "area": "In Grand Baie, near the bay and nightlife",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Ile aux Cerfs lagoon island",
+          "notes": "Busiest at midday; go early.",
+          "where": "Ile aux Cerfs",
+          "book": "Yes - book a speedboat",
+          "place": "mauritius/ile-aux-cerfs"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chamarel Seven Coloured Earths, waterfall and rum tasting",
+          "notes": "Cooler and wetter than the coast.",
+          "where": "Chamarel",
+          "book": "",
+          "place": "mauritius/chamarel"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "06:30",
+          "duration": "5h",
+          "name": "Le Morne Brabant summit hike",
+          "notes": "Start early; a guide is advisable.",
+          "where": "Le Morne",
+          "book": "Yes - book a guide",
+          "place": "mauritius/le-morne"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Catamaran cruise to the northern islands",
+          "notes": "Includes snorkelling and a barbecue lunch.",
+          "where": "Grand Baie",
+          "book": "Yes - book a catamaran",
+          "place": "mauritius/grand-baie-water"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "to": "Belle Mare resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Resort shuttle, taxi or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Belle Mare",
+          "to": "Le Morne",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Le Morne",
+          "to": "Grand Baie",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Grand Baie",
+          "to": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mauritius-classic-10d",
+      "title": "Mauritius Classic in 10 Days",
+      "summary": "East coast lagoon, the south-west highlands and the lively north.",
+      "days": 10,
+      "route": "Belle Mare > Le Morne > Grand Baie",
+      "arrive": "Mauritius (MRU)",
+      "depart": "Mauritius (MRU)",
+      "countries": [
+        "Mauritius"
+      ],
+      "regions": [],
+      "cities": [
+        "Belle Mare",
+        "Le Morne",
+        "Grand Baie"
+      ],
+      "imageQuery": "Mauritius lagoon beach resort",
+      "highlights": [
+        "Ile aux Cerfs",
+        "Black River Gorges",
+        "Le Morne",
+        "Port Louis",
+        "Grand Baie"
+      ],
+      "destinationKeys": [
+        "mauritius",
+        "mauritius/belle-mare",
+        "mauritius/le-morne",
+        "mauritius/grand-baie"
+      ],
+      "hero": "mauritius/le-morne",
+      "sources": [
+        "Rough Guides",
+        "Isla Guru",
+        "iExplore",
+        "Destinationless Travel",
+        "I Wandered"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "outdoors",
+        "adventure",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Belle Mare",
+          "hotel": "Resort at Belle Mare",
+          "start": 0,
+          "nights": 3,
+          "area": "On the Belle Mare beach strip on the east coast",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Le Morne",
+          "hotel": "Resort at Le Morne",
+          "start": 3,
+          "nights": 3,
+          "area": "On the Le Morne peninsula, beside the lagoon",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Grand Baie",
+          "hotel": "Hotel in Grand Baie",
+          "start": 6,
+          "nights": 3,
+          "area": "In Grand Baie, near the bay and nightlife",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Ile aux Cerfs lagoon island",
+          "notes": "Busiest at midday; go early.",
+          "where": "Ile aux Cerfs",
+          "book": "Yes - book a speedboat",
+          "place": "mauritius/ile-aux-cerfs"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Mahebourg market and Blue Bay",
+          "notes": "The big market is on Mondays.",
+          "where": "Mahebourg",
+          "book": "",
+          "place": "mauritius/mahebourg-south"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chamarel Seven Coloured Earths, waterfall and rum tasting",
+          "notes": "Cooler and wetter than the coast.",
+          "where": "Chamarel",
+          "book": "",
+          "place": "mauritius/chamarel"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Black River Gorges hike",
+          "notes": "Carry water and rain gear.",
+          "where": "Black River Gorges",
+          "book": "",
+          "place": "mauritius/black-river-gorges"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Port Louis Central Market and Caudan Waterfront",
+          "notes": "Go in the morning; markets close on Sundays.",
+          "where": "Port Louis",
+          "book": "",
+          "place": "mauritius/port-louis"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Pamplemousses Botanical Garden",
+          "notes": "Giant lilies and a palm avenue.",
+          "where": "Pamplemousses",
+          "book": "",
+          "place": "mauritius/pamplemousses-garden"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Catamaran cruise to the northern islands",
+          "notes": "Includes snorkelling and a barbecue lunch.",
+          "where": "Grand Baie",
+          "book": "Yes - book a catamaran",
+          "place": "mauritius/grand-baie-water"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "to": "Belle Mare resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Resort shuttle, taxi or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Belle Mare",
+          "to": "Le Morne",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Le Morne",
+          "to": "Grand Baie",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Grand Baie",
+          "to": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mauritius-complete-12d",
+      "title": "Complete Mauritius in 12 Days",
+      "summary": "East, south-west, west coast and north: lagoons, hikes, dolphins and boat days.",
+      "days": 12,
+      "route": "Belle Mare > Le Morne > Flic en Flac > Grand Baie",
+      "arrive": "Mauritius (MRU)",
+      "depart": "Mauritius (MRU)",
+      "countries": [
+        "Mauritius"
+      ],
+      "regions": [],
+      "cities": [
+        "Belle Mare",
+        "Le Morne",
+        "Flic en Flac",
+        "Grand Baie"
+      ],
+      "imageQuery": "Mauritius sunset Flic en Flac",
+      "highlights": [
+        "Ile aux Cerfs",
+        "Le Morne hike",
+        "Chamarel",
+        "Dolphin cruise",
+        "Grand Baie"
+      ],
+      "destinationKeys": [
+        "mauritius",
+        "mauritius/belle-mare",
+        "mauritius/le-morne",
+        "mauritius/flic-en-flac",
+        "mauritius/grand-baie"
+      ],
+      "hero": "mauritius/flic-en-flac",
+      "sources": [
+        "Rough Guides",
+        "Isla Guru",
+        "iExplore",
+        "Destinationless Travel",
+        "I Wandered"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "outdoors",
+        "adventure",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Belle Mare",
+          "hotel": "Resort at Belle Mare",
+          "start": 0,
+          "nights": 3,
+          "area": "On the Belle Mare beach strip on the east coast",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Le Morne",
+          "hotel": "Resort at Le Morne",
+          "start": 3,
+          "nights": 3,
+          "area": "On the Le Morne peninsula, beside the lagoon",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Flic en Flac",
+          "hotel": "Hotel in Flic en Flac",
+          "start": 6,
+          "nights": 2,
+          "area": "In Flic en Flac, close to the beach and restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Grand Baie",
+          "hotel": "Hotel in Grand Baie",
+          "start": 8,
+          "nights": 3,
+          "area": "In Grand Baie, near the bay and nightlife",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Ile aux Cerfs lagoon island",
+          "notes": "Busiest at midday; go early.",
+          "where": "Ile aux Cerfs",
+          "book": "Yes - book a speedboat",
+          "place": "mauritius/ile-aux-cerfs"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Mahebourg market and Blue Bay",
+          "notes": "The big market is on Mondays.",
+          "where": "Mahebourg",
+          "book": "",
+          "place": "mauritius/mahebourg-south"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Chamarel Seven Coloured Earths, waterfall and rum tasting",
+          "notes": "Cooler and wetter than the coast.",
+          "where": "Chamarel",
+          "book": "",
+          "place": "mauritius/chamarel"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "06:30",
+          "duration": "5h",
+          "name": "Le Morne Brabant summit hike",
+          "notes": "Start early; a guide is advisable.",
+          "where": "Le Morne",
+          "book": "Yes - book a guide",
+          "place": "mauritius/le-morne"
+        },
+        {
+          "day": 7,
+          "type": "Hike",
+          "time": "08:30",
+          "duration": "5h",
+          "name": "Black River Gorges hike",
+          "notes": "Carry water and rain gear.",
+          "where": "Black River Gorges",
+          "book": "",
+          "place": "mauritius/black-river-gorges"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "15:30",
+          "duration": "2h",
+          "name": "Late-afternoon dolphin and sunset cruise",
+          "notes": "Choose a responsible operator.",
+          "where": "Tamarin",
+          "book": "Yes - book a boat",
+          "place": "mauritius/tamarin-dolphins"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Port Louis Central Market and Caudan Waterfront",
+          "notes": "Go in the morning; markets close on Sundays.",
+          "where": "Port Louis",
+          "book": "",
+          "place": "mauritius/port-louis"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Pamplemousses Botanical Garden",
+          "notes": "Giant lilies and a palm avenue.",
+          "where": "Pamplemousses",
+          "book": "",
+          "place": "mauritius/pamplemousses-garden"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Catamaran cruise to the northern islands",
+          "notes": "Includes snorkelling and a barbecue lunch.",
+          "where": "Grand Baie",
+          "book": "Yes - book a catamaran",
+          "place": "mauritius/grand-baie-water"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "to": "Belle Mare resort",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Resort shuttle, taxi or rental car",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Belle Mare",
+          "to": "Le Morne",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Le Morne",
+          "to": "Flic en Flac",
+          "time": "10:00",
+          "minutes": 45,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Flic en Flac",
+          "to": "Grand Baie",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Grand Baie",
+          "to": "Sir Seewoosagur Ramgoolam Airport (MRU)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "mauritius/port-louis": {
+        "name": "Port Louis market and waterfront",
+        "description": "The capital, with a bustling central market, a waterfront Caudan area and Chinatown.",
+        "details": "Port Louis has a busy Central Market for spices, fabrics and street snacks such as dholl puri. The Caudan Waterfront has shops and cafes, and the Blue Penny Museum holds the rare stamps. The Aapravasi Ghat is a UNESCO site. Visit in the morning, and avoid Sundays when stalls close.",
+        "interests": [
+          "culture",
+          "food",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mauritius/pamplemousses-garden": {
+        "name": "Pamplemousses Botanical Garden",
+        "description": "A garden with giant water lilies and the oldest botanic collection in the southern hemisphere.",
+        "details": "Established in the 18th century, the garden has giant Victoria amazonica lilies, ponds of fish and a palm avenue. A guide explains the plants. It is in the north-west and combines well with a Grand Baie stay.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mauritius/grand-baie-water": {
+        "name": "Grand Baie and northern islands",
+        "description": "A lively resort bay with catamaran trips to Coin de Mire and Gabriel Island.",
+        "details": "Grand Baie has water sports, restaurants and nightlife. Catamaran cruises visit the northern islets for snorkelling, with sailing and a barbecue lunch. The Cap Malheureux church with its red roof is a short drive north.",
+        "interests": [
+          "relax",
+          "adventure",
+          "food",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mauritius/ile-aux-cerfs": {
+        "name": "Ile aux Cerfs",
+        "description": "A lagoon island on the east coast with white sand, water sports and a golf course.",
+        "details": "Speedboats leave from Trou d Eau Douce to the island, where visitors can swim, kayak, parasail or have a beach lunch. A catamaran trip also visits the Grand River South East waterfall. It is busiest at midday.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mauritius/chamarel": {
+        "name": "Chamarel Seven Coloured Earths and waterfall",
+        "description": "Dunes of seven natural colours and the highest waterfall on the island.",
+        "details": "Chamarel is in the south-west highlands, with the Seven Coloured Earths geopark, giant tortoises and a 100-metre waterfall viewpoint. A rum distillery nearby offers tastings. The weather is cooler and wetter than the coast.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "iconic_landmarks",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mauritius/black-river-gorges": {
+        "name": "Black River Gorges National Park",
+        "description": "Forested hiking trails with waterfalls, viewpoints and rare birds like the pink pigeon.",
+        "details": "The Black River Gorges park has the best hiking in the country, with trails to waterfalls, lookouts over the gorge and the Alexandra Falls viewpoint. Birdlife includes the endangered pink pigeon. Carry water and rain gear.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "mauritius/le-morne": {
+        "name": "Le Morne Brabant",
+        "description": "A dramatic UNESCO mountain rising from a peninsula, a symbol of the resistance to slavery.",
+        "details": "Le Morne Brabant stands at 556 metres, with a guided hike to the summit for views over the lagoon. The lagoon below is a kitesurfing hub, and the One Eye underwater waterfall illusion is visible from helicopter or a viewpoint. Start the hike early.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "H",
+        "image": null
+      },
+      "mauritius/tamarin-dolphins": {
+        "name": "Tamarin dolphins and salt pans",
+        "description": "A west-coast boat trip to swim near spinner dolphins and visit traditional salt pans.",
+        "details": "Early boats from Tamarin look for spinner dolphins and, from July to October, humpback whales. Tamarin also has salt pans and a surf spot. Choose operators that follow responsible dolphin-viewing guidelines.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "mauritius/mahebourg-south": {
+        "name": "Mahebourg and the south-east coast",
+        "description": "A relaxed fishing town with a market and the Blue Bay marine park.",
+        "details": "Mahebourg has a Monday market, the naval museum and nearby beaches at Blue Bay with glass-bottom boats and snorkelling. The south coast has dramatic cliffs at Gris Gris. It is close to the airport at Plaine Magnien.",
+        "interests": [
+          "culture",
+          "relax",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "mauritius": {
+        "name": "Mauritius",
+        "description": "An Indian Ocean island of lagoon beaches, mountains and a blend of cultures.",
+        "images": []
+      },
+      "mauritius/belle-mare": {
+        "name": "Belle Mare",
+        "description": "A long east-coast beach, close to the lagoon island of Ile aux Cerfs.",
+        "images": []
+      },
+      "mauritius/le-morne": {
+        "name": "Le Morne",
+        "description": "A peninsula under a UNESCO mountain, famed for kitesurfing.",
+        "images": []
+      },
+      "mauritius/flic-en-flac": {
+        "name": "Flic en Flac",
+        "description": "A west-coast beach town with sunsets and dolphin trips.",
+        "images": []
+      },
+      "mauritius/grand-baie": {
+        "name": "Grand Baie",
+        "description": "The north coast resort with restaurants and boat trips.",
+        "images": []
+      }
+    }
+  }
+}

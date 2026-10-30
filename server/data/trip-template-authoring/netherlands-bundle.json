@@ -1,0 +1,1193 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Rick Steves, Pickyourtrail, Stippl and TourRadar itineraries for the Netherlands",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "netherlands-amsterdam-4d",
+      "title": "Amsterdam in 4 Days",
+      "summary": "Canals, museums, markets and windmills.",
+      "days": 4,
+      "route": "Amsterdam",
+      "arrive": "Amsterdam (AMS)",
+      "depart": "Amsterdam (AMS)",
+      "countries": [
+        "Netherlands"
+      ],
+      "regions": [],
+      "cities": [
+        "Amsterdam"
+      ],
+      "imageQuery": "Amsterdam canals bikes",
+      "highlights": [
+        "Canal cruise",
+        "Rijksmuseum",
+        "Van Gogh Museum",
+        "Zaanse Schans"
+      ],
+      "destinationKeys": [
+        "netherlands",
+        "netherlands/amsterdam"
+      ],
+      "hero": "netherlands/amsterdam",
+      "sources": [
+        "Rick Steves",
+        "Pickyourtrail",
+        "Stippl",
+        "TourRadar",
+        "The Better Vacation"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Amsterdam",
+          "hotel": "Hotel in Amsterdam",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Jordaan or near Museumplein; central and tram-friendly",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Canal cruise and Jordaan walk",
+          "notes": "Pre-book the Anne Frank House separately.",
+          "where": "Amsterdam",
+          "book": "Yes - book Anne Frank House",
+          "place": "netherlands/amsterdam-canals"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Rijksmuseum and Van Gogh Museum",
+          "notes": "Timed tickets recommended.",
+          "where": "Museumplein, Amsterdam",
+          "book": "Yes - book museums",
+          "place": "netherlands/rijksmuseum-van-gogh"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Albert Cuyp market and bitterballen",
+          "notes": "Try stroopwafels and herring.",
+          "where": "De Pijp, Amsterdam",
+          "book": "",
+          "place": "netherlands/jordaan-markets"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Zaanse Schans windmills",
+          "notes": "Go early for quiet paths.",
+          "where": "Zaandam",
+          "book": "",
+          "place": "netherlands/zaanse-schans"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Amsterdam Schiphol Airport (AMS)",
+          "to": "Amsterdam hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Amsterdam hotel",
+          "to": "Amsterdam Schiphol Airport (AMS)",
+          "time": "12:00",
+          "minutes": 25,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "netherlands-amsterdam-haarlem-5d",
+      "title": "Amsterdam and Haarlem in 5 Days",
+      "summary": "The capital plus a calmer old town, with Keukenhof in spring.",
+      "days": 5,
+      "route": "Amsterdam > Haarlem",
+      "arrive": "Amsterdam (AMS)",
+      "depart": "Amsterdam (AMS)",
+      "countries": [
+        "Netherlands"
+      ],
+      "regions": [
+        "North Holland"
+      ],
+      "cities": [
+        "Amsterdam",
+        "Haarlem"
+      ],
+      "imageQuery": "Keukenhof tulips Netherlands",
+      "highlights": [
+        "Canal cruise",
+        "Rijksmuseum",
+        "Haarlem",
+        "Keukenhof"
+      ],
+      "destinationKeys": [
+        "netherlands",
+        "netherlands/north-holland",
+        "netherlands/amsterdam",
+        "netherlands/haarlem"
+      ],
+      "hero": "netherlands/north-holland",
+      "sources": [
+        "Rick Steves",
+        "Pickyourtrail",
+        "Stippl",
+        "TourRadar",
+        "The Better Vacation"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Amsterdam",
+          "hotel": "Hotel in Amsterdam",
+          "start": 0,
+          "nights": 2,
+          "area": "In the Jordaan or near Museumplein; central and tram-friendly",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Haarlem",
+          "hotel": "Hotel in Haarlem",
+          "start": 2,
+          "nights": 2,
+          "area": "In Haarlem old town near the Grote Markt",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Canal cruise and Jordaan walk",
+          "notes": "Pre-book the Anne Frank House separately.",
+          "where": "Amsterdam",
+          "book": "Yes - book Anne Frank House",
+          "place": "netherlands/amsterdam-canals"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Rijksmuseum and Van Gogh Museum",
+          "notes": "Timed tickets recommended.",
+          "where": "Museumplein, Amsterdam",
+          "book": "Yes - book museums",
+          "place": "netherlands/rijksmuseum-van-gogh"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Albert Cuyp market and bitterballen",
+          "notes": "Try stroopwafels and herring.",
+          "where": "De Pijp, Amsterdam",
+          "book": "",
+          "place": "netherlands/jordaan-markets"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Haarlem Grote Markt and Frans Hals Museum",
+          "notes": "Peek into a hofje courtyard.",
+          "where": "Haarlem",
+          "book": "",
+          "place": "netherlands/haarlem"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Keukenhof tulip gardens (spring only)",
+          "notes": "Open mid-March to mid-May; book timed tickets.",
+          "where": "Lisse",
+          "book": "Yes - book entry",
+          "place": "netherlands/keukenhof"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Amsterdam Schiphol Airport (AMS)",
+          "to": "Amsterdam hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Amsterdam",
+          "to": "Haarlem",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "NS train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Haarlem",
+          "to": "Amsterdam Schiphol Airport (AMS)",
+          "time": "11:00",
+          "minutes": 35,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "netherlands-amsterdam-delft-utrecht-7d",
+      "title": "Amsterdam, Delft and Utrecht in 7 Days",
+      "summary": "Capital, blue-and-white Delft and student-city Utrecht.",
+      "days": 7,
+      "route": "Amsterdam > Delft > Utrecht",
+      "arrive": "Amsterdam (AMS)",
+      "depart": "Amsterdam (AMS)",
+      "countries": [
+        "Netherlands"
+      ],
+      "regions": [
+        "South Holland"
+      ],
+      "cities": [
+        "Amsterdam",
+        "Delft",
+        "Utrecht"
+      ],
+      "imageQuery": "Delft canal Netherlands",
+      "highlights": [
+        "Rijksmuseum",
+        "Delft",
+        "Rotterdam",
+        "Utrecht Dom Tower"
+      ],
+      "destinationKeys": [
+        "netherlands",
+        "netherlands/amsterdam",
+        "netherlands/south-holland",
+        "netherlands/delft",
+        "netherlands/utrecht"
+      ],
+      "hero": "netherlands/delft",
+      "sources": [
+        "Rick Steves",
+        "Pickyourtrail",
+        "Stippl",
+        "TourRadar",
+        "The Better Vacation"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Amsterdam",
+          "hotel": "Hotel in Amsterdam",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Jordaan or near Museumplein; central and tram-friendly",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Delft",
+          "hotel": "Hotel in Delft",
+          "start": 3,
+          "nights": 2,
+          "area": "In Delft centre, a short walk to the market square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Utrecht",
+          "hotel": "Hotel in Utrecht",
+          "start": 5,
+          "nights": 1,
+          "area": "In the old centre of Utrecht along the canals",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Canal cruise and Jordaan walk",
+          "notes": "Pre-book the Anne Frank House separately.",
+          "where": "Amsterdam",
+          "book": "Yes - book Anne Frank House",
+          "place": "netherlands/amsterdam-canals"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Rijksmuseum and Van Gogh Museum",
+          "notes": "Timed tickets recommended.",
+          "where": "Museumplein, Amsterdam",
+          "book": "Yes - book museums",
+          "place": "netherlands/rijksmuseum-van-gogh"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Zaanse Schans windmills",
+          "notes": "Go early for quiet paths.",
+          "where": "Zaandam",
+          "book": "",
+          "place": "netherlands/zaanse-schans"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Delft canals and Royal Delft pottery",
+          "notes": "Climb the Nieuwe Kerk tower for the view.",
+          "where": "Delft",
+          "book": "",
+          "place": "netherlands/delft"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Rotterdam Markthal, Cube Houses and harbour",
+          "notes": "Take a harbour boat tour.",
+          "where": "Rotterdam",
+          "book": "",
+          "place": "netherlands/rotterdam"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Kinderdijk windmills by bike",
+          "notes": "Busy in July and August; go early.",
+          "where": "Kinderdijk",
+          "book": "",
+          "place": "netherlands/kinderdijk"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "4h",
+          "name": "Utrecht canals and Dom Tower climb",
+          "notes": "465 steps for the best view.",
+          "where": "Utrecht",
+          "book": "",
+          "place": "netherlands/utrecht"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Amsterdam Schiphol Airport (AMS)",
+          "to": "Amsterdam hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Amsterdam",
+          "to": "Delft",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "NS train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Delft",
+          "to": "Utrecht",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "NS train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Utrecht",
+          "to": "Amsterdam Schiphol Airport (AMS)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "netherlands-amsterdam-haarlem-delft-utrecht-8d",
+      "title": "Netherlands Highlights in 8 Days",
+      "summary": "Amsterdam, Haarlem, Delft and Utrecht, with Rotterdam and Kinderdijk.",
+      "days": 8,
+      "route": "Amsterdam > Haarlem > Delft > Utrecht",
+      "arrive": "Amsterdam (AMS)",
+      "depart": "Amsterdam (AMS)",
+      "countries": [
+        "Netherlands"
+      ],
+      "regions": [
+        "North Holland",
+        "South Holland"
+      ],
+      "cities": [
+        "Amsterdam",
+        "Haarlem",
+        "Delft",
+        "Utrecht"
+      ],
+      "imageQuery": "Kinderdijk windmills Netherlands",
+      "highlights": [
+        "Anne Frank House",
+        "Haarlem",
+        "Delft",
+        "Kinderdijk",
+        "Utrecht"
+      ],
+      "destinationKeys": [
+        "netherlands",
+        "netherlands/north-holland",
+        "netherlands/amsterdam",
+        "netherlands/haarlem",
+        "netherlands/south-holland",
+        "netherlands/delft",
+        "netherlands/utrecht"
+      ],
+      "hero": "netherlands/south-holland",
+      "sources": [
+        "Rick Steves",
+        "Pickyourtrail",
+        "Stippl",
+        "TourRadar",
+        "The Better Vacation"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "relax",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Amsterdam",
+          "hotel": "Hotel in Amsterdam",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Jordaan or near Museumplein; central and tram-friendly",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Haarlem",
+          "hotel": "Hotel in Haarlem",
+          "start": 3,
+          "nights": 1,
+          "area": "In Haarlem old town near the Grote Markt",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Delft",
+          "hotel": "Hotel in Delft",
+          "start": 4,
+          "nights": 2,
+          "area": "In Delft centre, a short walk to the market square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Utrecht",
+          "hotel": "Hotel in Utrecht",
+          "start": 6,
+          "nights": 1,
+          "area": "In the old centre of Utrecht along the canals",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Canal cruise and Jordaan walk",
+          "notes": "Pre-book the Anne Frank House separately.",
+          "where": "Amsterdam",
+          "book": "Yes - book Anne Frank House",
+          "place": "netherlands/amsterdam-canals"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Rijksmuseum and Van Gogh Museum",
+          "notes": "Timed tickets recommended.",
+          "where": "Museumplein, Amsterdam",
+          "book": "Yes - book museums",
+          "place": "netherlands/rijksmuseum-van-gogh"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "12:00",
+          "duration": "3h",
+          "name": "Albert Cuyp market and bitterballen",
+          "notes": "Try stroopwafels and herring.",
+          "where": "De Pijp, Amsterdam",
+          "book": "",
+          "place": "netherlands/jordaan-markets"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Haarlem Grote Markt and Frans Hals Museum",
+          "notes": "Peek into a hofje courtyard.",
+          "where": "Haarlem",
+          "book": "",
+          "place": "netherlands/haarlem"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Delft canals and Royal Delft pottery",
+          "notes": "Climb the Nieuwe Kerk tower for the view.",
+          "where": "Delft",
+          "book": "",
+          "place": "netherlands/delft"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Rotterdam Markthal, Cube Houses and harbour",
+          "notes": "Take a harbour boat tour.",
+          "where": "Rotterdam",
+          "book": "",
+          "place": "netherlands/rotterdam"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Kinderdijk windmills by bike",
+          "notes": "Busy in July and August; go early.",
+          "where": "Kinderdijk",
+          "book": "",
+          "place": "netherlands/kinderdijk"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "4h",
+          "name": "Utrecht canals and Dom Tower climb",
+          "notes": "465 steps for the best view.",
+          "where": "Utrecht",
+          "book": "",
+          "place": "netherlands/utrecht"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Amsterdam Schiphol Airport (AMS)",
+          "to": "Amsterdam hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Amsterdam",
+          "to": "Haarlem",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "NS train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Haarlem",
+          "to": "Delft",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "NS train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Delft",
+          "to": "Utrecht",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "NS train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Utrecht",
+          "to": "Amsterdam Schiphol Airport (AMS)",
+          "time": "11:00",
+          "minutes": 45,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "netherlands-complete-10d",
+      "title": "Complete Netherlands in 10 Days",
+      "summary": "Amsterdam, Giethoorn, Utrecht, Delft and Haarlem.",
+      "days": 10,
+      "route": "Amsterdam > Giethoorn > Utrecht > Delft > Haarlem",
+      "arrive": "Amsterdam (AMS)",
+      "depart": "Amsterdam (AMS)",
+      "countries": [
+        "Netherlands"
+      ],
+      "regions": [
+        "North Holland",
+        "South Holland",
+        "Overijssel"
+      ],
+      "cities": [
+        "Amsterdam",
+        "Giethoorn",
+        "Utrecht",
+        "Delft",
+        "Haarlem"
+      ],
+      "imageQuery": "Giethoorn village canals",
+      "highlights": [
+        "Anne Frank House",
+        "Giethoorn",
+        "Utrecht",
+        "Kinderdijk",
+        "Delft",
+        "Haarlem"
+      ],
+      "destinationKeys": [
+        "netherlands",
+        "netherlands/north-holland",
+        "netherlands/amsterdam",
+        "netherlands/overijssel",
+        "netherlands/giethoorn",
+        "netherlands/utrecht",
+        "netherlands/south-holland",
+        "netherlands/delft",
+        "netherlands/haarlem"
+      ],
+      "hero": "netherlands/giethoorn",
+      "sources": [
+        "Rick Steves",
+        "Pickyourtrail",
+        "Stippl",
+        "TourRadar",
+        "The Better Vacation"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "relax",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Amsterdam",
+          "hotel": "Hotel in Amsterdam",
+          "start": 0,
+          "nights": 3,
+          "area": "In the Jordaan or near Museumplein; central and tram-friendly",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Giethoorn",
+          "hotel": "Guesthouse in Giethoorn",
+          "start": 3,
+          "nights": 1,
+          "area": "In a canal-side guesthouse in Giethoorn village",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Utrecht",
+          "hotel": "Hotel in Utrecht",
+          "start": 4,
+          "nights": 2,
+          "area": "In the old centre of Utrecht along the canals",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Delft",
+          "hotel": "Hotel in Delft",
+          "start": 6,
+          "nights": 2,
+          "area": "In Delft centre, a short walk to the market square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Haarlem",
+          "hotel": "Hotel in Haarlem",
+          "start": 8,
+          "nights": 1,
+          "area": "In Haarlem old town near the Grote Markt",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Tour",
+          "time": "15:00",
+          "duration": "1.5h",
+          "name": "Canal cruise and Jordaan walk",
+          "notes": "Pre-book the Anne Frank House separately.",
+          "where": "Amsterdam",
+          "book": "Yes - book Anne Frank House",
+          "place": "netherlands/amsterdam-canals"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Rijksmuseum and Van Gogh Museum",
+          "notes": "Timed tickets recommended.",
+          "where": "Museumplein, Amsterdam",
+          "book": "Yes - book museums",
+          "place": "netherlands/rijksmuseum-van-gogh"
+        },
+        {
+          "day": 2,
+          "type": "Food & Drink",
+          "time": "12:00",
+          "duration": "3h",
+          "name": "Albert Cuyp market and bitterballen",
+          "notes": "Try stroopwafels and herring.",
+          "where": "De Pijp, Amsterdam",
+          "book": "",
+          "place": "netherlands/jordaan-markets"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2.5h",
+          "name": "Giethoorn whisper boat",
+          "notes": "Quietest in the early morning and evening.",
+          "where": "Giethoorn",
+          "book": "",
+          "place": "netherlands/giethoorn"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "4h",
+          "name": "Utrecht canals and Dom Tower climb",
+          "notes": "465 steps for the best view.",
+          "where": "Utrecht",
+          "book": "",
+          "place": "netherlands/utrecht"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Delft canals and Royal Delft pottery",
+          "notes": "Climb the Nieuwe Kerk tower for the view.",
+          "where": "Delft",
+          "book": "",
+          "place": "netherlands/delft"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Rotterdam Markthal, Cube Houses and harbour",
+          "notes": "Take a harbour boat tour.",
+          "where": "Rotterdam",
+          "book": "",
+          "place": "netherlands/rotterdam"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Kinderdijk windmills by bike",
+          "notes": "Busy in July and August; go early.",
+          "where": "Kinderdijk",
+          "book": "",
+          "place": "netherlands/kinderdijk"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "3h",
+          "name": "Haarlem Grote Markt and Frans Hals Museum",
+          "notes": "Peek into a hofje courtyard.",
+          "where": "Haarlem",
+          "book": "",
+          "place": "netherlands/haarlem"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Amsterdam Schiphol Airport (AMS)",
+          "to": "Amsterdam hotel",
+          "time": "",
+          "minutes": 25,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Amsterdam",
+          "to": "Giethoorn",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "NS train",
+          "notes": "Train to Steenwijk then a bus.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Giethoorn",
+          "to": "Utrecht",
+          "time": "09:30",
+          "minutes": 150,
+          "carrier": "NS train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Utrecht",
+          "to": "Delft",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "NS train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Delft",
+          "to": "Haarlem",
+          "time": "10:00",
+          "minutes": 60,
+          "carrier": "NS train",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Haarlem",
+          "to": "Amsterdam Schiphol Airport (AMS)",
+          "time": "11:00",
+          "minutes": 35,
+          "carrier": "Train or taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "netherlands/amsterdam-canals": {
+        "name": "Amsterdam canals and the Anne Frank House",
+        "description": "A UNESCO canal ring, with a boat tour and the hiding place of Anne Frank.",
+        "details": "Amsterdam is best on foot, by bike or by canal boat. The Anne Frank House needs timed tickets booked weeks ahead. The Jordaan has quiet lanes and brown cafes, and the Nine Streets have boutiques. Watch for bikes, which have priority.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/rijksmuseum-van-gogh": {
+        "name": "Rijksmuseum and Van Gogh Museum",
+        "description": "Rembrandt, Vermeer and the largest Van Gogh collection in the world, side by side.",
+        "details": "The Rijksmuseum holds The Night Watch and Dutch Golden Age masters. The Van Gogh Museum is a short walk away. Timed tickets are recommended, and mornings are quieter. Museumplein has a lawn for a break.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/jordaan-markets": {
+        "name": "Jordaan, Albert Cuyp market and food",
+        "description": "Neighbourhood lanes, a street market for stroopwafels and herring, and Dutch cheese.",
+        "details": "Albert Cuyp market in De Pijp sells fresh stroopwafels, Dutch cheese and herring. The Jordaan has hidden courtyards and small galleries. Try bitterballen with a beer at a brown cafe. Markets are closed on Sundays except a few.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/keukenhof": {
+        "name": "Keukenhof tulip gardens",
+        "description": "The world largest flower garden, open only in spring.",
+        "details": "Keukenhof has seven million bulbs, with tulips at their best in mid-April. It opens from mid-March to mid-May only. Nearby bulb fields can be seen from a bike or bus. Book timed tickets, since peak weekends are busy.",
+        "interests": [
+          "photography",
+          "outdoors",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/zaanse-schans": {
+        "name": "Zaanse Schans windmills",
+        "description": "A neighbourhood of working windmills, clog makers and a cheese farm north of Amsterdam.",
+        "details": "Zaanse Schans is a living museum of windmills, with a paint mill, a sawmill and a clog workshop. It is about 20 minutes by train from Amsterdam and busy at midday. Go early for a quiet walk on the Zaan river.",
+        "interests": [
+          "culture",
+          "photography",
+          "relax"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/haarlem": {
+        "name": "Haarlem old town and Frans Hals Museum",
+        "description": "A calmer alternative to Amsterdam, with a great church square and small museums.",
+        "details": "Haarlem has the Grote Markt and the St Bavo church, the Frans Hals Museum and the Corrie ten Boom house. Hofjes, hidden almshouse courtyards, are open to visitors. Trains to Amsterdam take 15 minutes, and the beach at Zandvoort is a short ride.",
+        "interests": [
+          "culture",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/delft": {
+        "name": "Delft blue pottery and Vermeer",
+        "description": "A canal town of blue-and-white ceramics and the painter Vermeer.",
+        "details": "Delft has the Royal Delft factory, the Nieuwe Kerk, and the market square. Vermeer Centre tells the story of the painter. Pretty canals and cafes make it very walkable. Rotterdam and The Hague are 15 minutes away by train.",
+        "interests": [
+          "culture",
+          "relax",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/rotterdam": {
+        "name": "Rotterdam Markthal, Cube Houses and harbour",
+        "description": "A modern port city of bold architecture, a market hall and boat tours of the harbour.",
+        "details": "Rotterdam was rebuilt after the war and has the Markthal arch, the Cube Houses and the Erasmus Bridge. Harbour tours show the largest port in Europe. Street art and food halls make it a lively contrast to Amsterdam.",
+        "interests": [
+          "culture",
+          "food",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/kinderdijk": {
+        "name": "Kinderdijk windmills",
+        "description": "Nineteen 18th-century windmills in a polder landscape, a UNESCO site.",
+        "details": "The Kinderdijk windmills were built to drain the polder and are best seen by bike or on foot. One mill is open to see how the miller lived. It is busy in July and August, so go early or in shoulder season. A waterbus runs from Rotterdam.",
+        "interests": [
+          "photography",
+          "culture",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/utrecht": {
+        "name": "Utrecht canals and Dom Tower",
+        "description": "A student city with a medieval centre, sunken canal wharves and the tallest church tower in the country.",
+        "details": "Utrecht has canal-level wharf cafes, the Dom Tower with 465 steps for the view, and the Miffy museum. It is more relaxed than Amsterdam. Trains from Amsterdam take about 30 minutes.",
+        "interests": [
+          "culture",
+          "relax",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "netherlands/giethoorn": {
+        "name": "Giethoorn canal village",
+        "description": "A car-free village of thatched farmhouses and canals, explored by whisper boat.",
+        "details": "Giethoorn has no roads, and people move by boat or footpath. Electric whisper boats can be rented, and cyclists use the paths. It is quietest in the early morning and evening, and it is about two hours from Amsterdam.",
+        "interests": [
+          "relax",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "netherlands": {
+        "name": "Netherlands",
+        "description": "A flat, canal-laced country of windmills, tulips, art and cycling.",
+        "images": []
+      },
+      "netherlands/north-holland": {
+        "name": "North Holland",
+        "description": "The province of Amsterdam and Haarlem.",
+        "images": []
+      },
+      "netherlands/amsterdam": {
+        "name": "Amsterdam",
+        "description": "The canal capital of museums, bikes and cafes.",
+        "images": []
+      },
+      "netherlands/haarlem": {
+        "name": "Haarlem",
+        "description": "A calm old town near the dunes.",
+        "images": []
+      },
+      "netherlands/south-holland": {
+        "name": "South Holland",
+        "description": "The province of Delft, Rotterdam and Kinderdijk.",
+        "images": []
+      },
+      "netherlands/delft": {
+        "name": "Delft",
+        "description": "A town of blue pottery and canals.",
+        "images": []
+      },
+      "netherlands/utrecht": {
+        "name": "Utrecht",
+        "description": "A medieval canal city.",
+        "images": []
+      },
+      "netherlands/overijssel": {
+        "name": "Overijssel",
+        "description": "The eastern province of Giethoorn.",
+        "images": []
+      },
+      "netherlands/giethoorn": {
+        "name": "Giethoorn",
+        "description": "A village without roads.",
+        "images": []
+      }
+    }
+  }
+}

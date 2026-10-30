@@ -248,6 +248,8 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
             textContentType="emailAddress"
             keyboardType="email-address"
             value={inviteInput}
+            accessibilityLabel="Invite emails"
+            testID="share-trip-invite-emails"
             onChangeText={setInviteInput}
           />
           <View style={styles.row}>
@@ -266,6 +268,9 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
             <TouchableOpacity
               style={[styles.button, styles.smallButton, inviteSubmitting && styles.buttonDisabled]}
               onPress={sendInvites}
+              accessibilityRole="button"
+              accessibilityLabel="Send Invite"
+              testID="share-trip-send"
               disabled={inviteSubmitting}
             >
               <Text style={styles.buttonText}>{inviteSubmitting ? 'Sending...' : 'Send Invite'}</Text>

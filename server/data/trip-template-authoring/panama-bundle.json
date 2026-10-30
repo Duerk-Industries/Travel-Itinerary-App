@@ -1,0 +1,1271 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Bucketlistly, Rough Guides, The Culture Trip and Sally Sees itineraries for Panama",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "panama-city-san-blas-5d",
+      "title": "Panama City and San Blas in 5 Days",
+      "summary": "The canal and old town, then a Guna island stay.",
+      "days": 5,
+      "route": "Panama City > San Blas Islands",
+      "arrive": "Panama City (PTY)",
+      "depart": "Panama City (PTY)",
+      "countries": [
+        "Panama"
+      ],
+      "regions": [
+        "Guna Yala"
+      ],
+      "cities": [
+        "Panama City",
+        "San Blas Islands"
+      ],
+      "imageQuery": "San Blas islands Panama",
+      "highlights": [
+        "Miraflores Locks",
+        "Casco Viejo",
+        "San Blas islands"
+      ],
+      "destinationKeys": [
+        "panama",
+        "panama/panama-city",
+        "panama/guna-yala",
+        "panama/san-blas-islands"
+      ],
+      "hero": "panama/san-blas-islands",
+      "sources": [
+        "Bucketlistly",
+        "Rough Guides",
+        "The Culture Trip",
+        "Sally Sees",
+        "Along Dusty Roads"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "culture",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Panama City",
+          "hotel": "Hotel in Panama City",
+          "start": 0,
+          "nights": 2,
+          "area": "In Casco Viejo for atmosphere, or in the Bella Vista area for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San Blas Islands",
+          "hotel": "Lodge on a San Blas island",
+          "start": 2,
+          "nights": 2,
+          "area": "In a Guna cabin on a small island; basic with limited power",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3.5h",
+          "name": "Casco Viejo and rooftop sunset",
+          "notes": "Cooler in the late afternoon.",
+          "where": "Casco Viejo",
+          "book": "",
+          "place": "panama/casco-viejo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Miraflores Locks",
+          "notes": "Check the transit schedule for a ship passing.",
+          "where": "Panama Canal",
+          "book": "",
+          "place": "panama/canal-miraflores"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Island hopping and snorkelling",
+          "notes": "Respect Guna customs and entry fees.",
+          "where": "San Blas",
+          "book": "Yes - arrange Guna boat",
+          "place": "panama/san-blas-guna-yala"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tocumen Airport (PTY)",
+          "to": "Panama City hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Panama City",
+          "to": "San Blas boat dock",
+          "time": "05:30",
+          "minutes": 180,
+          "carrier": "Shuttle or private driver",
+          "notes": "A 4x4 over a rough road to the dock, then a boat.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Other",
+          "from": "Carti dock",
+          "to": "San Blas island",
+          "time": "09:30",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Other",
+          "from": "San Blas island",
+          "to": "Carti dock",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Carti dock",
+          "to": "Tocumen Airport (PTY)",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "panama-city-bocas-7d",
+      "title": "Panama City and Bocas del Toro in 7 Days",
+      "summary": "Canal and old town, rainforest and Caribbean islands.",
+      "days": 7,
+      "route": "Panama City > Bocas del Toro",
+      "arrive": "Panama City (PTY)",
+      "depart": "Bocas del Toro (BOC)",
+      "countries": [
+        "Panama"
+      ],
+      "regions": [],
+      "cities": [
+        "Panama City",
+        "Bocas del Toro"
+      ],
+      "imageQuery": "Bocas del Toro Panama beach",
+      "highlights": [
+        "Miraflores Locks",
+        "Casco Viejo",
+        "Gamboa rainforest",
+        "Bocas island hopping"
+      ],
+      "destinationKeys": [
+        "panama",
+        "panama/panama-city",
+        "panama/bocas-del-toro"
+      ],
+      "hero": "panama/bocas-del-toro",
+      "sources": [
+        "Bucketlistly",
+        "Rough Guides",
+        "The Culture Trip",
+        "Sally Sees",
+        "Along Dusty Roads"
+      ],
+      "pace": "B",
+      "interests": [
+        "relax",
+        "outdoors",
+        "culture",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Panama City",
+          "hotel": "Hotel in Panama City",
+          "start": 0,
+          "nights": 3,
+          "area": "In Casco Viejo for atmosphere, or in the Bella Vista area for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bocas del Toro",
+          "hotel": "Hotel in Bocas del Toro",
+          "start": 3,
+          "nights": 3,
+          "area": "In Bocas Town or a hotel on a nearby island with a water taxi",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3.5h",
+          "name": "Casco Viejo and rooftop sunset",
+          "notes": "Cooler in the late afternoon.",
+          "where": "Casco Viejo",
+          "book": "",
+          "place": "panama/casco-viejo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Miraflores Locks",
+          "notes": "Check the transit schedule for a ship passing.",
+          "where": "Panama Canal",
+          "book": "",
+          "place": "panama/canal-miraflores"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Soberania and Gamboa rainforest walk",
+          "notes": "Go at dawn for birds and monkeys.",
+          "where": "Gamboa",
+          "book": "",
+          "place": "panama/soberania-gamboa"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Dolphin Bay, Cayo Zapatilla and Starfish Beach",
+          "notes": "Choose a flexible day; rain is frequent.",
+          "where": "Bocas del Toro",
+          "book": "Yes - book a boat tour",
+          "place": "panama/bocas-island-hopping"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Red Frog Beach and snorkel day",
+          "notes": "Choose a flexible day; rain is frequent.",
+          "where": "Bocas del Toro",
+          "book": "Yes - book a boat tour",
+          "place": "panama/bocas-island-hopping"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tocumen Airport (PTY)",
+          "to": "Panama City hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Panama City hotel",
+          "to": "Albrook Airport (PAC)",
+          "time": "08:00",
+          "minutes": 25,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Bocas del Toro Airport (BOC)",
+          "to": "Bocas hotel",
+          "time": "",
+          "minutes": 10,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Bocas hotel",
+          "to": "Bocas del Toro Airport (BOC)",
+          "time": "11:00",
+          "minutes": 10,
+          "carrier": "Water taxi and taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "panama-highlands-bocas-9d",
+      "title": "Panama City, Highlands and Bocas in 9 Days",
+      "summary": "Canal, El Valle, Boquete coffee and the Caribbean.",
+      "days": 9,
+      "route": "Panama City > El Valle de Anton > Boquete > Bocas del Toro",
+      "arrive": "Panama City (PTY)",
+      "depart": "Bocas del Toro (BOC)",
+      "countries": [
+        "Panama"
+      ],
+      "regions": [
+        "Chiriqui"
+      ],
+      "cities": [
+        "Panama City",
+        "El Valle de Anton",
+        "Boquete",
+        "Bocas del Toro"
+      ],
+      "imageQuery": "Boquete coffee Panama highlands",
+      "highlights": [
+        "Miraflores Locks",
+        "El Valle",
+        "Boquete coffee",
+        "Bocas island hopping"
+      ],
+      "destinationKeys": [
+        "panama",
+        "panama/panama-city",
+        "panama/el-valle-de-anton",
+        "panama/chiriqui",
+        "panama/boquete",
+        "panama/bocas-del-toro"
+      ],
+      "hero": "panama/boquete",
+      "sources": [
+        "Bucketlistly",
+        "Rough Guides",
+        "The Culture Trip",
+        "Sally Sees",
+        "Along Dusty Roads"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "food",
+        "relax",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Panama City",
+          "hotel": "Hotel in Panama City",
+          "start": 0,
+          "nights": 2,
+          "area": "In Casco Viejo for atmosphere, or in the Bella Vista area for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Valle de Anton",
+          "hotel": "Hotel in El Valle de Anton",
+          "start": 2,
+          "nights": 2,
+          "area": "In El Valle, close to the market square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Boquete",
+          "hotel": "Hotel in Boquete",
+          "start": 4,
+          "nights": 2,
+          "area": "In Boquete town or a coffee-farm lodge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bocas del Toro",
+          "hotel": "Hotel in Bocas del Toro",
+          "start": 6,
+          "nights": 2,
+          "area": "In Bocas Town or a hotel on a nearby island with a water taxi",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3.5h",
+          "name": "Casco Viejo and rooftop sunset",
+          "notes": "Cooler in the late afternoon.",
+          "where": "Casco Viejo",
+          "book": "",
+          "place": "panama/casco-viejo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Miraflores Locks",
+          "notes": "Check the transit schedule for a ship passing.",
+          "where": "Panama Canal",
+          "book": "",
+          "place": "panama/canal-miraflores"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "La India Dormida hike and Sunday market",
+          "notes": "Hike in the morning; market on Sundays.",
+          "where": "El Valle",
+          "book": "",
+          "place": "panama/el-valle"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Coffee farm tour and Pipeline Trail",
+          "notes": "Taste the Geisha coffee.",
+          "where": "Boquete",
+          "book": "",
+          "place": "panama/boquete-coffee"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Dolphin Bay, Cayo Zapatilla and Starfish Beach",
+          "notes": "Choose a flexible day; rain is frequent.",
+          "where": "Bocas del Toro",
+          "book": "Yes - book a boat tour",
+          "place": "panama/bocas-island-hopping"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tocumen Airport (PTY)",
+          "to": "Panama City hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Panama City",
+          "to": "El Valle lodge",
+          "time": "09:00",
+          "minutes": 120,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "El Valle",
+          "to": "Boquete",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "Shuttle or private driver",
+          "notes": "A long road day; a flight to David is an alternative.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Boquete",
+          "to": "Almirante dock",
+          "time": "07:30",
+          "minutes": 270,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Other",
+          "from": "Almirante",
+          "to": "Bocas Town",
+          "time": "12:30",
+          "minutes": 30,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Bocas hotel",
+          "to": "Bocas del Toro Airport (BOC)",
+          "time": "11:00",
+          "minutes": 10,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "panama-complete-12d",
+      "title": "Panama Highlights in 12 Days",
+      "summary": "Panama City, San Blas, El Valle, Boquete and Bocas.",
+      "days": 12,
+      "route": "Panama City > San Blas Islands > El Valle de Anton > Boquete > Bocas del Toro",
+      "arrive": "Panama City (PTY)",
+      "depart": "Bocas del Toro (BOC)",
+      "countries": [
+        "Panama"
+      ],
+      "regions": [
+        "Guna Yala",
+        "Chiriqui"
+      ],
+      "cities": [
+        "Panama City",
+        "San Blas Islands",
+        "El Valle de Anton",
+        "Boquete",
+        "Bocas del Toro"
+      ],
+      "imageQuery": "Panama San Blas Bocas highlands",
+      "highlights": [
+        "Panama Canal",
+        "San Blas",
+        "El Valle",
+        "Boquete",
+        "Bocas del Toro"
+      ],
+      "destinationKeys": [
+        "panama",
+        "panama/panama-city",
+        "panama/guna-yala",
+        "panama/san-blas-islands",
+        "panama/el-valle-de-anton",
+        "panama/chiriqui",
+        "panama/boquete",
+        "panama/bocas-del-toro"
+      ],
+      "hero": "panama/guna-yala",
+      "sources": [
+        "Bucketlistly",
+        "Rough Guides",
+        "The Culture Trip",
+        "Sally Sees",
+        "Along Dusty Roads"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "relax",
+        "culture",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Panama City",
+          "hotel": "Hotel in Panama City",
+          "start": 0,
+          "nights": 2,
+          "area": "In Casco Viejo for atmosphere, or in the Bella Vista area for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San Blas Islands",
+          "hotel": "Lodge on a San Blas island",
+          "start": 2,
+          "nights": 2,
+          "area": "In a Guna cabin on a small island; basic with limited power",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Valle de Anton",
+          "hotel": "Hotel in El Valle de Anton",
+          "start": 4,
+          "nights": 2,
+          "area": "In El Valle, close to the market square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Boquete",
+          "hotel": "Hotel in Boquete",
+          "start": 6,
+          "nights": 2,
+          "area": "In Boquete town or a coffee-farm lodge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bocas del Toro",
+          "hotel": "Hotel in Bocas del Toro",
+          "start": 8,
+          "nights": 3,
+          "area": "In Bocas Town or a hotel on a nearby island with a water taxi",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3.5h",
+          "name": "Casco Viejo and rooftop sunset",
+          "notes": "Cooler in the late afternoon.",
+          "where": "Casco Viejo",
+          "book": "",
+          "place": "panama/casco-viejo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Miraflores Locks",
+          "notes": "Check the transit schedule for a ship passing.",
+          "where": "Panama Canal",
+          "book": "",
+          "place": "panama/canal-miraflores"
+        },
+        {
+          "day": 3,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Island hopping and snorkelling",
+          "notes": "Respect Guna customs and entry fees.",
+          "where": "San Blas",
+          "book": "Yes - arrange Guna boat",
+          "place": "panama/san-blas-guna-yala"
+        },
+        {
+          "day": 5,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "La India Dormida hike and Sunday market",
+          "notes": "Hike in the morning; market on Sundays.",
+          "where": "El Valle",
+          "book": "",
+          "place": "panama/el-valle"
+        },
+        {
+          "day": 7,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Coffee farm tour and Pipeline Trail",
+          "notes": "Taste the Geisha coffee.",
+          "where": "Boquete",
+          "book": "",
+          "place": "panama/boquete-coffee"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Dolphin Bay, Cayo Zapatilla and Starfish Beach",
+          "notes": "Choose a flexible day; rain is frequent.",
+          "where": "Bocas del Toro",
+          "book": "Yes - book a boat tour",
+          "place": "panama/bocas-island-hopping"
+        },
+        {
+          "day": 10,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Red Frog Beach and snorkel day",
+          "notes": "Choose a flexible day; rain is frequent.",
+          "where": "Bocas del Toro",
+          "book": "Yes - book a boat tour",
+          "place": "panama/bocas-island-hopping"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tocumen Airport (PTY)",
+          "to": "Panama City hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Panama City",
+          "to": "San Blas boat dock",
+          "time": "05:30",
+          "minutes": 180,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Other",
+          "from": "Carti dock",
+          "to": "San Blas island",
+          "time": "09:30",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Other",
+          "from": "San Blas island",
+          "to": "Carti dock",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Carti dock",
+          "to": "El Valle lodge",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "El Valle",
+          "to": "Boquete",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Boquete",
+          "to": "Almirante dock",
+          "time": "07:30",
+          "minutes": 270,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Other",
+          "from": "Almirante",
+          "to": "Bocas Town",
+          "time": "12:30",
+          "minutes": 30,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Bocas hotel",
+          "to": "Bocas del Toro Airport (BOC)",
+          "time": "11:00",
+          "minutes": 10,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "panama-grand-14d",
+      "title": "Grand Panama in 14 Days",
+      "summary": "Canal and rainforest, San Blas, the highlands and Bocas, at a relaxed pace.",
+      "days": 14,
+      "route": "Panama City > San Blas Islands > El Valle de Anton > Boquete > Bocas del Toro",
+      "arrive": "Panama City (PTY)",
+      "depart": "Bocas del Toro (BOC)",
+      "countries": [
+        "Panama"
+      ],
+      "regions": [
+        "Guna Yala",
+        "Chiriqui"
+      ],
+      "cities": [
+        "Panama City",
+        "San Blas Islands",
+        "El Valle de Anton",
+        "Boquete",
+        "Bocas del Toro"
+      ],
+      "imageQuery": "Panama canal ship locks",
+      "highlights": [
+        "Panama Canal",
+        "Gamboa rainforest",
+        "San Blas",
+        "Boquete coffee",
+        "Bocas del Toro"
+      ],
+      "destinationKeys": [
+        "panama",
+        "panama/panama-city",
+        "panama/guna-yala",
+        "panama/san-blas-islands",
+        "panama/el-valle-de-anton",
+        "panama/chiriqui",
+        "panama/boquete",
+        "panama/bocas-del-toro"
+      ],
+      "hero": "panama/panama-city",
+      "sources": [
+        "Bucketlistly",
+        "Rough Guides",
+        "The Culture Trip",
+        "Sally Sees",
+        "Along Dusty Roads"
+      ],
+      "pace": "R",
+      "interests": [
+        "outdoors",
+        "relax",
+        "culture",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Panama City",
+          "hotel": "Hotel in Panama City",
+          "start": 0,
+          "nights": 3,
+          "area": "In Casco Viejo for atmosphere, or in the Bella Vista area for restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "San Blas Islands",
+          "hotel": "Lodge on a San Blas island",
+          "start": 3,
+          "nights": 2,
+          "area": "In a Guna cabin on a small island; basic with limited power",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "El Valle de Anton",
+          "hotel": "Hotel in El Valle de Anton",
+          "start": 5,
+          "nights": 2,
+          "area": "In El Valle, close to the market square",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Boquete",
+          "hotel": "Hotel in Boquete",
+          "start": 7,
+          "nights": 3,
+          "area": "In Boquete town or a coffee-farm lodge",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Bocas del Toro",
+          "hotel": "Hotel in Bocas del Toro",
+          "start": 10,
+          "nights": 3,
+          "area": "In Bocas Town or a hotel on a nearby island with a water taxi",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Sights & Landmarks",
+          "time": "16:00",
+          "duration": "3.5h",
+          "name": "Casco Viejo and rooftop sunset",
+          "notes": "Cooler in the late afternoon.",
+          "where": "Casco Viejo",
+          "book": "",
+          "place": "panama/casco-viejo"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3h",
+          "name": "Miraflores Locks",
+          "notes": "Check the transit schedule for a ship passing.",
+          "where": "Panama Canal",
+          "book": "",
+          "place": "panama/canal-miraflores"
+        },
+        {
+          "day": 2,
+          "type": "Outdoor Activity",
+          "time": "06:30",
+          "duration": "4h",
+          "name": "Soberania and Gamboa rainforest walk",
+          "notes": "Go at dawn for birds and monkeys.",
+          "where": "Gamboa",
+          "book": "",
+          "place": "panama/soberania-gamboa"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "Island hopping and snorkelling",
+          "notes": "Respect Guna customs and entry fees.",
+          "where": "San Blas",
+          "book": "Yes - arrange Guna boat",
+          "place": "panama/san-blas-guna-yala"
+        },
+        {
+          "day": 6,
+          "type": "Hike",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "La India Dormida hike and Sunday market",
+          "notes": "Hike in the morning; market on Sundays.",
+          "where": "El Valle",
+          "book": "",
+          "place": "panama/el-valle"
+        },
+        {
+          "day": 8,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "4h",
+          "name": "Coffee farm tour and Pipeline Trail",
+          "notes": "Taste the Geisha coffee.",
+          "where": "Boquete",
+          "book": "",
+          "place": "panama/boquete-coffee"
+        },
+        {
+          "day": 9,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Volcan Baru or waterfall hike",
+          "notes": "Taste the Geisha coffee.",
+          "where": "Boquete",
+          "book": "",
+          "place": "panama/boquete-coffee"
+        },
+        {
+          "day": 11,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Dolphin Bay, Cayo Zapatilla and Starfish Beach",
+          "notes": "Choose a flexible day; rain is frequent.",
+          "where": "Bocas del Toro",
+          "book": "Yes - book a boat tour",
+          "place": "panama/bocas-island-hopping"
+        },
+        {
+          "day": 12,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "6h",
+          "name": "Red Frog Beach and snorkel day",
+          "notes": "Choose a flexible day; rain is frequent.",
+          "where": "Bocas del Toro",
+          "book": "Yes - book a boat tour",
+          "place": "panama/bocas-island-hopping"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Tocumen Airport (PTY)",
+          "to": "Panama City hotel",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Taxi or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Panama City",
+          "to": "San Blas boat dock",
+          "time": "05:30",
+          "minutes": 180,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Other",
+          "from": "Carti dock",
+          "to": "San Blas island",
+          "time": "09:30",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Other",
+          "from": "San Blas island",
+          "to": "Carti dock",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Carti dock",
+          "to": "El Valle lodge",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "El Valle",
+          "to": "Boquete",
+          "time": "07:00",
+          "minutes": 420,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Boquete",
+          "to": "Almirante dock",
+          "time": "07:30",
+          "minutes": 270,
+          "carrier": "Shuttle or private driver",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Other",
+          "from": "Almirante",
+          "to": "Bocas Town",
+          "time": "12:30",
+          "minutes": 30,
+          "carrier": "Water taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Bocas hotel",
+          "to": "Bocas del Toro Airport (BOC)",
+          "time": "11:00",
+          "minutes": 10,
+          "carrier": "Taxi",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "panama/canal-miraflores": {
+        "name": "Panama Canal at Miraflores Locks",
+        "description": "Watch ships climb through the locks of one of the greatest engineering projects.",
+        "details": "The Miraflores Locks visitor centre has viewing decks, a museum and a film. Ships transit mostly in the morning and afternoon, so check the schedule. The Gatun Locks on the Atlantic side are less crowded. A partial canal transit day cruise is possible.",
+        "interests": [
+          "iconic_landmarks",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "panama/casco-viejo": {
+        "name": "Casco Viejo and Panama City skyline",
+        "description": "A restored colonial quarter of plazas, churches and rooftop bars facing the modern skyline.",
+        "details": "Casco Viejo is a UNESCO neighbourhood of colourful buildings, plazas and the Panama Canal Museum. Evenings bring rooftop bars with views of the skyline. Cinta Costera gives a bay-side walk. Panama City is hot and humid, so plan indoor breaks.",
+        "interests": [
+          "culture",
+          "food",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "panama/soberania-gamboa": {
+        "name": "Soberania National Park and Gamboa rainforest",
+        "description": "A rainforest park near the capital with sloths, monkeys and toucans, along the Panama Canal.",
+        "details": "Soberania has Pipeline Road, a world-famous birding trail, and the Gamboa rainforest resort has a canopy tower and boat trips on Gatun Lake. Capuchin monkeys, sloths and toucans are regular sightings. Go in the early morning.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "panama/san-blas-guna-yala": {
+        "name": "San Blas (Guna Yala) islands",
+        "description": "Palm-fringed islands run by the Guna people, with simple cabins and clear water.",
+        "details": "The Guna Yala archipelago has over 300 islands, with white sand, snorkelling and Guna culture, including mola textiles. Accommodation is in basic cabins, often with shared bathrooms and limited power. Trips go by 4x4 and boat. Guna entry fees apply.",
+        "interests": [
+          "relax",
+          "authentic_local",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "panama/el-valle": {
+        "name": "El Valle de Anton",
+        "description": "A village in a volcanic crater, with a craft market, hot springs and hikes.",
+        "details": "El Valle sits in a crater at 600 metres, cooler than the coast. Highlights include the Sunday market, La India Dormida hike, the square trees, thermal pools and a butterfly house. It is about two hours from Panama City.",
+        "interests": [
+          "outdoors",
+          "relax",
+          "authentic_local"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "panama/boquete-coffee": {
+        "name": "Boquete coffee tours and cloud forest",
+        "description": "Highland coffee farms with tastings, waterfalls and a trail through cloud forest.",
+        "details": "Boquete is known for Geisha coffee grown on the slopes of Volcan Baru. Farm tours show picking, roasting and tasting. The Pipeline Trail and the Lost Waterfalls are easy hikes. Climbing Volcan Baru is a night trek for the summit sunrise.",
+        "interests": [
+          "food",
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "panama/bocas-island-hopping": {
+        "name": "Bocas del Toro island hopping",
+        "description": "A Caribbean archipelago of mangroves, dolphins, beaches and snorkelling.",
+        "details": "Bocas Town is the hub for boat tours to Dolphin Bay, Cayo Zapatilla and Starfish Beach. Red Frog Beach has surf and a poison dart frog trail. Rain is common, so choose a flexible day. The islands are relaxed, with water taxis everywhere.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "adventure",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "panama": {
+        "name": "Panama",
+        "description": "A land of the canal, rainforest, mountains and two coasts.",
+        "images": []
+      },
+      "panama/panama-city": {
+        "name": "Panama City",
+        "description": "The canal capital with a colonial quarter and skyline.",
+        "images": []
+      },
+      "panama/guna-yala": {
+        "name": "Guna Yala",
+        "description": "The autonomous Guna territory of the San Blas islands.",
+        "images": []
+      },
+      "panama/san-blas-islands": {
+        "name": "San Blas Islands",
+        "description": "An archipelago of tiny palm islands.",
+        "images": []
+      },
+      "panama/el-valle-de-anton": {
+        "name": "El Valle de Anton",
+        "description": "A highland village in a volcano crater.",
+        "images": []
+      },
+      "panama/chiriqui": {
+        "name": "Chiriqui",
+        "description": "The western highland province of Boquete.",
+        "images": []
+      },
+      "panama/boquete": {
+        "name": "Boquete",
+        "description": "A cool coffee town below Volcan Baru.",
+        "images": []
+      },
+      "panama/bocas-del-toro": {
+        "name": "Bocas del Toro",
+        "description": "A Caribbean island archipelago.",
+        "images": []
+      }
+    }
+  }
+}

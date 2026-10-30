@@ -1,0 +1,1143 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining Czechia Tours, Guias Viajar, Visit Czechia and Salt in Our Hair itineraries for the Czech Republic",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "czech-republic-prague-4d",
+      "title": "Prague City Break in 4 Days",
+      "summary": "Castle, bridge, old town and a taste of Czech beer.",
+      "days": 4,
+      "route": "Prague",
+      "arrive": "Prague (PRG)",
+      "depart": "Prague (PRG)",
+      "countries": [
+        "Czech Republic"
+      ],
+      "regions": [],
+      "cities": [
+        "Prague"
+      ],
+      "imageQuery": "Prague Charles Bridge sunrise",
+      "highlights": [
+        "Prague Castle",
+        "Charles Bridge",
+        "Old Town Square",
+        "Czech pubs"
+      ],
+      "destinationKeys": [
+        "czech-republic",
+        "czech-republic/prague"
+      ],
+      "hero": "czech-republic/prague",
+      "sources": [
+        "Czechia Tours",
+        "Guias Viajar",
+        "Visit Czechia",
+        "Salt in Our Hair",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Prague",
+          "hotel": "Hotel in Prague",
+          "start": 0,
+          "nights": 3,
+          "area": "In Mala Strana, the Old Town or Vinohrady; central and well connected",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Czech pub dinner",
+          "notes": "Try a traditional pub with Pilsner and goulash.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/beer-hall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Prague Castle and St Vitus Cathedral",
+          "notes": "Go at opening; walk down through Mala Strana.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/prague-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Old Town Square and Charles Bridge",
+          "notes": "Cross the bridge at dawn for the quiet view.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/old-town-charles-bridge"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Josefov Jewish Quarter",
+          "notes": "One ticket covers several sites.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/jewish-quarter"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vaclav Havel Airport Prague (PRG)",
+          "to": "Prague hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express bus, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Prague hotel area",
+          "to": "Vaclav Havel Airport Prague (PRG)",
+          "time": "12:00",
+          "minutes": 40,
+          "carrier": "Airport express bus, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "czech-republic-prague-cesky-krumlov-5d",
+      "title": "Prague and Cesky Krumlov in 5 Days",
+      "summary": "The capital, then a night in the storybook town.",
+      "days": 5,
+      "route": "Prague > Cesky Krumlov",
+      "arrive": "Prague (PRG)",
+      "depart": "Prague (PRG)",
+      "countries": [
+        "Czech Republic"
+      ],
+      "regions": [
+        "South Bohemia"
+      ],
+      "cities": [
+        "Prague",
+        "Cesky Krumlov"
+      ],
+      "imageQuery": "Cesky Krumlov castle",
+      "highlights": [
+        "Prague Castle",
+        "Old Town Square",
+        "Cesky Krumlov castle"
+      ],
+      "destinationKeys": [
+        "czech-republic",
+        "czech-republic/prague",
+        "czech-republic/south-bohemia",
+        "czech-republic/cesky-krumlov"
+      ],
+      "hero": "czech-republic/cesky-krumlov",
+      "sources": [
+        "Czechia Tours",
+        "Guias Viajar",
+        "Visit Czechia",
+        "Salt in Our Hair",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "iconic_landmarks"
+      ],
+      "stays": [
+        {
+          "base": "Prague",
+          "hotel": "Hotel in Prague",
+          "start": 0,
+          "nights": 2,
+          "area": "In Mala Strana, the Old Town or Vinohrady; central and well connected",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cesky Krumlov",
+          "hotel": "Hotel in Cesky Krumlov",
+          "start": 2,
+          "nights": 2,
+          "area": "Inside the old town, a walk from the castle",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Czech pub dinner",
+          "notes": "Try a traditional pub with Pilsner and goulash.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/beer-hall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Prague Castle and St Vitus Cathedral",
+          "notes": "Go at opening; walk down through Mala Strana.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/prague-castle"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Old Town Square and Charles Bridge",
+          "notes": "Cross the bridge at dawn for the quiet view.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/old-town-charles-bridge"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cesky Krumlov castle and old town",
+          "notes": "Climb the tower, see the bears, then walk the old town.",
+          "where": "Cesky Krumlov",
+          "book": "",
+          "place": "czech-republic/cesky-krumlov"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "4h",
+          "name": "Second day in Cesky Krumlov",
+          "notes": "Climb the tower, see the bears, then walk the old town.",
+          "where": "Cesky Krumlov",
+          "book": "",
+          "place": "czech-republic/cesky-krumlov"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vaclav Havel Airport Prague (PRG)",
+          "to": "Prague hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express bus, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Prague",
+          "to": "Cesky Krumlov",
+          "time": "08:30",
+          "minutes": 180,
+          "carrier": "Train or intercity bus",
+          "notes": "Direct buses run; trains change at Ceske Budejovice.",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Cesky Krumlov",
+          "to": "Vaclav Havel Airport Prague (PRG)",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Train or intercity bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "czech-republic-prague-krumlov-karlovy-vary-7d",
+      "title": "Bohemia: Prague, Cesky Krumlov and Karlovy Vary in 7 Days",
+      "summary": "The classic Czech loop to castle town and spa town.",
+      "days": 7,
+      "route": "Prague > Cesky Krumlov > Karlovy Vary",
+      "arrive": "Prague (PRG)",
+      "depart": "Prague (PRG)",
+      "countries": [
+        "Czech Republic"
+      ],
+      "regions": [
+        "South Bohemia"
+      ],
+      "cities": [
+        "Prague",
+        "Cesky Krumlov",
+        "Karlovy Vary"
+      ],
+      "imageQuery": "Karlovy Vary colonnade",
+      "highlights": [
+        "Prague Castle",
+        "Charles Bridge",
+        "Cesky Krumlov",
+        "Karlovy Vary",
+        "Kutna Hora"
+      ],
+      "destinationKeys": [
+        "czech-republic",
+        "czech-republic/prague",
+        "czech-republic/south-bohemia",
+        "czech-republic/cesky-krumlov",
+        "czech-republic/karlovy-vary"
+      ],
+      "hero": "czech-republic/karlovy-vary",
+      "sources": [
+        "Czechia Tours",
+        "Guias Viajar",
+        "Visit Czechia",
+        "Salt in Our Hair",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "relax",
+        "photography",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Prague",
+          "hotel": "Hotel in Prague",
+          "start": 0,
+          "nights": 3,
+          "area": "In Mala Strana, the Old Town or Vinohrady; central and well connected",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cesky Krumlov",
+          "hotel": "Hotel in Cesky Krumlov",
+          "start": 3,
+          "nights": 2,
+          "area": "Inside the old town, a walk from the castle",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Karlovy Vary",
+          "hotel": "Hotel in Karlovy Vary",
+          "start": 5,
+          "nights": 1,
+          "area": "Near the colonnades along the Tepla river",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Czech pub dinner",
+          "notes": "Try a traditional pub with Pilsner and goulash.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/beer-hall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Prague Castle and St Vitus Cathedral",
+          "notes": "Go at opening; walk down through Mala Strana.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/prague-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Old Town Square and Charles Bridge",
+          "notes": "Cross the bridge at dawn for the quiet view.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/old-town-charles-bridge"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Josefov Jewish Quarter",
+          "notes": "One ticket covers several sites.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/jewish-quarter"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cesky Krumlov castle and old town",
+          "notes": "Climb the tower, see the bears, then walk the old town.",
+          "where": "Cesky Krumlov",
+          "book": "",
+          "place": "czech-republic/cesky-krumlov"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Karlovy Vary colonnades and spring water",
+          "notes": "Buy a spouted cup and sip the springs.",
+          "where": "Karlovy Vary",
+          "book": "",
+          "place": "czech-republic/karlovy-vary"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vaclav Havel Airport Prague (PRG)",
+          "to": "Prague hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express bus, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Prague",
+          "to": "Cesky Krumlov",
+          "time": "08:30",
+          "minutes": 180,
+          "carrier": "Train or intercity bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Cesky Krumlov",
+          "to": "Karlovy Vary",
+          "time": "08:30",
+          "minutes": 300,
+          "carrier": "Train or intercity bus",
+          "notes": "Change at Plzen or Prague.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Karlovy Vary",
+          "to": "Vaclav Havel Airport Prague (PRG)",
+          "time": "10:00",
+          "minutes": 120,
+          "carrier": "Train or intercity bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "czech-republic-prague-karlovy-vary-krumlov-brno-9d",
+      "title": "Czech Republic with Moravia in 9 Days",
+      "summary": "Prague, Karlovy Vary, Cesky Krumlov and Brno, with a Plzen brewery stop.",
+      "days": 9,
+      "route": "Prague > Karlovy Vary > Cesky Krumlov > Brno",
+      "arrive": "Prague (PRG)",
+      "depart": "Prague (PRG)",
+      "countries": [
+        "Czech Republic"
+      ],
+      "regions": [
+        "South Bohemia",
+        "South Moravia"
+      ],
+      "cities": [
+        "Prague",
+        "Karlovy Vary",
+        "Cesky Krumlov",
+        "Brno"
+      ],
+      "imageQuery": "Brno Spilberk castle",
+      "highlights": [
+        "Prague Castle",
+        "Karlovy Vary",
+        "Plzen brewery",
+        "Cesky Krumlov",
+        "Villa Tugendhat"
+      ],
+      "destinationKeys": [
+        "czech-republic",
+        "czech-republic/prague",
+        "czech-republic/karlovy-vary",
+        "czech-republic/south-bohemia",
+        "czech-republic/cesky-krumlov",
+        "czech-republic/south-moravia",
+        "czech-republic/brno"
+      ],
+      "hero": "czech-republic/south-moravia",
+      "sources": [
+        "Czechia Tours",
+        "Guias Viajar",
+        "Visit Czechia",
+        "Salt in Our Hair",
+        "TakeTours"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "food",
+        "relax",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Prague",
+          "hotel": "Hotel in Prague",
+          "start": 0,
+          "nights": 3,
+          "area": "In Mala Strana, the Old Town or Vinohrady; central and well connected",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Karlovy Vary",
+          "hotel": "Hotel in Karlovy Vary",
+          "start": 3,
+          "nights": 1,
+          "area": "Near the colonnades along the Tepla river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cesky Krumlov",
+          "hotel": "Hotel in Cesky Krumlov",
+          "start": 4,
+          "nights": 2,
+          "area": "Inside the old town, a walk from the castle",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Brno",
+          "hotel": "Hotel in Brno",
+          "start": 6,
+          "nights": 2,
+          "area": "In the centre of Brno near Freedom Square",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Czech pub dinner",
+          "notes": "Try a traditional pub with Pilsner and goulash.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/beer-hall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Prague Castle and St Vitus Cathedral",
+          "notes": "Go at opening; walk down through Mala Strana.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/prague-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Old Town Square and Charles Bridge",
+          "notes": "Cross the bridge at dawn for the quiet view.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/old-town-charles-bridge"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Josefov Jewish Quarter",
+          "notes": "One ticket covers several sites.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/jewish-quarter"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Karlovy Vary colonnades and spring water",
+          "notes": "Buy a spouted cup and sip the springs.",
+          "where": "Karlovy Vary",
+          "book": "",
+          "place": "czech-republic/karlovy-vary"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "12:00",
+          "duration": "3h",
+          "name": "Pilsner Urquell brewery tour",
+          "notes": "Fresh unfiltered beer straight from the cellar.",
+          "where": "Plzen",
+          "book": "",
+          "place": "czech-republic/plzen-brewery"
+        },
+        {
+          "day": 5,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cesky Krumlov castle and old town",
+          "notes": "Climb the tower, see the bears, then walk the old town.",
+          "where": "Cesky Krumlov",
+          "book": "",
+          "place": "czech-republic/cesky-krumlov"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Spilberk Castle and the old town",
+          "notes": "Walk up through the park to the castle.",
+          "where": "Brno",
+          "book": "",
+          "place": "czech-republic/brno"
+        },
+        {
+          "day": 7,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Villa Tugendhat",
+          "notes": "Tours need booking in advance.",
+          "where": "Brno",
+          "book": "Yes - book Villa Tugendhat",
+          "place": "czech-republic/brno"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vaclav Havel Airport Prague (PRG)",
+          "to": "Prague hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express bus, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Public Transit",
+          "from": "Prague",
+          "to": "Karlovy Vary",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Train or intercity bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Karlovy Vary",
+          "to": "Cesky Krumlov",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Train or intercity bus",
+          "notes": "Change at Plzen for the brewery stop.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Public Transit",
+          "from": "Cesky Krumlov",
+          "to": "Brno",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Train or intercity bus",
+          "notes": "Change at Ceske Budejovice.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Public Transit",
+          "from": "Brno",
+          "to": "Vaclav Havel Airport Prague (PRG)",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Train or intercity bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "czech-republic-complete-10d",
+      "title": "Complete Czech Republic in 10 Days",
+      "summary": "A fuller visit with four nights in Prague, then the spa town, fairytale town and Brno.",
+      "days": 10,
+      "route": "Prague > Karlovy Vary > Cesky Krumlov > Brno",
+      "arrive": "Prague (PRG)",
+      "depart": "Prague (PRG)",
+      "countries": [
+        "Czech Republic"
+      ],
+      "regions": [
+        "South Bohemia",
+        "South Moravia"
+      ],
+      "cities": [
+        "Prague",
+        "Karlovy Vary",
+        "Cesky Krumlov",
+        "Brno"
+      ],
+      "imageQuery": "Czech Republic Prague rooftops",
+      "highlights": [
+        "Prague Castle",
+        "Kutna Hora",
+        "Karlovy Vary",
+        "Cesky Krumlov",
+        "Brno"
+      ],
+      "destinationKeys": [
+        "czech-republic",
+        "czech-republic/prague",
+        "czech-republic/karlovy-vary",
+        "czech-republic/south-bohemia",
+        "czech-republic/cesky-krumlov",
+        "czech-republic/south-moravia",
+        "czech-republic/brno"
+      ],
+      "hero": "czech-republic/prague",
+      "sources": [
+        "Czechia Tours",
+        "Guias Viajar",
+        "Visit Czechia",
+        "Salt in Our Hair",
+        "TakeTours"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "food",
+        "photography",
+        "relax"
+      ],
+      "stays": [
+        {
+          "base": "Prague",
+          "hotel": "Hotel in Prague",
+          "start": 0,
+          "nights": 4,
+          "area": "In Mala Strana, the Old Town or Vinohrady; central and well connected",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Karlovy Vary",
+          "hotel": "Hotel in Karlovy Vary",
+          "start": 4,
+          "nights": 1,
+          "area": "Near the colonnades along the Tepla river",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cesky Krumlov",
+          "hotel": "Hotel in Cesky Krumlov",
+          "start": 5,
+          "nights": 2,
+          "area": "Inside the old town, a walk from the castle",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Brno",
+          "hotel": "Hotel in Brno",
+          "start": 7,
+          "nights": 2,
+          "area": "In the centre of Brno near Freedom Square",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Food & Drink",
+          "time": "18:30",
+          "duration": "2.5h",
+          "name": "Czech pub dinner",
+          "notes": "Try a traditional pub with Pilsner and goulash.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/beer-hall"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:00",
+          "duration": "4h",
+          "name": "Prague Castle and St Vitus Cathedral",
+          "notes": "Go at opening; walk down through Mala Strana.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/prague-castle"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Old Town Square and Charles Bridge",
+          "notes": "Cross the bridge at dawn for the quiet view.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/old-town-charles-bridge"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Josefov Jewish Quarter",
+          "notes": "One ticket covers several sites.",
+          "where": "Prague",
+          "book": "",
+          "place": "czech-republic/jewish-quarter"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Kutna Hora and the Sedlec Ossuary",
+          "notes": "About an hour by train from Prague.",
+          "where": "Kutna Hora",
+          "book": "",
+          "place": "czech-republic/kutna-hora"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Karlovy Vary colonnades and spring water",
+          "notes": "Buy a spouted cup and sip the springs.",
+          "where": "Karlovy Vary",
+          "book": "",
+          "place": "czech-republic/karlovy-vary"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "12:00",
+          "duration": "3h",
+          "name": "Pilsner Urquell brewery tour",
+          "notes": "Fresh unfiltered beer straight from the cellar.",
+          "where": "Plzen",
+          "book": "",
+          "place": "czech-republic/plzen-brewery"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cesky Krumlov castle and old town",
+          "notes": "Climb the tower, see the bears, then walk the old town.",
+          "where": "Cesky Krumlov",
+          "book": "",
+          "place": "czech-republic/cesky-krumlov"
+        },
+        {
+          "day": 8,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Spilberk Castle and the old town",
+          "notes": "Walk up through the park to the castle.",
+          "where": "Brno",
+          "book": "",
+          "place": "czech-republic/brno"
+        },
+        {
+          "day": 8,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "1.5h",
+          "name": "Villa Tugendhat",
+          "notes": "Tours need booking in advance.",
+          "where": "Brno",
+          "book": "Yes - book Villa Tugendhat",
+          "place": "czech-republic/brno"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Vaclav Havel Airport Prague (PRG)",
+          "to": "Prague hotel area",
+          "time": "",
+          "minutes": 40,
+          "carrier": "Airport express bus, taxi or ride-hail",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Public Transit",
+          "from": "Prague",
+          "to": "Karlovy Vary",
+          "time": "09:30",
+          "minutes": 120,
+          "carrier": "Train or intercity bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Public Transit",
+          "from": "Karlovy Vary",
+          "to": "Cesky Krumlov",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Train or intercity bus",
+          "notes": "Change at Plzen for the brewery stop.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Public Transit",
+          "from": "Cesky Krumlov",
+          "to": "Brno",
+          "time": "09:00",
+          "minutes": 240,
+          "carrier": "Train or intercity bus",
+          "notes": "Change at Ceske Budejovice.",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Public Transit",
+          "from": "Brno",
+          "to": "Vaclav Havel Airport Prague (PRG)",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Train or intercity bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "czech-republic/prague-castle": {
+        "name": "Prague Castle and Hradcany",
+        "description": "The largest castle complex in the world, with St Vitus Cathedral and Golden Lane.",
+        "details": "Prague Castle covers a hilltop above the Vltava, with the Gothic St Vitus Cathedral, the Old Royal Palace and Golden Lane. Go at opening for fewer crowds, and watch the changing of the guard at noon. The walk down through Mala Strana is lovely.",
+        "interests": [
+          "iconic_landmarks",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "czech-republic/old-town-charles-bridge": {
+        "name": "Old Town Square and Charles Bridge",
+        "description": "The astronomical clock, Tyn Church and the statue-lined medieval bridge.",
+        "details": "The Old Town Square has the Orloj clock, which performs on the hour. Charles Bridge is best at dawn when it is nearly empty, and at sunset. The lanes around the square are full of cafes, so move away to find quieter ones.",
+        "interests": [
+          "iconic_landmarks",
+          "photography",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "czech-republic/jewish-quarter": {
+        "name": "Josefov, the Jewish Quarter",
+        "description": "Synagogues, a medieval cemetery and Kafka sites in the old Jewish town.",
+        "details": "Josefov has six synagogues and the Old Jewish Cemetery, where tombstones are stacked in layers. One ticket covers several sites. The quarter also has the Kafka monument and some of the city smartest shopping streets.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "czech-republic/beer-hall": {
+        "name": "Czech beer hall and pub dinner",
+        "description": "Pilsner, goulash and dumplings in a traditional pub.",
+        "details": "Czech beer culture is among the best in the world. Traditional pubs serve unfiltered lager, svickova and fried cheese. A brewery tour in Prague or Plzen explains the Pilsner tradition. Book popular places at weekends.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "czech-republic/kutna-hora": {
+        "name": "Kutna Hora and the Sedlec Ossuary",
+        "description": "A silver-mining town with a Gothic cathedral and a chapel decorated with human bones.",
+        "details": "Kutna Hora is a UNESCO town about an hour from Prague by train. The Sedlec Ossuary is a small chapel decorated with the bones of tens of thousands of people, and the Cathedral of St Barbara is a Gothic landmark. A half-day visit suffices.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "czech-republic/cesky-krumlov": {
+        "name": "Cesky Krumlov castle and old town",
+        "description": "A fairytale medieval town in a loop of the Vltava, topped by a castle with a painted tower.",
+        "details": "Cesky Krumlov is a UNESCO town with cobbled streets, a castle with a Baroque theatre and gardens, and river rafting in summer. Stay overnight to see it after the day-trippers leave. The castle bear moat is an unusual sight.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "czech-republic/karlovy-vary": {
+        "name": "Karlovy Vary spa town",
+        "description": "A colonnaded spa town where visitors sip mineral water from a special cup.",
+        "details": "Karlovy Vary has pastel buildings, hot springs and the Mill Colonnade. Visitors sip warm spring water through spouted cups, taste Becherovka and Oplatky wafers, and tour the glassware. The film festival takes place in early summer.",
+        "interests": [
+          "relax",
+          "culture",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "czech-republic/brno": {
+        "name": "Brno, Spilberk and Villa Tugendhat",
+        "description": "Moravia capital with a hilltop fortress and a modernist villa.",
+        "details": "Brno has Spilberk Castle above the city, a bone-filled ossuary under St James church and the Villa Tugendhat, a UNESCO modernist house. It is a more local city than Prague, with good wine bars. Villa Tugendhat tours need booking.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "czech-republic/plzen-brewery": {
+        "name": "Plzen Pilsner Urquell brewery",
+        "description": "The original Pilsner brewery with cellars and a tasting from the tank.",
+        "details": "Pilsner Urquell invented the pale lager in 1842, and the tour includes the brewhouse and cold cellars with a fresh-from-the-barrel tasting. Plzen is 90 minutes from Prague by train and is a good day trip or stop on the way to Karlovy Vary or Cesky Krumlov.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "czech-republic": {
+        "name": "Czech Republic",
+        "description": "A central European country of beer, castles, spa towns and a famously beautiful capital.",
+        "images": []
+      },
+      "czech-republic/prague": {
+        "name": "Prague",
+        "description": "The capital, with a castle, medieval bridge and old town square.",
+        "images": []
+      },
+      "czech-republic/south-bohemia": {
+        "name": "South Bohemia",
+        "description": "The southern region of Cesky Krumlov and the river Vltava.",
+        "images": []
+      },
+      "czech-republic/cesky-krumlov": {
+        "name": "Cesky Krumlov",
+        "description": "A fairytale medieval town on a loop of the Vltava river.",
+        "images": []
+      },
+      "czech-republic/karlovy-vary": {
+        "name": "Karlovy Vary",
+        "description": "A grand spa town of colonnades and mineral springs.",
+        "images": []
+      },
+      "czech-republic/south-moravia": {
+        "name": "South Moravia",
+        "description": "The wine region of Brno and Moravian villages.",
+        "images": []
+      },
+      "czech-republic/brno": {
+        "name": "Brno",
+        "description": "Moravia capital, with a hilltop castle and modernist architecture.",
+        "images": []
+      }
+    }
+  }
+}

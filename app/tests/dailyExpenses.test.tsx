@@ -94,14 +94,14 @@ describe('DailyExpensesTab', () => {
     window.localStorage.clear();
   });
 
-  it('shows trip currency and opens detail modal on non-zero cell', () => {
+  it.each([false, true])('shows trip currency and opens detail modal (timestamp dates: %s)', (timestampDates) => {
     const { getByText, queryByTestId, getByTestId, getAllByText } = render(
       <DailyExpensesTab
         backendUrl="http://example.test"
         theme={theme}
         headers={{}}
         jsonHeaders={{}}
-        trip={trip}
+        trip={timestampDates ? { ...trip, startDate: `${trip.startDate}T00:00:00.000Z`, endDate: `${trip.endDate}T00:00:00.000Z` } : trip}
         groupMembers={groupMembers}
         expenses={expenses}
         setExpenses={() => {}}

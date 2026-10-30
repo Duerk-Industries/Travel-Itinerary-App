@@ -1,0 +1,1285 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, Goway, G Adventures and Nordic Visitor itineraries for Ireland",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "ireland-dublin-galway-5d",
+      "title": "Dublin and Galway in 5 Days",
+      "summary": "The capital and a west-coast city, with the Cliffs of Moher.",
+      "days": 5,
+      "route": "Dublin > Galway",
+      "arrive": "Dublin (DUB)",
+      "depart": "Shannon (SNN)",
+      "countries": [
+        "Ireland"
+      ],
+      "regions": [
+        "Leinster",
+        "Connacht"
+      ],
+      "cities": [
+        "Dublin",
+        "Galway"
+      ],
+      "imageQuery": "Cliffs of Moher Ireland",
+      "highlights": [
+        "Book of Kells",
+        "Guinness Storehouse",
+        "Galway",
+        "Cliffs of Moher"
+      ],
+      "destinationKeys": [
+        "ireland",
+        "ireland/leinster",
+        "ireland/dublin",
+        "ireland/connacht",
+        "ireland/galway"
+      ],
+      "hero": "ireland/galway",
+      "sources": [
+        "KimKim",
+        "Goway",
+        "G Adventures",
+        "Nordic Visitor",
+        "Leger Holidays"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Dublin",
+          "hotel": "Hotel in Dublin",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Trinity College or St Stephens Green, to walk to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Galway",
+          "hotel": "Hotel in Galway",
+          "start": 2,
+          "nights": 2,
+          "area": "Near Eyre Square or the Latin Quarter in Galway",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Trinity College and the Book of Kells",
+          "notes": "Timed tickets sell out in summer.",
+          "where": "Dublin",
+          "book": "Yes - book timed entry",
+          "place": "ireland/trinity-book-of-kells"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Guinness Storehouse and a music pub evening",
+          "notes": "Try a pub with live traditional music.",
+          "where": "Dublin",
+          "book": "Yes - book the Storehouse",
+          "place": "ireland/guinness-pubs"
+        },
+        {
+          "day": 2,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cliffs of Moher and the Burren",
+          "notes": "Check for access notices; the wind is strong.",
+          "where": "County Clare",
+          "book": "",
+          "place": "ireland/cliffs-of-moher-burren"
+        },
+        {
+          "day": 3,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "8h",
+          "name": "Galway city and Connemara loop",
+          "notes": "Include Kylemore Abbey; pubs fill at weekends.",
+          "where": "Galway",
+          "book": "",
+          "place": "ireland/galway-connemara"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dublin Airport (DUB)",
+          "to": "Dublin hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Public Transit",
+          "from": "Dublin",
+          "to": "Galway",
+          "time": "09:00",
+          "minutes": 150,
+          "carrier": "Irish Rail train or bus",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Galway",
+          "to": "Shannon Airport (SNN)",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car return or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ireland-dublin-galway-killarney-7d",
+      "title": "Ireland West Coast in 7 Days",
+      "summary": "Dublin, Galway and the Ring of Kerry.",
+      "days": 7,
+      "route": "Dublin > Galway > Killarney",
+      "arrive": "Dublin (DUB)",
+      "depart": "Cork (ORK)",
+      "countries": [
+        "Ireland"
+      ],
+      "regions": [
+        "Leinster",
+        "Connacht",
+        "Munster"
+      ],
+      "cities": [
+        "Dublin",
+        "Galway",
+        "Killarney"
+      ],
+      "imageQuery": "Ring of Kerry Ireland coast",
+      "highlights": [
+        "Book of Kells",
+        "Cliffs of Moher",
+        "Ring of Kerry",
+        "Killarney"
+      ],
+      "destinationKeys": [
+        "ireland",
+        "ireland/leinster",
+        "ireland/dublin",
+        "ireland/connacht",
+        "ireland/galway",
+        "ireland/munster",
+        "ireland/killarney"
+      ],
+      "hero": "ireland/munster",
+      "sources": [
+        "KimKim",
+        "Goway",
+        "G Adventures",
+        "Nordic Visitor",
+        "Leger Holidays"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Dublin",
+          "hotel": "Hotel in Dublin",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Trinity College or St Stephens Green, to walk to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Galway",
+          "hotel": "Hotel in Galway",
+          "start": 2,
+          "nights": 2,
+          "area": "Near Eyre Square or the Latin Quarter in Galway",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Killarney",
+          "hotel": "Hotel in Killarney",
+          "start": 4,
+          "nights": 2,
+          "area": "In Killarney town, a stroll to the national park",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Trinity College and the Book of Kells",
+          "notes": "Timed tickets sell out in summer.",
+          "where": "Dublin",
+          "book": "Yes - book timed entry",
+          "place": "ireland/trinity-book-of-kells"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Guinness Storehouse and a music pub evening",
+          "notes": "Try a pub with live traditional music.",
+          "where": "Dublin",
+          "book": "Yes - book the Storehouse",
+          "place": "ireland/guinness-pubs"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Cliffs of Moher and the Burren",
+          "notes": "Check for access notices; the wind is strong.",
+          "where": "County Clare",
+          "book": "",
+          "place": "ireland/cliffs-of-moher-burren"
+        },
+        {
+          "day": 4,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Killarney National Park and Gap of Dunloe",
+          "notes": "Take waterproofs.",
+          "where": "Killarney",
+          "book": "",
+          "place": "ireland/killarney-national-park"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Ring of Kerry drive",
+          "notes": "Drive anticlockwise to avoid tour buses.",
+          "where": "Ring of Kerry",
+          "book": "",
+          "place": "ireland/ring-of-kerry"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dublin Airport (DUB)",
+          "to": "Dublin hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Dublin",
+          "to": "Galway",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Galway",
+          "to": "Killarney",
+          "time": "09:30",
+          "minutes": 270,
+          "carrier": "Rental car or coach",
+          "notes": "Cross the Shannon by the Tarbert ferry or drive via Limerick.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Killarney",
+          "to": "Cork Airport (ORK)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car return or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ireland-dublin-galway-dingle-killarney-8d",
+      "title": "Ireland Dublin to Dingle in 8 Days",
+      "summary": "Dublin, Galway, Dingle and Killarney.",
+      "days": 8,
+      "route": "Dublin > Galway > Dingle > Killarney",
+      "arrive": "Dublin (DUB)",
+      "depart": "Cork (ORK)",
+      "countries": [
+        "Ireland"
+      ],
+      "regions": [
+        "Leinster",
+        "Connacht",
+        "Munster"
+      ],
+      "cities": [
+        "Dublin",
+        "Galway",
+        "Dingle",
+        "Killarney"
+      ],
+      "imageQuery": "Dingle peninsula Slea Head",
+      "highlights": [
+        "Trinity College",
+        "Cliffs of Moher",
+        "Slea Head Drive",
+        "Ring of Kerry"
+      ],
+      "destinationKeys": [
+        "ireland",
+        "ireland/leinster",
+        "ireland/dublin",
+        "ireland/connacht",
+        "ireland/galway",
+        "ireland/munster",
+        "ireland/dingle",
+        "ireland/killarney"
+      ],
+      "hero": "ireland/dingle",
+      "sources": [
+        "KimKim",
+        "Goway",
+        "G Adventures",
+        "Nordic Visitor",
+        "Leger Holidays"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "culture",
+        "authentic_local",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Dublin",
+          "hotel": "Hotel in Dublin",
+          "start": 0,
+          "nights": 2,
+          "area": "Near Trinity College or St Stephens Green, to walk to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Galway",
+          "hotel": "Hotel in Galway",
+          "start": 2,
+          "nights": 2,
+          "area": "Near Eyre Square or the Latin Quarter in Galway",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dingle",
+          "hotel": "Hotel in Dingle",
+          "start": 4,
+          "nights": 1,
+          "area": "In Dingle town, a short walk to the harbour and pubs",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Killarney",
+          "hotel": "Hotel in Killarney",
+          "start": 5,
+          "nights": 2,
+          "area": "In Killarney town, a stroll to the national park",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Trinity College and the Book of Kells",
+          "notes": "Timed tickets sell out in summer.",
+          "where": "Dublin",
+          "book": "Yes - book timed entry",
+          "place": "ireland/trinity-book-of-kells"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Guinness Storehouse and a music pub evening",
+          "notes": "Try a pub with live traditional music.",
+          "where": "Dublin",
+          "book": "Yes - book the Storehouse",
+          "place": "ireland/guinness-pubs"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Cliffs of Moher and the Burren",
+          "notes": "Check for access notices; the wind is strong.",
+          "where": "County Clare",
+          "book": "",
+          "place": "ireland/cliffs-of-moher-burren"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "14:30",
+          "duration": "3h",
+          "name": "Slea Head Drive",
+          "notes": "The roads are narrow; take it slowly.",
+          "where": "Dingle Peninsula",
+          "book": "",
+          "place": "ireland/dingle-peninsula"
+        },
+        {
+          "day": 5,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Killarney National Park and Gap of Dunloe",
+          "notes": "Take waterproofs.",
+          "where": "Killarney",
+          "book": "",
+          "place": "ireland/killarney-national-park"
+        },
+        {
+          "day": 6,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Ring of Kerry drive",
+          "notes": "Drive anticlockwise to avoid tour buses.",
+          "where": "Ring of Kerry",
+          "book": "",
+          "place": "ireland/ring-of-kerry"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dublin Airport (DUB)",
+          "to": "Dublin hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Dublin",
+          "to": "Galway",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Galway",
+          "to": "Dingle",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or coach",
+          "notes": "Take the Shannon ferry for a shorter route.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Dingle",
+          "to": "Killarney",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Killarney",
+          "to": "Cork Airport (ORK)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car return or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ireland-classic-10d",
+      "title": "Ireland Classic in 10 Days",
+      "summary": "Dublin with Wicklow, Galway and the Aran Islands, Dingle and Killarney.",
+      "days": 10,
+      "route": "Dublin > Galway > Dingle > Killarney",
+      "arrive": "Dublin (DUB)",
+      "depart": "Cork (ORK)",
+      "countries": [
+        "Ireland"
+      ],
+      "regions": [
+        "Leinster",
+        "Connacht",
+        "Munster"
+      ],
+      "cities": [
+        "Dublin",
+        "Galway",
+        "Dingle",
+        "Killarney"
+      ],
+      "imageQuery": "Aran Islands Dun Aonghasa",
+      "highlights": [
+        "Kilmainham Gaol",
+        "Glendalough",
+        "Aran Islands",
+        "Slea Head",
+        "Gap of Dunloe"
+      ],
+      "destinationKeys": [
+        "ireland",
+        "ireland/leinster",
+        "ireland/dublin",
+        "ireland/connacht",
+        "ireland/galway",
+        "ireland/munster",
+        "ireland/dingle",
+        "ireland/killarney"
+      ],
+      "hero": "ireland/connacht",
+      "sources": [
+        "KimKim",
+        "Goway",
+        "G Adventures",
+        "Nordic Visitor",
+        "Leger Holidays"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "photography",
+        "authentic_local"
+      ],
+      "stays": [
+        {
+          "base": "Dublin",
+          "hotel": "Hotel in Dublin",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Trinity College or St Stephens Green, to walk to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Galway",
+          "hotel": "Hotel in Galway",
+          "start": 3,
+          "nights": 2,
+          "area": "Near Eyre Square or the Latin Quarter in Galway",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dingle",
+          "hotel": "Hotel in Dingle",
+          "start": 5,
+          "nights": 2,
+          "area": "In Dingle town, a short walk to the harbour and pubs",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Killarney",
+          "hotel": "Hotel in Killarney",
+          "start": 7,
+          "nights": 2,
+          "area": "In Killarney town, a stroll to the national park",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Trinity College and the Book of Kells",
+          "notes": "Timed tickets sell out in summer.",
+          "where": "Dublin",
+          "book": "Yes - book timed entry",
+          "place": "ireland/trinity-book-of-kells"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Guinness Storehouse and a music pub evening",
+          "notes": "Try a pub with live traditional music.",
+          "where": "Dublin",
+          "book": "Yes - book the Storehouse",
+          "place": "ireland/guinness-pubs"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Glendalough and Wicklow Mountains",
+          "notes": "Coach tours leave from Dublin; bring waterproofs.",
+          "where": "Wicklow",
+          "book": "",
+          "place": "ireland/wicklow-glendalough"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "14:00",
+          "duration": "4h",
+          "name": "Cliffs of Moher and the Burren",
+          "notes": "Check for access notices; the wind is strong.",
+          "where": "County Clare",
+          "book": "",
+          "place": "ireland/cliffs-of-moher-burren"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Aran Islands day trip",
+          "notes": "Sailings depend on weather; windproof clothing.",
+          "where": "Inis Mor",
+          "book": "Yes - book a ferry",
+          "place": "ireland/aran-islands"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Slea Head Drive",
+          "notes": "The roads are narrow; take it slowly.",
+          "where": "Dingle Peninsula",
+          "book": "",
+          "place": "ireland/dingle-peninsula"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Killarney National Park and Gap of Dunloe",
+          "notes": "Take waterproofs.",
+          "where": "Killarney",
+          "book": "",
+          "place": "ireland/killarney-national-park"
+        },
+        {
+          "day": 8,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Ring of Kerry drive",
+          "notes": "Drive anticlockwise to avoid tour buses.",
+          "where": "Ring of Kerry",
+          "book": "",
+          "place": "ireland/ring-of-kerry"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dublin Airport (DUB)",
+          "to": "Dublin hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Dublin",
+          "to": "Galway",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Galway",
+          "to": "Dingle",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Private Transfer",
+          "from": "Dingle",
+          "to": "Killarney",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Private Transfer",
+          "from": "Killarney",
+          "to": "Cork Airport (ORK)",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car return or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ireland-complete-12d",
+      "title": "Complete Ireland in 12 Days",
+      "summary": "The east, west and south: Dublin, Galway, Dingle, Killarney and Cork.",
+      "days": 12,
+      "route": "Dublin > Galway > Dingle > Killarney > Cork",
+      "arrive": "Dublin (DUB)",
+      "depart": "Cork (ORK)",
+      "countries": [
+        "Ireland"
+      ],
+      "regions": [
+        "Leinster",
+        "Connacht",
+        "Munster"
+      ],
+      "cities": [
+        "Dublin",
+        "Galway",
+        "Dingle",
+        "Killarney",
+        "Cork"
+      ],
+      "imageQuery": "Blarney Castle Cork Ireland",
+      "highlights": [
+        "Newgrange",
+        "Glendalough",
+        "Aran Islands",
+        "Ring of Kerry",
+        "Blarney Castle"
+      ],
+      "destinationKeys": [
+        "ireland",
+        "ireland/leinster",
+        "ireland/dublin",
+        "ireland/connacht",
+        "ireland/galway",
+        "ireland/munster",
+        "ireland/dingle",
+        "ireland/killarney",
+        "ireland/cork"
+      ],
+      "hero": "ireland/cork",
+      "sources": [
+        "KimKim",
+        "Goway",
+        "G Adventures",
+        "Nordic Visitor",
+        "Leger Holidays"
+      ],
+      "pace": "R",
+      "interests": [
+        "culture",
+        "outdoors",
+        "food",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Dublin",
+          "hotel": "Hotel in Dublin",
+          "start": 0,
+          "nights": 3,
+          "area": "Near Trinity College or St Stephens Green, to walk to most sights",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Galway",
+          "hotel": "Hotel in Galway",
+          "start": 3,
+          "nights": 3,
+          "area": "Near Eyre Square or the Latin Quarter in Galway",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dingle",
+          "hotel": "Hotel in Dingle",
+          "start": 6,
+          "nights": 2,
+          "area": "In Dingle town, a short walk to the harbour and pubs",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Killarney",
+          "hotel": "Hotel in Killarney",
+          "start": 8,
+          "nights": 2,
+          "area": "In Killarney town, a stroll to the national park",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cork",
+          "hotel": "Hotel in Cork",
+          "start": 10,
+          "nights": 1,
+          "area": "In central Cork near the English Market",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "10:00",
+          "duration": "2h",
+          "name": "Trinity College and the Book of Kells",
+          "notes": "Timed tickets sell out in summer.",
+          "where": "Dublin",
+          "book": "Yes - book timed entry",
+          "place": "ireland/trinity-book-of-kells"
+        },
+        {
+          "day": 1,
+          "type": "Food & Drink",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Guinness Storehouse and a music pub evening",
+          "notes": "Try a pub with live traditional music.",
+          "where": "Dublin",
+          "book": "Yes - book the Storehouse",
+          "place": "ireland/guinness-pubs"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "16:30",
+          "duration": "2h",
+          "name": "Kilmainham Gaol and Phoenix Park",
+          "notes": "Tour tickets must be booked in advance.",
+          "where": "Dublin",
+          "book": "Yes - book the tour",
+          "place": "ireland/kilmainham-gaol"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Newgrange passage tomb",
+          "notes": "Book the guided entry in advance.",
+          "where": "Boyne Valley",
+          "book": "Yes - book entry",
+          "place": "ireland/newgrange"
+        },
+        {
+          "day": 4,
+          "type": "Day Trip",
+          "time": "09:30",
+          "duration": "8h",
+          "name": "Galway city and Connemara loop",
+          "notes": "Include Kylemore Abbey; pubs fill at weekends.",
+          "where": "Galway",
+          "book": "",
+          "place": "ireland/galway-connemara"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Aran Islands day trip",
+          "notes": "Sailings depend on weather; windproof clothing.",
+          "where": "Inis Mor",
+          "book": "Yes - book a ferry",
+          "place": "ireland/aran-islands"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Slea Head Drive",
+          "notes": "The roads are narrow; take it slowly.",
+          "where": "Dingle Peninsula",
+          "book": "",
+          "place": "ireland/dingle-peninsula"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Killarney National Park and Gap of Dunloe",
+          "notes": "Take waterproofs.",
+          "where": "Killarney",
+          "book": "",
+          "place": "ireland/killarney-national-park"
+        },
+        {
+          "day": 9,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "8h",
+          "name": "Ring of Kerry drive",
+          "notes": "Drive anticlockwise to avoid tour buses.",
+          "where": "Ring of Kerry",
+          "book": "",
+          "place": "ireland/ring-of-kerry"
+        },
+        {
+          "day": 11,
+          "type": "Sights & Landmarks",
+          "time": "11:00",
+          "duration": "5h",
+          "name": "Cork English Market and Blarney Castle",
+          "notes": "Kiss the Blarney Stone if you dare.",
+          "where": "Cork",
+          "book": "",
+          "place": "ireland/cork-blarney"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Dublin Airport (DUB)",
+          "to": "Dublin hotel area",
+          "time": "",
+          "minutes": 30,
+          "carrier": "Airport bus or taxi",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Dublin",
+          "to": "Galway",
+          "time": "09:30",
+          "minutes": 210,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Galway",
+          "to": "Dingle",
+          "time": "09:00",
+          "minutes": 270,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Dingle",
+          "to": "Killarney",
+          "time": "10:00",
+          "minutes": 75,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 10,
+          "transferType": "Private Transfer",
+          "from": "Killarney",
+          "to": "Cork",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Rental car or coach",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Cork",
+          "to": "Cork Airport (ORK)",
+          "time": "11:00",
+          "minutes": 20,
+          "carrier": "Rental car return or airport bus",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "ireland/trinity-book-of-kells": {
+        "name": "Trinity College and the Book of Kells",
+        "description": "The ninth-century illuminated gospel and the Long Room library.",
+        "details": "Trinity College Dublin holds the Book of Kells and the Long Room, a barrel-vaulted library with 200,000 old books. Tickets are timed and sell out in summer. The campus is in the middle of the city and a good start for a walking tour.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ireland/guinness-pubs": {
+        "name": "Guinness Storehouse and Dublin pubs",
+        "description": "The brewery experience with a pint on the rooftop, plus traditional music pubs in Temple Bar.",
+        "details": "The Guinness Storehouse tells the story of the famous stout and ends at the Gravity Bar with a view of Dublin. Temple Bar is touristy, so try quieter pubs such as The Cobblestone for live traditional music. Book the Storehouse online.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ireland/kilmainham-gaol": {
+        "name": "Kilmainham Gaol and Phoenix Park",
+        "description": "The prison where leaders of the 1916 Rising were held, with a guided tour.",
+        "details": "Kilmainham Gaol is a major site in Irish history, visited on a guided tour only, and tickets must be booked in advance. Phoenix Park nearby is one of the largest city parks in Europe and has wild deer. Allow half a day.",
+        "interests": [
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ireland/wicklow-glendalough": {
+        "name": "Glendalough and Wicklow Mountains",
+        "description": "A monastic valley with a round tower and two lakes, an hour south of Dublin.",
+        "details": "Glendalough was founded by St Kevin in the 6th century and has a round tower, a ruined cathedral and lakeside walks. The Wicklow Mountains are the Garden of Ireland. Trails range from easy to long hikes. Tour buses run from Dublin.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ireland/newgrange": {
+        "name": "Newgrange passage tomb",
+        "description": "A 5,000-year-old burial mound older than Stonehenge, with a winter solstice alignment.",
+        "details": "Newgrange in the Boyne Valley is a Neolithic passage tomb with a white quartz facade. Visitors enter the chamber on a guided tour from the visitor centre, so booking ahead is essential. It is about an hour north of Dublin.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ireland/cliffs-of-moher-burren": {
+        "name": "Cliffs of Moher and the Burren",
+        "description": "Sea cliffs rising 214 metres above the Atlantic, plus a limestone moonscape nearby.",
+        "details": "The Cliffs of Moher have a visitor centre and cliff-top paths, and the O Brien tower. Check local access notices, because sections are sometimes closed for safety. The Burren is a limestone plateau with rare wildflowers and ancient tombs. Wind is strong, so dress warmly.",
+        "interests": [
+          "outdoors",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ireland/aran-islands": {
+        "name": "Aran Islands",
+        "description": "Remote Atlantic islands of stone walls, Irish speakers and an ancient fort.",
+        "details": "Inis Mor, the largest Aran island, can be explored by bike or minibus. Dun Aonghasa is a prehistoric cliff fort. A ferry from Rossaveal or Doolin takes about 40 minutes. Weather can cancel sailings. Wear windproof clothing.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ireland/galway-connemara": {
+        "name": "Galway city and Connemara",
+        "description": "A lively west-coast city of buskers and pubs, with a wild mountain and lake landscape nearby.",
+        "details": "Galway has colourful streets, the Spanish Arch and traditional music pubs. Connemara is a day trip of bog, mountains and lakes, with Kylemore Abbey as the star. The Wild Atlantic Way coast road is scenic. Pubs fill quickly on weekends.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ireland/ring-of-kerry": {
+        "name": "Ring of Kerry",
+        "description": "A 179-kilometre scenic loop of coast, mountains and lakes on the Iveragh Peninsula.",
+        "details": "The Ring of Kerry is usually driven anticlockwise to avoid tour buses. Stops include Killarney National Park, Ladies View, Sneem and Waterville, with the Skellig Michael boats from Portmagee (seasonal). A full day is best.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ireland/dingle-peninsula": {
+        "name": "Dingle Peninsula and Slea Head Drive",
+        "description": "A narrow western peninsula of beehive huts, beaches and the town of Dingle.",
+        "details": "Slea Head Drive has views of the Blasket Islands, ancient stone huts and Gaelic-speaking villages. Dingle town has fishing boats, pubs with live music and Fungie memorials. The roads are narrow, so drive slowly.",
+        "interests": [
+          "outdoors",
+          "culture",
+          "photography",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "ireland/killarney-national-park": {
+        "name": "Killarney National Park and Gap of Dunloe",
+        "description": "Lakes, woodland and a famous mountain pass, explored by jaunting car or hike.",
+        "details": "Killarney National Park has Muckross House and gardens, Torc Waterfall and Ross Castle. The Gap of Dunloe is a glacial pass reached by walking or pony and trap. Weather is changeable, so take waterproofs.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "ireland/cork-blarney": {
+        "name": "Cork city, English Market and Blarney Castle",
+        "description": "Ireland second city with a covered food market, and a castle where you kiss the stone.",
+        "details": "Cork City has the English Market, a 1788 covered market with local produce. Blarney Castle is 20 minutes away, with gardens and the Blarney Stone. The Rock of Cashel in Tipperary lies on the way from Dublin.",
+        "interests": [
+          "food",
+          "culture",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "ireland": {
+        "name": "Ireland",
+        "description": "An island of green hills, Atlantic cliffs, lively pubs and storytelling.",
+        "images": []
+      },
+      "ireland/leinster": {
+        "name": "Leinster",
+        "description": "The eastern province of Dublin, Wicklow and the Boyne Valley.",
+        "images": []
+      },
+      "ireland/dublin": {
+        "name": "Dublin",
+        "description": "The capital, with a famous university, literature and music pubs.",
+        "images": []
+      },
+      "ireland/connacht": {
+        "name": "Connacht",
+        "description": "The western province of Galway and Connemara.",
+        "images": []
+      },
+      "ireland/galway": {
+        "name": "Galway",
+        "description": "A lively west-coast city of festivals and pubs.",
+        "images": []
+      },
+      "ireland/munster": {
+        "name": "Munster",
+        "description": "The south-western province of Kerry, Cork and the Cliffs of Moher.",
+        "images": []
+      },
+      "ireland/killarney": {
+        "name": "Killarney",
+        "description": "A tourist town and gateway to the Ring of Kerry.",
+        "images": []
+      },
+      "ireland/dingle": {
+        "name": "Dingle",
+        "description": "A fishing town on a western peninsula with live music pubs.",
+        "images": []
+      },
+      "ireland/cork": {
+        "name": "Cork",
+        "description": "The second city of Ireland and gateway to the south coast.",
+        "images": []
+      }
+    }
+  }
+}

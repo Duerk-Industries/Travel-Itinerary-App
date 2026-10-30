@@ -1,0 +1,885 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining The Daily Packers, Pickyourtrail, Magpie Travel and On The Go Tours itineraries for the Maldives",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "maldives-maafushi-4d",
+      "title": "Maafushi Island Break in 4 Days",
+      "summary": "A budget-friendly local island stay with snorkelling and a dolphin cruise.",
+      "days": 4,
+      "route": "Maafushi",
+      "arrive": "Male (MLE)",
+      "depart": "Male (MLE)",
+      "countries": [
+        "Maldives"
+      ],
+      "regions": [],
+      "cities": [
+        "Maafushi"
+      ],
+      "imageQuery": "Maafushi island Maldives",
+      "highlights": [
+        "Sandbank trip",
+        "Nurse sharks",
+        "Dolphin cruise"
+      ],
+      "destinationKeys": [
+        "maldives",
+        "maldives/maafushi"
+      ],
+      "hero": "maldives/maafushi",
+      "sources": [
+        "The Daily Packers",
+        "Pickyourtrail",
+        "Magpie Travel",
+        "On The Go Tours",
+        "HIDMC"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "outdoors",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Maafushi",
+          "hotel": "Guesthouse in Maafushi",
+          "start": 0,
+          "nights": 3,
+          "area": "In a beachside guesthouse on Maafushi, a short walk from the tourist beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Maafushi bikini beach and water sports",
+          "notes": "Dress modestly away from the tourist beach.",
+          "where": "Maafushi",
+          "book": "",
+          "place": "maldives/maafushi-beach"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Sandbank, nurse sharks and stingrays",
+          "notes": "Barbecue lunch on the sandbank; wear sun protection.",
+          "where": "South Male Atoll",
+          "book": "Yes - book a boat trip",
+          "place": "maldives/maafushi-sandbank"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Dolphin watching and sunset cruise",
+          "notes": "Sightings are likely but not guaranteed.",
+          "where": "Maafushi",
+          "book": "",
+          "place": "maldives/dolphin-sunset"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Other",
+          "from": "Velana International Airport (MLE)",
+          "to": "Maafushi",
+          "time": "13:00",
+          "minutes": 40,
+          "carrier": "Speedboat or public ferry",
+          "notes": "Speedboats run from the airport jetty; public ferries are slower.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Other",
+          "from": "Maafushi",
+          "to": "Velana International Airport (MLE)",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "maldives-maafushi-5d",
+      "title": "Maafushi and the Atoll in 5 Days",
+      "summary": "Four nights on a local island with sandbank, turtle reef and dolphin trips.",
+      "days": 5,
+      "route": "Maafushi",
+      "arrive": "Male (MLE)",
+      "depart": "Male (MLE)",
+      "countries": [
+        "Maldives"
+      ],
+      "regions": [],
+      "cities": [
+        "Maafushi"
+      ],
+      "imageQuery": "Maldives sandbank snorkelling",
+      "highlights": [
+        "Sandbank trip",
+        "Turtle reef",
+        "Dolphin cruise",
+        "Maafushi beach"
+      ],
+      "destinationKeys": [
+        "maldives",
+        "maldives/maafushi"
+      ],
+      "hero": "maldives/maafushi",
+      "sources": [
+        "The Daily Packers",
+        "Pickyourtrail",
+        "Magpie Travel",
+        "On The Go Tours",
+        "HIDMC"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "outdoors",
+        "adventure"
+      ],
+      "stays": [
+        {
+          "base": "Maafushi",
+          "hotel": "Guesthouse in Maafushi",
+          "start": 0,
+          "nights": 4,
+          "area": "In a beachside guesthouse on Maafushi, a short walk from the tourist beach",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Maafushi bikini beach and water sports",
+          "notes": "Dress modestly away from the tourist beach.",
+          "where": "Maafushi",
+          "book": "",
+          "place": "maldives/maafushi-beach"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Sandbank, nurse sharks and stingrays",
+          "notes": "Barbecue lunch on the sandbank; wear sun protection.",
+          "where": "South Male Atoll",
+          "book": "Yes - book a boat trip",
+          "place": "maldives/maafushi-sandbank"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Turtle reef and local island visit",
+          "notes": "Respect local dress codes at the village.",
+          "where": "Atoll",
+          "book": "",
+          "place": "maldives/vaavu-turtle-reef"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Dolphin watching and sunset cruise",
+          "notes": "Sightings are likely but not guaranteed.",
+          "where": "Maafushi",
+          "book": "",
+          "place": "maldives/dolphin-sunset"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Other",
+          "from": "Velana International Airport (MLE)",
+          "to": "Maafushi",
+          "time": "13:00",
+          "minutes": 40,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Other",
+          "from": "Maafushi",
+          "to": "Velana International Airport (MLE)",
+          "time": "09:00",
+          "minutes": 40,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "maldives-maafushi-dhigurah-7d",
+      "title": "Maafushi and Dhigurah in 7 Days",
+      "summary": "Two local islands: snorkelling around Maafushi then whale sharks at Dhigurah.",
+      "days": 7,
+      "route": "Maafushi > Dhigurah",
+      "arrive": "Male (MLE)",
+      "depart": "Male (MLE)",
+      "countries": [
+        "Maldives"
+      ],
+      "regions": [],
+      "cities": [
+        "Maafushi",
+        "Dhigurah"
+      ],
+      "imageQuery": "Dhigurah island whale shark Maldives",
+      "highlights": [
+        "Nurse sharks",
+        "Whale sharks",
+        "Manta rays",
+        "Dolphin cruise"
+      ],
+      "destinationKeys": [
+        "maldives",
+        "maldives/maafushi",
+        "maldives/dhigurah"
+      ],
+      "hero": "maldives/dhigurah",
+      "sources": [
+        "The Daily Packers",
+        "Pickyourtrail",
+        "Magpie Travel",
+        "On The Go Tours",
+        "HIDMC"
+      ],
+      "pace": "R",
+      "interests": [
+        "adventure",
+        "relax",
+        "outdoors",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Maafushi",
+          "hotel": "Guesthouse in Maafushi",
+          "start": 0,
+          "nights": 3,
+          "area": "In a beachside guesthouse on Maafushi, a short walk from the tourist beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dhigurah",
+          "hotel": "Guesthouse on Dhigurah",
+          "start": 3,
+          "nights": 3,
+          "area": "In a beachfront guesthouse on Dhigurah",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Maafushi bikini beach and water sports",
+          "notes": "Dress modestly away from the tourist beach.",
+          "where": "Maafushi",
+          "book": "",
+          "place": "maldives/maafushi-beach"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Sandbank, nurse sharks and stingrays",
+          "notes": "Barbecue lunch on the sandbank; wear sun protection.",
+          "where": "South Male Atoll",
+          "book": "Yes - book a boat trip",
+          "place": "maldives/maafushi-sandbank"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Dolphin watching and sunset cruise",
+          "notes": "Sightings are likely but not guaranteed.",
+          "where": "Maafushi",
+          "book": "",
+          "place": "maldives/dolphin-sunset"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "5h",
+          "name": "Whale shark and manta ray snorkel",
+          "notes": "Do not touch the animals; follow the guide.",
+          "where": "South Ari Atoll",
+          "book": "Yes - book the boat",
+          "place": "maldives/dhigurah-whale-shark"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Turtle reef and local island visit",
+          "notes": "Respect local dress codes at the village.",
+          "where": "Atoll",
+          "book": "",
+          "place": "maldives/vaavu-turtle-reef"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Other",
+          "from": "Velana International Airport (MLE)",
+          "to": "Maafushi",
+          "time": "13:00",
+          "minutes": 40,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Other",
+          "from": "Maafushi",
+          "to": "Dhigurah",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Speedboat or public ferry",
+          "notes": "A speedboat or public ferry; times vary.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Other",
+          "from": "Dhigurah",
+          "to": "Velana International Airport (MLE)",
+          "time": "08:00",
+          "minutes": 180,
+          "carrier": "Speedboat or public ferry",
+          "notes": "Allow a buffer before the flight.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "maldives-maafushi-dhigurah-resort-8d",
+      "title": "Local Islands and a Resort in 8 Days",
+      "summary": "Two nights on Maafushi, three on Dhigurah, then two on a resort island.",
+      "days": 8,
+      "route": "Maafushi > Dhigurah > South Ari Atoll",
+      "arrive": "Male (MLE)",
+      "depart": "Male (MLE)",
+      "countries": [
+        "Maldives"
+      ],
+      "regions": [],
+      "cities": [
+        "Maafushi",
+        "Dhigurah",
+        "South Ari Atoll"
+      ],
+      "imageQuery": "Maldives overwater villa",
+      "highlights": [
+        "Nurse sharks",
+        "Whale sharks",
+        "House reef",
+        "Overwater villa"
+      ],
+      "destinationKeys": [
+        "maldives",
+        "maldives/maafushi",
+        "maldives/dhigurah",
+        "maldives/south-ari-atoll"
+      ],
+      "hero": "maldives/south-ari-atoll",
+      "sources": [
+        "The Daily Packers",
+        "Pickyourtrail",
+        "Magpie Travel",
+        "On The Go Tours",
+        "HIDMC"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "adventure",
+        "photography",
+        "outdoors"
+      ],
+      "stays": [
+        {
+          "base": "Maafushi",
+          "hotel": "Guesthouse in Maafushi",
+          "start": 0,
+          "nights": 2,
+          "area": "In a beachside guesthouse on Maafushi, a short walk from the tourist beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dhigurah",
+          "hotel": "Guesthouse on Dhigurah",
+          "start": 2,
+          "nights": 3,
+          "area": "In a beachfront guesthouse on Dhigurah",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "South Ari Atoll",
+          "hotel": "Resort in South Ari Atoll",
+          "start": 5,
+          "nights": 2,
+          "area": "On a private resort island with a house reef and overwater villas",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Maafushi bikini beach and water sports",
+          "notes": "Dress modestly away from the tourist beach.",
+          "where": "Maafushi",
+          "book": "",
+          "place": "maldives/maafushi-beach"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Sandbank, nurse sharks and stingrays",
+          "notes": "Barbecue lunch on the sandbank; wear sun protection.",
+          "where": "South Male Atoll",
+          "book": "Yes - book a boat trip",
+          "place": "maldives/maafushi-sandbank"
+        },
+        {
+          "day": 3,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "5h",
+          "name": "Whale shark and manta ray snorkel",
+          "notes": "Do not touch the animals; follow the guide.",
+          "where": "South Ari Atoll",
+          "book": "Yes - book the boat",
+          "place": "maldives/dhigurah-whale-shark"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Turtle reef and local island visit",
+          "notes": "Respect local dress codes at the village.",
+          "where": "Atoll",
+          "book": "",
+          "place": "maldives/vaavu-turtle-reef"
+        },
+        {
+          "day": 6,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "House reef snorkel and spa afternoon",
+          "notes": "Reef shoes help; book the spa ahead.",
+          "where": "Resort island",
+          "book": "",
+          "place": "maldives/resort-reef"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Other",
+          "from": "Velana International Airport (MLE)",
+          "to": "Maafushi",
+          "time": "13:00",
+          "minutes": 40,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Other",
+          "from": "Maafushi",
+          "to": "Dhigurah",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Other",
+          "from": "Dhigurah",
+          "to": "Resort island",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Speedboat or public ferry",
+          "notes": "Speedboat transfer arranged by the resort.",
+          "book": ""
+        },
+        {
+          "day": 7,
+          "transferType": "Other",
+          "from": "Resort island",
+          "to": "Velana International Airport (MLE)",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Speedboat or public ferry",
+          "notes": "Resorts arrange the speedboat or seaplane.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "maldives-island-hop-10d",
+      "title": "Maldives Island Hopper in 10 Days",
+      "summary": "Three islands: Maafushi, Dhigurah and a resort in South Ari Atoll, with a Male afternoon.",
+      "days": 10,
+      "route": "Maafushi > Dhigurah > South Ari Atoll",
+      "arrive": "Male (MLE)",
+      "depart": "Male (MLE)",
+      "countries": [
+        "Maldives"
+      ],
+      "regions": [],
+      "cities": [
+        "Maafushi",
+        "Dhigurah",
+        "South Ari Atoll"
+      ],
+      "imageQuery": "Maldives atoll aerial turquoise",
+      "highlights": [
+        "Sandbank",
+        "Whale sharks",
+        "Manta rays",
+        "Overwater villa",
+        "Male fish market"
+      ],
+      "destinationKeys": [
+        "maldives",
+        "maldives/male",
+        "maldives/maafushi",
+        "maldives/dhigurah",
+        "maldives/south-ari-atoll"
+      ],
+      "hero": "maldives/male",
+      "sources": [
+        "The Daily Packers",
+        "Pickyourtrail",
+        "Magpie Travel",
+        "On The Go Tours",
+        "HIDMC"
+      ],
+      "pace": "R",
+      "interests": [
+        "relax",
+        "adventure",
+        "outdoors",
+        "culture"
+      ],
+      "stays": [
+        {
+          "base": "Maafushi",
+          "hotel": "Guesthouse in Maafushi",
+          "start": 0,
+          "nights": 3,
+          "area": "In a beachside guesthouse on Maafushi, a short walk from the tourist beach",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Dhigurah",
+          "hotel": "Guesthouse on Dhigurah",
+          "start": 3,
+          "nights": 3,
+          "area": "In a beachfront guesthouse on Dhigurah",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "South Ari Atoll",
+          "hotel": "Resort in South Ari Atoll",
+          "start": 6,
+          "nights": 3,
+          "area": "On a private resort island with a house reef and overwater villas",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 0,
+          "type": "Outdoor Activity",
+          "time": "15:00",
+          "duration": "2h",
+          "name": "Maafushi bikini beach and water sports",
+          "notes": "Dress modestly away from the tourist beach.",
+          "where": "Maafushi",
+          "book": "",
+          "place": "maldives/maafushi-beach"
+        },
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "09:30",
+          "duration": "6h",
+          "name": "Sandbank, nurse sharks and stingrays",
+          "notes": "Barbecue lunch on the sandbank; wear sun protection.",
+          "where": "South Male Atoll",
+          "book": "Yes - book a boat trip",
+          "place": "maldives/maafushi-sandbank"
+        },
+        {
+          "day": 2,
+          "type": "Tour",
+          "time": "16:00",
+          "duration": "2h",
+          "name": "Dolphin watching and sunset cruise",
+          "notes": "Sightings are likely but not guaranteed.",
+          "where": "Maafushi",
+          "book": "",
+          "place": "maldives/dolphin-sunset"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "08:00",
+          "duration": "5h",
+          "name": "Whale shark and manta ray snorkel",
+          "notes": "Do not touch the animals; follow the guide.",
+          "where": "South Ari Atoll",
+          "book": "Yes - book the boat",
+          "place": "maldives/dhigurah-whale-shark"
+        },
+        {
+          "day": 5,
+          "type": "Tour",
+          "time": "09:00",
+          "duration": "5h",
+          "name": "Turtle reef and local island visit",
+          "notes": "Respect local dress codes at the village.",
+          "where": "Atoll",
+          "book": "",
+          "place": "maldives/vaavu-turtle-reef"
+        },
+        {
+          "day": 7,
+          "type": "Outdoor Activity",
+          "time": "09:30",
+          "duration": "5h",
+          "name": "House reef snorkel and spa afternoon",
+          "notes": "Reef shoes help; book the spa ahead.",
+          "where": "Resort island",
+          "book": "",
+          "place": "maldives/resort-reef"
+        },
+        {
+          "day": 8,
+          "type": "Outdoor Activity",
+          "time": "10:00",
+          "duration": "5h",
+          "name": "Sandbank picnic and spa day",
+          "notes": "Reef shoes help; book the spa ahead.",
+          "where": "Resort island",
+          "book": "",
+          "place": "maldives/resort-reef"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Other",
+          "from": "Velana International Airport (MLE)",
+          "to": "Maafushi",
+          "time": "13:00",
+          "minutes": 40,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Other",
+          "from": "Maafushi",
+          "to": "Dhigurah",
+          "time": "09:00",
+          "minutes": 180,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Other",
+          "from": "Dhigurah",
+          "to": "Resort island",
+          "time": "10:00",
+          "minutes": 90,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 9,
+          "transferType": "Other",
+          "from": "Resort island",
+          "to": "Velana International Airport (MLE)",
+          "time": "09:00",
+          "minutes": 90,
+          "carrier": "Speedboat or public ferry",
+          "notes": "",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "maldives/maafushi-sandbank": {
+        "name": "Maafushi sandbank, nurse sharks and stingrays",
+        "description": "A boat day to a sandbar picnic and snorkelling with nurse sharks and stingrays.",
+        "details": "Boats leave Maafushi to nearby reefs and a sandbank in the lagoon. Typical stops include a house reef for turtles, a chance to swim with nurse sharks and stingrays, and a barbecue lunch. Women should dress modestly on the local island beaches.",
+        "interests": [
+          "adventure",
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "maldives/dolphin-sunset": {
+        "name": "Dolphin watching and sunset cruise",
+        "description": "An evening boat trip to see spinner dolphins leaping, with a sunset.",
+        "details": "Boats leave around 4pm to look for pods of spinner dolphins. Sightings are likely but not guaranteed. The trip includes sunset over the atoll and often fishing with hand lines.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "maldives/maafushi-beach": {
+        "name": "Maafushi bikini beach and water sports",
+        "description": "A designated tourist beach on a local island with kayaks, jet skis and cafes.",
+        "details": "Maafushi has a bikini beach for swimsuits, because the rest of the island follows local dress codes. Water sports such as jet skiing and parasailing are available. Guesthouses serve fresh fish. Alcohol is not sold on local islands.",
+        "interests": [
+          "relax",
+          "adventure",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "maldives/dhigurah-whale-shark": {
+        "name": "Dhigurah whale sharks and manta rays",
+        "description": "Snorkel with whale sharks near Dhigurah, which gather in the South Ari Atoll all year.",
+        "details": "Dhigurah is a long, thin local island with a whale shark spot just off its coast, and manta rays are seen at cleaning stations from May to November. Boats go out in the morning. Do not touch the animals, and respect the guide rules.",
+        "interests": [
+          "adventure",
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "maldives/resort-reef": {
+        "name": "Resort house reef and overwater villa",
+        "description": "Snorkelling steps from a private island villa, spas and sunset beaches.",
+        "details": "Resort islands have a house reef with turtles, rays and tropical fish, and many offer dolphin cruises, sandbank picnics and spa treatments. The overwater villa is the classic stay. Meals are expensive, so consider half-board. Seaplane transfers are included with most atoll resorts.",
+        "interests": [
+          "relax",
+          "photography",
+          "outdoors"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "maldives/vaavu-turtle-reef": {
+        "name": "Turtle reef and local island culture",
+        "description": "Snorkelling over a reef with turtles and a visit to a fishing village.",
+        "details": "Boat trips from Dhigurah and Maafushi visit turtle reefs and local island life, with tea at a village cafe. Local island customs apply, and alcohol is not available. Early morning snorkels are calmer.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "authentic_local"
+        ],
+        "mobility": "L",
+        "image": null
+      }
+    },
+    "destinations": {
+      "maldives": {
+        "name": "Maldives",
+        "description": "A nation of coral atolls with turquoise lagoons and the Indian Ocean marine life.",
+        "images": []
+      },
+      "maldives/male": {
+        "name": "Male",
+        "description": "The capital island and gateway to the atolls.",
+        "images": []
+      },
+      "maldives/maafushi": {
+        "name": "Maafushi",
+        "description": "A local island with guesthouses, a tourist beach and day trips.",
+        "images": []
+      },
+      "maldives/dhigurah": {
+        "name": "Dhigurah",
+        "description": "A long thin island known for whale sharks.",
+        "images": []
+      },
+      "maldives/south-ari-atoll": {
+        "name": "South Ari Atoll",
+        "description": "An atoll of resorts, manta rays and whale sharks.",
+        "images": []
+      }
+    }
+  }
+}

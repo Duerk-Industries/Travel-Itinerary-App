@@ -1,0 +1,1330 @@
+{
+  "format": "wanderbunnies.trip-templates",
+  "version": 1,
+  "generator": "Claude (Sonnet 5.5), combining KimKim, She Wanders Abroad, 22 Places and TakeTours itineraries for Colombia",
+  "templates": [
+    {
+      "schemaVersion": 1,
+      "id": "colombia-bogota-cartagena-5d",
+      "title": "Bogota and Cartagena in 5 Days",
+      "summary": "Highland capital, then the walled Caribbean city.",
+      "days": 5,
+      "route": "Bogota > Cartagena",
+      "arrive": "Bogota (BOG)",
+      "depart": "Cartagena (CTG)",
+      "countries": [
+        "Colombia"
+      ],
+      "regions": [
+        "Bolivar"
+      ],
+      "cities": [
+        "Bogota",
+        "Cartagena"
+      ],
+      "imageQuery": "Cartagena Colombia colourful walls",
+      "highlights": [
+        "La Candelaria",
+        "Gold Museum",
+        "Cartagena old city"
+      ],
+      "destinationKeys": [
+        "colombia",
+        "colombia/bogota",
+        "colombia/bolivar",
+        "colombia/cartagena"
+      ],
+      "hero": "colombia/cartagena",
+      "sources": [
+        "KimKim",
+        "She Wanders Abroad",
+        "22 Places",
+        "TakeTours",
+        "WeRoad"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "iconic_landmarks",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bogota",
+          "hotel": "Hotel in Bogota",
+          "start": 0,
+          "nights": 2,
+          "area": "In Chapinero or La Candelaria; Candelaria is atmospheric but quiet at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cartagena",
+          "hotel": "Hotel in Cartagena",
+          "start": 2,
+          "nights": 2,
+          "area": "In the old walled city or Getsemani, near restaurants and plazas",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "La Candelaria and Monserrate",
+          "notes": "Take the cable car up; go slowly at altitude.",
+          "where": "Bogota",
+          "book": "",
+          "place": "colombia/bogota-candelaria"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Gold Museum",
+          "notes": "Closed on Mondays.",
+          "where": "Bogota",
+          "book": "",
+          "place": "colombia/gold-museum"
+        },
+        {
+          "day": 3,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Cartagena walled city",
+          "notes": "Go early or at sunset; siesta in the heat.",
+          "where": "Cartagena",
+          "book": "",
+          "place": "colombia/cartagena-old-city"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "El Dorado Airport (BOG)",
+          "to": "Bogota hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Bogota hotel area",
+          "to": "El Dorado Airport (BOG)",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Cartagena Airport (CTG)",
+          "to": "Cartagena hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 4,
+          "transferType": "Private Transfer",
+          "from": "Cartagena hotel",
+          "to": "Cartagena Airport (CTG)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "Allow time for check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "colombia-medellin-cartagena-7d",
+      "title": "Medellin and Cartagena in 7 Days",
+      "summary": "Spring-like Medellin with Guatape, then island days on the Caribbean.",
+      "days": 7,
+      "route": "Medellin > Cartagena",
+      "arrive": "Medellin (MDE)",
+      "depart": "Cartagena (CTG)",
+      "countries": [
+        "Colombia"
+      ],
+      "regions": [
+        "Antioquia",
+        "Bolivar"
+      ],
+      "cities": [
+        "Medellin",
+        "Cartagena"
+      ],
+      "imageQuery": "Guatape colourful town Colombia",
+      "highlights": [
+        "Comuna 13",
+        "Guatape",
+        "Cartagena old city",
+        "Rosario Islands"
+      ],
+      "destinationKeys": [
+        "colombia",
+        "colombia/antioquia",
+        "colombia/medellin",
+        "colombia/bolivar",
+        "colombia/cartagena"
+      ],
+      "hero": "colombia/antioquia",
+      "sources": [
+        "KimKim",
+        "She Wanders Abroad",
+        "22 Places",
+        "TakeTours",
+        "WeRoad"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "outdoors",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Medellin",
+          "hotel": "Hotel in Medellin",
+          "start": 0,
+          "nights": 3,
+          "area": "In El Poblado, the safe and walkable area with restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cartagena",
+          "hotel": "Hotel in Cartagena",
+          "start": 3,
+          "nights": 3,
+          "area": "In the old walled city or Getsemani, near restaurants and plazas",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Comuna 13 community tour",
+          "notes": "Go with a community guide who explains the story.",
+          "where": "Medellin",
+          "book": "",
+          "place": "colombia/comuna-13"
+        },
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Plaza Botero and Parque Arvi cable car",
+          "notes": "The cable car climbs above the city to a forest park.",
+          "where": "Medellin",
+          "book": "",
+          "place": "colombia/medellin-city"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Guatape and El Penol",
+          "notes": "Climb the 740 steps early; the lakes lie below.",
+          "where": "Guatape",
+          "book": "",
+          "place": "colombia/guatape"
+        },
+        {
+          "day": 4,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Cartagena walled city",
+          "notes": "Go early or at sunset; siesta in the heat.",
+          "where": "Cartagena",
+          "book": "",
+          "place": "colombia/cartagena-old-city"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Rosario Islands boat day",
+          "notes": "Choose a smaller boat for quieter spots.",
+          "where": "Rosario Islands",
+          "book": "Yes - book a boat",
+          "place": "colombia/rosario-islands"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "Jose Maria Cordova Airport (MDE)",
+          "to": "Medellin hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Medellin hotel area",
+          "to": "Jose Maria Cordova Airport (MDE)",
+          "time": "08:30",
+          "minutes": 50,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Cartagena Airport (CTG)",
+          "to": "Cartagena hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Cartagena hotel",
+          "to": "Cartagena Airport (CTG)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "Allow time for check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "colombia-bogota-medellin-cartagena-9d",
+      "title": "Colombia Highlights in 9 Days",
+      "summary": "The three big cities with salt cathedral, Guatape and Rosario Islands.",
+      "days": 9,
+      "route": "Bogota > Medellin > Cartagena",
+      "arrive": "Bogota (BOG)",
+      "depart": "Cartagena (CTG)",
+      "countries": [
+        "Colombia"
+      ],
+      "regions": [
+        "Antioquia",
+        "Bolivar"
+      ],
+      "cities": [
+        "Bogota",
+        "Medellin",
+        "Cartagena"
+      ],
+      "imageQuery": "Medellin Colombia skyline",
+      "highlights": [
+        "Gold Museum",
+        "Salt Cathedral",
+        "Comuna 13",
+        "Guatape",
+        "Cartagena"
+      ],
+      "destinationKeys": [
+        "colombia",
+        "colombia/bogota",
+        "colombia/antioquia",
+        "colombia/medellin",
+        "colombia/bolivar",
+        "colombia/cartagena"
+      ],
+      "hero": "colombia/bogota",
+      "sources": [
+        "KimKim",
+        "She Wanders Abroad",
+        "22 Places",
+        "TakeTours",
+        "WeRoad"
+      ],
+      "pace": "B",
+      "interests": [
+        "culture",
+        "photography",
+        "outdoors",
+        "food"
+      ],
+      "stays": [
+        {
+          "base": "Bogota",
+          "hotel": "Hotel in Bogota",
+          "start": 0,
+          "nights": 3,
+          "area": "In Chapinero or La Candelaria; Candelaria is atmospheric but quiet at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Medellin",
+          "hotel": "Hotel in Medellin",
+          "start": 3,
+          "nights": 3,
+          "area": "In El Poblado, the safe and walkable area with restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cartagena",
+          "hotel": "Hotel in Cartagena",
+          "start": 6,
+          "nights": 2,
+          "area": "In the old walled city or Getsemani, near restaurants and plazas",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "La Candelaria and Monserrate",
+          "notes": "Take the cable car up; go slowly at altitude.",
+          "where": "Bogota",
+          "book": "",
+          "place": "colombia/bogota-candelaria"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Gold Museum",
+          "notes": "Closed on Mondays.",
+          "where": "Bogota",
+          "book": "",
+          "place": "colombia/gold-museum"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Zipaquira Salt Cathedral",
+          "notes": "A guided underground visit; combine with the colonial town.",
+          "where": "Zipaquira",
+          "book": "",
+          "place": "colombia/zipaquira"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Comuna 13 community tour",
+          "notes": "Go with a community guide who explains the story.",
+          "where": "Medellin",
+          "book": "",
+          "place": "colombia/comuna-13"
+        },
+        {
+          "day": 5,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Guatape and El Penol",
+          "notes": "Climb the 740 steps early; the lakes lie below.",
+          "where": "Guatape",
+          "book": "",
+          "place": "colombia/guatape"
+        },
+        {
+          "day": 7,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Cartagena walled city",
+          "notes": "Go early or at sunset; siesta in the heat.",
+          "where": "Cartagena",
+          "book": "",
+          "place": "colombia/cartagena-old-city"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "El Dorado Airport (BOG)",
+          "to": "Bogota hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Bogota hotel area",
+          "to": "El Dorado Airport (BOG)",
+          "time": "09:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Jose Maria Cordova Airport (MDE)",
+          "to": "Medellin hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Medellin hotel area",
+          "to": "Jose Maria Cordova Airport (MDE)",
+          "time": "09:00",
+          "minutes": 50,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 6,
+          "transferType": "Private Transfer",
+          "from": "Cartagena Airport (CTG)",
+          "to": "Cartagena hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Cartagena hotel",
+          "to": "Cartagena Airport (CTG)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "Allow time for check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "colombia-coffee-axis-12d",
+      "title": "Colombia with the Coffee Region in 12 Days",
+      "summary": "Bogota, the coffee hills of Salento, Medellin and Cartagena.",
+      "days": 12,
+      "route": "Bogota > Salento > Medellin > Cartagena",
+      "arrive": "Bogota (BOG)",
+      "depart": "Cartagena (CTG)",
+      "countries": [
+        "Colombia"
+      ],
+      "regions": [
+        "Quindio",
+        "Antioquia",
+        "Bolivar"
+      ],
+      "cities": [
+        "Bogota",
+        "Salento",
+        "Medellin",
+        "Cartagena"
+      ],
+      "imageQuery": "Cocora Valley wax palms",
+      "highlights": [
+        "Cocora Valley",
+        "Coffee farm",
+        "Comuna 13",
+        "Guatape",
+        "Cartagena"
+      ],
+      "destinationKeys": [
+        "colombia",
+        "colombia/bogota",
+        "colombia/quindio",
+        "colombia/salento",
+        "colombia/antioquia",
+        "colombia/medellin",
+        "colombia/bolivar",
+        "colombia/cartagena"
+      ],
+      "hero": "colombia/quindio",
+      "sources": [
+        "KimKim",
+        "She Wanders Abroad",
+        "22 Places",
+        "TakeTours",
+        "WeRoad"
+      ],
+      "pace": "B",
+      "interests": [
+        "outdoors",
+        "food",
+        "culture",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bogota",
+          "hotel": "Hotel in Bogota",
+          "start": 0,
+          "nights": 2,
+          "area": "In Chapinero or La Candelaria; Candelaria is atmospheric but quiet at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Salento",
+          "hotel": "Lodge near Salento",
+          "start": 2,
+          "nights": 3,
+          "area": "In Salento village or a nearby finca with views of the valley",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Medellin",
+          "hotel": "Hotel in Medellin",
+          "start": 5,
+          "nights": 3,
+          "area": "In El Poblado, the safe and walkable area with restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cartagena",
+          "hotel": "Hotel in Cartagena",
+          "start": 8,
+          "nights": 3,
+          "area": "In the old walled city or Getsemani, near restaurants and plazas",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "La Candelaria and Monserrate",
+          "notes": "Take the cable car up; go slowly at altitude.",
+          "where": "Bogota",
+          "book": "",
+          "place": "colombia/bogota-candelaria"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Gold Museum",
+          "notes": "Closed on Mondays.",
+          "where": "Bogota",
+          "book": "",
+          "place": "colombia/gold-museum"
+        },
+        {
+          "day": 3,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Cocora Valley loop",
+          "notes": "Wear waterproof boots; jeeps run to the trailhead.",
+          "where": "Cocora Valley",
+          "book": "",
+          "place": "colombia/cocora-valley"
+        },
+        {
+          "day": 4,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Coffee farm tour",
+          "notes": "Book ahead in busy months.",
+          "where": "Salento",
+          "book": "Yes - book a farm visit",
+          "place": "colombia/coffee-farm"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Comuna 13 community tour",
+          "notes": "Go with a community guide who explains the story.",
+          "where": "Medellin",
+          "book": "",
+          "place": "colombia/comuna-13"
+        },
+        {
+          "day": 6,
+          "type": "Sights & Landmarks",
+          "time": "15:00",
+          "duration": "3h",
+          "name": "Plaza Botero and Parque Arvi cable car",
+          "notes": "The cable car climbs above the city to a forest park.",
+          "where": "Medellin",
+          "book": "",
+          "place": "colombia/medellin-city"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Guatape and El Penol",
+          "notes": "Climb the 740 steps early; the lakes lie below.",
+          "where": "Guatape",
+          "book": "",
+          "place": "colombia/guatape"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Cartagena walled city",
+          "notes": "Go early or at sunset; siesta in the heat.",
+          "where": "Cartagena",
+          "book": "",
+          "place": "colombia/cartagena-old-city"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Rosario Islands boat day",
+          "notes": "Choose a smaller boat for quieter spots.",
+          "where": "Rosario Islands",
+          "book": "Yes - book a boat",
+          "place": "colombia/rosario-islands"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "El Dorado Airport (BOG)",
+          "to": "Bogota hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Bogota hotel area",
+          "to": "El Dorado Airport (BOG)",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 2,
+          "transferType": "Private Transfer",
+          "from": "Pereira Airport (PEI)",
+          "to": "Salento lodge",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Salento lodge",
+          "to": "Pereira Airport (PEI)",
+          "time": "09:00",
+          "minutes": 75,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Jose Maria Cordova Airport (MDE)",
+          "to": "Medellin hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Medellin hotel area",
+          "to": "Jose Maria Cordova Airport (MDE)",
+          "time": "09:00",
+          "minutes": 50,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Cartagena Airport (CTG)",
+          "to": "Cartagena hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Cartagena hotel",
+          "to": "Cartagena Airport (CTG)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "Allow time for check-in.",
+          "book": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "colombia-grand-14d",
+      "title": "Complete Colombia in 14 Days",
+      "summary": "Bogota, coffee country, Medellin, Cartagena and Tayrona National Park.",
+      "days": 14,
+      "route": "Bogota > Salento > Medellin > Cartagena > Santa Marta",
+      "arrive": "Bogota (BOG)",
+      "depart": "Santa Marta (SMR)",
+      "countries": [
+        "Colombia"
+      ],
+      "regions": [
+        "Quindio",
+        "Antioquia",
+        "Bolivar",
+        "Magdalena"
+      ],
+      "cities": [
+        "Bogota",
+        "Salento",
+        "Medellin",
+        "Cartagena",
+        "Santa Marta"
+      ],
+      "imageQuery": "Tayrona National Park beach",
+      "highlights": [
+        "Salt Cathedral",
+        "Cocora Valley",
+        "Guatape",
+        "Cartagena",
+        "Tayrona"
+      ],
+      "destinationKeys": [
+        "colombia",
+        "colombia/bogota",
+        "colombia/quindio",
+        "colombia/salento",
+        "colombia/antioquia",
+        "colombia/medellin",
+        "colombia/bolivar",
+        "colombia/cartagena",
+        "colombia/magdalena",
+        "colombia/santa-marta"
+      ],
+      "hero": "colombia/magdalena",
+      "sources": [
+        "KimKim",
+        "She Wanders Abroad",
+        "22 Places",
+        "TakeTours",
+        "WeRoad"
+      ],
+      "pace": "F",
+      "interests": [
+        "outdoors",
+        "culture",
+        "relax",
+        "photography"
+      ],
+      "stays": [
+        {
+          "base": "Bogota",
+          "hotel": "Hotel in Bogota",
+          "start": 0,
+          "nights": 3,
+          "area": "In Chapinero or La Candelaria; Candelaria is atmospheric but quiet at night",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Salento",
+          "hotel": "Lodge near Salento",
+          "start": 3,
+          "nights": 2,
+          "area": "In Salento village or a nearby finca with views of the valley",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Medellin",
+          "hotel": "Hotel in Medellin",
+          "start": 5,
+          "nights": 3,
+          "area": "In El Poblado, the safe and walkable area with restaurants",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Cartagena",
+          "hotel": "Hotel in Cartagena",
+          "start": 8,
+          "nights": 3,
+          "area": "In the old walled city or Getsemani, near restaurants and plazas",
+          "breakfast": false,
+          "dinner": false
+        },
+        {
+          "base": "Santa Marta",
+          "hotel": "Hotel in Santa Marta",
+          "start": 11,
+          "nights": 2,
+          "area": "In Santa Marta or a beach lodge close to the park entrance",
+          "breakfast": false,
+          "dinner": false
+        }
+      ],
+      "activities": [
+        {
+          "day": 1,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "La Candelaria and Monserrate",
+          "notes": "Take the cable car up; go slowly at altitude.",
+          "where": "Bogota",
+          "book": "",
+          "place": "colombia/bogota-candelaria"
+        },
+        {
+          "day": 1,
+          "type": "Ticketed Attraction",
+          "time": "14:30",
+          "duration": "2h",
+          "name": "Gold Museum",
+          "notes": "Closed on Mondays.",
+          "where": "Bogota",
+          "book": "",
+          "place": "colombia/gold-museum"
+        },
+        {
+          "day": 2,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "6h",
+          "name": "Zipaquira Salt Cathedral",
+          "notes": "A guided underground visit; combine with the colonial town.",
+          "where": "Zipaquira",
+          "book": "",
+          "place": "colombia/zipaquira"
+        },
+        {
+          "day": 4,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "6h",
+          "name": "Cocora Valley loop",
+          "notes": "Wear waterproof boots; jeeps run to the trailhead.",
+          "where": "Cocora Valley",
+          "book": "",
+          "place": "colombia/cocora-valley"
+        },
+        {
+          "day": 6,
+          "type": "Tour",
+          "time": "10:00",
+          "duration": "3h",
+          "name": "Comuna 13 community tour",
+          "notes": "Go with a community guide who explains the story.",
+          "where": "Medellin",
+          "book": "",
+          "place": "colombia/comuna-13"
+        },
+        {
+          "day": 7,
+          "type": "Day Trip",
+          "time": "08:30",
+          "duration": "8h",
+          "name": "Guatape and El Penol",
+          "notes": "Climb the 740 steps early; the lakes lie below.",
+          "where": "Guatape",
+          "book": "",
+          "place": "colombia/guatape"
+        },
+        {
+          "day": 9,
+          "type": "Sights & Landmarks",
+          "time": "09:30",
+          "duration": "3.5h",
+          "name": "Cartagena walled city",
+          "notes": "Go early or at sunset; siesta in the heat.",
+          "where": "Cartagena",
+          "book": "",
+          "place": "colombia/cartagena-old-city"
+        },
+        {
+          "day": 10,
+          "type": "Day Trip",
+          "time": "09:00",
+          "duration": "7h",
+          "name": "Rosario Islands boat day",
+          "notes": "Choose a smaller boat for quieter spots.",
+          "where": "Rosario Islands",
+          "book": "Yes - book a boat",
+          "place": "colombia/rosario-islands"
+        },
+        {
+          "day": 12,
+          "type": "Hike",
+          "time": "08:00",
+          "duration": "8h",
+          "name": "Tayrona National Park",
+          "notes": "Swim only where permitted; it is hot and humid.",
+          "where": "Tayrona",
+          "book": "Yes - book park entry",
+          "place": "colombia/tayrona"
+        }
+      ],
+      "legs": [
+        {
+          "day": 0,
+          "transferType": "Private Transfer",
+          "from": "El Dorado Airport (BOG)",
+          "to": "Bogota hotel area",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Bogota hotel area",
+          "to": "El Dorado Airport (BOG)",
+          "time": "08:00",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 3,
+          "transferType": "Private Transfer",
+          "from": "Pereira Airport (PEI)",
+          "to": "Salento lodge",
+          "time": "",
+          "minutes": 75,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Salento lodge",
+          "to": "Pereira Airport (PEI)",
+          "time": "09:00",
+          "minutes": 75,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 5,
+          "transferType": "Private Transfer",
+          "from": "Jose Maria Cordova Airport (MDE)",
+          "to": "Medellin hotel",
+          "time": "",
+          "minutes": 45,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Medellin hotel area",
+          "to": "Jose Maria Cordova Airport (MDE)",
+          "time": "09:00",
+          "minutes": 50,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "Allow time for domestic check-in.",
+          "book": ""
+        },
+        {
+          "day": 8,
+          "transferType": "Private Transfer",
+          "from": "Cartagena Airport (CTG)",
+          "to": "Cartagena hotel",
+          "time": "",
+          "minutes": 20,
+          "carrier": "Taxi, shuttle or rideshare",
+          "notes": "",
+          "book": ""
+        },
+        {
+          "day": 11,
+          "transferType": "Private Transfer",
+          "from": "Cartagena",
+          "to": "Santa Marta",
+          "time": "08:00",
+          "minutes": 270,
+          "carrier": "Shared shuttle or private transfer",
+          "notes": "The coastal road passes Barranquilla.",
+          "book": ""
+        },
+        {
+          "day": 13,
+          "transferType": "Private Transfer",
+          "from": "Santa Marta hotel",
+          "to": "Santa Marta Airport (SMR)",
+          "time": "12:00",
+          "minutes": 20,
+          "carrier": "Taxi, rideshare or pre-booked transfer",
+          "notes": "Allow time for check-in.",
+          "book": ""
+        }
+      ]
+    }
+  ],
+  "media": {
+    "places": {
+      "colombia/bogota-candelaria": {
+        "name": "La Candelaria and Monserrate",
+        "description": "The colonial heart of Bogota, with street art, plazas and a mountaintop church above the city.",
+        "details": "La Candelaria has cobbled streets, Botero Museum, the Plaza de Bolivar and murals. Monserrate is reached by cable car or funicular and gives a view over the city at 3,150 metres. Take it easy on the first day because of the altitude.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "colombia/gold-museum": {
+        "name": "Gold Museum (Museo del Oro)",
+        "description": "The world largest collection of pre-Hispanic gold, including the Muisca raft.",
+        "details": "The museum displays thousands of gold pieces from Colombian cultures, with a darkened room where the gold glows. It is in the centre of Bogota. Allow two hours, and note that it closes on Mondays.",
+        "interests": [
+          "culture",
+          "iconic_landmarks"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "colombia/zipaquira": {
+        "name": "Zipaquira Salt Cathedral",
+        "description": "An underground cathedral carved from a salt mine, an hour north of Bogota.",
+        "details": "The Salt Cathedral has chambers and crosses carved into halite with coloured lighting. Visits are by guided tour and last about an hour. It is combined with the colonial town of Zipaquira, or with Guatavita lake.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "colombia/comuna-13": {
+        "name": "Comuna 13 and Medellin metro cable",
+        "description": "A once-feared neighbourhood now known for street art, escalators and a tale of transformation.",
+        "details": "Comuna 13 is a hillside barrio with graffiti, hip-hop and outdoor escalators. Local guides tell the story of its history of violence and change, so go with a community guide. The metro cable system links the hillside barrios to the city.",
+        "interests": [
+          "culture",
+          "authentic_local",
+          "photography"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "colombia/medellin-city": {
+        "name": "Medellin Botero Plaza and Parque Arvi",
+        "description": "Fernando Botero sculptures in the city centre and a cable car to a forest park.",
+        "details": "Plaza Botero has 23 large bronze sculptures beside the Museum of Antioquia. The metro cable to Parque Arvi climbs above the valley to a nature reserve with walking trails. Medellin has a spring-like climate, known as the city of eternal spring.",
+        "interests": [
+          "culture",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "colombia/guatape": {
+        "name": "Guatape and El Penol rock",
+        "description": "A colourful lakeside town and a giant granite monolith with 740 steps to the top.",
+        "details": "El Penol is a rock rising from the lakes, climbed by a staircase for a view over islands and reservoirs. The town of Guatape is known for painted bas-relief house fronts. It is a day trip of two hours each way from Medellin.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "iconic_landmarks"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "colombia/cocora-valley": {
+        "name": "Cocora Valley",
+        "description": "A valley of the tallest palm in the world, the wax palm, reached from Salento.",
+        "details": "The Cocora Valley loop of about five hours passes cloud forest, hummingbirds and a meadow of wax palms up to 60 metres high. Willys jeeps take hikers from Salento to the trailhead. The path is muddy in places, so wear waterproof footwear.",
+        "interests": [
+          "outdoors",
+          "photography",
+          "adventure"
+        ],
+        "mobility": "M",
+        "image": null
+      },
+      "colombia/coffee-farm": {
+        "name": "Coffee farm tour",
+        "description": "A hands-on visit to a coffee finca, from bean to cup, in the Coffee Cultural Landscape.",
+        "details": "Farms around Salento offer tours that cover picking, drying, roasting and tasting. The region is a UNESCO World Heritage landscape. Tours take two hours, and some include lunch. Book ahead in busy months.",
+        "interests": [
+          "food",
+          "authentic_local",
+          "culture"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "colombia/cartagena-old-city": {
+        "name": "Cartagena walled city",
+        "description": "A colonial Caribbean city of colourful balconies, plazas and fortress walls, a UNESCO site.",
+        "details": "The old city is best seen on foot early or at sunset, with the walls, Plaza de Bolivar and the street of Getsemani nearby. The Castillo San Felipe de Barajas is a large fortress. Heat and humidity are intense in the middle of the day, so take a siesta.",
+        "interests": [
+          "culture",
+          "iconic_landmarks",
+          "photography",
+          "food"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "colombia/rosario-islands": {
+        "name": "Rosario Islands day trip",
+        "description": "Boat day to clear water, coral and beaches near Cartagena.",
+        "details": "The Islas del Rosario are a short boat ride from Cartagena, with beaches, snorkelling and seafood lunches. Day trips include a stop at a beach club or island. Choose a smaller boat for quieter spots.",
+        "interests": [
+          "relax",
+          "outdoors",
+          "photography"
+        ],
+        "mobility": "L",
+        "image": null
+      },
+      "colombia/tayrona": {
+        "name": "Tayrona National Park",
+        "description": "A jungle-backed coast of golden beaches and forest trails near Santa Marta.",
+        "details": "Tayrona has beaches such as Cabo San Juan and trails through rainforest. The walk from the park entrance to Cabo San Juan takes about two hours and is hot and humid. Some beaches have dangerous currents, so swim only where permitted. The park closes occasionally for maintenance.",
+        "interests": [
+          "outdoors",
+          "adventure",
+          "photography",
+          "relax"
+        ],
+        "mobility": "M",
+        "image": null
+      }
+    },
+    "destinations": {
+      "colombia": {
+        "name": "Colombia",
+        "description": "A country of Andean cities, coffee hills, Caribbean forts and jungle beaches.",
+        "images": []
+      },
+      "colombia/bogota": {
+        "name": "Bogota",
+        "description": "The high-altitude capital, with museums, street art and mountain views.",
+        "images": []
+      },
+      "colombia/antioquia": {
+        "name": "Antioquia",
+        "description": "The region of Medellin and its nearby towns and lakes.",
+        "images": []
+      },
+      "colombia/medellin": {
+        "name": "Medellin",
+        "description": "A transformed city in a green valley, known for art and innovation.",
+        "images": []
+      },
+      "colombia/quindio": {
+        "name": "Quindio",
+        "description": "The heart of the Coffee Axis, with Salento and the Cocora Valley.",
+        "images": []
+      },
+      "colombia/salento": {
+        "name": "Salento",
+        "description": "A colourful village in the coffee hills, close to the Cocora Valley.",
+        "images": []
+      },
+      "colombia/bolivar": {
+        "name": "Bolivar",
+        "description": "The Caribbean department that includes Cartagena.",
+        "images": []
+      },
+      "colombia/cartagena": {
+        "name": "Cartagena",
+        "description": "A walled Caribbean port city of colonial architecture.",
+        "images": []
+      },
+      "colombia/magdalena": {
+        "name": "Magdalena",
+        "description": "The Caribbean department of Santa Marta and Tayrona National Park.",
+        "images": []
+      },
+      "colombia/santa-marta": {
+        "name": "Santa Marta",
+        "description": "A coastal city and gateway to Tayrona National Park.",
+        "images": []
+      }
+    }
+  }
+}

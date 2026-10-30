@@ -2559,6 +2559,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               stepIndex === 0 ? styles.dangerButton : (styles.mapOptionButton ?? styles.button),
             ]}
             onPress={quickStartMode || stepIndex === 0 ? cancelWizard : goBack}
+            accessibilityRole="button"
           >
             <Text style={quickStartMode || stepIndex === 0 ? styles.dangerButtonText : (styles.mapOptionText ?? styles.buttonText)}>
               {quickStartMode || stepIndex === 0 ? 'Cancel' : 'Back'}
@@ -2581,6 +2582,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TouchableOpacity
                 style={[styles.button, themeStyle('tabs_createTripWizard_65', {  }, (theme ?? _styleTheme)), !canMoveNext && themeStyle('tabs_createTripWizard_66', {  }, (theme ?? _styleTheme))]}
                 onPress={goNext}
+                accessibilityRole="button"
+                accessibilityLabel="Next"
                 disabled={!canMoveNext}
               >
                 <Text style={styles.buttonText}>Next</Text>

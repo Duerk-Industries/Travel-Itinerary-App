@@ -1,3 +1,4 @@
+import { goHome } from './ui';
 /**
  * E2E: Multi-user trip group invitation flow
  *
@@ -85,13 +86,14 @@ test.describe('Multi-User Group Invitation', () => {
 
     // Click "Join" for the invite
     await userBPage.getByTestId(`invite-join-${inviteId}`).click();
-    await userBPage.waitForLoadState('networkidle');
+
 
     // Modal should close
     await expect(userBPage.getByTestId('invite-modal')).not.toBeVisible({ timeout: 5000 });
 
     // The trip should now appear as the active trip for User B — the home
     // hero card falls back to "Select a trip" only when no trip is active.
+    await goHome(userBPage);
     await expect(userBPage.getByTestId('home-hero-card')).toBeVisible({ timeout: 8000 });
     await expect(userBPage.getByText('Select a trip')).not.toBeVisible();
 
@@ -118,13 +120,14 @@ test.describe('Multi-User Group Invitation', () => {
     expect(inviteId).not.toBeNull();
 
     await userBPage.getByTestId(`invite-decline-${inviteId}`).click();
-    await userBPage.waitForLoadState('networkidle');
+
 
     // Modal should close
     await expect(userBPage.getByTestId('invite-modal')).not.toBeVisible({ timeout: 5000 });
 
     // User B should NOT have the trip as active — hero card falls back to
     // "Select a trip" when there is no active trip.
+    await goHome(userBPage);
     await expect(userBPage.getByTestId('home-hero-card')).toBeVisible({ timeout: 5000 });
     await expect(userBPage.getByText('Select a trip')).toBeVisible();
 
@@ -150,10 +153,11 @@ test.describe('Multi-User Group Invitation', () => {
     expect(inviteId).not.toBeNull();
 
     await userBPage.getByTestId(`invite-join-${inviteId}`).click();
-    await userBPage.waitForLoadState('networkidle');
+
 
     // User B reloads — trip should still be active (session persists)
     await userBPage.reload({ waitUntil: 'domcontentloaded' });
+    await goHome(userBPage);
     await expect(userBPage.getByTestId('home-hero-card')).toBeVisible({ timeout: 10_000 });
     await expect(userBPage.getByText('Select a trip')).not.toBeVisible();
 

@@ -5,7 +5,9 @@
  * direct HTTP calls to the backend. They are deliberately free of app-specific
  * business logic so they remain stable as the UI evolves.
  */
+import { chooseDestination, goHome, openTripWizard, advanceWizardStep } from './ui';
 import { type APIRequestContext, type Browser, type BrowserContext, type Page, expect } from '@playwright/test';
+export { goHome, openTab, openTripWizard, addTripItem } from './ui';
 
 export const API_BASE = process.env.API_BASE_URL ?? 'http://127.0.0.1:4000';
 export const TEST_USER_PASSWORD = 'password123';
@@ -92,6 +94,13 @@ export async function registerUser(
  * Logs an already-registered user in via the UI and waits for the home screen.
  */
 export async function loginAsUser(page: Page, credentials: UserCredentials): Promise<void> {
+  // Destination photos are an external-provider boundary, not part of these
+  // application journeys. Exercise the app's ordinary no-photo fallback.
+  await page.route('**/api/itinerary/images**', route => route.fulfill({
+    json: new URL(route.request().url()).pathname.endsWith('/batch')
+      ? { images: [] }
+      : { url: null, provider: 'placeholder', cached: false, fallbackUsed: true },
+  }));
   const authRes = await page.request.post(`${API_BASE}/api/web-auth/login`, {
     data: { email: credentials.email, password: credentials.password },
   });
@@ -110,10 +119,15 @@ export async function loginAsUser(page: Page, credentials: UserCredentials): Pro
     tripId: null,
     expiresAt: Date.now() + 12 * 60 * 60 * 1000,
   };
-  await page.addInitScript((payload) => {
+  // Seed once per tab, rather than restoring credentials on every navigation.
+  // Logout and reload tests must exercise the app's real session persistence.
+  const bootstrapKey = `e2e.session.seeded.${Date.now()}.${Math.random()}`;
+  await page.addInitScript(({ payload, bootstrapKey }) => {
+    if (window.sessionStorage.getItem(bootstrapKey)) return;
+    window.sessionStorage.setItem(bootstrapKey, '1');
     window.localStorage.setItem('stp.session', JSON.stringify(payload));
     window.localStorage.setItem('stp.session.token', payload.token);
-  }, session);
+  }, { payload: session, bootstrapKey });
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
   await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 15_000 });
 }
@@ -148,7 +162,7 @@ export async function createSecondUserContext(
 // ---------------------------------------------------------------------------
 
 /**
- * Drives the Create Trip Wizard through all 9 steps and returns the trip name.
+ * Drives the full Create Trip Wizard and returns the trip name.
  * Assumes the user is already logged in.
  */
 export async function createTripViaWizard(
@@ -157,14 +171,14 @@ export async function createTripViaWizard(
 ): Promise<string> {
   const tripName = options.tripName ?? `E2E Trip ${Date.now()}`;
 
-  await page.getByTestId('home-create-trip-button').click();
+  await openTripWizard(page);
   await expect(page.getByText('Create Trip Wizard')).toBeVisible();
 
   // Step 1: Trip Details
   await page.getByPlaceholder('Trip Name').fill(tripName);
-  await page.getByPlaceholder('Destination').fill('Test Destination');
-  await page.waitForLoadState('networkidle');
-  await page.getByText('Next').click();
+  await chooseDestination(page);
+
+  await advanceWizardStep(page);
 
   // Step 2: Dates — web renders native <input type="date"> fields, not a
   // calendar grid of clickable day numbers.
@@ -176,8 +190,8 @@ export async function createTripViaWizard(
   await expect(page.getByTitle('Start date')).toBeVisible();
   await page.getByTitle('Start date').fill(toIsoDate(startDate));
   await page.getByTitle('End date').fill(toIsoDate(endDate));
-  await page.waitForLoadState('networkidle');
-  await page.getByText('Next').click();
+
+  await advanceWizardStep(page);
 
   // Step 3: Participants
   await expect(page.getByText('Participants', { exact: true })).toBeVisible();
@@ -185,12 +199,12 @@ export async function createTripViaWizard(
     await page.getByPlaceholder('First name').fill('Invited');
     await page.getByPlaceholder('Last name').fill('Friend');
     await page.getByPlaceholder('Email (optional)').fill(options.participantEmail);
-    await page.waitForLoadState('networkidle');
+
     await page.getByText('Add Participant').click();
     await expect(page.getByText(`Invited Friend (${options.participantEmail})`)).toBeVisible();
   }
-  await page.waitForLoadState('networkidle');
-  await page.getByText('Next').click();
+
+  await advanceWizardStep(page);
 
   // Steps 4–9 (Itinerary, Flight Details, Accommodation Details, Activities,
   // Rental Cars, Ground Transfers): click through without asserting exact order/labels, since
@@ -199,37 +213,25 @@ export async function createTripViaWizard(
   // choice — pick "No" to skip it and keep this helper fast and API-key-free.
   const reviewHeading = page.getByText('Review & Confirm', { exact: true });
   for (let i = 0; i < 9 && !(await reviewHeading.isVisible().catch(() => false)); i += 1) {
-    await page.waitForLoadState('networkidle');
+
     const skipAiItinerary = page.getByText('No', { exact: true });
     if (await skipAiItinerary.isVisible().catch(() => false)) {
       await skipAiItinerary.click();
-      await page.waitForTimeout(200);
     }
-    await page.getByText('Next', { exact: true }).click();
-    await page.waitForTimeout(300);
+    await advanceWizardStep(page);
   }
 
   // Step 10: Review & Confirm
   await expect(reviewHeading).toBeVisible();
   await expect(page.getByText(tripName)).toBeVisible();
-  await page.waitForLoadState('networkidle');
+
   await page.getByText('Create Trip', { exact: true }).click();
-  // Wizard closes and lands directly on the new trip's Overview page (not
-  // the Home tab) — the home nav grid/hero card aren't present there until
-  // navigating back via the "⌂" home button.
+  // Creation lands on the new itinerary; return via the current desktop or phone navigation.
   await expect(page.getByText(tripName)).toBeVisible({ timeout: 10_000 });
-  await page.getByText('⌂', { exact: true }).click();
+  await goHome(page);
   await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 10_000 });
 
   return tripName;
-}
-
-/**
- * Clicks a home nav tab and waits for networkidle.
- */
-export async function openTab(page: Page, tabKey: string): Promise<void> {
-  await page.getByTestId(`home-nav-${tabKey}`).click();
-  await page.waitForLoadState('networkidle');
 }
 
 // ---------------------------------------------------------------------------

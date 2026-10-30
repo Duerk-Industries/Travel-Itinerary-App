@@ -1,3 +1,4 @@
+import { chooseDestination, advanceWizardStep, openTripWizard } from './ui';
 import { test, expect } from '@playwright/test';
 import { loginAsNewUser } from './fixtures';
 
@@ -13,19 +14,15 @@ test.describe('Create Trip Flow', () => {
     page,
   }) => {
     // Open the wizard
-    await page.getByTestId('home-create-trip-button').click();
+    await openTripWizard(page);
     await expect(page.getByText('Create Trip Wizard')).toBeVisible();
 
     // Step 1: Trip Details
     const tripName = `My E2E Test Trip ${Date.now()}`;
     await page.getByPlaceholder('Trip Name').fill(tripName);
-    await page.getByPlaceholder('Destination').fill('Test Destination');
+    await chooseDestination(page);
 
-    // Before each step transition, we wait for the network to be idle. This is a
-    // robust strategy to prevent the test from clicking "Next" before the app's
-    // client-side logic (like validation or state saving) has fully completed.
-    // This prevents a class of race conditions that cause test flakiness.
-    await page.waitForLoadState('networkidle');
+    // Each following assertion waits for the actual next wizard screen.
     await page.getByText('Next').click();
 
     // Step 2: Dates (optional)
@@ -40,7 +37,6 @@ test.describe('Create Trip Flow', () => {
     await page.getByTitle('Start date').fill(startDate.toISOString().slice(0, 10));
     await page.getByTitle('End date').fill(endDate.toISOString().slice(0, 10));
 
-    await page.waitForLoadState('networkidle');
     await page.getByText('Next').click();
 
     // Step 3: Participants
@@ -48,29 +44,29 @@ test.describe('Create Trip Flow', () => {
     await page.getByPlaceholder('First name').fill('Test');
     await page.getByPlaceholder('Last name').fill('Friend');
     await page.getByPlaceholder('Email (optional)').fill('friend@test.com');
-    await page.waitForLoadState('networkidle');
+
     await page.getByText('Add Participant').click();
     await expect(page.getByText('Test Friend (friend@test.com)')).toBeVisible();
-    await page.waitForLoadState('networkidle');
+
     await page.getByText('Next').click();
 
     // Steps 4–9: Itinerary, Flight Details, Accommodation Details, Activities,
     // Rental Cars, Ground Transfers — skipped for this happy-path test.
     for (const label of ['Itinerary', 'Flight Details', 'Accommodation Details', 'Activities', 'Rental Cars', 'Ground Transfers']) {
-      await expect(page.getByText(label, { exact: true })).toBeVisible();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+
       // Itinerary gates "Next" behind an explicit Yes/No AI-generation choice.
       const skipAiItinerary = page.getByText('No', { exact: true });
       if (await skipAiItinerary.isVisible().catch(() => false)) {
         await skipAiItinerary.click();
       }
-      await page.getByText('Next', { exact: true }).click();
+      await advanceWizardStep(page);
     }
 
-    // Step 9: Review & Confirm
+    // Final step: Review & Confirm
     await expect(page.getByText('Review & Confirm', { exact: true })).toBeVisible();
     await expect(page.getByText(tripName)).toBeVisible();
-    await page.waitForLoadState('networkidle');
+
     await page.getByText('Create Trip', { exact: true }).click();
 
     // Wizard closes and lands directly on the new trip's Overview page.
