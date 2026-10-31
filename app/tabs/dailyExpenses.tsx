@@ -431,7 +431,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const applyParsedReceiptDraft = (parsed: ParsedReceiptExpenseDraft) => {
     const parsedDateOutsideTrip = Boolean(parsed.expenseDate && tripDates.length && !tripDates.includes(parsed.expenseDate));
-    if (parsed.expenseDate && (!tripDates.length || tripDates.includes(parsed.expenseDate))) {
+    if (parsed.expenseDate) {
       setDraftDate(parsed.expenseDate);
     }
     const parsedCategory = parsed.category && categoryOptions.includes(parsed.category as CategoryOption)
@@ -448,7 +448,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       [
         'Filled in from your receipt. Check the amount, date and category before saving.',
         parsedDateOutsideTrip && parsed.expenseDate
-          ? `The receipt date (${formatDateLabel(parsed.expenseDate)}) is outside this trip's dates, so the date was not changed.`
+          ? `The receipt date (${formatDateLabel(parsed.expenseDate)}) is outside this trip's dates. Check the date before saving.`
           : '',
         !parsed.expenseDate ? "The receipt's date couldn't be read." : '',
         parsed.amount == null ? "The total couldn't be read." : '',

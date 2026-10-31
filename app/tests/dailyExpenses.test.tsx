@@ -179,13 +179,17 @@ describe('DailyExpensesTab', () => {
     }
   });
 
-  it('notes in the dialog, not the Description, when the receipt date is outside the trip', async () => {
+  it.each([
+    ['2025-02-02', '2025-02-02'],
+    ['2024-06-01', '2024-06-01'],
+    [null, '2025-02-01'],
+  ])('uses receipt date %s or keeps the default when missing', async (receiptDate, expectedDate) => {
     const originalOS = Platform.OS;
     const originalFetch = global.fetch;
     Platform.OS = 'web';
     global.fetch = jest.fn(async () => ({
       ok: true,
-      json: async () => ({ expenseDate: '2024-06-01', amount: 10, currency: 'EUR', vendor: 'Cafe Nero', category: 'Breakfast', notes: null }),
+      json: async () => ({ expenseDate: receiptDate, amount: 10, currency: 'EUR', vendor: 'Cafe Nero', category: 'Breakfast', notes: null }),
     })) as any;
     try {
       const screen = render(
@@ -196,7 +200,13 @@ describe('DailyExpensesTab', () => {
         fireEvent(screen.UNSAFE_getByProps({ 'data-testid': 'expense-receipt-input' }), 'change', { target: { files: [new File(['x'], 'r.jpg', { type: 'image/jpeg' })] } });
       });
       await waitFor(() => expect(screen.getByTestId('expense-receipt-review-notice')).toBeTruthy());
-      expect(screen.getByTestId('expense-receipt-review-notice').props.children).toMatch(/outside this trip's dates/);
+      expect(screen.getByTestId('daily-expense-date').props.value).toBe(expectedDate);
+      if (receiptDate === '2024-06-01') {
+        expect(screen.getByTestId('expense-receipt-review-notice').props.children).toMatch(/outside this trip's dates/);
+      }
+      if (!receiptDate) {
+        expect(screen.getByTestId('expense-receipt-review-notice').props.children).toMatch(/date couldn't be read/);
+      }
       expect(screen.getByTestId('expense-description-input').props.value).toBe('Cafe Nero');
     } finally {
       Platform.OS = originalOS;
