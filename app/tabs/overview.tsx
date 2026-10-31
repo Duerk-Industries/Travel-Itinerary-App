@@ -1,5 +1,5 @@
 // @ts-nocheck
-import ActivityPhoto from '../components/ActivityPhoto';
+import ActivitySummaryCard from '../components/ActivitySummaryCard';
 import IconText from '../components/IconText';
 import TransferSummaryCard from '../components/TransferSummaryCard';
 import CarRentalSummaryCard from '../components/CarRentalSummaryCard';
@@ -3203,10 +3203,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ? formatTravelerNames(tour.paidBy)
                         : formatTravelerNames(allMemberIds);
                     return (
-                      <View key={tour.id} style={styles.dayInfoRow}>
-                        <View style={styles.dayInfoText}>
-                          <TouchableOpacity
-                            testID={`day-details-activity-${tour.id}`}
+                      <ActivitySummaryCard key={tour.id} activity={tour} styles={styles} theme={theme}
+                        testID={`day-details-activity-${tour.id}`}
+                        photoTestID={`day-details-activity-photo-${tour.id}`}
+                        bookingTestID={`day-details-getyourguide-${tour.id}`}
+                        travelers={showTourNames ? participants : undefined}
+                        controls={controls} backendUrl={backendUrl} headers={headers} destination={trip?.destination}
                             onPress={() => {
                               if (featureStandardizedItemDialogs) {
                                 setDetailModal({
@@ -3233,27 +3235,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                   ],
                                 });
                               }
-                            }}
-                          >
-                            <Text style={[styles.dayInfoRoute, styles.linkText]}>{tour.name}</Text>
-                          </TouchableOpacity>
-                          <Text
-                            style={styles.helperText}
-                          >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}${tour.duration ? ` · ${tour.duration}` : ''}`}</Text>
-                          {tour.notes ? <Text style={styles.helperText}>{tour.notes}</Text> : null}
-                          <ActivityPhoto image={tour.image} name={tour.name} testID={`day-details-activity-photo-${tour.id}`} />
-                          {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
-                          <GetYourGuideCta
-                            backendUrl={backendUrl}
-                            headers={headers}
-                            activity={tour}
-                            destination={trip?.destination}
-                            theme={theme}
-                            testID={`day-details-getyourguide-${tour.id}`}
-                          />
-                        </View>
-                        {controls}
-                      </View>
+                            }} />
                     );
                     }}
                   />

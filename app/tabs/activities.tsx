@@ -1,3 +1,4 @@
+import ActivitySummaryCard from '../components/ActivitySummaryCard';
 import IconText from '../components/IconText';
 import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
@@ -404,6 +405,7 @@ type TourTabProps = {
   onOpenActivityRecap?: (activity: Tour) => void;
   /** Offer template activities that fit the days and cities of this trip. Off unless the page asks for it. */
   showSuggestions?: boolean;
+  compactActivityCards?: boolean;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -441,6 +443,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   featureActivityRecap = false,
   onOpenActivityRecap,
   showSuggestions = false,
+  compactActivityCards = false,
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
@@ -1021,7 +1024,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               </TouchableOpacity>
             ) : null}
             {!tableEditing ? <CsvTransferControls entity="activities" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={defaultActivityDate} tripEnd={tripEndDate} rows={tours} styles={styles} theme={theme} enabledImport={featureActivityLodgingCsvImport} enabledExport={featureActivityLodgingCsvExport} readOnly={readOnly} onImported={onDataChanged ?? fetchTours} /> : null}
-            {tableEditing ? (
+            {tableEditing && !compactActivityCards ? (
               <>
                 <TouchableOpacity
                   disabled={gridSaving}
@@ -1068,7 +1071,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         ) : null}
       </View>
       {gridMessage ? <Text style={styles.helperText}>{gridMessage}</Text> : null}
-      {tableEditing ? (
+      {tableEditing && !compactActivityCards ? (
         <>
           <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
           <EditableDataGrid
@@ -1093,7 +1096,15 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           </HorizontalTableScroll>
         </>
       ) : null}
-      {!tableEditing ? <>
+      {compactActivityCards ? (
+        <View style={themeStyle('compactItemList', {}, theme)} testID="activity-summary-list">
+          {sortedTours.map((tour) => (
+            <ActivitySummaryCard key={tour.id} activity={tour} styles={styles} theme={theme}
+              testID={`activity-details-${tour.id}`} photoTestID={`activity-photo-${tour.id}`}
+              onPress={() => setSelectedTourId(tour.id)} backendUrl={backendUrl} headers={jsonHeaders} destination={destination} />
+          ))}
+        </View>
+      ) : !tableEditing ? <>
         <HorizontalTableScroll
           style={styles.tableScroll}
           contentContainerStyle={styles.tableScrollContent}
