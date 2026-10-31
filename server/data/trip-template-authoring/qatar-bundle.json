@@ -682,7 +682,18 @@
       "qatar/doha": {
         "name": "Doha",
         "description": "The capital, on a curving bay with museums and a souq.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Night_skylines_of_Doha_by_Ahmed_A._Ghaffar.jpg/960px-Night_skylines_of_Doha_by_Ahmed_A._Ghaffar.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Night skylines of Doha by Ahmed A. Ghaffar.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Night_skylines_of_Doha_by_Ahmed_A._Ghaffar.jpg",
+            "license": "CC0",
+            "author": "Ahmed A. Ghaffar",
+            "selection": "ai"
+          }
+        ]
       },
       "qatar/inland-sea": {
         "name": "Inland Sea",
