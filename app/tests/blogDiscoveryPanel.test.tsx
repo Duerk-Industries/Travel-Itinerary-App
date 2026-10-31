@@ -42,36 +42,36 @@ describe('BlogDiscoveryPanel', () => {
       fireEvent.press(view.getByTestId(`blog-rate-place-${index}`));
     };
 
-    it("saves a thumb and a note together: the thumb as a rating, the note as an entry on the place's first day", async () => {
+    it("saves stars and a note together: the stars as a rating, the note as an entry on the place's first day", async () => {
       const { view, calls, onRated } = setup();
       await open(view);
-      fireEvent.press(view.getByTestId('blog-rate-up'));
+      fireEvent.press(view.getByTestId('blog-rate-stars-star-4'));
       fireEvent.changeText(view.getByTestId('blog-rate-note'), 'Best <chowder> ever & cheap');
       fireEvent.press(view.getByTestId('blog-rate-save'));
       await waitFor(() => expect(onRated).toHaveBeenCalled());
       const rating = calls.find((c) => c.url.endsWith('/blog/places/rating'));
-      expect(JSON.parse(rating.init.body)).toEqual({ place: 'Pike Place Market', value: 1 });
+      expect(JSON.parse(rating.init.body)).toEqual({ place: 'Pike Place Market', value: 4 });
       const entry = JSON.parse(calls.find((c) => c.url.endsWith('/blog/items')).init.body);
       expect(entry).toMatchObject({ kindKey: 'core.text', dayDate: '2027-04-02', tags: ['Place rating'] });
-      expect(entry.body).toBe('<p><strong>👍 Pike Place Market</strong></p><p>Best &lt;chowder&gt; ever &amp; cheap</p>');
-      expect(view.getByText(/Your thumb is saved\. Your note is on 2027-04-02\./)).toBeTruthy();
+      expect(entry.body).toBe('<p><strong>★★★★☆ Pike Place Market</strong></p><p>Best &lt;chowder&gt; ever &amp; cheap</p>');
+      expect(view.getByText(/Your rating is saved\. Your note is on 2027-04-02\./)).toBeTruthy();
       expect(view.queryByTestId('blog-rate-form')).toBeNull();
     });
 
-    it('a thumb alone makes no blog entry, and says when it will count', async () => {
+    it('a rating alone makes no blog entry, and says when it will count', async () => {
       const { view, calls } = setup({ matched: 1, rated: 0, notCompleted: 1, firstDate: '2027-04-02' });
       await open(view);
-      fireEvent.press(view.getByTestId('blog-rate-down'));
+      fireEvent.press(view.getByTestId('blog-rate-stars-star-2'));
       fireEvent.press(view.getByTestId('blog-rate-save'));
       await waitFor(() => expect(view.getByText(/once the activity is marked Completed/)).toBeTruthy());
       expect(calls.some((c) => c.url.endsWith('/blog/items'))).toBe(false);
     });
 
-    it('needs a thumb or a note, and a date before it can file a note', async () => {
+    it('needs a rating or a note, and a date before it can file a note', async () => {
       const { view, calls } = setup();
       await open(view);
       fireEvent.press(view.getByTestId('blog-rate-save'));
-      expect(view.getByText('Choose a thumb or write a note first.')).toBeTruthy();
+      expect(view.getByText('Choose a star rating or write a note first.')).toBeTruthy();
       fireEvent.press(view.getByTestId('blog-rate-cancel'));
       fireEvent.press(view.getByTestId('blog-rate-place-1'));
       fireEvent.changeText(view.getByTestId('blog-rate-note'), 'Lovely');
@@ -83,10 +83,10 @@ describe('BlogDiscoveryPanel', () => {
     it('keeps the form open and reports what was saved when the note cannot be filed', async () => {
       const { view, onRated } = setup(undefined, false);
       await open(view);
-      fireEvent.press(view.getByTestId('blog-rate-up'));
+      fireEvent.press(view.getByTestId('blog-rate-stars-star-5'));
       fireEvent.changeText(view.getByTestId('blog-rate-note'), 'Great');
       fireEvent.press(view.getByTestId('blog-rate-save'));
-      await waitFor(() => expect(view.getByText(/Your thumb is saved\. Blog is at capacity/)).toBeTruthy());
+      await waitFor(() => expect(view.getByText(/Your rating is saved\. Blog is at capacity/)).toBeTruthy());
       expect(onRated).not.toHaveBeenCalled();
       expect(view.getByTestId('blog-rate-form')).toBeTruthy();
     });

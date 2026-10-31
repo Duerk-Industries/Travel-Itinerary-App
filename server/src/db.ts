@@ -240,6 +240,10 @@ export const castItemVote = async (...args: Parameters<ReturnType<typeof adapter
   adapter().castItemVote(...args);
 export const getItemVoteSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getItemVoteSummaries']>) =>
   adapter().getItemVoteSummaries(...args);
+export const castStarRating = async (...args: Parameters<ReturnType<typeof adapter>['castStarRating']>) =>
+  adapter().castStarRating(...args);
+export const getStarRatingSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getStarRatingSummaries']>) =>
+  adapter().getStarRatingSummaries(...args);
 export const getItineraryDetailContext = async (
   ...args: Parameters<ReturnType<typeof adapter>['getItineraryDetailContext']>
 ) => adapter().getItineraryDetailContext(...args);

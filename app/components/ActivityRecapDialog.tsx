@@ -1,4 +1,4 @@
-import IconText from './IconText';
+import StarRating from './StarRating';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -11,7 +11,7 @@ export type ActivityRecapTarget = {
   name: string;
   date: string;
   status?: string | null;
-  userRating?: -1 | 1 | null;
+  userRating?: number | null;
 };
 
 type Props = {
@@ -20,7 +20,7 @@ type Props = {
   styles: Record<string, any>;
   theme?: any;
   onClose: () => void;
-  onSave: (input: { rating: -1 | 1 | null; note: string; tags: string[] }) => Promise<void>;
+  onSave: (input: { rating: number | null; note: string; tags: string[] }) => Promise<void>;
   onAddMedia: (input: { tags: string[] }) => Promise<void> | void;
 };
 
@@ -32,7 +32,7 @@ const splitTags = (value: string): string[] => Array.from(new Set(value.split(',
 const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme: _providedTheme, onClose, onSave, onAddMedia }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
-  const [rating, setRating] = useState<-1 | 1 | null>(null);
+  const [rating, setRating] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [extraTags, setExtraTags] = useState('');
   const [busy, setBusy] = useState(false);
@@ -57,9 +57,8 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
     setBusy(true);
     setError('');
     try {
-      // An existing rating is not re-submitted: the current server endpoint intentionally accepts
-      // one completed-activity vote per traveler.
-      await onSave({ rating: activity.userRating == null ? rating : null, note: note.trim(), tags });
+      // Only a new or changed rating is sent; an unchanged one would just rewrite its last-changed date.
+      await onSave({ rating: rating !== activity.userRating ? rating : null, note: note.trim(), tags });
       if (thenAddMedia) await onAddMedia({ tags });
       else onClose();
     } catch (cause: any) {
@@ -79,16 +78,8 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
           <Text style={themeStyle('components_ActivityRecapDialog_3', { textColor: textColor }, (theme ?? _styleTheme))}>{activity?.name || 'Activity'}</Text>
           <Text style={themeStyle('components_ActivityRecapDialog_4', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Rate it, then add a note or photos/videos to the trip blog.</Text>
 
-          {activity?.userRating == null ? (
-            <View style={themeStyle('components_ActivityRecapDialog_5', {  }, (theme ?? _styleTheme))}>
-              <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: rating === 1 }} onPress={() => setRating(1)} style={[styles.button, rating === 1 && themeStyle('components_ActivityRecapDialog_6', { theme: theme }, (theme ?? _styleTheme))]}>
-                <IconText style={[styles.buttonText, rating === 1 && themeStyle('selectionLabel', {}, (theme ?? _styleTheme))]}>👍 Loved it</IconText>
-              </TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: rating === -1 }} onPress={() => setRating(-1)} style={[styles.button, rating === -1 && themeStyle('components_ActivityRecapDialog_7', {  }, (theme ?? _styleTheme))]}>
-                <IconText style={[styles.buttonText, rating === -1 && themeStyle('components_ActivityRecapDialog_8', {  }, (theme ?? _styleTheme))]}>👎 Not for me</IconText>
-              </TouchableOpacity>
-            </View>
-          ) : <Text style={themeStyle('components_ActivityRecapDialog_9', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>You already rated this activity.</Text>}
+          <StarRating value={rating} size={32} onChange={setRating} label="Your rating" testID="activity-recap-rating" />
+          {activity?.userRating != null ? <Text style={themeStyle('components_ActivityRecapDialog_9', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>You rated this {activity.userRating} of 5. Tap a star to change it.</Text> : null}
 
           <TextInput
             testID="activity-recap-note"

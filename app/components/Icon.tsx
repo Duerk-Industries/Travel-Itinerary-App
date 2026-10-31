@@ -77,22 +77,24 @@ type Props = {
   name: IconName;
   size?: number;
   color: string;
+  /** Fills the shape (e.g. a solid star); outline-only when omitted. */
+  fill?: string;
   strokeWidth?: number;
   testID?: string;
 };
 
 // react-native-svg forwards props straight to the <svg> on web, where the native accessibility props are unknown
 // DOM attributes (React warns about each); aria-hidden is the web equivalent.
-const hiddenFromAssistiveTech = Platform.OS === 'web'
+const hiddenFromAssistiveTech = Platform?.OS === 'web'
   ? ({ 'aria-hidden': true } as Record<string, unknown>)
   : { accessibilityElementsHidden: true, importantForAccessibility: 'no' as const };
 
-const Icon: React.FC<Props> = ({ name, size = 22, color, strokeWidth = 1.75, testID }) => (
+const Icon: React.FC<Props> = ({ name, size = 22, color, fill = 'none', strokeWidth = 1.75, testID }) => (
   <Svg
     width={size}
     height={size}
     viewBox="0 0 24 24"
-    fill="none"
+    fill={fill}
     stroke={color}
     strokeWidth={strokeWidth}
     strokeLinecap="round"

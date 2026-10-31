@@ -5474,6 +5474,69 @@ export const getItemVoteSummaries = async (
   return result;
 };
 
+export type StarRatingItem = { itemId: string; providerKey: string };
+export type StarRatingSummary = {
+  /** Mean stars across every traveler's rating of this item's provider; null until someone has rated it. */
+  average: number | null;
+  /** How many ratings the average is over. Internal: not sent to clients yet. */
+  count: number;
+  /** What the requesting traveler gave this item (1-5), or null. */
+  userStars: number | null;
+};
+
+/** Saves or changes a traveler's 1-5 star rating of an item, remembering when they last changed it. */
+export const castStarRating = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemId: string,
+  providerKey: string,
+  stars: number
+): Promise<void> => {
+  await getPool().query(
+    `
+      INSERT INTO item_star_ratings (user_id, item_type, item_id, trip_id, provider_key, stars, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      ON CONFLICT (user_id, item_type, item_id)
+      DO UPDATE SET stars = EXCLUDED.stars, provider_key = EXCLUDED.provider_key, updated_at = NOW()
+    `,
+    [userId, itemType, itemId, tripId, providerKey, stars]
+  );
+};
+
+export const getStarRatingSummaries = async (
+  userId: string,
+  itemType: VoteItemType,
+  items: StarRatingItem[]
+): Promise<Record<string, StarRatingSummary>> => {
+  const result: Record<string, StarRatingSummary> = {};
+  items.forEach(({ itemId }) => { result[itemId] = { average: null, count: 0, userStars: null }; });
+  if (!items.length) return result;
+  const p = getPool();
+  const providerKeys = Array.from(new Set(items.map((item) => item.providerKey)));
+  const providerMarks = providerKeys.map((_, index) => `$${index + 2}`).join(', ');
+  const { rows: providerRows } = await p.query(
+    `SELECT provider_key as "providerKey", AVG(stars)::float as "average", COUNT(*)::int as "count"
+     FROM item_star_ratings WHERE item_type = $1 AND provider_key IN (${providerMarks}) GROUP BY provider_key`,
+    [itemType, ...providerKeys]
+  );
+  const byProvider = new Map<string, { average: number; count: number }>(
+    providerRows.map((row: any) => [String(row.providerKey), { average: Number(row.average), count: Number(row.count) }])
+  );
+  const itemIds = items.map((item) => item.itemId);
+  const itemMarks = itemIds.map((_, index) => `$${index + 3}`).join(', ');
+  const { rows: ownRows } = await p.query(
+    `SELECT item_id as "itemId", stars::int as "stars" FROM item_star_ratings WHERE item_type = $1 AND user_id = $2 AND item_id IN (${itemMarks})`,
+    [itemType, userId, ...itemIds]
+  );
+  const own = new Map<string, number>(ownRows.map((row: any) => [String(row.itemId), Number(row.stars)]));
+  items.forEach(({ itemId, providerKey }) => {
+    const provider = byProvider.get(providerKey);
+    result[itemId] = { average: provider?.average ?? null, count: provider?.count ?? 0, userStars: own.get(itemId) ?? null };
+  });
+  return result;
+};
+
 export const getItineraryDetailContext = async (
   detailId: string
 ): Promise<{ tripId: string; itineraryId: string } | null> => {

@@ -3532,6 +3532,16 @@ const styleFactories = {
   sectionText: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
   checkText: { fontSize: 20, fontWeight: '700' },
 })),
+  // components/StarRating.tsx
+  components_StarRating_1: (_theme: AppTheme, { StyleSheet }: ThemeStyleValues): any => (StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center' },
+  star: { position: 'relative' },
+  fill: { position: 'absolute', left: 0, top: 0, overflow: 'hidden' },
+})),
+  // components/StarRating.tsx
+  components_StarRating_2: (_theme: AppTheme, { size }: ThemeStyleValues): any => ({ width: size, height: size }),
+  // components/StarRating.tsx
+  components_StarRating_3: (_theme: AppTheme, { size, fraction }: ThemeStyleValues): any => ({ width: size * fraction, height: size }),
   // components/PackingListTable.tsx
   components_PackingListTable_1: (_theme: AppTheme, { item, index }: ThemeStyleValues): any => ({ ...item, position: index }),
   // components/PackingListTable.tsx

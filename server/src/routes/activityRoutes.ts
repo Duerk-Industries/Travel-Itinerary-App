@@ -5,11 +5,9 @@ import {
   createCatalogActivity,
   copyPublicActivity,
   undoCatalogActivity,
-  castItemVote,
   deleteExpenseForSource,
   deleteActivity,
   ensureUserInTrip,
-  getItemVoteSummaries,
   getActivityById,
   getLodgingById,
   insertActivity,
@@ -21,9 +19,11 @@ import {
 } from '../db';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
+import { rateItem } from '../services/itemRatingService';
+import { starRatingDto } from './ratingDto';
 import type { ActivityType } from '../types';
 import { readDto } from '../utils/dtoParse';
-import { createActivityDto, updateActivityDto, voteOrRatingDto, bulkActivitiesDto } from './activityDtos';
+import { createActivityDto, updateActivityDto, bulkActivitiesDto } from './activityDtos';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { HttpRateLimitExceededError, reserveHttpRateLimitOrThrow, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
@@ -563,7 +563,7 @@ router.post('/:id/vote', (_req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const dto = readDto(voteOrRatingDto, req.body, res);
+  const dto = readDto(starRatingDto, req.body, res);
   if (!dto) return;
   const value = dto.value;
   const activity = await getActivityById(req.params.id);
@@ -586,13 +586,7 @@ router.post('/:id/rating', async (req, res) => {
     res.status(400).json({ error: 'Rating is only allowed for Completed items' });
     return;
   }
-  await castItemVote(userId, tripId, 'activity', req.params.id, value, 'rating');
-  const summary = await getItemVoteSummaries(userId, tripId, 'activity', [req.params.id], 'rating');
-  res.json({
-    itemId: req.params.id,
-    netRating: summary[req.params.id]?.netVotes ?? 0,
-    userRating: summary[req.params.id]?.userVote ?? value,
-  });
+  res.json(await rateItem(userId, tripId, 'activity', activity as any, value));
 });
 
 export default router;

@@ -100,8 +100,8 @@ const sampleTour: Tour = {
   travelerIds: ['member-1'],
   netVotes: 2,
   userVote: 1,
-  netRating: 3,
-  userRating: 1,
+  averageRating: 3.5,
+  userRating: 4,
 };
 
 const renderActivityHarness = (

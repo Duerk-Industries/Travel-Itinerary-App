@@ -19,7 +19,8 @@ import {
   LEGACY_ITINERARY_STATUS,
   normalizeItineraryStatus,
 } from '../utils/itineraryStatus';
-import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
+import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
+import StarRating from '../components/StarRating';
 import CarRentalEditForm from './CarRentalEditForm';
 import EditableDataGrid, { type GridCellError, type GridColumn } from './EditableDataGrid';
 
@@ -49,7 +50,7 @@ export type CarRentalsPanelProps = {
   /** Delete a car-rental row by id. */
   onRemoveCarRental: (id: string) => void | Promise<void>;
   /** Post-trip rating (±1). */
-  onRateCarRental: (id: string, value: 1 | -1) => void | Promise<void>;
+  onRateCarRental: (id: string, value: number) => void | Promise<void>;
   theme?: AppTheme;
   externalEditCarRentalId?: string | null;
   onExternalEditHandled?: () => void;
@@ -192,7 +193,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
     { key: 'cost', label: 'Cost', width: 110, editor: 'decimal', getValue: (row) => String(row.cost || '') },
     { key: 'model', label: 'Car Model', width: 150, editor: 'text', getValue: (row) => row.model || '' },
     { key: 'notes', label: 'Notes', width: 230, editor: 'textarea', getValue: (row) => row.notes || '' },
-    { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
+    { key: 'averageRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => formatAverageRating(row.averageRating) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
   const beginGridEdit = () => { if (isFollowingMode) return; const snapshot = carRentals.map((row) => ({ ...row, paidBy: [...(row.paidBy ?? [])], travelerIds: [...(row.travelerIds ?? [])] })); setGridRows(snapshot); setGridOriginalRows(snapshot); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); setTableEditing(true); };
@@ -279,7 +280,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
             <Text style={styles.headerText}>Status</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('netRating')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('averageRating')}>
             <Text style={styles.headerText}>Rating</Text>
           </TouchableOpacity>
           <View style={[styles.tableHeaderCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_5', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
@@ -312,26 +313,19 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
             </View>
 
             <View style={[styles.tableCell, fixedTableColumn(110)]}>
-              {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
-              ) : (
+              {normalizeAverageRating((car as any).averageRating) !== null ? (
+                <StarRating value={(car as any).averageRating} size={14} label="Average rating" testID={`car-rental-average-rating-${car.id}`} />
+              ) : isFollowingMode || !canRateItem((car as any).status) ? (
                 <Text style={styles.cellText}>-</Text>
-              )}
+              ) : null}
+              {!isFollowingMode && canRateItem((car as any).status) ? (
+                <StarRating value={(car as any).userRating} size={14} onChange={(stars) => void onRateCarRental(car.id, stars)} label="Your rating" testID={`car-rental-your-rating-${car.id}`} />
+              ) : null}
             </View>
             <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_7', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
               <View style={styles.actionCell}>
                 <AddToCalendarButton event={rentalCalendarEvent(car)} styles={styles} />
 
-                {!isFollowingMode && shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
-                  <>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => onRateCarRental(car.id, 1)}>
-                      <Text style={styles.buttonText}>⭐</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => onRateCarRental(car.id, -1)}>
-                      <IconText style={styles.dangerButtonText}>✖</IconText>
-                    </TouchableOpacity>
-                  </>
-                ) : null}
                 {!isFollowingMode ? (
                   <>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openEditDialog(car)} testID={`car-rental-edit-${car.id}`}>
@@ -359,9 +353,9 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
           <Text style={styles.headerText}>{row.label}: </Text><Text style={styles.bodyText}>{row.value}</Text>
         </View>)}
         <AddToCalendarButton event={rentalCalendarEvent(selectedRental)} styles={styles} />
-        {!isFollowingMode && shouldShowRatingButtons(selectedRental.status, selectedRental.userRating) ? <View style={styles.actionCell}>
-          <TouchableOpacity style={styles.button} onPress={() => onRateCarRental(selectedRental.id, 1)}><Text style={styles.buttonText}>⭐</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => onRateCarRental(selectedRental.id, -1)}><IconText style={styles.dangerButtonText}>✖</IconText></TouchableOpacity>
+        {!isFollowingMode && canRateItem(selectedRental.status) ? <View style={styles.actionCell}>
+          <Text style={styles.headerText}>Your rating: </Text>
+          <StarRating value={selectedRental.userRating} size={22} onChange={(stars) => void onRateCarRental(selectedRental.id, stars)} label="Your rating" testID="car-rental-details-your-rating" />
         </View> : null}
         {!isFollowingMode ? <TouchableOpacity style={styles.button} testID="car-rental-details-edit" onPress={() => { openEditDialog(selectedRental); setSelectedRental(null); }}>
           <Text style={styles.buttonText}>Edit</Text>

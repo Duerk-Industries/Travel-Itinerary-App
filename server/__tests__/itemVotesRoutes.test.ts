@@ -47,14 +47,23 @@ describe('Item vote routes', () => {
   test('allows rating on completed flight', async () => {
     (db.getFlightById as jest.Mock).mockResolvedValue({ id: 'f1', tripId: 't1', status: 'Completed' });
     (db.ensureUserInTrip as jest.Mock).mockResolvedValue({ groupId: 'g1' });
-    (db.castItemVote as jest.Mock).mockResolvedValue(undefined);
-    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({ f1: { netVotes: -1, userVote: -1 } });
+    (db.castStarRating as jest.Mock).mockResolvedValue(undefined);
+    (db.getStarRatingSummaries as jest.Mock).mockResolvedValue({ f1: { average: 3.5, count: 2, userStars: 2 } });
 
     const app = appFor('/api/transfers', flightRoutes);
-    const res = await request(app).post('/api/transfers/f1/rating').send({ value: -1 }).expect(200);
+    const res = await request(app).post('/api/transfers/f1/rating').send({ value: 2 }).expect(200);
 
-    expect(db.castItemVote).toHaveBeenCalledWith('user-1', 't1', 'flight', 'f1', -1, 'rating');
-    expect(res.body).toEqual({ itemId: 'f1', netRating: -1, userRating: -1 });
+    expect(db.castStarRating).toHaveBeenCalledWith('user-1', 't1', 'flight', 'f1', 'item:f1', 2);
+    // The count behind the average and when it last changed stay internal.
+    expect(res.body).toEqual({ itemId: 'f1', averageRating: 3.5, userRating: 2 });
+  });
+
+  test.each([0, 6, 2.5, 'lots', -1])('rejects %p as a star rating', async (value) => {
+    (db.getFlightById as jest.Mock).mockResolvedValue({ id: 'f1', tripId: 't1', status: 'Completed' });
+    (db.ensureUserInTrip as jest.Mock).mockResolvedValue({ groupId: 'g1' });
+    const app = appFor('/api/transfers', flightRoutes);
+    await request(app).post('/api/transfers/f1/rating').send({ value }).expect(400);
+    expect(db.castStarRating).not.toHaveBeenCalled();
   });
 
   test('rejects rating when item is not completed', async () => {
@@ -62,8 +71,8 @@ describe('Item vote routes', () => {
     (db.ensureUserInTrip as jest.Mock).mockResolvedValue({ groupId: 'g1' });
 
     const app = appFor('/api/activities', activityRoutes);
-    await request(app).post('/api/activities/to1/rating').send({ value: 1 }).expect(400);
-    expect(db.castItemVote).not.toHaveBeenCalled();
+    await request(app).post('/api/activities/to1/rating').send({ value: 5 }).expect(400);
+    expect(db.castStarRating).not.toHaveBeenCalled();
   });
 });
 

@@ -28,7 +28,8 @@ import { FlightEditingForm, GroundTransferEditingForm } from '../components/Tran
 import { toWebStyle } from '../utils/webStyle';
 import { buildMemberDisplayLookup, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeTimeInput } from '../utils/normalizeTimeInput';
-import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
+import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
+import StarRating from '../components/StarRating';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import DateField from '../components/DateField';
 
@@ -52,8 +53,8 @@ export interface Flight {
   transferType?: TransferType;
   netVotes?: number;
   userVote?: -1 | 1 | null;
-  netRating?: number;
-  userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  userRating?: number | null;
   passenger_name: string;
   passenger_ids?: string[];
   arrival_date?: string | null;
@@ -429,8 +430,8 @@ export const normalizeFlightFromApi = (f: any): Flight => ({
   transferType: normalizeTransferType(f.transferType || f.transfer_type),
   netVotes: Number(f.netVotes ?? 0) || 0,
   userVote: f.userVote === 1 || f.userVote === -1 ? f.userVote : null,
-  netRating: Number(f.netRating ?? 0) || 0,
-  userRating: f.userRating === 1 || f.userRating === -1 ? f.userRating : null,
+  averageRating: normalizeAverageRating(f.averageRating),
+  userRating: normalizeStarRating(f.userRating),
   passenger_name: f.passenger_name ?? f.passengerName ?? '',
   passenger_ids: Array.isArray(f.passenger_ids)
     ? f.passenger_ids
@@ -651,8 +652,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     return [...flights].sort((a, b) => {
       const left = key === 'passenger_name' ? passengerLabel(a) : (a as any)[key];
       const right = key === 'passenger_name' ? passengerLabel(b) : (b as any)[key];
-      const leftValue = key === 'cost' || key === 'netVotes' || key === 'netRating' ? Number(left ?? 0) || 0 : String(left ?? '');
-      const rightValue = key === 'cost' || key === 'netVotes' || key === 'netRating' ? Number(right ?? 0) || 0 : String(right ?? '');
+      const leftValue = key === 'cost' || key === 'netVotes' || key === 'averageRating' ? Number(left ?? 0) || 0 : String(left ?? '');
+      const rightValue = key === 'cost' || key === 'netVotes' || key === 'averageRating' ? Number(right ?? 0) || 0 : String(right ?? '');
       if (leftValue === '' && rightValue !== '') return 1;
       if (rightValue === '' && leftValue !== '') return -1;
       const result = typeof leftValue === 'number' && typeof rightValue === 'number'
@@ -788,7 +789,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     { key: 'carrier', label: 'Airline', width: 150, editor: 'text', getValue: (row) => row.carrier || '' },
     { key: 'flight_number', label: 'Flight Number', width: 125, editor: 'text', getValue: (row) => row.flight_number || '' },
     { key: 'booking_reference', label: 'Booking Ref', width: 160, editor: 'text', getValue: (row) => row.booking_reference || '' },
-    { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
+    { key: 'averageRating', label: 'Rating', width: 100, editor: 'readonly', editable: false, getValue: (row) => formatAverageRating(row.averageRating) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], [allowedTransferTypes]);
   const gridColumns = useMemo(() => allGridColumns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
@@ -1396,7 +1397,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     onDataChanged ? onDataChanged() : fetchFlights();
   };
 
-  const rateFlight = async (id: string, value: 1 | -1) => {
+  const rateFlight = async (id: string, value: number) => {
     if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/transfers/${id}/rating`, {
@@ -1681,10 +1682,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   );
                 }
                 if (col.key === 'rating') {
-                  const showButtons = shouldShowRatingButtons(
-                    normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS),
-                    item.userRating
-                  );
+                  const canRate = !readOnly && canRateItem(item.status);
                   return (
                     <View
                       key={`${item.id}-${col.key}`}
@@ -1694,26 +1692,14 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
-                      {!readOnly && showButtons ? (
-                        <View style={styles.actionCell}>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton, COMPACT_ICON_BUTTON]}
-                            onPress={() => rateFlight(item.id, 1)}
-                          >
-                            <IconText style={styles.buttonText}>👍</IconText>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton, styles.dangerButton, COMPACT_ICON_BUTTON]}
-                            onPress={() => rateFlight(item.id, -1)}
-                          >
-                            <IconText style={styles.dangerButtonText}>👎</IconText>
-                          </TouchableOpacity>
-                        </View>
-                      ) : normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                        <Text style={styles.cellText}>{formatNetVotes(item.netRating ?? 0)}</Text>
-                      ) : (
+                      {normalizeAverageRating(item.averageRating) !== null ? (
+                        <StarRating value={item.averageRating} size={14} label="Average rating" testID={`transfer-average-rating-${item.id}`} />
+                      ) : !canRate ? (
                         <Text style={styles.cellText}>-</Text>
-                      )}
+                      ) : null}
+                      {canRate ? (
+                        <StarRating value={item.userRating} size={14} onChange={(stars) => void rateFlight(item.id, stars)} label="Your rating" testID={`transfer-your-rating-${item.id}`} />
+                      ) : null}
                     </View>
                   );
                 }

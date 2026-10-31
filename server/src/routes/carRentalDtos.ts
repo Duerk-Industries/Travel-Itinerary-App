@@ -86,9 +86,3 @@ export type UpdateCarRentalDto = z.infer<typeof updateCarRentalDto>;
 // POST /api/car-rentals/:id/vote and /api/car-rentals/:id/rating
 // ---------------------------------------------------------------------------
 
-export const voteOrRatingDto = z.object({
-  value: z
-    .union([z.literal(1), z.literal(-1), z.literal('1'), z.literal('-1')])
-    .transform((v) => (Number(v) === 1 ? 1 : -1) as 1 | -1),
-});
-export type VoteOrRatingDto = z.infer<typeof voteOrRatingDto>;

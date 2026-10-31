@@ -16,7 +16,8 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 
-import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
+import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
+import StarRating from '../components/StarRating';
 import GetYourGuideCta from '../components/GetYourGuideCta';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
@@ -57,8 +58,8 @@ export type Tour = PlanningCoordinates & Pick<Activity, 'nearLodgingId'> & {
   activityType: ActivityType;
   netVotes?: number;
   userVote?: -1 | 1 | null;
-  netRating?: number;
-  userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  userRating?: number | null;
   date: string;
   name: string;
   startLocation: string;
@@ -99,7 +100,7 @@ const activitySortValue = (tour: Tour, key: string): string | number => {
   const value = tour[key as keyof Tour];
   if (Array.isArray(value)) return value.join('; ');
   if (value === null || value === undefined) return '';
-  if (key === 'netRating' || key === 'userRating' || key === 'netVotes' || key === 'cost') {
+  if (key === 'averageRating' || key === 'userRating' || key === 'netVotes' || key === 'cost') {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : '';
   }
@@ -351,8 +352,8 @@ export const normalizeActivityFromApi = (t: any): Tour => ({
     status: normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS),
     netVotes: Number(t.netVotes ?? 0) || 0,
     userVote: t.userVote === 1 || t.userVote === -1 ? t.userVote : null,
-    netRating: Number(t.netRating ?? 0) || 0,
-    userRating: t.userRating === 1 || t.userRating === -1 ? t.userRating : null,
+    averageRating: normalizeAverageRating(t.averageRating),
+    userRating: normalizeStarRating(t.userRating),
     cost: String(t.cost ?? ''),
     paidBy: Array.isArray(t.paidBy) ? t.paidBy : [],
     travelerIds: Array.isArray(t.travelerIds) ? t.travelerIds : [],
@@ -649,7 +650,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       .catch((err) => Alert.alert(err.message));
   };
 
-  const rateTour = async (id: string, value: 1 | -1) => {
+  const rateTour = async (id: string, value: number) => {
     if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/activities/${id}/rating`, {
@@ -713,8 +714,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         getSelectedIds: (row) => row.travelerIds ?? [],
         pickerOptions: activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member) })),
       },
-      { key: 'netRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
-      { key: 'userRating', label: 'Your Rating', width: 120, editor: 'readonly', editable: false, getValue: (row) => row.userRating ? String(row.userRating) : '-' },
+      { key: 'averageRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => formatAverageRating(row.averageRating) },
+      { key: 'userRating', label: 'Your Rating', width: 120, editor: 'readonly', editable: false, getValue: (row) => row.userRating ? `${row.userRating} of 5` : '-' },
       { key: 'suggestions', label: 'Suggestions', width: 140, editor: 'readonly', editable: false, getValue: () => 'See details' },
       { key: 'actions', label: 'Actions', width: 110, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
     ];
@@ -1102,7 +1103,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               { key: 'startTime', label: 'Start Time', width: 120 },
               { key: 'duration', label: 'Duration', width: 120 },
               { key: 'status', label: 'Status', width: 130 },
-              { key: 'netRating', label: 'Rating', width: 120 },
+              { key: 'averageRating', label: 'Rating', width: 120 },
             ].map((col, idx, arr) => (
               <TouchableOpacity
                 key={col.key}
@@ -1154,8 +1155,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
               <View style={[styles.cell, styles.lastCell, fixedColumnStyle(120)]}>
-                {normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                  <Text style={styles.cellText}>{formatNetVotes(t.netRating ?? 0)}</Text>
+                {normalizeAverageRating(t.averageRating) !== null ? (
+                  <StarRating value={t.averageRating} size={14} label="Average rating" testID={`activity-average-rating-${t.id}`} />
                 ) : (
                   <Text style={styles.cellText}>-</Text>
                 )}
@@ -1238,22 +1239,21 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 {renderDetailRow('Status', normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS))}
                 {renderDetailRow(
                   'Rating',
-                  !readOnly && shouldShowRatingButtons(selectedTour.status, selectedTour.userRating) ? (
+                  normalizeAverageRating(selectedTour.averageRating) !== null ? (
                     <View style={styles.actionCell}>
-                      <Text style={styles.cellText}>{formatNetVotes(selectedTour.netRating ?? 0)}</Text>
-                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateTour(selectedTour.id, 1)}>
-                        <IconText style={styles.buttonText}>👍</IconText>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateTour(selectedTour.id, -1)}>
-                        <IconText style={styles.dangerButtonText}>👎</IconText>
-                      </TouchableOpacity>
+                      <StarRating value={selectedTour.averageRating} size={18} label="Average rating" testID="activity-detail-average-rating" />
+                      <Text style={styles.cellText}>{formatAverageRating(selectedTour.averageRating)}</Text>
                     </View>
-                  ) : normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                    formatNetVotes(selectedTour.netRating ?? 0)
                   ) : (
                     '-'
                   )
                 )}
+                {!readOnly && canRateItem(selectedTour.status)
+                  ? renderDetailRow(
+                    'Your rating',
+                    <StarRating value={selectedTour.userRating} size={22} onChange={(stars) => void rateTour(selectedTour.id, stars)} label="Your rating" testID="activity-detail-your-rating" />
+                  )
+                  : null}
                 {renderDetailRow('Cost', selectedTour.cost ? `$${selectedTour.cost}` : '-')}
                 {renderDetailRow('Platform Booked On', selectedTour.bookedOn || '-')}
                 {renderDetailRow('Free Cancel By', selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : '-')}
@@ -1323,7 +1323,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             { label: 'Description', value: selectedTour.notes || '-' },
             { label: 'Paid by', value: formatPeopleList(selectedTour.paidBy) },
             { label: 'Attendees', value: formatPeopleList(selectedTour.travelerIds) },
-            { label: 'Rating', value: formatNetVotes(selectedTour.netRating ?? 0) },
+            { label: 'Rating', value: formatAverageRating(selectedTour.averageRating) },
           ]}
           theme={theme}
           onClose={() => setSelectedTourId(null)}

@@ -142,7 +142,7 @@ router.get('/:tripId/blog/places', async (req, res) => {
   }
 });
 
-// The thumb half of "Rate this place" (the written note is an ordinary blog entry, posted by the
+// The star half of "Rate this place" (the written note is an ordinary blog entry, posted by the
 // client through POST /blog/items so it passes through that route's limits and audience rules).
 router.post('/:tripId/blog/places/rating', async (req, res) => {
   try {
@@ -152,12 +152,12 @@ router.post('/:tripId/blog/places/rating', async (req, res) => {
     }
     const place = String(req.body?.place ?? '').trim();
     const value = Number(req.body?.value);
-    if (!place || place.length > 300 || (value !== 1 && value !== -1)) {
-      res.status(400).json({ error: 'A place and a thumb (1 or -1) are required' });
+    if (!place || place.length > 300 || !Number.isInteger(value) || value < 1 || value > 5) {
+      res.status(400).json({ error: 'A place and a rating of 1 to 5 stars are required' });
       return;
     }
     await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_AUTHORING_WRITE', requireConfiguredLimit: true });
-    res.json(await ratePlace(req.params.tripId, userIdOf(req), place, value as 1 | -1));
+    res.json(await ratePlace(req.params.tripId, userIdOf(req), place, value));
   } catch (err) {
     const message = String((err as Error).message || 'Unable to rate this place');
     const status = err instanceof ApiLimitExceededError ? 429 : /not authorized/i.test(message) ? 403 : /required/i.test(message) ? 400 : 500;

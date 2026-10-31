@@ -1,10 +1,15 @@
 import { getItemVoteSummaries } from '../db';
 import { normalizeItineraryStatus } from '../utils/itineraryStatus';
+import { applyStarRatings } from './itemRatingService';
 
 export type VoteItemType = 'flight' | 'lodging' | 'activity' | 'car_rental';
 
 const normalizeVoteSummaryKey = (id: string): string => String(id).trim().toLowerCase();
 
+/**
+ * Adds the thumb-vote summary and the star rating to each item: `averageRating` is the mean of every traveler's
+ * ratings of the item's provider (null until rated) and `userRating` is the requesting traveler's own 1-5 stars.
+ */
 export const applyVoteSummary = async <T extends { id: string }>(
   userId: string,
   tripId: string,
@@ -17,32 +22,27 @@ export const applyVoteSummary = async <T extends { id: string }>(
   downVotes: number;
   upVoterIds: string[];
   downVoterIds: string[];
-  netRating: number;
-  userRating: -1 | 1 | null;
+  averageRating: number | null;
+  userRating: number | null;
 }>> => {
   if (!items.length) return [];
   const ids = items.map((item) => item.id);
   const voteSummary = await getItemVoteSummaries(userId, tripId, itemType, ids, 'vote');
-  const ratingSummary = await getItemVoteSummaries(userId, tripId, itemType, ids, 'rating');
+  const rated = await applyStarRatings(userId, itemType, items);
   const normalizedVoteSummary = Object.fromEntries(
     Object.entries(voteSummary).map(([id, summary]) => [normalizeVoteSummaryKey(id), summary])
   );
-  const normalizedRatingSummary = Object.fromEntries(
-    Object.entries(ratingSummary).map(([id, summary]) => [normalizeVoteSummaryKey(id), summary])
-  );
-  return items.map((item) => {
+  return rated.map((item) => {
     const vote = normalizedVoteSummary[normalizeVoteSummaryKey(item.id)];
     return {
       ...item,
-      ...('status' in item ? { status: normalizeItineraryStatus(item.status) } : {}),
+      ...('status' in item ? { status: normalizeItineraryStatus((item as { status?: unknown }).status) } : {}),
       netVotes: vote?.netVotes ?? 0,
       userVote: vote?.userVote ?? null,
       upVotes: vote?.upVotes ?? 0,
       downVotes: vote?.downVotes ?? 0,
       upVoterIds: vote?.upVoterIds ?? [],
       downVoterIds: vote?.downVoterIds ?? [],
-      netRating: normalizedRatingSummary[normalizeVoteSummaryKey(item.id)]?.netVotes ?? 0,
-      userRating: normalizedRatingSummary[normalizeVoteSummaryKey(item.id)]?.userVote ?? null,
     };
   });
 };

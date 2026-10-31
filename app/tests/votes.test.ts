@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 /// <reference types="node" />
-import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import { canRateItem, formatAverageRating, formatNetVotes, normalizeAverageRating, normalizeStarRating, shouldShowVoteButtons } from '../utils/votes';
 
 describe('votes utils', () => {
   test('never shows proposal vote buttons', () => {
@@ -9,10 +9,29 @@ describe('votes utils', () => {
     expect(shouldShowVoteButtons('Booked', null)).toBe(false);
   });
 
-  test('shows rating buttons only for completed items with no user rating', () => {
-    expect(shouldShowRatingButtons('Completed', null)).toBe(true);
-    expect(shouldShowRatingButtons('Completed', -1)).toBe(false);
-    expect(shouldShowRatingButtons('Proposed', null)).toBe(false);
+  test('lets only completed items be rated, and rated again', () => {
+    expect(canRateItem('Completed')).toBe(true);
+    expect(canRateItem('Booked')).toBe(false);
+    expect(canRateItem('Proposed')).toBe(false);
+    expect(canRateItem('Cancelled')).toBe(false);
+  });
+
+  test('keeps only whole 1-5 stars as the traveler\'s own rating', () => {
+    expect([1, 5, '3'].map(normalizeStarRating)).toEqual([1, 5, 3]);
+    expect([0, 6, 2.5, -1, null, undefined, 'x'].map(normalizeStarRating)).toEqual([null, null, null, null, null, null, null]);
+  });
+
+  test('keeps a positive average up to 5 and treats nobody-rated as null', () => {
+    expect(normalizeAverageRating(4.333)).toBe(4.333);
+    expect(normalizeAverageRating('3.5')).toBe(3.5);
+    expect(normalizeAverageRating(9)).toBe(5);
+    expect([0, null, undefined, '', 'x', -2].map(normalizeAverageRating)).toEqual([null, null, null, null, null, null]);
+  });
+
+  test('formats the average to one decimal, or a dash when unrated', () => {
+    expect(formatAverageRating(4.333)).toBe('4.3');
+    expect(formatAverageRating(5)).toBe('5.0');
+    expect(formatAverageRating(null)).toBe('-');
   });
 
   test('formats net vote count with positive sign', () => {

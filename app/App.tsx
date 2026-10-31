@@ -156,7 +156,6 @@ import AuthForm from './components/AuthForm';
 import PasswordField from './components/PasswordField';
 import LandingPage from './components/LandingPage';
 import { toWebStyle } from './utils/webStyle';
-import { formatNetVotes, shouldShowRatingButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 import { buildWebOAuthRedirectUrl } from './utils/oauthRedirect';
 import { installPermissionDeniedInterceptor } from './utils/permissionDeniedInterceptor';
@@ -1379,7 +1378,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode, costTrackingAllowed]);
 
-  const rateOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+  const rateOnCarRental = useCallback(async (id: string, value: number) => {
     if (isFollowingMode) return;
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}/rating`, {
       method: 'POST',
@@ -2078,7 +2077,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setPendingActivityRecap(null);
   }, [activeTripId, pendingActivityRecap, tours]);
 
-  const saveActivityRecap = useCallback(async ({ rating, note, tags }: { rating: -1 | 1 | null; note: string; tags: string[] }) => {
+  const saveActivityRecap = useCallback(async ({ rating, note, tags }: { rating: number | null; note: string; tags: string[] }) => {
     const activity = activityRecapTarget;
     if (!activity || !activeTripId) throw new Error('Choose an activity first.');
     if (rating != null) {

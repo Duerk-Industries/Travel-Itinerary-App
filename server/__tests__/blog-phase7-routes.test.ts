@@ -44,23 +44,25 @@ describe('Phase 7 blog discovery and offline replay routes', () => {
     expect(response.body.places).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'Pike Place Market', firstDate: '2027-04-02', sourceTypes: ['activities'] })]));
   });
 
-  it('rates a place with a thumb: Completed items take it, the rest are reported, nothing else is touched', async () => {
+  it('rates a place with stars: Completed items take it, the rest are reported, nothing else is touched', async () => {
     await request(app).post('/api/activities').set(auth())
       .send({ tripId, date: '2027-04-03', name: 'Boat tour', startLocation: 'Elliott Bay Dock', startTime: '10:00', duration: '1 hour', cost: '0', status: 'Proposed' }).expect(201);
     const rate = (place: string, value: unknown) => request(app).post(`/api/trips/${tripId}/blog/places/rating`).set(auth()).send({ place, value });
 
-    const completed = await rate('  pike   place MARKET ', 1).expect(200);
+    const completed = await rate('  pike   place MARKET ', 4).expect(200);
     expect(completed.body).toEqual({ matched: 1, rated: 1, notCompleted: 0, firstDate: '2027-04-02' });
-    const proposed = await rate('Elliott Bay Dock', -1).expect(200);
+    const proposed = await rate('Elliott Bay Dock', 2).expect(200);
     expect(proposed.body).toEqual({ matched: 1, rated: 0, notCompleted: 1, firstDate: '2027-04-03' });
     expect((await rate('Nowhere in particular', 1).expect(200)).body).toMatchObject({ matched: 0, rated: 0 });
 
     const rated = await request(app).get(`/api/activities?tripId=${tripId}`).set(auth()).expect(200);
-    expect(rated.body.find((a: any) => a.name === 'Market walk')).toMatchObject({ userRating: 1, netRating: 1 });
+    expect(rated.body.find((a: any) => a.name === 'Market walk')).toMatchObject({ userRating: 4, averageRating: 4 });
     expect(rated.body.find((a: any) => a.name === 'Boat tour')).toMatchObject({ userRating: null });
 
     await rate('', 1).expect(400);
     await rate('Pike Place Market', 0).expect(400);
+    await rate('Pike Place Market', 6).expect(400);
+    await rate('Pike Place Market', 3.5).expect(400);
     await rate('Pike Place Market', 'up').expect(400);
     await request(app).post(`/api/trips/${tripId}/blog/places/rating`).send({ place: 'Pike Place Market', value: 1 }).expect(401);
   });

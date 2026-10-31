@@ -1,3 +1,4 @@
+import StarRating from './StarRating';
 import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
@@ -38,8 +39,8 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
-  // "Rate this place": a thumb and a written note, saved together.
-  const [rating, setRating] = useState<{ key: string; thumb: 1 | -1 | null; note: string } | null>(null);
+  // "Rate this place": 1-5 stars and a written note, saved together.
+  const [rating, setRating] = useState<{ key: string; stars: number | null; note: string } | null>(null);
   if (!searchEnabled && !placesEnabled) return null;
 
   const search = async (cursor: string | null = null) => {
@@ -73,19 +74,19 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
   const saveRating = async (place: any) => {
     if (!rating || busy) return;
     const note = rating.note.trim();
-    if (rating.thumb === null && !note) { setNotice('Choose a thumb or write a note first.'); return; }
-    if (note && !place.firstDate) { setNotice('This place has no date yet, so a note cannot be filed. Give it a thumb, or add the date to its activity.'); return; }
+    if (rating.stars === null && !note) { setNotice('Choose a star rating or write a note first.'); return; }
+    if (note && !place.firstDate) { setNotice('This place has no date yet, so a note cannot be filed. Give it a star rating, or add the date to its activity.'); return; }
     setBusy('rate'); setNotice('');
     try {
       const parts: string[] = [];
-      if (rating.thumb !== null) {
-        const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/places/rating`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ place: place.name, value: rating.thumb }) });
+      if (rating.stars !== null) {
+        const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/places/rating`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ place: place.name, value: rating.stars }) });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Unable to save your thumb');
-        parts.push(data.rated > 0 ? 'Your thumb is saved.' : data.matched > 0 ? "Your thumb will count once the activity is marked Completed." : 'No activity or stay is recorded for this place, so the thumb was not kept.');
+        if (!response.ok) throw new Error(data.error || 'Unable to save your rating');
+        parts.push(data.rated > 0 ? 'Your rating is saved.' : data.matched > 0 ? "Your rating will count once the activity is marked Completed." : 'No activity or stay is recorded for this place, so the rating was not kept.');
       }
       if (note) {
-        const mark = rating.thumb === 1 ? '👍 ' : rating.thumb === -1 ? '👎 ' : '';
+        const mark = rating.stars === null ? '' : `${'★'.repeat(rating.stars)}${'☆'.repeat(5 - rating.stars)} `;
         const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Idempotency-Key': createIdempotencyKey('place-note'), ...headers },
@@ -128,15 +129,11 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
               <View key={placeKey}>
                 <TouchableOpacity accessibilityRole="link" onPress={() => url && Linking.openURL(url)} style={themeStyle('components_BlogDiscoveryPanel_16', { borderColor: borderColor }, (theme ?? _styleTheme))}><Text style={themeStyle('components_BlogDiscoveryPanel_17', { textColor: textColor }, (theme ?? _styleTheme))}>{place.name}</Text><Text style={themeStyle('components_BlogDiscoveryPanel_18', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{[place.firstDate, `${place.occurrences} visit${place.occurrences === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</Text></TouchableOpacity>
                 {!open ? (
-                  <TouchableOpacity testID={`blog-rate-place-${places.indexOf(place)}`} accessibilityRole="button" accessibilityLabel={`Rate ${place.name}`} disabled={Boolean(busy)} onPress={() => setRating({ key: placeKey, thumb: null, note: '' })} style={themeStyle('components_BlogDiscoveryPanel_14', {  }, (theme ?? _styleTheme))}><Text style={themeStyle('components_BlogDiscoveryPanel_15', { accentColor: accentColor }, (theme ?? _styleTheme))}>Rate this place</Text></TouchableOpacity>
+                  <TouchableOpacity testID={`blog-rate-place-${places.indexOf(place)}`} accessibilityRole="button" accessibilityLabel={`Rate ${place.name}`} disabled={Boolean(busy)} onPress={() => setRating({ key: placeKey, stars: null, note: '' })} style={themeStyle('components_BlogDiscoveryPanel_14', {  }, (theme ?? _styleTheme))}><Text style={themeStyle('components_BlogDiscoveryPanel_15', { accentColor: accentColor }, (theme ?? _styleTheme))}>Rate this place</Text></TouchableOpacity>
                 ) : (
                   <View testID="blog-rate-form">
                     <View style={themeStyle('components_BlogDiscoveryPanel_4', {  }, (theme ?? _styleTheme))}>
-                      {([1, -1] as const).map((value) => (
-                        <TouchableOpacity key={value} testID={value === 1 ? 'blog-rate-up' : 'blog-rate-down'} accessibilityRole="button" accessibilityState={{ selected: rating?.thumb === value }} accessibilityLabel={value === 1 ? 'Thumbs up' : 'Thumbs down'} onPress={() => setRating((current) => current ? { ...current, thumb: current.thumb === value ? null : value } : current)} style={rating?.thumb === value ? themeStyle('components_BlogDiscoveryPanel_27', { accentColor: accentColor }, (theme ?? _styleTheme)) : themeStyle('components_BlogDiscoveryPanel_26', { borderColor: borderColor }, (theme ?? _styleTheme))}>
-                          <IconText style={rating?.thumb === value ? themeStyle('components_BlogDiscoveryPanel_7', {  }, (theme ?? _styleTheme)) : themeStyle('components_BlogDiscoveryPanel_17', { textColor: textColor }, (theme ?? _styleTheme))}>{value === 1 ? '👍' : '👎'}</IconText>
-                        </TouchableOpacity>
-                      ))}
+                      <StarRating value={rating?.stars ?? null} size={30} label="Your rating" testID="blog-rate-stars" onChange={(stars) => setRating((current) => current ? { ...current, stars: current.stars === stars ? null : stars } : current)} />
                     </View>
                     <TextInput testID="blog-rate-note" accessibilityLabel={`Your note about ${place.name}`} multiline value={rating?.note ?? ''} onChangeText={(value) => setRating((current) => current ? { ...current, note: value } : current)} maxLength={2000} placeholder="What was it like? (optional)" placeholderTextColor={mutedColor} style={themeStyle('components_BlogDiscoveryPanel_28', { borderColor: borderColor, textColor: textColor }, (theme ?? _styleTheme))} />
                     <View style={themeStyle('components_BlogDiscoveryPanel_4', {  }, (theme ?? _styleTheme))}>

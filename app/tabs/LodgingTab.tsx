@@ -20,7 +20,8 @@ import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CsvTransferControls from '../components/CsvTransferControls';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
-import { formatNetVotes, shouldShowRatingButtons } from '../utils/votes';
+import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
+import StarRating from '../components/StarRating';
 
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import { ITINERARY_STATUSES } from '../utils/itineraryStatus';
@@ -241,7 +242,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     );
   };
 
-  const rateOnLodging = async (lodgingId: string, value: 1 | -1) => {
+  const rateOnLodging = async (lodgingId: string, value: number) => {
     if (readOnly) return;
     const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}/rating`, {
       method: 'POST',
@@ -258,7 +259,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   
   const lodgingSortValue = (row: Lodging, key: string): string | number => {
     const value = (row as any)[key];
-    if (key === 'netVotes' || key === 'netRating' || key === 'totalCost') return Number(value ?? 0) || 0;
+    if (key === 'netVotes' || key === 'averageRating' || key === 'totalCost') return Number(value ?? 0) || 0;
     if (value === null || value === undefined) return '';
     return String(value);
   };
@@ -292,7 +293,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     { key: 'refundBy', label: 'Refund By', width: 140, editor: 'date', getValue: (row) => row.refundBy || '' },
     { key: 'totalCost', label: 'Total Cost', width: 115, editor: 'decimal', getValue: (row) => String(row.totalCost || '') },
     { key: 'address', label: 'Address', width: 230, editor: 'text', getValue: (row) => row.address || '' },
-    { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
+    { key: 'averageRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => formatAverageRating(row.averageRating) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
 
@@ -409,7 +410,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               <Text style={styles.headerText}>Status</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('netRating')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('averageRating')}>
               <Text style={styles.headerText}>Rating</Text>
             </TouchableOpacity>
             <View style={[styles.tableHeaderCell, fixedTableColumn(168), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_LodgingTab_20', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
@@ -438,20 +439,14 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               </View>
 
               <View style={[styles.tableCell, fixedTableColumn(110)]}>
-                {!readOnly && shouldShowRatingButtons(lodging.status, (lodging as any).userRating) ? (
-                  <View style={styles.actionCell}>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnLodging(lodging.id, 1)}>
-                      <IconText style={styles.buttonText}>👍</IconText>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnLodging(lodging.id, -1)}>
-                      <IconText style={styles.dangerButtonText}>👎</IconText>
-                    </TouchableOpacity>
-                  </View>
-                ) : normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                  <Text style={styles.cellText}>{formatNetVotes((lodging as any).netRating ?? 0)}</Text>
-                ) : (
+                {normalizeAverageRating((lodging as any).averageRating) !== null ? (
+                  <StarRating value={(lodging as any).averageRating} size={14} label="Average rating" testID={`lodging-average-rating-${lodging.id}`} />
+                ) : readOnly || !canRateItem(lodging.status) ? (
                   <Text style={styles.cellText}>-</Text>
-                )}
+                ) : null}
+                {!readOnly && canRateItem(lodging.status) ? (
+                  <StarRating value={(lodging as any).userRating} size={14} onChange={(stars) => void rateOnLodging(lodging.id, stars)} label="Your rating" testID={`lodging-your-rating-${lodging.id}`} />
+                ) : null}
               </View>
               <View style={[styles.tableCell, fixedTableColumn(168), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_LodgingTab_22', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
                 <View style={[styles.actionCell, themeStyle('tabs_LodgingTab_23', {  }, (theme ?? _styleTheme))]}>
@@ -503,7 +498,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             { label: 'Travelers', value: selectedLodging.travelerIds?.length ? selectedLodging.travelerIds.map(travelerName).join(', ') : '-' },
             { label: 'Total cost', value: selectedLodging.totalCost ? `$${selectedLodging.totalCost}` : '-' },
             { label: 'Cost per night', value: selectedLodging.costPerNight ? `$${selectedLodging.costPerNight}` : '-' },
-            { label: 'Rating', value: formatNetVotes(selectedLodging.netRating ?? 0) },
+            { label: 'Rating', value: formatAverageRating(selectedLodging.averageRating) },
           ]}
           styles={styles}
           theme={theme}

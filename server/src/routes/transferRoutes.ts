@@ -6,9 +6,7 @@ import { authenticate } from '../auth';
 import {
   deleteFlight,
   deleteExpenseForSource,
-  castItemVote,
   ensureUserInTrip,
-  getItemVoteSummaries,
   getTripGroupId,
   getCurrentDbProvider,
   getFlightById,
@@ -24,6 +22,9 @@ import {
 import { isEmailConfigured, sendShareEmail } from '../mailer';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
+import { rateItem } from '../services/itemRatingService';
+import { readDto } from '../utils/dtoParse';
+import { starRatingDto } from './ratingDto';
 import { assertCanUseFeature, getUserRoleForToken } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { buildManualUploadPayloads } from '../ingestion/intake';
@@ -520,12 +521,9 @@ router.post('/:id/vote', (_req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const valueRaw = Number(req.body?.value);
-  const value = valueRaw === 1 ? 1 : valueRaw === -1 ? -1 : null;
-  if (value == null) {
-    res.status(400).json({ error: 'value must be 1 or -1' });
-    return;
-  }
+  const dto = readDto(starRatingDto, req.body, res);
+  if (!dto) return;
+  const value = dto.value;
   const flight = await getFlightById(req.params.id);
   if (!flight) {
     res.status(404).json({ error: 'Transfer not found' });
@@ -546,13 +544,7 @@ router.post('/:id/rating', async (req, res) => {
     res.status(400).json({ error: 'Rating is only allowed for Completed items' });
     return;
   }
-  await castItemVote(userId, tripId, 'flight', req.params.id, value, 'rating');
-  const summary = await getItemVoteSummaries(userId, tripId, 'flight', [req.params.id], 'rating');
-  res.json({
-    itemId: req.params.id,
-    netRating: summary[req.params.id]?.netVotes ?? 0,
-    userRating: summary[req.params.id]?.userVote ?? value,
-  });
+  res.json(await rateItem(userId, tripId, 'flight', flight as any, value));
 });
 
 export default router;

@@ -5260,6 +5260,65 @@ export const getItemVoteSummaries = async (
   return result;
 };
 
+export type StarRatingItem = { itemId: string; providerKey: string };
+export type StarRatingSummary = { average: number | null; count: number; userStars: number | null };
+
+const STAR_RATINGS = 'item_star_ratings';
+const starRatingDocId = (userId: string, itemType: string, itemId: string): string => `${userId}__${itemType}__${itemId}`;
+
+/** Saves or changes a traveler's 1-5 star rating of an item, remembering when they last changed it. */
+export const castStarRating = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemId: string,
+  providerKey: string,
+  stars: number
+): Promise<void> => {
+  const ref = getDb().collection(STAR_RATINGS).doc(starRatingDocId(userId, itemType, itemId));
+  const existing = await ref.get();
+  const now = nowIso();
+  await ref.set({
+    userId, itemType, itemId, tripId, providerKey, stars,
+    createdAt: existing.exists ? (existing.data() as any).createdAt ?? now : now,
+    updatedAt: now,
+  });
+};
+
+export const getStarRatingSummaries = async (
+  userId: string,
+  itemType: VoteItemType,
+  items: StarRatingItem[]
+): Promise<Record<string, StarRatingSummary>> => {
+  const result: Record<string, StarRatingSummary> = {};
+  items.forEach(({ itemId }) => { result[itemId] = { average: null, count: 0, userStars: null }; });
+  if (!items.length) return result;
+  const db = getDb();
+  const providerKeys = Array.from(new Set(items.map((item) => item.providerKey)));
+  const totals = new Map<string, { sum: number; count: number }>();
+  for (let i = 0; i < providerKeys.length; i += 10) {
+    const snap = await db.collection(STAR_RATINGS).where('itemType', '==', itemType).where('providerKey', 'in', providerKeys.slice(i, i + 10)).get();
+    snap.docs.forEach((doc) => {
+      const data = doc.data() as any;
+      const total = totals.get(String(data.providerKey)) ?? { sum: 0, count: 0 };
+      total.sum += Number(data.stars) || 0;
+      total.count += 1;
+      totals.set(String(data.providerKey), total);
+    });
+  }
+  const ownDocs = await db.getAll(...items.map(({ itemId }) => db.collection(STAR_RATINGS).doc(starRatingDocId(userId, itemType, itemId))));
+  items.forEach(({ itemId, providerKey }, index) => {
+    const total = totals.get(providerKey);
+    const own = ownDocs[index];
+    result[itemId] = {
+      average: total && total.count ? total.sum / total.count : null,
+      count: total?.count ?? 0,
+      userStars: own.exists ? Number((own.data() as any).stars) || null : null,
+    };
+  });
+  return result;
+};
+
 export const getItineraryDetailContext = async (
   detailId: string
 ): Promise<{ tripId: string; itineraryId: string } | null> => {

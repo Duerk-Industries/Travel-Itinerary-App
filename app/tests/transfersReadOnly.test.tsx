@@ -91,7 +91,7 @@ const flight: Flight = {
   paidBy: ['member-1'],
   netVotes: 0,
   userVote: null,
-  netRating: 0,
+  averageRating: null,
   userRating: null,
 };
 
