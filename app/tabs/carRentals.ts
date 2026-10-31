@@ -1,7 +1,7 @@
 import { singlePayerIds } from '../utils/payerSelection';
-import { normalizeAverageRating, normalizeStarRating } from '../utils/votes';
 import type { PlanningCoordinates } from '../../server/src/types';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
+import { normalizeRatingFields } from '../utils/votes';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   type ItineraryStatus,
@@ -17,7 +17,8 @@ export type CarRental = PlanningCoordinates & {
   netVotes?: number;
   userVote?: -1 | 1 | null;
   averageRating?: number | null;
-  userRating?: number | null;
+  ratingCount?: number;
+  userStars?: number | null;
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;
@@ -103,8 +104,7 @@ export const normalizeCarRentalFromApi = (r: any): CarRental => ({
   status: normalizeItineraryStatus(r.status, DEFAULT_NEW_ITINERARY_STATUS),
   netVotes: Number(r.netVotes ?? 0) || 0,
   userVote: r.userVote === 1 || r.userVote === -1 ? r.userVote : null,
-  averageRating: normalizeAverageRating(r.averageRating),
-  userRating: normalizeStarRating(r.userRating),
+  ...normalizeRatingFields(r),
   pickupLocation: String(r.pickupLocation ?? r.pickup_location ?? ''),
   pickupDate: String(r.pickupDate ?? r.pickup_date ?? ''),
   dropoffLocation: String(r.dropoffLocation ?? r.dropoff_location ?? ''),

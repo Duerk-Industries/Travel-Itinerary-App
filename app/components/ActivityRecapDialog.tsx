@@ -1,17 +1,17 @@
-import StarRating from './StarRating';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
+import StarRating from './StarRating';
 
 export type ActivityRecapTarget = {
   id: string;
   name: string;
   date: string;
   status?: string | null;
-  userRating?: number | null;
+  userStars?: number | null;
 };
 
 type Props = {
@@ -46,19 +46,18 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
 
   useEffect(() => {
     if (!visible) return;
-    setRating(activity?.userRating ?? null);
+    setRating(activity?.userStars ?? null);
     setNote('');
     setExtraTags('');
     setError('');
-  }, [visible, activity?.id, activity?.userRating]);
+  }, [visible, activity?.id, activity?.userStars]);
 
   const save = async (thenAddMedia = false) => {
     if (!activity) return;
     setBusy(true);
     setError('');
     try {
-      // Only a new or changed rating is sent; an unchanged one would just rewrite its last-changed date.
-      await onSave({ rating: rating !== activity.userRating ? rating : null, note: note.trim(), tags });
+      await onSave({ rating: rating === (activity.userStars ?? null) ? null : rating, note: note.trim(), tags });
       if (thenAddMedia) await onAddMedia({ tags });
       else onClose();
     } catch (cause: any) {
@@ -78,8 +77,8 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
           <Text style={themeStyle('components_ActivityRecapDialog_3', { textColor: textColor }, (theme ?? _styleTheme))}>{activity?.name || 'Activity'}</Text>
           <Text style={themeStyle('components_ActivityRecapDialog_4', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Rate it, then add a note or photos/videos to the trip blog.</Text>
 
-          <StarRating value={rating} size={32} onChange={setRating} label="Your rating" testID="activity-recap-rating" />
-          {activity?.userRating != null ? <Text style={themeStyle('components_ActivityRecapDialog_9', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>You rated this {activity.userRating} of 5. Tap a star to change it.</Text> : null}
+          <StarRating value={rating} size={32} onChange={setRating} label="Your rating" name={activity?.name || 'this activity'} theme={theme} testID="activity-recap-rating" />
+          {activity?.userStars != null ? <Text style={themeStyle('components_ActivityRecapDialog_9', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>You rated this {activity.userStars} of 5. Tap a star to change it.</Text> : null}
 
           <TextInput
             testID="activity-recap-note"

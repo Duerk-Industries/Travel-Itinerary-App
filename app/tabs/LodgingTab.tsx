@@ -20,8 +20,8 @@ import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CsvTransferControls from '../components/CsvTransferControls';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
-import { canRateItem, formatAverageRating } from '../utils/votes';
-import ItemRatingCell from '../components/ItemRatingCell';
+import { formatRating } from '../utils/votes';
+import { ItemRating } from '../components/StarRating';
 
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import { ITINERARY_STATUSES } from '../utils/itineraryStatus';
@@ -242,18 +242,19 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     );
   };
 
-  const rateOnLodging = async (lodgingId: string, value: number) => {
+  const rateOnLodging = async (lodgingId: string, stars: number) => {
     if (readOnly) return;
     const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}/rating`, {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ value }),
+      body: JSON.stringify({ stars }),
     });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
       Alert.alert(data.error || 'Unable to submit rating');
       return;
     }
+    setSelectedLodging((current) => (current?.id === lodgingId ? { ...current, ...data } : current));
     onRefreshLodgings?.();
   };
   
@@ -293,7 +294,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     { key: 'refundBy', label: 'Refund By', width: 140, editor: 'date', getValue: (row) => row.refundBy || '' },
     { key: 'totalCost', label: 'Total Cost', width: 115, editor: 'decimal', getValue: (row) => String(row.totalCost || '') },
     { key: 'address', label: 'Address', width: 230, editor: 'text', getValue: (row) => row.address || '' },
-    { key: 'averageRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => formatAverageRating(row.averageRating) },
+    { key: 'averageRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => formatRating(row.averageRating, row.ratingCount) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
 
@@ -439,14 +440,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               </View>
 
               <View style={[styles.tableCell, fixedTableColumn(110)]}>
-                <ItemRatingCell
-                  id={lodging.id}
-                  testIDPrefix="lodging"
-                  averageRating={(lodging as any).averageRating}
-                  userRating={(lodging as any).userRating}
-                  canRate={!readOnly && canRateItem(lodging.status)}
-                  onRate={(stars) => void rateOnLodging(lodging.id, stars)}
-                />
+                <ItemRating status={lodging.status} averageRating={lodging.averageRating} ratingCount={lodging.ratingCount} userStars={lodging.userStars} readOnly={readOnly} onRate={(stars) => rateOnLodging(lodging.id, stars)} name={lodging.name} testID={`lodging-rating-${lodging.id}`} theme={theme} />
               </View>
               <View style={[styles.tableCell, fixedTableColumn(168), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_LodgingTab_22', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
                 <View style={[styles.actionCell, themeStyle('tabs_LodgingTab_23', {  }, (theme ?? _styleTheme))]}>
@@ -498,7 +492,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             { label: 'Travelers', value: selectedLodging.travelerIds?.length ? selectedLodging.travelerIds.map(travelerName).join(', ') : '-' },
             { label: 'Total cost', value: selectedLodging.totalCost ? `$${selectedLodging.totalCost}` : '-' },
             { label: 'Cost per night', value: selectedLodging.costPerNight ? `$${selectedLodging.costPerNight}` : '-' },
-            { label: 'Rating', value: formatAverageRating(selectedLodging.averageRating) },
+            { label: 'Rating', value: null, content: <ItemRating status={selectedLodging.status} averageRating={selectedLodging.averageRating} ratingCount={selectedLodging.ratingCount} userStars={selectedLodging.userStars} readOnly={readOnly} onRate={(stars) => rateOnLodging(selectedLodging.id, stars)} name={selectedLodging.name} testID={`lodging-details-rating-${selectedLodging.id}`} theme={theme} /> },
           ]}
           styles={styles}
           theme={theme}
@@ -524,6 +518,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           onEdit={openEditDialog}
           onDelete={() => setLodgingToDelete(selectedLodging)}
           onOpenMap={onOpenMap}
+          onRate={(stars) => rateOnLodging(selectedLodging.id, stars)}
         />
       ) : null}
 

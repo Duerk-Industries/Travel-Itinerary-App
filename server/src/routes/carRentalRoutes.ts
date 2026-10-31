@@ -14,12 +14,12 @@ import {
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
 import { rateItem } from '../services/itemRatingService';
-import { starRatingDto } from './ratingDto';
 import { assertCanUseFeature } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { readDto } from '../utils/dtoParse';
 import { createCarRentalDto, updateCarRentalDto } from './carRentalDtos';
+import { itemRatingDto } from './itemRatingDto';
 
 const router = Router();
 router.use(bodyParser.json());
@@ -209,9 +209,8 @@ router.post('/:id/vote', (_req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const dto = readDto(starRatingDto, req.body, res);
-  if (!dto) return;
-  const value = dto.value;
+  const stars = readDto(itemRatingDto, req.body, res);
+  if (!stars) return;
 
   const rental = await getCarRentalById(req.params.id);
   if (!rental) {
@@ -234,7 +233,7 @@ router.post('/:id/rating', async (req, res) => {
     return;
   }
 
-  res.json(await rateItem(userId, tripId, 'car_rental', rental as any, value));
+  res.json(await rateItem(userId, tripId, 'car_rental', rental as any, stars));
 });
 
 export default router;

@@ -167,6 +167,20 @@ export const openGetYourGuideDescriptor = async (
   }
 };
 
+export const openGetYourGuideTour = async (backendUrl: string, path: string): Promise<boolean> => {
+  const url = `${backendUrl.replace(/\/$/, '')}${path}`;
+  if (Platform.OS === 'web') {
+    if (typeof window === 'undefined') return false;
+    return Boolean(window.open(url, '_blank', 'noopener,noreferrer'));
+  }
+  try {
+    await Linking.openURL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const GETYOURGUIDE_DISCLOSURE_TEXT = 'Affiliate link — we may earn a commission at no extra cost to you.';
 
 export const formatGetYourGuideExportDisclosure = (descriptor?: GetYourGuideClientDescriptor | null): string =>

@@ -57,7 +57,8 @@ const tour: Tour = {
   netVotes: 0,
   userVote: null,
   averageRating: null,
-  userRating: null,
+  ratingCount: 0,
+  userStars: null,
 };
 
 const groupMembers = [

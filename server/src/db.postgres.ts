@@ -1568,6 +1568,7 @@ export const initDb = async (): Promise<void> => {
     await del('itineraries');
     await del('tours');
     await del('car_rentals');
+    await del('item_ratings');
     await del('item_votes');
     await del('lodgings');
     await del('flight_shares');
@@ -5480,6 +5481,8 @@ export type StarRatingSummary = {
   average: number | null;
   /** How many ratings the average is over. Internal: not sent to clients yet. */
   count: number;
+  /** Ratings of 3 or more stars minus ratings below 3, the net thumbs that builds from before star ratings show. */
+  net: number;
   /** What the requesting traveler gave this item (1-5), or null. */
   userStars: number | null;
 };
@@ -5541,24 +5544,48 @@ export const deleteLegacyThumbRatings = async (ids: string[]): Promise<void> => 
   for (const id of ids) await getPool().query('DELETE FROM item_votes WHERE id = $1', [id]);
 };
 
+export type LegacyItemRating = { userId: string; tripId: string; itemType: VoteItemType; itemId: string; stars: number; changedAt: Date };
+
+/** Whole-star ratings kept per item in `item_ratings` before ratings were averaged by provider, for moving them over. */
+export const listLegacyItemRatings = async (limit = 500): Promise<LegacyItemRating[]> => {
+  const { rows } = await getPool().query(
+    `SELECT user_id::text as "userId", trip_id::text as "tripId", item_type as "itemType", item_id::text as "itemId",
+            stars::int as "stars", updated_at as "changedAt"
+     FROM item_ratings LIMIT ${Math.max(1, Math.floor(limit))}`
+  );
+  return rows.map((row: any) => ({
+    userId: String(row.userId),
+    tripId: String(row.tripId),
+    itemType: String(row.itemType) as VoteItemType,
+    itemId: String(row.itemId),
+    stars: Number(row.stars),
+    changedAt: row.changedAt ? new Date(row.changedAt) : new Date(),
+  }));
+};
+
+export const deleteLegacyItemRating = async (userId: string, itemType: VoteItemType, itemId: string): Promise<void> => {
+  await getPool().query('DELETE FROM item_ratings WHERE user_id = $1 AND item_type = $2 AND item_id = $3', [userId, itemType, itemId]);
+};
+
 export const getStarRatingSummaries = async (
   userId: string,
   itemType: VoteItemType,
   items: StarRatingItem[]
 ): Promise<Record<string, StarRatingSummary>> => {
   const result: Record<string, StarRatingSummary> = {};
-  items.forEach(({ itemId }) => { result[itemId] = { average: null, count: 0, userStars: null }; });
+  items.forEach(({ itemId }) => { result[itemId] = { average: null, count: 0, net: 0, userStars: null }; });
   if (!items.length) return result;
   const p = getPool();
   const providerKeys = Array.from(new Set(items.map((item) => item.providerKey)));
   const providerMarks = providerKeys.map((_, index) => `$${index + 2}`).join(', ');
   const { rows: providerRows } = await p.query(
-    `SELECT provider_key as "providerKey", AVG(stars)::float as "average", COUNT(*)::int as "count"
+    `SELECT provider_key as "providerKey", AVG(stars)::float as "average", COUNT(*)::int as "count",
+            SUM(CASE WHEN stars >= 3 THEN 1 ELSE -1 END)::int as "net"
      FROM item_star_ratings WHERE item_type = $1 AND provider_key IN (${providerMarks}) GROUP BY provider_key`,
     [itemType, ...providerKeys]
   );
-  const byProvider = new Map<string, { average: number; count: number }>(
-    providerRows.map((row: any) => [String(row.providerKey), { average: Number(row.average), count: Number(row.count) }])
+  const byProvider = new Map<string, { average: number; count: number; net: number }>(
+    providerRows.map((row: any) => [String(row.providerKey), { average: Number(row.average), count: Number(row.count), net: Number(row.net) }])
   );
   const itemIds = items.map((item) => item.itemId);
   const itemMarks = itemIds.map((_, index) => `$${index + 3}`).join(', ');
@@ -5569,7 +5596,7 @@ export const getStarRatingSummaries = async (
   const own = new Map<string, number>(ownRows.map((row: any) => [String(row.itemId), Number(row.stars)]));
   items.forEach(({ itemId, providerKey }) => {
     const provider = byProvider.get(providerKey);
-    result[itemId] = { average: provider?.average ?? null, count: provider?.count ?? 0, userStars: own.get(itemId) ?? null };
+    result[itemId] = { average: provider?.average ?? null, count: provider?.count ?? 0, net: provider?.net ?? 0, userStars: own.get(itemId) ?? null };
   });
   return result;
 };
@@ -14243,6 +14270,47 @@ const TRIP_TEMPLATE_SELECT = `SELECT id, title, summary, days, route, image_quer
   COALESCE(countries, '[]'::jsonb) AS countries, COALESCE(cities, '[]'::jsonb) AS cities,
   COALESCE(highlights, '[]'::jsonb) AS highlights, content_hash AS "contentHash", enabled, sort_order AS "sortOrder"
   FROM trip_templates`;
+
+export type GetYourGuideTourRecord = {
+  id: string;
+  url: string;
+  title: string;
+  rating: number;
+  reviewCount: number;
+  city: string;
+  country: string;
+  activities: string[];
+  checkedAt: string;
+};
+
+export const upsertGetYourGuideTour = async (tour: GetYourGuideTourRecord): Promise<void> => {
+  const p = getPool();
+  const values = [tour.id, tour.url, tour.title, tour.rating, tour.reviewCount, tour.city, tour.country, JSON.stringify(tour.activities), tour.checkedAt];
+  const updated = await p.query(
+    `UPDATE getyourguide_tours SET url = $2, title = $3, rating = $4, review_count = $5, city = $6, country = $7, activities = $8::jsonb, checked_at = $9, updated_at = NOW()
+     WHERE id = $1`,
+    values
+  );
+  if (updated.rowCount) return;
+  await p.query(
+    `INSERT INTO getyourguide_tours (id, url, title, rating, review_count, city, country, activities, checked_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)`,
+    values
+  );
+};
+
+export const listGetYourGuideTours = async (): Promise<GetYourGuideTourRecord[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, url, title, rating, review_count as "reviewCount", city, country, activities, checked_at as "checkedAt" FROM getyourguide_tours`
+  );
+  return rows.map((row: any) => ({ ...row, rating: Number(row.rating), reviewCount: Number(row.reviewCount) }));
+};
+
+export const deleteGetYourGuideTour = async (id: string): Promise<void> => {
+  const p = getPool();
+  await p.query('DELETE FROM getyourguide_tours WHERE id = $1', [id]);
+};
 
 export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {
   const p = getPool();

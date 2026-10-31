@@ -2739,6 +2739,7 @@ const deleteAllTripArtifacts = async (tripId: string): Promise<void> => {
   // trip itself is going away).
   await deleteQueryBatch(db.collection('car_rentals').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('item_votes').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('item_ratings').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_activity').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_comments').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_followers').where('tripId', '==', tripId));
@@ -5261,7 +5262,7 @@ export const getItemVoteSummaries = async (
 };
 
 export type StarRatingItem = { itemId: string; providerKey: string };
-export type StarRatingSummary = { average: number | null; count: number; userStars: number | null };
+export type StarRatingSummary = { average: number | null; count: number; net: number; userStars: number | null };
 
 const STAR_RATINGS = 'item_star_ratings';
 const starRatingDocId = (userId: string, itemType: string, itemId: string): string => `${userId}__${itemType}__${itemId}`;
@@ -5321,23 +5322,47 @@ export const deleteLegacyThumbRatings = async (ids: string[]): Promise<void> => 
   }
 };
 
+export type LegacyItemRating = { userId: string; tripId: string; itemType: VoteItemType; itemId: string; stars: number; changedAt: Date };
+
+/** Whole-star ratings kept per item in `item_ratings` before ratings were averaged by provider, for moving them over. */
+export const listLegacyItemRatings = async (limit = 500): Promise<LegacyItemRating[]> => {
+  const snap = await getDb().collection('item_ratings').limit(Math.max(1, Math.floor(limit))).get();
+  return snap.docs.map((doc) => {
+    const data = doc.data() as any;
+    const changedAt = new Date(String(data.updatedAt ?? ''));
+    return {
+      userId: String(data.userId ?? ''),
+      tripId: String(data.tripId ?? ''),
+      itemType: String(data.itemType) as VoteItemType,
+      itemId: String(data.itemId ?? ''),
+      stars: Number(data.stars),
+      changedAt: Number.isNaN(changedAt.getTime()) ? new Date() : changedAt,
+    };
+  });
+};
+
+export const deleteLegacyItemRating = async (userId: string, itemType: VoteItemType, itemId: string): Promise<void> => {
+  await getDb().collection('item_ratings').doc(`${itemType}_${itemId}_${userId}`).delete();
+};
+
 export const getStarRatingSummaries = async (
   userId: string,
   itemType: VoteItemType,
   items: StarRatingItem[]
 ): Promise<Record<string, StarRatingSummary>> => {
   const result: Record<string, StarRatingSummary> = {};
-  items.forEach(({ itemId }) => { result[itemId] = { average: null, count: 0, userStars: null }; });
+  items.forEach(({ itemId }) => { result[itemId] = { average: null, count: 0, net: 0, userStars: null }; });
   if (!items.length) return result;
   const db = getDb();
   const providerKeys = Array.from(new Set(items.map((item) => item.providerKey)));
-  const totals = new Map<string, { sum: number; count: number }>();
+  const totals = new Map<string, { sum: number; count: number; net: number }>();
   for (let i = 0; i < providerKeys.length; i += 10) {
     const snap = await db.collection(STAR_RATINGS).where('itemType', '==', itemType).where('providerKey', 'in', providerKeys.slice(i, i + 10)).get();
     snap.docs.forEach((doc) => {
       const data = doc.data() as any;
-      const total = totals.get(String(data.providerKey)) ?? { sum: 0, count: 0 };
+      const total = totals.get(String(data.providerKey)) ?? { sum: 0, count: 0, net: 0 };
       total.sum += Number(data.stars) || 0;
+      total.net += Number(data.stars) >= 3 ? 1 : -1;
       total.count += 1;
       totals.set(String(data.providerKey), total);
     });
@@ -5349,6 +5374,7 @@ export const getStarRatingSummaries = async (
     result[itemId] = {
       average: total && total.count ? total.sum / total.count : null,
       count: total?.count ?? 0,
+      net: total?.net ?? 0,
       userStars: own.exists ? Number((own.data() as any).stars) || null : null,
     };
   });
@@ -10089,6 +10115,34 @@ export type TripTemplateRecord = {
   contentHash: string;
   enabled: boolean;
   sortOrder: number;
+};
+
+type GetYourGuideTourRecord = {
+  id: string;
+  url: string;
+  title: string;
+  rating: number;
+  reviewCount: number;
+  city: string;
+  country: string;
+  activities: string[];
+  checkedAt: string;
+};
+
+export const upsertGetYourGuideTour = async (tour: GetYourGuideTourRecord): Promise<void> => {
+  await getDb().collection('getyourguide_tours').doc(tour.id).set({ ...tour, updatedAt: nowIso() });
+};
+
+export const listGetYourGuideTours = async (): Promise<GetYourGuideTourRecord[]> => {
+  const snap = await getDb().collection('getyourguide_tours').get();
+  return snap.docs.map((doc) => {
+    const { updatedAt: _updatedAt, ...tour } = doc.data() as GetYourGuideTourRecord & { updatedAt?: string };
+    return tour;
+  });
+};
+
+export const deleteGetYourGuideTour = async (id: string): Promise<void> => {
+  await getDb().collection('getyourguide_tours').doc(id).delete();
 };
 
 export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {

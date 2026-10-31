@@ -26,6 +26,7 @@ jest.mock('react-native', () => {
     SectionList: 'SectionList',
     Switch: 'Switch',
     Modal: 'Modal',
+    Keyboard: { dismiss: jest.fn() },
     KeyboardAvoidingView: 'KeyboardAvoidingView',
     SafeAreaView: 'SafeAreaView',
     ActivityIndicator: 'ActivityIndicator',
@@ -100,8 +101,9 @@ const sampleTour: Tour = {
   travelerIds: ['member-1'],
   netVotes: 2,
   userVote: 1,
-  averageRating: 3.5,
-  userRating: 4,
+  averageRating: 4.5,
+  ratingCount: 2,
+  userStars: 5,
 };
 
 const renderActivityHarness = (

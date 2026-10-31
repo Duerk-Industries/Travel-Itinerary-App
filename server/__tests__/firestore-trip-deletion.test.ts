@@ -85,6 +85,10 @@ describe('Firestore trip deletion cascade (emulator)', () => {
       .collection('item_votes')
       .doc(itemVoteId)
       .set({ id: itemVoteId, tripId, itemType: 'flight', itemId: flightId, userId: ownerId, value: 1 });
+    await db
+      .collection('item_ratings')
+      .doc(`flight_${flightId}_${ownerId}`)
+      .set({ tripId, itemType: 'flight', itemId: flightId, userId: ownerId, stars: 4 });
     const activityId = randomUUID();
     await db.collection('trip_activity').doc(activityId).set({ id: activityId, tripId, type: 'TRIP_CREATED' });
     const commentId = randomUUID();
@@ -153,6 +157,7 @@ describe('Firestore trip deletion cascade (emulator)', () => {
       ['expenses', 'tripId', tripId],
       ['car_rentals', 'tripId', tripId],
       ['item_votes', 'tripId', tripId],
+      ['item_ratings', 'tripId', tripId],
       ['trip_activity', 'tripId', tripId],
       ['trip_comments', 'tripId', tripId],
       ['trip_followers', 'tripId', tripId],

@@ -23,8 +23,8 @@ import { isEmailConfigured, sendShareEmail } from '../mailer';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
 import { rateItem } from '../services/itemRatingService';
+import { itemRatingDto } from './itemRatingDto';
 import { readDto } from '../utils/dtoParse';
-import { starRatingDto } from './ratingDto';
 import { assertCanUseFeature, getUserRoleForToken } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { buildManualUploadPayloads } from '../ingestion/intake';
@@ -521,9 +521,8 @@ router.post('/:id/vote', (_req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const dto = readDto(starRatingDto, req.body, res);
-  if (!dto) return;
-  const value = dto.value;
+  const stars = readDto(itemRatingDto, req.body, res);
+  if (!stars) return;
   const flight = await getFlightById(req.params.id);
   if (!flight) {
     res.status(404).json({ error: 'Transfer not found' });
@@ -544,7 +543,7 @@ router.post('/:id/rating', async (req, res) => {
     res.status(400).json({ error: 'Rating is only allowed for Completed items' });
     return;
   }
-  res.json(await rateItem(userId, tripId, 'flight', flight as any, value));
+  res.json(await rateItem(userId, tripId, 'flight', flight as any, stars));
 });
 
 export default router;

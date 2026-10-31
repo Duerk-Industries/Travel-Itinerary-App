@@ -107,6 +107,17 @@ describe('HomeTab', () => {
     expect(onNavigate).toHaveBeenCalledWith('all-trips');
   });
 
+  test('keeps full-screen trip dialogs clear of the status bar and home indicator', () => {
+    const insets = jest.spyOn(require('react-native-safe-area-context'), 'useSafeAreaInsets')
+      .mockReturnValue({ top: 59, right: 0, bottom: 34, left: 0 });
+    const { getByTestId } = render(<FollowTripButton styles={styles} onFollowTrip={jest.fn()} />);
+    fireEvent.press(getByTestId('all-trips-follow-button'));
+    const style = Object.assign({}, ...getByTestId('all-trips-follow-dialog').props.style);
+    expect(style.paddingTop).toBe(75);
+    expect(style.paddingBottom).toBe(50);
+    insets.mockRestore();
+  });
+
   test('does not allow followers to change the banner', () => {
     const { queryByText, getByTestId } = render(
       <HomeTab readOnly backendUrl="http://localhost" headers={{}} activeTripId="t2" trips={trips} followedTrips={followedTrips}

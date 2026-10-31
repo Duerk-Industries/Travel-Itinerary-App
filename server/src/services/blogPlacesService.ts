@@ -55,16 +55,16 @@ const placeKey = (raw: unknown): string => String(raw ?? '').trim().replace(/\s+
 export type PlaceRatingResult = {
   /** Activities and stays that go by this place name. */
   matched: number;
-  /** How many of them took the rating. Only Completed items can be rated. */
+  /** How many of them took the stars. Only Completed items can be rated. */
   rated: number;
-  /** Matched items that are not Completed yet, so the rating could not be recorded on them. */
+  /** Matched items that are not Completed yet, so the stars could not be recorded on them. */
   notCompleted: number;
   /** The place's first date, for filing a note against the right day. */
   firstDate: string | null;
 };
 
 /**
- * The star half of "Rate this place". A place is the name the places list shows (an activity's
+ * The stars half of "Rate this place". A place is the name the places list shows (an activity's
  * start location or name, a stay's address or name), so the rating lands on the activities and stays
  * that go by that name. It follows the same rule as rating them one at a time: Completed items only.
  */

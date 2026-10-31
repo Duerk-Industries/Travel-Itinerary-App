@@ -1,6 +1,6 @@
 import { getItemVoteSummaries } from '../db';
 import { normalizeItineraryStatus } from '../utils/itineraryStatus';
-import { applyStarRatings } from './itemRatingService';
+import { applyStarRatings, type ItemRatingSummary } from './itemRatingService';
 
 export type VoteItemType = 'flight' | 'lodging' | 'activity' | 'car_rental';
 
@@ -8,7 +8,7 @@ const normalizeVoteSummaryKey = (id: string): string => String(id).trim().toLowe
 
 /**
  * Adds the thumb-vote summary and the star rating to each item: `averageRating` is the mean of every traveler's
- * ratings of the item's provider (null until rated) and `userRating` is the requesting traveler's own 1-5 stars.
+ * ratings of the item's provider (null until rated) and `userStars` is the requesting traveler's own 1-5 stars.
  */
 export const applyVoteSummary = async <T extends { id: string }>(
   userId: string,
@@ -22,9 +22,7 @@ export const applyVoteSummary = async <T extends { id: string }>(
   downVotes: number;
   upVoterIds: string[];
   downVoterIds: string[];
-  averageRating: number | null;
-  userRating: number | null;
-}>> => {
+} & ItemRatingSummary>> => {
   if (!items.length) return [];
   const ids = items.map((item) => item.id);
   const voteSummary = await getItemVoteSummaries(userId, tripId, itemType, ids, 'vote');

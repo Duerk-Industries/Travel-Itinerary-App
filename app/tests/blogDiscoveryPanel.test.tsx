@@ -45,12 +45,12 @@ describe('BlogDiscoveryPanel', () => {
     it("saves stars and a note together: the stars as a rating, the note as an entry on the place's first day", async () => {
       const { view, calls, onRated } = setup();
       await open(view);
-      fireEvent.press(view.getByTestId('blog-rate-stars-star-4'));
+      fireEvent.press(view.getByTestId('blog-rate-star-4'));
       fireEvent.changeText(view.getByTestId('blog-rate-note'), 'Best <chowder> ever & cheap');
       fireEvent.press(view.getByTestId('blog-rate-save'));
       await waitFor(() => expect(onRated).toHaveBeenCalled());
       const rating = calls.find((c) => c.url.endsWith('/blog/places/rating'));
-      expect(JSON.parse(rating.init.body)).toEqual({ place: 'Pike Place Market', value: 4 });
+      expect(JSON.parse(rating.init.body)).toEqual({ place: 'Pike Place Market', stars: 4 });
       const entry = JSON.parse(calls.find((c) => c.url.endsWith('/blog/items')).init.body);
       expect(entry).toMatchObject({ kindKey: 'core.text', dayDate: '2027-04-02', tags: ['Place rating'] });
       expect(entry.body).toBe('<p><strong>★★★★☆ Pike Place Market</strong></p><p>Best &lt;chowder&gt; ever &amp; cheap</p>');
@@ -61,7 +61,7 @@ describe('BlogDiscoveryPanel', () => {
     it('a rating alone makes no blog entry, and says when it will count', async () => {
       const { view, calls } = setup({ matched: 1, rated: 0, notCompleted: 1, firstDate: '2027-04-02' });
       await open(view);
-      fireEvent.press(view.getByTestId('blog-rate-stars-star-2'));
+      fireEvent.press(view.getByTestId('blog-rate-star-2'));
       fireEvent.press(view.getByTestId('blog-rate-save'));
       await waitFor(() => expect(view.getByText(/once the activity is marked Completed/)).toBeTruthy());
       expect(calls.some((c) => c.url.endsWith('/blog/items'))).toBe(false);
@@ -83,7 +83,7 @@ describe('BlogDiscoveryPanel', () => {
     it('keeps the form open and reports what was saved when the note cannot be filed', async () => {
       const { view, onRated } = setup(undefined, false);
       await open(view);
-      fireEvent.press(view.getByTestId('blog-rate-stars-star-5'));
+      fireEvent.press(view.getByTestId('blog-rate-star-5'));
       fireEvent.changeText(view.getByTestId('blog-rate-note'), 'Great');
       fireEvent.press(view.getByTestId('blog-rate-save'));
       await waitFor(() => expect(view.getByText(/Your rating is saved\. Blog is at capacity/)).toBeTruthy());

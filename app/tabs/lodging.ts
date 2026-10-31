@@ -1,10 +1,10 @@
 import { withoutHotelPlaceholder } from '../utils/lodgingPlaceholder';
-import { normalizeAverageRating, normalizeStarRating } from '../utils/votes';
 import { singlePayerIds } from '../utils/payerSelection';
 import type { PlanningCoordinates } from '../../server/src/types';
 import { formatDateLong } from '../utils/formatDateLong';
 import { startItemSaveTask } from '../utils/analytics/track';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
+import { normalizeRatingFields } from '../utils/votes';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -26,7 +26,8 @@ export type Lodging = PlanningCoordinates & {
   upVoterIds?: string[];
   downVoterIds?: string[];
   averageRating?: number | null;
-  userRating?: number | null;
+  ratingCount?: number;
+  userStars?: number | null;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -104,8 +105,7 @@ export const normalizeLodgingFromApi = (l: any): Lodging => ({
   downVotes: Number(l.downVotes ?? 0) || 0,
   upVoterIds: Array.isArray(l.upVoterIds) ? l.upVoterIds.map(String) : [],
   downVoterIds: Array.isArray(l.downVoterIds) ? l.downVoterIds.map(String) : [],
-  averageRating: normalizeAverageRating(l.averageRating),
-  userRating: normalizeStarRating(l.userRating),
+  ...normalizeRatingFields(l),
   name: l.name,
   checkInDate: normalizeDate(l.check_in_date ?? l.checkInDate),
   checkOutDate: normalizeDate(l.check_out_date ?? l.checkOutDate),

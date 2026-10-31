@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
-import StarRating, { starFill } from '../components/StarRating';
+import StarRating, { ItemRating, starFill } from '../components/StarRating';
 import { ThemeProvider } from '../theme/ThemeContext';
 import { getAppTheme } from '../theme/theme';
 
@@ -47,5 +47,55 @@ describe('StarRating', () => {
     const view = mount(<StarRating value={null} testID="off" onChange={onChange} disabled />);
     fireEvent.press(view.getByTestId('off-star-3'));
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('names what is being rated on each star, and a tap rates without also pressing the row behind it', () => {
+    const onChange = jest.fn();
+    const stopPropagation = jest.fn();
+    const view = mount(<StarRating value={3} testID="rate" name="Museum" onChange={onChange} />);
+    expect(view.getByTestId('rate-star-1').props.accessibilityLabel).toBe('Rate Museum 1 star');
+    expect(view.getByTestId('rate-star-4').props.accessibilityLabel).toBe('Rate Museum 4 stars');
+    fireEvent.press(view.getByTestId('rate-star-4'), { stopPropagation });
+    expect(onChange).toHaveBeenCalledWith(4);
+    expect(stopPropagation).toHaveBeenCalled();
+  });
+});
+
+describe('ItemRating', () => {
+  const completed = { status: 'Completed', averageRating: 4.5, ratingCount: 2, userStars: null, name: 'Museum', testID: 'rate' };
+
+  it('shows a dash until the item is Completed', () => {
+    const view = mount(<ItemRating {...completed} status="Booked" onRate={jest.fn()} />);
+    expect(view.getByText('-')).toBeTruthy();
+    expect(view.queryByTestId('rate-star-1')).toBeNull();
+  });
+
+  it('shows the group average with how many rated, and empty stars to rate with until the traveler has rated', () => {
+    const onRate = jest.fn();
+    const view = mount(<ItemRating {...completed} onRate={onRate} />);
+    expect(view.getByText('4.5 (2)')).toBeTruthy();
+    expect(view.getByTestId('rate-average-fill-4')).toBeTruthy();
+    fireEvent.press(view.getByTestId('rate-star-2'));
+    expect(onRate).toHaveBeenCalledWith(2);
+  });
+
+  it('shows the traveler\'s own stars in place of the average once they have rated, still changeable', () => {
+    const onRate = jest.fn();
+    const view = mount(<ItemRating {...completed} userStars={5} onRate={onRate} />);
+    expect(view.queryByText('4.5 (2)')).toBeNull();
+    expect(view.getByTestId('rate-fill-5')).toBeTruthy();
+    fireEvent.press(view.getByTestId('rate-star-3'));
+    expect(onRate).toHaveBeenCalledWith(3);
+  });
+
+  it('shows only the average to someone who cannot rate', () => {
+    const view = mount(<ItemRating {...completed} readOnly onRate={jest.fn()} />);
+    expect(view.getByText('4.5 (2)')).toBeTruthy();
+    expect(view.queryByTestId('rate-star-1')).toBeNull();
+  });
+
+  it('says so when nobody has rated yet', () => {
+    const view = mount(<ItemRating {...completed} averageRating={null} ratingCount={0} readOnly />);
+    expect(view.getByText('No ratings')).toBeTruthy();
   });
 });

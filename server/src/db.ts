@@ -254,6 +254,10 @@ export const hasStarRating = async (...args: Parameters<ReturnType<typeof adapte
   adapter().hasStarRating(...args);
 export const deleteLegacyThumbRatings = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyThumbRatings']>) =>
   adapter().deleteLegacyThumbRatings(...args);
+export const listLegacyItemRatings = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyItemRatings']>) =>
+  adapter().listLegacyItemRatings(...args);
+export const deleteLegacyItemRating = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyItemRating']>) =>
+  adapter().deleteLegacyItemRating(...args);
 export const getItineraryDetailContext = async (
   ...args: Parameters<ReturnType<typeof adapter>['getItineraryDetailContext']>
 ) => adapter().getItineraryDetailContext(...args);
@@ -871,6 +875,12 @@ export const claimApiSpendReservation = async (...args: Parameters<ReturnType<ty
 export const listLegacyBlogMapArtifacts = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyBlogMapArtifacts']>) => adapter().listLegacyBlogMapArtifacts(...args);
 export const deleteLegacyBlogMapArtifact = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyBlogMapArtifact']>) => adapter().deleteLegacyBlogMapArtifact(...args);
 
+export type { GetYourGuideTourRecord } from './db.postgres';
+export const upsertGetYourGuideTour = async (...args: Parameters<ReturnType<typeof adapter>['upsertGetYourGuideTour']>) =>
+  adapter().upsertGetYourGuideTour(...args);
+export const listGetYourGuideTours = async () => adapter().listGetYourGuideTours();
+export const deleteGetYourGuideTour = async (...args: Parameters<ReturnType<typeof adapter>['deleteGetYourGuideTour']>) =>
+  adapter().deleteGetYourGuideTour(...args);
 export type { TripTemplateRecord } from './db.postgres';
 export const upsertTripTemplate = async (...args: Parameters<ReturnType<typeof adapter>['upsertTripTemplate']>) =>
   adapter().upsertTripTemplate(...args);

@@ -32,15 +32,18 @@ describe('applyVoteSummary', () => {
       netVotes: 1,
       userVote: 1,
       averageRating: null,
+      ratingCount: 0,
+      userStars: null,
+      netRating: 0,
       userRating: null,
     });
   });
 
-  it('adds the provider average and the traveler\'s own stars, rounded, without the count behind them', async () => {
+  it('adds the provider average, the count behind it and the traveler\'s own stars, rounded', async () => {
     (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({});
     (db.getStarRatingSummaries as jest.Mock).mockResolvedValue({
-      'act-1': { average: 4.3333333, count: 3, userStars: 5 },
-      'act-2': { average: null, count: 0, userStars: null },
+      'act-1': { average: 4.3333333, count: 3, net: 1, userStars: 5 },
+      'act-2': { average: null, count: 0, net: 0, userStars: null },
     });
 
     const [rated, unrated] = await applyVoteSummary('user-1', 'trip-1', 'activity', [
@@ -48,12 +51,24 @@ describe('applyVoteSummary', () => {
       { id: 'act-2', name: 'Walk' },
     ]);
 
-    expect(rated).toMatchObject({ averageRating: 4.33, userRating: 5 });
-    expect(unrated).toMatchObject({ averageRating: null, userRating: null });
-    expect(rated).not.toHaveProperty('ratingCount');
+    expect(rated).toMatchObject({ averageRating: 4.33, ratingCount: 3, userStars: 5, netRating: 1, userRating: 1 });
+    expect(unrated).toMatchObject({ averageRating: null, ratingCount: 0, userStars: null, netRating: 0, userRating: null });
     expect(db.getStarRatingSummaries).toHaveBeenCalledWith('user-1', 'activity', [
       { itemId: 'act-1', providerKey: 'catalog:louvre' },
       { itemId: 'act-2', providerKey: 'name:walk' },
     ]);
+  });
+
+  it('shows builds from before star ratings a thumb: 3 or more stars is up, fewer is down', async () => {
+    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({});
+    (db.getStarRatingSummaries as jest.Mock).mockResolvedValue({
+      a: { average: 2, count: 1, net: -1, userStars: 2 },
+      b: { average: 3, count: 1, net: 1, userStars: 3 },
+    });
+
+    const [low, mid] = await applyVoteSummary('user-1', 'trip-1', 'activity', [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
+
+    expect(low).toMatchObject({ netRating: -1, userRating: -1 });
+    expect(mid).toMatchObject({ netRating: 1, userRating: 1 });
   });
 });

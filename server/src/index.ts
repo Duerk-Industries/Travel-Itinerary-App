@@ -31,6 +31,7 @@ import { getBillingPlanConfig } from './db';
 import { startScheduledAggregation } from './ai/analytics/scheduledAggregation';
 import { syncPackingPresetCatalogFromDisk } from './services/packingListCatalogService';
 import { syncTripTemplatesFromSeed } from './services/tripTemplateService';
+import { syncGetYourGuideToursFromSeed } from './services/getYourGuideTourService';
 import { mailAdmissionProblems } from './ingestion/worker/mailReceiptWorker';
 import { isFeatureEnabled } from './services/entitlementService';
 import { refreshMeanVector } from './services/meanVectorService';
@@ -105,6 +106,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     }
     await syncPackingPresetCatalogFromDisk();
     await syncTripTemplatesFromSeed();
+    await syncGetYourGuideToursFromSeed();
     await warnIfStripePricesUnconfigured(getBillingPlanConfig);
     await seedDefaultTestAccountsIfEnabled();
     await refreshMeanVector().catch(err => logError('[mean-vector] Startup refresh failed', err));

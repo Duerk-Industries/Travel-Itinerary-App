@@ -15,7 +15,7 @@ import { getGooglePlaceImage } from '../image-service';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
 import { rateItem } from '../services/itemRatingService';
-import { starRatingDto } from './ratingDto';
+import { itemRatingDto } from './itemRatingDto';
 import { readDto } from '../utils/dtoParse';
 import { createLodgingDto, updateLodgingDto } from './lodgingDtos';
 
@@ -309,9 +309,8 @@ router.post('/:id/vote', (_req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const dto = readDto(starRatingDto, req.body, res);
-  if (!dto) return;
-  const value = dto.value;
+  const stars = readDto(itemRatingDto, req.body, res);
+  if (!stars) return;
   const lodging = await getLodgingById(req.params.id);
   if (!lodging) {
     res.status(404).json({ error: 'Lodging not found' });
@@ -332,7 +331,7 @@ router.post('/:id/rating', async (req, res) => {
     res.status(400).json({ error: 'Rating is only allowed for Completed items' });
     return;
   }
-  res.json(await rateItem(userId, tripId, 'lodging', lodging as any, value));
+  res.json(await rateItem(userId, tripId, 'lodging', lodging as any, stars));
 });
 
 export default router;

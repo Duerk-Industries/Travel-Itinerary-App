@@ -6,6 +6,7 @@ type DropdownOptionButtonProps = {
   children: React.ReactNode;
   onPress?: () => void;
   onPressIn?: () => void;
+  onPressOut?: () => void;
   testID?: string;
   disabled?: boolean;
   selected?: boolean;
@@ -24,6 +25,7 @@ const DropdownOptionButtonComponent: React.FC<DropdownOptionButtonProps> = ({
   children,
   onPress,
   onPressIn,
+  onPressOut,
   testID,
   disabled,
   selected,
@@ -35,6 +37,7 @@ const DropdownOptionButtonComponent: React.FC<DropdownOptionButtonProps> = ({
     disabled={disabled}
     onPress={onPress}
     onPressIn={onPressIn}
+    onPressOut={onPressOut}
     {...WEB_IMMEDIATE_PRESS_IN}
     accessibilityRole="menuitem"
     accessibilityLabel={accessibilityLabel}

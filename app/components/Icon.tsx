@@ -80,6 +80,8 @@ type Props = {
   /** Fills the shape (e.g. a solid star); outline-only when omitted. */
   fill?: string;
   strokeWidth?: number;
+  /** Shorthand for filling the shape with the icon colour. */
+  filled?: boolean;
   testID?: string;
 };
 
@@ -89,12 +91,12 @@ const hiddenFromAssistiveTech = Platform?.OS === 'web'
   ? ({ 'aria-hidden': true } as Record<string, unknown>)
   : { accessibilityElementsHidden: true, importantForAccessibility: 'no' as const };
 
-const Icon: React.FC<Props> = ({ name, size = 22, color, fill = 'none', strokeWidth = 1.75, testID }) => (
+const Icon: React.FC<Props> = ({ name, size = 22, color, fill = 'none', strokeWidth = 1.75, filled = false, testID }) => (
   <Svg
     width={size}
     height={size}
     viewBox="0 0 24 24"
-    fill={fill}
+    fill={filled ? color : fill}
     stroke={color}
     strokeWidth={strokeWidth}
     strokeLinecap="round"

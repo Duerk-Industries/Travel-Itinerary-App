@@ -71,6 +71,53 @@ describe('MustSeeAttractionSelector', () => {
     });
   });
 
+  it('closes the list on blur without losing the typed text, and reopens it on focus', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 'attr:nyc:bridge', sourceType: 'attraction', name: 'Manhattan Bridge', destinationName: 'New York City' }],
+    });
+    const selectedLocations: LocationOption[] = [
+      { id: 'destination:nyc', sourceType: 'destination', name: 'New York City', countryName: 'USA' },
+    ];
+    const { getByPlaceholderText, findByText, queryByText } = render(
+      <MustSeeAttractionSelector {...defaultProps} selectedLocations={selectedLocations} />
+    );
+    const input = getByPlaceholderText('Must See Attractions');
+    fireEvent(input, 'focus');
+    fireEvent.changeText(input, 'Manhattan');
+    await findByText('Manhattan Bridge');
+
+    fireEvent(input, 'blur');
+    expect(queryByText('Manhattan Bridge')).toBeNull();
+    expect(getByPlaceholderText('Must See Attractions').props.value).toBe('Manhattan');
+
+    fireEvent(input, 'focus');
+    expect(queryByText('Manhattan Bridge')).toBeTruthy();
+  });
+
+  it('keeps the list open when blur comes from pressing an option (web mouse-down order)', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 'attr:nyc:bridge', sourceType: 'attraction', name: 'Manhattan Bridge', destinationName: 'New York City' }],
+    });
+    const selectedLocations: LocationOption[] = [
+      { id: 'destination:nyc', sourceType: 'destination', name: 'New York City', countryName: 'USA' },
+    ];
+    const { getByPlaceholderText, findByTestId, queryByText } = render(
+      <MustSeeAttractionSelector {...defaultProps} selectedLocations={selectedLocations} />
+    );
+    const input = getByPlaceholderText('Must See Attractions');
+    fireEvent.changeText(input, 'Manhattan');
+    const option = await findByTestId('must-see-suggestion-attr:nyc:bridge');
+
+    fireEvent(option, 'pressIn');
+    fireEvent(input, 'blur');
+    expect(queryByText('Manhattan Bridge')).toBeTruthy();
+    fireEvent(option, 'pressOut');
+    fireEvent.press(option);
+    expect(defaultProps.onAddAttraction).toHaveBeenCalledWith(expect.objectContaining({ name: 'Manhattan Bridge' }));
+  });
+
   it('adds manual attraction when no suggestions exist and auto-tags its destination when unambiguous', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,

@@ -81,8 +81,3 @@ export const updateCarRentalDto = z.object({
   travelerIds: patchField(z.array(z.union([z.string(), z.number()]))),
 });
 export type UpdateCarRentalDto = z.infer<typeof updateCarRentalDto>;
-
-// ---------------------------------------------------------------------------
-// POST /api/car-rentals/:id/vote and /api/car-rentals/:id/rating
-// ---------------------------------------------------------------------------
-

@@ -19,9 +19,8 @@ import {
   LEGACY_ITINERARY_STATUS,
   normalizeItineraryStatus,
 } from '../utils/itineraryStatus';
-import { canRateItem, formatAverageRating } from '../utils/votes';
-import StarRating from '../components/StarRating';
-import ItemRatingCell from '../components/ItemRatingCell';
+import { formatRating } from '../utils/votes';
+import { ItemRating } from './StarRating';
 import CarRentalEditForm from './CarRentalEditForm';
 import EditableDataGrid, { type GridCellError, type GridColumn } from './EditableDataGrid';
 
@@ -50,8 +49,8 @@ export type CarRentalsPanelProps = {
   onUpdateCarRental: (id: string, draft?: CarRentalDraft) => boolean | void | Promise<boolean | void>;
   /** Delete a car-rental row by id. */
   onRemoveCarRental: (id: string) => void | Promise<void>;
-  /** Post-trip rating (±1). */
-  onRateCarRental: (id: string, value: number) => void | Promise<void>;
+  /** Post-trip rating (1 to 5 stars). */
+  onRateCarRental: (id: string, stars: number) => void | Promise<void>;
   theme?: AppTheme;
   externalEditCarRentalId?: string | null;
   onExternalEditHandled?: () => void;
@@ -175,6 +174,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   const sortCarRows = (rows: CarRental[]) => {
     const key = carSort.key ?? 'pickupDate';
     const direction = carSort.direction === 'asc' ? 1 : -1;
+    if (key === 'averageRating') return [...rows].sort((a, b) => (Number((a as any).averageRating ?? 0) - Number((b as any).averageRating ?? 0)) * direction);
     return [...rows].sort((a, b) => String((a as any)[key] ?? '').localeCompare(String((b as any)[key] ?? ''), undefined, { sensitivity: 'base', numeric: true }) * direction);
   };
   const sortedCarRentals = React.useMemo(() => sortCarRows(carRentals), [carRentals, carSort]);
@@ -194,7 +194,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
     { key: 'cost', label: 'Cost', width: 110, editor: 'decimal', getValue: (row) => String(row.cost || '') },
     { key: 'model', label: 'Car Model', width: 150, editor: 'text', getValue: (row) => row.model || '' },
     { key: 'notes', label: 'Notes', width: 230, editor: 'textarea', getValue: (row) => row.notes || '' },
-    { key: 'averageRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => formatAverageRating(row.averageRating) },
+    { key: 'averageRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => formatRating(row.averageRating, row.ratingCount) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
   const beginGridEdit = () => { if (isFollowingMode) return; const snapshot = carRentals.map((row) => ({ ...row, paidBy: [...(row.paidBy ?? [])], travelerIds: [...(row.travelerIds ?? [])] })); setGridRows(snapshot); setGridOriginalRows(snapshot); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); setTableEditing(true); };
@@ -314,14 +314,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
             </View>
 
             <View style={[styles.tableCell, fixedTableColumn(110)]}>
-              <ItemRatingCell
-                id={car.id}
-                testIDPrefix="car-rental"
-                averageRating={(car as any).averageRating}
-                userRating={(car as any).userRating}
-                canRate={!isFollowingMode && canRateItem((car as any).status)}
-                onRate={(stars) => void onRateCarRental(car.id, stars)}
-              />
+              <ItemRating status={(car as any).status} averageRating={car.averageRating} ratingCount={car.ratingCount} userStars={car.userStars} readOnly={isFollowingMode} onRate={(stars) => onRateCarRental(car.id, stars)} name={car.vendor || 'this car rental'} testID={`car-rental-rating-${car.id}`} theme={theme} />
             </View>
             <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_7', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
               <View style={styles.actionCell}>
@@ -354,10 +347,10 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
           <Text style={styles.headerText}>{row.label}: </Text><Text style={styles.bodyText}>{row.value}</Text>
         </View>)}
         <AddToCalendarButton event={rentalCalendarEvent(selectedRental)} styles={styles} />
-        {!isFollowingMode && canRateItem(selectedRental.status) ? <View style={styles.actionCell}>
-          <Text style={styles.headerText}>Your rating: </Text>
-          <StarRating value={selectedRental.userRating} size={22} onChange={(stars) => void onRateCarRental(selectedRental.id, stars)} label="Your rating" testID="car-rental-details-your-rating" />
-        </View> : null}
+        <View style={styles.row}>
+          <Text style={styles.headerText}>Rating: </Text>
+          <ItemRating status={(selectedRental as any).status} averageRating={selectedRental.averageRating} ratingCount={selectedRental.ratingCount} userStars={selectedRental.userStars} readOnly={isFollowingMode} onRate={(stars) => onRateCarRental(selectedRental.id, stars)} name={selectedRental.vendor || 'this car rental'} testID="car-rental-details-rating" theme={theme} />
+        </View>
         {!isFollowingMode ? <TouchableOpacity style={styles.button} testID="car-rental-details-edit" onPress={() => { openEditDialog(selectedRental); setSelectedRental(null); }}>
           <Text style={styles.buttonText}>Edit</Text>
         </TouchableOpacity> : null}

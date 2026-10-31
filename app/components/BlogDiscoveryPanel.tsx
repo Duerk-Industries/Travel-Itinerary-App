@@ -1,5 +1,3 @@
-import StarRating from './StarRating';
-import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -7,6 +5,8 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Linking, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { buildMapUrl, loadStoredMapPreference } from '../utils/mapLinks';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
+import { formatStarMarks } from '../utils/votes';
+import StarRating from './StarRating';
 
 const escapeHtml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -39,7 +39,7 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
-  // "Rate this place": 1-5 stars and a written note, saved together.
+  // "Rate this place": a thumb and a written note, saved together.
   const [rating, setRating] = useState<{ key: string; stars: number | null; note: string } | null>(null);
   if (!searchEnabled && !placesEnabled) return null;
 
@@ -80,13 +80,13 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
     try {
       const parts: string[] = [];
       if (rating.stars !== null) {
-        const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/places/rating`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ place: place.name, value: rating.stars }) });
+        const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/places/rating`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ place: place.name, stars: rating.stars }) });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'Unable to save your rating');
         parts.push(data.rated > 0 ? 'Your rating is saved.' : data.matched > 0 ? "Your rating will count once the activity is marked Completed." : 'No activity or stay is recorded for this place, so the rating was not kept.');
       }
       if (note) {
-        const mark = rating.stars === null ? '' : `${'★'.repeat(rating.stars)}${'☆'.repeat(5 - rating.stars)} `;
+        const mark = rating.stars !== null ? `${formatStarMarks(rating.stars)} ` : '';
         const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Idempotency-Key': createIdempotencyKey('place-note'), ...headers },
@@ -133,7 +133,7 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
                 ) : (
                   <View testID="blog-rate-form">
                     <View style={themeStyle('components_BlogDiscoveryPanel_4', {  }, (theme ?? _styleTheme))}>
-                      <StarRating value={rating?.stars ?? null} size={30} label="Your rating" testID="blog-rate-stars" onChange={(stars) => setRating((current) => current ? { ...current, stars: current.stars === stars ? null : stars } : current)} />
+                      <StarRating value={rating?.stars ?? null} size={30} label="Your rating" name={place.name} theme={theme} testID="blog-rate" onChange={(stars) => setRating((current) => current ? { ...current, stars: current.stars === stars ? null : stars } : current)} />
                     </View>
                     <TextInput testID="blog-rate-note" accessibilityLabel={`Your note about ${place.name}`} multiline value={rating?.note ?? ''} onChangeText={(value) => setRating((current) => current ? { ...current, note: value } : current)} maxLength={2000} placeholder="What was it like? (optional)" placeholderTextColor={mutedColor} style={themeStyle('components_BlogDiscoveryPanel_28', { borderColor: borderColor, textColor: textColor }, (theme ?? _styleTheme))} />
                     <View style={themeStyle('components_BlogDiscoveryPanel_4', {  }, (theme ?? _styleTheme))}>

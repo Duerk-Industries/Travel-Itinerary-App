@@ -76,8 +76,3 @@ export const updateLodgingDto = z.object({
   travelerIds: patchField(z.array(z.union([z.string(), z.number()]))),
 });
 export type UpdateLodgingDto = z.infer<typeof updateLodgingDto>;
-
-// ---------------------------------------------------------------------------
-// POST /api/lodgings/:id/vote and /api/lodgings/:id/rating
-// ---------------------------------------------------------------------------
-

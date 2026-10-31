@@ -21,7 +21,7 @@ import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/it
 import { applyVoteSummary } from '../services/itemVoteService';
 import { attachActivityImages } from '../services/activityImageService';
 import { rateItem } from '../services/itemRatingService';
-import { starRatingDto } from './ratingDto';
+import { itemRatingDto } from './itemRatingDto';
 import type { ActivityType } from '../types';
 import { readDto } from '../utils/dtoParse';
 import { createActivityDto, updateActivityDto, bulkActivitiesDto } from './activityDtos';
@@ -564,9 +564,8 @@ router.post('/:id/vote', (_req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const dto = readDto(starRatingDto, req.body, res);
-  if (!dto) return;
-  const value = dto.value;
+  const stars = readDto(itemRatingDto, req.body, res);
+  if (!stars) return;
   const activity = await getActivityById(req.params.id);
   if (!activity) {
     res.status(404).json({ error: 'Activity not found' });
@@ -587,7 +586,7 @@ router.post('/:id/rating', async (req, res) => {
     res.status(400).json({ error: 'Rating is only allowed for Completed items' });
     return;
   }
-  res.json(await rateItem(userId, tripId, 'activity', activity as any, value));
+  res.json(await rateItem(userId, tripId, 'activity', activity as any, stars));
 });
 
 export default router;

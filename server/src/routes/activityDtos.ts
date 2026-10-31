@@ -103,8 +103,3 @@ export const bulkActivitiesDto = z
     }
   });
 export type BulkActivitiesDto = z.infer<typeof bulkActivitiesDto>;
-
-// ---------------------------------------------------------------------------
-// POST /api/activities/:id/vote and /api/activities/:id/rating
-// ---------------------------------------------------------------------------
-

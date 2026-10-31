@@ -28,8 +28,8 @@ import { FlightEditingForm, GroundTransferEditingForm } from '../components/Tran
 import { toWebStyle } from '../utils/webStyle';
 import { buildMemberDisplayLookup, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeTimeInput } from '../utils/normalizeTimeInput';
-import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
-import ItemRatingCell from '../components/ItemRatingCell';
+import { formatRating, normalizeRatingFields } from '../utils/votes';
+import { ItemRating } from '../components/StarRating';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import DateField from '../components/DateField';
 
@@ -54,7 +54,8 @@ export interface Flight {
   netVotes?: number;
   userVote?: -1 | 1 | null;
   averageRating?: number | null;
-  userRating?: number | null;
+  ratingCount?: number;
+  userStars?: number | null;
   passenger_name: string;
   passenger_ids?: string[];
   arrival_date?: string | null;
@@ -430,8 +431,7 @@ export const normalizeFlightFromApi = (f: any): Flight => ({
   transferType: normalizeTransferType(f.transferType || f.transfer_type),
   netVotes: Number(f.netVotes ?? 0) || 0,
   userVote: f.userVote === 1 || f.userVote === -1 ? f.userVote : null,
-  averageRating: normalizeAverageRating(f.averageRating),
-  userRating: normalizeStarRating(f.userRating),
+  ...normalizeRatingFields(f),
   passenger_name: f.passenger_name ?? f.passengerName ?? '',
   passenger_ids: Array.isArray(f.passenger_ids)
     ? f.passenger_ids
@@ -559,7 +559,7 @@ const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'rating'; lab
   { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
   { key: 'status', label: 'Status', minWidth: 120 },
   { key: 'transfer_type', label: 'Type', minWidth: 120 },
-  { key: 'rating', label: 'Rating', minWidth: 96 },
+  { key: 'rating', label: 'Rating', minWidth: 160 },
   { key: 'departure_date', label: 'Departure Date' },
   { key: 'departure_location', label: 'Departure Location' },
   { key: 'departure_time', label: 'Departure Time' },
@@ -573,13 +573,13 @@ const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'rating'; lab
   { key: 'flight_number', label: 'Flight Number' },
   { key: 'booking_reference', label: 'Booking Ref' },
   { key: 'paidBy', label: 'Paid by' },
-  { key: 'actions', label: 'Actions', minWidth: 140 },
+  // Wide enough for Details, Edit and Delete side by side; narrower pushed Delete out of the cell.
+  { key: 'actions', label: 'Actions', minWidth: 240 },
 ];
 
-// Shrinks the Edit/Delete and thumbs-up/down buttons in the transfers table down to roughly
+// Shrinks the Edit/Delete buttons in the transfers table down to roughly
 // one line of text tall, instead of the app-wide button paddings meant for standalone buttons.
 const COMPACT_ACTION_BUTTON: ViewStyle = themeStyle('tabs_transfers_1', {  }, getStyleTheme('auto', null));
-const COMPACT_ICON_BUTTON: ViewStyle = themeStyle('tabs_transfers_2', {  }, getStyleTheme('auto', null));
 
 
 export const FlightsTab: React.FC<FlightsTabProps> = ({
@@ -789,7 +789,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     { key: 'carrier', label: 'Airline', width: 150, editor: 'text', getValue: (row) => row.carrier || '' },
     { key: 'flight_number', label: 'Flight Number', width: 125, editor: 'text', getValue: (row) => row.flight_number || '' },
     { key: 'booking_reference', label: 'Booking Ref', width: 160, editor: 'text', getValue: (row) => row.booking_reference || '' },
-    { key: 'averageRating', label: 'Rating', width: 100, editor: 'readonly', editable: false, getValue: (row) => formatAverageRating(row.averageRating) },
+    { key: 'averageRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => formatRating(row.averageRating, row.ratingCount) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], [allowedTransferTypes]);
   const gridColumns = useMemo(() => allGridColumns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
@@ -1397,18 +1397,19 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     onDataChanged ? onDataChanged() : fetchFlights();
   };
 
-  const rateFlight = async (id: string, value: number) => {
+  const rateFlight = async (id: string, stars: number) => {
     if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/transfers/${id}/rating`, {
         method: 'POST',
         headers: jsonHeaders,
-        body: JSON.stringify({ value }),
+        body: JSON.stringify({ stars }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Unable to submit rating');
       }
+      setSelectedTransfer((current) => (current?.id === id ? { ...current, ...data } : current));
       onDataChanged ? onDataChanged() : await fetchFlights();
     } catch (err: any) {
       Alert.alert(err?.message || 'Unable to submit rating');
@@ -1682,7 +1683,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   );
                 }
                 if (col.key === 'rating') {
-                  const canRate = !readOnly && canRateItem(item.status);
                   return (
                     <View
                       key={`${item.id}-${col.key}`}
@@ -1692,14 +1692,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
-                      <ItemRatingCell
-                        id={item.id}
-                        testIDPrefix="transfer"
-                        averageRating={item.averageRating}
-                        userRating={item.userRating}
-                        canRate={canRate}
-                        onRate={(stars) => void rateFlight(item.id, stars)}
-                      />
+                      <ItemRating status={item.status} averageRating={item.averageRating} ratingCount={item.ratingCount} userStars={item.userStars} readOnly={readOnly} onRate={(stars) => rateFlight(item.id, stars)} name="this transfer" testID={`transfer-table-rating-${item.id}`} theme={theme} />
                     </View>
                   );
                 }
@@ -2117,6 +2110,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         onClose: () => setSelectedTransfer(null),
         onEdit: () => { const item = selectedTransfer; setSelectedTransfer(null); openFlightDetails(item); },
         onDelete: () => { const item = selectedTransfer; setSelectedTransfer(null); void removeFlight(item.id); },
+        onRate: (stars: number) => rateFlight(selectedTransfer.id, stars),
       }) : null}
       <TransferEditor
         backendUrl={backendUrl}
