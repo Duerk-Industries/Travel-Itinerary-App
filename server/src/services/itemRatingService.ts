@@ -3,8 +3,7 @@ import type { VoteItemType } from './itemVoteService';
 
 // Travelers rate a booked item 1-5 stars. The rating belongs to the item (so each person's own rating can be shown
 // back to them) and also to the provider behind it, so every traveler's ratings of the same hotel, airline, rental
-// company or activity average together. The count behind an average and when a rating last changed are kept in the
-// database but not sent to clients yet.
+// company or activity average together. When a rating last changed is kept in the database but not sent to clients.
 
 export const MIN_STARS = 1;
 export const MAX_STARS = 5;
@@ -56,13 +55,25 @@ export const providerContextFor = async (tripId: string, itemType: VoteItemType,
 
 const roundAverage = (average: number | null): number | null => (average === null ? null : Math.round(average * 100) / 100);
 
-/** Adds `averageRating` (null until rated) and the requesting traveler's own `userRating` (1-5 or null). */
+export type ItemRatingSummary = {
+  /** Mean stars across every traveler's rating of the item's provider; null until rated. */
+  averageRating: number | null;
+  /** How many ratings the average is over. */
+  ratingCount: number;
+  /** What the requesting traveler gave this item (1-5), or null. */
+  userStars: number | null;
+  // Builds released before star ratings read only these two, as thumbs: stars of 3 or more count as up.
+  netRating: number;
+  userRating: -1 | 1 | null;
+};
+
+/** Adds the provider's `averageRating` (null until rated) and the requesting traveler's own `userStars` (1-5 or null). */
 export const applyStarRatings = async <T extends { id: string }>(
   userId: string,
   tripId: string,
   itemType: VoteItemType,
   items: T[]
-): Promise<Array<T & { averageRating: number | null; userRating: number | null }>> => {
+): Promise<Array<T & ItemRatingSummary>> => {
   if (!items.length) return [];
   const context = await providerContextFor(tripId, itemType, items as Array<Record<string, any>>);
   const summaries = await getStarRatingSummaries(
@@ -72,7 +83,15 @@ export const applyStarRatings = async <T extends { id: string }>(
   );
   return items.map((item) => {
     const summary = summaries[String(item.id)];
-    return { ...item, averageRating: roundAverage(summary?.average ?? null), userRating: summary?.userStars ?? null };
+    const userStars = summary?.userStars ?? null;
+    return {
+      ...item,
+      averageRating: roundAverage(summary?.average ?? null),
+      ratingCount: summary?.count ?? 0,
+      userStars,
+      netRating: summary?.net ?? 0,
+      userRating: userStars === null ? null : userStars >= 3 ? 1 : -1,
+    };
   });
 };
 
@@ -83,9 +102,10 @@ export const rateItem = async (
   itemType: VoteItemType,
   item: { id: string } & Record<string, any>,
   stars: number
-): Promise<{ itemId: string; averageRating: number | null; userRating: number | null }> => {
+): Promise<ItemRatingSummary & { itemId: string }> => {
   const context = await providerContextFor(tripId, itemType, [item]);
   await castStarRating(userId, tripId, itemType, String(item.id), providerKeyFor(itemType, item, context), stars);
   const [rated] = await applyStarRatings(userId, tripId, itemType, [item]);
-  return { itemId: String(item.id), averageRating: rated.averageRating, userRating: rated.userRating };
+  const { averageRating, ratingCount, userStars, netRating, userRating } = rated;
+  return { itemId: String(item.id), averageRating, ratingCount, userStars, netRating, userRating };
 };

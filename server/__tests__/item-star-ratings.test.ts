@@ -2,7 +2,8 @@
 /// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
-import { castItemVote, closePool, getStarRatingSummaries, initDb, insertCarRental, insertFlight, insertLodging, listLegacyThumbRatings } from '../src/db';
+import { queryBlog } from '../src/db.postgres';
+import { castItemVote, closePool, getCurrentDbProvider, getStarRatingSummaries, initDb, insertCarRental, insertFlight, insertLodging, listLegacyThumbRatings } from '../src/db';
 import { providerKeyFor } from '../src/services/itemRatingService';
 import { convertThumbRatingsToStars } from '../src/services/thumbRatingConversionService';
 import { registerAndLoginWebUser, seedTiersForTest, setUserTierInDb } from './helpers';
@@ -25,7 +26,7 @@ describe('1-5 star ratings, averaged per provider across travelers', () => {
     userId: who.userId, tripId: who.tripId, status, name, checkInDate: '2026-03-01', checkOutDate: '2026-03-04', rooms: 1, totalCost: 0, costPerNight: 0, address: '', paid_by: [], traveler_ids: [],
   } as any);
   const rate = (who: Traveler, id: string, value: unknown) =>
-    request(app).post(`/api/lodgings/${id}/rating`).set('Authorization', `Bearer ${who.token}`).send({ value });
+    request(app).post(`/api/lodgings/${id}/rating`).set('Authorization', `Bearer ${who.token}`).send({ stars: value });
   const listed = async (who: Traveler, id: string) => {
     const res = await request(app).get(`/api/lodgings?tripId=${who.tripId}`).set('Authorization', `Bearer ${who.token}`).expect(200);
     return res.body.find((item: any) => item.id === id);
@@ -48,34 +49,34 @@ describe('1-5 star ratings, averaged per provider across travelers', () => {
     const aliceStay = await lodgingFor(alice, hotel);
     const bobStay = await lodgingFor(bob, `  ${hotel.toUpperCase()} `);
 
-    expect(await listed(alice, aliceStay.id)).toMatchObject({ averageRating: null, userRating: null });
+    expect(await listed(alice, aliceStay.id)).toMatchObject({ averageRating: null, ratingCount: 0, userStars: null });
 
-    expect((await rate(alice, aliceStay.id, 5).expect(200)).body).toEqual({ itemId: aliceStay.id, averageRating: 5, userRating: 5 });
-    expect((await rate(bob, bobStay.id, 2).expect(200)).body).toEqual({ itemId: bobStay.id, averageRating: 3.5, userRating: 2 });
+    expect((await rate(alice, aliceStay.id, 5).expect(200)).body).toEqual({ itemId: aliceStay.id, averageRating: 5, ratingCount: 1, userStars: 5, netRating: 1, userRating: 1 });
+    // Builds from before star ratings read the same ratings as thumbs: 3 stars or more is up.
+    expect((await rate(bob, bobStay.id, 2).expect(200)).body).toEqual({ itemId: bobStay.id, averageRating: 3.5, ratingCount: 2, userStars: 2, netRating: 0, userRating: -1 });
 
     // Partial averages come through, and each traveler sees their own stars next to the shared average.
-    expect(await listed(alice, aliceStay.id)).toMatchObject({ averageRating: 3.5, userRating: 5 });
-    expect(await listed(bob, bobStay.id)).toMatchObject({ averageRating: 3.5, userRating: 2 });
+    expect(await listed(alice, aliceStay.id)).toMatchObject({ averageRating: 3.5, userStars: 5 });
+    expect(await listed(bob, bobStay.id)).toMatchObject({ averageRating: 3.5, userStars: 2 });
     // A provider's rating is visible on its other bookings too, including ones not yet rated.
     const another = await lodgingFor(alice, hotel, 'Booked');
-    expect(await listed(alice, another.id)).toMatchObject({ averageRating: 3.5, userRating: null });
+    expect(await listed(alice, another.id)).toMatchObject({ averageRating: 3.5, userStars: null });
   });
 
-  it('lets a traveler change their rating: one vote each, the average follows, the count and change date stay internal', async () => {
+  it('lets a traveler change their rating: one vote each, the average follows, the change date stays internal', async () => {
     const hotel = `Changing Inn ${uniq}`;
     const stay = await lodgingFor(alice, hotel);
     const providerKey = providerKeyFor('lodging', { id: stay.id, name: hotel });
 
     await rate(alice, stay.id, 1).expect(200);
     const before = await getStarRatingSummaries(alice.userId, 'lodging', [{ itemId: stay.id, providerKey }]);
-    expect(before[stay.id]).toEqual({ average: 1, count: 1, userStars: 1 });
+    expect(before[stay.id]).toEqual({ average: 1, count: 1, net: -1, userStars: 1 });
 
     const changed = (await rate(alice, stay.id, 4).expect(200)).body;
-    expect(changed).toEqual({ itemId: stay.id, averageRating: 4, userRating: 4 });
-    expect(changed).not.toHaveProperty('ratingCount');
+    expect(changed).toMatchObject({ itemId: stay.id, averageRating: 4, ratingCount: 1, userStars: 4 });
     expect(changed).not.toHaveProperty('updatedAt');
     const after = await getStarRatingSummaries(alice.userId, 'lodging', [{ itemId: stay.id, providerKey }]);
-    expect(after[stay.id]).toEqual({ average: 4, count: 1, userStars: 4 });
+    expect(after[stay.id]).toEqual({ average: 4, count: 1, net: 1, userStars: 4 });
   });
 
   it('only takes whole stars from 1 to 5 on completed items by trip members', async () => {
@@ -95,9 +96,9 @@ describe('1-5 star ratings, averaged per provider across travelers', () => {
       userId: alice.userId, tripId: alice.tripId, status: 'Completed', pickupLocation: 'A', pickupDate: '2026-03-01', dropoffLocation: 'B', dropoffDate: '2026-03-04',
       reference: '', vendor: `Skyline ${uniq}`, prepaid: '', cost: 0, model: '', notes: '', paidBy: [], travelerIds: [],
     } as any);
-    await request(app).post(`/api/transfers/${flight.id}/rating`).set('Authorization', `Bearer ${alice.token}`).send({ value: 4 }).expect(200);
-    const rentalRes = await request(app).post(`/api/car-rentals/${rental.id}/rating`).set('Authorization', `Bearer ${alice.token}`).send({ value: '2' }).expect(200);
-    expect(rentalRes.body).toEqual({ itemId: rental.id, averageRating: 2, userRating: 2 });
+    await request(app).post(`/api/transfers/${flight.id}/rating`).set('Authorization', `Bearer ${alice.token}`).send({ stars: 4 }).expect(200);
+    const rentalRes = await request(app).post(`/api/car-rentals/${rental.id}/rating`).set('Authorization', `Bearer ${alice.token}`).send({ stars: 2 }).expect(200);
+    expect(rentalRes.body).toMatchObject({ itemId: rental.id, averageRating: 2, userStars: 2 });
 
     expect(providerKeyFor('flight', { id: 'f', carrier: '' })).toBe('item:f');
     expect(providerKeyFor('activity', { id: 'a', name: 'Louvre', catalogId: 'CAT-1' })).toBe('catalog:cat-1');
@@ -126,8 +127,8 @@ describe('1-5 star ratings, averaged per provider across travelers', () => {
     const northToo = await stayAt(bob, '1 north rd.');
     const south = await stayAt(alice, '2 South Rd');
     await rate(alice, north.id, 5).expect(200);
-    expect((await rate(bob, northToo.id, 3).expect(200)).body).toMatchObject({ averageRating: 4, userRating: 3 });
-    expect(await listed(alice, south.id)).toMatchObject({ averageRating: null, userRating: null });
+    expect((await rate(bob, northToo.id, 3).expect(200)).body).toMatchObject({ averageRating: 4, userStars: 3 });
+    expect(await listed(alice, south.id)).toMatchObject({ averageRating: null, userStars: null });
   });
 
   it('converts old thumb ratings once: up is 5 stars, down is 1, an existing star rating is kept', async () => {
@@ -140,10 +141,29 @@ describe('1-5 star ratings, averaged per provider across travelers', () => {
     await rate(alice, alreadyStarred.id, 4).expect(200);
 
     expect(await convertThumbRatingsToStars()).toBe(2);
-    expect(await listed(alice, liked.id)).toMatchObject({ averageRating: 5, userRating: 5 });
-    expect(await listed(alice, disliked.id)).toMatchObject({ averageRating: 1, userRating: 1 });
-    expect(await listed(alice, alreadyStarred.id)).toMatchObject({ userRating: 4 });
+    expect(await listed(alice, liked.id)).toMatchObject({ averageRating: 5, userStars: 5 });
+    expect(await listed(alice, disliked.id)).toMatchObject({ averageRating: 1, userStars: 1 });
+    expect(await listed(alice, alreadyStarred.id)).toMatchObject({ userStars: 4 });
     expect(await listLegacyThumbRatings()).toEqual([]);
+    expect(await convertThumbRatingsToStars()).toBe(0);
+  });
+
+  // The per-item `item_ratings` table is only seeded here through SQL, so this runs on the SQL adapters.
+  (getCurrentDbProvider() === 'firebase' ? it.skip : it)('moves stars saved per item before provider averaging into the provider ratings, once', async () => {
+    const moved = await lodgingFor(alice, `Per Item ${uniq}`);
+    const kept = await lodgingFor(alice, `Per Item Kept ${uniq}`);
+    await rate(alice, kept.id, 5).expect(200);
+    const save = (id: string, stars: number) => queryBlog(
+      'INSERT INTO item_ratings (trip_id, item_type, item_id, user_id, stars) VALUES ($1, $2, $3, $4, $5)',
+      [alice.tripId, 'lodging', id, alice.userId, stars]
+    );
+    await save(moved.id, 2);
+    await save(kept.id, 1);
+
+    expect(await convertThumbRatingsToStars()).toBe(1);
+    expect(await listed(alice, moved.id)).toMatchObject({ averageRating: 2, userStars: 2 });
+    expect(await listed(alice, kept.id)).toMatchObject({ userStars: 5 });
+    expect((await queryBlog('SELECT 1 FROM item_ratings WHERE user_id = $1', [alice.userId])).rowCount).toBe(0);
     expect(await convertThumbRatingsToStars()).toBe(0);
   });
 });

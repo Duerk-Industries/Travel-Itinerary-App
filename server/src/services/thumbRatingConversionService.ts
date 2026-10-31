@@ -1,4 +1,4 @@
-import { castStarRating, deleteLegacyThumbRatings, getActivityById, getCarRentalById, getFlightById, getLodgingById, hasStarRating, listLegacyThumbRatings } from '../db';
+import { castStarRating, deleteLegacyItemRating, deleteLegacyThumbRatings, getActivityById, getCarRentalById, getFlightById, getLodgingById, hasStarRating, listLegacyItemRatings, listLegacyThumbRatings } from '../db';
 import { logError, logInfo } from '../logger';
 import { providerContextFor, providerKeyFor } from './itemRatingService';
 import type { VoteItemType } from './itemVoteService';
@@ -6,6 +6,7 @@ import type { VoteItemType } from './itemVoteService';
 // Before star ratings, a completed item was rated with a thumb. Each thumb becomes a star rating once (up is 5 stars,
 // down is 1), keeping the date the traveler last changed it, and the thumb is removed so this never repeats. A thumb
 // whose item has been deleted is dropped, and a traveler who has already starred the item keeps their stars.
+// Stars stored per item in `item_ratings` (the table that came before ratings were averaged by provider) move over the same way.
 
 const BATCH_SIZE = 500;
 const THUMB_STARS = { up: 5, down: 1 } as const;
@@ -19,9 +20,41 @@ const loadItem = async (itemType: VoteItemType, itemId: string): Promise<(Record
   }
 };
 
-/** Converts every leftover thumb rating; returns how many became star ratings. */
+const moveItemRatings = async (): Promise<number> => {
+  let moved = 0;
+  for (;;) {
+    const ratings = await listLegacyItemRatings(BATCH_SIZE);
+    if (!ratings.length) break;
+    let finished = 0;
+    for (const rating of ratings) {
+      try {
+        const item = await loadItem(rating.itemType, rating.itemId);
+        if (item && !(await hasStarRating(rating.userId, rating.itemType, rating.itemId))) {
+          const tripId = rating.tripId || String(item.tripId ?? item.trip_id ?? '');
+          const context = await providerContextFor(tripId, rating.itemType, [item]);
+          await castStarRating(rating.userId, tripId, rating.itemType, rating.itemId, providerKeyFor(rating.itemType, item, context), rating.stars, rating.changedAt);
+          moved += 1;
+        }
+        await deleteLegacyItemRating(rating.userId, rating.itemType, rating.itemId);
+        finished += 1;
+      } catch (err) {
+        logError(`[thumb-ratings] could not move ${rating.itemType} ${rating.itemId}`, err);
+      }
+    }
+    if (!finished || ratings.length < BATCH_SIZE) break;
+  }
+  return moved;
+};
+
+/** Converts every leftover thumb rating and per-item rating; returns how many became star ratings. */
 export const convertThumbRatingsToStars = async (): Promise<number> => {
   let converted = 0;
+  try {
+    converted += await moveItemRatings();
+  } catch (err) {
+    // The table is created by a migration; a database that has not run it has nothing to move.
+    logError('[thumb-ratings] could not read per-item ratings', err);
+  }
   for (;;) {
     const thumbs = await listLegacyThumbRatings(BATCH_SIZE);
     if (!thumbs.length) break;
