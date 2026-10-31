@@ -935,7 +935,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Kalemegdan_park_in_Belgrade_Europe.jpg/960px-Kalemegdan_park_in_Belgrade_Europe.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Kalemegdan park in Belgrade Europe.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kalemegdan_park_in_Belgrade_Europe.jpg",
+          "license": "Public domain",
+          "author": "Dusan Bicanski",
+          "selection": "ai"
+        }
       },
       "serbia/belgrade-nightlife-zemun": {
         "name": "Zemun, river barges and Belgrade nightlife",
@@ -947,7 +956,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Zemun_center_from_Millenium_Tower.JPG/960px-Zemun_center_from_Millenium_Tower.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Zemun center from Millenium Tower.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Zemun_center_from_Millenium_Tower.JPG",
+          "license": "CC0",
+          "author": "Jan Pešula",
+          "selection": "ai"
+        }
       },
       "serbia/novi-sad-petrovaradin": {
         "name": "Novi Sad and Petrovaradin Fortress",
@@ -959,7 +977,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/Petrovaradin_Fortress_2010.jpg/960px-Petrovaradin_Fortress_2010.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Petrovaradin Fortress 2010.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Petrovaradin_Fortress_2010.jpg",
+          "license": "Public domain",
+          "author": "No machine-readable author provided. Peccafly assumed (based on copyright claims).",
+          "selection": "ai"
+        }
       },
       "serbia/sremski-karlovci-fruska-gora": {
         "name": "Sremski Karlovci and Fruska Gora wineries",
@@ -1007,7 +1034,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Mokra_Gora%2C_Uzice%2C_Serbia_2012.jpg/960px-Mokra_Gora%2C_Uzice%2C_Serbia_2012.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Mokra Gora, Uzice, Serbia 2012.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mokra_Gora,_Uzice,_Serbia_2012.jpg",
+          "license": "CC0",
+          "author": "Tumi-1983",
+          "selection": "ai"
+        }
       },
       "serbia/zlatibor-resort": {
         "name": "Zlatibor mountain, Sirogojno and Stopica Cave",
@@ -1031,7 +1067,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Crkva_manastira_Studenica.jpg/960px-Crkva_manastira_Studenica.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Crkva manastira Studenica.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Crkva_manastira_Studenica.jpg",
+          "license": "Public domain",
+          "author": "Bratislav Tabaš",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1043,7 +1088,18 @@
       "serbia/belgrade": {
         "name": "Belgrade",
         "description": "The capital at the meeting of two great rivers.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/45/August_2006_Belgrade_14.jpg/960px-August_2006_Belgrade_14.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:August 2006 Belgrade 14.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:August_2006_Belgrade_14.jpg",
+            "license": "CC0",
+            "author": "Syced",
+            "selection": "ai"
+          }
+        ]
       },
       "serbia/novi-sad": {
         "name": "Novi Sad",
@@ -1053,7 +1109,18 @@
       "serbia/zlatibor": {
         "name": "Zlatibor",
         "description": "A mountain resort and base for Tara and Mokra Gora.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Zlatibor_lake.png/960px-Zlatibor_lake.png",
+            "width": 960,
+            "height": 459,
+            "title": "File:Zlatibor lake.png",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Zlatibor_lake.png",
+            "license": "CC0",
+            "author": "Grati",
+            "selection": "ai"
+          }
+        ]
       },
       "serbia/nis": {
         "name": "Nis",

@@ -2018,7 +2018,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Edinburgh_Castle_Exterior.jpg/960px-Edinburgh_Castle_Exterior.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Edinburgh Castle Exterior.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Edinburgh_Castle_Exterior.jpg",
+          "license": "CC0",
+          "author": "Michael D Beckwith",
+          "selection": "ai"
+        }
       },
       "united-kingdom/national-museum-scotland": {
         "name": "National Museum of Scotland",
@@ -2041,7 +2050,16 @@
           "iconic_landmarks"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Arthur%27s_Seat_Baltane_01.jpg/960px-Arthur%27s_Seat_Baltane_01.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Arthur's Seat Baltane 01.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Arthur%27s_Seat_Baltane_01.jpg",
+          "license": "CC0",
+          "author": "Horep",
+          "selection": "ai"
+        }
       },
       "united-kingdom/st-andrews": {
         "name": "St Andrews old town and cathedral ruins",
@@ -2053,7 +2071,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/St._Andrews_MET_DP140434.jpg/960px-St._Andrews_MET_DP140434.jpg",
+          "width": 960,
+          "height": 708,
+          "title": "File:St. Andrews MET DP140434.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:St._Andrews_MET_DP140434.jpg",
+          "license": "CC0",
+          "author": "David Octavius Hill / Robert Adamson / Hill & Adamson",
+          "selection": "ai"
+        }
       },
       "united-kingdom/dean-village": {
         "name": "Dean Village and Stockbridge",
@@ -2065,7 +2092,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c5/Dean_Village_%2850312338893%29.jpg/960px-Dean_Village_%2850312338893%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dean Village (50312338893).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dean_Village_(50312338893).jpg",
+          "license": "CC0",
+          "author": "Alex Liivet from Chester, United Kingdom",
+          "selection": "ai"
+        }
       },
       "united-kingdom/old-town-dinner": {
         "name": "Traditional dinner in Edinburgh's Old Town",
@@ -2110,7 +2146,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Glen_Coe_2012.JPG/960px-Glen_Coe_2012.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Glen Coe 2012.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Glen_Coe_2012.JPG",
+          "license": "CC0",
+          "author": "Lómelinde",
+          "selection": "ai"
+        }
       },
       "united-kingdom/eilean-donan-castle": {
         "name": "Eilean Donan Castle",
@@ -2122,7 +2167,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Eilean_Donan_Castle.jpg/960px-Eilean_Donan_Castle.jpg",
+          "width": 960,
+          "height": 645,
+          "title": "File:Eilean Donan Castle.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Eilean_Donan_Castle.jpg",
+          "license": "Public domain",
+          "author": "JC83",
+          "selection": "ai"
+        }
       },
       "united-kingdom/old-man-of-storr": {
         "name": "The Old Man of Storr",
@@ -2134,7 +2188,16 @@
           "iconic_landmarks"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/Old_Man_of_Storr%2C_Portree%2C_United_Kingdom_%28Unsplash_yfIVHbP5QaA%29.jpg/960px-Old_Man_of_Storr%2C_Portree%2C_United_Kingdom_%28Unsplash_yfIVHbP5QaA%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Old Man of Storr, Portree, United Kingdom (Unsplash yfIVHbP5QaA).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Old_Man_of_Storr,_Portree,_United_Kingdom_(Unsplash_yfIVHbP5QaA).jpg",
+          "license": "CC0",
+          "author": "Arthur arthur10",
+          "selection": "ai"
+        }
       },
       "united-kingdom/quiraing": {
         "name": "The Quiraing",
@@ -2145,7 +2208,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/The_Quiraing%2C_Portree%2C_United_Kingdom_%28Unsplash%29.jpg/960px-The_Quiraing%2C_Portree%2C_United_Kingdom_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:The Quiraing, Portree, United Kingdom (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Quiraing,_Portree,_United_Kingdom_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "George Hiles hilesy",
+          "selection": "ai"
+        }
       },
       "united-kingdom/fairy-pools": {
         "name": "The Fairy Pools",
@@ -2168,7 +2240,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Jasper_van_der_Meij_2014_%28Unsplash%29.jpg/960px-Jasper_van_der_Meij_2014_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 636,
+          "title": "File:Jasper van der Meij 2014 (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Jasper_van_der_Meij_2014_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Jasper van der Meij jaspervandermeij",
+          "selection": "ai"
+        }
       },
       "united-kingdom/portree": {
         "name": "Portree",
@@ -2203,7 +2284,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/Urquhart_Castle%2C_Loch_Ness%2C_Scotland_%2849720828661%29.jpg/960px-Urquhart_Castle%2C_Loch_Ness%2C_Scotland_%2849720828661%29.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Urquhart Castle, Loch Ness, Scotland (49720828661).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Urquhart_Castle,_Loch_Ness,_Scotland_(49720828661).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "united-kingdom/culloden-battlefield": {
         "name": "Culloden Battlefield",
@@ -2214,7 +2304,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d7/Culloden_Battlefield.jpg/960px-Culloden_Battlefield.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Culloden Battlefield.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Culloden_Battlefield.jpg",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "united-kingdom/inverness-town": {
         "name": "Inverness town centre",
@@ -2225,7 +2324,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Inverness_December_2009.jpg/960px-Inverness_December_2009.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Inverness December 2009.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Inverness_December_2009.jpg",
+          "license": "CC0",
+          "author": "Stablenode",
+          "selection": "ai"
+        }
       },
       "united-kingdom/loch-ness-cruise": {
         "name": "Loch Ness boat cruise",
@@ -2258,7 +2366,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Blair_Castle_-_Scotland.JPG/960px-Blair_Castle_-_Scotland.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Blair Castle - Scotland.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Blair_Castle_-_Scotland.JPG",
+          "license": "Public domain",
+          "author": "No machine-readable author provided. Hasso~commonswiki assumed (based on copyright claims).",
+          "selection": "ai"
+        }
       },
       "united-kingdom/queens-view": {
         "name": "Queen's View, Loch Tummel",
@@ -2303,7 +2420,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Kelvingrove_Art_Gallery_and_Museum_%2850419052972%29.jpg/960px-Kelvingrove_Art_Gallery_and_Museum_%2850419052972%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Kelvingrove Art Gallery and Museum (50419052972).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kelvingrove_Art_Gallery_and_Museum_(50419052972).jpg",
+          "license": "CC0",
+          "author": "Alex Liivet from Chester, United Kingdom",
+          "selection": "ai"
+        }
       },
       "united-kingdom/glasgow-mackintosh": {
         "name": "Mackintosh architecture walk",
@@ -2361,7 +2487,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Gezicht_op_Iona_Abbey_en_St._Oran%27s_chapel%2C_RP-F-F01185-C.jpg/960px-Gezicht_op_Iona_Abbey_en_St._Oran%27s_chapel%2C_RP-F-F01185-C.jpg",
+          "width": 960,
+          "height": 739,
+          "title": "File:Gezicht op Iona Abbey en St. Oran's chapel, RP-F-F01185-C.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gezicht_op_Iona_Abbey_en_St._Oran%27s_chapel,_RP-F-F01185-C.jpg",
+          "license": "CC0",
+          "author": "Rijksmuseum",
+          "selection": "ai"
+        }
       },
       "united-kingdom/loch-lomond": {
         "name": "Loch Lomond viewpoint",
@@ -2373,7 +2508,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/Loch-Lomond-7.jpg/960px-Loch-Lomond-7.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Loch-Lomond-7.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Loch-Lomond-7.jpg",
+          "license": "CC0",
+          "author": "MartinThoma",
+          "selection": "ai"
+        }
       },
       "united-kingdom/glenfinnan-viaduct": {
         "name": "Glenfinnan Viaduct",
@@ -2385,14 +2529,34 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e4/Viaduct_in_the_autumn_%28Unsplash%29.jpg/960px-Viaduct_in_the_autumn_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Viaduct in the autumn (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Viaduct_in_the_autumn_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Paul-Louis Pröve pietz",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "united-kingdom": {
         "name": "United Kingdom",
         "description": "An island nation of four constituent countries, pairing historic cities and castles with coastline, moorland and mountain scenery.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/55/Ireland_and_the_United_Kingdom_%28MODIS%29.jpg/960px-Ireland_and_the_United_Kingdom_%28MODIS%29.jpg",
+            "width": 960,
+            "height": 755,
+            "title": "File:Ireland and the United Kingdom (MODIS).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ireland_and_the_United_Kingdom_(MODIS).jpg",
+            "license": "Public domain",
+            "author": "MODIS Land Rapid Response Team, NASA GSFC",
+            "selection": "ai"
+          }
+        ]
       },
       "united-kingdom/scotland": {
         "name": "Scotland",
@@ -2402,12 +2566,34 @@
       "united-kingdom/edinburgh": {
         "name": "Edinburgh",
         "description": "A compact hilltop capital of a medieval Old Town, a Georgian New Town, and a castle that overlooks both.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c4/Edinburgh_Castle_from_Grass_Market.jpg/960px-Edinburgh_Castle_from_Grass_Market.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Edinburgh Castle from Grass Market.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Edinburgh_Castle_from_Grass_Market.jpg",
+            "license": "Public domain",
+            "author": "George Washington Wilson / Adam Cuerden",
+            "selection": "ai"
+          }
+        ]
       },
       "united-kingdom/isle-of-skye": {
         "name": "Isle of Skye",
         "description": "A mountainous Hebridean island of jagged ridgelines, sea cliffs and single-track roads, reached by bridge from the mainland.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/The_Red_Cuillin%2C_Isle_of_Skye%2C_Scotland_01.jpg/960px-The_Red_Cuillin%2C_Isle_of_Skye%2C_Scotland_01.jpg",
+            "width": 960,
+            "height": 649,
+            "title": "File:The Red Cuillin, Isle of Skye, Scotland 01.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Red_Cuillin,_Isle_of_Skye,_Scotland_01.jpg",
+            "license": "CC0",
+            "author": "Ridiculopathy",
+            "selection": "ai"
+          }
+        ]
       },
       "united-kingdom/inverness": {
         "name": "Inverness",
@@ -2422,7 +2608,18 @@
       "united-kingdom/oban": {
         "name": "Oban",
         "description": "A harbour town on the west coast, the ferry gateway to the Inner Hebrides and known for its seafood and whisky.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Oban_Harbour_%2830027768535%29.jpg/960px-Oban_Harbour_%2830027768535%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Oban Harbour (30027768535).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Oban_Harbour_(30027768535).jpg",
+            "license": "CC0",
+            "author": "Alex Liivet from Chester, United Kingdom",
+            "selection": "ai"
+          }
+        ]
       },
       "united-kingdom/pitlochry": {
         "name": "Pitlochry",
@@ -2432,7 +2629,18 @@
       "united-kingdom/st-andrews": {
         "name": "St Andrews",
         "description": "A small university and golf town on the Fife coast, with the ruins of the largest medieval cathedral in Scotland above its harbour.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/St._Andrews_MET_DP140434.jpg/960px-St._Andrews_MET_DP140434.jpg",
+            "width": 960,
+            "height": 708,
+            "title": "File:St. Andrews MET DP140434.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:St._Andrews_MET_DP140434.jpg",
+            "license": "CC0",
+            "author": "David Octavius Hill / Robert Adamson / Hill & Adamson",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

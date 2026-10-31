@@ -1004,7 +1004,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Terrasses_de_la_m%C3%A9dina_de_Tunis.jpg/960px-Terrasses_de_la_m%C3%A9dina_de_Tunis.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Terrasses de la médina de Tunis.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Terrasses_de_la_m%C3%A9dina_de_Tunis.jpg",
+          "license": "Public domain",
+          "author": "Raspail",
+          "selection": "ai"
+        }
       },
       "tunisia/carthage-sidi-bou-said": {
         "name": "Carthage ruins and Sidi Bou Said",
@@ -1028,7 +1037,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/The_Roman_Theatre_02.jpg/960px-The_Roman_Theatre_02.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:The Roman Theatre 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Roman_Theatre_02.jpg",
+          "license": "CC0",
+          "author": "نعيم قربوسي",
+          "selection": "ai"
+        }
       },
       "tunisia/el-jem": {
         "name": "El Jem amphitheatre",
@@ -1040,7 +1058,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Amphitheatre_of_El_Jem%2C_Tunisia_in_January_2023.jpg/960px-Amphitheatre_of_El_Jem%2C_Tunisia_in_January_2023.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Amphitheatre of El Jem, Tunisia in January 2023.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Amphitheatre_of_El_Jem,_Tunisia_in_January_2023.jpg",
+          "license": "CC0",
+          "author": "Ridiculopathy",
+          "selection": "ai"
+        }
       },
       "tunisia/kairouan": {
         "name": "Kairouan Great Mosque and medina",
@@ -1052,7 +1079,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/La_grande_mosqu%C3%A9e_de_Kairouan.jpg/960px-La_grande_mosqu%C3%A9e_de_Kairouan.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:La grande mosquée de Kairouan.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:La_grande_mosqu%C3%A9e_de_Kairouan.jpg",
+          "license": "CC0",
+          "author": "Afek91",
+          "selection": "ai"
+        }
       },
       "tunisia/matmata-troglodyte": {
         "name": "Matmata troglodyte houses",
@@ -1077,7 +1113,16 @@
           "authentic_local"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Liberty_Square%2C_Douz_City_06.jpg/960px-Liberty_Square%2C_Douz_City_06.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Liberty Square, Douz City 06.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Liberty_Square,_Douz_City_06.jpg",
+          "license": "CC0",
+          "author": "نعيم قربوسي",
+          "selection": "ai"
+        }
       },
       "tunisia/djerba": {
         "name": "Djerba Houmt Souk and El Ghriba synagogue",
@@ -1119,7 +1164,18 @@
       "tunisia/kairouan": {
         "name": "Kairouan",
         "description": "A holy city with the oldest mosque in North Africa.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Entr%C3%A9e_de_la_Grande_Mosqu%C3%A9e_de_Kairouan_en_juillet_1967.jpg/960px-Entr%C3%A9e_de_la_Grande_Mosqu%C3%A9e_de_Kairouan_en_juillet_1967.jpg",
+            "width": 960,
+            "height": 656,
+            "title": "File:Entrée de la Grande Mosquée de Kairouan en juillet 1967.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Entr%C3%A9e_de_la_Grande_Mosqu%C3%A9e_de_Kairouan_en_juillet_1967.jpg",
+            "license": "CC0",
+            "author": "Mouliric",
+            "selection": "ai"
+          }
+        ]
       },
       "tunisia/douz": {
         "name": "Douz",

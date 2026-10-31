@@ -1458,7 +1458,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/British_Museum_portico_2011_1.jpg/960px-British_Museum_portico_2011_1.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:British Museum portico 2011 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:British_Museum_portico_2011_1.jpg",
+          "license": "CC0",
+          "author": "Perituss",
+          "selection": "ai"
+        }
       },
       "united-kingdom/london-tower-greenwich": {
         "name": "Tower of London, Tower Bridge and Greenwich",
@@ -1470,7 +1479,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Exterior_of_Tower_of_London.jpg/960px-Exterior_of_Tower_of_London.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Exterior of Tower of London.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Exterior_of_Tower_of_London.jpg",
+          "license": "CC0",
+          "author": "SkyRose18",
+          "selection": "ai"
+        }
       },
       "united-kingdom/windsor-oxford": {
         "name": "Windsor Castle or Oxford colleges",
@@ -1494,7 +1512,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Stonehenge_complex%2C_2024.jpg/960px-Stonehenge_complex%2C_2024.jpg",
+          "width": 960,
+          "height": 686,
+          "title": "File:Stonehenge complex, 2024.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Stonehenge_complex,_2024.jpg",
+          "license": "CC0",
+          "author": "Hotolmo22",
+          "selection": "ai"
+        }
       },
       "united-kingdom/bath-roman-baths": {
         "name": "Bath Roman Baths and the Royal Crescent",
@@ -1507,7 +1534,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/65/Bath_Roman_Baths_%289816895015%29.jpg/960px-Bath_Roman_Baths_%289816895015%29.jpg",
+          "width": 960,
+          "height": 645,
+          "title": "File:Bath Roman Baths (9816895015).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bath_Roman_Baths_(9816895015).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "united-kingdom/cotswolds-villages": {
         "name": "Cotswolds villages",
@@ -1532,7 +1568,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bc/York_Minster_from_city_wall_-_1987-09-21_colored.jpg/960px-York_Minster_from_city_wall_-_1987-09-21_colored.jpg",
+          "width": 960,
+          "height": 625,
+          "title": "File:York Minster from city wall - 1987-09-21 colored.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:York_Minster_from_city_wall_-_1987-09-21_colored.jpg",
+          "license": "CC0",
+          "author": "Cbaile19",
+          "selection": "ai"
+        }
       },
       "united-kingdom/lake-district-windermere": {
         "name": "Lake District: Windermere cruise and fell walk",
@@ -1556,7 +1601,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/44/Titanic_Belfast_in_2025.02.jpg/960px-Titanic_Belfast_in_2025.02.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Titanic Belfast in 2025.02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Titanic_Belfast_in_2025.02.jpg",
+          "license": "CC0",
+          "author": "CAPTAIN RAJU",
+          "selection": "ai"
+        }
       },
       "united-kingdom/giants-causeway": {
         "name": "Giant Causeway and the Antrim coast",
@@ -1568,14 +1622,34 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/The_Giant%27s_Causeway_landscape.jpg/960px-The_Giant%27s_Causeway_landscape.jpg",
+          "width": 960,
+          "height": 718,
+          "title": "File:The Giant's Causeway landscape.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Giant%27s_Causeway_landscape.jpg",
+          "license": "CC0",
+          "author": "Yujin",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "united-kingdom": {
         "name": "United Kingdom",
         "description": "A group of nations of castles, cathedrals, moors, lakes and cities.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/55/Ireland_and_the_United_Kingdom_%28MODIS%29.jpg/960px-Ireland_and_the_United_Kingdom_%28MODIS%29.jpg",
+            "width": 960,
+            "height": 755,
+            "title": "File:Ireland and the United Kingdom (MODIS).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ireland_and_the_United_Kingdom_(MODIS).jpg",
+            "license": "Public domain",
+            "author": "MODIS Land Rapid Response Team, NASA GSFC",
+            "selection": "ai"
+          }
+        ]
       },
       "united-kingdom/england": {
         "name": "England",
@@ -1585,17 +1659,50 @@
       "united-kingdom/london": {
         "name": "London",
         "description": "The capital, with royal sights and world-class museums.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Early_morning_in_London_-_50442294331.jpg/960px-Early_morning_in_London_-_50442294331.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Early morning in London - 50442294331.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Early_morning_in_London_-_50442294331.jpg",
+            "license": "CC0",
+            "author": "Pierre Blaché from Paris, France",
+            "selection": "ai"
+          }
+        ]
       },
       "united-kingdom/oxford": {
         "name": "Oxford",
         "description": "A university city of colleges.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3d/University_of_Oxford%2C_Oxford%2C_United_Kingdom_%28Unsplash%29.jpg/960px-University_of_Oxford%2C_Oxford%2C_United_Kingdom_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 539,
+            "title": "File:University of Oxford, Oxford, United Kingdom (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:University_of_Oxford,_Oxford,_United_Kingdom_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Sidharth Bhatia sidharthbhatia",
+            "selection": "ai"
+          }
+        ]
       },
       "united-kingdom/bath": {
         "name": "Bath",
         "description": "A Georgian spa city with Roman baths.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Great_Bath_%28view_from_north_east_corner%29_2025-07-24.jpg/960px-Great_Bath_%28view_from_north_east_corner%29_2025-07-24.jpg",
+            "width": 960,
+            "height": 723,
+            "title": "File:Great Bath (view from north east corner) 2025-07-24.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Great_Bath_(view_from_north_east_corner)_2025-07-24.jpg",
+            "license": "CC0",
+            "author": "Andy Li",
+            "selection": "ai"
+          }
+        ]
       },
       "united-kingdom/cotswolds": {
         "name": "Cotswolds",
@@ -1605,7 +1712,18 @@
       "united-kingdom/lake-district": {
         "name": "Lake District",
         "description": "A national park of lakes and fells.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Misty_Lake_District.JPG/960px-Misty_Lake_District.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Misty Lake District.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Misty_Lake_District.JPG",
+            "license": "CC0",
+            "author": "PookieFugglestein",
+            "selection": "ai"
+          }
+        ]
       },
       "united-kingdom/york": {
         "name": "York",
@@ -1620,7 +1738,18 @@
       "united-kingdom/belfast": {
         "name": "Belfast",
         "description": "The capital of Northern Ireland.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/The_Titanic_Memorial_Garden%2C_Belfast%2C_United_Kingdom_%28Unsplash%29.jpg/960px-The_Titanic_Memorial_Garden%2C_Belfast%2C_United_Kingdom_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:The Titanic Memorial Garden, Belfast, United Kingdom (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Titanic_Memorial_Garden,_Belfast,_United_Kingdom_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Yaniv Knobel knobelman",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

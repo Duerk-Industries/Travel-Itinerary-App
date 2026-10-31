@@ -1456,7 +1456,16 @@
           "culture"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Sigiriya_rock_from_a_distance.jpg/960px-Sigiriya_rock_from_a_distance.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Sigiriya rock from a distance.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sigiriya_rock_from_a_distance.jpg",
+          "license": "CC0",
+          "author": "Yourusernamewillbepublic2",
+          "selection": "ai"
+        }
       },
       "sri-lanka/dambulla-polonnaruwa": {
         "name": "Dambulla cave temples and Polonnaruwa",
@@ -1468,7 +1477,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Exterior_of_Dambulla_cave_temple_1.jpg/960px-Exterior_of_Dambulla_cave_temple_1.jpg",
+          "width": 960,
+          "height": 748,
+          "title": "File:Exterior of Dambulla cave temple 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Exterior_of_Dambulla_cave_temple_1.jpg",
+          "license": "CC0",
+          "author": "Dudva",
+          "selection": "ai"
+        }
       },
       "sri-lanka/kandy-tooth": {
         "name": "Kandy Temple of the Tooth and the lake",
@@ -1480,7 +1498,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/The_temple_of_Tooth_-_2010.JPG/960px-The_temple_of_Tooth_-_2010.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:The temple of Tooth - 2010.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_temple_of_Tooth_-_2010.JPG",
+          "license": "Public domain",
+          "author": "Løken",
+          "selection": "ai"
+        }
       },
       "sri-lanka/kandy-ella-train": {
         "name": "Kandy to Ella train ride",
@@ -1505,7 +1532,16 @@
           "food"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e5/Tea-plantation_Nuwara_Eliya-2567.jpg/960px-Tea-plantation_Nuwara_Eliya-2567.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Tea-plantation Nuwara Eliya-2567.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tea-plantation_Nuwara_Eliya-2567.jpg",
+          "license": "CC0",
+          "author": "Bergentroll",
+          "selection": "ai"
+        }
       },
       "sri-lanka/ella-nine-arches": {
         "name": "Ella: Nine Arches Bridge, Little Adam Peak and Ravana Falls",
@@ -1557,7 +1593,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/Galle_Fort_as_seen_from_outside_the_main_street..jpg/960px-Galle_Fort_as_seen_from_outside_the_main_street..jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Galle Fort as seen from outside the main street..jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Galle_Fort_as_seen_from_outside_the_main_street..jpg",
+          "license": "CC0",
+          "author": "Rudolph.A.furtado",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1569,22 +1614,66 @@
       "sri-lanka/colombo": {
         "name": "Colombo",
         "description": "The coastal capital.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Colombo_city_skyline.png/960px-Colombo_city_skyline.png",
+            "width": 960,
+            "height": 720,
+            "title": "File:Colombo city skyline.png",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Colombo_city_skyline.png",
+            "license": "CC0",
+            "author": "Gihanud2001",
+            "selection": "ai"
+          }
+        ]
       },
       "sri-lanka/sigiriya": {
         "name": "Sigiriya",
         "description": "The Lion Rock and the Cultural Triangle.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Sigiriya_rock_from_a_distance.jpg/960px-Sigiriya_rock_from_a_distance.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Sigiriya rock from a distance.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sigiriya_rock_from_a_distance.jpg",
+            "license": "CC0",
+            "author": "Yourusernamewillbepublic2",
+            "selection": "ai"
+          }
+        ]
       },
       "sri-lanka/kandy": {
         "name": "Kandy",
         "description": "A hill-country city of the Temple of the Tooth.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Kandy_Spiritual_Buddhist_Place_Across_Lake.jpg/960px-Kandy_Spiritual_Buddhist_Place_Across_Lake.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Kandy Spiritual Buddhist Place Across Lake.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Kandy_Spiritual_Buddhist_Place_Across_Lake.jpg",
+            "license": "CC0",
+            "author": "Yourusernamewillbepublic2",
+            "selection": "ai"
+          }
+        ]
       },
       "sri-lanka/nuwara-eliya": {
         "name": "Nuwara Eliya",
         "description": "A cool hill station of tea estates.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e5/Tea-plantation_Nuwara_Eliya-2567.jpg/960px-Tea-plantation_Nuwara_Eliya-2567.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Tea-plantation Nuwara Eliya-2567.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tea-plantation_Nuwara_Eliya-2567.jpg",
+            "license": "CC0",
+            "author": "Bergentroll",
+            "selection": "ai"
+          }
+        ]
       },
       "sri-lanka/ella": {
         "name": "Ella",

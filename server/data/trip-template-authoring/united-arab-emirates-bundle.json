@@ -915,7 +915,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/The_Dubai_Fountain_%26_Burj_Khalifa_Pixabay.jpg/960px-The_Dubai_Fountain_%26_Burj_Khalifa_Pixabay.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:The Dubai Fountain & Burj Khalifa Pixabay.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Dubai_Fountain_%26_Burj_Khalifa_Pixabay.jpg",
+          "license": "CC0",
+          "author": "Christian Raggini",
+          "selection": "ai"
+        }
       },
       "united-arab-emirates/old-dubai": {
         "name": "Old Dubai: Creek, souks and abra ride",
@@ -940,7 +949,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Dubai_Marina_and_Skyline_from_Le_Royal_M%C3%A9ridien_Beach_Resort_and_Spa.jpg/960px-Dubai_Marina_and_Skyline_from_Le_Royal_M%C3%A9ridien_Beach_Resort_and_Spa.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dubai Marina and Skyline from Le Royal Méridien Beach Resort and Spa.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dubai_Marina_and_Skyline_from_Le_Royal_M%C3%A9ridien_Beach_Resort_and_Spa.jpg",
+          "license": "Public domain",
+          "author": "CT Cooper",
+          "selection": "ai"
+        }
       },
       "united-arab-emirates/dubai-desert-safari": {
         "name": "Dubai desert safari",
@@ -965,7 +983,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/The_other_side_of_Hatta_Dam.jpg/960px-The_other_side_of_Hatta_Dam.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:The other side of Hatta Dam.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_other_side_of_Hatta_Dam.jpg",
+          "license": "CC0",
+          "author": "Tms2007",
+          "selection": "ai"
+        }
       },
       "united-arab-emirates/sheikh-zayed-mosque": {
         "name": "Sheikh Zayed Grand Mosque",
@@ -989,7 +1016,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6e/Visitors_at_Louvre_Abu_Dhabi.jpg/960px-Visitors_at_Louvre_Abu_Dhabi.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Visitors at Louvre Abu Dhabi.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Visitors_at_Louvre_Abu_Dhabi.jpg",
+          "license": "CC0",
+          "author": "Tasos Lekkas",
+          "selection": "ai"
+        }
       },
       "united-arab-emirates/yas-island": {
         "name": "Yas Island and Ferrari World",
@@ -1013,29 +1049,82 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/58/Al_%D9%90%D9%90Ain_Palace_Museum_682020_AR_4eb05b921c.jpg/960px-Al_%D9%90%D9%90Ain_Palace_Museum_682020_AR_4eb05b921c.jpg",
+          "width": 960,
+          "height": 600,
+          "title": "File:Al ِِAin Palace Museum 682020 AR 4eb05b921c.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Al_%D9%90%D9%90Ain_Palace_Museum_682020_AR_4eb05b921c.jpg",
+          "license": "CC0",
+          "author": "BoTheyaab",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "united-arab-emirates": {
         "name": "United Arab Emirates",
         "description": "A federation of emirates of futuristic cities, desert dunes and mountain oases.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Artificial_Archipelagos%2C_Dubai%2C_United_Arab_Emirates_ISS022-E-024940_lrg.jpg/960px-Artificial_Archipelagos%2C_Dubai%2C_United_Arab_Emirates_ISS022-E-024940_lrg.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Artificial Archipelagos, Dubai, United Arab Emirates ISS022-E-024940 lrg.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Artificial_Archipelagos,_Dubai,_United_Arab_Emirates_ISS022-E-024940_lrg.jpg",
+            "license": "Public domain",
+            "author": "Member of the Expedition 22 crew.",
+            "selection": "ai"
+          }
+        ]
       },
       "united-arab-emirates/dubai": {
         "name": "Dubai",
         "description": "The skyscraper city of souks, beaches and desert safaris.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Dubai%2C_United_Arab_Emirates_%28Unsplash_suv4vuJsH6g%29.jpg/960px-Dubai%2C_United_Arab_Emirates_%28Unsplash_suv4vuJsH6g%29.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Dubai, United Arab Emirates (Unsplash suv4vuJsH6g).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Dubai,_United_Arab_Emirates_(Unsplash_suv4vuJsH6g).jpg",
+            "license": "CC0",
+            "author": "Caleb Whiting dogbear869",
+            "selection": "ai"
+          }
+        ]
       },
       "united-arab-emirates/hatta": {
         "name": "Hatta",
         "description": "A mountain enclave inland.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/The_other_side_of_Hatta_Dam.jpg/960px-The_other_side_of_Hatta_Dam.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:The other side of Hatta Dam.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:The_other_side_of_Hatta_Dam.jpg",
+            "license": "CC0",
+            "author": "Tms2007",
+            "selection": "ai"
+          }
+        ]
       },
       "united-arab-emirates/abu-dhabi": {
         "name": "Abu Dhabi",
         "description": "The capital, with a vast mosque and a Louvre museum.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Abu_Dhabi_Sunset_%28Unsplash%29.jpg/960px-Abu_Dhabi_Sunset_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 636,
+            "title": "File:Abu Dhabi Sunset (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Abu_Dhabi_Sunset_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Emma Van Sant emma",
+            "selection": "ai"
+          }
+        ]
       },
       "united-arab-emirates/al-ain": {
         "name": "Al Ain",

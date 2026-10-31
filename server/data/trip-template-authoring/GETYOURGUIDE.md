@@ -39,6 +39,30 @@ For each activity worth booking in the template:
 
 Keep several tours for one activity when they differ, such as a ticket and a combined tour.
 
+## Running it over many templates
+
+Only activities whose `book` note is set are worth a search, about 300 distinct names across all
+bundles. Work the list in batches.
+
+- **Search budget.** Web searches are capped per turn (200), and every agent running in that turn
+  shares the cap. Aim for about one search per activity, so one turn covers roughly 150 activities.
+  Several parallel agents just drain the same cap faster; split the list so each agent has about
+  40 activities and expect to continue in the next turn.
+- **Keep a record.** Give each agent a work list file and have it write two files: the tours it found,
+  and a `searched` list of every activity name it actually searched, whether or not it found a tour.
+  Without the second, a later run cannot tell "searched, nothing suitable" from "never searched".
+- **Search tips.** Restrict the search to the getyourguide.com domain. A query holding the tour's
+  `t` number returns that tour's own rating and review count, which settles step 3 above. Prefer the
+  figures from the result that names the exact tour.
+- **Merge.** Write results to a scratch JSON array, not straight into `getyourguide-tours.json`, then
+  merge with `python server/tools/trip-templates/merge_gyg_tours.py <tours.json>...`. It rejects an
+  entry with a malformed URL, a tour id that is not in the URL, a rating under 4.0, fewer than 50
+  reviews, an activity name no template has, or an id already in the file, and prints why.
+- **Check.** Run `npx jest --config jest.projects.js --runInBand getYourGuide` from `server/`.
+- **Read the doubts.** Have agents list matches they were unsure of (a rating tied to a tour only by
+  title, a tour covering only one stop of a combined activity, a different departure city) and check
+  those before committing. No link beats a wrong link.
+
 ## How a tour is chosen
 
 The choice is made per trip, in `selectToursForActivities`, so it needs no template-specific data.

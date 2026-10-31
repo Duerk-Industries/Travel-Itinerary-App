@@ -844,7 +844,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/Masmak_castle.jpg/960px-Masmak_castle.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Masmak castle.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Masmak_castle.jpg",
+          "license": "Public domain",
+          "author": "Baptiste Marcel",
+          "selection": "ai"
+        }
       },
       "saudi-arabia/diriyah": {
         "name": "Diriyah At-Turaif and Bujairi Terrace",
@@ -857,7 +866,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/At-Turaif_District_in_ad-Dir%27iyah_2025.jpg/960px-At-Turaif_District_in_ad-Dir%27iyah_2025.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:At-Turaif District in ad-Dir'iyah 2025.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:At-Turaif_District_in_ad-Dir%27iyah_2025.jpg",
+          "license": "CC0",
+          "author": "ほっきー",
+          "selection": "ai"
+        }
       },
       "saudi-arabia/edge-of-the-world": {
         "name": "Edge of the World cliffs",
@@ -882,7 +900,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/20141006_143132_resized.jpg/960px-20141006_143132_resized.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:20141006 143132 resized.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:20141006_143132_resized.jpg",
+          "license": "CC0",
+          "author": "Franksuresh",
+          "selection": "ai"
+        }
       },
       "saudi-arabia/alula-oasis-rocks": {
         "name": "AlUla Old Town, Elephant Rock and Jabal Ikmah",
@@ -908,7 +935,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7b/Old_Jeddah_%28Al_Balad%29%2C_Saudi_Arabia_in_November_2022.jpg/960px-Old_Jeddah_%28Al_Balad%29%2C_Saudi_Arabia_in_November_2022.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Old Jeddah (Al Balad), Saudi Arabia in November 2022.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Old_Jeddah_(Al_Balad),_Saudi_Arabia_in_November_2022.jpg",
+          "license": "Public domain",
+          "author": "Anne and David",
+          "selection": "ai"
+        }
       },
       "saudi-arabia/jeddah-corniche": {
         "name": "Jeddah Corniche, Floating Mosque and Red Sea",
@@ -942,7 +978,18 @@
       "saudi-arabia/jeddah": {
         "name": "Jeddah",
         "description": "The Red Sea port with a UNESCO old town.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7b/Old_Jeddah_%28Al_Balad%29%2C_Saudi_Arabia_in_November_2022.jpg/960px-Old_Jeddah_%28Al_Balad%29%2C_Saudi_Arabia_in_November_2022.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Old Jeddah (Al Balad), Saudi Arabia in November 2022.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Old_Jeddah_(Al_Balad),_Saudi_Arabia_in_November_2022.jpg",
+            "license": "Public domain",
+            "author": "Anne and David",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

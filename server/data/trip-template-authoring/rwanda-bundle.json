@@ -901,7 +901,16 @@
           "iconic_landmarks"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Silverback.JPG/960px-Silverback.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Silverback.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Silverback.JPG",
+          "license": "CC0",
+          "author": "Patrick Cyusa",
+          "selection": "ai"
+        }
       },
       "rwanda/golden-monkeys-fossey": {
         "name": "Golden monkey trek or Dian Fossey hike",
@@ -951,7 +960,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9e/Beauty_of_Akagera_national_park.jpg/960px-Beauty_of_Akagera_national_park.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Beauty of Akagera national park.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Beauty_of_Akagera_national_park.jpg",
+          "license": "CC0",
+          "author": "Nkunda102",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -968,7 +986,18 @@
       "rwanda/akagera": {
         "name": "Akagera",
         "description": "A savannah national park in the east.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9e/Beauty_of_Akagera_national_park.jpg/960px-Beauty_of_Akagera_national_park.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Beauty of Akagera national park.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Beauty_of_Akagera_national_park.jpg",
+            "license": "CC0",
+            "author": "Nkunda102",
+            "selection": "ai"
+          }
+        ]
       },
       "rwanda/volcanoes-national-park": {
         "name": "Volcanoes National Park",
@@ -978,7 +1007,18 @@
       "rwanda/lake-kivu": {
         "name": "Lake Kivu",
         "description": "A highland lake with beaches and coffee.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Lake_Kivu%2C_Western_Rwanda.jpg/960px-Lake_Kivu%2C_Western_Rwanda.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Lake Kivu, Western Rwanda.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Kivu,_Western_Rwanda.jpg",
+            "license": "CC0",
+            "author": "Synkubito",
+            "selection": "ai"
+          }
+        ]
       },
       "rwanda/nyungwe": {
         "name": "Nyungwe",

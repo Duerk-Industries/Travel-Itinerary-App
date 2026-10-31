@@ -1147,7 +1147,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/Norwegian_Getaway_in_Stockholm_archipelago_Stockholm_21_August_2017.jpg/960px-Norwegian_Getaway_in_Stockholm_archipelago_Stockholm_21_August_2017.jpg",
+          "width": 960,
+          "height": 554,
+          "title": "File:Norwegian Getaway in Stockholm archipelago Stockholm 21 August 2017.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Norwegian_Getaway_in_Stockholm_archipelago_Stockholm_21_August_2017.jpg",
+          "license": "CC0",
+          "author": "anastasis · Kazan",
+          "selection": "ai"
+        }
       },
       "sweden/uppsala": {
         "name": "Uppsala Cathedral and Gamla Uppsala",
@@ -1159,7 +1168,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/The_fa%C3%A7ade_of_the_Uppsala_Cathedral.jpg/960px-The_fa%C3%A7ade_of_the_Uppsala_Cathedral.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:The façade of the Uppsala Cathedral.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_fa%C3%A7ade_of_the_Uppsala_Cathedral.jpg",
+          "license": "CC0",
+          "author": "LarryBroom",
+          "selection": "ai"
+        }
       },
       "sweden/gothenburg": {
         "name": "Gothenburg Haga, Liseberg and seafood",
@@ -1172,7 +1190,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Looking_down_Haga_Nygata%2C_G%C3%B6teborg%2C_2006.jpg/960px-Looking_down_Haga_Nygata%2C_G%C3%B6teborg%2C_2006.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Looking down Haga Nygata, Göteborg, 2006.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Looking_down_Haga_Nygata,_G%C3%B6teborg,_2006.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "sweden/gothenburg-archipelago": {
         "name": "Gothenburg southern archipelago",
@@ -1197,7 +1224,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/Winter_in_Visby_2017.jpg/960px-Winter_in_Visby_2017.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Winter in Visby 2017.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Winter_in_Visby_2017.jpg",
+          "license": "CC0",
+          "author": "VisbyStar",
+          "selection": "ai"
+        }
       },
       "sweden/abisko-aurora": {
         "name": "Abisko northern lights and Sky Station",
@@ -1239,12 +1275,34 @@
       "sweden/visby": {
         "name": "Visby",
         "description": "A walled medieval town on Gotland.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/Winter_in_Visby_2017.jpg/960px-Winter_in_Visby_2017.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Winter in Visby 2017.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Winter_in_Visby_2017.jpg",
+            "license": "CC0",
+            "author": "VisbyStar",
+            "selection": "ai"
+          }
+        ]
       },
       "sweden/abisko": {
         "name": "Abisko",
         "description": "An Arctic national park known for aurora.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Abisko_overview.JPG/960px-Abisko_overview.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Abisko overview.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Abisko_overview.JPG",
+            "license": "CC0",
+            "author": "Ojan",
+            "selection": "ai"
+          }
+        ]
       },
       "sweden/gothenburg": {
         "name": "Gothenburg",

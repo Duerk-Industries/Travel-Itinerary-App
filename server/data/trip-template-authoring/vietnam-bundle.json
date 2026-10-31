@@ -2441,7 +2441,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Constellation_of_Literature_pavilion_-_Temple_of_Literature%2C_Hanoi_-_DSC04688.JPG/960px-Constellation_of_Literature_pavilion_-_Temple_of_Literature%2C_Hanoi_-_DSC04688.JPG",
+          "width": 960,
+          "height": 641,
+          "title": "File:Constellation of Literature pavilion - Temple of Literature, Hanoi - DSC04688.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Constellation_of_Literature_pavilion_-_Temple_of_Literature,_Hanoi_-_DSC04688.JPG",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "vietnam/ho-chi-minh-mausoleum": {
         "name": "Ho Chi Minh Mausoleum complex",
@@ -2452,7 +2461,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Mausoleum_of_Ho_Chi_Minh%2C_February_2025.jpg/960px-Mausoleum_of_Ho_Chi_Minh%2C_February_2025.jpg",
+          "width": 960,
+          "height": 749,
+          "title": "File:Mausoleum of Ho Chi Minh, February 2025.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mausoleum_of_Ho_Chi_Minh,_February_2025.jpg",
+          "license": "CC0",
+          "author": "SerChevalerie",
+          "selection": "ai"
+        }
       },
       "vietnam/hoa-lo-prison": {
         "name": "Hoa Lo Prison Museum",
@@ -2485,7 +2503,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Exterior_view_-_Vietnam_Museum_of_Ethnology_-_Hanoi%2C_Vietnam_-_DSC03432.JPG/960px-Exterior_view_-_Vietnam_Museum_of_Ethnology_-_Hanoi%2C_Vietnam_-_DSC03432.JPG",
+          "width": 960,
+          "height": 640,
+          "title": "File:Exterior view - Vietnam Museum of Ethnology - Hanoi, Vietnam - DSC03432.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Exterior_view_-_Vietnam_Museum_of_Ethnology_-_Hanoi,_Vietnam_-_DSC03432.JPG",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "vietnam/ha-long-cruise": {
         "name": "Overnight cruise in Ha Long Bay",
@@ -2510,7 +2537,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Trang_An%2C_Ninh_Binh.jpg/960px-Trang_An%2C_Ninh_Binh.jpg",
+          "width": 960,
+          "height": 642,
+          "title": "File:Trang An, Ninh Binh.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Trang_An,_Ninh_Binh.jpg",
+          "license": "CC0",
+          "author": "GieohatchoHaiLy",
+          "selection": "ai"
+        }
       },
       "vietnam/tam-coc": {
         "name": "Tam Coc and Bich Dong",
@@ -2522,7 +2558,16 @@
           "authentic_local"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Tam_Coc_20220802_152247457.png/960px-Tam_Coc_20220802_152247457.png",
+          "width": 960,
+          "height": 720,
+          "title": "File:Tam Coc 20220802 152247457.png",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tam_Coc_20220802_152247457.png",
+          "license": "CC0",
+          "author": "Shyamal",
+          "selection": "ai"
+        }
       },
       "vietnam/hang-mua": {
         "name": "Hang Mua viewpoint",
@@ -2534,7 +2579,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Ninh_Binh_-_NinhBinh1648.jpg/960px-Ninh_Binh_-_NinhBinh1648.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Ninh Binh - NinhBinh1648.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ninh_Binh_-_NinhBinh1648.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "vietnam/hoa-lu": {
         "name": "Hoa Lu ancient capital",
@@ -2545,7 +2599,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d2/Codohoalu2010k5.jpg/960px-Codohoalu2010k5.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Codohoalu2010k5.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Codohoalu2010k5.jpg",
+          "license": "Public domain",
+          "author": "Kien1980v at Vietnamese Wikipedia",
+          "selection": "ai"
+        }
       },
       "vietnam/sapa-town": {
         "name": "Sapa town",
@@ -2557,7 +2620,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Sa-pa-3006284.jpg/960px-Sa-pa-3006284.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Sa-pa-3006284.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sa-pa-3006284.jpg",
+          "license": "CC0",
+          "author": "Quangpraha",
+          "selection": "ai"
+        }
       },
       "vietnam/cat-cat-village": {
         "name": "Cat Cat Village",
@@ -2607,7 +2679,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e2/Meridian_Gate_of_the_Imperial_City_of_Hu%E1%BA%BF_at_night%2C_seen_from_the_inside.jpg/960px-Meridian_Gate_of_the_Imperial_City_of_Hu%E1%BA%BF_at_night%2C_seen_from_the_inside.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Meridian Gate of the Imperial City of Huế at night, seen from the inside.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Meridian_Gate_of_the_Imperial_City_of_Hu%E1%BA%BF_at_night,_seen_from_the_inside.jpg",
+          "license": "CC0",
+          "author": "Deepak-nsk",
+          "selection": "ai"
+        }
       },
       "vietnam/thien-mu-pagoda": {
         "name": "Thien Mu Pagoda",
@@ -2619,7 +2700,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Thien_Mu_Pagoda%2C_Hue_%2815250812170%29.jpg/960px-Thien_Mu_Pagoda%2C_Hue_%2815250812170%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Thien Mu Pagoda, Hue (15250812170).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Thien_Mu_Pagoda,_Hue_(15250812170).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "vietnam/hue-royal-tombs": {
         "name": "Royal tombs of Hue",
@@ -2679,7 +2769,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/Hoi_An_-_HoiAn1457.jpg/960px-Hoi_An_-_HoiAn1457.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Hoi An - HoiAn1457.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hoi_An_-_HoiAn1457.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "vietnam/hoi-an-lantern-night": {
         "name": "Hoi An evening and lantern lights",
@@ -2704,7 +2803,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/M%E1%BB%B9_S%C6%A1n_Cham_Temple_Ruins%2C_Vietnam_%2854151057499%29.jpg/960px-M%E1%BB%B9_S%C6%A1n_Cham_Temple_Ruins%2C_Vietnam_%2854151057499%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Mỹ Sơn Cham Temple Ruins, Vietnam (54151057499).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:M%E1%BB%B9_S%C6%A1n_Cham_Temple_Ruins,_Vietnam_(54151057499).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "vietnam/hoi-an-cooking-class": {
         "name": "Cooking class in Hoi An",
@@ -2740,7 +2848,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Basket_Boat_and_the_Bamboo_forest_%28Unsplash%29.jpg/960px-Basket_Boat_and_the_Bamboo_forest_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Basket Boat and the Bamboo forest (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Basket_Boat_and_the_Bamboo_forest_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Chester Ho chesterho",
+          "selection": "ai"
+        }
       },
       "vietnam/marble-mountains": {
         "name": "Marble Mountains",
@@ -2764,7 +2881,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/Golden_Bridge_at_Ba_Na_Hills_20250718.jpg/960px-Golden_Bridge_at_Ba_Na_Hills_20250718.jpg",
+          "width": 960,
+          "height": 621,
+          "title": "File:Golden Bridge at Ba Na Hills 20250718.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Golden_Bridge_at_Ba_Na_Hills_20250718.jpg",
+          "license": "CC0",
+          "author": "DvTor8303",
+          "selection": "ai"
+        }
       },
       "vietnam/war-remnants-museum": {
         "name": "War Remnants Museum",
@@ -2775,7 +2901,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Vietnam-_War_Remnants_Museum.jpg/960px-Vietnam-_War_Remnants_Museum.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Vietnam- War Remnants Museum.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Vietnam-_War_Remnants_Museum.jpg",
+          "license": "CC0",
+          "author": "Gary Todd",
+          "selection": "ai"
+        }
       },
       "vietnam/reunification-palace": {
         "name": "Reunification Palace",
@@ -2786,7 +2921,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7d/20190923_Independence_Palace-10.jpg/960px-20190923_Independence_Palace-10.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:20190923 Independence Palace-10.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:20190923_Independence_Palace-10.jpg",
+          "license": "CC0",
+          "author": "Balon Greyjoy",
+          "selection": "ai"
+        }
       },
       "vietnam/saigon-notre-dame-post-office": {
         "name": "Notre-Dame Cathedral and Central Post Office",
@@ -2857,7 +3001,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/On_the_Mekong_Delta..JPG/960px-On_the_Mekong_Delta..JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:On the Mekong Delta..JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:On_the_Mekong_Delta..JPG",
+          "license": "CC0",
+          "author": "Rudolph.A.Furtado",
+          "selection": "ai"
+        }
       },
       "vietnam/cai-rang-floating-market": {
         "name": "Cai Rang Floating Market",
@@ -2898,17 +3051,50 @@
       "vietnam/quang-ninh": {
         "name": "Quang Ninh",
         "description": "The north-eastern coastal province that holds Ha Long Bay and its thousands of limestone islands.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Bai_Tu_Long_Bay_-_Quang_Ninh_-_Vietnam_%2835892945123%29.jpg/960px-Bai_Tu_Long_Bay_-_Quang_Ninh_-_Vietnam_%2835892945123%29.jpg",
+            "width": 960,
+            "height": 554,
+            "title": "File:Bai Tu Long Bay - Quang Ninh - Vietnam (35892945123).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Bai_Tu_Long_Bay_-_Quang_Ninh_-_Vietnam_(35892945123).jpg",
+            "license": "Public domain",
+            "author": "AnhTuan Le",
+            "selection": "ai"
+          }
+        ]
       },
       "vietnam/ha-long-bay": {
         "name": "Ha Long Bay",
         "description": "A UNESCO-listed bay of limestone karst islands in the Gulf of Tonkin, explored on overnight junk cruises.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/Ha_Long_bay_tourism_24.jpg/960px-Ha_Long_bay_tourism_24.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Ha Long bay tourism 24.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ha_Long_bay_tourism_24.jpg",
+            "license": "CC0",
+            "author": "Syced",
+            "selection": "ai"
+          }
+        ]
       },
       "vietnam/ninh-binh": {
         "name": "Ninh Binh",
         "description": "A province south of Hanoi of rivers, caves and limestone peaks rising from rice fields, with a former capital at Hoa Lu.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Ninh_Binh_-_NinhBinh1648.jpg/960px-Ninh_Binh_-_NinhBinh1648.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Ninh Binh - NinhBinh1648.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ninh_Binh_-_NinhBinh1648.jpg",
+            "license": "CC0",
+            "author": "lumoplank",
+            "selection": "ai"
+          }
+        ]
       },
       "vietnam/lao-cai": {
         "name": "Lao Cai",
@@ -2918,7 +3104,18 @@
       "vietnam/sapa": {
         "name": "Sapa",
         "description": "A cool mountain town in the far north, base for treks through terraced valleys and hill-tribe villages.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Rice_terraces_in_Sapa%2C_Vietnam.jpg/960px-Rice_terraces_in_Sapa%2C_Vietnam.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Rice terraces in Sapa, Vietnam.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Rice_terraces_in_Sapa,_Vietnam.jpg",
+            "license": "CC0",
+            "author": "Eerin25",
+            "selection": "ai"
+          }
+        ]
       },
       "vietnam/hue": {
         "name": "Hue",
@@ -2928,7 +3125,18 @@
       "vietnam/da-nang": {
         "name": "Da Nang",
         "description": "A central coastal city with a long beach, the Marble Mountains and the airport that serves Hoi An and Hue.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3e/Da_Nang%2C_Vietnam.jpg/960px-Da_Nang%2C_Vietnam.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Da Nang, Vietnam.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Da_Nang,_Vietnam.jpg",
+            "license": "CC0",
+            "author": "Quangpraha",
+            "selection": "ai"
+          }
+        ]
       },
       "vietnam/hoi-an": {
         "name": "Hoi An",
@@ -2943,7 +3151,18 @@
       "vietnam/ho-chi-minh-city": {
         "name": "Ho Chi Minh City",
         "description": "Vietnam's biggest city in the south, still widely called Saigon, with French colonial landmarks, war museums, markets and street food.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Ho_Chi_Minh_City_Skyline_at_Night.jpg/960px-Ho_Chi_Minh_City_Skyline_at_Night.jpg",
+            "width": 960,
+            "height": 506,
+            "title": "File:Ho Chi Minh City Skyline at Night.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ho_Chi_Minh_City_Skyline_at_Night.jpg",
+            "license": "CC0",
+            "author": "Tran Van Ngoc",
+            "selection": "ai"
+          }
+        ]
       },
       "vietnam/cu-chi": {
         "name": "Cu Chi",
@@ -2953,7 +3172,18 @@
       "vietnam/mekong-delta": {
         "name": "Mekong Delta",
         "description": "A region of rivers, canals, orchards and floating markets in southern Vietnam where the Mekong meets the sea.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Vente_d%27ananas_-_march%C3%A9_flottant_sur_le_M%C3%A9kong.JPG/960px-Vente_d%27ananas_-_march%C3%A9_flottant_sur_le_M%C3%A9kong.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Vente d'ananas - marché flottant sur le Mékong.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Vente_d%27ananas_-_march%C3%A9_flottant_sur_le_M%C3%A9kong.JPG",
+            "license": "CC0",
+            "author": "Dinkum",
+            "selection": "ai"
+          }
+        ]
       },
       "vietnam/can-tho": {
         "name": "Can Tho",

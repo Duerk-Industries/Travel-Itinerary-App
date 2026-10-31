@@ -1035,7 +1035,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c3/Gyeongbokgung%28palace%29_Geunjeongjeon%28hall%29.jpg/960px-Gyeongbokgung%28palace%29_Geunjeongjeon%28hall%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Gyeongbokgung(palace) Geunjeongjeon(hall).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gyeongbokgung(palace)_Geunjeongjeon(hall).jpg",
+          "license": "CC0",
+          "author": "Brady Bellini",
+          "selection": "ai"
+        }
       },
       "south-korea/seoul-food-markets": {
         "name": "Gwangjang Market, Myeongdong and Korean BBQ",
@@ -1047,7 +1056,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/Gwangjang_Market%2C_Seoul_01.jpg/960px-Gwangjang_Market%2C_Seoul_01.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Gwangjang Market, Seoul 01.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gwangjang_Market,_Seoul_01.jpg",
+          "license": "CC0",
+          "author": "Bgag",
+          "selection": "ai"
+        }
       },
       "south-korea/seoul-namsan-hongdae": {
         "name": "Namsan Tower, Hongdae and Dongdaemun",
@@ -1059,7 +1077,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/S7300388.JPG/960px-S7300388.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:S7300388.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:S7300388.JPG",
+          "license": "Public domain",
+          "author": "Anthony Jackson",
+          "selection": "ai"
+        }
       },
       "south-korea/dmz": {
         "name": "DMZ and Joint Security Area",
@@ -1071,7 +1098,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/71/Dmz-jsa-korea-4-4-2009.jpg/960px-Dmz-jsa-korea-4-4-2009.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dmz-jsa-korea-4-4-2009.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dmz-jsa-korea-4-4-2009.jpg",
+          "license": "Public domain",
+          "author": "Chuckupd",
+          "selection": "ai"
+        }
       },
       "south-korea/gyeongju": {
         "name": "Gyeongju Bulguksa, Seokguram and Daereungwon",
@@ -1083,7 +1119,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Bulguksa_Temple%2C_Gyeongju_-_Bulguska2643.jpg/960px-Bulguksa_Temple%2C_Gyeongju_-_Bulguska2643.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Bulguksa Temple, Gyeongju - Bulguska2643.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bulguksa_Temple,_Gyeongju_-_Bulguska2643.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "south-korea/busan-gamcheon": {
         "name": "Busan Gamcheon Culture Village and Jagalchi Market",
@@ -1096,7 +1141,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Gamcheon_Culture_Village.jpg/960px-Gamcheon_Culture_Village.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Gamcheon Culture Village.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gamcheon_Culture_Village.jpg",
+          "license": "CC0",
+          "author": "Bernard Gagnon",
+          "selection": "ai"
+        }
       },
       "south-korea/haedong-yonggungsa": {
         "name": "Haedong Yonggungsa Temple",
@@ -1108,7 +1162,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/Haedong_Yonggungsa_Temple%2C_Busan_-_HaedongYonggungsa2706.jpg/960px-Haedong_Yonggungsa_Temple%2C_Busan_-_HaedongYonggungsa2706.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Haedong Yonggungsa Temple, Busan - HaedongYonggungsa2706.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Haedong_Yonggungsa_Temple,_Busan_-_HaedongYonggungsa2706.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "south-korea/jeonju-hanok": {
         "name": "Jeonju Hanok Village and bibimbap",
@@ -1120,7 +1183,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/22/Jeonju_Hanok_Maeul_02.jpg/960px-Jeonju_Hanok_Maeul_02.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Jeonju Hanok Maeul 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Jeonju_Hanok_Maeul_02.jpg",
+          "license": "CC0",
+          "author": "Bernard Gagnon",
+          "selection": "ai"
+        }
       },
       "south-korea/jeju-hallasan": {
         "name": "Jeju Hallasan and Seongsan Ilchulbong",
@@ -1158,22 +1230,66 @@
       "south-korea/seoul": {
         "name": "Seoul",
         "description": "The capital, a mix of palaces and neon.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C%2C_Seoul%2C_South_Korea_%28Unsplash%29.jpg/960px-%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C%2C_Seoul%2C_South_Korea_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:서울특별시, Seoul, South Korea (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C,_Seoul,_South_Korea_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Jenny Kim jen_nysj",
+            "selection": "ai"
+          }
+        ]
       },
       "south-korea/gyeongju": {
         "name": "Gyeongju",
         "description": "The old Silla capital.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a3/Gyeongju_Historic_Areas_01.JPG/960px-Gyeongju_Historic_Areas_01.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Gyeongju Historic Areas 01.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Gyeongju_Historic_Areas_01.JPG",
+            "license": "Public domain",
+            "author": "Abasaa",
+            "selection": "ai"
+          }
+        ]
       },
       "south-korea/busan": {
         "name": "Busan",
         "description": "A coastal city of beaches and hillside villages.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Busan_beach.jpg/960px-Busan_beach.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Busan beach.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Busan_beach.jpg",
+            "license": "CC0",
+            "author": "Syced",
+            "selection": "ai"
+          }
+        ]
       },
       "south-korea/jeonju": {
         "name": "Jeonju",
         "description": "A gastronomic city with a hanok village.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/Jeonju_Hanok_Village_South_Korea_02.jpg/960px-Jeonju_Hanok_Village_South_Korea_02.jpg",
+            "width": 960,
+            "height": 536,
+            "title": "File:Jeonju Hanok Village South Korea 02.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Jeonju_Hanok_Village_South_Korea_02.jpg",
+            "license": "CC0",
+            "author": "Hankook12",
+            "selection": "ai"
+          }
+        ]
       },
       "south-korea/jeju": {
         "name": "Jeju",
