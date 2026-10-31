@@ -11,6 +11,7 @@ import transferRoutes from './routes/transferRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
 import tripRoutes from './routes/tripRoutes';
 import tripTemplateRoutes from './routes/tripTemplateRoutes';
+import templateImageRoutes from './routes/templateImageRoutes';
 import adminTripTemplateRoutes from './routes/adminTripTemplateRoutes';
 import itineraryRoutes from './routes/itineraryRoutes';
 import itineraryDataRoutes from './routes/itineraryDataRoutes';
@@ -469,6 +470,7 @@ app.use('/api/flights', trackItemSaved('transfer'), confirmEditedItem('transfer'
 app.use('/api/groups', groupsRouter);
 app.use('/api/trips', tripRoutes);
 app.use('/api/trip-templates', tripTemplateRoutes);
+app.use('/api/template-images', templateImageRoutes);
 app.use('/api/trips', blogRoutes);
 app.use('/api/trips', blogAuthoringRoutes);
 app.use('/api/trips', blogEngagementRoutes);

@@ -18,6 +18,7 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 
 import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
 import StarRating from '../components/StarRating';
+import ActivityPhoto, { type ActivityImage } from '../components/ActivityPhoto';
 import ItemRatingCell from '../components/ItemRatingCell';
 import GetYourGuideCta from '../components/GetYourGuideCta';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
@@ -61,6 +62,8 @@ export type Tour = PlanningCoordinates & Pick<Activity, 'nearLodgingId'> & {
   userVote?: -1 | 1 | null;
   averageRating?: number | null;
   userRating?: number | null;
+  /** A picture of the activity with its credit, found by the server; absent until one is found. */
+  image?: ActivityImage | null;
   date: string;
   name: string;
   startLocation: string;
@@ -1233,6 +1236,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 {renderDetailRow('Start Location', selectedTour.startLocation || '-')}
                 {renderDetailRow('Start Time', selectedTour.startTime || '-')}
                 {renderDetailRow('Duration', selectedTour.duration || '-')}
+                <ActivityPhoto image={selectedTour.image} name={selectedTour.name} testID="activity-detail-photo" />
                 {renderDetailRow('Status', normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS))}
                 {renderDetailRow(
                   'Rating',

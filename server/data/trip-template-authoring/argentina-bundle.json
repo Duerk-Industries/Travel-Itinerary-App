@@ -1465,7 +1465,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ee/Cemetery_Argentina_Buenos_Aires_2.jpg/960px-Cemetery_Argentina_Buenos_Aires_2.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Cemetery Argentina Buenos Aires 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cemetery_Argentina_Buenos_Aires_2.jpg",
+          "license": "CC0",
+          "author": "Monster4711",
+          "selection": "ai"
+        }
       },
       "argentina/plaza-de-mayo": {
         "name": "Plaza de Mayo and Casa Rosada",
@@ -1476,7 +1485,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Plaza_de_mayo_y_casa_de_gobierno_1890s.jpg/960px-Plaza_de_mayo_y_casa_de_gobierno_1890s.jpg",
+          "width": 960,
+          "height": 580,
+          "title": "File:Plaza de mayo y casa de gobierno 1890s.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Plaza_de_mayo_y_casa_de_gobierno_1890s.jpg",
+          "license": "Public domain",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "argentina/san-telmo": {
         "name": "San Telmo market and tango",
@@ -1500,7 +1518,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/La_Boca%2C_Buenos_Aires%2C_Argentina_%28Unsplash%29.jpg/960px-La_Boca%2C_Buenos_Aires%2C_Argentina_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:La Boca, Buenos Aires, Argentina (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:La_Boca,_Buenos_Aires,_Argentina_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Eduardo Sánchez eduardoequis",
+          "selection": "ai"
+        }
       },
       "argentina/tango-show": {
         "name": "Tango show and dinner",
@@ -1537,7 +1564,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e2/Iguazu_falls_01.jpg/960px-Iguazu_falls_01.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Iguazu falls 01.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Iguazu_falls_01.jpg",
+          "license": "CC0",
+          "author": "Wikistayj",
+          "selection": "ai"
+        }
       },
       "argentina/iguazu-brazil-side": {
         "name": "Iguazu Falls, Brazilian side",
@@ -1562,7 +1598,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/29/Glaciar_Perito_Moreno%2C_El_Calafate%2C_Argentina_%28Unsplash%29.jpg/960px-Glaciar_Perito_Moreno%2C_El_Calafate%2C_Argentina_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 636,
+          "title": "File:Glaciar Perito Moreno, El Calafate, Argentina (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Glaciar_Perito_Moreno,_El_Calafate,_Argentina_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Agustin Lautaro agustinl",
+          "selection": "ai"
+        }
       },
       "argentina/glacier-boat": {
         "name": "Upsala and Spegazzini glacier cruise",
@@ -1574,7 +1619,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2e/Upsala_Glacier%2C_Argentina.jpg/960px-Upsala_Glacier%2C_Argentina.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Upsala Glacier, Argentina.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Upsala_Glacier,_Argentina.jpg",
+          "license": "Public domain",
+          "author": "This image was taken by the NASA Expedition 21 crew Image acquired with a Nikon D2Xs digital camera fitted with a 400 mm lens, and is provided by the ISS Crew Earth Observations experiment and Image Science & Analysis Laboratory, Johnson Space Centre.",
+          "selection": "ai"
+        }
       },
       "argentina/el-chalten-hikes": {
         "name": "El Chalten and Fitz Roy hikes",
@@ -1586,7 +1640,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d7/Fitz_Roy_from_afar.jpg/960px-Fitz_Roy_from_afar.jpg",
+          "width": 960,
+          "height": 509,
+          "title": "File:Fitz Roy from afar.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Fitz_Roy_from_afar.jpg",
+          "license": "CC0",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "argentina/mendoza-wineries": {
         "name": "Mendoza and Uco Valley wineries",
@@ -1635,24 +1698,66 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Cerro_Catedral%2C_Argentina.jpg/960px-Cerro_Catedral%2C_Argentina.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Cerro Catedral, Argentina.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cerro_Catedral,_Argentina.jpg",
+          "license": "Public domain",
+          "author": "No machine-readable author provided. Matiasmehdi assumed (based on copyright claims).",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "argentina": {
         "name": "Argentina",
         "description": "A country of tango, wine, waterfalls and the glaciers and peaks of Patagonia.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Deep_blue_cracks_form_crevasses_within_the_Grey_Glacier_in_southern_Patagonia_Argentina_2024.jpg/960px-Deep_blue_cracks_form_crevasses_within_the_Grey_Glacier_in_southern_Patagonia_Argentina_2024.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Deep blue cracks form crevasses within the Grey Glacier in southern Patagonia Argentina 2024.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Deep_blue_cracks_form_crevasses_within_the_Grey_Glacier_in_southern_Patagonia_Argentina_2024.jpg",
+            "license": "CC0",
+            "author": "Stch2022",
+            "selection": "ai"
+          }
+        ]
       },
       "argentina/buenos-aires": {
         "name": "Buenos Aires",
         "description": "The capital, a city of European boulevards, tango, steak and late nights.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/Cabildo_Plaza_de_Mayo_Buenos_Aires_5_de_Agosto_2023.jpg/960px-Cabildo_Plaza_de_Mayo_Buenos_Aires_5_de_Agosto_2023.jpg",
+            "width": 960,
+            "height": 639,
+            "title": "File:Cabildo Plaza de Mayo Buenos Aires 5 de Agosto 2023.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cabildo_Plaza_de_Mayo_Buenos_Aires_5_de_Agosto_2023.jpg",
+            "license": "CC0",
+            "author": "Crazychubut",
+            "selection": "ai"
+          }
+        ]
       },
       "argentina/misiones": {
         "name": "Misiones",
         "description": "The north-east province of the Iguazu Falls and red-earth subtropical forest.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/Reflected_Nature_In_Misiones_Argentina_%28196035823%29.jpeg/960px-Reflected_Nature_In_Misiones_Argentina_%28196035823%29.jpeg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Reflected Nature In Misiones Argentina (196035823).jpeg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Reflected_Nature_In_Misiones_Argentina_(196035823).jpeg",
+            "license": "CC0",
+            "author": "Damian Cardozo",
+            "selection": "ai"
+          }
+        ]
       },
       "argentina/puerto-iguazu": {
         "name": "Puerto Iguazu",
@@ -1667,12 +1772,34 @@
       "argentina/el-calafate": {
         "name": "El Calafate",
         "description": "The base for visits to the Perito Moreno Glacier on Lago Argentino.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/El_Calafate%2C_Argentina_%28Unsplash_cdZh5dQ-muE%29.jpg/960px-El_Calafate%2C_Argentina_%28Unsplash_cdZh5dQ-muE%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:El Calafate, Argentina (Unsplash cdZh5dQ-muE).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:El_Calafate,_Argentina_(Unsplash_cdZh5dQ-muE).jpg",
+            "license": "CC0",
+            "author": "Miguel Mansilla miguelmansilla",
+            "selection": "ai"
+          }
+        ]
       },
       "argentina/el-chalten": {
         "name": "El Chalten",
         "description": "A small trekking village below Mount Fitz Roy.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/El_Chalt%C3%A9n.JPG/960px-El_Chalt%C3%A9n.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:El Chaltén.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:El_Chalt%C3%A9n.JPG",
+            "license": "Public domain",
+            "author": "Unknown",
+            "selection": "ai"
+          }
+        ]
       },
       "argentina/mendoza": {
         "name": "Mendoza",
@@ -1687,7 +1814,18 @@
       "argentina/bariloche": {
         "name": "Bariloche",
         "description": "An alpine-style lake town known for chocolate, skiing and hiking.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ee/Mountains_and_Lake_in_Bariloche_%28Unsplash%29.jpg/960px-Mountains_and_Lake_in_Bariloche_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Mountains and Lake in Bariloche (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Mountains_and_Lake_in_Bariloche_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Roger Burkhard roger_burkhard",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

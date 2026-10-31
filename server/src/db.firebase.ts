@@ -5355,6 +5355,34 @@ export const getStarRatingSummaries = async (
   return result;
 };
 
+export type ActivityImageCacheEntry = { url: string | null; credit: string; pageUrl: string; checkedAt: Date };
+
+const ACTIVITY_IMAGE_CACHE = 'activity_image_cache';
+// Keys hold arbitrary activity names, so the document id is a hash of the key.
+const activityImageDocId = (key: string): string => createHash('sha1').update(key).digest('hex');
+
+/** What was found for each activity-name key already looked up; a null `url` means nothing suitable was found. */
+export const getActivityImageCache = async (keys: string[]): Promise<Record<string, ActivityImageCacheEntry>> => {
+  const unique = Array.from(new Set(keys.filter(Boolean)));
+  if (!unique.length) return {};
+  const db = getDb();
+  const docs = await db.getAll(...unique.map((key) => db.collection(ACTIVITY_IMAGE_CACHE).doc(activityImageDocId(key))));
+  const result: Record<string, ActivityImageCacheEntry> = {};
+  docs.forEach((doc, index) => {
+    if (!doc.exists) return;
+    const data = doc.data() as any;
+    const checkedAt = new Date(String(data.checkedAt ?? ''));
+    result[unique[index]] = { url: data.url ? String(data.url) : null, credit: String(data.credit ?? ''), pageUrl: String(data.pageUrl ?? ''), checkedAt: Number.isNaN(checkedAt.getTime()) ? new Date(0) : checkedAt };
+  });
+  return result;
+};
+
+export const saveActivityImageCache = async (key: string, image: { url: string; credit: string; pageUrl: string } | null): Promise<void> => {
+  await getDb().collection(ACTIVITY_IMAGE_CACHE).doc(activityImageDocId(key)).set({
+    key, url: image?.url ?? null, credit: image?.credit ?? null, pageUrl: image?.pageUrl ?? null, checkedAt: nowIso(),
+  });
+};
+
 export const getItineraryDetailContext = async (
   detailId: string
 ): Promise<{ tripId: string; itineraryId: string } | null> => {

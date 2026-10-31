@@ -17,6 +17,7 @@ import { createSocketServer } from './socket';
 import { startGmailPollingScheduler } from './services/gmailPollingService';
 import { startRetentionScheduler } from './services/retentionService';
 import { startItineraryCompletionScheduler } from './services/itineraryCompletionService';
+import { startTemplateImageMirror } from './services/templateImageMirrorService';
 import { startThumbRatingConversion } from './services/thumbRatingConversionService';
 import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
 import { startFailedRetryScheduler } from './services/failedRetryScheduler';
@@ -145,6 +146,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   startRetentionScheduler();
   startItineraryCompletionScheduler();
   startThumbRatingConversion();
+  startTemplateImageMirror();
   startIngestionMetricsScheduler();
   startFailedRetryScheduler();
   startBillingReconciliationScheduler();

@@ -10,6 +10,8 @@ export type UnsplashSearchResult = {
   alt_description?: string | null;
   location?: { name?: string | null; city?: string | null; country?: string | null } | null;
   tags?: Array<{ title?: string | null }>;
+  user?: { name?: string | null } | null;
+  links?: { html?: string | null } | null;
 };
 
 type UnsplashSearchResponse = {

@@ -29,12 +29,12 @@ const MAX_SUGGESTIONS = 30;
 const MAX_STAY_DAYS = 60;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const normalize = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+export const normalize = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 const clock = (value: string): string => (/^\d{1,2}:\d{2}$/.test(value) ? value.padStart(5, '0') : '');
 const mentions = (text: string, city: string): boolean => Boolean(city) && ` ${text} `.includes(` ${city} `);
 
 /** An existing activity covers a suggestion when one name contains the other. */
-const sameActivity = (existing: string, suggested: string): boolean => {
+export const sameActivity = (existing: string, suggested: string): boolean => {
   if (!existing || !suggested) return false;
   if (existing === suggested) return true;
   const [short, long] = existing.length <= suggested.length ? [existing, suggested] : [suggested, existing];

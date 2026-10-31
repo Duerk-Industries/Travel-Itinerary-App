@@ -1617,7 +1617,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Skanderbeg_square_%28OSCAL19_trip%29.jpg/960px-Skanderbeg_square_%28OSCAL19_trip%29.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Skanderbeg square (OSCAL19 trip).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Skanderbeg_square_(OSCAL19_trip).jpg",
+          "license": "CC0",
+          "author": "albinfo",
+          "selection": "ai"
+        }
       },
       "albania/bunkart": {
         "name": "Bunk'Art 1 and 2",
@@ -1628,7 +1637,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/01/0685_July_2017_in_Tirana.jpg/960px-0685_July_2017_in_Tirana.jpg",
+          "width": 960,
+          "height": 636,
+          "title": "File:0685 July 2017 in Tirana.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:0685_July_2017_in_Tirana.jpg",
+          "license": "CC0",
+          "author": "Rakoon",
+          "selection": "ai"
+        }
       },
       "albania/mount-dajti": {
         "name": "Dajti Ekspres cable car",
@@ -1640,7 +1658,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Dajti_Tower_with_cablecar.JPG/960px-Dajti_Tower_with_cablecar.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dajti Tower with cablecar.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dajti_Tower_with_cablecar.JPG",
+          "license": "CC0",
+          "author": "Jan Pešula",
+          "selection": "ai"
+        }
       },
       "albania/kruja": {
         "name": "Kruja castle and Skanderbeg Museum",
@@ -1651,7 +1678,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Castle_Kruja_Albania_2004-07-08.jpg/960px-Castle_Kruja_Albania_2004-07-08.jpg",
+          "width": 960,
+          "height": 575,
+          "title": "File:Castle Kruja Albania 2004-07-08.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Castle_Kruja_Albania_2004-07-08.jpg",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "albania/berat-castle": {
         "name": "Berat, the town of a thousand windows",
@@ -1688,7 +1724,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Old_houses_of_Gjirokast%C3%ABr_with_mountains_in_the_background.jpg/960px-Old_houses_of_Gjirokast%C3%ABr_with_mountains_in_the_background.jpg",
+          "width": 960,
+          "height": 539,
+          "title": "File:Old houses of Gjirokastër with mountains in the background.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Old_houses_of_Gjirokast%C3%ABr_with_mountains_in_the_background.jpg",
+          "license": "Public domain",
+          "author": "Pogoniani village club in Athens.",
+          "selection": "ai"
+        }
       },
       "albania/butrint": {
         "name": "Butrint archaeological park",
@@ -1724,7 +1769,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c3/Ksamil_beach.jpg/960px-Ksamil_beach.jpg",
+          "width": 960,
+          "height": 723,
+          "title": "File:Ksamil beach.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ksamil_beach.jpg",
+          "license": "CC0",
+          "author": "DieliAlla",
+          "selection": "ai"
+        }
       },
       "albania/llogara-pass": {
         "name": "Llogara Pass and the Riviera road",
@@ -1736,7 +1790,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0b/24_Llogara.jpg/960px-24_Llogara.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:24 Llogara.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:24_Llogara.jpg",
+          "license": "CC0",
+          "author": "JonaSali29",
+          "selection": "ai"
+        }
       },
       "albania/himara-beaches": {
         "name": "Himare, Dhermi and Gjipe beaches",
@@ -1748,7 +1811,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b1/Dhermi_long_beach.jpg/960px-Dhermi_long_beach.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dhermi long beach.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dhermi_long_beach.jpg",
+          "license": "Public domain",
+          "author": "Igiann",
+          "selection": "ai"
+        }
       },
       "albania/rozafa-castle": {
         "name": "Shkoder and Rozafa Castle",
@@ -1772,7 +1844,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Liqeni_i_Komanit_Puke.jpg/960px-Liqeni_i_Komanit_Puke.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Liqeni i Komanit Puke.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Liqeni_i_Komanit_Puke.jpg",
+          "license": "CC0",
+          "author": "AMcreative1",
+          "selection": "ai"
+        }
       },
       "albania/theth-hike": {
         "name": "Theth valley and Blue Eye of Theth",
@@ -1785,7 +1866,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Kst1905.007.jpg/960px-Kst1905.007.jpg",
+          "width": 960,
+          "height": 677,
+          "title": "File:Kst1905.007.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kst1905.007.jpg",
+          "license": "Public domain",
+          "author": "Karl Steinmetz",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1807,12 +1897,34 @@
       "albania/gjirokaster": {
         "name": "Gjirokaster",
         "description": "A stone city of tower houses under a hilltop fortress.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/92/KULLA_E_SAHATIT_-_GJIROKASTER.jpg/960px-KULLA_E_SAHATIT_-_GJIROKASTER.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:KULLA E SAHATIT - GJIROKASTER.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:KULLA_E_SAHATIT_-_GJIROKASTER.jpg",
+            "license": "CC0",
+            "author": "Sefer Susuri",
+            "selection": "ai"
+          }
+        ]
       },
       "albania/saranda": {
         "name": "Saranda",
         "description": "A seaside town facing Corfu, the base for Butrint and Ksamil.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Saranda_01.jpg/960px-Saranda_01.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Saranda 01.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Saranda_01.jpg",
+            "license": "CC0",
+            "author": "Shkelzen A. Rexha",
+            "selection": "ai"
+          }
+        ]
       },
       "albania/himare": {
         "name": "Himare",
@@ -1832,7 +1944,18 @@
       "albania/theth": {
         "name": "Theth",
         "description": "A remote Alpine village of stone houses, waterfalls and trails.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/Theth_Church_Albania.jpg/960px-Theth_Church_Albania.jpg",
+            "width": 960,
+            "height": 726,
+            "title": "File:Theth Church Albania.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Theth_Church_Albania.jpg",
+            "license": "CC0",
+            "author": "peter_h",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

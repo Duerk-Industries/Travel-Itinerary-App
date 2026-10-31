@@ -3542,6 +3542,10 @@ const styleFactories = {
   components_StarRating_2: (_theme: AppTheme, { size }: ThemeStyleValues): any => ({ width: size, height: size }),
   // components/StarRating.tsx
   components_StarRating_3: (_theme: AppTheme, { size, fraction }: ThemeStyleValues): any => ({ width: size * fraction, height: size }),
+  // components/ActivityPhoto.tsx
+  components_ActivityPhoto_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 6, alignSelf: 'flex-start' }),
+  components_ActivityPhoto_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 128, height: 96, borderRadius: 8, backgroundColor: _theme.colors.surfaceMuted }),
+  components_ActivityPhoto_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 10, marginTop: 2, color: _theme.colors.textMuted }),
   // components/PackingListTable.tsx
   components_PackingListTable_1: (_theme: AppTheme, { item, index }: ThemeStyleValues): any => ({ ...item, position: index }),
   // components/PackingListTable.tsx

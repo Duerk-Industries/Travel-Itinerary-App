@@ -1425,7 +1425,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Sch%C3%B6nbrunn_Palace%2C_Vienna.JPG/960px-Sch%C3%B6nbrunn_Palace%2C_Vienna.JPG",
+          "width": 960,
+          "height": 603,
+          "title": "File:Schönbrunn Palace, Vienna.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sch%C3%B6nbrunn_Palace,_Vienna.JPG",
+          "license": "CC0",
+          "author": "Gveret Tered",
+          "selection": "ai"
+        }
       },
       "austria/belvedere": {
         "name": "Belvedere and Klimt",
@@ -1461,7 +1470,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/Vienna_State_Opera_at_night.jpg/960px-Vienna_State_Opera_at_night.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Vienna State Opera at night.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Vienna_State_Opera_at_night.jpg",
+          "license": "CC0",
+          "author": "Pierre Blaché",
+          "selection": "ai"
+        }
       },
       "austria/wachau-valley": {
         "name": "Wachau Valley and Melk Abbey",
@@ -1486,7 +1504,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Historic_Centre_of_the_City_of_Salzburg_from_Hauserbr%C3%BCcke_Gaisberg_2023-09-28_03.jpg/960px-Historic_Centre_of_the_City_of_Salzburg_from_Hauserbr%C3%BCcke_Gaisberg_2023-09-28_03.jpg",
+          "width": 960,
+          "height": 643,
+          "title": "File:Historic Centre of the City of Salzburg from Hauserbrücke Gaisberg 2023-09-28 03.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Historic_Centre_of_the_City_of_Salzburg_from_Hauserbr%C3%BCcke_Gaisberg_2023-09-28_03.jpg",
+          "license": "CC0",
+          "author": "Leonhard Lenz",
+          "selection": "ai"
+        }
       },
       "austria/hohensalzburg": {
         "name": "Hohensalzburg Fortress",
@@ -1498,7 +1525,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Salzburg_Hohensalzburg_Fortress_%289812852556%29.jpg/960px-Salzburg_Hohensalzburg_Fortress_%289812852556%29.jpg",
+          "width": 960,
+          "height": 697,
+          "title": "File:Salzburg Hohensalzburg Fortress (9812852556).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Salzburg_Hohensalzburg_Fortress_(9812852556).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "austria/sound-of-music-tour": {
         "name": "Sound of Music locations and lake district",
@@ -1510,7 +1546,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/27/Mary_Martin_in_The_Sound_of_Music_by_Toni_Frissell.jpg/960px-Mary_Martin_in_The_Sound_of_Music_by_Toni_Frissell.jpg",
+          "width": 960,
+          "height": 621,
+          "title": "File:Mary Martin in The Sound of Music by Toni Frissell.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mary_Martin_in_The_Sound_of_Music_by_Toni_Frissell.jpg",
+          "license": "Public domain",
+          "author": "Toni Frissell / Adam Cuerden",
+          "selection": "ai"
+        }
       },
       "austria/hallstatt": {
         "name": "Hallstatt village and lake",
@@ -1558,7 +1603,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Goldenes_Dachl_from_Innsbruck.jpg/960px-Goldenes_Dachl_from_Innsbruck.jpg",
+          "width": 960,
+          "height": 714,
+          "title": "File:Goldenes Dachl from Innsbruck.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Goldenes_Dachl_from_Innsbruck.jpg",
+          "license": "CC0",
+          "author": "Wilfredor",
+          "selection": "ai"
+        }
       },
       "austria/nordkette": {
         "name": "Nordkette cable car",
@@ -1581,7 +1635,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c0/Riese_sommer_by_Edgar_Moskopp.jpg/960px-Riese_sommer_by_Edgar_Moskopp.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Riese sommer by Edgar Moskopp.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Riese_sommer_by_Edgar_Moskopp.jpg",
+          "license": "Public domain",
+          "author": "Gegengoliath",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1593,17 +1656,50 @@
       "austria/vienna": {
         "name": "Vienna",
         "description": "The Habsburg capital of palaces, coffee houses and classical music.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/Statue_Eugenio_of_Savoy_Heldenplatz_Vienna_Austria.jpg/960px-Statue_Eugenio_of_Savoy_Heldenplatz_Vienna_Austria.jpg",
+            "width": 960,
+            "height": 718,
+            "title": "File:Statue Eugenio of Savoy Heldenplatz Vienna Austria.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Statue_Eugenio_of_Savoy_Heldenplatz_Vienna_Austria.jpg",
+            "license": "CC0",
+            "author": "Jebulon",
+            "selection": "ai"
+          }
+        ]
       },
       "austria/lower-austria": {
         "name": "Lower Austria",
         "description": "The region around Vienna, including the Wachau Valley.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dc/Laxenburg%2C_Lower_Austria.jpg/960px-Laxenburg%2C_Lower_Austria.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Laxenburg, Lower Austria.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Laxenburg,_Lower_Austria.jpg",
+            "license": "CC0",
+            "author": "Marina bauer",
+            "selection": "ai"
+          }
+        ]
       },
       "austria/durnstein": {
         "name": "Durnstein",
         "description": "A pastel Danube village in the Wachau, below a castle ruin.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a4/D%C3%BCrnstein%2C_Austria_%28Unsplash_NgzetT1JZyI%29.jpg/960px-D%C3%BCrnstein%2C_Austria_%28Unsplash_NgzetT1JZyI%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Dürnstein, Austria (Unsplash NgzetT1JZyI).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:D%C3%BCrnstein,_Austria_(Unsplash_NgzetT1JZyI).jpg",
+            "license": "CC0",
+            "author": "Chris De Wit skyxperience",
+            "selection": "ai"
+          }
+        ]
       },
       "austria/salzburg": {
         "name": "Salzburg",
@@ -1613,17 +1709,50 @@
       "austria/upper-austria": {
         "name": "Upper Austria",
         "description": "The region of the Salzkammergut lakes and Hallstatt.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Ischl%2C_Upper_Austria%2C_Austria-Hungary%2C_1890s.jpg/960px-Ischl%2C_Upper_Austria%2C_Austria-Hungary%2C_1890s.jpg",
+            "width": 960,
+            "height": 701,
+            "title": "File:Ischl, Upper Austria, Austria-Hungary, 1890s.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ischl,_Upper_Austria,_Austria-Hungary,_1890s.jpg",
+            "license": "Public domain",
+            "author": "Photoglob Zürich, reprinted by Detroit Publishing Co.",
+            "selection": "ai"
+          }
+        ]
       },
       "austria/hallstatt": {
         "name": "Hallstatt",
         "description": "A timber-house village on an Alpine lake.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Hallstatt_Austria_Bergsee_Lake_Alpine_Summer.jpg/960px-Hallstatt_Austria_Bergsee_Lake_Alpine_Summer.jpg",
+            "width": 960,
+            "height": 549,
+            "title": "File:Hallstatt Austria Bergsee Lake Alpine Summer.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Hallstatt_Austria_Bergsee_Lake_Alpine_Summer.jpg",
+            "license": "CC0",
+            "author": "Julius_Silver",
+            "selection": "ai"
+          }
+        ]
       },
       "austria/tyrol": {
         "name": "Tyrol",
         "description": "The Alpine province of Innsbruck and the mountains.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Gehrenspitze_Tannheim_Tyrol_Austria.jpg/960px-Gehrenspitze_Tannheim_Tyrol_Austria.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Gehrenspitze Tannheim Tyrol Austria.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Gehrenspitze_Tannheim_Tyrol_Austria.jpg",
+            "license": "CC0",
+            "author": "Wilfredor",
+            "selection": "ai"
+          }
+        ]
       },
       "austria/innsbruck": {
         "name": "Innsbruck",

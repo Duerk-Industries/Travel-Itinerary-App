@@ -1,4 +1,5 @@
 // @ts-nocheck
+import ActivityPhoto from '../components/ActivityPhoto';
 import IconText from '../components/IconText';
 import TransferSummaryCard from '../components/TransferSummaryCard';
 import CarRentalSummaryCard from '../components/CarRentalSummaryCard';
@@ -3240,6 +3241,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             style={styles.helperText}
                           >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}${tour.duration ? ` · ${tour.duration}` : ''}`}</Text>
                           {tour.notes ? <Text style={styles.helperText}>{tour.notes}</Text> : null}
+                          <ActivityPhoto image={tour.image} name={tour.name} testID={`day-details-activity-photo-${tour.id}`} />
                           {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
                           <GetYourGuideCta
                             backendUrl={backendUrl}

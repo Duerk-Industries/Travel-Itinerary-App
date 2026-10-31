@@ -5574,6 +5574,30 @@ export const getStarRatingSummaries = async (
   return result;
 };
 
+export type ActivityImageCacheEntry = { url: string | null; credit: string; pageUrl: string; checkedAt: Date };
+
+/** What was found for each activity-name key already looked up; a null `url` means nothing suitable was found. */
+export const getActivityImageCache = async (keys: string[]): Promise<Record<string, ActivityImageCacheEntry>> => {
+  const unique = Array.from(new Set(keys.filter(Boolean)));
+  if (!unique.length) return {};
+  const { rows } = await getPool().query(
+    `SELECT cache_key as "key", image_url as "url", credit, page_url as "pageUrl", checked_at as "checkedAt"
+     FROM activity_image_cache WHERE cache_key IN (${unique.map((_, index) => `$${index + 1}`).join(', ')})`,
+    unique
+  );
+  return Object.fromEntries(rows.map((row: any) => [String(row.key), {
+    url: row.url ? String(row.url) : null, credit: String(row.credit ?? ''), pageUrl: String(row.pageUrl ?? ''), checkedAt: new Date(row.checkedAt),
+  }]));
+};
+
+export const saveActivityImageCache = async (key: string, image: { url: string; credit: string; pageUrl: string } | null): Promise<void> => {
+  await getPool().query(
+    `INSERT INTO activity_image_cache (cache_key, image_url, credit, page_url, checked_at) VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (cache_key) DO UPDATE SET image_url = EXCLUDED.image_url, credit = EXCLUDED.credit, page_url = EXCLUDED.page_url, checked_at = EXCLUDED.checked_at`,
+    [key, image?.url ?? null, image?.credit ?? null, image?.pageUrl ?? null, new Date()]
+  );
+};
+
 export const getItineraryDetailContext = async (
   detailId: string
 ): Promise<{ tripId: string; itineraryId: string } | null> => {

@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { deleteTripTemplateImport, listTripTemplates, upsertTripTemplateImport } from '../db';
 import { logInfo } from '../logger';
+import { queueTemplatePictureLookup, type PictureTarget } from './templatePictureService';
 import {
   MAX_PLACE_DETAILS,
   TEMPLATE_INTERESTS,
+  templateImageProblem,
   getTemplateDestination,
   getTemplatePlace,
   templateDestinationSchema,
@@ -64,8 +66,6 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const KEY = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DESTINATION_KEY = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
 const CLOCK = /^([01]?\d|2[0-3]):[0-5]\d$/;
-const COMMONS_HOSTS = new Set(['upload.wikimedia.org', 'thumb.wikimedia.org']);
-const OPEN_LICENSE = /public domain|\bpd\b|cc0|cc[- ]?zero/i;
 
 export type TemplateIssues = { errors: string[]; warnings: string[] };
 
@@ -142,17 +142,7 @@ export const checkTemplate = (plan: TemplatePlan, media: MediaLookup): TemplateI
 };
 
 /** A shared place or destination entry is accepted only with a public-domain or CC0 picture hosted by Wikimedia. */
-const checkImage = (image: { url: string; license: string } | null | undefined): string | null => {
-  if (!image) return null;
-  let host = '';
-  try {
-    const parsed = new URL(image.url);
-    host = parsed.protocol === 'https:' ? parsed.hostname : '';
-  } catch { /* falls through to the error */ }
-  if (!COMMONS_HOSTS.has(host)) return `picture ${image.url} must be an https upload.wikimedia.org or thumb.wikimedia.org address.`;
-  if (!OPEN_LICENSE.test(image.license)) return `picture license "${image.license}" is not public domain or CC0, the only licenses accepted.`;
-  return null;
-};
+const checkImage = templateImageProblem;
 
 // ------------------------------------------------------------------------ reading a bundle
 
@@ -274,6 +264,12 @@ export const importBundle = async (input: unknown, options: { dryRun: boolean; i
   await refreshImportedTemplates(true);
   await syncTripTemplatesFromSeed();
   logInfo(`[trip-templates] imported ${prepared.templates.filter((t) => t.status !== 'unchanged').length} template(s), ${prepared.places.length} place(s), ${prepared.destinations.length} destination(s)`);
+  // Stops and cities that came without a picture get one looked for in the background; the import does not wait for it.
+  const pictureTargets: PictureTarget[] = [
+    ...prepared.places.map(({ key }) => ({ kind: 'place' as const, key })),
+    ...prepared.destinations.map(({ key }) => ({ kind: 'destination' as const, key })),
+  ];
+  void queueTemplatePictureLookup(pictureTargets, options.importedBy);
   return { ...prepared.report, applied: true };
 };
 

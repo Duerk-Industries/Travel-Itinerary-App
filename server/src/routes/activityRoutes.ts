@@ -19,6 +19,7 @@ import {
 } from '../db';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
+import { attachActivityImages } from '../services/activityImageService';
 import { rateItem } from '../services/itemRatingService';
 import { starRatingDto } from './ratingDto';
 import type { ActivityType } from '../types';
@@ -118,7 +119,7 @@ router.get('/', async (req, res) => {
   const activities = await listActivities(userId, tripId);
   if (tripId) {
     const withVotes = await applyVoteSummary(userId, tripId, 'activity', activities as any[]);
-    res.json(withVotes);
+    res.json(await attachActivityImages(withVotes));
     return;
   }
   const grouped = new Map<string, any[]>();
@@ -134,7 +135,7 @@ router.get('/', async (req, res) => {
     const withVotes = await applyVoteSummary(userId, tId, 'activity', items);
     merged.push(...withVotes);
   }
-  res.json(merged.length ? merged : activities);
+  res.json(merged.length ? await attachActivityImages(merged) : activities);
 });
 
 const nearLodgingIsValid = async (tripId: string, lodgingId?: string | null): Promise<boolean> => {

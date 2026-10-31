@@ -244,7 +244,11 @@ export const castStarRating = async (...args: Parameters<ReturnType<typeof adapt
   adapter().castStarRating(...args);
 export const getStarRatingSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getStarRatingSummaries']>) =>
   adapter().getStarRatingSummaries(...args);
-export const listLegacyThumbRatings = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyThumbRatings']>) =>
+export const getActivityImageCache = async (...args: Parameters<ReturnType<typeof adapter>['getActivityImageCache']>) =>
+  adapter().getActivityImageCache(...args);
+export const saveActivityImageCache = async (...args: Parameters<ReturnType<typeof adapter>['saveActivityImageCache']>) =>
+  adapter().saveActivityImageCache(...args);
+export const listLegacyThumbRatings =async (...args: Parameters<ReturnType<typeof adapter>['listLegacyThumbRatings']>) =>
   adapter().listLegacyThumbRatings(...args);
 export const hasStarRating = async (...args: Parameters<ReturnType<typeof adapter>['hasStarRating']>) =>
   adapter().hasStarRating(...args);

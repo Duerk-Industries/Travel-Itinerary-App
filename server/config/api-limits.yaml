@@ -36,6 +36,8 @@ providers:
       PARSE_FLIGHT_TEXT: 200
       LEGACY_DOCUMENT_PARSE: 100
       BLOG_CAPTION_SUGGEST: 200
+      # A vision model approving a Commons picture for an imported template stop; one call per stop.
+      TEMPLATE_PICTURE_REVIEW: 300
 
   ANTHROPIC:
     window: hour
@@ -128,6 +130,8 @@ providers:
       IMAGE_SERVICE_LOCATION_IMAGE: 50
       IMAGE_SERVICE_ITINERARY_IMAGE: 50
       IMAGE_SERVICE_GOOGLE_PLACE_FALLBACK: 50
+      # Below the overall 50 so activity photos, which are fetched in the background, leave room for trip pictures.
+      ACTIVITY_PHOTO: 30
       UNSPLASH_HEALTH_CHECK: 50
 
   SMTP:
@@ -181,6 +185,8 @@ providers:
       ATTRACTION_WIKIPEDIA_ENRICHMENT: 500
       ATTRACTION_WIKIPEDIA_SUMMARY: 500
       ATTRACTION_WIKIMEDIA_PAGEVIEWS: 500
+      # Commons searches for template pictures; about five requests per stop.
+      TEMPLATE_PICTURE_SEARCH: 1500
 
   SERPAPI:
     window: hour
