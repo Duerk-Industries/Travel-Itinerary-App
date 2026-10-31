@@ -947,7 +947,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Treska_River_and_Matka_Canyon..JPG/960px-Treska_River_and_Matka_Canyon..JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Treska River and Matka Canyon..JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Treska_River_and_Matka_Canyon..JPG",
+          "license": "CC0",
+          "author": "Rudolph.A.furtado",
+          "selection": "ai"
+        }
       },
       "north-macedonia/mavrovo": {
         "name": "Mavrovo National Park and St Jovan Bigorski",
@@ -972,7 +981,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/Ohrid-Old-Town-2.JPG/960px-Ohrid-Old-Town-2.JPG",
+          "width": 960,
+          "height": 719,
+          "title": "File:Ohrid-Old-Town-2.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ohrid-Old-Town-2.JPG",
+          "license": "Public domain",
+          "author": "Apcbg",
+          "selection": "ai"
+        }
       },
       "north-macedonia/st-naum": {
         "name": "Monastery of St Naum and the springs",
@@ -984,7 +1002,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Springs_of_Black_Drim_02.JPG/960px-Springs_of_Black_Drim_02.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Springs of Black Drim 02.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Springs_of_Black_Drim_02.JPG",
+          "license": "CC0",
+          "author": "Stojan Toshe Nikolovski",
+          "selection": "ai"
+        }
       },
       "north-macedonia/bitola": {
         "name": "Bitola Shirok Sokak and Heraclea Lyncestis",
@@ -1015,7 +1042,18 @@
       "north-macedonia": {
         "name": "North Macedonia",
         "description": "A Balkan country of lakes, monasteries, bazaars and wine valleys.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3d/Tower_and_West_Wall_of_Skopje_Fortress%2C_North_Macedonia%2C_2026.jpg/960px-Tower_and_West_Wall_of_Skopje_Fortress%2C_North_Macedonia%2C_2026.jpg",
+            "width": 960,
+            "height": 614,
+            "title": "File:Tower and West Wall of Skopje Fortress, North Macedonia, 2026.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tower_and_West_Wall_of_Skopje_Fortress,_North_Macedonia,_2026.jpg",
+            "license": "CC0",
+            "author": "Julian Lupyan",
+            "selection": "ai"
+          }
+        ]
       },
       "north-macedonia/skopje": {
         "name": "Skopje",
@@ -1030,7 +1068,18 @@
       "north-macedonia/ohrid": {
         "name": "Ohrid",
         "description": "A lakeside town of churches and beaches.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/The_Church_of_Saints_Clement_and_Panteleimon%2C_Plaoshnik_-Ohrid%2C_North_Macedonia.jpg/960px-The_Church_of_Saints_Clement_and_Panteleimon%2C_Plaoshnik_-Ohrid%2C_North_Macedonia.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:The Church of Saints Clement and Panteleimon, Plaoshnik -Ohrid, North Macedonia.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Church_of_Saints_Clement_and_Panteleimon,_Plaoshnik_-Ohrid,_North_Macedonia.jpg",
+            "license": "CC0",
+            "author": "Делфина",
+            "selection": "ai"
+          }
+        ]
       },
       "north-macedonia/bitola": {
         "name": "Bitola",

@@ -1122,14 +1122,34 @@
           "authentic_local"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Ghorepani_Ghandruk_Trek_%E2%80%94_Short%2C_Sweet%2C_and_Full_of_Mountain_Magic.jpg/960px-Ghorepani_Ghandruk_Trek_%E2%80%94_Short%2C_Sweet%2C_and_Full_of_Mountain_Magic.jpg",
+          "width": 960,
+          "height": 636,
+          "title": "File:Ghorepani Ghandruk Trek — Short, Sweet, and Full of Mountain Magic.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ghorepani_Ghandruk_Trek_%E2%80%94_Short,_Sweet,_and_Full_of_Mountain_Magic.jpg",
+          "license": "CC0",
+          "author": "Farnandezcristofer",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "nepal": {
         "name": "Nepal",
         "description": "A Himalayan country of temples, trekking, rhino jungles and Buddhist pilgrimage.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Expo_2010_Nepal_Pavilion.jpg/960px-Expo_2010_Nepal_Pavilion.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Expo 2010 Nepal Pavilion.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Expo_2010_Nepal_Pavilion.jpg",
+            "license": "CC0",
+            "author": "Gary Lee Todd, Ph.D.",
+            "selection": "ai"
+          }
+        ]
       },
       "nepal/kathmandu": {
         "name": "Kathmandu",

@@ -1312,7 +1312,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e9/Oslo_Opera_House_in_Norway.jpg/960px-Oslo_Opera_House_in_Norway.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Oslo Opera House in Norway.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Oslo_Opera_House_in_Norway.jpg",
+          "license": "CC0",
+          "author": "cc0cc0 = free for everybody",
+          "selection": "ai"
+        }
       },
       "norway/viking-fram": {
         "name": "Viking Ship Museum and Fram Museum",
@@ -1335,7 +1344,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/The_diminishing_perspective_while_looking_down_the_platform_beside_the_Fl%C3%A5msbana_Fl%C3%A5m_Railway_passenger_car.jpg/960px-The_diminishing_perspective_while_looking_down_the_platform_beside_the_Fl%C3%A5msbana_Fl%C3%A5m_Railway_passenger_car.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:The diminishing perspective while looking down the platform beside the Flåmsbana Flåm Railway passenger car.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_diminishing_perspective_while_looking_down_the_platform_beside_the_Fl%C3%A5msbana_Fl%C3%A5m_Railway_passenger_car.jpg",
+          "license": "CC0",
+          "author": "Stch2022",
+          "selection": "ai"
+        }
       },
       "norway/bergen-bryggen": {
         "name": "Bergen Bryggen, Floibanen and fish market",
@@ -1348,7 +1366,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/The_Bryggen_buidlings_in_Bergen%2C_Norway_in_2026.jpg/960px-The_Bryggen_buidlings_in_Bergen%2C_Norway_in_2026.jpg",
+          "width": 960,
+          "height": 621,
+          "title": "File:The Bryggen buidlings in Bergen, Norway in 2026.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Bryggen_buidlings_in_Bergen,_Norway_in_2026.jpg",
+          "license": "CC0",
+          "author": "Stch2022",
+          "selection": "ai"
+        }
       },
       "norway/geirangerfjord": {
         "name": "Geirangerfjord, Trollstigen and Alesund",
@@ -1387,29 +1414,82 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Reine---Lofoten-Islands.JPG/960px-Reine---Lofoten-Islands.JPG",
+          "width": 960,
+          "height": 641,
+          "title": "File:Reine---Lofoten-Islands.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Reine---Lofoten-Islands.JPG",
+          "license": "Public domain",
+          "author": "Peleg",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "norway": {
         "name": "Norway",
         "description": "A country of fjords, mountains, Arctic lights and Viking history.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Lofoten%2C_Norway_%28Unsplash%29.jpg/960px-Lofoten%2C_Norway_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Lofoten, Norway (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Lofoten,_Norway_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Johannes Groll followhansi",
+            "selection": "ai"
+          }
+        ]
       },
       "norway/oslo": {
         "name": "Oslo",
         "description": "The harbour capital with museums and parks.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Oslo_palace1.jpg/960px-Oslo_palace1.jpg",
+            "width": 960,
+            "height": 643,
+            "title": "File:Oslo palace1.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Oslo_palace1.jpg",
+            "license": "Public domain",
+            "author": "cs:Wikipedista:Li-sung",
+            "selection": "ai"
+          }
+        ]
       },
       "norway/flam": {
         "name": "Flam",
         "description": "A fjord village at the end of a famous railway.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/The_diminishing_perspective_while_looking_down_the_platform_beside_the_Fl%C3%A5msbana_Fl%C3%A5m_Railway_passenger_car.jpg/960px-The_diminishing_perspective_while_looking_down_the_platform_beside_the_Fl%C3%A5msbana_Fl%C3%A5m_Railway_passenger_car.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:The diminishing perspective while looking down the platform beside the Flåmsbana Flåm Railway passenger car.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:The_diminishing_perspective_while_looking_down_the_platform_beside_the_Fl%C3%A5msbana_Fl%C3%A5m_Railway_passenger_car.jpg",
+            "license": "CC0",
+            "author": "Stch2022",
+            "selection": "ai"
+          }
+        ]
       },
       "norway/bergen": {
         "name": "Bergen",
         "description": "A rainy wooden-wharf city and gateway to the fjords.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/The_Bryggen_buidlings_in_Bergen%2C_Norway_in_2026.jpg/960px-The_Bryggen_buidlings_in_Bergen%2C_Norway_in_2026.jpg",
+            "width": 960,
+            "height": 621,
+            "title": "File:The Bryggen buidlings in Bergen, Norway in 2026.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Bryggen_buidlings_in_Bergen,_Norway_in_2026.jpg",
+            "license": "CC0",
+            "author": "Stch2022",
+            "selection": "ai"
+          }
+        ]
       },
       "norway/alesund": {
         "name": "Alesund",
@@ -1419,12 +1499,34 @@
       "norway/tromso": {
         "name": "Tromso",
         "description": "The Arctic city of aurora and sleds.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Tromso_-_02a.jpg/960px-Tromso_-_02a.jpg",
+            "width": 960,
+            "height": 569,
+            "title": "File:Tromso - 02a.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tromso_-_02a.jpg",
+            "license": "Public domain",
+            "author": "JojoSlight corrections by Blueshade",
+            "selection": "ai"
+          }
+        ]
       },
       "norway/reine": {
         "name": "Reine",
         "description": "A fishing village in the Lofoten Islands.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Reine%2C_Norway_%28Unsplash%29.jpg/960px-Reine%2C_Norway_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 625,
+            "title": "File:Reine, Norway (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Reine,_Norway_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Jamie MacPherson jmacpherson",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }
