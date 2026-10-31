@@ -18,6 +18,7 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 
 import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
 import StarRating from '../components/StarRating';
+import ItemRatingCell from '../components/ItemRatingCell';
 import GetYourGuideCta from '../components/GetYourGuideCta';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
@@ -1155,11 +1156,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
               <View style={[styles.cell, styles.lastCell, fixedColumnStyle(120)]}>
-                {normalizeAverageRating(t.averageRating) !== null ? (
-                  <StarRating value={t.averageRating} size={14} label="Average rating" testID={`activity-average-rating-${t.id}`} />
-                ) : (
-                  <Text style={styles.cellText}>-</Text>
-                )}
+                <ItemRatingCell id={t.id} testIDPrefix="activity" averageRating={t.averageRating} userRating={t.userRating} canRate={false} />
               </View>
             </TouchableOpacity>
           ))}

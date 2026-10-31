@@ -28,7 +28,7 @@ export const applyVoteSummary = async <T extends { id: string }>(
   if (!items.length) return [];
   const ids = items.map((item) => item.id);
   const voteSummary = await getItemVoteSummaries(userId, tripId, itemType, ids, 'vote');
-  const rated = await applyStarRatings(userId, itemType, items);
+  const rated = await applyStarRatings(userId, tripId, itemType, items);
   const normalizedVoteSummary = Object.fromEntries(
     Object.entries(voteSummary).map(([id, summary]) => [normalizeVoteSummaryKey(id), summary])
   );

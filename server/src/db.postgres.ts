@@ -5491,17 +5491,54 @@ export const castStarRating = async (
   itemType: VoteItemType,
   itemId: string,
   providerKey: string,
-  stars: number
+  stars: number,
+  changedAt: Date = new Date()
 ): Promise<void> => {
   await getPool().query(
     `
       INSERT INTO item_star_ratings (user_id, item_type, item_id, trip_id, provider_key, stars, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
       ON CONFLICT (user_id, item_type, item_id)
-      DO UPDATE SET stars = EXCLUDED.stars, provider_key = EXCLUDED.provider_key, updated_at = NOW()
+      DO UPDATE SET stars = EXCLUDED.stars, provider_key = EXCLUDED.provider_key, updated_at = EXCLUDED.updated_at
     `,
-    [userId, itemType, itemId, tripId, providerKey, stars]
+    [userId, itemType, itemId, tripId, providerKey, stars, changedAt]
   );
+};
+
+export type LegacyThumbRating = { id: string; userId: string; tripId: string; itemType: VoteItemType; itemId: string; thumb: 1 | -1; changedAt: Date };
+
+const LEGACY_RATING_TYPES = ['flight:rating', 'lodging:rating', 'activity:rating', 'car_rental:rating'];
+
+/** Thumb ratings from before star ratings, for converting them (a thumb up becomes 5 stars, down becomes 1). */
+export const listLegacyThumbRatings = async (limit = 500): Promise<LegacyThumbRating[]> => {
+  const { rows } = await getPool().query(
+    `SELECT id::text as "id", user_id::text as "userId", trip_id::text as "tripId", item_type as "itemType",
+            item_id::text as "itemId", value::int as "value", updated_at as "changedAt"
+     FROM item_votes WHERE item_type IN ($1, $2, $3, $4) LIMIT ${Math.max(1, Math.floor(limit))}`,
+    LEGACY_RATING_TYPES
+  );
+  return rows.map((row: any) => ({
+    id: String(row.id),
+    userId: String(row.userId),
+    tripId: String(row.tripId),
+    itemType: String(row.itemType).replace(':rating', '') as VoteItemType,
+    itemId: String(row.itemId),
+    thumb: Number(row.value) === -1 ? -1 : 1,
+    changedAt: row.changedAt ? new Date(row.changedAt) : new Date(),
+  }));
+};
+
+/** Whether the traveler has already starred this item, so a converted thumb never overwrites a newer star rating. */
+export const hasStarRating = async (userId: string, itemType: VoteItemType, itemId: string): Promise<boolean> => {
+  const { rows } = await getPool().query(
+    'SELECT 1 as "found" FROM item_star_ratings WHERE user_id = $1 AND item_type = $2 AND item_id = $3',
+    [userId, itemType, itemId]
+  );
+  return rows.length > 0;
+};
+
+export const deleteLegacyThumbRatings = async (ids: string[]): Promise<void> => {
+  for (const id of ids) await getPool().query('DELETE FROM item_votes WHERE id = $1', [id]);
 };
 
 export const getStarRatingSummaries = async (

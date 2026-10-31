@@ -19,8 +19,9 @@ import {
   LEGACY_ITINERARY_STATUS,
   normalizeItineraryStatus,
 } from '../utils/itineraryStatus';
-import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
+import { canRateItem, formatAverageRating } from '../utils/votes';
 import StarRating from '../components/StarRating';
+import ItemRatingCell from '../components/ItemRatingCell';
 import CarRentalEditForm from './CarRentalEditForm';
 import EditableDataGrid, { type GridCellError, type GridColumn } from './EditableDataGrid';
 
@@ -313,14 +314,14 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
             </View>
 
             <View style={[styles.tableCell, fixedTableColumn(110)]}>
-              {normalizeAverageRating((car as any).averageRating) !== null ? (
-                <StarRating value={(car as any).averageRating} size={14} label="Average rating" testID={`car-rental-average-rating-${car.id}`} />
-              ) : isFollowingMode || !canRateItem((car as any).status) ? (
-                <Text style={styles.cellText}>-</Text>
-              ) : null}
-              {!isFollowingMode && canRateItem((car as any).status) ? (
-                <StarRating value={(car as any).userRating} size={14} onChange={(stars) => void onRateCarRental(car.id, stars)} label="Your rating" testID={`car-rental-your-rating-${car.id}`} />
-              ) : null}
+              <ItemRatingCell
+                id={car.id}
+                testIDPrefix="car-rental"
+                averageRating={(car as any).averageRating}
+                userRating={(car as any).userRating}
+                canRate={!isFollowingMode && canRateItem((car as any).status)}
+                onRate={(stars) => void onRateCarRental(car.id, stars)}
+              />
             </View>
             <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_7', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
               <View style={styles.actionCell}>

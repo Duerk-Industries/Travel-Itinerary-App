@@ -20,8 +20,8 @@ import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CsvTransferControls from '../components/CsvTransferControls';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
-import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
-import StarRating from '../components/StarRating';
+import { canRateItem, formatAverageRating } from '../utils/votes';
+import ItemRatingCell from '../components/ItemRatingCell';
 
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import { ITINERARY_STATUSES } from '../utils/itineraryStatus';
@@ -439,14 +439,14 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               </View>
 
               <View style={[styles.tableCell, fixedTableColumn(110)]}>
-                {normalizeAverageRating((lodging as any).averageRating) !== null ? (
-                  <StarRating value={(lodging as any).averageRating} size={14} label="Average rating" testID={`lodging-average-rating-${lodging.id}`} />
-                ) : readOnly || !canRateItem(lodging.status) ? (
-                  <Text style={styles.cellText}>-</Text>
-                ) : null}
-                {!readOnly && canRateItem(lodging.status) ? (
-                  <StarRating value={(lodging as any).userRating} size={14} onChange={(stars) => void rateOnLodging(lodging.id, stars)} label="Your rating" testID={`lodging-your-rating-${lodging.id}`} />
-                ) : null}
+                <ItemRatingCell
+                  id={lodging.id}
+                  testIDPrefix="lodging"
+                  averageRating={(lodging as any).averageRating}
+                  userRating={(lodging as any).userRating}
+                  canRate={!readOnly && canRateItem(lodging.status)}
+                  onRate={(stars) => void rateOnLodging(lodging.id, stars)}
+                />
               </View>
               <View style={[styles.tableCell, fixedTableColumn(168), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_LodgingTab_22', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
                 <View style={[styles.actionCell, themeStyle('tabs_LodgingTab_23', {  }, (theme ?? _styleTheme))]}>

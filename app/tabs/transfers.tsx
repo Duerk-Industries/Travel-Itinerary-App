@@ -29,7 +29,7 @@ import { toWebStyle } from '../utils/webStyle';
 import { buildMemberDisplayLookup, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeTimeInput } from '../utils/normalizeTimeInput';
 import { canRateItem, formatAverageRating, normalizeAverageRating, normalizeStarRating } from '../utils/votes';
-import StarRating from '../components/StarRating';
+import ItemRatingCell from '../components/ItemRatingCell';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import DateField from '../components/DateField';
 
@@ -1692,14 +1692,14 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
-                      {normalizeAverageRating(item.averageRating) !== null ? (
-                        <StarRating value={item.averageRating} size={14} label="Average rating" testID={`transfer-average-rating-${item.id}`} />
-                      ) : !canRate ? (
-                        <Text style={styles.cellText}>-</Text>
-                      ) : null}
-                      {canRate ? (
-                        <StarRating value={item.userRating} size={14} onChange={(stars) => void rateFlight(item.id, stars)} label="Your rating" testID={`transfer-your-rating-${item.id}`} />
-                      ) : null}
+                      <ItemRatingCell
+                        id={item.id}
+                        testIDPrefix="transfer"
+                        averageRating={item.averageRating}
+                        userRating={item.userRating}
+                        canRate={canRate}
+                        onRate={(stars) => void rateFlight(item.id, stars)}
+                      />
                     </View>
                   );
                 }

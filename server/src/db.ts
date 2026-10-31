@@ -244,6 +244,12 @@ export const castStarRating = async (...args: Parameters<ReturnType<typeof adapt
   adapter().castStarRating(...args);
 export const getStarRatingSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getStarRatingSummaries']>) =>
   adapter().getStarRatingSummaries(...args);
+export const listLegacyThumbRatings = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyThumbRatings']>) =>
+  adapter().listLegacyThumbRatings(...args);
+export const hasStarRating = async (...args: Parameters<ReturnType<typeof adapter>['hasStarRating']>) =>
+  adapter().hasStarRating(...args);
+export const deleteLegacyThumbRatings = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyThumbRatings']>) =>
+  adapter().deleteLegacyThumbRatings(...args);
 export const getItineraryDetailContext = async (
   ...args: Parameters<ReturnType<typeof adapter>['getItineraryDetailContext']>
 ) => adapter().getItineraryDetailContext(...args);

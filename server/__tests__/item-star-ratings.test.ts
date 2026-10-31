@@ -2,8 +2,9 @@
 /// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
-import { closePool, getStarRatingSummaries, initDb, insertCarRental, insertFlight, insertLodging } from '../src/db';
+import { castItemVote, closePool, getStarRatingSummaries, initDb, insertCarRental, insertFlight, insertLodging, listLegacyThumbRatings } from '../src/db';
 import { providerKeyFor } from '../src/services/itemRatingService';
+import { convertThumbRatingsToStars } from '../src/services/thumbRatingConversionService';
 import { registerAndLoginWebUser, seedTiersForTest, setUserTierInDb } from './helpers';
 
 describe('1-5 star ratings, averaged per provider across travelers', () => {
@@ -100,6 +101,49 @@ describe('1-5 star ratings, averaged per provider across travelers', () => {
 
     expect(providerKeyFor('flight', { id: 'f', carrier: '' })).toBe('item:f');
     expect(providerKeyFor('activity', { id: 'a', name: 'Louvre', catalogId: 'CAT-1' })).toBe('catalog:cat-1');
-    expect(providerKeyFor('lodging', { id: 'l', name: 'X', placeId: 'ChIJ1' })).toBe('place:chij1');
+  });
+
+  it('matches hotels by name and address, else name and trip destination, else name alone', () => {
+    const at = (address: string) => providerKeyFor('lodging', { id: 'l', name: 'Hotel  Lux!', address });
+    expect(at('1 Main St., Paris')).toBe(at(' 1 main st paris '));
+    expect(at('1 Main St, Paris')).not.toBe(at('9 Quay Rd, Nice'));
+    expect(providerKeyFor('lodging', { id: 'l', name: 'Hotel Lux', address: '' }, { destination: 'Paris, France' })).toBe('hotel:hotel lux|in paris france');
+    expect(providerKeyFor('lodging', { id: 'l', name: 'Hotel Lux', address: '' }, { destination: 'Nice' })).not.toBe(
+      providerKeyFor('lodging', { id: 'l', name: 'Hotel Lux', address: '' }, { destination: 'Paris' })
+    );
+    // An address wins over the destination, and with neither the name alone is averaged.
+    expect(providerKeyFor('lodging', { id: 'l', name: 'Hotel Lux', address: '1 Main St' }, { destination: 'Paris' })).toBe('hotel:hotel lux|1 main st');
+    expect(providerKeyFor('lodging', { id: 'l', name: 'Hotel Lux' })).toBe('hotel:hotel lux');
+    expect(providerKeyFor('lodging', { id: 'l', name: '  ' })).toBe('item:l');
+  });
+
+  it('keeps same-named hotels at different addresses apart when averaging', async () => {
+    const hotel = `Twin Inn ${uniq}`;
+    const stayAt = (who: Traveler, address: string) => insertLodging({
+      userId: who.userId, tripId: who.tripId, status: 'Completed', name: hotel, checkInDate: '2026-03-01', checkOutDate: '2026-03-04', rooms: 1, totalCost: 0, costPerNight: 0, address, paid_by: [], traveler_ids: [],
+    } as any);
+    const north = await stayAt(alice, '1 North Rd');
+    const northToo = await stayAt(bob, '1 north rd.');
+    const south = await stayAt(alice, '2 South Rd');
+    await rate(alice, north.id, 5).expect(200);
+    expect((await rate(bob, northToo.id, 3).expect(200)).body).toMatchObject({ averageRating: 4, userRating: 3 });
+    expect(await listed(alice, south.id)).toMatchObject({ averageRating: null, userRating: null });
+  });
+
+  it('converts old thumb ratings once: up is 5 stars, down is 1, an existing star rating is kept', async () => {
+    const liked = await lodgingFor(alice, `Thumb Up ${uniq}`);
+    const disliked = await lodgingFor(alice, `Thumb Down ${uniq}`);
+    const alreadyStarred = await lodgingFor(alice, `Both ${uniq}`);
+    await castItemVote(alice.userId, alice.tripId, 'lodging', liked.id, 1, 'rating');
+    await castItemVote(alice.userId, alice.tripId, 'lodging', disliked.id, -1, 'rating');
+    await castItemVote(alice.userId, alice.tripId, 'lodging', alreadyStarred.id, -1, 'rating');
+    await rate(alice, alreadyStarred.id, 4).expect(200);
+
+    expect(await convertThumbRatingsToStars()).toBe(2);
+    expect(await listed(alice, liked.id)).toMatchObject({ averageRating: 5, userRating: 5 });
+    expect(await listed(alice, disliked.id)).toMatchObject({ averageRating: 1, userRating: 1 });
+    expect(await listed(alice, alreadyStarred.id)).toMatchObject({ userRating: 4 });
+    expect(await listLegacyThumbRatings()).toEqual([]);
+    expect(await convertThumbRatingsToStars()).toBe(0);
   });
 });

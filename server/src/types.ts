@@ -323,8 +323,8 @@ export interface Flight {
   transferType?: 'Flight' | 'Public Transit' | 'Private Transfer' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
   netVotes?: number;
   userVote?: -1 | 1 | null;
-  netRating?: number;
-  userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  userRating?: number | null;
   passengerName: string;
   passengerIds?: string[];
   departureDate: string;
@@ -640,8 +640,8 @@ export interface Lodging extends PlanningCoordinates {
   status: ItineraryStatus;
   netVotes?: number;
   userVote?: -1 | 1 | null;
-  netRating?: number;
-  userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  userRating?: number | null;
   name: string;
   check_in_date: string;
   check_out_date: string;
@@ -672,8 +672,8 @@ export interface Activity extends PlanningCoordinates {
   activityType: ActivityType;
   netVotes?: number;
   userVote?: -1 | 1 | null;
-  netRating?: number;
-  userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  userRating?: number | null;
   /** Empty when this is an optional, unscheduled activity. */
   date: string;
   name: string;
@@ -714,8 +714,8 @@ export interface CarRental extends PlanningCoordinates {
   status: ItineraryStatus;
   netVotes?: number;
   userVote?: -1 | 1 | null;
-  netRating?: number;
-  userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  userRating?: number | null;
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;

@@ -5273,16 +5273,52 @@ export const castStarRating = async (
   itemType: VoteItemType,
   itemId: string,
   providerKey: string,
-  stars: number
+  stars: number,
+  changedAt: Date = new Date()
 ): Promise<void> => {
   const ref = getDb().collection(STAR_RATINGS).doc(starRatingDocId(userId, itemType, itemId));
   const existing = await ref.get();
-  const now = nowIso();
+  const now = changedAt.toISOString();
   await ref.set({
     userId, itemType, itemId, tripId, providerKey, stars,
     createdAt: existing.exists ? (existing.data() as any).createdAt ?? now : now,
     updatedAt: now,
   });
+};
+
+export type LegacyThumbRating = { id: string; userId: string; tripId: string; itemType: VoteItemType; itemId: string; thumb: 1 | -1; changedAt: Date };
+
+const LEGACY_RATING_TYPES = ['flight:rating', 'lodging:rating', 'activity:rating', 'car_rental:rating'];
+
+/** Thumb ratings from before star ratings, for converting them (a thumb up becomes 5 stars, down becomes 1). */
+export const listLegacyThumbRatings = async (limit = 500): Promise<LegacyThumbRating[]> => {
+  const snap = await getDb().collection('item_votes').where('itemType', 'in', LEGACY_RATING_TYPES).limit(Math.max(1, Math.floor(limit))).get();
+  return snap.docs.map((doc) => {
+    const data = doc.data() as any;
+    const changedAt = new Date(String(data.updatedAt ?? data.createdAt ?? ''));
+    return {
+      id: doc.id,
+      userId: String(data.userId ?? ''),
+      tripId: String(data.tripId ?? ''),
+      itemType: String(data.itemType).replace(':rating', '') as VoteItemType,
+      itemId: String(data.itemId ?? ''),
+      thumb: data.value === -1 ? -1 : 1,
+      changedAt: Number.isNaN(changedAt.getTime()) ? new Date() : changedAt,
+    };
+  });
+};
+
+/** Whether the traveler has already starred this item, so a converted thumb never overwrites a newer star rating. */
+export const hasStarRating = async (userId: string, itemType: VoteItemType, itemId: string): Promise<boolean> =>
+  (await getDb().collection(STAR_RATINGS).doc(starRatingDocId(userId, itemType, itemId)).get()).exists;
+
+export const deleteLegacyThumbRatings = async (ids: string[]): Promise<void> => {
+  const db = getDb();
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = db.batch();
+    ids.slice(i, i + 400).forEach((id) => batch.delete(db.collection('item_votes').doc(id)));
+    await batch.commit();
+  }
 };
 
 export const getStarRatingSummaries = async (
