@@ -16,6 +16,7 @@ import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudget
 import { createSocketServer } from './socket';
 import { startGmailPollingScheduler } from './services/gmailPollingService';
 import { startRetentionScheduler } from './services/retentionService';
+import { startItineraryCompletionScheduler } from './services/itineraryCompletionService';
 import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
 import { startFailedRetryScheduler } from './services/failedRetryScheduler';
 import { startBillingReconciliationScheduler } from './billing/subscriptionReconciliationService';
@@ -141,6 +142,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
 
   startGmailPollingScheduler();
   startRetentionScheduler();
+  startItineraryCompletionScheduler();
   startIngestionMetricsScheduler();
   startFailedRetryScheduler();
   startBillingReconciliationScheduler();

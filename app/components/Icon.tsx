@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 /**
@@ -80,6 +81,12 @@ type Props = {
   testID?: string;
 };
 
+// react-native-svg forwards props straight to the <svg> on web, where the native accessibility props are unknown
+// DOM attributes (React warns about each); aria-hidden is the web equivalent.
+const hiddenFromAssistiveTech = Platform.OS === 'web'
+  ? ({ 'aria-hidden': true } as Record<string, unknown>)
+  : { accessibilityElementsHidden: true, importantForAccessibility: 'no' as const };
+
 const Icon: React.FC<Props> = ({ name, size = 22, color, strokeWidth = 1.75, testID }) => (
   <Svg
     width={size}
@@ -90,8 +97,7 @@ const Icon: React.FC<Props> = ({ name, size = 22, color, strokeWidth = 1.75, tes
     strokeWidth={strokeWidth}
     strokeLinecap="round"
     strokeLinejoin="round"
-    accessibilityElementsHidden
-    importantForAccessibility="no"
+    {...hiddenFromAssistiveTech}
     testID={testID}
   >
     {ICON_PATHS[name].map((d) => <Path key={d} d={d} />)}

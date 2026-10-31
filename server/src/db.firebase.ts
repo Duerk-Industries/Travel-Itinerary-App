@@ -9776,6 +9776,34 @@ export const deleteAnalyticsEventsForSubjects = async (subjectIds: string[]): Pr
   return deleted;
 };
 
+/** See the Postgres adapter: Booked items become Completed once the last day they cover is before `beforeDate`. */
+export const completeEndedItineraryItems = async (beforeDate: string): Promise<number> => {
+  const db = getDb();
+  const day = (value: unknown): string => (typeof value === 'string' ? value.slice(0, 10) : '');
+  const targets: Array<[string, (data: any) => string]> = [
+    ['flights', (data) => day(data.arrivalDate) || day(data.departureDate)],
+    ['lodgings', (data) => day(data.check_out_date ?? data.checkOutDate)],
+    ['tours', (data) => day(data.date)],
+    ['car_rentals', (data) => day(data.dropoffDate) || day(data.pickupDate)],
+  ];
+  let completed = 0;
+  for (const [collection, endDate] of targets) {
+    const snap = await db.collection(collection).where('status', '==', 'Booked').get();
+    // Undated items have no end day to wait for, so they stay Booked.
+    const ended = snap.docs.filter((doc) => {
+      const end = endDate(doc.data());
+      return end !== '' && end < beforeDate;
+    });
+    for (let i = 0; i < ended.length; i += 400) {
+      const batch = db.batch();
+      ended.slice(i, i + 400).forEach((doc) => batch.update(doc.ref, { status: 'Completed' }));
+      await batch.commit();
+    }
+    completed += ended.length;
+  }
+  return completed;
+};
+
 export const deleteExpiredAnalyticsEvents = async (nowIsoValue: string): Promise<number> => {
   const snap = await getDb().collection(ANALYTICS_EVENTS).where('expiresAt', '<', nowIsoValue).limit(5_000).get();
   await deleteDocRefsInBatches(snap.docs.map((doc) => doc.ref));

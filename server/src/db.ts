@@ -825,6 +825,8 @@ export const deleteAnalyticsEventsForSubjects = async (...args: Parameters<Retur
   adapter().deleteAnalyticsEventsForSubjects(...args);
 export const deleteExpiredAnalyticsEvents = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpiredAnalyticsEvents']>) =>
   adapter().deleteExpiredAnalyticsEvents(...args);
+export const completeEndedItineraryItems = async (...args: Parameters<ReturnType<typeof adapter>['completeEndedItineraryItems']>) =>
+  adapter().completeEndedItineraryItems(...args);
 export const listAnalyticsEventsBetween = async (...args: Parameters<ReturnType<typeof adapter>['listAnalyticsEventsBetween']>) =>
   adapter().listAnalyticsEventsBetween(...args);
 export const getAnalyticsSubjectTimezone = async (...args: Parameters<ReturnType<typeof adapter>['getAnalyticsSubjectTimezone']>) =>

@@ -13885,6 +13885,27 @@ export const deleteAnalyticsEventsForSubjects = async (subjectIds: string[]): Pr
   return result.rowCount ?? 0;
 };
 
+/**
+ * Marks Booked items Completed once the last day they cover is before `beforeDate` (YYYY-MM-DD): a flight or
+ * transfer ends on its arrival date, a lodging on check-out, a car rental on drop-off, an activity on its date.
+ * Only Booked moves on; Proposed, Needs Booking and Cancelled are left alone. Returns how many were completed.
+ */
+export const completeEndedItineraryItems = async (beforeDate: string): Promise<number> => {
+  const pool = getPool();
+  const targets = [
+    ['flights', 'COALESCE(arrival_date, departure_date)'],
+    ['lodgings', 'check_out_date'],
+    ['tours', 'date'],
+    ['car_rentals', 'COALESCE(dropoff_date, pickup_date)'],
+  ] as const;
+  let completed = 0;
+  for (const [table, endDate] of targets) {
+    const result = await pool.query(`UPDATE ${table} SET status = 'Completed' WHERE status = 'Booked' AND ${endDate} < $1::date`, [beforeDate]);
+    completed += result.rowCount ?? 0;
+  }
+  return completed;
+};
+
 /** Retention: delete events whose expiry has passed. */
 export const deleteExpiredAnalyticsEvents = async (nowIso: string): Promise<number> => {
   const result = await getPool().query(`DELETE FROM analytics_events WHERE expires_at < $1`, [nowIso]);
