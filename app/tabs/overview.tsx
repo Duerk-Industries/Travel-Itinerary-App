@@ -101,6 +101,8 @@ import LodgingDialog from '../components/LodgingDialog';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
 import GetYourGuideCta from '../components/GetYourGuideCta';
+import GetYourGuideTourLink, { GetYourGuideDisclosure } from '../components/GetYourGuideTourLink';
+import { canBookTour, useGetYourGuideTourLinks } from '../hooks/useGetYourGuideTourLinks';
 import { optionalActivitiesForDay } from '../utils/optionalActivities';
 import AddItemPopover, { type AddItemActivityOption, type AddItemKind } from '../components/AddItemPopover';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
@@ -603,6 +605,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     durationDays: '',
   });
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+  const [savingOverviewEdits, setSavingOverviewEdits] = useState(false);
 
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
@@ -841,6 +844,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     () => buildBookingPriorities({ flights, lodgings, activities: tours, carRentals }),
     [flights, lodgings, tours, carRentals]
   );
+  const tourLinks = useGetYourGuideTourLinks({
+    backendUrl,
+    headers,
+    tripId: trip?.id,
+    enabled: !readOnly,
+    refreshKey: tours.map((tour) => `${tour.id}:${tour.name}:${tour.status}`).join('|'),
+  });
 
   const refreshItineraryDetails = async () => {
     if (!itineraryId) return;
@@ -1737,16 +1747,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         Alert.alert('Unable to remove member: missing group id');
         return;
       }
-      for (const memberId of pendingRemovalIds) {
-        const removeRes = await fetch(`${backendUrl}/api/groups/${removalGroupId}/members/${memberId}`, {
-          method: 'DELETE',
-          headers,
-        });
-        if (!removeRes.ok) {
-          const removeData = await removeRes.json().catch(() => ({}));
-          Alert.alert(removeData.error || 'Unable to remove member');
-          return;
-        }
+      const removals = await Promise.all(pendingRemovalIds.map((memberId) => fetch(`${backendUrl}/api/groups/${removalGroupId}/members/${memberId}`, {
+        method: 'DELETE',
+        headers,
+      })));
+      const failedRemoval = removals.find((removeRes) => !removeRes.ok);
+      if (failedRemoval) {
+        const removeData = await failedRemoval.json().catch(() => ({}));
+        Alert.alert(removeData.error || 'Unable to remove member');
+        return;
       }
       setPendingRemovalIds([]);
       onRefreshGroups();
@@ -2835,10 +2844,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <Text style={styles.sectionTitle}>What to book now</Text>
         {bookingPriorities.slice(0, 6).map((item) => (
           <View key={`${item.kind}-${item.id}`} style={[styles.row, themeStyle('tabs_overview_13', {  }, (theme ?? _styleTheme))]} testID={`overview-booking-priority-${item.kind}-${item.id}`}>
-            <Text style={styles.bodyText}>
-              {bookingPriorityKindLabel[item.kind]}: {item.label}
-              {item.date ? ` (${item.date})` : ''}
-            </Text>
+            <View style={themeStyle('tabs_overview_108', {  }, (theme ?? _styleTheme))}>
+              <Text style={styles.bodyText}>
+                {bookingPriorityKindLabel[item.kind]}: {item.label}
+                {item.date ? ` (${item.date})` : ''}
+              </Text>
+              {item.kind === 'activity' && tourLinks[item.id] ? (
+                <GetYourGuideTourLink backendUrl={backendUrl} link={tourLinks[item.id]} activityName={item.label} hideDisclosure testID={`overview-booking-getyourguide-${item.id}`} theme={theme} />
+              ) : null}
+            </View>
             <Text style={bookingPriorityUrgencyStyle[item.urgency]}>
               {bookingPriorityUrgencyLabel[item.urgency]}
               {item.urgency === 'overdue' && item.daysUntil !== null ? ` · ${Math.abs(item.daysUntil)}d ago` : ''}
@@ -2846,6 +2860,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </Text>
           </View>
         ))}
+        {bookingPriorities.slice(0, 6).some((item) => item.kind === 'activity' && tourLinks[item.id]) ? <GetYourGuideDisclosure theme={theme} /> : null}
       </View>
     );
   };
@@ -3034,6 +3049,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           <Text
                             style={[
                               styles.helperText,
+                              themeStyle('tabs_overview_107', {  }, (theme ?? _styleTheme)),
                               checked && themeStyle('tabs_overview_43', { theme: theme }, (theme ?? _styleTheme)),
                             ]}
                           >
@@ -3548,8 +3564,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <Text style={styles.sectionTitle}>Overview</Text>
           {isEditing ? (
             <View style={[styles.row, themeStyle('tabs_overview_58', {  }, (theme ?? _styleTheme)), isPhoneLayout ? themeStyle('tabs_overview_59', {  }, (theme ?? _styleTheme)) : null]}>
-              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveOverviewEdits}>
-                <Text style={styles.buttonText}>Save</Text>
+              <TouchableOpacity testID="overview-save-edits" style={[styles.button, styles.smallButton, savingOverviewEdits && styles.buttonDisabled]} disabled={savingOverviewEdits}
+                onPress={() => { setSavingOverviewEdits(true); saveOverviewEdits().finally(() => setSavingOverviewEdits(false)); }}>
+                <Text style={styles.buttonText}>{savingOverviewEdits ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.smallButton, styles.dangerButton]}
@@ -3800,19 +3817,27 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 member.status === 'pending' && styles.attendeeChipPending,
               ]}
             >
-              <Text style={styles.attendeeText} numberOfLines={1} ellipsizeMode="tail">{attendeeLabel(member)}</Text>
+              <Text style={[styles.attendeeText, pendingRemovalIds.includes(member.id) && styles.attendeeTextRemoving]} numberOfLines={1} ellipsizeMode="tail">{attendeeLabel(member)}</Text>
               {isEditing ? (
                 <TouchableOpacity
+                  testID={`overview-remove-traveler-${member.id}`}
                   style={styles.attendeeRemoveButton}
                   onPress={() => removeTraveler(member.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${pendingRemovalIds.includes(member.id) ? 'Keep' : 'Remove'} ${attendeeLabel(member)}`}
                   hitSlop={themeStyle('tabs_overview_79', {  }, (theme ?? _styleTheme))}
                 >
-                  <Text style={styles.attendeeRemoveText}>✕</Text>
+                  <Text style={styles.attendeeRemoveText}>{pendingRemovalIds.includes(member.id) ? 'Undo' : '✕'}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
           ))}
         </View>
+        {isEditing && pendingRemovalIds.length ? (
+          <Text style={styles.attendeeRemovalNotice} accessibilityLiveRegion="polite" testID="overview-pending-removal-notice">
+            {`${pendingRemovalIds.length} ${pendingRemovalIds.length === 1 ? 'traveler' : 'travelers'} will be removed from this trip when you tap Save.`}
+          </Text>
+        ) : null}
         {isEditing ? (
           <View style={themeStyle('tabs_overview_80', {  }, (theme ?? _styleTheme))}>
             <Text style={styles.headerText}>Pending Invites</Text>
@@ -4088,6 +4113,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           members={groupMembers}
           styles={styles}
           theme={theme}
+          footer={editingTourId && tourLinks[editingTourId] && canBookTour(tourDraft.status)
+            ? <GetYourGuideTourLink backendUrl={backendUrl} link={tourLinks[editingTourId]} activityName={tourDraft.name} testID="activity-edit-getyourguide" theme={theme} />
+            : null}
         />
       ) : null}
 

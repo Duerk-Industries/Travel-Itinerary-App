@@ -6,6 +6,7 @@ import type { Trip } from '../../server/src/types';
 import type { FollowedTrip } from './follow';
 import { getTripPeriod, TripPeriod } from '../utils/tripPeriod';
 import FollowTripButton from '../components/FollowTripButton';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { formatDateLong } from '../utils/formatDateLong';
 
 type Props = {
@@ -21,15 +22,34 @@ type Props = {
   onNavigate?: (page: string) => void;
   onFollowTrip?: (code: string) => Promise<string | null>;
   onDeleteTrip?: (trip: { id: string; name: string }) => void;
+  /** Resolves to an error message, or null once the trip is unfollowed. */
+  onUnfollowTrip?: (tripId: string) => Promise<string | null>;
   hiddenPages?: Set<string>;
 };
 
-export default function AllTripsTab({ backendUrl, headers, trips, followedTrips, activeTripId, styles, onSelectTrip, onSelectFollowedTrip, onBack, onNavigate, onFollowTrip, onDeleteTrip, hiddenPages }: Props) {
+export default function AllTripsTab({ backendUrl, headers, trips, followedTrips, activeTripId, styles, onSelectTrip, onSelectFollowedTrip, onBack, onNavigate, onFollowTrip, onDeleteTrip, onUnfollowTrip, hiddenPages }: Props) {
   const _styleTheme = useStyleTheme();
   const [details, setDetails] = useState<Record<string, Trip>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [tripToUnfollow, setTripToUnfollow] = useState<{ id: string; name: string } | null>(null);
+  const [unfollowBusy, setUnfollowBusy] = useState(false);
+  const [unfollowError, setUnfollowError] = useState<string | null>(null);
+  const confirmUnfollow = async () => {
+    if (!tripToUnfollow || !onUnfollowTrip || unfollowBusy) return;
+    setUnfollowBusy(true);
+    setUnfollowError(null);
+    try {
+      const failure = await onUnfollowTrip(tripToUnfollow.id);
+      if (failure) setUnfollowError(failure);
+      else setTripToUnfollow(null);
+    } catch {
+      setUnfollowError('Unable to unfollow trip');
+    } finally {
+      setUnfollowBusy(false);
+    }
+  };
   useEffect(() => {
     let cancelled = false;
     setLoading(followedTrips.length > 0);
@@ -79,7 +99,7 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
               const rows = entries.filter((trip) => trip.following === following && getTripPeriod(trip) === period);
               if (!rows.length) return null;
               return <View key={String(following)} style={themeStyle('tabs_allTrips_layout5', {  }, _styleTheme)}>
-                <Text accessibilityRole="header" style={styles.homeModalRowTitle}>{following ? 'Following' : 'One the Trip'}</Text>
+                <Text accessibilityRole="header" style={styles.homeModalRowTitle}>{following ? 'Following' : 'On the Trip'}</Text>
                 {rows.map((trip) => (
                   <Pressable key={trip.id} accessibilityRole="button" accessibilityLabel={`Select ${trip.name}`} accessibilityState={{ selected: trip.id === activeTripId }}
                     testID={`all-trips-row-${trip.id}`}
@@ -100,7 +120,19 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
                         style={({ pressed }: { pressed: boolean }) => [styles.homeModalRowDelete, pressed && styles.homeModalRowDeletePressed]}
                         onPress={(e: any) => { e?.stopPropagation?.(); onDeleteTrip({ id: trip.id, name: trip.name }); }}
                       >
-                        <Text style={styles.homeModalRowDeleteText}>🗑 Delete</Text>
+                        <Text style={styles.homeModalRowDeleteText}>Delete</Text>
+                      </Pressable>
+                    ) : null}
+                    {following && onUnfollowTrip ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Unfollow ${trip.name}`}
+                        testID={`all-trips-row-unfollow-${trip.id}`}
+                        hitSlop={8}
+                        style={({ pressed }: { pressed: boolean }) => [styles.homeModalRowDelete, pressed && styles.homeModalRowDeletePressed]}
+                        onPress={(e: any) => { e?.stopPropagation?.(); setUnfollowError(null); setTripToUnfollow({ id: trip.id, name: trip.name }); }}
+                      >
+                        <Text style={styles.homeModalRowDeleteText}>Unfollow</Text>
                       </Pressable>
                     ) : null}
                   </Pressable>
@@ -110,6 +142,22 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
           </View>
         ))}
       </ScrollView>
+      {tripToUnfollow ? (
+        <ConfirmDialog
+          visible
+          useNativeModal
+          title="Unfollow trip?"
+          message={`You'll stop following ${tripToUnfollow.name}. You'll need a follow code to follow it again.`}
+          confirmLabel="Unfollow"
+          busy={unfollowBusy}
+          busyLabel="Unfollowing…"
+          errorMessage={unfollowError}
+          onConfirm={confirmUnfollow}
+          onCancel={() => setTripToUnfollow(null)}
+          styles={styles}
+          testID="all-trips-unfollow-dialog"
+        />
+      ) : null}
     </View>
   );
 }

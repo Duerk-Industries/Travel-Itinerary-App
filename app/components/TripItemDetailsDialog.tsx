@@ -12,6 +12,8 @@ export type TripItemDetailRow = {
   label: string;
   value: React.ReactNode;
   onPress?: () => void;
+  /** Replaces the value text, for a control such as star rating. */
+  content?: React.ReactNode;
 };
 
 export type TripItemDetailsDialogProps = {
@@ -80,7 +82,7 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
         {rows.map((row) => (
           <View key={row.label} style={detailStyles.row}>
             <Text style={detailStyles.label}>{row.label}</Text>
-            {row.onPress ? (
+            {row.content ? row.content : row.onPress ? (
               <TouchableOpacity style={themeStyle('components_TripItemDetailsDialog_3', {  }, (theme ?? _styleTheme))} onPress={row.onPress}><Text style={[detailStyles.value, styles.linkText]}>{row.value}</Text></TouchableOpacity>
             ) : <Text style={detailStyles.value}>{row.value || '-'}</Text>}
           </View>

@@ -86,7 +86,7 @@ export const undoCatalogActivityPostgres = async (userId: string, activityId: st
   await client.query('SELECT id FROM tours WHERE id=$1 FOR UPDATE', [activityId]);
   const current = await postgres.getActivityById(activityId);
   if (!current || canonicalOperationHash(projection(current)) !== canonicalOperationHash(projection(saved.activity))) throw new PlanningError('ACTIVITY_CHANGED', 409, 'This activity has changed. Open it to review before deleting.');
-  if ((await client.query('SELECT id FROM expenses WHERE source_id=$1 LIMIT 1', [activityId])).rows.length || (await client.query('SELECT id FROM item_votes WHERE item_id=$1 LIMIT 1', [activityId])).rows.length) throw new PlanningError('ACTIVITY_CHANGED', 409, 'This activity has shared changes. Open it to review before deleting.');
+  if ((await client.query('SELECT id FROM expenses WHERE source_id=$1 LIMIT 1', [activityId])).rows.length || (await client.query('SELECT id FROM item_votes WHERE item_id=$1 LIMIT 1', [activityId])).rows.length || (await client.query('SELECT stars FROM item_ratings WHERE item_id=$1 LIMIT 1', [activityId])).rows.length) throw new PlanningError('ACTIVITY_CHANGED', 409, 'This activity has shared changes. Open it to review before deleting.');
   await client.query('DELETE FROM tours WHERE id=$1', [activityId]);
   await client.query('UPDATE operation_receipts SET response_body=$3 WHERE user_id=$1 AND operation_key=$2', [userId, key, JSON.stringify({ ...saved, undone: true })]);
   return true;
@@ -128,7 +128,8 @@ export const undoCatalogActivityFirebase = async (userId: string, activityId: st
     if (!current.exists || canonicalOperationHash(projection(current.data() as Activity)) !== canonicalOperationHash(projection(saved.activity))) throw new PlanningError('ACTIVITY_CHANGED', 409, 'This activity has changed. Open it to review before deleting.');
     const linked = await tx.get(db.collection('expenses').where('sourceId', '==', activityId).limit(1));
     const votes = await tx.get(db.collection('item_votes').where('itemId', '==', activityId).limit(1));
-    if (!linked.empty || !votes.empty) throw new PlanningError('ACTIVITY_CHANGED', 409, 'This activity has shared changes. Open it to review before deleting.');
+    const ratings = await tx.get(db.collection('item_ratings').where('itemId', '==', activityId).limit(1));
+    if (!linked.empty || !votes.empty || !ratings.empty) throw new PlanningError('ACTIVITY_CHANGED', 409, 'This activity has shared changes. Open it to review before deleting.');
     tx.delete(current.ref); tx.update(ref, { response: { ...saved, undone: true } }); return true;
   });
 };

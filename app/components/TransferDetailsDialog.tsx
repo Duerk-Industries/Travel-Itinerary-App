@@ -9,15 +9,17 @@ import { isFlightTransfer } from '../utils/transferCategory';
 import { formatFlightDetails } from '../utils/overviewBuilder';
 import TripItemDetailsDialog from './TripItemDetailsDialog';
 import TransferDirections from './TransferDirections';
+import { ItemRating } from './StarRating';
+import { canRateItem } from '../utils/votes';
 import { transferLocationLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 
 type Props = {
   flight: Flight; backendUrl: string; headers: Record<string, string>;
   styles: Record<string, any>; theme?: AppTheme; readOnly?: boolean; mapApp?: MapApp;
   lodgings?: TransferHotel[]; activities?: TransferActivity[];
-  onClose: () => void; onEdit: () => void; onDelete: () => void; testID?: string;
+  onClose: () => void; onEdit: () => void; onDelete: () => void; onRate?: (stars: number) => void; testID?: string;
 };
-function TransferDetails({ flight, backendUrl, headers, styles, theme: _providedTheme, readOnly, mapApp, lodgings = [], activities = [], onClose, onEdit, onDelete, testID }: Props) {
+function TransferDetails({ flight, backendUrl, headers, styles, theme: _providedTheme, readOnly, mapApp, lodgings = [], activities = [], onClose, onEdit, onDelete, onRate, testID }: Props) {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const [detailAirportLabels, setDetailAirportLabels] = useState<Record<string, string>>({});
@@ -54,9 +56,11 @@ function TransferDetails({ flight, backendUrl, headers, styles, theme: _provided
   return <TripItemDetailsDialog visible kind="flight" calendarEvent={uiTransferCalendarEvent(flight)}
     title={`${detailAirportLocation(flight, 'departure')} → ${detailAirportLocation(flight, 'arrival')}`}
     status={flight.status || undefined}
-    rows={formatFlightDetails(flight).map(item => ({ label: item.label,
+    rows={[...formatFlightDetails(flight).map(item => ({ label: item.label,
       value: item.label === 'Departure' ? detailAirportLocation(flight, 'departure')
-        : item.label === 'Arrival' ? detailAirportLocation(flight, 'arrival') : item.value }))}
+        : item.label === 'Arrival' ? detailAirportLocation(flight, 'arrival') : item.value })),
+      ...(canRateItem(flight.status) ? [{ label: 'Rating', value: null, content: <ItemRating status={flight.status} averageRating={flight.averageRating} ratingCount={flight.ratingCount} userStars={flight.userStars}
+        readOnly={readOnly} onRate={onRate} name={`${detailAirportLocation(flight, 'departure')} to ${detailAirportLocation(flight, 'arrival')}`} testID={`transfer-rating-${flight.id}`} theme={theme} /> }] : [])]}
     supplementalContent={ground ? <TransferDirections lodgings={lodgings} departureDate={flight.departure_date} arrivalDate={flight.arrival_date || flight.departure_date} origin={flight.departure_location || flight.departure_airport_code || ''}
       destination={flight.arrival_location || flight.arrival_airport_code || ''}
       transferType={flight.transfer_type || flight.transferType || 'Other'} mapApp={mapApp} styles={styles} /> : undefined}

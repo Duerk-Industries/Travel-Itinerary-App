@@ -48,6 +48,8 @@ export type ActivityEditFormProps = {
   members: ActivityFormMember[];
   styles: Record<string, any>;
   theme?: AppTheme;
+  /** Shown at the bottom of the form, below every field. */
+  footer?: React.ReactNode;
 };
 
 const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
@@ -57,6 +59,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
   onSave,
   onCancel,
   isNew,
+  footer,
   members,
   styles,
   theme: _providedTheme,
@@ -284,6 +287,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
             </View>
             <Text style={styles.modalLabel}>Paid by</Text>
             <PayerSelect members={activeMembers} value={draft.paidBy} formatName={formatMemberDisplayName} onChange={ids => onChange((prev) => ({ ...prev, paidBy: ids }))} styles={styles} testID="activity-payer" />
+            {footer}
           </ScrollView>
           <View style={[styles.tableFooter, themeStyle('components_ActivityEditForm_14', {  }, (theme ?? _styleTheme))]}>
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onCancel} testID="activity-cancel">

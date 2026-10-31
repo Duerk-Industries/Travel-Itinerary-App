@@ -1,7 +1,7 @@
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Keyboard, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import DropdownOptionButton from './DropdownOptionButton';
 import Modal from './KeyboardAwareModal';
 
@@ -45,7 +45,10 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
   );
 
   const toggleOpen = useCallback(() => {
-    if (!disabled) setOpen((current) => !current);
+    if (disabled) return;
+    // Without this, iOS refocuses the previously active text input when the options modal closes.
+    Keyboard.dismiss();
+    setOpen((current) => !current);
   }, [disabled]);
 
   const selectValue = useCallback(

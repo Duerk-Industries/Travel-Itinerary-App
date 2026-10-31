@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Modal from './KeyboardAwareModal';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 type Props = { styles: Record<string, any>; onFollowTrip: (code: string) => Promise<string | null> };
 export default function FollowTripButton({ styles, onFollowTrip }: Props) {
   const _styleTheme = useStyleTheme();
+  const safeAreaInsets = useSafeAreaInsets();
   const [showFollowDialog, setShowFollowDialog] = useState(false);
   const [followCodeInput, setFollowCodeInput] = useState('');
   const [followCodeError, setFollowCodeError] = useState('');
@@ -37,7 +39,7 @@ export default function FollowTripButton({ styles, onFollowTrip }: Props) {
     </Pressable>
       {showFollowDialog ? (
         <Modal transparent animationType="fade" visible onRequestClose={() => setShowFollowDialog(false)}>
-          <View style={styles.homeModalOverlay} testID="all-trips-follow-dialog">
+          <View style={[styles.homeModalOverlay, themeStyle('tabs_HomeTab_20', { safeAreaInsets: safeAreaInsets }, _styleTheme)]} testID="all-trips-follow-dialog">
             <View style={styles.homeModalCard}>
               <View style={styles.homeModalHeader}>
                 <Text style={styles.homeModalTitle}>Follow Trip</Text>

@@ -245,9 +245,10 @@ npx playwright test
 
 - **Naming:** files use camelCase for utilities (`formatDateLong.ts`), PascalCase for React components (`LodgingDetailsDialog.tsx`), camelCase for tab files (`tripDetails.tsx`)
 - **Co-location:** each tab file owns its fetch logic — API calls are not centralized in a separate API layer
+- **GetYourGuide tours:** matched offline in `server/data/getyourguide-tours.json`, synced to `getyourguide_tours` at startup, and chosen per trip by exact activity name. See `server/data/trip-template-authoring/GETYOURGUIDE.md`
 - **Backward compatibility:** `/api/flights` is a permanent alias for `/api/transfers`; do not remove it
 - **Itinerary status lifecycle:** `Needed → Proposed → Booked → Completed | Cancelled` — enforced by `server/src/utils/itineraryStatus.ts` and mirrored in `app/utils/itineraryStatus.ts`
-- **Voting:** trip items (flights, lodgings, activities) support thumbs-up/down votes via `itemVoteService.ts`; separate from star ratings
+- **Ratings:** travelers rate Completed trip items (transfers, lodgings, activities, car rentals) from 1 to 5 stars via `itemVoteService.ts`. Earlier thumbs in `item_votes` count as 5 or 1 stars; proposal voting is retired
 
 ---
 

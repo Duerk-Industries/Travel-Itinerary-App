@@ -4,6 +4,7 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
+import Icon, { type IconName } from './Icon';
 
 
 export type AddItemKind = 'activity' | 'note' | 'checklist';
@@ -33,10 +34,10 @@ export type AddItemPopoverProps = {
   theme?: AppTheme;
 };
 
-const OPTIONS: Array<{ kind: AddItemKind; icon: string; label: string; description: string }> = [
-  { kind: 'note', icon: '📝', label: 'Add a note', description: 'Free-form text for the day' },
-  { kind: 'checklist', icon: '✅', label: 'Add a checklist', description: 'A title with toggleable items' },
-  { kind: 'activity', icon: '🗓️', label: 'Add a new activity', description: 'Time + activity + cost' },
+const OPTIONS: Array<{ kind: AddItemKind; icon: IconName; label: string; description: string }> = [
+  { kind: 'note', icon: 'note', label: 'Add a note', description: 'Free-form text for the day' },
+  { kind: 'checklist', icon: 'checklist', label: 'Add a checklist', description: 'A title with toggleable items' },
+  { kind: 'activity', icon: 'calendar', label: 'Add a new activity', description: 'Time + activity + cost' },
 ];
 
 const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, mode = 'items', onSelect, onClose, hiddenKinds, optionalActivities = [], onSelectOptionalActivity, suggestedActivities = [], onSelectSuggestedActivity, busy = false, theme: _providedTheme }) => {
@@ -51,7 +52,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, mode = 'items'
       style={styles((theme ?? _styleTheme)).option} onPress={() => onSelect(activity.id)}>
       {activity.image
         ? <Image source={{ uri: activity.image.url }} accessibilityIgnoresInvertColors accessibilityLabel={activity.name} style={styles((theme ?? _styleTheme)).optionImage} />
-        : <Text style={styles((theme ?? _styleTheme)).optionIcon}>{kind === 'optional' ? '💡' : '✨'}</Text>}
+        : <View style={styles((theme ?? _styleTheme)).optionIcon}><Icon name={kind === 'optional' ? 'bulb' : 'sparkle'} color={(theme ?? _styleTheme).colors.text} size={22} /></View>}
       <View style={styles((theme ?? _styleTheme)).optionTextWrap}>
         <Text style={[styles((theme ?? _styleTheme)).optionLabel, colors && themeStyle('components_AddItemPopover_4', { colors }, (theme ?? _styleTheme))]}>{activity.name || 'Optional activity'}</Text>
         {activity.description ? <Text numberOfLines={3} style={[styles((theme ?? _styleTheme)).optionDescription, colors && themeStyle('components_AddItemPopover_5', { colors }, (theme ?? _styleTheme))]}>{activity.description}</Text> : null}
@@ -90,7 +91,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, mode = 'items'
             disabled={busy}
             style={({ pressed }: { pressed: boolean }) => [styles((theme ?? _styleTheme)).option, pressed && themeStyle('components_AddItemPopover_3', { colors: colors }, (theme ?? _styleTheme))]}
           >
-            <Text style={styles((theme ?? _styleTheme)).optionIcon}>{opt.icon}</Text>
+            <View style={styles((theme ?? _styleTheme)).optionIcon}><Icon name={opt.icon} color={(theme ?? _styleTheme).colors.text} size={22} /></View>
             <View style={styles((theme ?? _styleTheme)).optionTextWrap}>
               <Text style={[styles((theme ?? _styleTheme)).optionLabel, colors && themeStyle('components_AddItemPopover_4', { colors: colors }, (theme ?? _styleTheme))]}>{opt.label}</Text>
               <Text style={[styles((theme ?? _styleTheme)).optionDescription, colors && themeStyle('components_AddItemPopover_5', { colors: colors }, (theme ?? _styleTheme))]}>{opt.description}</Text>

@@ -106,16 +106,16 @@ export const hitSlop = {
 
 const lightTheme: AppTheme = {
   mode: 'light',
-  // Monochrome: white surfaces, near-black ink, and soft graphite gradients for emphasis.
-  // Semantic colors (success / warning / error / info) keep their hues.
+  // Monochrome: soft warm-grey surfaces (pure white was too bright), near-black ink, and soft
+  // graphite gradients for emphasis. Semantic colors (success / warning / error / info) keep their hues.
   colors: {
-    background: '#FFFFFF', // Previously #FAFCFD
-    backgroundAlt: '#F5F5F5', // Previously #F2F5F7
-    surface: '#FFFFFF',
-    surfaceMuted: '#F4F4F4', // Previously #F2F5F7
+    background: '#ECECE8', // Previously #FFFFFF
+    backgroundAlt: '#E4E4DF', // Previously #F5F5F5
+    surface: '#F6F6F3', // Previously #FFFFFF
+    surfaceMuted: '#EAEAE5', // Previously #F4F4F4
     text: '#0A0A0A', // Previously #111827
-    textMuted: '#6B6B6B', // Previously #626C79
-    border: '#E8E8E8', // Previously #E6ECEF
+    textMuted: '#5C5C5C', // Previously #6B6B6B
+    border: '#D6D6D0', // Previously #E8E8E8
     primary: '#0A0A0A', // Previously #152944
     link: '#0A0A0A', // Previously #45B7C6
     nature: '#3F3F3F', // Previously #5E6B3F
@@ -135,8 +135,8 @@ const lightTheme: AppTheme = {
     overlay: 'rgba(21,41,68,0.45)',
     onAccent: '#FFFFFF',
     linkText: '#0A0A0A', // Previously #152944
-    accentSurface: '#F4F4F4', // Previously #EFFAFB
-    accentBorder: '#E8E8E8', // Previously #9DCFD6
+    accentSurface: '#EAEAE5', // Previously #F4F4F4
+    accentBorder: '#D6D6D0', // Previously #E8E8E8
     accentAction: '#0A0A0A', // Previously #152944
     dangerText: '#B91C1C',
     dangerSurface: '#FFF1F2',
@@ -451,6 +451,10 @@ const styleFactories = {
   // components/ActivityEditForm.tsx
   components_ActivityEditForm_14: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ justifyContent: 'space-between' }),
   // components/ActivityRecapDialog.tsx
+  components_StarRating_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center' }),
+  components_StarRating_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minWidth: 28, minHeight: 28, alignItems: 'center', justifyContent: 'center' }),
+  components_StarRating_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.textMuted, fontSize: 12 }),
+  components_StarRating_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ gap: 2, alignItems: 'flex-start' }),
   components_ActivityRecapDialog_1: (_theme: AppTheme, { surface }: ThemeStyleValues): any => ({ marginTop: 0, backgroundColor: surface, maxHeight: '100%' }),
   // components/ActivityRecapDialog.tsx
   components_ActivityRecapDialog_2: (_theme: AppTheme, { textColor }: ThemeStyleValues): any => ({ color: textColor }),
@@ -460,14 +464,6 @@ const styleFactories = {
   components_ActivityRecapDialog_4: (_theme: AppTheme, { mutedColor }: ThemeStyleValues): any => ({ color: mutedColor, marginTop: 2 }),
   // components/ActivityRecapDialog.tsx
   components_ActivityRecapDialog_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', gap: 8, marginTop: 14 }),
-  // components/ActivityRecapDialog.tsx
-  components_ActivityRecapDialog_6: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.selectedSurface }),
-  // components/ActivityRecapDialog.tsx
-  components_ActivityRecapDialog_7: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ backgroundColor: _theme.colors.dangerAction }),
-  // components/ActivityRecapDialog.tsx
-  components_ActivityRecapDialog_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ color: _theme.colors.onAccent }),
-  // components/ActivityRecapDialog.tsx
-  components_ActivityRecapDialog_9: (_theme: AppTheme, { mutedColor }: ThemeStyleValues): any => ({ color: mutedColor, marginTop: 14 }),
   // components/ActivityRecapDialog.tsx
   components_ActivityRecapDialog_10: (_theme: AppTheme, { textColor, borderColor }: ThemeStyleValues): any => ({ color: textColor, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, minHeight: 88, marginTop: 14, textAlignVertical: 'top' }),
   // components/ActivityRecapDialog.tsx
@@ -568,9 +564,8 @@ const styleFactories = {
     backgroundColor: _theme.colors.scrim,
   },
   optionIcon: {
-    fontSize: 20,
     width: 28,
-    textAlign: 'center',
+    alignItems: 'center',
   },
   optionImage: {
     width: 56,
@@ -4556,12 +4551,13 @@ const styleFactories = {
   components_TransferEditingForm_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }),
   // components/TransferEditingForm.tsx
   components_TransferEditingForm_6: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minWidth: 200, flex: 1 }),
+  // Date, time and location fields share each row evenly; fixed widths left them lopsided on phones.
   // components/TransferEditingForm.tsx
-  components_TransferEditingForm_7: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexGrow: 0, flexShrink: 0, flexBasis: 190, minWidth: 190, maxWidth: 240 }),
+  components_TransferEditingForm_7: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexGrow: 1, flexShrink: 1, flexBasis: 150, minWidth: 140 }),
   // components/TransferEditingForm.tsx
-  components_TransferEditingForm_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexGrow: 0, flexShrink: 0, flexBasis: 180, minWidth: 180, maxWidth: 220 }),
+  components_TransferEditingForm_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexGrow: 1, flexShrink: 1, flexBasis: 150, minWidth: 140 }),
   // components/TransferEditingForm.tsx
-  components_TransferEditingForm_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minWidth: 240, flexGrow: 1, flexBasis: 0 }),
+  components_TransferEditingForm_9: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minWidth: 200, flexGrow: 1, flexBasis: 0 }),
   // components/TransferEditingForm.tsx
   components_TransferEditingForm_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({
     backgroundColor: _theme.colors.overlay,
@@ -4577,7 +4573,7 @@ const styleFactories = {
   // components/TransferEditingForm.tsx
   components_TransferEditingForm_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ maxHeight: 420 }),
   // components/TransferEditingForm.tsx
-  components_TransferEditingForm_14: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingRight: 12, paddingBottom: 8 }),
+  components_TransferEditingForm_14: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingBottom: 8 }),
   // components/TransferEditingForm.tsx
   components_TransferEditingForm_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 16 }),
   // components/TransferEditingForm.tsx
@@ -6057,7 +6053,8 @@ const styleFactories = {
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_14: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ alignSelf: 'flex-start', marginTop: 8 }),
   // tabs/createTripWizard.tsx
-  tabs_createTripWizard_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 120 }),
+  // Capped so long text scrolls inside the input (iOS follows the caret there) rather than growing past the keyboard.
+  tabs_createTripWizard_15: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 120, maxHeight: 160 }),
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_16: (_theme: AppTheme, { dateModeSelected, theme }: ThemeStyleValues): any => ({
                     backgroundColor: dateModeSelected === 'range' ? _theme.colors.selectedSurface : (theme?.colors.surface ?? _theme.colors.surface),
@@ -6103,9 +6100,7 @@ const styleFactories = {
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_29: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginRight: 8 }),
   // tabs/createTripWizard.tsx
-  tabs_createTripWizard_30: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ maxHeight: 520 }),
-  // tabs/createTripWizard.tsx
-  tabs_createTripWizard_31: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingBottom: 12 }),
+  tabs_createTripWizard_31: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingBottom: 12, gap: 10 }),
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_32: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10 }),
   // tabs/createTripWizard.tsx
@@ -6117,9 +6112,7 @@ const styleFactories = {
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_36: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ position: 'absolute', right: 8, top: 10, padding: 6 }),
   // tabs/createTripWizard.tsx
-  tabs_createTripWizard_37: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ maxHeight: 520 }),
-  // tabs/createTripWizard.tsx
-  tabs_createTripWizard_38: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingBottom: 12 }),
+  tabs_createTripWizard_38: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingBottom: 12, gap: 10 }),
   // tabs/createTripWizard.tsx
   tabs_createTripWizard_39: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ gap: 8 }),
   // tabs/createTripWizard.tsx
@@ -6431,6 +6424,11 @@ const styleFactories = {
   // tabs/HomeTab.tsx
   tabs_HomeTab_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginLeft: 8 }),
   tabs_HomeTab_19: (_theme: AppTheme, {  }: ThemeStyleValues): any => (_theme.colors.text),
+  // tabs/HomeTab.tsx
+  // Native modals draw edge to edge, so the overlay has to clear the status bar and home indicator itself.
+  tabs_HomeTab_20: (_theme: AppTheme, { safeAreaInsets }: ThemeStyleValues): any => ({ paddingTop: 16 + (safeAreaInsets?.top ?? 0), paddingBottom: 16 + (safeAreaInsets?.bottom ?? 0) }),
+  // tabs/HomeTab.tsx
+  tabs_HomeTab_21: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingHorizontal: 8 }),
   // tabs/ingestion.tsx
   tabs_ingestion_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, minWidth: 220 }),
   // tabs/ingestion.tsx
@@ -6627,6 +6625,7 @@ const styleFactories = {
   tabs_overview_12: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 120, textAlignVertical: 'top' }),
   // tabs/overview.tsx
   tabs_overview_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ justifyContent: 'space-between' }),
+  tabs_overview_108: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexShrink: 1 }),
   // tabs/overview.tsx
   tabs_overview_14: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', maxWidth: '100%', minWidth: 0, flexGrow: 0, flexShrink: 1, alignSelf: 'stretch', marginVertical: 8 }),
   // tabs/overview.tsx
@@ -6682,9 +6681,11 @@ const styleFactories = {
   // tabs/overview.tsx
   tabs_overview_34: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginLeft: 'auto', paddingVertical: 6 }),
   // tabs/overview.tsx
-  tabs_overview_35: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ alignItems: 'flex-start', gap: 8 }),
+  // The text column keeps a usable width and the actions wrap below it, so a wide reaction bar can
+  // no longer squeeze the text into a one-letter-wide vertical strip.
+  tabs_overview_35: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }),
   // tabs/overview.tsx
-  tabs_overview_36: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, gap: 4 }),
+  tabs_overview_36: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexGrow: 1, flexShrink: 1, flexBasis: 240, minWidth: 240, gap: 4 }),
   // tabs/overview.tsx
   tabs_overview_37: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontStyle: 'italic' }),
   // tabs/overview.tsx
@@ -6811,12 +6812,13 @@ const styleFactories = {
   tabs_overview_98: (_theme: AppTheme, { isPhoneLayout }: ThemeStyleValues): any => (isPhoneLayout ? { gap: 4 } : { gap: 4, flex: 1, maxWidth: 220 }),
   tabs_overview_99: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'column', alignItems: 'stretch', gap: 8 }),
   tabs_overview_100: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ gap: 4 }),
-  tabs_overview_101: (_theme: AppTheme, { isPhoneLayout }: ThemeStyleValues): any => ({ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, ...(isPhoneLayout ? {} : { flexShrink: 0 }) }),
+  tabs_overview_101: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, flexShrink: 1 }),
   tabs_overview_102: (_theme: AppTheme, { isPhoneLayout }: ThemeStyleValues): any => ([{ marginTop: 4, fontWeight: '600' }, isPhoneLayout ? { fontSize: 12 } : null]),
   tabs_overview_103: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 }),
   tabs_overview_104: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingVertical: 6, gap: 2 }),
   tabs_overview_105: (_theme: AppTheme, { lodgingThumbnailSize }: ThemeStyleValues): any => ({ fontSize: Math.round(lodgingThumbnailSize * 0.42) }),
   tabs_overview_106: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ fontWeight: '700', color: theme ? linkTextColor(theme) : undefined }),
+  tabs_overview_107: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, minWidth: 0 }),
   // tabs/traits.tsx
   tabs_traits_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10 }),
   // tabs/traits.tsx
@@ -6827,8 +6829,6 @@ const styleFactories = {
   tabs_traits_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1 }),
   // tabs/transfers.tsx
   tabs_transfers_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ height: 24, minWidth: 56, paddingHorizontal: 8, paddingVertical: 2 }),
-  // tabs/transfers.tsx
-  tabs_transfers_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minWidth: 0, paddingHorizontal: 6, paddingVertical: 2 }),
   // tabs/transfers.tsx
   tabs_transfers_3: (_theme: AppTheme, { x, y, width, height }: ThemeStyleValues): any => ({ x, y, width, height }),
   // tabs/transfers.tsx
@@ -6859,7 +6859,7 @@ const styleFactories = {
   // tabs/transfers.tsx
   tabs_transfers_9: (_theme: AppTheme, { showList }: ThemeStyleValues): any => ({ pointerEvents: showList ? 'auto' : 'box-none' }),
   // tabs/transfers.tsx
-  tabs_transfers_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', gap: 8 }),
+  tabs_transfers_10: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', flexShrink: 1, gap: 8 }),
   // tabs/transfers.tsx
   tabs_transfers_11: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }),
   // tabs/transfers.tsx
@@ -8131,6 +8131,7 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     width: 32,
     height: 32,
     borderRadius: 16,
+    padding: 0, // The base button's 10px padding left only 12px of height, clipping the "+".
     paddingHorizontal: 0,
     justifyContent: 'center',
     alignItems: 'center',
@@ -8174,7 +8175,19 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     maxWidth: '100%',
   }),
   attendeeChipRemoving: ({
-    backgroundColor: theme.mode === 'dark' ? (theme ?? getAppTheme('light', 'light')).colors.dangerAction : (theme ?? getAppTheme('light', 'light')).colors.surfaceMuted,
+    backgroundColor: theme.colors.dangerSurface,
+    borderWidth: 1,
+    borderColor: theme.colors.dangerBorder,
+  }),
+  attendeeTextRemoving: ({
+    color: theme.colors.dangerText,
+    textDecorationLine: 'line-through',
+  }),
+  attendeeRemovalNotice: ({
+    color: theme.colors.dangerText,
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightSemibold,
+    marginTop: 8,
   }),
   attendeeChipPending: ({
     backgroundColor: theme.mode === 'dark' ? (theme ?? getAppTheme('light', 'light')).colors.accentSurface : (theme ?? getAppTheme('light', 'light')).colors.accentSurface,

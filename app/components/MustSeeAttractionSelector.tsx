@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { LocationOption } from './LocationSelector';
 import DropdownOptionButton from './DropdownOptionButton';
+import { useDropdownDismissOnBlur } from '../hooks/useDropdownDismissOnBlur';
 
 export type AttractionOption = {
   id: string;
@@ -45,6 +46,7 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
   const [suggestions, setSuggestions] = useState<AttractionOption[]>([]);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<any>(null);
+  const dropdown = useDropdownDismissOnBlur();
   const addGuardRef = useRef<Set<string>>(new Set());
   const cacheRef = useRef<Map<string, { ts: number; results: AttractionOption[] }>>(new Map());
   const minChars = 2;
@@ -187,7 +189,7 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
     return 'Attraction';
   };
 
-  const showDropdown = suggestions.length > 0 || (query.trim().length > 0 && suggestions.length === 0 && canSearch);
+  const showDropdown = dropdown.open && (suggestions.length > 0 || (query.trim().length > 0 && suggestions.length === 0 && canSearch));
   // zIndex must elevate on native too, not just web — otherwise this dropdown's absolutely
   // positioned suggestion list doesn't stack above sibling fields rendered after it (e.g.
   // LocationSelector's own dropdown, or later form rows), and the two visually overlap.
@@ -202,7 +204,9 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
             style={[styles.input, themeStyle('components_MustSeeAttractionSelector_4', {  }, _styleTheme)]}
             placeholder={placeholder}
             value={query}
-            onChangeText={setQuery}
+            onChangeText={(text: string) => { setQuery(text); dropdown.showDropdown(); }}
+            onFocus={dropdown.showDropdown}
+            onBlur={dropdown.handleBlur}
             onKeyPress={handleKeyPress}
             onSubmitEditing={handleSubmit}
             accessibilityLabel={title}
@@ -215,6 +219,7 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
                   key={`must-see-suggestion-${item.id}`}
                   styles={styles}
                   onPress={() => handleAddSuggestion(item)}
+                  {...dropdown.optionPressProps}
                   testID={`must-see-suggestion-${item.id}`}
                 >
                   <View style={[styles.row, themeStyle('components_MustSeeAttractionSelector_5', {  }, _styleTheme)]}>
@@ -228,6 +233,7 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
                   key="manual-must-see-option"
                   styles={styles}
                   onPress={handleManualAdd}
+                  {...dropdown.optionPressProps}
                   testID="manual-must-see-option"
                 >
                   <View style={[styles.row, themeStyle('components_MustSeeAttractionSelector_6', {  }, _styleTheme)]}>

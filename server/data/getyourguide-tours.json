@@ -1,0 +1,136 @@
+{
+  "tours": [
+    {
+      "id": "t770155",
+      "url": "https://www.getyourguide.com/rio-de-janeiro-l9/rio-de-janeiro-christ-the-redeemer-and-sugarloaf-tour-with-t770155/",
+      "title": "Rio de Janeiro: Christ the Redeemer and Sugarloaf Tour with Lunch",
+      "rating": 4.6,
+      "reviewCount": 455,
+      "city": "Rio de Janeiro",
+      "country": "Brazil",
+      "activities": ["Christ the Redeemer", "Sugarloaf Mountain cable car"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t161850",
+      "url": "https://www.getyourguide.com/rio-de-janeiro-l9/christ-the-redeemer-cog-train-ticket-t161850/",
+      "title": "Christ the Redeemer Entry Ticket by Corcovado Train",
+      "rating": 4.4,
+      "reviewCount": 5396,
+      "city": "Rio de Janeiro",
+      "country": "Brazil",
+      "activities": ["Christ the Redeemer"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t289500",
+      "url": "https://www.getyourguide.com/sugarloaf-cable-car-l23318/rio-de-janeiro-sugarloaf-cable-car-official-ticket-t289500/",
+      "title": "Rio de Janeiro: Sugarloaf Cable Car",
+      "rating": 4.6,
+      "reviewCount": 3989,
+      "city": "Rio de Janeiro",
+      "country": "Brazil",
+      "activities": ["Sugarloaf Mountain cable car"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t224712",
+      "url": "https://www.getyourguide.com/foz-do-iguacu-l497/from-foz-do-iguacu-brazilian-side-of-the-falls-with-ticket-t224712/",
+      "title": "From Foz do Iguaçu: Brazilian Side of the Falls with Ticket",
+      "rating": 4.6,
+      "reviewCount": 373,
+      "city": "Foz do Iguaçu",
+      "country": "Brazil",
+      "activities": ["Iguaçu National Park, Brazilian side"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t224745",
+      "url": "https://www.getyourguide.com/foz-do-iguacu-l497/from-foz-do-iguacu-itaipu-dam-tour-with-entrance-ticket-t224745/",
+      "title": "Itaipu Dam Tour with Admission Ticket from Foz do Iguaçu",
+      "rating": 4.3,
+      "reviewCount": 189,
+      "city": "Foz do Iguaçu",
+      "country": "Brazil",
+      "activities": ["Itaipu Dam"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t156135",
+      "url": "https://www.getyourguide.com/edinburgh-l44/edinburgh-castle-history-and-heritage-tour-tickets-incl-t156135/",
+      "title": "Edinburgh: Edinburgh Castle Guided History Tour with Tickets",
+      "rating": 4.8,
+      "reviewCount": 12882,
+      "city": "Edinburgh",
+      "country": "Scotland",
+      "activities": ["Edinburgh Castle"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t407882",
+      "url": "https://www.getyourguide.com/edinburgh-l44/edinburgh-castle-skip-the-line-guided-walking-tour-t407882/",
+      "title": "Edinburgh Castle: Guided Walking Tour with Entry Ticket",
+      "rating": 4.7,
+      "reviewCount": 14500,
+      "city": "Edinburgh",
+      "country": "Scotland",
+      "activities": ["Edinburgh Castle"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t184139",
+      "url": "https://www.getyourguide.com/inverness-l1935/from-inverness-loch-ness-cruise-urquhart-castle-t184139/",
+      "title": "From Inverness: Loch Ness Cruise and Urquhart Castle",
+      "rating": 4.7,
+      "reviewCount": 2616,
+      "city": "Inverness",
+      "country": "Scotland",
+      "activities": ["Urquhart Castle on Loch Ness", "Loch Ness boat cruise"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t45775",
+      "url": "https://www.getyourguide.com/inverness-l1935/loch-ness-inspiration-cruise-t45775/",
+      "title": "Loch Ness: Urquhart Castle Round-Trip Cruise",
+      "rating": 4.4,
+      "reviewCount": 3594,
+      "city": "Inverness",
+      "country": "Scotland",
+      "activities": ["Loch Ness boat cruise"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t1053456",
+      "url": "https://www.getyourguide.com/oban-l457/oban-distillery-tour-with-3-whisky-tastings-t1053456/",
+      "title": "Oban: Distillery Tour with 3 Whisky Tastings",
+      "rating": 4.6,
+      "reviewCount": 217,
+      "city": "Oban",
+      "country": "Scotland",
+      "activities": ["Oban Distillery tour"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t551173",
+      "url": "https://www.getyourguide.com/kyoto-l96826/japanese-garden-and-tea-celemony-45-minute-t551173/",
+      "title": "Kyoto: Tea Ceremony in a Traditional Tea House in Kiyomizu",
+      "rating": 4.9,
+      "reviewCount": 3015,
+      "city": "Kyoto",
+      "country": "Japan",
+      "activities": ["Kyoto tea ceremony", "Tea ceremony experience"],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t173031",
+      "url": "https://www.getyourguide.com/tokyo-l193/mt-fuji-day-tour-with-kawaguchiko-lake-and-gotemba-outlets-t173031/",
+      "title": "From Tokyo: Mount Fuji Full-Day Sightseeing Trip",
+      "rating": 4.4,
+      "reviewCount": 5051,
+      "city": "Kawaguchiko",
+      "country": "Japan",
+      "activities": ["Mt Fuji Five Lakes day trip"],
+      "checkedAt": "2026-10-31"
+    }
+  ]
+}

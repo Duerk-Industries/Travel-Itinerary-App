@@ -3,6 +3,7 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, TextInput, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import DropdownOptionButton from './DropdownOptionButton';
+import { useDropdownDismissOnBlur } from '../hooks/useDropdownDismissOnBlur';
 
 export type LocationOption = {
   id: string;
@@ -52,6 +53,8 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
   const [cityLoading, setCityLoading] = useState(false);
   const countryStateInputRef = useRef<any>(null);
   const cityInputRef = useRef<any>(null);
+  const countryStateDropdown = useDropdownDismissOnBlur();
+  const cityDropdown = useDropdownDismissOnBlur();
   const addGuardRef = useRef<Set<string>>(new Set());
   const countryStateCacheRef = useRef<Map<string, { ts: number; results: LocationOption[] }>>(new Map());
   const cityCacheRef = useRef<Map<string, { ts: number; results: LocationOption[] }>>(new Map());
@@ -291,10 +294,10 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
     return 'Country';
   };
 
-  const showCountryStateDropdown =
-    countryStateSuggestions.length > 0 || (countryStateQuery.trim().length > 0 && countryStateSuggestions.length === 0);
-  const showCityDropdown =
-    citySuggestions.length > 0 || (cityQuery.trim().length > 0 && citySuggestions.length === 0 && canSearchCities);
+  const showCountryStateDropdown = countryStateDropdown.open &&
+    (countryStateSuggestions.length > 0 || (countryStateQuery.trim().length > 0 && countryStateSuggestions.length === 0));
+  const showCityDropdown = cityDropdown.open &&
+    (citySuggestions.length > 0 || (cityQuery.trim().length > 0 && citySuggestions.length === 0 && canSearchCities));
   // zIndex must elevate on native too, not just web — otherwise this dropdown's absolutely
   // positioned suggestion list doesn't stack above sibling fields rendered after it (e.g.
   // MustSeeAttractionSelector, or later form rows), and the two visually overlap.
@@ -309,7 +312,9 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
             style={[styles.input, themeStyle('components_LocationSelector_4', {  }, _styleTheme)]}
             placeholder={placeholder}
             value={countryStateQuery}
-            onChangeText={setCountryStateQuery}
+            onChangeText={(text: string) => { setCountryStateQuery(text); countryStateDropdown.showDropdown(); }}
+            onFocus={countryStateDropdown.showDropdown}
+            onBlur={countryStateDropdown.handleBlur}
             onKeyPress={handleCountryStateKeyPress}
             onSubmitEditing={handleCountryStateSubmit}
             accessibilityLabel={title}
@@ -321,6 +326,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
                   key={`location-suggestion-${location.id}`}
                   styles={styles}
                   onPress={() => handleAddCountryState(location)}
+                  {...countryStateDropdown.optionPressProps}
                   testID={`location-suggestion-${location.id}`}
                 >
                   <View style={[styles.row, themeStyle('components_LocationSelector_5', {  }, _styleTheme)]}>
@@ -334,6 +340,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
                   key="manual-country-option"
                   styles={styles}
                   onPress={handleCountryStateManualAdd}
+                  {...countryStateDropdown.optionPressProps}
                   testID="manual-country-option"
                 >
                   <View style={[styles.row, themeStyle('components_LocationSelector_6', {  }, _styleTheme)]}>
@@ -366,7 +373,9 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
                 style={[styles.input, themeStyle('components_LocationSelector_11', {  }, _styleTheme)]}
                 placeholder="Search cities"
                 value={cityQuery}
-                onChangeText={setCityQuery}
+                onChangeText={(text: string) => { setCityQuery(text); cityDropdown.showDropdown(); }}
+                onFocus={cityDropdown.showDropdown}
+                onBlur={cityDropdown.handleBlur}
                 onKeyPress={handleCityKeyPress}
                 onSubmitEditing={handleCitySubmit}
                 accessibilityLabel="Search cities"
@@ -379,6 +388,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
                       key={`city-suggestion-${location.id}`}
                       styles={styles}
                       onPress={() => handleAddCity(location)}
+                      {...cityDropdown.optionPressProps}
                       testID={`city-suggestion-${location.id}`}
                     >
                       <View style={[styles.row, themeStyle('components_LocationSelector_12', {  }, _styleTheme)]}>
@@ -392,6 +402,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
                       key="manual-city-option"
                       styles={styles}
                       onPress={handleCityManualAdd}
+                      {...cityDropdown.optionPressProps}
                       testID="manual-city-option"
                     >
                       <View style={[styles.row, themeStyle('components_LocationSelector_13', {  }, _styleTheme)]}>

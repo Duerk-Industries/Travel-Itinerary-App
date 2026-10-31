@@ -79,6 +79,45 @@ describe('CreateTripWizard Quick Start', () => {
     expect(queryByText('Start planning in seconds')).toBeNull();
   });
 
+  it('keeps the Description field in view when the keyboard shrinks the customize step', () => {
+    const scrollToEnd = jest.fn();
+    const ui = render(<CreateTripWizard {...baseProps} />, {
+      createNodeMock: (element: any) => (element.type === 'ScrollView' ? { scrollToEnd } : {}),
+    });
+    fireEvent.press(ui.getByTestId('quick-start-customize'));
+    const scroll = ui.getByTestId('wizard-step-scroll');
+    const description = ui.getByLabelText('Description');
+
+    fireEvent(scroll, 'layout', { nativeEvent: { layout: { height: 240 } } });
+    expect(scrollToEnd).not.toHaveBeenCalled();
+
+    fireEvent(description, 'focus');
+    scrollToEnd.mockClear();
+    fireEvent(scroll, 'layout', { nativeEvent: { layout: { height: 240 } } });
+    expect(scrollToEnd).toHaveBeenCalledTimes(1);
+
+    fireEvent(description, 'blur');
+    scrollToEnd.mockClear();
+    fireEvent(scroll, 'contentSizeChange', 400, 900);
+    expect(scrollToEnd).not.toHaveBeenCalled();
+  });
+
+  it('moves past the Dates step without choosing any dates', () => {
+    const ui = render(<CreateTripWizard {...baseProps} featureQuickStartTripWizard={false} />);
+    fireEvent.changeText(ui.getByLabelText('Trip name'), 'Kyoto Trip');
+    fireEvent.press(ui.getByText('Next'));
+    expect(ui.getByText('Step 2 of 10: Dates')).toBeTruthy();
+    fireEvent.press(ui.getByText('Next'));
+    expect(ui.getByText('Step 3 of 10: Participants')).toBeTruthy();
+  });
+
+  it('caps the Description height so long text scrolls inside the field', () => {
+    const ui = render(<CreateTripWizard {...baseProps} />);
+    fireEvent.press(ui.getByTestId('quick-start-customize'));
+    const style = Object.assign({}, ...[ui.getByLabelText('Description').props.style].flat());
+    expect(style.maxHeight).toBe(160);
+  });
+
   describe('dates already chosen on Quick Start', () => {
     const withDates = { name: 'Trip to Tokyo', destinationQuery: 'Tokyo', startDate: '2027-05-10', endDate: '2027-05-12' };
 
@@ -127,13 +166,13 @@ describe('CreateTripWizard Quick Start', () => {
     });
   });
 
-  it('disables Create Trip until a name, destination, and both dates are present', () => {
+  it('disables Create Trip until a name and destination are present', () => {
     const { getByTestId } = render(<CreateTripWizard {...baseProps} />);
     const createButton = getByTestId('quick-start-create');
     expect(createButton.props.accessibilityState?.disabled ?? createButton.props.disabled).toBeTruthy();
 
     fireEvent.changeText(getByTestId('quick-start-trip-name'), 'Kyoto Trip');
-    // Name alone still isn't enough — destination and dates are still missing.
+    // Name alone still isn't enough — the destination is still missing.
     expect(getByTestId('quick-start-create').props.accessibilityState?.disabled ?? getByTestId('quick-start-create').props.disabled).toBeTruthy();
   });
 

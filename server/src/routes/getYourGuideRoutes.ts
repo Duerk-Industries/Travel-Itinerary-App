@@ -5,6 +5,9 @@ import { createGetYourGuideDescriptor, resolveGetYourGuideRedirect } from '../se
 import { HttpRateLimitExceededError, reserveRequestRateLimits } from '../services/httpRateLimitService';
 import { incrementMetric } from '../metrics';
 import { recordGetYourGuideClick } from '../services/getYourGuideObservability';
+import { buildGetYourGuideTourRedirect, getActivityTourLinks } from '../services/getYourGuideTourService';
+import { getGetYourGuidePartnerConfig, isGetYourGuideFeatureEnabled } from '../config/getYourGuide';
+import { ensureUserInTrip, getTripById, listActivities } from '../db';
 
 const router = Router();
 const MAX_DESCRIPTOR_BODY_BYTES = 64 * 1024;
@@ -74,6 +77,47 @@ router.get('/getyourguide', async (req: Request, res: Response, next: NextFuncti
     }
     if (req.header('X-Analytics-Consent')?.toLowerCase() === 'granted') {
       incrementMetric('getyourguide_affiliate_click', { kind: 'activity' });
+      recordGetYourGuideClick();
+    }
+    res.redirect(302, redirectUrl);
+  } catch (err) {
+    if (rateLimitError(err, res)) return;
+    next(err);
+  }
+});
+
+// The tours matched to a trip's activities. Outside the trip, or with the feature off, there are simply none.
+router.get('/getyourguide/trips/:tripId/tours', authenticate, async (req: Request, res: Response, next: NextFunction) => {
+  const userId = String((req as Request & { user?: TokenPayload }).user?.userId ?? '').trim();
+  try {
+    const { tripId } = req.params;
+    if (!userId || !(await isGetYourGuideFeatureEnabled()) || !(await ensureUserInTrip(tripId, userId))) {
+      res.json({ links: {} });
+      return;
+    }
+    const [trip, activities] = await Promise.all([getTripById(tripId), listActivities(userId, tripId)]);
+    res.json({ links: await getActivityTourLinks(activities, [trip?.destination, trip?.name].filter(Boolean).join(' ')) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// A link to a stored tour stays valid as long as the tour does, so it can sit on a page left open.
+router.get('/getyourguide/tours/:tourId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const identity = clientIdentity(req);
+    await rateLimit(req, 'getyourguide_redirect_ip', identity, setting('redirectPerMinutePerIp', 60), 60 * 1000);
+    await rateLimit(req, 'getyourguide_redirect_daily_ip', identity, setting('redirectPerDayPerAccount', 300), 24 * 60 * 60 * 1000);
+    const partnerId = getGetYourGuidePartnerConfig().partnerId;
+    const redirectUrl = partnerId && (await isGetYourGuideFeatureEnabled())
+      ? await buildGetYourGuideTourRedirect(req.params.tourId, partnerId)
+      : null;
+    if (!redirectUrl) {
+      unavailable(res);
+      return;
+    }
+    if (req.header('X-Analytics-Consent')?.toLowerCase() === 'granted') {
+      incrementMetric('getyourguide_affiliate_click', { kind: 'tour' });
       recordGetYourGuideClick();
     }
     res.redirect(302, redirectUrl);

@@ -27,6 +27,7 @@ Paste this to a fresh session:
    `regions`, base `cities`, and a `media.destinations` entry for every one of them.
 4. `node validate-bundle.mjs <file>` → fix every ERROR. Warnings are optional but read them.
 5. Save as `<country-slug>-bundle.json` here, tick it off below, commit nothing unless asked.
+6. Match its activities to GetYourGuide tours: see `GETYOURGUIDE.md`.
 
 ---
 

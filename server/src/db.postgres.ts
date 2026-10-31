@@ -1568,6 +1568,7 @@ export const initDb = async (): Promise<void> => {
     await del('itineraries');
     await del('tours');
     await del('car_rentals');
+    await del('item_ratings');
     await del('item_votes');
     await del('lodgings');
     await del('flight_shares');
@@ -5472,6 +5473,48 @@ export const getItemVoteSummaries = async (
     if (String(row.userId) === String(userId)) summary.userVote = value;
   });
   return result;
+};
+
+export const setItemRating = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemId: string,
+  stars: number
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `
+      INSERT INTO item_ratings (trip_id, item_type, item_id, user_id, stars, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      ON CONFLICT (item_type, item_id, user_id)
+      DO UPDATE SET stars = EXCLUDED.stars, updated_at = NOW()
+    `,
+    [tripId, itemType, itemId, userId, stars]
+  );
+};
+
+export const listItemRatings = async (
+  tripId: string,
+  itemType: VoteItemType,
+  itemIds: string[]
+): Promise<Array<{ itemId: string; userId: string; stars: number }>> => {
+  const normalizedIds = Array.from(new Set((itemIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  if (!normalizedIds.length) return [];
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT item_id::text as "itemId",
+             user_id::text as "userId",
+             stars::int as "stars"
+      FROM item_ratings
+      WHERE trip_id = $1
+        AND item_type = $2
+        AND item_id = ANY($3::uuid[])
+    `,
+    [tripId, itemType, normalizedIds]
+  );
+  return rows;
 };
 
 export const getItineraryDetailContext = async (
@@ -14098,6 +14141,47 @@ const TRIP_TEMPLATE_SELECT = `SELECT id, title, summary, days, route, image_quer
   COALESCE(countries, '[]'::jsonb) AS countries, COALESCE(cities, '[]'::jsonb) AS cities,
   COALESCE(highlights, '[]'::jsonb) AS highlights, content_hash AS "contentHash", enabled, sort_order AS "sortOrder"
   FROM trip_templates`;
+
+export type GetYourGuideTourRecord = {
+  id: string;
+  url: string;
+  title: string;
+  rating: number;
+  reviewCount: number;
+  city: string;
+  country: string;
+  activities: string[];
+  checkedAt: string;
+};
+
+export const upsertGetYourGuideTour = async (tour: GetYourGuideTourRecord): Promise<void> => {
+  const p = getPool();
+  const values = [tour.id, tour.url, tour.title, tour.rating, tour.reviewCount, tour.city, tour.country, JSON.stringify(tour.activities), tour.checkedAt];
+  const updated = await p.query(
+    `UPDATE getyourguide_tours SET url = $2, title = $3, rating = $4, review_count = $5, city = $6, country = $7, activities = $8::jsonb, checked_at = $9, updated_at = NOW()
+     WHERE id = $1`,
+    values
+  );
+  if (updated.rowCount) return;
+  await p.query(
+    `INSERT INTO getyourguide_tours (id, url, title, rating, review_count, city, country, activities, checked_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)`,
+    values
+  );
+};
+
+export const listGetYourGuideTours = async (): Promise<GetYourGuideTourRecord[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, url, title, rating, review_count as "reviewCount", city, country, activities, checked_at as "checkedAt" FROM getyourguide_tours`
+  );
+  return rows.map((row: any) => ({ ...row, rating: Number(row.rating), reviewCount: Number(row.reviewCount) }));
+};
+
+export const deleteGetYourGuideTour = async (id: string): Promise<void> => {
+  const p = getPool();
+  await p.query('DELETE FROM getyourguide_tours WHERE id = $1', [id]);
+};
 
 export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {
   const p = getPool();

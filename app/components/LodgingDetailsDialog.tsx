@@ -13,11 +13,13 @@ import { useImageSource } from '../utils/imageSource';
 
 import TripDayMap from './TripDayMap';
 import DialogShell from './DialogShell';
+import { ItemRating } from './StarRating';
 
 type DetailRow = {
   label: string;
   value: any;
   action?: () => void;
+  content?: React.ReactNode;
 };
 
 type LodgingDetailsDialogProps = {
@@ -43,6 +45,7 @@ type LodgingDetailsDialogProps = {
   onEdit: (lodging: Lodging) => void;
   onDelete: (lodging: Lodging) => void;
   onOpenMap: (address: string) => void;
+  onRate?: (stars: number) => void;
   testID?: string;
 };
 
@@ -61,6 +64,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
   onEdit,
   onDelete,
   onOpenMap,
+  onRate,
   testID,
 }) => {
   const _styleTheme = useStyleTheme();
@@ -217,11 +221,12 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
                 { label: 'Cost per night', value: lodging.costPerNight ? `$${lodging.costPerNight}` : '$0' },
                 { label: 'Features', value: lodging.features?.length ? lodging.features.join(', ') : 'None listed' },
                 { label: 'Notes', value: lodging.notes || 'None' },
+                { label: 'Your rating', value: null, content: <ItemRating status={lodging.status} averageRating={lodging.averageRating} ratingCount={lodging.ratingCount} userStars={lodging.userStars} readOnly={readOnly} onRate={onRate} name={lodging.name} testID={`lodging-details-rating-${lodging.id}`} theme={theme} /> },
               ] as DetailRow[]
             ).map((row) => (
               <View key={row.label} style={detailStyles.detailRow}>
                 <Text style={detailStyles.detailLabel}>{row.label}</Text>
-                {row.action ? (
+                {row.content ? row.content : row.action ? (
                   <Text style={[detailStyles.detailValue, styles.linkText]} onPress={row.action}>
                     {row.value}
                   </Text>
@@ -239,7 +244,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
             {placeDetailsRows.map((row) => (
               <View key={row.label} style={detailStyles.detailRow}>
                 <Text style={detailStyles.detailLabel}>{row.label}</Text>
-                {row.action ? (
+                {row.content ? row.content : row.action ? (
                   <Text style={[detailStyles.detailValue, styles.linkText]} onPress={row.action}>
                     {row.value}
                   </Text>

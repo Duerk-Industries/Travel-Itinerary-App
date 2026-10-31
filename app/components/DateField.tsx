@@ -20,7 +20,7 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 // in), it always presents above that Modal — callers never need to hoist picker state up to a
 // parent and pass it back down.
 import React, { useEffect, useMemo, useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Keyboard, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { toWebStyle } from '../utils/webStyle';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
@@ -124,6 +124,9 @@ const DateField: React.FC<DateFieldProps> = ({
 
   const openPicker = () => {
     if (disabled) return;
+    // Forms use keyboardShouldPersistTaps="handled", so this tap leaves the keyboard up. iOS would
+    // hand focus back to that text input when the sheet closes, reopening the keyboard.
+    Keyboard.dismiss();
     onOpen?.();
     setDraftDate(parseValue(value));
     setPickerOpen(true);

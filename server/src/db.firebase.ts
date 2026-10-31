@@ -2739,6 +2739,7 @@ const deleteAllTripArtifacts = async (tripId: string): Promise<void> => {
   // trip itself is going away).
   await deleteQueryBatch(db.collection('car_rentals').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('item_votes').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('item_ratings').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_activity').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_comments').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_followers').where('tripId', '==', tripId));
@@ -5258,6 +5259,43 @@ export const getItemVoteSummaries = async (
     });
   }
   return result;
+};
+
+export const setItemRating = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemId: string,
+  stars: number
+): Promise<void> => {
+  const db = getDb();
+  await db
+    .collection('item_ratings')
+    .doc(`${itemType}_${itemId}_${userId}`)
+    .set({ tripId, itemType, itemId, userId, stars, updatedAt: nowIso() }, { merge: true });
+};
+
+export const listItemRatings = async (
+  tripId: string,
+  itemType: VoteItemType,
+  itemIds: string[]
+): Promise<Array<{ itemId: string; userId: string; stars: number }>> => {
+  const normalized = Array.from(new Set((itemIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  const db = getDb();
+  const ratings: Array<{ itemId: string; userId: string; stars: number }> = [];
+  for (let i = 0; i < normalized.length; i += 10) {
+    const snap = await db
+      .collection('item_ratings')
+      .where('tripId', '==', tripId)
+      .where('itemType', '==', itemType)
+      .where('itemId', 'in', normalized.slice(i, i + 10))
+      .get();
+    snap.docs.forEach((doc) => {
+      const rating = doc.data() as any;
+      ratings.push({ itemId: String(rating.itemId), userId: String(rating.userId), stars: Number(rating.stars) });
+    });
+  }
+  return ratings;
 };
 
 export const getItineraryDetailContext = async (
@@ -9938,6 +9976,34 @@ export type TripTemplateRecord = {
   contentHash: string;
   enabled: boolean;
   sortOrder: number;
+};
+
+type GetYourGuideTourRecord = {
+  id: string;
+  url: string;
+  title: string;
+  rating: number;
+  reviewCount: number;
+  city: string;
+  country: string;
+  activities: string[];
+  checkedAt: string;
+};
+
+export const upsertGetYourGuideTour = async (tour: GetYourGuideTourRecord): Promise<void> => {
+  await getDb().collection('getyourguide_tours').doc(tour.id).set({ ...tour, updatedAt: nowIso() });
+};
+
+export const listGetYourGuideTours = async (): Promise<GetYourGuideTourRecord[]> => {
+  const snap = await getDb().collection('getyourguide_tours').get();
+  return snap.docs.map((doc) => {
+    const { updatedAt: _updatedAt, ...tour } = doc.data() as GetYourGuideTourRecord & { updatedAt?: string };
+    return tour;
+  });
+};
+
+export const deleteGetYourGuideTour = async (id: string): Promise<void> => {
+  await getDb().collection('getyourguide_tours').doc(id).delete();
 };
 
 export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {

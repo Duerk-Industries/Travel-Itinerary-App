@@ -4,13 +4,14 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
+import StarRating from './StarRating';
 
 export type ActivityRecapTarget = {
   id: string;
   name: string;
   date: string;
   status?: string | null;
-  userRating?: -1 | 1 | null;
+  userStars?: number | null;
 };
 
 type Props = {
@@ -19,7 +20,7 @@ type Props = {
   styles: Record<string, any>;
   theme?: any;
   onClose: () => void;
-  onSave: (input: { rating: -1 | 1 | null; note: string; tags: string[] }) => Promise<void>;
+  onSave: (input: { rating: number | null; note: string; tags: string[] }) => Promise<void>;
   onAddMedia: (input: { tags: string[] }) => Promise<void> | void;
 };
 
@@ -31,7 +32,7 @@ const splitTags = (value: string): string[] => Array.from(new Set(value.split(',
 const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme: _providedTheme, onClose, onSave, onAddMedia }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
-  const [rating, setRating] = useState<-1 | 1 | null>(null);
+  const [rating, setRating] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [extraTags, setExtraTags] = useState('');
   const [busy, setBusy] = useState(false);
@@ -45,20 +46,18 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
 
   useEffect(() => {
     if (!visible) return;
-    setRating(activity?.userRating ?? null);
+    setRating(activity?.userStars ?? null);
     setNote('');
     setExtraTags('');
     setError('');
-  }, [visible, activity?.id, activity?.userRating]);
+  }, [visible, activity?.id, activity?.userStars]);
 
   const save = async (thenAddMedia = false) => {
     if (!activity) return;
     setBusy(true);
     setError('');
     try {
-      // An existing rating is not re-submitted: the current server endpoint intentionally accepts
-      // one completed-activity vote per traveler.
-      await onSave({ rating: activity.userRating == null ? rating : null, note: note.trim(), tags });
+      await onSave({ rating: rating === (activity.userStars ?? null) ? null : rating, note: note.trim(), tags });
       if (thenAddMedia) await onAddMedia({ tags });
       else onClose();
     } catch (cause: any) {
@@ -78,16 +77,9 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
           <Text style={themeStyle('components_ActivityRecapDialog_3', { textColor: textColor }, (theme ?? _styleTheme))}>{activity?.name || 'Activity'}</Text>
           <Text style={themeStyle('components_ActivityRecapDialog_4', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Rate it, then add a note or photos/videos to the trip blog.</Text>
 
-          {activity?.userRating == null ? (
-            <View style={themeStyle('components_ActivityRecapDialog_5', {  }, (theme ?? _styleTheme))}>
-              <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: rating === 1 }} onPress={() => setRating(1)} style={[styles.button, rating === 1 && themeStyle('components_ActivityRecapDialog_6', { theme: theme }, (theme ?? _styleTheme))]}>
-                <Text style={[styles.buttonText, rating === 1 && themeStyle('selectionLabel', {}, (theme ?? _styleTheme))]}>👍 Loved it</Text>
-              </TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: rating === -1 }} onPress={() => setRating(-1)} style={[styles.button, rating === -1 && themeStyle('components_ActivityRecapDialog_7', {  }, (theme ?? _styleTheme))]}>
-                <Text style={[styles.buttonText, rating === -1 && themeStyle('components_ActivityRecapDialog_8', {  }, (theme ?? _styleTheme))]}>👎 Not for me</Text>
-              </TouchableOpacity>
-            </View>
-          ) : <Text style={themeStyle('components_ActivityRecapDialog_9', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>You already rated this activity.</Text>}
+          <View style={themeStyle('components_ActivityRecapDialog_5', {  }, (theme ?? _styleTheme))}>
+            <StarRating value={rating} onRate={setRating} name={activity?.name || 'this activity'} testID="activity-recap-rating" theme={theme} />
+          </View>
 
           <TextInput
             testID="activity-recap-note"

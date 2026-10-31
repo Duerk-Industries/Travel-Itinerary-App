@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, within } from '@testing-library/react-native';
-import { Modal, Platform, ScrollView, View } from 'react-native';
+import { Keyboard, Modal, Platform, ScrollView, View } from 'react-native';
 import SelectField from '../components/SelectField';
 import KeyboardAwareModal from '../components/KeyboardAwareModal';
 
@@ -49,6 +49,13 @@ it.each(['backdrop', 'cancel', 'hardware back'])('dismisses with %s without chan
   else fireEvent.press(screen.getByLabelText(action === 'cancel' ? 'Cancel selection' : 'Dismiss options', { includeHiddenElements: true }));
   expect(screen.queryByTestId('payer-options')).toBeNull();
   expect(onChange).not.toHaveBeenCalled();
+});
+
+it('dismisses the keyboard on open so closing the modal cannot refocus a text input', () => {
+  const dismiss = jest.spyOn(Keyboard, 'dismiss').mockClear();
+  const screen = render(<SelectField value="" options={options} styles={styles} onChange={jest.fn()} title="Payer" testID="payer" />);
+  fireEvent.press(screen.getByLabelText('Payer'));
+  expect(dismiss).toHaveBeenCalledTimes(1);
 });
 
 it('does not open a disabled selector', () => {

@@ -150,7 +150,6 @@ import AuthForm from './components/AuthForm';
 import PasswordField from './components/PasswordField';
 import LandingPage from './components/LandingPage';
 import { toWebStyle } from './utils/webStyle';
-import { formatNetVotes, shouldShowRatingButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 import { buildWebOAuthRedirectUrl } from './utils/oauthRedirect';
 import { installPermissionDeniedInterceptor } from './utils/permissionDeniedInterceptor';
@@ -1373,12 +1372,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode, costTrackingAllowed]);
 
-  const rateOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+  const rateOnCarRental = useCallback(async (id: string, stars: number) => {
     if (isFollowingMode) return;
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}/rating`, {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ value }),
+      body: JSON.stringify({ stars }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -2072,12 +2071,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setPendingActivityRecap(null);
   }, [activeTripId, pendingActivityRecap, tours]);
 
-  const saveActivityRecap = useCallback(async ({ rating, note, tags }: { rating: -1 | 1 | null; note: string; tags: string[] }) => {
+  const saveActivityRecap = useCallback(async ({ rating, note, tags }: { rating: number | null; note: string; tags: string[] }) => {
     const activity = activityRecapTarget;
     if (!activity || !activeTripId) throw new Error('Choose an activity first.');
     if (rating != null) {
       const response = await fetch(`${backendUrl}/api/activities/${activity.id}/rating`, {
-        method: 'POST', headers: jsonHeaders, body: JSON.stringify({ value: rating }),
+        method: 'POST', headers: jsonHeaders, body: JSON.stringify({ stars: rating }),
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to save your rating.');
     }
@@ -3319,25 +3318,33 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const handleExternalActivityEditHandled = useCallback(() => setExternalActivityEditId(null), []);
   const handleExternalLodgingEditHandled = useCallback(() => setExternalLodgingEditId(null), []);
   const handleExternalCarRentalEditHandled = useCallback(() => setExternalCarRentalEditId(null), []);
-  const handleUnfollowTrip = useCallback(
-    async (tripId: string) => {
+  // Resolves to an error message, or null once the trip is unfollowed.
+  const unfollowTrip = useCallback(
+    async (tripId: string): Promise<string | null> => {
       const res = await fetch(`${backendUrl}/api/trips/${tripId}/follow`, {
         method: 'DELETE',
         headers,
       });
       if (res.status === 401) {
         logout();
-        return;
+        return null;
       }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        Alert.alert(data.error || 'Unable to unfollow trip');
-        return;
+        return data.error || 'Unable to unfollow trip';
       }
       setFollowedTrips((prev) => prev.filter((trip) => trip.tripId !== tripId));
       setSelectedFollowedTripId((prev) => (prev === tripId ? null : prev));
+      return null;
     },
     [backendUrl, headers, logout]
+  );
+  const handleUnfollowTrip = useCallback(
+    async (tripId: string) => {
+      const error = await unfollowTrip(tripId);
+      if (error) Alert.alert(error);
+    },
+    [unfollowTrip]
   );
 
   const renderSharedPageScroll = (content: React.ReactNode) => (
@@ -3544,7 +3551,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               activeTripId={activeTripId} styles={styles}
               onSelectTrip={(id) => { handleSelectOwnedTrip(id); requestPageChange('home'); }}
               onSelectFollowedTrip={handleSelectFollowedTrip}
-              onNavigate={handleHomeNavigate} onFollowTrip={handleFollowTripByCode} onDeleteTrip={confirmDeleteTrip} hiddenPages={hiddenPages}
+              onNavigate={handleHomeNavigate} onFollowTrip={handleFollowTripByCode} onDeleteTrip={confirmDeleteTrip} onUnfollowTrip={unfollowTrip} hiddenPages={hiddenPages}
               onBack={() => requestPageChange('home')} />
           ) : null}
 

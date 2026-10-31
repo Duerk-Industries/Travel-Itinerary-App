@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { act, render, fireEvent } from '@testing-library/react-native';
-import { Platform } from 'react-native';
+import { Keyboard, Platform } from 'react-native';
 import DateField from '../components/DateField';
 import { getAppTheme } from '../theme/theme';
 
@@ -199,5 +199,15 @@ describe('DateField', () => {
     );
     fireEvent.press(getByTestId('trip-start-date'));
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['ios', 'android'] as const)('on %s, dismisses the keyboard so closing the picker cannot refocus a text input', (os) => {
+    Platform.OS = os;
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockClear();
+    const { getByTestId } = render(
+      <DateField value="" onChange={() => {}} styles={styles} testID="trip-start-date" />
+    );
+    fireEvent.press(getByTestId('trip-start-date'));
+    expect(dismiss).toHaveBeenCalledTimes(1);
   });
 });

@@ -29,13 +29,27 @@ describe('unscheduled trip creation', () => {
   });
   afterEach(() => { global.fetch = originalFetch; });
 
+  it('creates from Quick Start with no dates or trip length at all', async () => {
+    const screen = render(<CreateTripWizard {...props} />);
+    fireEvent.changeText(screen.getByTestId('quick-start-trip-name'), 'Someday Japan');
+    fireEvent.press(screen.getByTestId('choose-destination'));
+    fireEvent.press(screen.getByTestId('quick-start-create'));
+    await waitFor(() => expect(props.onTripCreated).toHaveBeenCalled());
+    const create = fetchMock.mock.calls.find(([url]) => url.endsWith('/api/trips/wizard'))!;
+    const body = JSON.parse(create[1].body);
+    expect(body.startDate).toBeUndefined();
+    expect(body.endDate).toBeUndefined();
+    expect(body.durationDays).toBeUndefined();
+  });
+
   it('creates from Quick Start with a trip length instead of calendar dates', async () => {
     const screen = render(<CreateTripWizard {...props} />);
     fireEvent.changeText(screen.getByTestId('quick-start-trip-name'), 'Someday Japan');
     fireEvent.press(screen.getByTestId('choose-destination'));
     fireEvent.press(screen.getByTestId('quick-start-dates-unscheduled'));
     expect(screen.queryByTestId('quick-start-start-date')).toBeNull();
-    expect(screen.getByTestId('quick-start-create').props.disabled).toBeTruthy();
+    // Trip length is optional, but what is typed still has to be a whole number of days.
+    expect(screen.getByTestId('quick-start-create').props.disabled).toBeFalsy();
     fireEvent.changeText(screen.getByTestId('quick-start-trip-length'), '1.5');
     expect(screen.getByTestId('quick-start-create').props.disabled).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('quick-start-trip-length'), '7');

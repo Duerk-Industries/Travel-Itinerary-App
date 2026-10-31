@@ -641,6 +641,8 @@ caching:
   # API calls are enabled until the verified partner quota/terms are recorded.
   # The API TTL values are reserved configuration only; do not persist GYG
   # content until written partner permission is recorded.
+  # This applies to Partner API responses. The hand-curated list in
+  # data/getyourguide-tours.json was approved separately by the owner on 2026-10-31.
   getYourGuide:
     redirectTokenTtlMinutes: 10
     freshTtlMinutes: 15

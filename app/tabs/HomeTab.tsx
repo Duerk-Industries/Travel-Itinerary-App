@@ -2,6 +2,7 @@ import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Modal from '../components/KeyboardAwareModal';
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -76,6 +77,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   featureCoverPhotoFallbackV2 = true,
 }) => {
   const _styleTheme = useStyleTheme();
+  const safeAreaInsets = useSafeAreaInsets();
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 680;
   const isCompactLayout = viewportWidth < 520;
@@ -282,9 +284,9 @@ const HomeTab: React.FC<HomeTabProps> = ({
 
       {showTripPicker ? (
         <Modal transparent animationType="fade" visible onRequestClose={() => setShowTripPicker(false)}>
-          <View style={styles.homeModalOverlay} testID="home-trip-modal">
+          <View style={[styles.homeModalOverlay, themeStyle('tabs_HomeTab_20', { safeAreaInsets: safeAreaInsets }, _styleTheme)]} testID="home-trip-modal">
             <View style={styles.homeModalCard}>
-              <View style={styles.homeModalHeader}>
+              <View style={[styles.homeModalHeader, themeStyle('tabs_HomeTab_21', {  }, _styleTheme)]}>
                 <Text style={styles.homeModalTitle}>Select a trip</Text>
                 <Pressable
                   onPress={() => setShowTripPicker(false)}
@@ -304,6 +306,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                     testID={`home-trip-row-${trip.id}`}
                     style={({ pressed }: { pressed: boolean }) => [
                       styles.homeModalRow,
+                      themeStyle('tabs_HomeTab_21', {  }, _styleTheme),
                       idx === 0 && trip.id === activeTripId && styles.homeModalRowActive,
                       pressed && styles.homeModalRowPressed,
                     ]}
@@ -341,13 +344,14 @@ const HomeTab: React.FC<HomeTabProps> = ({
                 ))}
                 {followedTrips.length ? (
                   <View>
-                    <Text style={styles.homeModalTitle}>Followed Trips</Text>
+                    <Text style={[styles.homeModalTitle, themeStyle('tabs_HomeTab_21', {  }, _styleTheme)]}>Followed Trips</Text>
                     {followedTrips.map((trip) => (
                       <Pressable
                         key={`followed-${trip.tripId}`}
                         testID={`home-followed-trip-row-${trip.tripId}`}
                         style={({ pressed }: { pressed: boolean }) => [
                           styles.homeModalRow,
+                          themeStyle('tabs_HomeTab_21', {  }, _styleTheme),
                           pressed && styles.homeModalRowPressed,
                         ]}
                         onPress={() => {
@@ -372,7 +376,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
 
       {showNoTripsDialog ? (
         <Modal transparent animationType="fade" visible onRequestClose={() => setShowNoTripsDialog(false)}>
-          <View style={styles.homeModalOverlay} testID="home-no-trips-dialog">
+          <View style={[styles.homeModalOverlay, themeStyle('tabs_HomeTab_20', { safeAreaInsets: safeAreaInsets }, _styleTheme)]} testID="home-no-trips-dialog">
             <View style={styles.homeModalCard}>
               <View style={styles.homeModalHeader}>
                 <Text style={styles.homeModalTitle}>Create a trip first</Text>

@@ -147,6 +147,10 @@ const steps = [
   'Review & Confirm',
 ];
 
+// Dates are optional: leaving them blank is fine, but anything typed in still has to be valid.
+const optionalDatesError = (dates: TripDates): string | null =>
+  dates.mode === 'duration' && !dates.durationDays.trim() ? null : validateTripDates(dates);
+
 const INTEREST_WEIGHT_FIELDS: Array<{
   key: keyof PromptInterestWeights;
   label: string;
@@ -330,6 +334,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
   const descriptionRef = useRef<any>(null);
+  const descriptionFocusedRef = useRef(false);
+  const stepScrollRef = useRef<any>(null);
 
   useEffect(() => {
     if (createdTripId) {
@@ -756,6 +762,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     descriptionRef.current?.focus();
   }, []);
 
+  // Description is the last field on its step, so the keyboard shrinking the scroll area leaves it
+  // out of view. ScrollView won't follow a focused input by itself; re-pin it on every size change.
+  const keepDescriptionInView = useCallback(() => {
+    if (descriptionFocusedRef.current) stepScrollRef.current?.scrollToEnd({ animated: true });
+  }, []);
+
   const addItineraryItem = () => {
     if (!itineraryDraft.activity.trim()) {
       setWizardError('Add an activity description for the itinerary item.');
@@ -815,40 +827,20 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 
   const canMoveNext = useMemo(() => {
     if (stepIndex === 0) return !validateTripDetails(details);
-    if (stepIndex === 1) {
-      if (!dateModeSelected) return false;
-      if (dateModeSelected === 'range') {
-        if (!dates.startDate || !dates.endDate) return false;
-      } else if (dateModeSelected === 'month') {
-        if (!dates.startMonth || !dates.startYear || !dates.durationDays) return false;
-      }
-      return !validateTripDates(dates);
-    }
+    if (stepIndex === 1) return !optionalDatesError(dates);
     if (stepIndex === 2) return !validateParticipants(participants);
     if (stepIndex === 3) return canProceedFromItineraryStep(itineraryMode);
     return true;
-  }, [dateModeSelected, dates, details, itineraryMode, participants, stepIndex]);
+  }, [dates, details, itineraryMode, participants, stepIndex]);
 
   const quickStartDatesReady = Boolean(dates.mode === 'duration' ? !validateTripDates(dates) : dates.startDate && dates.endDate && !validateTripDates({ ...dates, mode: 'range' }));
-  const quickStartReady = Boolean(details.name.trim() && selectedLocations.length && quickStartDatesReady);
+  const quickStartReady = Boolean(details.name.trim() && selectedLocations.length && !optionalDatesError(dates));
 
   const DATES_STEP = 1;
   const goNext = useCallback(() => {
     let error: string | null = null;
     if (stepIndex === 0) error = validateTripDetails(details);
-    if (stepIndex === 1 && !dateModeSelected) {
-      error = 'Select a date option to continue.';
-    }
-    if (stepIndex === 1 && !error) {
-      if (dateModeSelected === 'range') {
-        if (!dates.startDate || !dates.endDate) {
-          error = 'Select both a start and end date.';
-        }
-      } else if (dateModeSelected === 'month' && (!dates.startMonth || !dates.startYear || !dates.durationDays)) {
-        error = 'Select a month and number of days.';
-      }
-    }
-    if (stepIndex === 1 && !error) error = validateTripDates(dates);
+    if (stepIndex === 1) error = optionalDatesError(dates);
     if (stepIndex === 2) error = validateParticipants(participants);
     if (stepIndex === 3 && !canProceedFromItineraryStep(itineraryMode)) error = 'Choose Yes or No to continue.';
     if (error) {
@@ -860,7 +852,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       const next = Math.min(prev + 1, totalSteps - 1);
       return skipDatesStep && next === DATES_STEP ? next + 1 : next;
     });
-  }, [dateModeSelected, dates, details, itineraryMode, participants, skipDatesStep, stepIndex, totalSteps]);
+  }, [dates, details, itineraryMode, participants, skipDatesStep, stepIndex, totalSteps]);
 
   const goBack = useCallback(() => {
     setWizardError('');
@@ -1499,6 +1491,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               multiline
               value={details.description}
               onChangeText={(text: string) => setDetails((prev) => ({ ...prev, description: text }))}
+              onFocus={() => { descriptionFocusedRef.current = true; keepDescriptionInView(); }}
+              onBlur={() => { descriptionFocusedRef.current = false; }}
             />
             {skipDatesStep ? (
               <View style={styles.row}>
@@ -1560,7 +1554,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               </TouchableOpacity>
             </View>
             {!dateModeSelected ? (
-              <Text style={styles.helperText}>Select a date option to continue.</Text>
+              <Text style={styles.helperText}>Optional. Pick an option, or tap Next and add dates later.</Text>
             ) : dates.mode === 'duration' ? (
               <View>
                 <Text style={styles.modalLabel}>Trip length (days)</Text>
@@ -1761,14 +1755,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 AI itinerary generation is currently unavailable. You can build your itinerary manually below.
               </Text>
             )}
+            {/* These sections flow in the step's own ScrollView: a second, nested one left part of
+                the step stuck out of reach on phones. */}
             {itineraryMode === 'ai' ? (
-              <ScrollView
-                style={themeStyle('tabs_createTripWizard_30', {  }, (theme ?? _styleTheme))}
-                contentContainerStyle={themeStyle('tabs_createTripWizard_31', {  }, (theme ?? _styleTheme))}
-                showsVerticalScrollIndicator
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-              >
+              <View style={themeStyle('tabs_createTripWizard_31', {  }, (theme ?? _styleTheme))}>
                 <Text style={styles.helperText}>We'll generate a starter plan you can edit later.</Text>
                 <Text style={styles.helperText}>
                   The AI itinerary will be generated after you complete all steps of the trip wizard.
@@ -1939,19 +1929,13 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     style={themeStyle('tabs_createTripWizard_36', {  }, (theme ?? _styleTheme))}
                     onPress={showItineraryAirportDropdown}
                   >
-                    <Text style={styles.selectCaret}></Text>
+                    <Text style={styles.selectCaret}>▾</Text>
                   </TouchableOpacity>
                 </View>
-              </ScrollView>
+              </View>
             ) : null}
             {itineraryMode === 'manual' ? (
-              <ScrollView
-                style={themeStyle('tabs_createTripWizard_37', {  }, (theme ?? _styleTheme))}
-                contentContainerStyle={themeStyle('tabs_createTripWizard_38', {  }, (theme ?? _styleTheme))}
-                showsVerticalScrollIndicator
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-              >
+              <View style={themeStyle('tabs_createTripWizard_38', {  }, (theme ?? _styleTheme))}>
                 <Text style={styles.helperText}>All days are free to start. Add manual items to any day.</Text>
                 {!computedDays && dates.mode === 'range' ? (
                   <TextInput
@@ -2004,7 +1988,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     );
                   })}
                 </View>
-              </ScrollView>
+              </View>
             ) : null}
             {itineraryMode === 'manual' && manualDay ? (
               <DialogShell
@@ -2544,9 +2528,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         </Modal>
         {/* Step content scrolls; nav buttons stay anchored below */}
         <ScrollView
+          ref={stepScrollRef}
+          testID="wizard-step-scroll"
           style={themeStyle('tabs_createTripWizard_56', {  }, (theme ?? _styleTheme))}
           contentContainerStyle={themeStyle('tabs_createTripWizard_57', {  }, (theme ?? _styleTheme))}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          onLayout={keepDescriptionInView}
+          onContentSizeChange={keepDescriptionInView}
         >
           {renderStepContent()}
         </ScrollView>

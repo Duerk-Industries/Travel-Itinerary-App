@@ -2,24 +2,23 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
-  castItemVote,
   deleteCarRental,
   deleteExpenseForSource,
   ensureUserInTrip,
   getCarRentalById,
-  getItemVoteSummaries,
   insertCarRental,
   listCarRentals,
   updateCarRental,
   upsertExpenseForSource,
 } from '../db';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
-import { applyVoteSummary } from '../services/itemVoteService';
+import { applyVoteSummary, saveItemRating } from '../services/itemVoteService';
 import { assertCanUseFeature } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { readDto } from '../utils/dtoParse';
-import { createCarRentalDto, updateCarRentalDto, voteOrRatingDto } from './carRentalDtos';
+import { createCarRentalDto, updateCarRentalDto } from './carRentalDtos';
+import { itemRatingDto } from './itemRatingDto';
 
 const router = Router();
 router.use(bodyParser.json());
@@ -209,9 +208,8 @@ router.post('/:id/vote', (_req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const dto = readDto(voteOrRatingDto, req.body, res);
-  if (!dto) return;
-  const value = dto.value;
+  const stars = readDto(itemRatingDto, req.body, res);
+  if (!stars) return;
 
   const rental = await getCarRentalById(req.params.id);
   if (!rental) {
@@ -234,13 +232,7 @@ router.post('/:id/rating', async (req, res) => {
     return;
   }
 
-  await castItemVote(userId, tripId, 'car_rental', req.params.id, value, 'rating');
-  const summary = await getItemVoteSummaries(userId, tripId, 'car_rental', [req.params.id], 'rating');
-  res.json({
-    itemId: req.params.id,
-    netRating: summary[req.params.id]?.netVotes ?? 0,
-    userRating: summary[req.params.id]?.userVote ?? value,
-  });
+  res.json(await saveItemRating(userId, tripId, 'car_rental', req.params.id, stars));
 });
 
 export default router;

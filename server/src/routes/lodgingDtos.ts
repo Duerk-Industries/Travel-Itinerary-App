@@ -76,14 +76,3 @@ export const updateLodgingDto = z.object({
   travelerIds: patchField(z.array(z.union([z.string(), z.number()]))),
 });
 export type UpdateLodgingDto = z.infer<typeof updateLodgingDto>;
-
-// ---------------------------------------------------------------------------
-// POST /api/lodgings/:id/vote and /api/lodgings/:id/rating
-// ---------------------------------------------------------------------------
-
-export const voteOrRatingDto = z.object({
-  value: z
-    .union([z.literal(1), z.literal(-1), z.literal('1'), z.literal('-1')])
-    .transform((v) => (Number(v) === 1 ? 1 : -1) as 1 | -1),
-});
-export type VoteOrRatingDto = z.infer<typeof voteOrRatingDto>;

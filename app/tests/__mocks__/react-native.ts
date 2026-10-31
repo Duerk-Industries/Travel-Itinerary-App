@@ -14,6 +14,7 @@ export const FlatList = 'FlatList';
 export const SectionList = 'SectionList';
 export const Switch = 'Switch';
 export const Modal = 'Modal';
+export const Keyboard = { dismiss: jest.fn() };
 export const KeyboardAvoidingView = 'KeyboardAvoidingView';
 export const SafeAreaView = 'SafeAreaView';
 export const ActivityIndicator = 'ActivityIndicator';
@@ -59,6 +60,7 @@ export default {
   SectionList,
   Switch,
   Modal,
+  Keyboard,
   KeyboardAvoidingView,
   SafeAreaView,
   ActivityIndicator,

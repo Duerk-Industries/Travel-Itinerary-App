@@ -90,8 +90,9 @@ const flight: Flight = {
   paidBy: ['member-1'],
   netVotes: 0,
   userVote: null,
-  netRating: 0,
-  userRating: null,
+  averageRating: null,
+  ratingCount: 0,
+  userStars: null,
 };
 
 describe('FlightsTab read-only mode', () => {
@@ -241,12 +242,12 @@ describe('FlightsTab read-only mode', () => {
       fireEvent(getByTestId('transfer-arrival-date'), 'change', { target: { value: '2026-09-05' } });
       fireEvent(getByTestId('transfer-departure-date'), 'change', { target: { value: '2026-09-10' } });
       expect(getByTestId('transfer-arrival-date').props.value).toBe('2026-09-10');
-      expect(options('departure')).toEqual(['', 'new']);
-      expect(options('arrival')).toEqual(['', 'new']);
+      expect(options('departure')).toEqual(['', 'custom', 'new']);
+      expect(options('arrival')).toEqual(['', 'custom', 'new']);
       rerender(<FlightsTab {...props} flights={[{ ...transfer }]} />);
       expect(getByTestId('transfer-departure-date').props.value).toBe('2026-09-10');
       expect(getByTestId('transfer-arrival-date').props.value).toBe('2026-09-10');
-      expect(options('arrival')).toEqual(['', 'new']);
+      expect(options('arrival')).toEqual(['', 'custom', 'new']);
     } finally {
       Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS });
     }
