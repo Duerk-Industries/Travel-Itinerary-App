@@ -2527,7 +2527,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Colosseum_of_Rome%2C_Italy.jpg/960px-Colosseum_of_Rome%2C_Italy.jpg",
+          "width": 960,
+          "height": 604,
+          "title": "File:Colosseum of Rome, Italy.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Colosseum_of_Rome,_Italy.jpg",
+          "license": "CC0",
+          "author": "Wilfredor",
+          "selection": "ai"
+        }
       },
       "italy/roman-forum": {
         "name": "Roman Forum and Palatine Hill",
@@ -2538,7 +2547,16 @@
           "iconic_landmarks"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Roman_Forum_%2825854190723%29.jpg/960px-Roman_Forum_%2825854190723%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Roman Forum (25854190723).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Roman_Forum_(25854190723).jpg",
+          "license": "CC0",
+          "author": "Alex Liivet from Chester, United Kingdom",
+          "selection": "ai"
+        }
       },
       "italy/capitoline-museums": {
         "name": "Capitoline Museums",
@@ -2549,7 +2567,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Entrance_to_Capitoline_Museums_via_the_Cordonata%2C_Rome.jpg/960px-Entrance_to_Capitoline_Museums_via_the_Cordonata%2C_Rome.jpg",
+          "width": 960,
+          "height": 706,
+          "title": "File:Entrance to Capitoline Museums via the Cordonata, Rome.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Entrance_to_Capitoline_Museums_via_the_Cordonata,_Rome.jpg",
+          "license": "CC0",
+          "author": "Wilfredor",
+          "selection": "ai"
+        }
       },
       "italy/pantheon": {
         "name": "Pantheon",
@@ -2561,7 +2588,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/In_cima_al_Pantheon_di_Roma%2C_1975_-_On_the_top_of_the_Pantheon_in_Rome_%28Italy%29%2C_1975_--_004.jpg/960px-In_cima_al_Pantheon_di_Roma%2C_1975_-_On_the_top_of_the_Pantheon_in_Rome_%28Italy%29%2C_1975_--_004.jpg",
+          "width": 960,
+          "height": 734,
+          "title": "File:In cima al Pantheon di Roma, 1975 - On the top of the Pantheon in Rome (Italy), 1975 -- 004.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:In_cima_al_Pantheon_di_Roma,_1975_-_On_the_top_of_the_Pantheon_in_Rome_(Italy),_1975_--_004.jpg",
+          "license": "Public domain",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "italy/trevi-fountain": {
         "name": "Trevi Fountain",
@@ -2572,7 +2608,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e5/Detail_Neptune_Trevi_fountain_Rome_Italy.jpg/960px-Detail_Neptune_Trevi_fountain_Rome_Italy.jpg",
+          "width": 960,
+          "height": 635,
+          "title": "File:Detail Neptune Trevi fountain Rome Italy.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Detail_Neptune_Trevi_fountain_Rome_Italy.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "italy/piazza-navona": {
         "name": "Piazza Navona",
@@ -2584,7 +2629,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e5/Piazza_Navona%2C_Rome%2C_Italy_in_2006.jpg/960px-Piazza_Navona%2C_Rome%2C_Italy_in_2006.jpg",
+          "width": 960,
+          "height": 705,
+          "title": "File:Piazza Navona, Rome, Italy in 2006.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Piazza_Navona,_Rome,_Italy_in_2006.jpg",
+          "license": "Public domain",
+          "author": "Ee60640 at en.wikipedia",
+          "selection": "ai"
+        }
       },
       "italy/spanish-steps": {
         "name": "Spanish Steps",
@@ -2595,7 +2649,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Spanish_steps.jpg/960px-Spanish_steps.jpg",
+          "width": 960,
+          "height": 794,
+          "title": "File:Spanish steps.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Spanish_steps.jpg",
+          "license": "Public domain",
+          "author": "Tatiana kitty",
+          "selection": "ai"
+        }
       },
       "italy/vatican-museums": {
         "name": "Vatican Museums and Sistine Chapel",
@@ -2606,7 +2669,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Sistine_Chapel_ceiling%2C_Creation_of_Adam.jpg/960px-Sistine_Chapel_ceiling%2C_Creation_of_Adam.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Sistine Chapel ceiling, Creation of Adam.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sistine_Chapel_ceiling,_Creation_of_Adam.jpg",
+          "license": "Public domain",
+          "author": "Michelangelo",
+          "selection": "ai"
+        }
       },
       "italy/st-peters-basilica": {
         "name": "St Peter's Basilica",
@@ -2618,7 +2690,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/St._Peter%27s_Basilica_%26_Statue_of_St._Peter_%2848466814022%29.jpg/960px-St._Peter%27s_Basilica_%26_Statue_of_St._Peter_%2848466814022%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:St. Peter's Basilica & Statue of St. Peter (48466814022).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:St._Peter%27s_Basilica_%26_Statue_of_St._Peter_(48466814022).jpg",
+          "license": "Public domain",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "italy/castel-sant-angelo": {
         "name": "Castel Sant'Angelo",
@@ -2630,7 +2711,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4d/Castel_Sant%27Angelo_at_dusk%2C_Rome%2C_Italy.jpg/960px-Castel_Sant%27Angelo_at_dusk%2C_Rome%2C_Italy.jpg",
+          "width": 960,
+          "height": 636,
+          "title": "File:Castel Sant'Angelo at dusk, Rome, Italy.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Castel_Sant%27Angelo_at_dusk,_Rome,_Italy.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "italy/borghese-gallery": {
         "name": "Borghese Gallery",
@@ -2653,7 +2743,16 @@
           "authentic_local"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e9/Buildings_in_Trastevere_-_Rome%2C_Italy_-_DSC00346.jpg/960px-Buildings_in_Trastevere_-_Rome%2C_Italy_-_DSC00346.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Buildings in Trastevere - Rome, Italy - DSC00346.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Buildings_in_Trastevere_-_Rome,_Italy_-_DSC00346.jpg",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "italy/florence-duomo": {
         "name": "Florence Duomo and Brunelleschi's dome",
@@ -2665,7 +2764,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Roofs_Duomo_Campanile_Florence.jpg/960px-Roofs_Duomo_Campanile_Florence.jpg",
+          "width": 960,
+          "height": 686,
+          "title": "File:Roofs Duomo Campanile Florence.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Roofs_Duomo_Campanile_Florence.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "italy/uffizi-gallery": {
         "name": "Uffizi Gallery",
@@ -2699,7 +2807,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Brogi-Piazza_della_Signoria-Florence.jpg/960px-Brogi-Piazza_della_Signoria-Florence.jpg",
+          "width": 960,
+          "height": 715,
+          "title": "File:Brogi-Piazza della Signoria-Florence.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Brogi-Piazza_della_Signoria-Florence.jpg",
+          "license": "Public domain",
+          "author": "Photo by Giacomo Brogi",
+          "selection": "ai"
+        }
       },
       "italy/ponte-vecchio": {
         "name": "Ponte Vecchio",
@@ -2710,7 +2827,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Ponte_Vecchio_Arno_Florence.jpg/960px-Ponte_Vecchio_Arno_Florence.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Ponte Vecchio Arno Florence.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ponte_Vecchio_Arno_Florence.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "italy/mercato-centrale": {
         "name": "Mercato Centrale",
@@ -2745,7 +2871,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4d/Pitti_Palace%2C_royal_residence%2C_Florence%2C_Italy-LCCN2001700792.jpg/960px-Pitti_Palace%2C_royal_residence%2C_Florence%2C_Italy-LCCN2001700792.jpg",
+          "width": 960,
+          "height": 702,
+          "title": "File:Pitti Palace, royal residence, Florence, Italy-LCCN2001700792.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pitti_Palace,_royal_residence,_Florence,_Italy-LCCN2001700792.jpg",
+          "license": "Public domain",
+          "author": "Photochrom Print Collection",
+          "selection": "ai"
+        }
       },
       "italy/siena": {
         "name": "Siena",
@@ -2757,7 +2892,16 @@
           "authentic_local"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Italy-siena-buildings-1393098224YFI.jpg/960px-Italy-siena-buildings-1393098224YFI.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Italy-siena-buildings-1393098224YFI.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Italy-siena-buildings-1393098224YFI.jpg",
+          "license": "CC0",
+          "author": "Svetlana Tikhonova",
+          "selection": "ai"
+        }
       },
       "italy/pisa-leaning-tower": {
         "name": "Pisa and the Leaning Tower",
@@ -2769,7 +2913,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Pisa_Cathedral_2014.jpg/960px-Pisa_Cathedral_2014.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Pisa Cathedral 2014.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pisa_Cathedral_2014.jpg",
+          "license": "CC0",
+          "author": "Perituss",
+          "selection": "ai"
+        }
       },
       "italy/st-marks-basilica": {
         "name": "St Mark's Basilica",
@@ -2781,7 +2934,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/St_Mark%27s_Basilica_2007.jpg/960px-St_Mark%27s_Basilica_2007.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:St Mark's Basilica 2007.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:St_Mark%27s_Basilica_2007.jpg",
+          "license": "Public domain",
+          "author": "jeanne (talk)",
+          "selection": "ai"
+        }
       },
       "italy/doges-palace": {
         "name": "Doge's Palace",
@@ -2792,7 +2954,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Doge%27s_Palace_2.jpg/960px-Doge%27s_Palace_2.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Doge's Palace 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Doge%27s_Palace_2.jpg",
+          "license": "CC0",
+          "author": "Peter_Glyn",
+          "selection": "ai"
+        }
       },
       "italy/rialto-bridge": {
         "name": "Rialto Bridge and market",
@@ -2804,7 +2975,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/Michele_Marieschi_-_Views_of_Venice-_The_Bridge_and_Market_of_Rialto_-_1978.136.6_-_Cleveland_Museum_of_Art.jpg/960px-Michele_Marieschi_-_Views_of_Venice-_The_Bridge_and_Market_of_Rialto_-_1978.136.6_-_Cleveland_Museum_of_Art.jpg",
+          "width": 960,
+          "height": 661,
+          "title": "File:Michele Marieschi - Views of Venice- The Bridge and Market of Rialto - 1978.136.6 - Cleveland Museum of Art.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Michele_Marieschi_-_Views_of_Venice-_The_Bridge_and_Market_of_Rialto_-_1978.136.6_-_Cleveland_Museum_of_Art.jpg",
+          "license": "CC0",
+          "author": "Michele Marieschi",
+          "selection": "ai"
+        }
       },
       "italy/grand-canal-vaporetto": {
         "name": "Grand Canal by vaporetto",
@@ -2886,7 +3066,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/29/View_of_Castel_dell%27Ovo_from_the_Colonna_Spezzata_beach%2C_Naples%2C_2010.jpg/960px-View_of_Castel_dell%27Ovo_from_the_Colonna_Spezzata_beach%2C_Naples%2C_2010.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:View of Castel dell'Ovo from the Colonna Spezzata beach, Naples, 2010.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:View_of_Castel_dell%27Ovo_from_the_Colonna_Spezzata_beach,_Naples,_2010.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "italy/pompeii": {
         "name": "Pompeii",
@@ -2898,7 +3087,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/Street_houses_Pompeii_Italy.jpg/960px-Street_houses_Pompeii_Italy.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Street houses Pompeii Italy.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Street_houses_Pompeii_Italy.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "italy/mount-vesuvius": {
         "name": "Mount Vesuvius",
@@ -2910,7 +3108,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Mount_Vesuvius_Araucaria.jpg/960px-Mount_Vesuvius_Araucaria.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Mount Vesuvius Araucaria.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mount_Vesuvius_Araucaria.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "italy/sorrento-town": {
         "name": "Sorrento",
@@ -2922,7 +3129,16 @@
           "food"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Port_of_Sorrento.jpg/960px-Port_of_Sorrento.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Port of Sorrento.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Port_of_Sorrento.jpg",
+          "license": "CC0",
+          "author": "Duesseljan",
+          "selection": "ai"
+        }
       },
       "italy/capri": {
         "name": "Capri",
@@ -2935,7 +3151,16 @@
           "relax"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Casa-Malaparte-Capri-Italy_1991-May_04.jpg/960px-Casa-Malaparte-Capri-Italy_1991-May_04.jpg",
+          "width": 960,
+          "height": 636,
+          "title": "File:Casa-Malaparte-Capri-Italy 1991-May 04.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Casa-Malaparte-Capri-Italy_1991-May_04.jpg",
+          "license": "CC0",
+          "author": "Eoghanacht",
+          "selection": "ai"
+        }
       },
       "italy/amalfi-coast": {
         "name": "Amalfi Coast",
@@ -2947,7 +3172,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bc/Amalfi_Coast_%28247891353%29.jpeg/960px-Amalfi_Coast_%28247891353%29.jpeg",
+          "width": 960,
+          "height": 456,
+          "title": "File:Amalfi Coast (247891353).jpeg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Amalfi_Coast_(247891353).jpeg",
+          "license": "CC0",
+          "author": "Kailash U",
+          "selection": "ai"
+        }
       },
       "italy/milan-duomo": {
         "name": "Milan Cathedral",
@@ -2959,7 +3193,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/71/Milan_Cathedral%2C_choir_outside.jpg/960px-Milan_Cathedral%2C_choir_outside.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Milan Cathedral, choir outside.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Milan_Cathedral,_choir_outside.jpg",
+          "license": "CC0",
+          "author": "Gerda Arendt",
+          "selection": "ai"
+        }
       },
       "italy/last-supper": {
         "name": "The Last Supper",
@@ -2970,7 +3213,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Leonardo_da_Vinci_%281452-1519%29_-_The_Last_Supper_%281495-1498%29.jpg/960px-Leonardo_da_Vinci_%281452-1519%29_-_The_Last_Supper_%281495-1498%29.jpg",
+          "width": 960,
+          "height": 500,
+          "title": "File:Leonardo da Vinci (1452-1519) - The Last Supper (1495-1498).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Leonardo_da_Vinci_(1452-1519)_-_The_Last_Supper_(1495-1498).jpg",
+          "license": "Public domain",
+          "author": "Leonardo da Vinci",
+          "selection": "ai"
+        }
       },
       "italy/galleria-vittorio-emanuele": {
         "name": "Galleria Vittorio Emanuele II",
@@ -2981,7 +3233,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Galleria_Vittorio_Emanuele_II_mcD.JPG/960px-Galleria_Vittorio_Emanuele_II_mcD.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Galleria Vittorio Emanuele II mcD.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Galleria_Vittorio_Emanuele_II_mcD.JPG",
+          "license": "Public domain",
+          "author": "Thue",
+          "selection": "ai"
+        }
       },
       "italy/sforza-castle": {
         "name": "Sforza Castle",
@@ -2993,7 +3254,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Sforza_Castle%2C_Milan.jpg/960px-Sforza_Castle%2C_Milan.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Sforza Castle, Milan.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sforza_Castle,_Milan.jpg",
+          "license": "CC0",
+          "author": "Gerda Arendt",
+          "selection": "ai"
+        }
       },
       "italy/cinque-terre-villages": {
         "name": "The Cinque Terre villages",
@@ -3006,7 +3276,16 @@
           "authentic_local"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Cinque_Terre_%28217337419%29.jpeg/960px-Cinque_Terre_%28217337419%29.jpeg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Cinque Terre (217337419).jpeg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cinque_Terre_(217337419).jpeg",
+          "license": "CC0",
+          "author": "Life On Manual",
+          "selection": "ai"
+        }
       },
       "italy/cinque-terre-trail": {
         "name": "Cinque Terre coastal trail",
@@ -3018,7 +3297,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Cinque_Terre_%28217337419%29.jpeg/960px-Cinque_Terre_%28217337419%29.jpeg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Cinque Terre (217337419).jpeg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cinque_Terre_(217337419).jpeg",
+          "license": "CC0",
+          "author": "Life On Manual",
+          "selection": "ai"
+        }
       },
       "italy/monterosso-beach": {
         "name": "Monterosso al Mare beach",
@@ -3046,27 +3334,82 @@
       "italy/rome": {
         "name": "Rome",
         "description": "A capital where ancient ruins, baroque fountains and the Vatican's art collections sit within a few walkable kilometres of each other.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Sant%27Angelo_bridge%2C_dusk%2C_Rome%2C_Italy.jpg/960px-Sant%27Angelo_bridge%2C_dusk%2C_Rome%2C_Italy.jpg",
+            "width": 960,
+            "height": 483,
+            "title": "File:Sant'Angelo bridge, dusk, Rome, Italy.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sant%27Angelo_bridge,_dusk,_Rome,_Italy.jpg",
+            "license": "CC0",
+            "author": "Jebulon",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/tuscany": {
         "name": "Tuscany",
         "description": "A region of Renaissance cities, walled hill towns, vineyards and cypress ridges in central Italy.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d3/Tuscany%2C_Italy_%28Unsplash%29.jpg/960px-Tuscany%2C_Italy_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Tuscany, Italy (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tuscany,_Italy_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Vittorio Zamboni vittorio_zamboni",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/florence": {
         "name": "Florence",
         "description": "A compact Renaissance city on the Arno, holding Brunelleschi's dome, Michelangelo's David and the Uffizi collection.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Ponte_Vecchio_Arno_Florence.jpg/960px-Ponte_Vecchio_Arno_Florence.jpg",
+            "width": 960,
+            "height": 639,
+            "title": "File:Ponte Vecchio Arno Florence.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ponte_Vecchio_Arno_Florence.jpg",
+            "license": "CC0",
+            "author": "Jebulon",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/siena": {
         "name": "Siena",
         "description": "A walled brick hill town in Tuscany built around a sloping shell-shaped square, with a striped marble cathedral.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Italy-siena-buildings-1393098224YFI.jpg/960px-Italy-siena-buildings-1393098224YFI.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Italy-siena-buildings-1393098224YFI.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Italy-siena-buildings-1393098224YFI.jpg",
+            "license": "CC0",
+            "author": "Svetlana Tikhonova",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/pisa": {
         "name": "Pisa",
         "description": "A Tuscan city on the Arno, visited chiefly for the cathedral square and its famously tilted bell tower.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Pisa_Cathedral%2C_Italy.jpg/960px-Pisa_Cathedral%2C_Italy.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Pisa Cathedral, Italy.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Pisa_Cathedral,_Italy.jpg",
+            "license": "CC0",
+            "author": "Unknown authorUnknown author",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/veneto": {
         "name": "Veneto",
@@ -3076,7 +3419,18 @@
       "italy/venice": {
         "name": "Venice",
         "description": "A city built across a lagoon on canals instead of streets, with Byzantine mosaics, Gothic palaces and no cars.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/Venice_Old_Town_Lagoon_Aerial_View.jpg/960px-Venice_Old_Town_Lagoon_Aerial_View.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Venice Old Town Lagoon Aerial View.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Venice_Old_Town_Lagoon_Aerial_View.jpg",
+            "license": "CC0",
+            "author": "Horst-schlaemma",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/campania": {
         "name": "Campania",
@@ -3086,17 +3440,50 @@
       "italy/naples": {
         "name": "Naples",
         "description": "A loud, densely lived-in port city below Vesuvius, with a Greek street grid, the finest Pompeii finds and the birthplace of pizza.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c5/Naples%2C_Italy_%28Unsplash%29.jpg/960px-Naples%2C_Italy_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Naples, Italy (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Naples,_Italy_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Montse Monmo monmo",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/sorrento": {
         "name": "Sorrento",
         "description": "A clifftop town on the Bay of Naples, used as a practical base for Pompeii, Capri and the Amalfi Coast.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Port_of_Sorrento.jpg/960px-Port_of_Sorrento.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Port of Sorrento.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Port_of_Sorrento.jpg",
+            "license": "CC0",
+            "author": "Duesseljan",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/pompeii": {
         "name": "Pompeii",
         "description": "The excavated Roman town below Vesuvius, buried by the eruption of AD 79 and preserved to street level.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/Street_houses_Pompeii_Italy.jpg/960px-Street_houses_Pompeii_Italy.jpg",
+            "width": 960,
+            "height": 639,
+            "title": "File:Street houses Pompeii Italy.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Street_houses_Pompeii_Italy.jpg",
+            "license": "CC0",
+            "author": "Jebulon",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/capri": {
         "name": "Capri",
@@ -3106,12 +3493,34 @@
       "italy/amalfi-coast": {
         "name": "Amalfi Coast",
         "description": "A UNESCO-listed stretch of cliff coast south of Sorrento, with Positano, Amalfi and other villages stacked above the sea.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bc/Amalfi_Coast_%28247891353%29.jpeg/960px-Amalfi_Coast_%28247891353%29.jpeg",
+            "width": 960,
+            "height": 456,
+            "title": "File:Amalfi Coast (247891353).jpeg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Amalfi_Coast_(247891353).jpeg",
+            "license": "CC0",
+            "author": "Kailash U",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/lombardy": {
         "name": "Lombardy",
         "description": "A wealthy northern region of lakes and industrial cities, centred on Milan and reaching up to the Alps.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Val_di_Sole%2C_Passo_del_Tonale_and_Valcamonica_in_Lombardy%2C_Italy%2C_seen_from_an_airplane%2C_2003.jpg/960px-Val_di_Sole%2C_Passo_del_Tonale_and_Valcamonica_in_Lombardy%2C_Italy%2C_seen_from_an_airplane%2C_2003.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Val di Sole, Passo del Tonale and Valcamonica in Lombardy, Italy, seen from an airplane, 2003.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Val_di_Sole,_Passo_del_Tonale_and_Valcamonica_in_Lombardy,_Italy,_seen_from_an_airplane,_2003.jpg",
+            "license": "CC0",
+            "author": "DimiTalen",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/milan": {
         "name": "Milan",
@@ -3126,12 +3535,34 @@
       "italy/cinque-terre": {
         "name": "Cinque Terre",
         "description": "Five cliffside fishing villages on the Ligurian coast, linked by train, boat and a network of steep footpaths.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Cinque_Terre_%28217337419%29.jpeg/960px-Cinque_Terre_%28217337419%29.jpeg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Cinque Terre (217337419).jpeg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cinque_Terre_(217337419).jpeg",
+            "license": "CC0",
+            "author": "Life On Manual",
+            "selection": "ai"
+          }
+        ]
       },
       "italy/monterosso-al-mare": {
         "name": "Monterosso al Mare",
         "description": "The westernmost and flattest of the Cinque Terre villages, and the only one with a substantial beach.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Church_San_Giovanni_Battista_%28Monterosso_al_Mare%29.jpg/960px-Church_San_Giovanni_Battista_%28Monterosso_al_Mare%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Church San Giovanni Battista (Monterosso al Mare).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Church_San_Giovanni_Battista_(Monterosso_al_Mare).jpg",
+            "license": "Public domain",
+            "author": "Tangopaso",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

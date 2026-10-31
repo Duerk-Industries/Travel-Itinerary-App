@@ -999,7 +999,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/%E1%9E%90%E1%9F%92%E1%9E%84%E1%9F%83%E1%9E%9A%E1%9F%87%E1%9E%93%E1%9F%85%E1%9E%94%E1%9F%92%E1%9E%9A%E1%9E%B6%E1%9E%9F%E1%9E%B6%E1%9E%91%E1%9E%A2%E1%9E%84%E1%9F%92%E1%9E%82%E1%9E%9A%E1%9E%9C%E1%9E%8F%E1%9F%92%E1%9E%8F%E1%9F%A1%E1%9F%A4_-_Sunnrise_at_Angkor_Wat_14.jpg/960px-%E1%9E%90%E1%9F%92%E1%9E%84%E1%9F%83%E1%9E%9A%E1%9F%87%E1%9E%93%E1%9F%85%E1%9E%94%E1%9F%92%E1%9E%9A%E1%9E%B6%E1%9E%9F%E1%9E%B6%E1%9E%91%E1%9E%A2%E1%9E%84%E1%9F%92%E1%9E%82%E1%9E%9A%E1%9E%9C%E1%9E%8F%E1%9F%92%E1%9E%8F%E1%9F%A1%E1%9F%A4_-_Sunnrise_at_Angkor_Wat_14.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:ថ្ងៃរះនៅប្រាសាទអង្គរវត្ត១៤ - Sunnrise at Angkor Wat 14.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:%E1%9E%90%E1%9F%92%E1%9E%84%E1%9F%83%E1%9E%9A%E1%9F%87%E1%9E%93%E1%9F%85%E1%9E%94%E1%9F%92%E1%9E%9A%E1%9E%B6%E1%9E%9F%E1%9E%B6%E1%9E%91%E1%9E%A2%E1%9E%84%E1%9F%92%E1%9E%82%E1%9E%9A%E1%9E%9C%E1%9E%8F%E1%9F%92%E1%9E%8F%E1%9F%A1%E1%9F%A4_-_Sunnrise_at_Angkor_Wat_14.jpg",
+          "license": "CC0",
+          "author": "Random username 083794703875938",
+          "selection": "ai"
+        }
       },
       "cambodia/angkor-thom-bayon": {
         "name": "Angkor Thom and the Bayon",
@@ -1011,7 +1020,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ad/Angkor_Thom_Bayon_%289728436726%29.jpg/960px-Angkor_Thom_Bayon_%289728436726%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Angkor Thom Bayon (9728436726).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Angkor_Thom_Bayon_(9728436726).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "cambodia/ta-prohm": {
         "name": "Ta Prohm",
@@ -1023,7 +1041,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Ta_Prohm_-_TaProhm1265.jpg/960px-Ta_Prohm_-_TaProhm1265.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Ta Prohm - TaProhm1265.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ta_Prohm_-_TaProhm1265.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "cambodia/banteay-srei": {
         "name": "Banteay Srei and the Grand Circuit",
@@ -1034,7 +1061,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/%E1%9E%93%E1%9F%85%E1%9E%94%E1%9F%92%E1%9E%9A%E1%9E%B6%E1%9E%9F%E1%9E%B6%E1%9E%91%E1%9E%94%E1%9E%93%E1%9F%92%E1%9E%91%E1%9E%B6%E1%9E%99%E1%9E%9F%E1%9F%92%E1%9E%9A%E1%9E%B8%E1%9F%A6_-_at_Banteay_Srei_6.jpg/960px-%E1%9E%93%E1%9F%85%E1%9E%94%E1%9F%92%E1%9E%9A%E1%9E%B6%E1%9E%9F%E1%9E%B6%E1%9E%91%E1%9E%94%E1%9E%93%E1%9F%92%E1%9E%91%E1%9E%B6%E1%9E%99%E1%9E%9F%E1%9F%92%E1%9E%9A%E1%9E%B8%E1%9F%A6_-_at_Banteay_Srei_6.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:នៅប្រាសាទបន្ទាយស្រី៦ - at Banteay Srei 6.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:%E1%9E%93%E1%9F%85%E1%9E%94%E1%9F%92%E1%9E%9A%E1%9E%B6%E1%9E%9F%E1%9E%B6%E1%9E%91%E1%9E%94%E1%9E%93%E1%9F%92%E1%9E%91%E1%9E%B6%E1%9E%99%E1%9E%9F%E1%9F%92%E1%9E%9A%E1%9E%B8%E1%9F%A6_-_at_Banteay_Srei_6.jpg",
+          "license": "CC0",
+          "author": "Random username 083794703875938",
+          "selection": "ai"
+        }
       },
       "cambodia/tonle-sap": {
         "name": "Tonle Sap floating village",
@@ -1046,7 +1082,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Tonle_Sap_Lake_%289728580725%29.jpg/960px-Tonle_Sap_Lake_%289728580725%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Tonle Sap Lake (9728580725).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tonle_Sap_Lake_(9728580725).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "cambodia/phare-circus": {
         "name": "Phare, The Cambodian Circus",
@@ -1093,7 +1138,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Entrance_gate_to_%27Tuol_Sleng%27_Prison..JPG/960px-Entrance_gate_to_%27Tuol_Sleng%27_Prison..JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Entrance gate to 'Tuol Sleng' Prison..JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Entrance_gate_to_%27Tuol_Sleng%27_Prison..JPG",
+          "license": "CC0",
+          "author": "Rudolph.A.Furtado",
+          "selection": "ai"
+        }
       },
       "cambodia/phnom-penh-markets": {
         "name": "Central Market and Russian Market",
@@ -1129,14 +1183,34 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2d/Kep_Crab_Market.jpg/960px-Kep_Crab_Market.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Kep Crab Market.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kep_Crab_Market.jpg",
+          "license": "CC0",
+          "author": "Mx. Granger",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "cambodia": {
         "name": "Cambodia",
         "description": "The land of Angkor, with Mekong river towns, a capital on the water and a quiet south coast.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/64/Angkor_Wat_in_Cambodia.jpg/960px-Angkor_Wat_in_Cambodia.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Angkor Wat in Cambodia.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Angkor_Wat_in_Cambodia.jpg",
+            "license": "CC0",
+            "author": "Martaapue",
+            "selection": "ai"
+          }
+        ]
       },
       "cambodia/siem-reap": {
         "name": "Siem Reap",
@@ -1151,7 +1225,18 @@
       "cambodia/phnom-penh": {
         "name": "Phnom Penh",
         "description": "The capital at the meeting of the Mekong and Tonle Sap rivers.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/360%C2%B0_Phnom_Penh_%28Central_Market_2022%29.jpg/960px-360%C2%B0_Phnom_Penh_%28Central_Market_2022%29.jpg",
+            "width": 960,
+            "height": 480,
+            "title": "File:360° Phnom Penh (Central Market 2022).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:360%C2%B0_Phnom_Penh_(Central_Market_2022).jpg",
+            "license": "CC0",
+            "author": "Kiensvay",
+            "selection": "ai"
+          }
+        ]
       },
       "cambodia/kampot": {
         "name": "Kampot",

@@ -1269,7 +1269,18 @@
       "fiji/nadi": {
         "name": "Nadi",
         "description": "The gateway town and airport on the west of Viti Levu.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Nadi_town.jpg/960px-Nadi_town.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Nadi town.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Nadi_town.jpg",
+            "license": "Public domain",
+            "author": "Cometstyles",
+            "selection": "ai"
+          }
+        ]
       },
       "fiji/mamanuca-islands": {
         "name": "Mamanuca Islands",
@@ -1279,7 +1290,18 @@
       "fiji/yasawa-islands": {
         "name": "Yasawa Islands",
         "description": "A remote chain of white beaches and caves north of the Mamanucas.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/Waya_1.jpg/960px-Waya_1.jpg",
+            "width": 960,
+            "height": 637,
+            "title": "File:Waya 1.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Waya_1.jpg",
+            "license": "Public domain",
+            "author": "msdstefan",
+            "selection": "ai"
+          }
+        ]
       },
       "fiji/coral-coast": {
         "name": "Coral Coast",
@@ -1289,7 +1311,18 @@
       "fiji/suva": {
         "name": "Suva",
         "description": "The capital, on the wetter south-east coast.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ad/Suva_City_2_February_2015.jpg/960px-Suva_City_2_February_2015.jpg",
+            "width": 960,
+            "height": 717,
+            "title": "File:Suva City 2 February 2015.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Suva_City_2_February_2015.jpg",
+            "license": "CC0",
+            "author": "Stemoc",
+            "selection": "ai"
+          }
+        ]
       },
       "fiji/taveuni": {
         "name": "Taveuni",

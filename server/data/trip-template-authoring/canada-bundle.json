@@ -1219,7 +1219,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Stanley_Seawall.jpg/960px-Stanley_Seawall.jpg",
+          "width": 960,
+          "height": 443,
+          "title": "File:Stanley Seawall.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Stanley_Seawall.jpg",
+          "license": "Public domain",
+          "author": "bobanny",
+          "selection": "ai"
+        }
       },
       "canada/granville-island": {
         "name": "Granville Island Public Market",
@@ -1231,7 +1240,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Granville_Island.jpg/960px-Granville_Island.jpg",
+          "width": 960,
+          "height": 563,
+          "title": "File:Granville Island.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Granville_Island.jpg",
+          "license": "Public domain",
+          "author": "Zhatt",
+          "selection": "ai"
+        }
       },
       "canada/capilano": {
         "name": "Capilano Suspension Bridge and Grouse Mountain",
@@ -1243,7 +1261,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/Capilano_Suspension_Bridge_2.jpg/960px-Capilano_Suspension_Bridge_2.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Capilano Suspension Bridge 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Capilano_Suspension_Bridge_2.jpg",
+          "license": "Public domain",
+          "author": "Masterhatch at English Wikipedia",
+          "selection": "ai"
+        }
       },
       "canada/banff-gondola": {
         "name": "Banff town and Sulphur Mountain Gondola",
@@ -1255,7 +1282,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/CandianRockiesBanffCanada.JPG/960px-CandianRockiesBanffCanada.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:CandianRockiesBanffCanada.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:CandianRockiesBanffCanada.JPG",
+          "license": "Public domain",
+          "author": "Real Jsu",
+          "selection": "ai"
+        }
       },
       "canada/lake-louise-moraine": {
         "name": "Lake Louise and Moraine Lake",
@@ -1267,7 +1303,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/29/Moraine_lake_in_Banff_national_park.jpg/960px-Moraine_lake_in_Banff_national_park.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Moraine lake in Banff national park.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Moraine_lake_in_Banff_national_park.jpg",
+          "license": "Public domain",
+          "author": "Bruno.menetrier on fr.wikipedia",
+          "selection": "ai"
+        }
       },
       "canada/johnston-canyon": {
         "name": "Johnston Canyon",
@@ -1278,7 +1323,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Johnston_Canyon_%28Alberta%29.jpg/960px-Johnston_Canyon_%28Alberta%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Johnston Canyon (Alberta).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Johnston_Canyon_(Alberta).jpg",
+          "license": "Public domain",
+          "author": "DI Florian Fuchs",
+          "selection": "ai"
+        }
       },
       "canada/icefields-parkway": {
         "name": "Icefields Parkway and Columbia Icefield",
@@ -1327,7 +1381,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/TorontoWaterfrontAndSailboats3.jpg/960px-TorontoWaterfrontAndSailboats3.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:TorontoWaterfrontAndSailboats3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:TorontoWaterfrontAndSailboats3.jpg",
+          "license": "CC0",
+          "author": "Raysonho @ Open Grid Scheduler / Grid Engine",
+          "selection": "ai"
+        }
       },
       "canada/st-lawrence-market": {
         "name": "St Lawrence Market and Distillery District",
@@ -1351,7 +1414,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Horseshoe_Falls%2C_Niagara%2C_Ontario%2C_Canada.jpg/960px-Horseshoe_Falls%2C_Niagara%2C_Ontario%2C_Canada.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Horseshoe Falls, Niagara, Ontario, Canada.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Horseshoe_Falls,_Niagara,_Ontario,_Canada.jpg",
+          "license": "CC0",
+          "author": "Salwa Farwaneh Dameh",
+          "selection": "ai"
+        }
       },
       "canada/old-montreal": {
         "name": "Old Montreal and Notre-Dame Basilica",
@@ -1388,7 +1460,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a3/Chateau_Frontenac_from_a_street_in_Old_Quebec.jpg/960px-Chateau_Frontenac_from_a_street_in_Old_Quebec.jpg",
+          "width": 960,
+          "height": 649,
+          "title": "File:Chateau Frontenac from a street in Old Quebec.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Chateau_Frontenac_from_a_street_in_Old_Quebec.jpg",
+          "license": "CC0",
+          "author": "Wilfredor",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1405,7 +1486,18 @@
       "canada/vancouver": {
         "name": "Vancouver",
         "description": "A coastal city between mountains and sea, with a huge seawall park.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/Skyline_with_seaplane_-_Vancouver%2C_Canada_-_DSC09323.JPG/960px-Skyline_with_seaplane_-_Vancouver%2C_Canada_-_DSC09323.JPG",
+            "width": 960,
+            "height": 609,
+            "title": "File:Skyline with seaplane - Vancouver, Canada - DSC09323.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Skyline_with_seaplane_-_Vancouver,_Canada_-_DSC09323.JPG",
+            "license": "CC0",
+            "author": "Daderot",
+            "selection": "ai"
+          }
+        ]
       },
       "canada/alberta": {
         "name": "Alberta",
@@ -1420,32 +1512,98 @@
       "canada/jasper": {
         "name": "Jasper",
         "description": "A quieter mountain town with elk, lakes and dark skies.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b1/Jasper%2C_Alberta%2C_Canada%2C_ViewFromSummit_RyanShepherd.JPG/960px-Jasper%2C_Alberta%2C_Canada%2C_ViewFromSummit_RyanShepherd.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Jasper, Alberta, Canada, ViewFromSummit RyanShepherd.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Jasper,_Alberta,_Canada,_ViewFromSummit_RyanShepherd.JPG",
+            "license": "Public domain",
+            "author": "Ryanshepherd at English Wikipedia",
+            "selection": "ai"
+          }
+        ]
       },
       "canada/ontario": {
         "name": "Ontario",
         "description": "The central province of Toronto and Niagara Falls.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Niagara_Falls_Ontario_Canada_aerial_view.jpg/960px-Niagara_Falls_Ontario_Canada_aerial_view.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Niagara Falls Ontario Canada aerial view.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Niagara_Falls_Ontario_Canada_aerial_view.jpg",
+            "license": "CC0",
+            "author": "Salwa Farwaneh",
+            "selection": "ai"
+          }
+        ]
       },
       "canada/toronto": {
         "name": "Toronto",
         "description": "The big, multicultural city on Lake Ontario with the CN Tower.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/CN_Tower%2C_Toronto%2C_Canada_%28Unsplash_DJ_kOgH5u0o%29.jpg/960px-CN_Tower%2C_Toronto%2C_Canada_%28Unsplash_DJ_kOgH5u0o%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:CN Tower, Toronto, Canada (Unsplash DJ kOgH5u0o).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:CN_Tower,_Toronto,_Canada_(Unsplash_DJ_kOgH5u0o).jpg",
+            "license": "CC0",
+            "author": "Scott Webb scottwebb",
+            "selection": "ai"
+          }
+        ]
       },
       "canada/quebec": {
         "name": "Quebec",
         "description": "The French-speaking province of Montreal and Quebec City.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Chateau_Frontenac_illuminated_at_night_in_Quebec_City.jpg/960px-Chateau_Frontenac_illuminated_at_night_in_Quebec_City.jpg",
+            "width": 960,
+            "height": 614,
+            "title": "File:Chateau Frontenac illuminated at night in Quebec City.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Chateau_Frontenac_illuminated_at_night_in_Quebec_City.jpg",
+            "license": "CC0",
+            "author": "Wilfredor",
+            "selection": "ai"
+          }
+        ]
       },
       "canada/montreal": {
         "name": "Montreal",
         "description": "A bilingual city of old stone streets, food and festivals.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/22/Kondiaronk_Belvedere%2C_Montreal_city%2C_Canada.jpg/960px-Kondiaronk_Belvedere%2C_Montreal_city%2C_Canada.jpg",
+            "width": 960,
+            "height": 646,
+            "title": "File:Kondiaronk Belvedere, Montreal city, Canada.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Kondiaronk_Belvedere,_Montreal_city,_Canada.jpg",
+            "license": "CC0",
+            "author": "Wilfredor",
+            "selection": "ai"
+          }
+        ]
       },
       "canada/quebec-city": {
         "name": "Quebec City",
         "description": "The walled old town above the St Lawrence river.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2a/Chateau_Frontenac_at_dusk_in_Quebec_City.jpg/960px-Chateau_Frontenac_at_dusk_in_Quebec_City.jpg",
+            "width": 960,
+            "height": 648,
+            "title": "File:Chateau Frontenac at dusk in Quebec City.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Chateau_Frontenac_at_dusk_in_Quebec_City.jpg",
+            "license": "CC0",
+            "author": "Wilfredor",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

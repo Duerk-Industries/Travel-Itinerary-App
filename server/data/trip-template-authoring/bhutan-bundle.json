@@ -1212,7 +1212,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7b/BrickCon_2014_%2815487945282%29.jpg/960px-BrickCon_2014_%2815487945282%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:BrickCon 2014 (15487945282).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:BrickCon_2014_(15487945282).jpg",
+          "license": "CC0",
+          "author": "Pascal from Heidelberg, Germany",
+          "selection": "ai"
+        }
       },
       "bhutan/paro-dzong-museum": {
         "name": "Paro Dzong and National Museum",
@@ -1259,7 +1268,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Bhutan-1546093_640.jpg/960px-Bhutan-1546093_640.jpg",
+          "width": 960,
+          "height": 617,
+          "title": "File:Bhutan-1546093 640.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bhutan-1546093_640.jpg",
+          "license": "CC0",
+          "author": "https://pixabay.com/en/users/Wellcometravel-2992275/",
+          "selection": "ai"
+        }
       },
       "bhutan/takin-preserve": {
         "name": "Motithang Takin Preserve",
@@ -1282,7 +1300,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Dochula_Pass_September_2023.jpg/960px-Dochula_Pass_September_2023.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Dochula Pass September 2023.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dochula_Pass_September_2023.jpg",
+          "license": "CC0",
+          "author": "Mussi Katz",
+          "selection": "ai"
+        }
       },
       "bhutan/punakha-dzong": {
         "name": "Punakha Dzong",
@@ -1294,7 +1321,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Punakha_Dzong_Surrounded_by_Jacaranda_Blossoms.jpg/960px-Punakha_Dzong_Surrounded_by_Jacaranda_Blossoms.jpg",
+          "width": 960,
+          "height": 537,
+          "title": "File:Punakha Dzong Surrounded by Jacaranda Blossoms.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Punakha_Dzong_Surrounded_by_Jacaranda_Blossoms.jpg",
+          "license": "CC0",
+          "author": "Little Peacock in Maryland",
+          "selection": "ai"
+        }
       },
       "bhutan/chimi-lhakhang": {
         "name": "Chimi Lhakhang and Punakha suspension bridge",
@@ -1338,7 +1374,18 @@
       "bhutan": {
         "name": "Bhutan",
         "description": "The Himalayan kingdom of monasteries, fortress-monasteries and an emphasis on happiness.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7d/Bhutan_23_%28635%29.jpg/960px-Bhutan_23_%28635%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Bhutan 23 (635).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Bhutan_23_(635).jpg",
+            "license": "CC0",
+            "author": "Mussi Katz",
+            "selection": "ai"
+          }
+        ]
       },
       "bhutan/paro": {
         "name": "Paro",
@@ -1348,12 +1395,34 @@
       "bhutan/thimphu": {
         "name": "Thimphu",
         "description": "The low-rise capital of monasteries, markets and a golden Buddha.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/73/Thimphu.JPG/960px-Thimphu.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Thimphu.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Thimphu.JPG",
+            "license": "Public domain",
+            "author": "Md. Aminul Hassan (myself)",
+            "selection": "ai"
+          }
+        ]
       },
       "bhutan/punakha": {
         "name": "Punakha",
         "description": "A warm valley of rice terraces and a river-confluence fortress.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d3/Samuel_Davis_-_The_Former_Winter_Capital_of_Bhutan_at_Punakha_Dzong_-_B1977.14.284_-_Yale_Center_for_British_Art.jpg/960px-Samuel_Davis_-_The_Former_Winter_Capital_of_Bhutan_at_Punakha_Dzong_-_B1977.14.284_-_Yale_Center_for_British_Art.jpg",
+            "width": 960,
+            "height": 610,
+            "title": "File:Samuel Davis - The Former Winter Capital of Bhutan at Punakha Dzong - B1977.14.284 - Yale Center for British Art.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Samuel_Davis_-_The_Former_Winter_Capital_of_Bhutan_at_Punakha_Dzong_-_B1977.14.284_-_Yale_Center_for_British_Art.jpg",
+            "license": "CC0",
+            "author": "Samuel Davis",
+            "selection": "ai"
+          }
+        ]
       },
       "bhutan/wangdue-phodrang": {
         "name": "Wangdue Phodrang",

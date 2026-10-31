@@ -1004,7 +1004,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7e/Castle_of_Prague_from_the_Charles_Bridge.jpg/960px-Castle_of_Prague_from_the_Charles_Bridge.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Castle of Prague from the Charles Bridge.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Castle_of_Prague_from_the_Charles_Bridge.jpg",
+          "license": "Public domain",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "czech-republic/old-town-charles-bridge": {
         "name": "Old Town Square and Charles Bridge",
@@ -1039,7 +1048,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e2/Prague%2C_U_Medv%C3%ADdk%C5%AF_restaurant%2C_Oldgott_beer.jpg/960px-Prague%2C_U_Medv%C3%ADdk%C5%AF_restaurant%2C_Oldgott_beer.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Prague, U Medvídků restaurant, Oldgott beer.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Prague,_U_Medv%C3%ADdk%C5%AF_restaurant,_Oldgott_beer.jpg",
+          "license": "CC0",
+          "author": "Kawon Kez Sel",
+          "selection": "ai"
+        }
       },
       "czech-republic/kutna-hora": {
         "name": "Kutna Hora and the Sedlec Ossuary",
@@ -1050,7 +1068,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Kutna_Hora-Sedlec_cathedral_011.jpg/960px-Kutna_Hora-Sedlec_cathedral_011.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Kutna Hora-Sedlec cathedral 011.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kutna_Hora-Sedlec_cathedral_011.jpg",
+          "license": "Public domain",
+          "author": "User:Miaow Miaow",
+          "selection": "ai"
+        }
       },
       "czech-republic/cesky-krumlov": {
         "name": "Cesky Krumlov castle and old town",
@@ -1063,7 +1090,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Upper_Castle_of_%C4%8Cesk%C3%BD_Krumlov_2006.JPG/960px-Upper_Castle_of_%C4%8Cesk%C3%BD_Krumlov_2006.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Upper Castle of Český Krumlov 2006.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Upper_Castle_of_%C4%8Cesk%C3%BD_Krumlov_2006.JPG",
+          "license": "Public domain",
+          "author": "July Morning",
+          "selection": "ai"
+        }
       },
       "czech-republic/karlovy-vary": {
         "name": "Karlovy Vary spa town",
@@ -1075,7 +1111,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/V%C5%99%C3%ADdlo_Karlovy_Vary_2010_1.jpg/960px-V%C5%99%C3%ADdlo_Karlovy_Vary_2010_1.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Vřídlo Karlovy Vary 2010 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:V%C5%99%C3%ADdlo_Karlovy_Vary_2010_1.jpg",
+          "license": "CC0",
+          "author": "Perituss",
+          "selection": "ai"
+        }
       },
       "czech-republic/brno": {
         "name": "Brno, Spilberk and Villa Tugendhat",
@@ -1087,7 +1132,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4d/Part_of_Old_Brno_district_from_Spilberk_castle.JPG/960px-Part_of_Old_Brno_district_from_Spilberk_castle.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Part of Old Brno district from Spilberk castle.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Part_of_Old_Brno_district_from_Spilberk_castle.JPG",
+          "license": "Public domain",
+          "author": "Coeli",
+          "selection": "ai"
+        }
       },
       "czech-republic/plzen-brewery": {
         "name": "Plzen Pilsner Urquell brewery",
@@ -1121,12 +1175,34 @@
       "czech-republic/cesky-krumlov": {
         "name": "Cesky Krumlov",
         "description": "A fairytale medieval town on a loop of the Vltava river.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/Cesky_Krumlov_from_Cloak_Bridge_1.jpg/960px-Cesky_Krumlov_from_Cloak_Bridge_1.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Cesky Krumlov from Cloak Bridge 1.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cesky_Krumlov_from_Cloak_Bridge_1.jpg",
+            "license": "CC0",
+            "author": "Perituss",
+            "selection": "ai"
+          }
+        ]
       },
       "czech-republic/karlovy-vary": {
         "name": "Karlovy Vary",
         "description": "A grand spa town of colonnades and mineral springs.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/38/Zeyerova_Karlovy_Vary_2015-07-09.jpg/960px-Zeyerova_Karlovy_Vary_2015-07-09.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Zeyerova Karlovy Vary 2015-07-09.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Zeyerova_Karlovy_Vary_2015-07-09.jpg",
+            "license": "CC0",
+            "author": "Perituss",
+            "selection": "ai"
+          }
+        ]
       },
       "czech-republic/south-moravia": {
         "name": "South Moravia",

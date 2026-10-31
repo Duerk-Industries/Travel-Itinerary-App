@@ -1185,7 +1185,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Feedings_at_Giraffe_Centre_Nairobi_2025.jpg/960px-Feedings_at_Giraffe_Centre_Nairobi_2025.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Feedings at Giraffe Centre Nairobi 2025.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Feedings_at_Giraffe_Centre_Nairobi_2025.jpg",
+          "license": "CC0",
+          "author": "Noroi",
+          "selection": "ai"
+        }
       },
       "kenya/amboseli": {
         "name": "Amboseli National Park",
@@ -1234,7 +1243,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Masai_Mara_Zebra.jpg/960px-Masai_Mara_Zebra.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Masai Mara Zebra.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Masai_Mara_Zebra.jpg",
+          "license": "CC0",
+          "author": "HasselbladWhisperer",
+          "selection": "ai"
+        }
       },
       "kenya/mara-balloon": {
         "name": "Masai Mara balloon safari",
@@ -1257,7 +1275,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e5/Maasai_village_on_the_A109_road%2C_Kenya.jpg/960px-Maasai_village_on_the_A109_road%2C_Kenya.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Maasai village on the A109 road, Kenya.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Maasai_village_on_the_A109_road,_Kenya.jpg",
+          "license": "CC0",
+          "author": "CT Cooper",
+          "selection": "ai"
+        }
       },
       "kenya/diani-beach": {
         "name": "Diani Beach",
@@ -1269,7 +1296,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/Diani_Beach_towards_the_south_next_to_the_Indian_Ocean_Beach_Club_hotel_near_Mombasa%2C_Coast_Province%2C_Kenya.jpg/960px-Diani_Beach_towards_the_south_next_to_the_Indian_Ocean_Beach_Club_hotel_near_Mombasa%2C_Coast_Province%2C_Kenya.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Diani Beach towards the south next to the Indian Ocean Beach Club hotel near Mombasa, Coast Province, Kenya.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Diani_Beach_towards_the_south_next_to_the_Indian_Ocean_Beach_Club_hotel_near_Mombasa,_Coast_Province,_Kenya.jpg",
+          "license": "CC0",
+          "author": "CT Cooper",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1281,7 +1317,18 @@
       "kenya/nairobi": {
         "name": "Nairobi",
         "description": "The capital, with a national park on its doorstep.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Nairobi_City_tour.jpg/960px-Nairobi_City_tour.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Nairobi City tour.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Nairobi_City_tour.jpg",
+            "license": "CC0",
+            "author": "Francis Akuka for the Wikimedia Foundation",
+            "selection": "ai"
+          }
+        ]
       },
       "kenya/amboseli": {
         "name": "Amboseli",
@@ -1296,12 +1343,34 @@
       "kenya/masai-mara": {
         "name": "Masai Mara",
         "description": "Kenya greatest wildlife reserve and migration crossing.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Masai_Mara_Zebra.jpg/960px-Masai_Mara_Zebra.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Masai Mara Zebra.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Masai_Mara_Zebra.jpg",
+            "license": "CC0",
+            "author": "HasselbladWhisperer",
+            "selection": "ai"
+          }
+        ]
       },
       "kenya/diani-beach": {
         "name": "Diani Beach",
         "description": "A white-sand beach on the south coast.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/Diani_Beach_towards_the_south_next_to_the_Indian_Ocean_Beach_Club_hotel_near_Mombasa%2C_Coast_Province%2C_Kenya.jpg/960px-Diani_Beach_towards_the_south_next_to_the_Indian_Ocean_Beach_Club_hotel_near_Mombasa%2C_Coast_Province%2C_Kenya.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Diani Beach towards the south next to the Indian Ocean Beach Club hotel near Mombasa, Coast Province, Kenya.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Diani_Beach_towards_the_south_next_to_the_Indian_Ocean_Beach_Club_hotel_near_Mombasa,_Coast_Province,_Kenya.jpg",
+            "license": "CC0",
+            "author": "CT Cooper",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

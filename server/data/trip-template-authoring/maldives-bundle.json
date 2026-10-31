@@ -858,7 +858,18 @@
       "maldives": {
         "name": "Maldives",
         "description": "A nation of coral atolls with turquoise lagoons and the Indian Ocean marine life.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Amilla_Maldives_Villas.jpg/960px-Amilla_Maldives_Villas.jpg",
+            "width": 960,
+            "height": 576,
+            "title": "File:Amilla Maldives Villas.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Amilla_Maldives_Villas.jpg",
+            "license": "CC0",
+            "author": "Amilla Maldives",
+            "selection": "ai"
+          }
+        ]
       },
       "maldives/male": {
         "name": "Male",
@@ -878,7 +889,18 @@
       "maldives/south-ari-atoll": {
         "name": "South Ari Atoll",
         "description": "An atoll of resorts, manta rays and whale sharks.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Sun_Island_Resort%2C_Alif_Dhaal_Atoll%2C_Maldives_%28Unsplash%29.jpg/960px-Sun_Island_Resort%2C_Alif_Dhaal_Atoll%2C_Maldives_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Sun Island Resort, Alif Dhaal Atoll, Maldives (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sun_Island_Resort,_Alif_Dhaal_Atoll,_Maldives_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Syd Sujuaan sydsujuaan",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

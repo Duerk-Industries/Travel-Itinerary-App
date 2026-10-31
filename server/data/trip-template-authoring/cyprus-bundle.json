@@ -832,7 +832,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Paphos_Archaeological_Park_Odeon_and_Lighthouse.JPG/960px-Paphos_Archaeological_Park_Odeon_and_Lighthouse.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Paphos Archaeological Park Odeon and Lighthouse.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Paphos_Archaeological_Park_Odeon_and_Lighthouse.JPG",
+          "license": "CC0",
+          "author": "Stefan Bellini",
+          "selection": "ai"
+        }
       },
       "cyprus/akamas-blue-lagoon": {
         "name": "Akamas Peninsula and Blue Lagoon",
@@ -845,7 +854,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Aphrodite_Nature_Trail%2C_Cyprus%2C_view_to_Akamas_peninsula_from_Moutti_Tis_Sotiras.jpg/960px-Aphrodite_Nature_Trail%2C_Cyprus%2C_view_to_Akamas_peninsula_from_Moutti_Tis_Sotiras.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Aphrodite Nature Trail, Cyprus, view to Akamas peninsula from Moutti Tis Sotiras.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Aphrodite_Nature_Trail,_Cyprus,_view_to_Akamas_peninsula_from_Moutti_Tis_Sotiras.jpg",
+          "license": "CC0",
+          "author": "Gerda Arendt",
+          "selection": "ai"
+        }
       },
       "cyprus/kourion-petra-tou-romiou": {
         "name": "Kourion and Aphrodite Rock",
@@ -882,7 +900,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Apsin_fm_east.JPG/960px-Apsin_fm_east.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Apsin fm east.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Apsin_fm_east.JPG",
+          "license": "CC0",
+          "author": "Zippymarmalade",
+          "selection": "ai"
+        }
       },
       "cyprus/troodos-hiking": {
         "name": "Troodos nature trails and waterfalls",
@@ -918,7 +945,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dc/2022_03_Larnaca_Salt_Lake_4.jpg/960px-2022_03_Larnaca_Salt_Lake_4.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:2022 03 Larnaca Salt Lake 4.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:2022_03_Larnaca_Salt_Lake_4.jpg",
+          "license": "CC0",
+          "author": "Qasinka",
+          "selection": "ai"
+        }
       },
       "cyprus/cape-greco": {
         "name": "Cape Greco and Ayia Napa sea caves",
@@ -930,7 +966,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9e/Cape_Greco%2C_Crow%27s_Arch.jpg/960px-Cape_Greco%2C_Crow%27s_Arch.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Cape Greco, Crow's Arch.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cape_Greco,_Crow%27s_Arch.jpg",
+          "license": "CC0",
+          "author": "Gerda Arendt",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -942,7 +987,18 @@
       "cyprus/paphos": {
         "name": "Paphos",
         "description": "A coastal town of Roman mosaics and a harbour fort, close to the wild Akamas.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/Paphos_Castle.jpg/960px-Paphos_Castle.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Paphos Castle.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Paphos_Castle.jpg",
+            "license": "CC0",
+            "author": "Vsatinet",
+            "selection": "ai"
+          }
+        ]
       },
       "cyprus/troodos": {
         "name": "Troodos",

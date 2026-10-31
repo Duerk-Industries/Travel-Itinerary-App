@@ -1154,7 +1154,16 @@
           "authentic_local"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Ascensor_Panteon.jpg/960px-Ascensor_Panteon.jpg",
+          "width": 960,
+          "height": 616,
+          "title": "File:Ascensor Panteon.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ascensor_Panteon.jpg",
+          "license": "Public domain",
+          "author": "Colección de tarjetas postales de Carlos Cornejo",
+          "selection": "ai"
+        }
       },
       "chile/vina-del-mar": {
         "name": "Vina del Mar and the coast",
@@ -1177,7 +1186,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4d/Valle_De_La_Luna%2C_II_Regi%C3%B3n%2C_Chile_%28Unsplash%29.jpg/960px-Valle_De_La_Luna%2C_II_Regi%C3%B3n%2C_Chile_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Valle De La Luna, II Región, Chile (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Valle_De_La_Luna,_II_Regi%C3%B3n,_Chile_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Marcelo Hernán Arre Márfull mham",
+          "selection": "ai"
+        }
       },
       "chile/el-tatio": {
         "name": "El Tatio geysers",
@@ -1189,7 +1207,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Geysire_El_Tatio.jpg/960px-Geysire_El_Tatio.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Geysire El Tatio.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Geysire_El_Tatio.jpg",
+          "license": "Public domain",
+          "author": "Simon Prisner",
+          "selection": "ai"
+        }
       },
       "chile/atacama-lagoons-salar": {
         "name": "Atacama Salt Flat and altiplanic lagoons",
@@ -1250,7 +1277,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/View_of_Glacier_Grey_from_Lago_Grey_%28Grey_Lake%29%2C_with_the_Cuernos_del_Paine_mountains_in_the_background%2C_seen_during_NASA%27s_AirSAR_2004_campaign_in_Chile_%28ED04-0056-108%29.jpg/960px-thumbnail.jpg",
+          "width": 960,
+          "height": 634,
+          "title": "File:View of Glacier Grey from Lago Grey (Grey Lake), with the Cuernos del Paine mountains in the background, seen during NASA's AirSAR 2004 campaign in Chile (ED04-0056-108).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:View_of_Glacier_Grey_from_Lago_Grey_(Grey_Lake),_with_the_Cuernos_del_Paine_mountains_in_the_background,_seen_during_NASA%27s_AirSAR_2004_campaign_in_Chile_(ED04-0056-108).jpg",
+          "license": "Public domain",
+          "author": "NASA Armstrong Flight Research Center / NASA/Jim Ross",
+          "selection": "ai"
+        }
       },
       "chile/paine-viewpoints": {
         "name": "Torres del Paine viewpoints and wildlife",
@@ -1262,7 +1298,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Cuernos_Torres_del_Paine_laguna_los_Cisnes.jpg/960px-Cuernos_Torres_del_Paine_laguna_los_Cisnes.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Cuernos Torres del Paine laguna los Cisnes.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cuernos_Torres_del_Paine_laguna_los_Cisnes.jpg",
+          "license": "CC0",
+          "author": "Blog2025Patagonia",
+          "selection": "ai"
+        }
       },
       "chile/milodon-cave": {
         "name": "Milodon Cave and Puerto Natales",
@@ -1273,7 +1318,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Cueva_del_Milod%C3%B3n_021.JPG/960px-Cueva_del_Milod%C3%B3n_021.JPG",
+          "width": 960,
+          "height": 713,
+          "title": "File:Cueva del Milodón 021.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cueva_del_Milod%C3%B3n_021.JPG",
+          "license": "Public domain",
+          "author": "Jorge Morales Piderit",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1295,7 +1349,18 @@
       "chile/valparaiso": {
         "name": "Valparaiso",
         "description": "A hillside port city of murals, funiculars and bohemian charm.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Random_houses_in_Valparaiso%2C_Chile_%28Unsplash%29.jpg/960px-Random_houses_in_Valparaiso%2C_Chile_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Random houses in Valparaiso, Chile (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Random_houses_in_Valparaiso,_Chile_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Olivier Chatel beolive",
+            "selection": "ai"
+          }
+        ]
       },
       "chile/antofagasta": {
         "name": "Antofagasta",
@@ -1315,12 +1380,34 @@
       "chile/puerto-natales": {
         "name": "Puerto Natales",
         "description": "A quiet port and gateway to Torres del Paine.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/44/La_Mano_-_is_a_concrete_sculpture_in_the_form_of_a_human_hand_reaching_upward_on_the_edge_of_the_Se%C3%B1oret_Channel_in_Puerto_Natales%2C_Chile_%282024%29.jpg/960px-La_Mano_-_is_a_concrete_sculpture_in_the_form_of_a_human_hand_reaching_upward_on_the_edge_of_the_Se%C3%B1oret_Channel_in_Puerto_Natales%2C_Chile_%282024%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:La Mano - is a concrete sculpture in the form of a human hand reaching upward on the edge of the Señoret Channel in Puerto Natales, Chile (2024).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:La_Mano_-_is_a_concrete_sculpture_in_the_form_of_a_human_hand_reaching_upward_on_the_edge_of_the_Se%C3%B1oret_Channel_in_Puerto_Natales,_Chile_(2024).jpg",
+            "license": "CC0",
+            "author": "Stch2022",
+            "selection": "ai"
+          }
+        ]
       },
       "chile/torres-del-paine": {
         "name": "Torres del Paine",
         "description": "A national park of granite spires, glaciers and turquoise lakes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Cuernos_Torres_del_Paine_laguna_los_Cisnes.jpg/960px-Cuernos_Torres_del_Paine_laguna_los_Cisnes.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Cuernos Torres del Paine laguna los Cisnes.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cuernos_Torres_del_Paine_laguna_los_Cisnes.jpg",
+            "license": "CC0",
+            "author": "Blog2025Patagonia",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

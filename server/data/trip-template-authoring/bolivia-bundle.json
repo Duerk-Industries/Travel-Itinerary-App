@@ -1157,7 +1157,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/Cabinas_Linea_Verde_Mi_Teleferico.jpg/960px-Cabinas_Linea_Verde_Mi_Teleferico.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Cabinas Linea Verde Mi Teleferico.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cabinas_Linea_Verde_Mi_Teleferico.jpg",
+          "license": "CC0",
+          "author": "EEJCC",
+          "selection": "ai"
+        }
       },
       "bolivia/witches-market": {
         "name": "Witches Market and Calle Jaen",
@@ -1191,7 +1200,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Zonnepoort_tiwanaku.jpg/960px-Zonnepoort_tiwanaku.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Zonnepoort tiwanaku.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Zonnepoort_tiwanaku.jpg",
+          "license": "Public domain",
+          "author": "Mhwater",
+          "selection": "ai"
+        }
       },
       "bolivia/death-road": {
         "name": "Death Road (Camino de las Yungas) by bike",
@@ -1228,7 +1246,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Salar_de_Uyuni_Bolivia.jpg/960px-Salar_de_Uyuni_Bolivia.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Salar de Uyuni Bolivia.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Salar_de_Uyuni_Bolivia.jpg",
+          "license": "Public domain",
+          "author": "Entropy1963",
+          "selection": "ai"
+        }
       },
       "bolivia/train-cemetery": {
         "name": "Train Cemetery, Uyuni",
@@ -1239,7 +1266,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Cemit%C3%A9rio_de_trens%2C_Uyuni%2C_Bolivia_3.jpg/960px-Cemit%C3%A9rio_de_trens%2C_Uyuni%2C_Bolivia_3.jpg",
+          "width": 960,
+          "height": 662,
+          "title": "File:Cemitério de trens, Uyuni, Bolivia 3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cemit%C3%A9rio_de_trens,_Uyuni,_Bolivia_3.jpg",
+          "license": "Public domain",
+          "author": "Herr stahlhoefer",
+          "selection": "ai"
+        }
       },
       "bolivia/sunset-salt-flat": {
         "name": "Salt flat sunrise or sunset",
@@ -1287,7 +1323,16 @@
           "authentic_local"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/Cerro_ricco.jpg/960px-Cerro_ricco.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Cerro ricco.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cerro_ricco.jpg",
+          "license": "Public domain",
+          "author": "Mhwater at Dutch Wikipedia",
+          "selection": "ai"
+        }
       },
       "bolivia/lagunas-altiplano": {
         "name": "Altiplano lagoons and Laguna Colorada",
@@ -1299,7 +1344,16 @@
           "adventure"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/Laguna_Colorada.jpg/960px-Laguna_Colorada.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Laguna Colorada.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Laguna_Colorada.jpg",
+          "license": "Public domain",
+          "author": "Franz Barjak",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1316,7 +1370,18 @@
       "bolivia/copacabana": {
         "name": "Copacabana",
         "description": "A lakeside pilgrimage town on Lake Titicaca and the gateway to Isla del Sol.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Copacabana_lago_titicaca_Bolivia_%2885679%29.jpg/960px-Copacabana_lago_titicaca_Bolivia_%2885679%29.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Copacabana lago titicaca Bolivia (85679).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Copacabana_lago_titicaca_Bolivia_(85679).jpg",
+            "license": "CC0",
+            "author": "Qhanaaru",
+            "selection": "ai"
+          }
+        ]
       },
       "bolivia/potosi": {
         "name": "Potosi",
@@ -1326,7 +1391,18 @@
       "bolivia/uyuni": {
         "name": "Uyuni",
         "description": "A remote town and the gateway to the world largest salt flat.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/Cemit%C3%A9rio_de_trens%2C_Uyuni%2C_Bolivia.jpg/960px-Cemit%C3%A9rio_de_trens%2C_Uyuni%2C_Bolivia.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Cemitério de trens, Uyuni, Bolivia.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cemit%C3%A9rio_de_trens,_Uyuni,_Bolivia.jpg",
+            "license": "Public domain",
+            "author": "Herr stahlhoefer",
+            "selection": "ai"
+          }
+        ]
       },
       "bolivia/chuquisaca": {
         "name": "Chuquisaca",

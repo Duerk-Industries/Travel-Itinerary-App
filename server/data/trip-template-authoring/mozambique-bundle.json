@@ -1064,7 +1064,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/Fortaleza_%2838893480790%29.jpg/960px-Fortaleza_%2838893480790%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Fortaleza (38893480790).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Fortaleza_(38893480790).jpg",
+          "license": "CC0",
+          "author": "ilf_",
+          "selection": "ai"
+        }
       },
       "mozambique/tofo-diving": {
         "name": "Tofo diving with mantas and whale sharks",
@@ -1115,7 +1124,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Bazaruto_Archipelago_National_Park_%28154448_-_oli2_20240803_lrg%29.jpg/960px-Bazaruto_Archipelago_National_Park_%28154448_-_oli2_20240803_lrg%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Bazaruto Archipelago National Park (154448 - oli2 20240803 lrg).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bazaruto_Archipelago_National_Park_(154448_-_oli2_20240803_lrg).jpg",
+          "license": "Public domain",
+          "author": "NASA Earth Observatory images by Wanmei Liang, using Landsat data from the U.S. Geological Survey. Story by Kathryn Hansen.",
+          "selection": "ai"
+        }
       },
       "mozambique/ilha-de-mocambique": {
         "name": "Ilha de Mocambique",
@@ -1148,12 +1166,34 @@
       "mozambique": {
         "name": "Mozambique",
         "description": "A long Indian Ocean coast of islands, reefs and Portuguese-African culture.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/ISS020-E-18224_-_View_of_Mozambique.jpg/960px-ISS020-E-18224_-_View_of_Mozambique.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:ISS020-E-18224 - View of Mozambique.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:ISS020-E-18224_-_View_of_Mozambique.jpg",
+            "license": "Public domain",
+            "author": "Earth Science and Remote Sensing Unit, Lyndon B. Johnson Space Center",
+            "selection": "ai"
+          }
+        ]
       },
       "mozambique/maputo": {
         "name": "Maputo",
         "description": "The Portuguese-influenced capital.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/01/Maputo_train_station_%2839993705724%29.jpg/960px-Maputo_train_station_%2839993705724%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Maputo train station (39993705724).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Maputo_train_station_(39993705724).jpg",
+            "license": "CC0",
+            "author": "ilf_",
+            "selection": "ai"
+          }
+        ]
       },
       "mozambique/tofo": {
         "name": "Tofo",

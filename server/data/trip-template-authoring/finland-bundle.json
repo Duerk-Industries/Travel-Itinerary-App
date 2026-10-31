@@ -1011,7 +1011,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Senaatintori_Helsinki_2022-09-16_04.jpg/960px-Senaatintori_Helsinki_2022-09-16_04.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Senaatintori Helsinki 2022-09-16 04.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Senaatintori_Helsinki_2022-09-16_04.jpg",
+          "license": "CC0",
+          "author": "Leonhard Lenz",
+          "selection": "ai"
+        }
       },
       "finland/suomenlinna": {
         "name": "Suomenlinna sea fortress",
@@ -1060,7 +1069,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Turku_Castle_from_Satamakatu.jpg/960px-Turku_Castle_from_Satamakatu.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Turku Castle from Satamakatu.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Turku_Castle_from_Satamakatu.jpg",
+          "license": "CC0",
+          "author": "Ypsilon from Finland",
+          "selection": "ai"
+        }
       },
       "finland/tampere": {
         "name": "Tampere museums and sauna capital",
@@ -1072,7 +1090,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/FI-Tampere-20131006_144949_HDR.JPG/960px-FI-Tampere-20131006_144949_HDR.JPG",
+          "width": 960,
+          "height": 540,
+          "title": "File:FI-Tampere-20131006 144949 HDR.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:FI-Tampere-20131006_144949_HDR.JPG",
+          "license": "CC0",
+          "author": "Brylie Oxley",
+          "selection": "ai"
+        }
       },
       "finland/savonlinna": {
         "name": "Savonlinna and Olavinlinna Castle",
@@ -1085,7 +1112,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Olavinlinna_Savonlinna_Finland.jpg/960px-Olavinlinna_Savonlinna_Finland.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Olavinlinna Savonlinna Finland.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Olavinlinna_Savonlinna_Finland.jpg",
+          "license": "CC0",
+          "author": "HENKKA5",
+          "selection": "ai"
+        }
       },
       "finland/santa-claus-village": {
         "name": "Santa Claus Village and the Arctic Circle",
@@ -1133,14 +1169,34 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Arktikum_Rovaniemi_2022-09-15_02.jpg/960px-Arktikum_Rovaniemi_2022-09-15_02.jpg",
+          "width": 960,
+          "height": 643,
+          "title": "File:Arktikum Rovaniemi 2022-09-15 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Arktikum_Rovaniemi_2022-09-15_02.jpg",
+          "license": "CC0",
+          "author": "Leonhard Lenz",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "finland": {
         "name": "Finland",
         "description": "A land of lakes, forests, saunas and the Arctic north.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9e/View_from_viewing_platform_looking_out_towards_Levi_town_in_Finland.jpg/960px-View_from_viewing_platform_looking_out_towards_Levi_town_in_Finland.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:View from viewing platform looking out towards Levi town in Finland.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:View_from_viewing_platform_looking_out_towards_Levi_town_in_Finland.jpg",
+            "license": "CC0",
+            "author": "Hellowikieditor",
+            "selection": "ai"
+          }
+        ]
       },
       "finland/helsinki": {
         "name": "Helsinki",
@@ -1155,7 +1211,18 @@
       "finland/tampere": {
         "name": "Tampere",
         "description": "A lakeside city of museums and saunas.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Tampere_City_Hall_Aug2008.jpg/960px-Tampere_City_Hall_Aug2008.jpg",
+            "width": 960,
+            "height": 628,
+            "title": "File:Tampere City Hall Aug2008.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tampere_City_Hall_Aug2008.jpg",
+            "license": "Public domain",
+            "author": "Methem (Mikko J. Putkonen)",
+            "selection": "ai"
+          }
+        ]
       },
       "finland/lakeland": {
         "name": "Lakeland",
@@ -1165,12 +1232,34 @@
       "finland/savonlinna": {
         "name": "Savonlinna",
         "description": "A lake town with a medieval castle.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Olavinlinna_Savonlinna_Finland.jpg/960px-Olavinlinna_Savonlinna_Finland.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:Olavinlinna Savonlinna Finland.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Olavinlinna_Savonlinna_Finland.jpg",
+            "license": "CC0",
+            "author": "HENKKA5",
+            "selection": "ai"
+          }
+        ]
       },
       "finland/lapland": {
         "name": "Lapland",
         "description": "Finland Arctic north, home of Santa Claus, huskies and the aurora.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Aurora_borealis_over_Lapland_%28Unsplash%29.jpg/960px-Aurora_borealis_over_Lapland_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:Aurora borealis over Lapland (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Aurora_borealis_over_Lapland_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Vincent Guth vingtcent",
+            "selection": "ai"
+          }
+        ]
       },
       "finland/rovaniemi": {
         "name": "Rovaniemi",

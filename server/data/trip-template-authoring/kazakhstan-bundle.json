@@ -701,7 +701,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Almaty_church.jpg/960px-Almaty_church.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Almaty church.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Almaty_church.jpg",
+          "license": "Public domain",
+          "author": "No machine-readable author provided. Staecker assumed (based on copyright claims).",
+          "selection": "ai"
+        }
       },
       "kazakhstan/medeu-shymbulak": {
         "name": "Medeu and Shymbulak",
@@ -713,7 +722,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Medeo.jpg/960px-Medeo.jpg",
+          "width": 960,
+          "height": 747,
+          "title": "File:Medeo.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Medeo.jpg",
+          "license": "Public domain",
+          "author": "P. Christopher Staecker",
+          "selection": "ai"
+        }
       },
       "kazakhstan/big-almaty-lake": {
         "name": "Big Almaty Lake",
@@ -725,7 +743,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Big_Almaty_Lake_%28Bolshaya_Almatinka%29_in_June.jpg/960px-Big_Almaty_Lake_%28Bolshaya_Almatinka%29_in_June.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Big Almaty Lake (Bolshaya Almatinka) in June.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Big_Almaty_Lake_(Bolshaya_Almatinka)_in_June.jpg",
+          "license": "Public domain",
+          "author": "Ds02006",
+          "selection": "ai"
+        }
       },
       "kazakhstan/charyn-canyon": {
         "name": "Charyn Canyon",
@@ -738,7 +765,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Charyn_Canyon%2C_Kazakhstan_04.jpg/960px-Charyn_Canyon%2C_Kazakhstan_04.jpg",
+          "width": 960,
+          "height": 590,
+          "title": "File:Charyn Canyon, Kazakhstan 04.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Charyn_Canyon,_Kazakhstan_04.jpg",
+          "license": "CC0",
+          "author": "Bgag",
+          "selection": "ai"
+        }
       },
       "kazakhstan/kolsai-kaindy": {
         "name": "Kolsai Lakes and Kaindy Lake",
@@ -750,7 +786,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Kolsai_lake.jpg/960px-Kolsai_lake.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Kolsai lake.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kolsai_lake.jpg",
+          "license": "CC0",
+          "author": "Katariyakartikey",
+          "selection": "ai"
+        }
       },
       "kazakhstan/astana-center": {
         "name": "Astana Baiterek and Khan Shatyr",
@@ -762,7 +807,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Baiterek_metro_station%2C_Astana%2C_2026.jpg/960px-Baiterek_metro_station%2C_Astana%2C_2026.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Baiterek metro station, Astana, 2026.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Baiterek_metro_station,_Astana,_2026.jpg",
+          "license": "CC0",
+          "author": "Bdx",
+          "selection": "ai"
+        }
       },
       "kazakhstan/turkestan-yasawi": {
         "name": "Turkestan and the Yasawi Mausoleum",
@@ -791,12 +845,34 @@
       "kazakhstan/saty": {
         "name": "Saty",
         "description": "A mountain village, base for the Kolsai and Kaindy lakes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Saty%2C_Kyrgyzstan.jpg/960px-Saty%2C_Kyrgyzstan.jpg",
+            "width": 960,
+            "height": 707,
+            "title": "File:Saty, Kyrgyzstan.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Saty,_Kyrgyzstan.jpg",
+            "license": "CC0",
+            "author": "Mirzoulugʻbek",
+            "selection": "ai"
+          }
+        ]
       },
       "kazakhstan/astana": {
         "name": "Astana",
         "description": "The futuristic capital on the steppe.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/Buildings_in_Astana.jpg/960px-Buildings_in_Astana.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Buildings in Astana.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Buildings_in_Astana.jpg",
+            "license": "CC0",
+            "author": "Bgag",
+            "selection": "ai"
+          }
+        ]
       },
       "kazakhstan/turkestan": {
         "name": "Turkestan",

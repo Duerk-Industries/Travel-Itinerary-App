@@ -1241,7 +1241,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2a/Palais_Royale_de_ROVA_Manjaka-miadana_03.jpg/960px-Palais_Royale_de_ROVA_Manjaka-miadana_03.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Palais Royale de ROVA Manjaka-miadana 03.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Palais_Royale_de_ROVA_Manjaka-miadana_03.jpg",
+          "license": "CC0",
+          "author": "Lalinah",
+          "selection": "ai"
+        }
       },
       "madagascar/andasibe-indri": {
         "name": "Andasibe-Mantadia and the indri",
@@ -1328,7 +1337,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bf/Nosy_Be.jpg/960px-Nosy_Be.jpg",
+          "width": 960,
+          "height": 688,
+          "title": "File:Nosy Be.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Nosy_Be.jpg",
+          "license": "Public domain",
+          "author": "NASA",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1370,7 +1388,18 @@
       "madagascar/nosy-be": {
         "name": "Nosy Be",
         "description": "A northern beach island.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bf/Nosy_Be.jpg/960px-Nosy_Be.jpg",
+            "width": 960,
+            "height": 688,
+            "title": "File:Nosy Be.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Nosy_Be.jpg",
+            "license": "Public domain",
+            "author": "NASA",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

@@ -767,7 +767,18 @@
       "eswatini": {
         "name": "Eswatini",
         "description": "A small kingdom of mountains, culture and easy wildlife viewing.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/Eswatini_reed_dance_ceremony_Young_maidens_observing_the_Eswatini_traditional_reed_dance_ceremony.jpg/960px-Eswatini_reed_dance_ceremony_Young_maidens_observing_the_Eswatini_traditional_reed_dance_ceremony.jpg",
+            "width": 960,
+            "height": 636,
+            "title": "File:Eswatini reed dance ceremony Young maidens observing the Eswatini traditional reed dance ceremony.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Eswatini_reed_dance_ceremony_Young_maidens_observing_the_Eswatini_traditional_reed_dance_ceremony.jpg",
+            "license": "CC0",
+            "author": "Sphiwe Clememtine Mkhabela",
+            "selection": "ai"
+          }
+        ]
       },
       "eswatini/ezulwini-valley": {
         "name": "Ezulwini Valley",

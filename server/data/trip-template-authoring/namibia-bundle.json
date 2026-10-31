@@ -1175,7 +1175,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Windhoek-269058_1920.jpg/960px-Windhoek-269058_1920.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Windhoek-269058 1920.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Windhoek-269058_1920.jpg",
+          "license": "CC0",
+          "author": "elvirahattingh1",
+          "selection": "ai"
+        }
       },
       "namibia/sossusvlei": {
         "name": "Sossusvlei, Dune 45 and Deadvlei",
@@ -1188,7 +1197,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Sossusvlei_Dunes_Namib.jpg/960px-Sossusvlei_Dunes_Namib.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Sossusvlei Dunes Namib.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sossusvlei_Dunes_Namib.jpg",
+          "license": "CC0",
+          "author": "Vicartb",
+          "selection": "ai"
+        }
       },
       "namibia/sesriem-canyon": {
         "name": "Sesriem Canyon and Solitaire",
@@ -1224,7 +1242,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4a/Cape_Cross_Osos.jpg/960px-Cape_Cross_Osos.jpg",
+          "width": 960,
+          "height": 718,
+          "title": "File:Cape Cross Osos.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cape_Cross_Osos.jpg",
+          "license": "Public domain",
+          "author": "Teo Gómez",
+          "selection": "ai"
+        }
       },
       "namibia/twyfelfontein-damaraland": {
         "name": "Twyfelfontein rock engravings and desert elephants",
@@ -1250,7 +1277,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Elephants_at_Etosha_National_Park01.JPG/960px-Elephants_at_Etosha_National_Park01.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Elephants at Etosha National Park01.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Elephants_at_Etosha_National_Park01.JPG",
+          "license": "Public domain",
+          "author": "Vberger",
+          "selection": "ai"
+        }
       },
       "namibia/fish-river-canyon": {
         "name": "Fish River Canyon",
@@ -1275,17 +1311,50 @@
       "namibia/windhoek": {
         "name": "Windhoek",
         "description": "The capital, at the heart of the country.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Windhoek-269058_1920.jpg/960px-Windhoek-269058_1920.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Windhoek-269058 1920.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Windhoek-269058_1920.jpg",
+            "license": "CC0",
+            "author": "elvirahattingh1",
+            "selection": "ai"
+          }
+        ]
       },
       "namibia/sossusvlei": {
         "name": "Sossusvlei",
         "description": "The great dune sea of the Namib desert.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Deadvlei%2C_Sossusvlei_%28Unsplash%29.jpg/960px-Deadvlei%2C_Sossusvlei_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 643,
+            "title": "File:Deadvlei, Sossusvlei (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Deadvlei,_Sossusvlei_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Marcelo Novais marnovais",
+            "selection": "ai"
+          }
+        ]
       },
       "namibia/swakopmund": {
         "name": "Swakopmund",
         "description": "A coastal adventure town.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Alter_Bahnhof_Swakopmund_Hotel.jpg/960px-Alter_Bahnhof_Swakopmund_Hotel.jpg",
+            "width": 960,
+            "height": 718,
+            "title": "File:Alter Bahnhof Swakopmund Hotel.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Alter_Bahnhof_Swakopmund_Hotel.jpg",
+            "license": "Public domain",
+            "author": "fotografiert von Freddy Weber (für Benutzer:Roger_Zenner) im August 2004",
+            "selection": "ai"
+          }
+        ]
       },
       "namibia/damaraland": {
         "name": "Damaraland",

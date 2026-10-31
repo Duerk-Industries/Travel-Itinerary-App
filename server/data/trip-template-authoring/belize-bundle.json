@@ -1046,7 +1046,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Xunantunich_El_Castillo_2011.jpg/960px-Xunantunich_El_Castillo_2011.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Xunantunich El Castillo 2011.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Xunantunich_El_Castillo_2011.jpg",
+          "license": "CC0",
+          "author": "Kaldari",
+          "selection": "ai"
+        }
       },
       "belize/atm-cave": {
         "name": "Actun Tunichil Muknal (ATM) cave",
@@ -1155,7 +1164,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Laughing_Bird_Caye_2.jpg/960px-Laughing_Bird_Caye_2.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Laughing Bird Caye 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Laughing_Bird_Caye_2.jpg",
+          "license": "CC0",
+          "author": "Kaldari",
+          "selection": "ai"
+        }
       },
       "belize/rio-frio-pine-ridge": {
         "name": "Mountain Pine Ridge and Big Rock Falls",
@@ -1179,7 +1197,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c5/St._Herman%27s_Cave%2C_Belize.jpg/960px-St._Herman%27s_Cave%2C_Belize.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:St. Herman's Cave, Belize.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:St._Herman%27s_Cave,_Belize.jpg",
+          "license": "CC0",
+          "author": "Nosferattus",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {

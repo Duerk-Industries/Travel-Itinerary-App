@@ -3113,7 +3113,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Blue_Lagoon_Geothermal_pool_16.jpg/960px-Blue_Lagoon_Geothermal_pool_16.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Blue Lagoon Geothermal pool 16.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Blue_Lagoon_Geothermal_pool_16.jpg",
+          "license": "CC0",
+          "author": "Netha Hussain",
+          "selection": "ai"
+        }
       },
       "iceland/hallgrimskirkja": {
         "name": "Hallgrímskirkja",
@@ -3125,7 +3134,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Hallgrimskirkja%2C_Reykjav%C3%ADk%2C_Iceland_%28Unsplash%29.jpg/960px-Hallgrimskirkja%2C_Reykjav%C3%ADk%2C_Iceland_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Hallgrimskirkja, Reykjavík, Iceland (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hallgrimskirkja,_Reykjav%C3%ADk,_Iceland_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Ferdinand Stöhr fellowferdi",
+          "selection": "ai"
+        }
       },
       "iceland/harpa-seafront": {
         "name": "Harpa and the Reykjavik seafront",
@@ -3185,7 +3203,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cc/Iceland_Strokkur.jpg/960px-Iceland_Strokkur.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Iceland Strokkur.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Iceland_Strokkur.jpg",
+          "license": "Public domain",
+          "author": "Cechpeter",
+          "selection": "ai"
+        }
       },
       "iceland/gullfoss": {
         "name": "Gullfoss",
@@ -3197,7 +3224,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Gullfoss%2C_Island.jpg/960px-Gullfoss%2C_Island.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Gullfoss, Island.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gullfoss,_Island.jpg",
+          "license": "CC0",
+          "author": "SinaSabet28",
+          "selection": "ai"
+        }
       },
       "iceland/seljalandsfoss": {
         "name": "Seljalandsfoss",
@@ -3209,7 +3245,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Premises_of_Seljalandsfoss_08.jpg/960px-Premises_of_Seljalandsfoss_08.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Premises of Seljalandsfoss 08.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Premises_of_Seljalandsfoss_08.jpg",
+          "license": "CC0",
+          "author": "Netha Hussain",
+          "selection": "ai"
+        }
       },
       "iceland/skogafoss": {
         "name": "Skógafoss",
@@ -3221,7 +3266,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Skogafoss%2C_Iceland_%28Unsplash%29.jpg/960px-Skogafoss%2C_Iceland_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Skogafoss, Iceland (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Skogafoss,_Iceland_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Adam Jang adamjang",
+          "selection": "ai"
+        }
       },
       "iceland/dyrholaey": {
         "name": "Dyrhólaey",
@@ -3233,7 +3287,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/The_Dyrh%C3%B3laey_lighthouse_Iceland_%28Unsplash%29.jpg/960px-The_Dyrh%C3%B3laey_lighthouse_Iceland_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:The Dyrhólaey lighthouse Iceland (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Dyrh%C3%B3laey_lighthouse_Iceland_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Tim Trad timtrad",
+          "selection": "ai"
+        }
       },
       "iceland/reynisfjara": {
         "name": "Reynisfjara black sand beach",
@@ -3245,7 +3308,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9d/Reynisdrangar_Sea_Stacks_at_Reynisfjara_Beach.jpg/960px-Reynisdrangar_Sea_Stacks_at_Reynisfjara_Beach.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Reynisdrangar Sea Stacks at Reynisfjara Beach.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Reynisdrangar_Sea_Stacks_at_Reynisfjara_Beach.jpg",
+          "license": "CC0",
+          "author": "Redido964",
+          "selection": "ai"
+        }
       },
       "iceland/solheimajokull-glacier-walk": {
         "name": "Sólheimajökull glacier walk",
@@ -3257,7 +3329,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/S%C3%B3lheimaj%C3%B6kull_-2_%2827978435247%29.jpg/960px-S%C3%B3lheimaj%C3%B6kull_-2_%2827978435247%29.jpg",
+          "width": 960,
+          "height": 539,
+          "title": "File:Sólheimajökull -2 (27978435247).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:S%C3%B3lheimaj%C3%B6kull_-2_(27978435247).jpg",
+          "license": "CC0",
+          "author": "Henrique Pinto from Recife, Brazil",
+          "selection": "ai"
+        }
       },
       "iceland/skaftafell-svartifoss": {
         "name": "Skaftafell and Svartifoss",
@@ -3293,7 +3374,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/Vatnaj%C3%B6kull_glacier.jpg/960px-Vatnaj%C3%B6kull_glacier.jpg",
+          "width": 960,
+          "height": 456,
+          "title": "File:Vatnajökull glacier.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Vatnaj%C3%B6kull_glacier.jpg",
+          "license": "CC0",
+          "author": "DCheretovich",
+          "selection": "ai"
+        }
       },
       "iceland/diamond-beach": {
         "name": "Diamond Beach",
@@ -3304,7 +3394,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/Diamond_Beach%2C_Merritt_Island%2C_Iceland_%28Unsplash%29.jpg/960px-Diamond_Beach%2C_Merritt_Island%2C_Iceland_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Diamond Beach, Merritt Island, Iceland (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Diamond_Beach,_Merritt_Island,_Iceland_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "lydia harper lids_harper",
+          "selection": "ai"
+        }
       },
       "iceland/hofn-langoustine": {
         "name": "Langoustine dinner in Höfn",
@@ -3351,7 +3450,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Sey%C3%B0isfj%C3%B6r%C3%B0ur%2C_Iceland_%2843237723921%29.jpg/960px-Sey%C3%B0isfj%C3%B6r%C3%B0ur%2C_Iceland_%2843237723921%29.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Seyðisfjörður, Iceland (43237723921).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sey%C3%B0isfj%C3%B6r%C3%B0ur,_Iceland_(43237723921).jpg",
+          "license": "CC0",
+          "author": "Joe deSousa",
+          "selection": "ai"
+        }
       },
       "iceland/hengifoss": {
         "name": "Hengifoss",
@@ -3363,7 +3471,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Hengifoss_shot.jpg/960px-Hengifoss_shot.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Hengifoss shot.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hengifoss_shot.jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "iceland/dettifoss": {
         "name": "Dettifoss",
@@ -3375,7 +3492,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e9/Dettifoss_TimBekaert.JPG/960px-Dettifoss_TimBekaert.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dettifoss TimBekaert.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dettifoss_TimBekaert.JPG",
+          "license": "Public domain",
+          "author": "Tbc",
+          "selection": "ai"
+        }
       },
       "iceland/hverir-geothermal": {
         "name": "Hverir geothermal area",
@@ -3387,7 +3513,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/51/The_N%C3%A1mafjall_Hverir_Geothermal_Area%2C_Iceland_%2853650043976%29.jpg/960px-The_N%C3%A1mafjall_Hverir_Geothermal_Area%2C_Iceland_%2853650043976%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:The Námafjall Hverir Geothermal Area, Iceland (53650043976).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_N%C3%A1mafjall_Hverir_Geothermal_Area,_Iceland_(53650043976).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "iceland/myvatn-lava-craters": {
         "name": "Dimmuborgir and the Mývatn craters",
@@ -3399,7 +3534,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4a/The_Lava_Fields_of_Dimmuborgir%2C_Iceland_%2841555497030%29.jpg/960px-The_Lava_Fields_of_Dimmuborgir%2C_Iceland_%2841555497030%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:The Lava Fields of Dimmuborgir, Iceland (41555497030).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Lava_Fields_of_Dimmuborgir,_Iceland_(41555497030).jpg",
+          "license": "CC0",
+          "author": "Joe deSousa",
+          "selection": "ai"
+        }
       },
       "iceland/myvatn-nature-baths": {
         "name": "Mývatn Nature Baths",
@@ -3410,7 +3554,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Blue_lagoon_M%C3%BDvatn1.JPG/960px-Blue_lagoon_M%C3%BDvatn1.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Blue lagoon Mývatn1.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Blue_lagoon_M%C3%BDvatn1.JPG",
+          "license": "Public domain",
+          "author": "TommyBee",
+          "selection": "ai"
+        }
       },
       "iceland/godafoss": {
         "name": "Goðafoss",
@@ -3422,7 +3575,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Go%C3%B0afoss_Waterfall%2C_Iceland_%2853650101346%29.jpg/960px-Go%C3%B0afoss_Waterfall%2C_Iceland_%2853650101346%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Goðafoss Waterfall, Iceland (53650101346).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Go%C3%B0afoss_Waterfall,_Iceland_(53650101346).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "iceland/husavik-whale-watching": {
         "name": "Whale-watching from Húsavík",
@@ -3446,7 +3608,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Akureyri_Island.jpg/960px-Akureyri_Island.jpg",
+          "width": 960,
+          "height": 478,
+          "title": "File:Akureyri Island.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Akureyri_Island.jpg",
+          "license": "CC0",
+          "author": "Monster4711",
+          "selection": "ai"
+        }
       },
       "iceland/kirkjufell": {
         "name": "Kirkjufell",
@@ -3458,7 +3629,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Kirkjufell%2C_Iceland_%28Unsplash_LoKG7kKx7Zc%29.jpg/960px-Kirkjufell%2C_Iceland_%28Unsplash_LoKG7kKx7Zc%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Kirkjufell, Iceland (Unsplash LoKG7kKx7Zc).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kirkjufell,_Iceland_(Unsplash_LoKG7kKx7Zc).jpg",
+          "license": "CC0",
+          "author": "Steven Diaz stevendiazphoto",
+          "selection": "ai"
+        }
       },
       "iceland/arnarstapi-hellnar": {
         "name": "Arnarstapi to Hellnar coastal walk",
@@ -3494,7 +3674,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Bethany_Legg_2014-11-21_%28Unsplash_Kf-FKx50OMs%29.jpg/960px-Bethany_Legg_2014-11-21_%28Unsplash_Kf-FKx50OMs%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Bethany Legg 2014-11-21 (Unsplash Kf-FKx50OMs).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bethany_Legg_2014-11-21_(Unsplash_Kf-FKx50OMs).jpg",
+          "license": "CC0",
+          "author": "Bethany Legg bkotynski",
+          "selection": "ai"
+        }
       },
       "iceland/hraunfossar": {
         "name": "Hraunfossar and Barnafoss",
@@ -3506,14 +3695,34 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Hraunfosar_in_the_Fall_%28Unsplash%29.jpg/960px-Hraunfosar_in_the_Fall_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Hraunfosar in the Fall (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hraunfosar_in_the_Fall_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Adam Edgerton adamedgerton",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "iceland": {
         "name": "Iceland",
         "description": "An island of waterfalls, glaciers, black sand beaches and geothermal pools, best seen on a self-drive loop.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Iceland_satellite.jpg/960px-Iceland_satellite.jpg",
+            "width": 960,
+            "height": 738,
+            "title": "File:Iceland satellite.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Iceland_satellite.jpg",
+            "license": "Public domain",
+            "author": "Jeff Schmaltz",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/capital-region": {
         "name": "Capital Region",
@@ -3533,7 +3742,18 @@
       "iceland/golden-circle": {
         "name": "Golden Circle",
         "description": "A loop east of Reykjavik linking Thingvellir National Park, the Geysir geothermal area and Gullfoss waterfall.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/57/January_2007_Iceland%2C_Golden_Circle_daytrip_99.jpg/960px-January_2007_Iceland%2C_Golden_Circle_daytrip_99.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:January 2007 Iceland, Golden Circle daytrip 99.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:January_2007_Iceland,_Golden_Circle_daytrip_99.jpg",
+            "license": "CC0",
+            "author": "Syced",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/vik": {
         "name": "Vik",
@@ -3548,7 +3768,18 @@
       "iceland/jokulsarlon": {
         "name": "Jokulsarlon",
         "description": "A glacier lagoon of floating icebergs on the south-east coast, beside the ice-strewn Diamond Beach.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Icebergs_at_J%C3%B6kuls%C3%A1rl%C3%B3n_2.jpg/960px-Icebergs_at_J%C3%B6kuls%C3%A1rl%C3%B3n_2.jpg",
+            "width": 960,
+            "height": 636,
+            "title": "File:Icebergs at Jökulsárlón 2.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Icebergs_at_J%C3%B6kuls%C3%A1rl%C3%B3n_2.jpg",
+            "license": "CC0",
+            "author": "AsleepInTheChapel",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/hofn": {
         "name": "Hofn",
@@ -3558,7 +3789,18 @@
       "iceland/east-iceland": {
         "name": "East Iceland",
         "description": "A quiet region of fjords, small fishing villages and mountains, with the town of Egilsstaðir at its centre.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/Berufj%C3%B6r%C3%B0ur_%28East-Iceland%29_-_Roland_Larsson_2017-05-28_%28Unsplash_SCjhLOM_4ks%29.jpg/960px-Berufj%C3%B6r%C3%B0ur_%28East-Iceland%29_-_Roland_Larsson_2017-05-28_%28Unsplash_SCjhLOM_4ks%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Berufjörður (East-Iceland) - Roland Larsson 2017-05-28 (Unsplash SCjhLOM 4ks).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Berufj%C3%B6r%C3%B0ur_(East-Iceland)_-_Roland_Larsson_2017-05-28_(Unsplash_SCjhLOM_4ks).jpg",
+            "license": "CC0",
+            "author": "Roland Larsson becomingsilence",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/egilsstadir": {
         "name": "Egilsstadir",
@@ -3568,7 +3810,18 @@
       "iceland/seydisfjordur": {
         "name": "Seydisfjordur",
         "description": "A small arts town at the head of a long fjord, with a rainbow street and a ferry link to Denmark.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Sey%C3%B0isfj%C3%B6r%C3%B0ur%2C_Iceland_%2843237723921%29.jpg/960px-Sey%C3%B0isfj%C3%B6r%C3%B0ur%2C_Iceland_%2843237723921%29.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Seyðisfjörður, Iceland (43237723921).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sey%C3%B0isfj%C3%B6r%C3%B0ur,_Iceland_(43237723921).jpg",
+            "license": "CC0",
+            "author": "Joe deSousa",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/north-iceland": {
         "name": "North Iceland",
@@ -3578,22 +3831,66 @@
       "iceland/myvatn": {
         "name": "Myvatn",
         "description": "A shallow volcanic lake in the north surrounded by lava fields, craters, mud pots and geothermal baths.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/Myvatn%2C_Islandia.jpg/960px-Myvatn%2C_Islandia.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Myvatn, Islandia.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Myvatn,_Islandia.jpg",
+            "license": "CC0",
+            "author": "Jolaus",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/akureyri": {
         "name": "Akureyri",
         "description": "Iceland's northern capital at the head of the Eyjafjörður fjord, with a botanical garden and a hilltop church.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Akureyri_Island.jpg/960px-Akureyri_Island.jpg",
+            "width": 960,
+            "height": 478,
+            "title": "File:Akureyri Island.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Akureyri_Island.jpg",
+            "license": "CC0",
+            "author": "Monster4711",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/husavik": {
         "name": "Husavik",
         "description": "A small town on Skjálfandi bay that is the whale-watching capital of Iceland.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/Fishing_boats%2C_Husavik%2C_Iceland_%2816655024103%29.jpg/960px-Fishing_boats%2C_Husavik%2C_Iceland_%2816655024103%29.jpg",
+            "width": 960,
+            "height": 541,
+            "title": "File:Fishing boats, Husavik, Iceland (16655024103).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Fishing_boats,_Husavik,_Iceland_(16655024103).jpg",
+            "license": "Public domain",
+            "author": "TJH1976",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/west-iceland": {
         "name": "West Iceland",
         "description": "A region of lava fields, waterfalls and the Snæfellsnes peninsula, within a few hours of Reykjavik.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b2/Laki_Iceland_West.JPG/960px-Laki_Iceland_West.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Laki Iceland West.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Laki_Iceland_West.JPG",
+            "license": "Public domain",
+            "author": "TommyBee",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/snaefellsnes": {
         "name": "Snaefellsnes",
@@ -3603,7 +3900,18 @@
       "iceland/stykkisholmur": {
         "name": "Stykkisholmur",
         "description": "A pretty harbour town on Snæfellsnes with painted wooden houses and a ferry to the Westfjords.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Bethany_Legg_2014-11-21_%28Unsplash_Kf-FKx50OMs%29.jpg/960px-Bethany_Legg_2014-11-21_%28Unsplash_Kf-FKx50OMs%29.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:Bethany Legg 2014-11-21 (Unsplash Kf-FKx50OMs).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Bethany_Legg_2014-11-21_(Unsplash_Kf-FKx50OMs).jpg",
+            "license": "CC0",
+            "author": "Bethany Legg bkotynski",
+            "selection": "ai"
+          }
+        ]
       },
       "iceland/borgarnes": {
         "name": "Borgarnes",

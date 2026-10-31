@@ -1063,7 +1063,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Lake_Yojoa_NASA.jpg/960px-Lake_Yojoa_NASA.jpg",
+          "width": 960,
+          "height": 658,
+          "title": "File:Lake Yojoa NASA.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Yojoa_NASA.jpg",
+          "license": "Public domain",
+          "author": "NASA",
+          "selection": "ai"
+        }
       },
       "honduras/pico-bonito": {
         "name": "Pico Bonito National Park and Cangrejal River",
@@ -1075,7 +1084,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Cangrejal_009.jpg/960px-Cangrejal_009.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Cangrejal 009.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cangrejal_009.jpg",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "honduras/la-ceiba-cayos": {
         "name": "La Ceiba and Cayos Cochinos",
@@ -1129,7 +1147,18 @@
       "honduras/lake-yojoa": {
         "name": "Lake Yojoa",
         "description": "A highland lake of birds, waterfalls and local brewing.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Lake_Yojoa_NASA.jpg/960px-Lake_Yojoa_NASA.jpg",
+            "width": 960,
+            "height": 658,
+            "title": "File:Lake Yojoa NASA.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Yojoa_NASA.jpg",
+            "license": "Public domain",
+            "author": "NASA",
+            "selection": "ai"
+          }
+        ]
       },
       "honduras/la-ceiba": {
         "name": "La Ceiba",
@@ -1139,7 +1168,18 @@
       "honduras/bay-islands": {
         "name": "Bay Islands",
         "description": "Caribbean islands of coral reef, diving and whale sharks.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Scarus_iseri%2C_West_Bay%2C_Bay_Islands%2C_Honduras_imported_from_iNaturalist_photo_471779098.png/960px-Scarus_iseri%2C_West_Bay%2C_Bay_Islands%2C_Honduras_imported_from_iNaturalist_photo_471779098.png",
+            "width": 960,
+            "height": 540,
+            "title": "File:Scarus iseri, West Bay, Bay Islands, Honduras imported from iNaturalist photo 471779098.png",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Scarus_iseri,_West_Bay,_Bay_Islands,_Honduras_imported_from_iNaturalist_photo_471779098.png",
+            "license": "CC0",
+            "author": "no rights reserved",
+            "selection": "ai"
+          }
+        ]
       },
       "honduras/utila": {
         "name": "Utila",

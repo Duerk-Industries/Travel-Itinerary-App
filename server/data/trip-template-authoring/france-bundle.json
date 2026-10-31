@@ -1276,7 +1276,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Pont_des_Invalides_and_the_Eiffel_Tower%2C_Paris_31_August_2019.jpg/960px-Pont_des_Invalides_and_the_Eiffel_Tower%2C_Paris_31_August_2019.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Pont des Invalides and the Eiffel Tower, Paris 31 August 2019.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pont_des_Invalides_and_the_Eiffel_Tower,_Paris_31_August_2019.jpg",
+          "license": "CC0",
+          "author": "Pierre Blaché from Paris, France",
+          "selection": "ai"
+        }
       },
       "france/louvre-orsay": {
         "name": "Louvre and Musee d Orsay",
@@ -1287,7 +1296,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/Visitors_of_Mus%C3%A9e_du_Louvre%2C_April_2005_%282%29.jpg/960px-Visitors_of_Mus%C3%A9e_du_Louvre%2C_April_2005_%282%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Visitors of Musée du Louvre, April 2005 (2).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Visitors_of_Mus%C3%A9e_du_Louvre,_April_2005_(2).jpg",
+          "license": "CC0",
+          "author": "Syced",
+          "selection": "ai"
+        }
       },
       "france/montmartre-marais": {
         "name": "Montmartre and the Marais",
@@ -1312,7 +1330,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Main_Fa%C3%A7ade%2C_Palace_of_Versailles%2C_Cour_Royale.jpg/960px-Main_Fa%C3%A7ade%2C_Palace_of_Versailles%2C_Cour_Royale.jpg",
+          "width": 960,
+          "height": 637,
+          "title": "File:Main Façade, Palace of Versailles, Cour Royale.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Main_Fa%C3%A7ade,_Palace_of_Versailles,_Cour_Royale.jpg",
+          "license": "Public domain",
+          "author": "Julian Lupyan",
+          "selection": "ai"
+        }
       },
       "france/normandy-dday": {
         "name": "D-Day beaches and Normandy memorials",
@@ -1324,7 +1351,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/VCJCS_Attends_D-Day_81st_Anniversary_Commemorations_at_Normandy_American_Cemetery_and_Memorial_and_Utah_Beach_%289093110%29.jpg/960px-VCJCS_Attends_D-Day_81st_Anniversary_Commemorations_at_Normandy_American_Cemetery_and_Memorial_and_Utah_Beach_%289093110%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:VCJCS Attends D-Day 81st Anniversary Commemorations at Normandy American Cemetery and Memorial and Utah Beach (9093110).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:VCJCS_Attends_D-Day_81st_Anniversary_Commemorations_at_Normandy_American_Cemetery_and_Memorial_and_Utah_Beach_(9093110).jpg",
+          "license": "Public domain",
+          "author": "Tech. Sgt. Tinese Treadwell",
+          "selection": "ai"
+        }
       },
       "france/mont-saint-michel": {
         "name": "Mont-Saint-Michel",
@@ -1336,7 +1372,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Mont_Saint-Michel%2C_Le_Mont-Saint-Michel%2C_France_%28Unsplash_pJGNsvYB9vw%29.jpg/960px-Mont_Saint-Michel%2C_Le_Mont-Saint-Michel%2C_France_%28Unsplash_pJGNsvYB9vw%29.jpg",
+          "width": 960,
+          "height": 547,
+          "title": "File:Mont Saint-Michel, Le Mont-Saint-Michel, France (Unsplash pJGNsvYB9vw).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mont_Saint-Michel,_Le_Mont-Saint-Michel,_France_(Unsplash_pJGNsvYB9vw).jpg",
+          "license": "CC0",
+          "author": "Okamatsu Fujikawa okamatsu",
+          "selection": "ai"
+        }
       },
       "france/loire-chateaux": {
         "name": "Loire Valley chateaux",
@@ -1375,7 +1420,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/de/Pont_Saint-B%C3%A9n%C3%A9zet_from_the_east%2C_Avignon%2C_2015.jpg/960px-Pont_Saint-B%C3%A9n%C3%A9zet_from_the_east%2C_Avignon%2C_2015.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Pont Saint-Bénézet from the east, Avignon, 2015.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pont_Saint-B%C3%A9n%C3%A9zet_from_the_east,_Avignon,_2015.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "france/nice-riviera": {
         "name": "Nice, Eze and Monaco",
@@ -1400,7 +1454,18 @@
       "france/paris": {
         "name": "Paris",
         "description": "The capital, with museums, monuments and cafes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Pont_Royal_and_Mus%C3%A9e_d%27Orsay%2C_Paris_10_July_2020.jpg/960px-Pont_Royal_and_Mus%C3%A9e_d%27Orsay%2C_Paris_10_July_2020.jpg",
+            "width": 960,
+            "height": 542,
+            "title": "File:Pont Royal and Musée d'Orsay, Paris 10 July 2020.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Pont_Royal_and_Mus%C3%A9e_d%27Orsay,_Paris_10_July_2020.jpg",
+            "license": "CC0",
+            "author": "Pierre Blaché from Paris, France",
+            "selection": "ai"
+          }
+        ]
       },
       "france/normandy": {
         "name": "Normandy",
@@ -1410,7 +1475,18 @@
       "france/bayeux": {
         "name": "Bayeux",
         "description": "A medieval town, home to the tapestry, and base for the D-Day beaches.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/General_view%2C_Bayeux%2C_France-LCCN2001697568.jpg/960px-General_view%2C_Bayeux%2C_France-LCCN2001697568.jpg",
+            "width": 960,
+            "height": 733,
+            "title": "File:General view, Bayeux, France-LCCN2001697568.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:General_view,_Bayeux,_France-LCCN2001697568.jpg",
+            "license": "Public domain",
+            "author": "Photochrom Print Collection",
+            "selection": "ai"
+          }
+        ]
       },
       "france/loire-valley": {
         "name": "Loire Valley",
@@ -1420,22 +1496,66 @@
       "france/amboise": {
         "name": "Amboise",
         "description": "A royal chateau town in the heart of the Loire.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/2022.10.27.141809_View_Amboise_France.jpg/960px-2022.10.27.141809_View_Amboise_France.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:2022.10.27.141809 View Amboise France.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:2022.10.27.141809_View_Amboise_France.jpg",
+            "license": "CC0",
+            "author": "Hermann Luyken",
+            "selection": "ai"
+          }
+        ]
       },
       "france/bordeaux": {
         "name": "Bordeaux",
         "description": "A graceful wine city on the Garonne river.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/Bordeaux_LL_postcard_63.jpg/960px-Bordeaux_LL_postcard_63.jpg",
+            "width": 960,
+            "height": 593,
+            "title": "File:Bordeaux LL postcard 63.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Bordeaux_LL_postcard_63.jpg",
+            "license": "Public domain",
+            "author": "Unknown authorUnknown author",
+            "selection": "ai"
+          }
+        ]
       },
       "france/provence": {
         "name": "Provence",
         "description": "The south-east region of lavender fields, Roman ruins and hill villages.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Farmhouse_in_Provence%2C_1888%2C_Vincent_van_Gogh%2C_NGA.jpg/960px-Farmhouse_in_Provence%2C_1888%2C_Vincent_van_Gogh%2C_NGA.jpg",
+            "width": 960,
+            "height": 724,
+            "title": "File:Farmhouse in Provence, 1888, Vincent van Gogh, NGA.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Farmhouse_in_Provence,_1888,_Vincent_van_Gogh,_NGA.jpg",
+            "license": "Public domain",
+            "author": "Vincent van Gogh",
+            "selection": "ai"
+          }
+        ]
       },
       "france/avignon": {
         "name": "Avignon",
         "description": "The papal city on the Rhone.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Avignon_MET_DP137984.jpg/960px-Avignon_MET_DP137984.jpg",
+            "width": 960,
+            "height": 777,
+            "title": "File:Avignon MET DP137984.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Avignon_MET_DP137984.jpg",
+            "license": "CC0",
+            "author": "Édouard Baldus",
+            "selection": "ai"
+          }
+        ]
       },
       "france/french-riviera": {
         "name": "French Riviera",
@@ -1445,7 +1565,18 @@
       "france/nice": {
         "name": "Nice",
         "description": "The capital of the French Riviera.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bf/Nice_l%27Entr%C3%A9e_du_Port.jpg/960px-Nice_l%27Entr%C3%A9e_du_Port.jpg",
+            "width": 960,
+            "height": 621,
+            "title": "File:Nice l'Entrée du Port.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Nice_l%27Entr%C3%A9e_du_Port.jpg",
+            "license": "Public domain",
+            "author": "Unknown authorUnknown author",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

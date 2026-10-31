@@ -2375,7 +2375,16 @@
           "nightlife"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Morocco_CMS_CC-BY_%2815560638589%29.jpg/960px-Morocco_CMS_CC-BY_%2815560638589%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Morocco CMS CC-BY (15560638589).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Morocco_CMS_CC-BY_(15560638589).jpg",
+          "license": "CC0",
+          "author": "Carlos ZGZ from Paris, France",
+          "selection": "ai"
+        }
       },
       "morocco/marrakech-souks": {
         "name": "Marrakech souks",
@@ -2387,7 +2396,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Covered_Souk_Semmarine%2C_Marrakech%2C_2008.jpg/960px-Covered_Souk_Semmarine%2C_Marrakech%2C_2008.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Covered Souk Semmarine, Marrakech, 2008.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Covered_Souk_Semmarine,_Marrakech,_2008.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "morocco/koutoubia-mosque": {
         "name": "Koutoubia Mosque",
@@ -2399,7 +2417,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bd/Koutoubia_Mosque_1.jpg/960px-Koutoubia_Mosque_1.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Koutoubia Mosque 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Koutoubia_Mosque_1.jpg",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "morocco/bahia-palace": {
         "name": "Bahia Palace",
@@ -2411,7 +2438,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dc/Bahia_Palace_%2835041163431%29.jpg/960px-Bahia_Palace_%2835041163431%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Bahia Palace (35041163431).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bahia_Palace_(35041163431).jpg",
+          "license": "CC0",
+          "author": "Brian Dooley",
+          "selection": "ai"
+        }
       },
       "morocco/saadian-tombs": {
         "name": "Saadian Tombs",
@@ -2447,7 +2483,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Jardin_de_majorelle_027.jpg/960px-Jardin_de_majorelle_027.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Jardin de majorelle 027.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Jardin_de_majorelle_027.jpg",
+          "license": "Public domain",
+          "author": "Kafka1",
+          "selection": "ai"
+        }
       },
       "morocco/ben-youssef-madrasa": {
         "name": "Ben Youssef Madrasa",
@@ -2459,7 +2504,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Marrakech_medersa-ben-youssef.jpg/960px-Marrakech_medersa-ben-youssef.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Marrakech medersa-ben-youssef.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Marrakech_medersa-ben-youssef.jpg",
+          "license": "Public domain",
+          "author": "Tom Neys",
+          "selection": "ai"
+        }
       },
       "morocco/marrakech-hammam": {
         "name": "Traditional hammam",
@@ -2507,7 +2561,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Amssakrou%2C_Morocco%2C_2008.jpg/960px-Amssakrou%2C_Morocco%2C_2008.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Amssakrou, Morocco, 2008.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Amssakrou,_Morocco,_2008.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "morocco/essaouira-medina": {
         "name": "Essaouira medina and ramparts",
@@ -2520,7 +2583,16 @@
           "authentic_local"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Sqallla_of_Essaouira_%28ancienne_Mogador%29_16.jpg/960px-Sqallla_of_Essaouira_%28ancienne_Mogador%29_16.jpg",
+          "width": 960,
+          "height": 667,
+          "title": "File:Sqallla of Essaouira (ancienne Mogador) 16.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sqallla_of_Essaouira_(ancienne_Mogador)_16.jpg",
+          "license": "CC0",
+          "author": "Mounir Neddi",
+          "selection": "ai"
+        }
       },
       "morocco/essaouira-port": {
         "name": "Essaouira fishing port",
@@ -2532,7 +2604,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/20/Fishing_boats_in_the_port_of_Essaouira%2C_2008.jpg/960px-Fishing_boats_in_the_port_of_Essaouira%2C_2008.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Fishing boats in the port of Essaouira, 2008.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Fishing_boats_in_the_port_of_Essaouira,_2008.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "morocco/essaouira-beach": {
         "name": "Essaouira beach",
@@ -2544,7 +2625,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Essaouira_coast%2C_Morocco.jpg/960px-Essaouira_coast%2C_Morocco.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Essaouira coast, Morocco.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Essaouira_coast,_Morocco.jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "morocco/ait-benhaddou": {
         "name": "Ait Benhaddou",
@@ -2556,7 +2646,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/A%C3%AFt_Ben_Haddou_Overview_%28Souss-Massa-Dra%C3%A2%2C_Maroc%29_%2815748043842%29.jpg/960px-A%C3%AFt_Ben_Haddou_Overview_%28Souss-Massa-Dra%C3%A2%2C_Maroc%29_%2815748043842%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Aït Ben Haddou Overview (Souss-Massa-Draâ, Maroc) (15748043842).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:A%C3%AFt_Ben_Haddou_Overview_(Souss-Massa-Dra%C3%A2,_Maroc)_(15748043842).jpg",
+          "license": "CC0",
+          "author": "Carlos ZGZ from Paris, France",
+          "selection": "ai"
+        }
       },
       "morocco/skoura-palm-grove": {
         "name": "Skoura palm grove and kasbah",
@@ -2593,7 +2692,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/Dad%C3%A8s_Gorges_Road_in_Morocco.jpg/960px-Dad%C3%A8s_Gorges_Road_in_Morocco.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dadès Gorges Road in Morocco.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dad%C3%A8s_Gorges_Road_in_Morocco.jpg",
+          "license": "CC0",
+          "author": "csanjuanfer",
+          "selection": "ai"
+        }
       },
       "morocco/erg-chebbi-camel-trek": {
         "name": "Camel trek in the Erg Chebbi dunes",
@@ -2631,7 +2739,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Terrasses_de_F%C3%A8s_el_Bali_-_A858.jpg/960px-Terrasses_de_F%C3%A8s_el_Bali_-_A858.jpg",
+          "width": 960,
+          "height": 712,
+          "title": "File:Terrasses de Fès el Bali - A858.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Terrasses_de_F%C3%A8s_el_Bali_-_A858.jpg",
+          "license": "CC0",
+          "author": "Passet Stéphane",
+          "selection": "ai"
+        }
       },
       "morocco/chouara-tannery": {
         "name": "Chouara Tannery",
@@ -2643,7 +2760,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9e/Tanneries_de_F%C3%A8s_%28Maroc%29_%2815561343407%29.jpg/960px-Tanneries_de_F%C3%A8s_%28Maroc%29_%2815561343407%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Tanneries de Fès (Maroc) (15561343407).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tanneries_de_F%C3%A8s_(Maroc)_(15561343407).jpg",
+          "license": "CC0",
+          "author": "Carlos ZGZ from Paris, France",
+          "selection": "ai"
+        }
       },
       "morocco/bou-inania-madrasa": {
         "name": "Bou Inania Madrasa",
@@ -2655,7 +2781,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/Fes_Medersa_Bou_Inania_Mosaique.jpg/960px-Fes_Medersa_Bou_Inania_Mosaique.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Fes Medersa Bou Inania Mosaique.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Fes_Medersa_Bou_Inania_Mosaique.jpg",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "morocco/fes-el-jdid": {
         "name": "Fes el-Jdid and the Mellah",
@@ -2679,7 +2814,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/Marinid_Tombs_in_April_2016_2.jpg/960px-Marinid_Tombs_in_April_2016_2.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Marinid Tombs in April 2016 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Marinid_Tombs_in_April_2016_2.jpg",
+          "license": "CC0",
+          "author": "Mx. Granger",
+          "selection": "ai"
+        }
       },
       "morocco/volubilis": {
         "name": "Volubilis and Moulay Idriss",
@@ -2692,7 +2836,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bd/The_Roman_Ruins_of_Volubilis_-_Morocco.jpg/960px-The_Roman_Ruins_of_Volubilis_-_Morocco.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:The Roman Ruins of Volubilis - Morocco.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Roman_Ruins_of_Volubilis_-_Morocco.jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "morocco/chefchaouen-blue-medina": {
         "name": "Chefchaouen blue medina",
@@ -2705,7 +2858,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/Chefchaouen%2C_Morocco_%28Unsplash_Y05TMi8ZFHA%29.jpg/960px-Chefchaouen%2C_Morocco_%28Unsplash_Y05TMi8ZFHA%29.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Chefchaouen, Morocco (Unsplash Y05TMi8ZFHA).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Chefchaouen,_Morocco_(Unsplash_Y05TMi8ZFHA).jpg",
+          "license": "CC0",
+          "author": "Randy Tarampi randytarampi",
+          "selection": "ai"
+        }
       },
       "morocco/spanish-mosque-viewpoint": {
         "name": "Spanish Mosque viewpoint",
@@ -2765,7 +2927,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a1/Ruelle_bleue%2C_Kasbah_des_Oudayas_%28Rabat%2C_Maroc%29_%2815561666480%29.jpg/960px-Ruelle_bleue%2C_Kasbah_des_Oudayas_%28Rabat%2C_Maroc%29_%2815561666480%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Ruelle bleue, Kasbah des Oudayas (Rabat, Maroc) (15561666480).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ruelle_bleue,_Kasbah_des_Oudayas_(Rabat,_Maroc)_(15561666480).jpg",
+          "license": "CC0",
+          "author": "Carlos ZGZ from Paris, France",
+          "selection": "ai"
+        }
       },
       "morocco/hassan-tower": {
         "name": "Hassan Tower and the Mausoleum of Mohammed V",
@@ -2777,7 +2948,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e4/Hassan_Tower_and_columns_%28Rabat%2C_Morocco%29_%2815126547404%29.jpg/960px-Hassan_Tower_and_columns_%28Rabat%2C_Morocco%29_%2815126547404%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Hassan Tower and columns (Rabat, Morocco) (15126547404).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hassan_Tower_and_columns_(Rabat,_Morocco)_(15126547404).jpg",
+          "license": "CC0",
+          "author": "Carlos ZGZ from Paris, France",
+          "selection": "ai"
+        }
       },
       "morocco/chellah": {
         "name": "Chellah necropolis",
@@ -2789,7 +2969,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Ruins_of_Chellah_%26_14th_century_minaret_%2815561693200%29.jpg/960px-Ruins_of_Chellah_%26_14th_century_minaret_%2815561693200%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Ruins of Chellah & 14th century minaret (15561693200).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ruins_of_Chellah_%26_14th_century_minaret_(15561693200).jpg",
+          "license": "CC0",
+          "author": "Carlos ZGZ from Paris, France",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -2801,12 +2990,34 @@
       "morocco/marrakech-safi": {
         "name": "Marrakech-Safi",
         "description": "The region around Marrakech, taking in the High Atlas foothills and the Atlantic port of Essaouira.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d7/Marrakech_skyline_view.jpg/960px-Marrakech_skyline_view.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Marrakech skyline view.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Marrakech_skyline_view.jpg",
+            "license": "CC0",
+            "author": "hichamaarkoubi",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/marrakech": {
         "name": "Marrakech",
         "description": "A red-walled city of souks, palaces and a vast main square, the usual starting point for trips into the Atlas and Sahara.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d7/Marrakech_skyline_view.jpg/960px-Marrakech_skyline_view.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Marrakech skyline view.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Marrakech_skyline_view.jpg",
+            "license": "CC0",
+            "author": "hichamaarkoubi",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/imlil": {
         "name": "Imlil",
@@ -2816,27 +3027,82 @@
       "morocco/essaouira": {
         "name": "Essaouira",
         "description": "A whitewashed Atlantic port with a fortified medina, a busy fishing harbour and steady winds for kitesurfing.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Fishing_boats_of_Essaouira_-_Morocco.jpg/960px-Fishing_boats_of_Essaouira_-_Morocco.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:Fishing boats of Essaouira - Morocco.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Fishing_boats_of_Essaouira_-_Morocco.jpg",
+            "license": "CC0",
+            "author": "Mustang Joe",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/draa-tafilalet": {
         "name": "Draa-Tafilalet",
         "description": "The south-eastern region that stretches from the High Atlas across the kasbah country to the edge of the Sahara.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2d/Morocco_CMS_CC-BY_%2815744602211%29.jpg/960px-Morocco_CMS_CC-BY_%2815744602211%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Morocco CMS CC-BY (15744602211).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Morocco_CMS_CC-BY_(15744602211).jpg",
+            "license": "CC0",
+            "author": "Carlos ZGZ from Paris, France",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/ait-benhaddou": {
         "name": "Ait Benhaddou",
         "description": "A fortified earthen village on the old Saharan caravan route, listed by UNESCO and used as a film location.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/A%C3%AFt_Ben_Haddou_Overview_%28Souss-Massa-Dra%C3%A2%2C_Maroc%29_%2815748043842%29.jpg/960px-A%C3%AFt_Ben_Haddou_Overview_%28Souss-Massa-Dra%C3%A2%2C_Maroc%29_%2815748043842%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Aït Ben Haddou Overview (Souss-Massa-Draâ, Maroc) (15748043842).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:A%C3%AFt_Ben_Haddou_Overview_(Souss-Massa-Dra%C3%A2,_Maroc)_(15748043842).jpg",
+            "license": "CC0",
+            "author": "Carlos ZGZ from Paris, France",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/skoura": {
         "name": "Skoura",
         "description": "A palm grove oasis near Ouarzazate scattered with mud-brick kasbahs and far fewer visitors than the main route.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/Skoura%2C_Palmenoasen.jpg/960px-Skoura%2C_Palmenoasen.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Skoura, Palmenoasen.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Skoura,_Palmenoasen.jpg",
+            "license": "Public domain",
+            "author": "ArnoldBetten",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/dades-valley": {
         "name": "Dades Valley",
         "description": "A valley of red rock formations, kasbahs and a hairpin road on the route between Ouarzazate and the desert.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Dades_River_valley.jpg/960px-Dades_River_valley.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Dades River valley.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Dades_River_valley.jpg",
+            "license": "CC0",
+            "author": "Youssefkhar",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/todra-gorge": {
         "name": "Todra Gorge",
@@ -2846,7 +3112,18 @@
       "morocco/merzouga": {
         "name": "Merzouga",
         "description": "The village at the edge of the Erg Chebbi dunes, where camel treks and desert camps for the night begin.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/The_Merzouga_dunes_of_Morocco.jpg/960px-The_Merzouga_dunes_of_Morocco.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:The Merzouga dunes of Morocco.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Merzouga_dunes_of_Morocco.jpg",
+            "license": "CC0",
+            "author": "Mustang Joe",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/fes-meknes": {
         "name": "Fes-Meknes",
@@ -2861,7 +3138,18 @@
       "morocco/volubilis": {
         "name": "Volubilis",
         "description": "The best-preserved Roman site in Morocco, with mosaic floors in place, near the pilgrimage town of Moulay Idriss.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bd/The_Roman_Ruins_of_Volubilis_-_Morocco.jpg/960px-The_Roman_Ruins_of_Volubilis_-_Morocco.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:The Roman Ruins of Volubilis - Morocco.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Roman_Ruins_of_Volubilis_-_Morocco.jpg",
+            "license": "CC0",
+            "author": "Mustang Joe",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/tanger-tetouan-al-hoceima": {
         "name": "Tanger-Tetouan-Al Hoceima",
@@ -2871,7 +3159,18 @@
       "morocco/chefchaouen": {
         "name": "Chefchaouen",
         "description": "A small mountain town in the Rif known for its blue-washed medina and hiking in the surrounding hills.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Chefchaouen%2C_Morocco_%2815127131383%29.jpg/960px-Chefchaouen%2C_Morocco_%2815127131383%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Chefchaouen, Morocco (15127131383).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Chefchaouen,_Morocco_(15127131383).jpg",
+            "license": "CC0",
+            "author": "Carlos ZGZ from Paris, France",
+            "selection": "ai"
+          }
+        ]
       },
       "morocco/casablanca-settat": {
         "name": "Casablanca-Settat",
