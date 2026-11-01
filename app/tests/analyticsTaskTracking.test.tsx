@@ -3,6 +3,7 @@
  */
 /// <reference types="jest" />
 import React from 'react';
+import { Platform } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import {
   __resetAnalyticsForTests,
@@ -116,6 +117,9 @@ describe('invite tracking (ShareTripModal)', () => {
 });
 
 describe('import tracking (CSV)', () => {
+  const originalOS = Platform.OS;
+  beforeEach(() => { Platform.OS = 'web'; });
+  afterEach(() => { Platform.OS = originalOS; });
   const styles = new Proxy({}, { get: () => ({}) }) as Record<string, any>;
 
   it('counts a dismissed file picker as a cancelled import', async () => {

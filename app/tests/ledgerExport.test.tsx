@@ -1,7 +1,12 @@
 /** @jest-environment node */
 import React from 'react';
+import { Platform } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import LedgerTab from '../tabs/ledger';
+
+const originalOS = Platform.OS;
+beforeEach(() => { Platform.OS = 'web'; });
+afterEach(() => { Platform.OS = originalOS; });
 
 const people = [
   { id: 'a', firstName: 'Alex' },
@@ -21,7 +26,7 @@ const exportDetails = (overrides: Partial<Props> = {}) => {
     payerName={(id) => id} saveCoveredBy={async () => {}} payments={[]} currentUserMemberId={null}
     onAddPayment={async () => {}} onDeletePayment={async () => {}} {...overrides} />);
   fireEvent.press(screen.getByText('Export Details'));
-  expect(screen.queryByText('Export CSV')).toBeNull();
+  expect(screen.queryByText('Export Table')).toBeNull();
   expect(downloadCsv).toHaveBeenCalledTimes(1);
   const csv = downloadCsv.mock.calls[0][0] as string;
   screen.unmount();

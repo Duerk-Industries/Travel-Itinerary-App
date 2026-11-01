@@ -4,6 +4,7 @@ import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { useCsvControlsVisible } from '../hooks/useCsvControlsVisible';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ExpenseCovering from './ExpenseCovering';
 import PaymentDialog from '../components/PaymentDialog';
@@ -264,6 +265,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width: viewportWidth } = useWindowDimensions();
+  const showCsvControls = useCsvControlsVisible();
   const isNarrowLayout = viewportWidth < 700;
   const tripCurrency = (trip?.currency ?? 'USD').toUpperCase();
 
@@ -610,12 +612,12 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
           >
             <Text style={styles.buttonText}>Cost Report</Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          {showCsvControls ? <TouchableOpacity
             style={[styles.button, styles.smallButton, themeStyle('tabs_ledger_30', {  }, (theme ?? _styleTheme))]}
             onPress={handleExportCsv}
           >
             <Text style={styles.buttonText}>Export Details</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> : null}
         </View>
         <Text style={styles.helperText}>Paid vs. used costs across all trip expenses.</Text>
         {isNarrowLayout

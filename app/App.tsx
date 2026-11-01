@@ -52,6 +52,7 @@ import { normalizeDateString } from './utils/normalizeDateString';
 import { defaultTemperatureUnitForRegion, normalizeTemperatureUnit, type TemperatureUnit } from './utils/temperatureUnit';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { initializeAppCheck } from './utils/firebaseAppCheck';
+import { useCsvControlsVisible } from './hooks/useCsvControlsVisible';
 import { dedupeMembersByIdentity, formatMemberDisplayName } from './utils/memberDisplay';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/transfers';
 import { type Tour, ActivityTab, fetchActivitiesForTrip } from './tabs/activities';
@@ -481,6 +482,7 @@ class RootErrorBoundary extends React.Component<
 const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', onOpenAdminSection }) => {
   const _styleTheme = useStyleTheme();
   const { viewportWidth, isNarrowLayout, isPhoneLayout } = useLayoutBreakpoints();
+  const showCsvControls = useCsvControlsVisible();
   const systemColorScheme = useColorScheme();
   const isWebIOSSafari = useMemo(() => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
@@ -3774,7 +3776,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Cost Report</Text>
                 <View style={[styles.row, styles.sectionActions]}>
-                  <TouchableOpacity
+                  {showCsvControls ? <TouchableOpacity
                     accessibilityRole="button"
                     accessibilityLabel="Download Cost Details"
                     testID="cost-details-download"
@@ -3786,7 +3788,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     }}
                   >
                     <Text style={styles.buttonText}>Download Cost Details</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> : null}
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
